@@ -16215,6 +16215,18 @@ static DECKS: &[Factory] = &[
     super::decks::pale_rider_of_trostad,
     super::decks::uninvited_geist,
     super::decks::unimpeded_trespasser,
+    super::decks::cultists_staff,
+    super::decks::pennon_blade,
+    super::decks::lens_of_clarity,
+    super::decks::shambling_suit,
+    super::decks::molderhulk,
+    super::decks::rhizome_lurcher,
+    super::decks::rune_of_sustenance,
+    super::decks::face_yourself,
+    super::decks::moonveil_dragon,
+    super::decks::stone_giant_of_high_pass,
+    super::decks::winter_tormented_loner,
+    super::decks::gray_slaad,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

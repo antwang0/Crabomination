@@ -961,9 +961,7 @@ fn sound_the_trumpets_recruits_on_cheap_spells() {
     g.players[0].library.clear();
     g.add_card_to_library(0, catalog::grizzly_bears());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    for c in [Color::Red] {
-        g.players[1].mana_pool.add(c, 1);
-    }
+    g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
         .expect("bolt");
@@ -985,4 +983,80 @@ fn uninvited_geist_transforms() {
     attack_unblocked(&mut g, vec![(geist, 1)]);
     assert_eq!(g.battlefield_find(geist).unwrap().definition.name, "Unimpeded Trespasser");
     assert_eq!(pt(&g, geist), (3, 3));
+}
+
+// ── Batch 7 ─────────────────────────────────────────────────────────────────
+
+/// Pennon Blade scales with your creatures; Shambling Suit with your artifacts
+/// and enchantments.
+#[test]
+fn pennon_blade_and_shambling_suit_scale() {
+    let mut g = pod(2);
+    let suit = ready(&mut g, 0, catalog::shambling_suit());
+    let blade = ready(&mut g, 0, catalog::pennon_blade());
+    assert_eq!(pt(&g, suit), (2, 3), "the Suit and the Blade");
+    g.battlefield_find_mut(blade).unwrap().attached_to = Some(suit);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, suit), (4, 5), "+1/+1 for each of two creatures");
+}
+
+/// Rhizome Lurcher enters with a counter per creature card in your graveyard;
+/// Molderhulk costs {1} less per one.
+#[test]
+fn undergrowth_counts_creature_cards() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    let lurcher = g.add_card_to_hand(0, catalog::rhizome_lurcher());
+    cast(&mut g, lurcher);
+    assert_eq!(plus(&g, lurcher), 2);
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    let hulk = g.add_card_to_hand(0, catalog::molderhulk());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(forest))]));
+    cast(&mut g, hulk);
+    assert!(g.battlefield_find(forest).is_some(), "the land came back");
+}
+
+/// Face Yourself copies each of a player's creatures with haste, and the copies
+/// leave at the end step without a planeswalker.
+#[test]
+fn face_yourself_copies_then_sacrifices() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::face_yourself());
+    cast_with(&mut g, spell, Some(Target::Player(1)), None);
+    let mine: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.id).collect();
+    assert_eq!(mine.len(), 2);
+    assert!(mine.iter().all(|id| g.permanent_has_keyword(*id, &Keyword::Haste)));
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 0);
+}
+
+/// Stone-Giant of High Pass makes a Stone Boulder as it enters and sacrifices
+/// an artifact for 4 damage.
+#[test]
+fn stone_giant_boulders_and_throws() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_hand(0, catalog::stone_giant_of_high_pass());
+    cast(&mut g, giant);
+    assert_eq!(named_count(&g, 0, "Stone Boulder"), 1);
+    let life = g.players[1].life;
+    activate(&mut g, giant, 0, Some(Target::Player(1)));
+    assert_eq!(named_count(&g, 0, "Stone Boulder"), 0);
+    assert_eq!(g.players[1].life, life - 4);
+}
+
+/// Winter: sacrificing a creature makes each opponent sacrifice one.
+#[test]
+fn winter_trades_a_sacrifice_with_each_opponent() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 2, catalog::grizzly_bears());
+    let winter = g.add_card_to_hand(0, catalog::winter_tormented_loner());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, winter);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert_eq!(g.players[0].graveyard.len(), 1, "one creature of yours paid for it");
 }

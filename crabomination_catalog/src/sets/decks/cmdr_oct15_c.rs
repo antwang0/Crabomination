@@ -2483,3 +2483,235 @@ pub fn uninvited_geist() -> CardDefinition {
         ..skulk("Uninvited Geist", cost(&[generic(2), u()]), vec![CreatureType::Spirit], 2, 2)
     }
 }
+
+// ── Batch 7 ─────────────────────────────────────────────────────────────────
+
+/// Cultist's Staff — {2} Equipment, +2/+2, equip {3}.
+pub fn cultists_staff() -> CardDefinition {
+    equipment("Cultist's Staff", cost(&[generic(2)]), cost(&[generic(3)]), EquipBonus { power: 2, toughness: 2, ..Default::default() })
+}
+
+/// Pennon Blade — {3} Equipment, +1/+1 per creature you control, equip {4}.
+pub fn pennon_blade() -> CardDefinition {
+    equipment(
+        "Pennon Blade",
+        cost(&[generic(3)]),
+        cost(&[generic(4)]),
+        EquipBonus {
+            scale: Some(crate::card::EquipScale { filter: yours(R::Creature), per_power: 1, per_toughness: 1, ..Default::default() }),
+            ..Default::default()
+        },
+    )
+}
+
+/// Lens of Clarity — {1} artifact. You may look at your top card and at
+/// face-down creatures you don't control any time (hidden information only).
+pub fn lens_of_clarity() -> CardDefinition {
+    CardDefinition {
+        name: "Lens of Clarity",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
+}
+
+/// Shambling Suit — {3} */3 artifact creature Construct; power is your
+/// artifacts and/or enchantments.
+pub fn shambling_suit() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "Shambling Suit's power is equal to the number of artifacts and/or enchantments you control.",
+            effect: StaticEffect::SelfBasePtFromValue {
+                power: Value::CountOf(Box::new(Selector::EachPermanent(yours(R::Artifact.or(R::Enchantment))))),
+                toughness: Value::Const(3),
+            },
+        }],
+        ..creature("Shambling Suit", cost(&[generic(3)]), vec![CreatureType::Construct], 0, 3)
+    }
+}
+
+fn creature_cards_in_your_graveyard() -> Value {
+    Value::CountOf(Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Creature }))
+}
+
+/// Molderhulk — {7}{B}{G} 6/6 Fungus Zombie. Undergrowth: {1} less per
+/// creature card in your graveyard. Enters: a land card from your graveyard
+/// returns to the battlefield.
+pub fn molderhulk() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Undergrowth — This spell costs {1} less to cast for each creature card in your graveyard.",
+            effect: StaticEffect::SelfCostReducedPerCreatureInGraveyard,
+        }],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::InYourGraveyard.and(R::Land)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        ..creature("Molderhulk", cost(&[generic(7), b(), g()]), vec![CreatureType::Fungus, CreatureType::Zombie], 6, 6)
+    }
+}
+
+/// Rhizome Lurcher — {2}{B}{G} 2/2 Fungus Zombie. Undergrowth: enters with a
+/// +1/+1 counter per creature card in your graveyard.
+pub fn rhizome_lurcher() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, creature_cards_in_your_graveyard())),
+        ..creature("Rhizome Lurcher", cost(&[generic(2), b(), g()]), vec![CreatureType::Fungus, CreatureType::Zombie], 2, 2)
+    }
+}
+
+/// Rune of Sustenance — {1}{W} Aura Rune, enchant permanent. Enters: draw. An
+/// enchanted creature has lifelink; on an Equipment, the creature it equips.
+pub fn rune_of_sustenance() -> CardDefinition {
+    CardDefinition {
+        name: "Rune of Sustenance",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Rune], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Lifelink], relays_through_equipment: true, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Face Yourself — {5}{R}{R} sorcery. A hasty token copy of each creature a
+/// player controls, each sacrificed at an end step while you control no
+/// planeswalker.
+pub fn face_yourself() -> CardDefinition {
+    let no_walker = Predicate::Not(Box::new(Predicate::ValueAtLeast(
+        Value::CountOf(Box::new(Selector::EachPermanent(yours(R::Planeswalker)))),
+        Value::ONE,
+    )));
+    spell(
+        "Face Yourself",
+        cost(&[generic(5), r(), r()]),
+        false,
+        Effect::ForEach {
+            selector: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+            body: Box::new(Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::TriggerSource,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![Keyword::Haste],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::GrantTriggeredAbility {
+                    what: Selector::LastCreatedToken,
+                    trigger: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(no_walker),
+                        effect: Effect::SacrificeSource,
+                    }),
+                    duration: Duration::Permanent,
+                },
+            ])),
+        },
+    )
+}
+
+/// Moonveil Dragon — {3}{R}{R}{R} 5/5 flying Dragon. {R}: your creatures get
+/// +1/+0.
+pub fn moonveil_dragon() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(yours(R::Creature)),
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..flier("Moonveil Dragon", cost(&[generic(3), r(), r(), r()]), vec![CreatureType::Dragon], 5, 5)
+    }
+}
+
+/// Stone-Giant of High Pass — {5}{R}{R} 7/7 Giant. Entering or attacking: a
+/// 3/1 defender Wall artifact token named Stone Boulder. {2}{R}, sacrifice an
+/// artifact: 4 damage to any target.
+pub fn stone_giant_of_high_pass() -> CardDefinition {
+    let boulder = || {
+        make(1, TokenDefinition { keywords: vec![Keyword::Defender], ..token("Stone Boulder", 3, 1, None, vec![CreatureType::Wall], true) })
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(boulder()), on_attack(boulder())],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_other_may_be_source: false,
+            sac_other_filter: Some((R::Artifact, 1)),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..creature("Stone-Giant of High Pass", cost(&[generic(5), r(), r()]), vec![CreatureType::Giant], 7, 7)
+    }
+}
+
+/// Winter, Tormented Loner — {2}{B} legendary 0/3 Human Warlock. Enters: you
+/// may sacrifice a creature or planeswalker; when you do, each opponent
+/// sacrifices a creature. +1/+0 per creature and planeswalker card in your
+/// graveyard.
+pub fn winter_tormented_loner() -> CardDefinition {
+    legendary(CardDefinition {
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice a creature or planeswalker so each opponent sacrifices a creature?".into(),
+            filter: R::Creature.or(R::Planeswalker),
+            count: Value::ONE,
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: R::Creature,
+                }),
+            }),
+            else_: None,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Winter gets +1/+0 for each creature and planeswalker card in your graveyard.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: R::Creature.or(R::Planeswalker),
+                })),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        ..creature("Winter, Tormented Loner", cost(&[generic(2), b()]), vec![CreatureType::Human, CreatureType::Warlock], 0, 3)
+    })
+}
+
+/// Gray Slaad — {2}{B} 4/1 Frog Horror; menace and deathtouch with four or more
+/// creature cards in your graveyard. Adventure: {1}{B} sorcery — mill four.
+pub fn gray_slaad() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as there are four or more creature cards in your graveyard, this creature has menace and deathtouch.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(creature_cards_in_your_graveyard(), Value::Const(4)),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Menace, Keyword::Deathtouch],
+            },
+        }],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Entropic Decay",
+            cost: cost(&[generic(1), b()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+        })),
+        ..creature("Gray Slaad", cost(&[generic(2), b()]), vec![CreatureType::Frog, CreatureType::Horror], 4, 1)
+    }
+}
