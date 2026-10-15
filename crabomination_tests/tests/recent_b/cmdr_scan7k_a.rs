@@ -333,3 +333,196 @@ fn thrull_wizard_taxes_black_spells_b_or_three() {
         assert_eq!(g.battlefield_find(bear).is_none(), paid, "{floating} floating");
     }
 }
+
+// ── decks::cmdr_scan7k_b ─────────────────────────────────────────────────────
+
+fn library(g: &mut GameState, seat: usize, n: usize) {
+    for _ in 0..n {
+        g.add_card_to_library(seat, catalog::island());
+    }
+}
+
+/// Armaggon's entry destroys up to three creatures — the opponents'.
+#[test]
+fn armaggon_destroys_up_to_three() {
+    let mut g = pod(3);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs: Vec<CardId> = (0..3).map(|i| ready(&mut g, 1 + i % 2, catalog::grizzly_bears())).collect();
+    let shark = g.add_card_to_hand(0, catalog::armaggon_future_shark());
+    cast(&mut g, shark);
+    assert!(g.battlefield_find(mine).is_some());
+    assert!(theirs.iter().all(|id| g.battlefield_find(*id).is_none()));
+}
+
+/// Shark Shredder's hit puts a creature card from the damaged player's
+/// graveyard onto the battlefield under its controller, tapped and attacking.
+#[test]
+fn shark_shredder_steals_from_the_graveyard_it_hit() {
+    let mut g = pod(3);
+    let shark = ready(&mut g, 0, catalog::shark_shredder_killer_clone());
+    let corpse = g.add_card_to_graveyard(2, catalog::serra_angel());
+    declare(&mut g, vec![(shark, 2)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat && g.battlefield_find(corpse).is_none() {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    let angel = g.battlefield_find(corpse).expect("reanimated");
+    assert_eq!(angel.controller, 0);
+    assert!(angel.tapped);
+    assert!(g.attacking().iter().any(|a| a.attacker == corpse && a.target == AttackTarget::Player(2)));
+}
+
+/// Songbird discards for flying.
+#[test]
+fn songbird_discards_for_flying() {
+    let mut g = pod(2);
+    let bird = ready(&mut g, 0, catalog::songbird_sonic_screamer());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, bird, 0, None);
+    assert!(g.permanent_has_keyword(bird, &Keyword::Flying));
+    assert!(g.players[0].hand.is_empty());
+}
+
+/// Unesh's entry splits the top four between hand and graveyard, and Sphinx
+/// spells cost {2} less after it.
+#[test]
+fn unesh_splits_four_and_discounts_sphinxes() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    let unesh = g.add_card_to_hand(0, catalog::unesh_criosphinx_sovereign());
+    cast(&mut g, unesh);
+    assert_eq!(g.players[0].hand.len() + g.players[0].graveyard.len(), 4);
+    assert_eq!(g.players[0].library.len(), 2);
+    let jwar = g.add_card_to_hand(0, catalog::sphinx_of_jwar_isle());
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: jwar, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{4}{U}{U} less two");
+}
+
+/// Teferi, Timebender's −3: 2 life and two cards.
+#[test]
+fn teferi_timebender_minus_three_draws_two() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let pw = ready(&mut g, 0, catalog::teferi_timebender());
+    g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 5);
+    let life = g.players[0].life;
+    loyalty(&mut g, pw, 1, None);
+    assert_eq!(g.players[0].life, life + 2);
+    assert_eq!(g.players[0].hand.len(), 2);
+}
+
+/// Cartouche of Knowledge draws as it enters and gives flying and +1/+1.
+#[test]
+fn cartouche_of_knowledge_draws_and_grants_flying() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::cartouche_of_knowledge());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("aura");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Flying));
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// Reptil's {3} form: a 3/5 Dinosaur Hero with vigilance and reach this turn.
+#[test]
+fn reptil_becomes_a_brontosaurus() {
+    let mut g = pod(2);
+    let reptil = ready(&mut g, 0, catalog::reptil_dinomorpher());
+    activate(&mut g, reptil, 0, None);
+    assert_eq!(pt(&g, reptil), (3, 5));
+    assert!(g.permanent_has_keyword(reptil, &Keyword::Reach));
+    assert!(g.permanent_has_keyword(reptil, &Keyword::Vigilance));
+    let c = g.computed_permanent(reptil).unwrap();
+    assert!(c.subtypes().creature_types.contains(&crabomination::card::CreatureType::Dinosaur));
+    assert!(!c.subtypes().creature_types.contains(&crabomination::card::CreatureType::Human), "becomes, not in addition");
+}
+
+/// Roaring Primadox returns one of your creatures at your upkeep.
+#[test]
+fn roaring_primadox_bounces_at_upkeep() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    library(&mut g, 1, 2);
+    ready(&mut g, 0, catalog::roaring_primadox());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::Draw);
+    let bf = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(bf, 1, "one of the two went home");
+    let _ = bear;
+}
+
+/// Spider-Man, Brooklyn Visionary cast for its web-slinging cost bounces a
+/// tapped creature and fetches a tapped basic.
+#[test]
+fn spider_man_brooklyn_visionary_web_slings_and_ramps() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::forest());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spidey = g.add_card_to_hand(0, catalog::spider_man_brooklyn_visionary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spidey, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("web-slinging {2}{G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    let forest = g.battlefield.iter().find(|c| c.definition.name == "Forest").expect("fetched");
+    assert!(forest.tapped);
+}
+
+/// That's Rough Buddy puts two counters once a creature of yours has left
+/// the battlefield this turn, one otherwise.
+#[test]
+fn thats_rough_buddy_counts_a_departed_creature() {
+    for left in [false, true] {
+        let mut g = pod(2);
+        library(&mut g, 0, 2);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        if left {
+            let other = ready(&mut g, 0, catalog::llanowar_elves());
+            let mut evs = Vec::new();
+            g.sacrifice_one(other, 0, &mut evs);
+        }
+        let buddy = g.add_card_to_hand(0, catalog::thats_rough_buddy());
+        flood(&mut g);
+        g.perform_action(GameAction::CastSpell {
+            card_id: buddy, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(plus(&g, bear), if left { 2 } else { 1 });
+    }
+}
+
+/// Paramecia Coloniex dying exiles itself to put a creature card on top of
+/// your library.
+#[test]
+fn paramecia_coloniex_stacks_a_creature_on_top() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let worm = ready(&mut g, 0, catalog::paramecia_coloniex());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    g.sacrifice_one(worm, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == worm));
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(angel), "on top");
+}

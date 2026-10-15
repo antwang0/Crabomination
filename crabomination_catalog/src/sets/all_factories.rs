@@ -15602,6 +15602,21 @@ static DECKS: &[Factory] = &[
     super::decks::avatar_of_growth,
     super::decks::dragonrage,
     super::decks::thrull_wizard,
+    // cmdr_scan7k_b
+    super::decks::armaggon_future_shark,
+    super::decks::shark_shredder_killer_clone,
+    super::decks::songbird_sonic_screamer,
+    super::decks::unesh_criosphinx_sovereign,
+    super::decks::teferi_timebender,
+    super::decks::cartouche_of_knowledge,
+    super::decks::cloak_of_feathers,
+    super::decks::spider_rex_daring_dino,
+    super::decks::reptil_dinomorpher,
+    super::decks::roaring_primadox,
+    super::decks::spider_man_brooklyn_visionary,
+    super::decks::sokkas_sword_training,
+    super::decks::thats_rough_buddy,
+    super::decks::paramecia_coloniex,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
