@@ -3289,3 +3289,26 @@ fn great_gilded_boat_recruits_on_attack() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm));
     assert_eq!(named_count(&g, 0, "Human Soldier"), 1);
 }
+
+/// CR 400.7 — bug fix: Me, the Immortal keeps counters everywhere but a hand
+/// or library, so a Reprieve bouncing the spell leaves none on the card in
+/// hand (four-seat audit pod, seed 932544).
+#[test]
+fn reprieve_strips_me_the_immortals_counters() {
+    let mut g = pod(2);
+    library(&mut g, 1, 2);
+    let me = g.add_card_to_hand(0, catalog::me_the_immortal());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: me, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    if let Some(crabomination::game::types::StackItem::Spell { card, .. }) = g.stack.last_mut() {
+        card.add_counters(CounterType::PlusOnePlusOne, 3);
+    }
+    let rep = g.add_card_to_hand(1, catalog::reprieve());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: rep, target: Some(Target::Permanent(me)), additional_targets: vec![], mode: None, x_value: None }).expect("reprieve");
+    drain_stack(&mut g);
+    let card = g.players[0].hand.iter().find(|c| c.id == me).expect("back in hand");
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 0);
+}

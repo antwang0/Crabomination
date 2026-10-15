@@ -24637,9 +24637,13 @@ impl GameState {
                         };
                         // CR 400.7 — a card in a hand or library is a new
                         // object: no kicker or cast permission rides along
-                        // (Spell Crumple bottoming a kicked spell, seed 4200188).
-                        if would_be.is_some() {
+                        // (Spell Crumple bottoming a kicked spell, seed 4200188),
+                        // and no counters either, even Me, the Immortal's —
+                        // its text keeps them everywhere but a hand or library
+                        // (Reprieve on it, four-seat audit pod seed 932544).
+                        if let Some(to) = would_be {
                             card.forget_spell_choices();
+                            card.drop_counters_for_zone_change(to);
                         }
                         match zone {
                             // Index 0 is the top (draw = `library.remove(0)`).
