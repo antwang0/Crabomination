@@ -223,6 +223,7 @@ pub fn rune_of_might() -> CardDefinition {
         },
     );
     c.triggered_abilities = vec![etb(draw(1))];
+    c.subtypes.enchantment_subtypes.push(crate::card::EnchantmentSubtype::Rune);
     c
 }
 

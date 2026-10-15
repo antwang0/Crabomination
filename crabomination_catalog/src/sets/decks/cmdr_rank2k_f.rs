@@ -411,7 +411,7 @@ pub fn pirates_prize() -> CardDefinition {
 /// Rune of Speed — {1}{R} Aura on a permanent: entering draws a card; a
 /// creature host gets +1/+0 and haste, an Equipment host grants that.
 pub fn rune_of_speed() -> CardDefinition {
-    CardDefinition {
+    let mut c = CardDefinition {
         triggered_abilities: vec![etb(draw(1))],
         equipped_bonus: Some(EquipBonus {
             power: 1,
@@ -420,7 +420,9 @@ pub fn rune_of_speed() -> CardDefinition {
             ..Default::default()
         }),
         ..aura("Rune of Speed", cost(&[generic(1), r()]), R::Permanent)
-    }
+    };
+    c.subtypes.enchantment_subtypes.push(crate::card::EnchantmentSubtype::Rune);
+    c
 }
 
 /// Scrap Welder — {2}{R} 3/3 Goblin Artificer. {T}, sacrifice an artifact
