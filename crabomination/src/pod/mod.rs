@@ -17280,6 +17280,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHARK_SHREDDER_COMMANDERS,
             main: decks::SHARK_SHREDDER_MAIN,
         },
+        // Seat 2805: Orcus, Prince of Undeath's EDHREC average deck. `--pod-decks 2805`.
+        PodDeck {
+            name: "Orcus, Prince of Undeath (BR)",
+            commanders: decks::ORCUS_COMMANDERS,
+            main: decks::ORCUS_MAIN,
+        },
+        // Seat 2806: Baron Sengir's EDHREC average deck. `--pod-decks 2806`.
+        PodDeck {
+            name: "Baron Sengir (B)",
+            commanders: decks::BARON_SENGIR_COMMANDERS,
+            main: decks::BARON_SENGIR_MAIN,
+        },
+        // Seat 2807: Nemata, Primeval Warden's EDHREC average deck. `--pod-decks 2807`.
+        PodDeck {
+            name: "Nemata, Primeval Warden (BG)",
+            commanders: decks::NEMATA_COMMANDERS,
+            main: decks::NEMATA_MAIN,
+        },
+        // Seat 2808: Strong, the Brutish Thespian's EDHREC average deck. `--pod-decks 2808`.
+        PodDeck {
+            name: "Strong, the Brutish Thespian (G)",
+            commanders: decks::STRONG_COMMANDERS,
+            main: decks::STRONG_MAIN,
+        },
+        // Seat 2809: Oviya Pashiri, Sage Lifecrafter's EDHREC average deck. `--pod-decks 2809`.
+        PodDeck {
+            name: "Oviya Pashiri, Sage Lifecrafter (G)",
+            commanders: decks::OVIYA_PASHIRI_COMMANDERS,
+            main: decks::OVIYA_PASHIRI_MAIN,
+        },
+        // Seat 2810: Curie, Emergent Intelligence's EDHREC average deck. `--pod-decks 2810`.
+        PodDeck {
+            name: "Curie, Emergent Intelligence (U)",
+            commanders: decks::CURIE_COMMANDERS,
+            main: decks::CURIE_MAIN,
+        },
+        // Seat 2811: Absorbing Man and Titania's EDHREC average deck. `--pod-decks 2811`.
+        PodDeck {
+            name: "Absorbing Man and Titania (RG)",
+            commanders: decks::ABSORBING_MAN_AND_TITANIA_COMMANDERS,
+            main: decks::ABSORBING_MAN_AND_TITANIA_MAIN,
+        },
+        // Seat 2812: Tobias, Doomed Conqueror's EDHREC average deck. `--pod-decks 2812`.
+        PodDeck {
+            name: "Tobias, Doomed Conqueror (WU)",
+            commanders: decks::TOBIAS_COMMANDERS,
+            main: decks::TOBIAS_MAIN,
+        },
+        // Seat 2813: Jet, Freedom Fighter's EDHREC average deck. `--pod-decks 2813`.
+        PodDeck {
+            name: "Jet, Freedom Fighter (WR)",
+            commanders: decks::JET_2_COMMANDERS,
+            main: decks::JET_2_MAIN,
+        },
+        // Seat 2814: Hercules, Olympian Hero's EDHREC average deck. `--pod-decks 2814`.
+        PodDeck {
+            name: "Hercules, Olympian Hero (W)",
+            commanders: decks::HERCULES_2_COMMANDERS,
+            main: decks::HERCULES_2_MAIN,
+        },
+        // Seat 2815: Quake, Agent of S.H.I.E.L.D.'s EDHREC average deck. `--pod-decks 2815`.
+        PodDeck {
+            name: "Quake, Agent of S.H.I.E.L.D. (W)",
+            commanders: decks::QUAKE_COMMANDERS,
+            main: decks::QUAKE_MAIN,
+        },
+        // Seat 2816: Spider-Gwen, Free Spirit's EDHREC average deck. `--pod-decks 2816`.
+        PodDeck {
+            name: "Spider-Gwen, Free Spirit (R)",
+            commanders: decks::SPIDER_GWEN_COMMANDERS,
+            main: decks::SPIDER_GWEN_MAIN,
+        },
+        // Seat 2817: Badgey, Malicious Glitch's EDHREC average deck. `--pod-decks 2817`.
+        PodDeck {
+            name: "Badgey, Malicious Glitch (B)",
+            commanders: decks::BADGEY_COMMANDERS,
+            main: decks::BADGEY_MAIN,
+        },
+        // Seat 2818: Lady Caleria's EDHREC average deck. `--pod-decks 2818`.
+        PodDeck {
+            name: "Lady Caleria (WG)",
+            commanders: decks::LADY_CALERIA_COMMANDERS,
+            main: decks::LADY_CALERIA_MAIN,
+        },
+        // Seat 2819: Shang-Chi, Martial Mentor's EDHREC average deck. `--pod-decks 2819`.
+        PodDeck {
+            name: "Shang-Chi, Martial Mentor (G)",
+            commanders: decks::SHANG_CHI_2_COMMANDERS,
+            main: decks::SHANG_CHI_2_MAIN,
+        },
+        // Seat 2820: The Mary Janes's EDHREC average deck. `--pod-decks 2820`.
+        PodDeck {
+            name: "The Mary Janes (R)",
+            commanders: decks::THE_MARY_JANES_COMMANDERS,
+            main: decks::THE_MARY_JANES_MAIN,
+        },
+        // Seat 2821: Picard, Steadfast Captain's EDHREC average deck. `--pod-decks 2821`.
+        PodDeck {
+            name: "Picard, Steadfast Captain (W)",
+            commanders: decks::PICARD_2_COMMANDERS,
+            main: decks::PICARD_2_MAIN,
+        },
+        // Seat 2822: General Chang, Cold Warrior's EDHREC average deck. `--pod-decks 2822`.
+        PodDeck {
+            name: "General Chang, Cold Warrior (B)",
+            commanders: decks::GENERAL_CHANG_COMMANDERS,
+            main: decks::GENERAL_CHANG_MAIN,
+        },
+        // Seat 2823: Patriot, Young Avenger's EDHREC average deck. `--pod-decks 2823`.
+        PodDeck {
+            name: "Patriot, Young Avenger (WR)",
+            commanders: decks::PATRIOT_COMMANDERS,
+            main: decks::PATRIOT_MAIN,
+        },
     ]
 }
 
@@ -21920,6 +22034,25 @@ mod tests {
             ("Dralnu, Lich Lord", &[0x1508]),
             ("Shredder, Shadow Master", &[0x1509]),
             ("Shark Shredder, Killer Clone", &[0x150A]),
+            ("Orcus, Prince of Undeath", &[0x150B]),
+            ("Baron Sengir", &[0x150C]),
+            ("Nemata, Primeval Warden", &[0x150D]),
+            ("Strong, the Brutish Thespian", &[0x150E]),
+            ("Oviya Pashiri, Sage Lifecrafter", &[0x150F]),
+            ("Curie, Emergent Intelligence", &[0x1510]),
+            ("Absorbing Man and Titania", &[0x1511]),
+            ("Tobias, Doomed Conqueror", &[0x1512]),
+            ("Jet, Freedom Fighter", &[0x1513]),
+            ("Hercules, Olympian Hero", &[0x1514]),
+            ("Quake, Agent of S.H.I.E.L.D.", &[0x1515]),
+            ("Spider-Gwen, Free Spirit", &[0x1516]),
+            ("Badgey, Malicious Glitch", &[0x1517]),
+            ("Lady Caleria", &[0x1518]),
+            ("Shang-Chi, Martial Mentor", &[0x1519]),
+            ("The Mary Janes", &[0x151A]),
+            ("Picard, Steadfast Captain", &[0x151B]),
+            ("General Chang, Cold Warrior", &[0x151C]),
+            ("Patriot, Young Avenger", &[0x151D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
