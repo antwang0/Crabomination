@@ -203,6 +203,13 @@ the handoff.
   losses; Ganax's true loop), the Dovehawk cap above, and two **OPEN board caps** — Mazirek + Scurry
   Oak + Iridescent Hornbeetle (6 seats, seed 920254 game 1) and Roil Elemental + Zagorka + Machine Man
   (seed 921736 game 1): token explosions the bot opts into, the Preston / Cathars' Crusade lever.
+- **Sweep seed 9303 (audit, 1,456 games, every deck x 4,6,8):** 3 panics, 1 board cap.
+  Endless Whispers and Verdant Mastery resolved `PlayerRef::EachOpponent` as a battlefield
+  controller — several players in a pod (seeds 930608, 931908; fixed upstream concurrently with
+  `OpponentOf(You)`, pod regression test in `cmdr_scan7k_a.rs`). **FIXED:** the pod's CR 704.5a
+  invariant waived Phyrexian Unlife but not Pact Weapon's `ControllerDoesntLoseForZeroLife`
+  (seed 931068). **OPEN board cap:** seed 931516, decks 967,1825,985,2488 (Blossoming Sands
+  triggers among the tops).
 - ✅ ~~**OPEN (bot):** storm-style cast copies keep the original's target~~ — fixed by `012vc8CU`.
 - **Blocked (primitive):** My Precious (an Adventure half with an additional sacrifice cost —
   `Adventure` has no `additional_cast_cost`, 173 literals), Charging Tuskodon (a per-creature
