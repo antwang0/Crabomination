@@ -16380,6 +16380,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IRON_MAN_5_COMMANDERS,
             main: decks::IRON_MAN_5_MAIN,
         },
+        // Seat 2655: Slinza, the Spiked Stampede's EDHREC average deck. `--pod-decks 2655`.
+        PodDeck {
+            name: "Slinza, the Spiked Stampede (RG)",
+            commanders: decks::SLINZA_COMMANDERS,
+            main: decks::SLINZA_MAIN,
+        },
+        // Seat 2656: Zagras, Thief of Heartbeats's EDHREC average deck. `--pod-decks 2656`.
+        PodDeck {
+            name: "Zagras, Thief of Heartbeats (BR)",
+            commanders: decks::ZAGRAS_COMMANDERS,
+            main: decks::ZAGRAS_MAIN,
+        },
+        // Seat 2657: Feroz, Ulgrotha's Warden's EDHREC average deck. `--pod-decks 2657`.
+        PodDeck {
+            name: "Feroz, Ulgrotha's Warden (WUG)",
+            commanders: decks::FEROZ_COMMANDERS,
+            main: decks::FEROZ_MAIN,
+        },
+        // Seat 2658: Captain Ripley Vance's EDHREC average deck. `--pod-decks 2658`.
+        PodDeck {
+            name: "Captain Ripley Vance (R)",
+            commanders: decks::CAPTAIN_RIPLEY_VANCE_COMMANDERS,
+            main: decks::CAPTAIN_RIPLEY_VANCE_MAIN,
+        },
+        // Seat 2659: Prince Imrahil the Fair's EDHREC average deck. `--pod-decks 2659`.
+        PodDeck {
+            name: "Prince Imrahil the Fair (WU)",
+            commanders: decks::PRINCE_IMRAHIL_THE_FAIR_COMMANDERS,
+            main: decks::PRINCE_IMRAHIL_THE_FAIR_MAIN,
+        },
+        // Seat 2660: The Spot, Living Portal's EDHREC average deck. `--pod-decks 2660`.
+        PodDeck {
+            name: "The Spot, Living Portal (WB)",
+            commanders: decks::THE_SPOT_COMMANDERS,
+            main: decks::THE_SPOT_MAIN,
+        },
+        // Seat 2661: Azula, On the Hunt's EDHREC average deck. `--pod-decks 2661`.
+        PodDeck {
+            name: "Azula, On the Hunt (B)",
+            commanders: decks::AZULA_3_COMMANDERS,
+            main: decks::AZULA_3_MAIN,
+        },
+        // Seat 2662: Suki, Courageous Rescuer's EDHREC average deck. `--pod-decks 2662`.
+        PodDeck {
+            name: "Suki, Courageous Rescuer (W)",
+            commanders: decks::SUKI_2_COMMANDERS,
+            main: decks::SUKI_2_MAIN,
+        },
+        // Seat 2663: Jarvis, Earth's Mightiest Butler's EDHREC average deck. `--pod-decks 2663`.
+        PodDeck {
+            name: "Jarvis, Earth's Mightiest Butler (U)",
+            commanders: decks::JARVIS_COMMANDERS,
+            main: decks::JARVIS_MAIN,
+        },
     ]
 }
 
@@ -20867,6 +20921,15 @@ mod tests {
             ("The Fire Nation Drill", &[0x1472]),
             ("Yoshimaru, Beloved Companion", &[0x1473]),
             ("Iron Man, Futurist Paragon", &[0x1474]),
+            ("Slinza, the Spiked Stampede", &[0x1475]),
+            ("Zagras, Thief of Heartbeats", &[0x1476]),
+            ("Feroz, Ulgrotha's Warden", &[0x1477]),
+            ("Captain Ripley Vance", &[0x1478]),
+            ("Prince Imrahil the Fair", &[0x1479]),
+            ("The Spot, Living Portal", &[0x147A]),
+            ("Azula, On the Hunt", &[0x147B]),
+            ("Suki, Courageous Rescuer", &[0x147C]),
+            ("Jarvis, Earth's Mightiest Butler", &[0x147D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
