@@ -2396,6 +2396,9 @@ pub enum Predicate {
     /// `GameState.opponent_cast_since_your_turn` seat mask, cleared at `who`'s
     /// cleanup.
     OpponentCastSpellSinceYourTurn { who: PlayerRef },
+    /// True if `who` has been dealt combat damage since their last turn ended
+    /// (Marchesa, Resolute Monarch). `GameState.combat_damaged_since_your_turn`.
+    CombatDamagedSinceYourTurn { who: PlayerRef },
     /// CR 701.19 — true if `who` (any matching player) searched their own
     /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
     /// opponent. Archive Trap's "rather than pay" gate.

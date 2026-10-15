@@ -3007,6 +3007,11 @@ pub struct GameState {
     /// tracked; no supported format seats that many.
     #[serde(default)]
     pub(crate) opponent_cast_since_your_turn: u64,
+    /// Seat mask: bit `s` is set once seat `s` has been dealt combat damage
+    /// since its last turn ended (`Predicate::CombatDamagedSinceYourTurn`).
+    /// Cleared for the active player at cleanup, as the mask above.
+    #[serde(default)]
+    pub(crate) combat_damaged_since_your_turn: u64,
     /// Printed colours of the most recently cast spell this turn — Mana
     /// Maze's cast restriction. Cleared at Cleanup.
     ///
@@ -4555,6 +4560,7 @@ impl Clone for GameState {
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
             opponent_cast_since_your_turn: self.opponent_cast_since_your_turn,
+            combat_damaged_since_your_turn: self.combat_damaged_since_your_turn,
             last_cast_spell_colors: self.last_cast_spell_colors,
             noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
@@ -4774,6 +4780,7 @@ impl GameState {
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
             opponent_cast_since_your_turn: 0,
+            combat_damaged_since_your_turn: 0,
             last_cast_spell_colors: crate::mana::ColorSet::empty(),
             noncreature_spells_cast_this_turn: 0,
             mana_spent_on_spells_this_turn: 0,
