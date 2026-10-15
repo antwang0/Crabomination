@@ -72479,3 +72479,59 @@ pub const REPTIL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest,
 ];
+
+pub const BALTHIER_AND_FRAN_COMMANDERS: &[CardFactory] = &[balthier_and_fran];
+
+/// **Balthier and Fran**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Mountains = 99.
+/// Balthier and Fran (EDHREC, fetched 2026-10-15).
+pub const BALTHIER_AND_FRAN_MAIN: &[CardFactory] = &[
+    adventurers_airship, arcane_signet, brotherhood_vertibird, cultivators_caravan, cybership,
+    esikas_chariot, guidelight_matrix, hoard_hauler, lumbering_worldwagon,
+    mighty_servant_of_leuk_o, nautiloid_ship, reaver_titan, reckoner_bankbuster,
+    rocketeer_boostbuggy, rolling_hamsphere, skysovereign_consul_flagship, smugglers_copter,
+    sol_ring, surgehacker_mech, the_regalia, the_thanos_copter, thunderhawk_gunship,
+    thunderous_velocipede, veloheart_bike, weatherlight, buried_ruin, cinder_glade,
+    command_tower, game_trail, karplusan_forest, kessig_wolf_run, mech_hangar, mossfire_valley,
+    rockfall_vale, rocky_roads, rogues_passage, rootbound_crag, spire_garden, stomping_ground,
+    thornspire_verge, wild_roads, bello_bard_of_the_brambles, blaster_combat_dj,
+    canoptek_spyder, dynamite_diver, elvish_mystic, foundry_inspector, goblin_anarchomancer,
+    house_cartographer, intrepid_stablemaster, iron_spider_stark_upgrade, jhoiras_familiar,
+    kona_rescue_beastie, llanowar_elves, meria_scholar_of_antiquity, ohran_frostfang,
+    oviya_automech_artisan, reckless_velocitaur, speedway_fanatic, toski_bearer_of_secrets,
+    berserkers_onslaught, pias_revolution, siege_modification, unnatural_growth, beast_within,
+    chaos_warp, defend_the_rider, heroic_intervention, road_rage, run_over,
+    untimely_malfunction, chandra_spark_hunter, blasphemous_act, cultivate, farseek,
+    full_throttle, natures_lore, push_the_limit, rampant_growth, start_your_engines,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BLASTER_COMMANDERS: &[CardFactory] = &[blaster_combat_dj];
+
+/// **Blaster, Combat DJ**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 10 Forests + 8 Mountains = 99.
+/// Blaster, Combat DJ (EDHREC, fetched 2026-10-15).
+pub const BLASTER_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cloud_key, gruul_signet, lux_artillery, mystic_forge,
+    ozolith_the_shattered_spire, sol_ring, the_earth_crystal, the_great_henge, the_ozolith,
+    throne_of_geth, thunderous_velocipede, buried_ruin, cinder_glade, command_tower, game_trail,
+    great_furnace, inventors_fair, karns_bastion, karplusan_forest, kessig_wolf_run,
+    power_depot, rockfall_vale, rootbound_crag, slagwoods_bridge, spire_garden, stomping_ground,
+    tree_of_tales, arcbound_crusher, arcbound_overseer, arcbound_ravager, arcbound_reclaimer,
+    arcbound_slith, arcbound_stinger, arcbound_tracker, arcbound_worker, big_mother_mouser,
+    copper_myr, cradle_clearcutter, foundry_inspector, hangarback_walker, haywire_mite,
+    iron_apprentice, iron_myr, iron_spider_stark_upgrade, liberator_urzas_battlethopter,
+    marketback_walker, myr_retriever, ornithopter_of_paradise, patchwork_automaton,
+    scrap_trawler, scrapyard_recombiner, solemn_simulacrum, steel_overseer, stonecoil_serpent,
+    surge_conductor, threefold_thunderhulk, verdurous_gearhulk, walking_ballista,
+    all_will_be_one, branching_evolution, greater_good, hardened_scales,
+    invigorating_hot_spring, rhythm_of_the_wild, terrasymbiosis, beast_within, chaos_warp,
+    heroic_intervention, inspiring_call, kazuuls_fury, return_of_the_wildspeaker,
+    daretti_scrap_savant, blasphemous_act, cultivate, natures_lore, rampant_growth,
+    rishkars_expertise, stump_stomp, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

@@ -15936,6 +15936,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::REPTIL_COMMANDERS,
             main: decks::REPTIL_MAIN,
         },
+        // Seat 2581: Balthier and Fran's EDHREC average deck. `--pod-decks 2581`.
+        PodDeck {
+            name: "Balthier and Fran (RG)",
+            commanders: decks::BALTHIER_AND_FRAN_COMMANDERS,
+            main: decks::BALTHIER_AND_FRAN_MAIN,
+        },
+        // Seat 2582: Blaster, Combat DJ's EDHREC average deck. `--pod-decks 2582`.
+        PodDeck {
+            name: "Blaster, Combat DJ (RG)",
+            commanders: decks::BLASTER_COMMANDERS,
+            main: decks::BLASTER_MAIN,
+        },
     ]
 }
 
@@ -20349,6 +20361,8 @@ mod tests {
             ("Armaggon, Future Shark", &[0x1428]),
             ("Aang, the Last Airbender", &[0x1429]),
             ("Reptil, Dinomorpher", &[0x142A]),
+            ("Balthier and Fran", &[0x142B]),
+            ("Blaster, Combat DJ", &[0x142C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
