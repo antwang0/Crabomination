@@ -1030,3 +1030,19 @@ fn dr_crusher_doubles_lifegain_triggers() {
     cast_with(&mut g, spell, Some(Target::Player(0)), vec![], None);
     assert_eq!(plus(&g, crusher), 2);
 }
+
+/// CR 508.1 — under Tomik, a planeswalker takes one attacker a combat.
+#[test]
+fn tomik_caps_attackers_per_planeswalker() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::tomik_orzhov_lawmage());
+    let walker = ready(&mut g, 1, catalog::ajani_outland_chaperone());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let at_pw = |id| Attack { attacker: id, target: AttackTarget::Planeswalker(walker) };
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![at_pw(a), at_pw(b)])).is_err());
+    g.perform_action(GameAction::DeclareAttackers(vec![at_pw(a), Attack { attacker: b, target: AttackTarget::Player(1) }]))
+        .expect("one at the planeswalker");
+}

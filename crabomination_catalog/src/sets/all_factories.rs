@@ -4612,6 +4612,7 @@ static DECKS: &[Factory] = &[
     super::decks::volcano_hellion,
     super::decks::saheeli_filigree_master,
     super::decks::dr_beverly_crusher,
+    super::decks::tomik_orzhov_lawmage,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

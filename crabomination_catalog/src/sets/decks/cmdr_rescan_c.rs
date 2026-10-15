@@ -720,3 +720,27 @@ pub fn dr_beverly_crusher() -> CardDefinition {
         ..legend("Dr. Beverly Crusher", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Doctor], 2, 2)
     }
 }
+
+/// Tomik, Orzhov Lawmage — {1}{W} legendary 2/1 Human Advisor; flying.
+/// Planeswalkers you control have "No more than one creature can attack this
+/// planeswalker each combat." {T}: target creature with a +1/+1 counter on
+/// it gains flying until end of turn. (Urdnan.)
+pub fn tomik_orzhov_lawmage() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Planeswalkers you control have \"No more than one creature can attack this planeswalker each combat.\"",
+            effect: StaticEffect::YourPlaneswalkersAttackerCap { n: 1 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne))),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend("Tomik, Orzhov Lawmage", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Advisor], 2, 1)
+    }
+}
