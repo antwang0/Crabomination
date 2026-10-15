@@ -46978,8 +46978,9 @@ impl GameState {
                 candidates.extend(
                     self.exile
                         .iter()
+                        // "a face-up … card you own in exile" (Karn, the Great Creator).
                         .filter(|c| {
-                            c.owner == p && self.evaluate_requirement_on_card(filter, c, p)
+                            c.owner == p && !c.face_down && self.evaluate_requirement_on_card(filter, c, p)
                         })
                         .map(|c| (c.id, false)),
                 );
@@ -47016,7 +47017,11 @@ impl GameState {
                 let card = Self::take_card(&mut self.players[p].sideboard, chosen)
                     .or_else(|| self.take_from_exile(chosen));
                 // A wish puts the card into your hand — not a draw (CR 121.1).
-                if let Some(card) = card {
+                // CR 400.7 — a new object: an exile-play permission it had
+                // (Victor Mancha's) doesn't follow it (four-seat audit pod,
+                // seed 930852).
+                if let Some(mut card) = card {
+                    card.may_play_until = None;
                     self.players[p].hand.push(card);
                 }
                 Ok(())

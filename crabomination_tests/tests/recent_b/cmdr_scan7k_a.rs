@@ -2891,3 +2891,22 @@ fn alrund_end_step_takes_the_chosen_type() {
     assert!(g.players[0].hand.iter().any(|c| c.id == wurm));
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(island));
 }
+
+/// CR 400.7 — bug fix: Karn, the Great Creator's −2 takes a card Victor
+/// Mancha exiled to hand without Victor's play permission (four-seat audit
+/// pod, seed 930852), and never a face-down exiled card.
+#[test]
+fn karn_wish_drops_an_exile_play_permission() {
+    let mut g = pod(2);
+    let trawler = g.add_card_to_graveyard(0, catalog::scrap_trawler());
+    let victor = g.add_card_to_hand(0, catalog::victor_mancha_runaway());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: victor, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("victor");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == trawler && c.may_play_until.is_some()), "Victor exiled it playable");
+    let karn = ready(&mut g, 0, catalog::karn_the_great_creator());
+    g.battlefield_find_mut(karn).unwrap().add_counters(CounterType::Loyalty, 5);
+    loyalty(&mut g, karn, 1, None);
+    let card = g.players[0].hand.iter().find(|c| c.id == trawler).expect("wished to hand");
+    assert!(card.may_play_until.is_none());
+}
