@@ -9241,6 +9241,29 @@ impl GameState {
                 CumulativeUpkeepCost::GraveyardCardsToBottom(per) => {
                     self.pay_graveyard_cards_to_bottom(active, *per as usize, n as usize, &mut events)
                 }
+                CumulativeUpkeepCost::GainControlOfLand => {
+                    // The payer's pick: untapped lands first, from the
+                    // opponent with the most lands (lowest id breaks ties).
+                    let land_count = |s: usize| {
+                        self.battlefield.iter().filter(|c| c.controller == s && c.definition.is_land()).count()
+                    };
+                    let mut cands: Vec<(std::cmp::Reverse<usize>, bool, CardId)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller != active && !self.same_team(active, c.controller))
+                        .filter(|c| c.definition.is_land())
+                        .map(|c| (std::cmp::Reverse(land_count(c.controller)), c.tapped, c.id))
+                        .collect();
+                    if cands.len() >= n as usize {
+                        cands.sort();
+                        for (_, _, cid) in cands.into_iter().take(n as usize) {
+                            self.change_control(cid, active);
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
                 CumulativeUpkeepCost::Sacrifice(filter) => {
                     // Need N matching permanents (other than the source) to pay.
                     let cands = self.sacrifice_candidates(active, filter, Some(id));

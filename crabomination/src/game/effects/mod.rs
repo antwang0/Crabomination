@@ -26845,7 +26845,7 @@ impl GameState {
                 Ok(())
             }
             Effect::OwnersGainControlOf { filter } => {
-                self.owners_gain_control_of(filter);
+                self.owners_gain_control_of(filter, Some(ctx.controller));
                 Ok(())
             }
             Effect::DamageEachCreatureOfChosenColor { amount } => {

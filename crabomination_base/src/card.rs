@@ -2923,6 +2923,10 @@ pub enum CumulativeUpkeepCost {
     /// "Cumulative upkeep—An opponent gains N life" (Wall of Shards): N life
     /// per age counter, to one opponent. Payable while an opponent is alive.
     OpponentGainsLife(u32),
+    /// "Cumulative upkeep—Gain control of a land you don't control" (Herald
+    /// of Leshrac): one land per age counter, kept for good (CR 702.24a).
+    /// Unpayable unless that many lands are someone else's.
+    GainControlOfLand,
 }
 
 impl CumulativeUpkeepCost {
@@ -2938,6 +2942,7 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
             CumulativeUpkeepCost::OpponentCreatesSurvivor => "Have an opponent create a 1/1 red Survivor".into(),
             CumulativeUpkeepCost::OpponentGainsLife(n) => format!("An opponent gains {n} life"),
+            CumulativeUpkeepCost::GainControlOfLand => "Gain control of a land you don't control".into(),
             CumulativeUpkeepCost::AddMana(c) => format!("Add one {c:?} mana"),
             CumulativeUpkeepCost::PutCounterOnOpponentCreature(k) => {
                 format!("Put a {k:?} counter on a creature an opponent controls")

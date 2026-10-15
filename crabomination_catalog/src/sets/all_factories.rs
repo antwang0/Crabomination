@@ -16073,6 +16073,7 @@ static DECKS: &[Factory] = &[
     super::decks::twisted_spider_clone,
     super::decks::kapow,
     super::decks::venom_blast,
+    super::decks::herald_of_leshrac,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

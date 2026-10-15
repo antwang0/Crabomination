@@ -4679,3 +4679,29 @@ fn miles_morales_counters_and_fights() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(giant).is_none(), "6 power into the Giant");
 }
+
+/// CR 702.24a — Herald of Leshrac's cumulative upkeep steals a land per age
+/// counter; it gets +1/+1 per stolen land, and leaving gives them back.
+#[test]
+fn herald_of_leshrac_steals_and_returns_lands() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    library(&mut g, 1, 5);
+    let herald = ready(&mut g, 0, catalog::herald_of_leshrac());
+    let a = g.add_card_to_battlefield(1, catalog::swamp());
+    let b = g.add_card_to_battlefield(1, catalog::swamp());
+    step_to(&mut g, 0, TurnStep::Draw);
+    let stolen: Vec<CardId> = [a, b].into_iter().filter(|&l| g.battlefield_find(l).unwrap().controller == 0).collect();
+    assert_eq!(stolen.len(), 1, "one age counter, one land");
+    assert_eq!(pt(&g, herald), (3, 5));
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![herald]) },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(stolen[0]).unwrap().controller, 1, "back to its owner");
+}

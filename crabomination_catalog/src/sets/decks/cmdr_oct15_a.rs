@@ -1772,3 +1772,29 @@ pub fn blood_sun() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Herald of Leshrac — {6}{B} 2/4 flying Avatar. Cumulative upkeep—gain
+/// control of a land you don't control. +1/+1 for each land you control but
+/// don't own. Leaving the battlefield, each player gains control of each land
+/// they own that you control.
+pub fn herald_of_leshrac() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::CumulativeUpkeep(crate::card::CumulativeUpkeepCost::GainControlOfLand),
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each land you control but don't own.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: R::Land.and(R::ControlledByYou).and(R::OwnedByYou.negate()),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::OwnersGainControlOf { filter: R::Land.and(R::ControlledByYou) },
+        }],
+        ..creature("Herald of Leshrac", cost(&[generic(6), b()]), vec![CreatureType::Avatar], 2, 4)
+    }
+}
