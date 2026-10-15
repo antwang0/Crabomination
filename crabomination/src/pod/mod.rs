@@ -16968,6 +16968,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FARAMIR_3_COMMANDERS,
             main: decks::FARAMIR_3_MAIN,
         },
+        // Seat 2753: Ruxa, Patient Professor's EDHREC average deck. `--pod-decks 2753`.
+        PodDeck {
+            name: "Ruxa, Patient Professor (G)",
+            commanders: decks::RUXA_COMMANDERS,
+            main: decks::RUXA_MAIN,
+        },
+        // Seat 2754: Empress Galina's EDHREC average deck. `--pod-decks 2754`.
+        PodDeck {
+            name: "Empress Galina (U)",
+            commanders: decks::EMPRESS_GALINA_COMMANDERS,
+            main: decks::EMPRESS_GALINA_MAIN,
+        },
+        // Seat 2755: Mirri, Cat Warrior's EDHREC average deck. `--pod-decks 2755`.
+        PodDeck {
+            name: "Mirri, Cat Warrior (G)",
+            commanders: decks::MIRRI_2_COMMANDERS,
+            main: decks::MIRRI_2_MAIN,
+        },
+        // Seat 2756: Masumaro, First to Live's EDHREC average deck. `--pod-decks 2756`.
+        PodDeck {
+            name: "Masumaro, First to Live (G)",
+            commanders: decks::MASUMARO_COMMANDERS,
+            main: decks::MASUMARO_MAIN,
+        },
+        // Seat 2757: Jedit Ojanen of Efrava's EDHREC average deck. `--pod-decks 2757`.
+        PodDeck {
+            name: "Jedit Ojanen of Efrava (G)",
+            commanders: decks::JEDIT_OJANEN_OF_EFRAVA_COMMANDERS,
+            main: decks::JEDIT_OJANEN_OF_EFRAVA_MAIN,
+        },
+        // Seat 2758: Kopala, Warden of Waves's EDHREC average deck. `--pod-decks 2758`.
+        PodDeck {
+            name: "Kopala, Warden of Waves (U)",
+            commanders: decks::KOPALA_COMMANDERS,
+            main: decks::KOPALA_MAIN,
+        },
+        // Seat 2759: Lo and Li, Twin Tutors's EDHREC average deck. `--pod-decks 2759`.
+        PodDeck {
+            name: "Lo and Li, Twin Tutors (B)",
+            commanders: decks::LO_AND_LI_2_COMMANDERS,
+            main: decks::LO_AND_LI_2_MAIN,
+        },
+        // Seat 2760: Lady Orca's EDHREC average deck. `--pod-decks 2760`.
+        PodDeck {
+            name: "Lady Orca (BR)",
+            commanders: decks::LADY_ORCA_COMMANDERS,
+            main: decks::LADY_ORCA_MAIN,
+        },
+        // Seat 2761: Casey Jones, Jury-Rig Justiciar's EDHREC average deck. `--pod-decks 2761`.
+        PodDeck {
+            name: "Casey Jones, Jury-Rig Justiciar (R)",
+            commanders: decks::CASEY_JONES_4_COMMANDERS,
+            main: decks::CASEY_JONES_4_MAIN,
+        },
+        // Seat 2762: The Terror of Serpent's Pass's EDHREC average deck. `--pod-decks 2762`.
+        PodDeck {
+            name: "The Terror of Serpent's Pass (U)",
+            commanders: decks::THE_TERROR_OF_SERPENTS_PASS_COMMANDERS,
+            main: decks::THE_TERROR_OF_SERPENTS_PASS_MAIN,
+        },
     ]
 }
 
@@ -21556,6 +21616,16 @@ mod tests {
             ("Siegfried, Famed Swordsman", &[0x14D4]),
             ("Mister Immortal", &[0x14D5]),
             ("Faramir, Field Commander", &[0x14D6]),
+            ("Ruxa, Patient Professor", &[0x14D7]),
+            ("Empress Galina", &[0x14D8]),
+            ("Mirri, Cat Warrior", &[0x14D9]),
+            ("Masumaro, First to Live", &[0x14DA]),
+            ("Jedit Ojanen of Efrava", &[0x14DB]),
+            ("Kopala, Warden of Waves", &[0x14DC]),
+            ("Lo and Li, Twin Tutors", &[0x14DD]),
+            ("Lady Orca", &[0x14DE]),
+            ("Casey Jones, Jury-Rig Justiciar", &[0x14DF]),
+            ("The Terror of Serpent's Pass", &[0x14E0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
