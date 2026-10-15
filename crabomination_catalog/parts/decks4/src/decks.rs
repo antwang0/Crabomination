@@ -1038,3 +1038,6 @@ pub use cmdr_oct15_a::*;
 #[path = "../../../src/sets/decks/cmdr_oct15_b.rs"]
 mod cmdr_oct15_b;
 pub use cmdr_oct15_b::*;
+#[path = "../../../src/sets/decks/cmdr_oct15_c.rs"]
+mod cmdr_oct15_c;
+pub use cmdr_oct15_c::*;
