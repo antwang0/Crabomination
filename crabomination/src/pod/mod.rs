@@ -16776,6 +16776,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WITCH_KING_2_COMMANDERS,
             main: decks::WITCH_KING_2_MAIN,
         },
+        // Seat 2721: Beorn the Fierce's EDHREC average deck. `--pod-decks 2721`.
+        PodDeck {
+            name: "Beorn the Fierce (G)",
+            commanders: decks::BEORN_THE_FIERCE_COMMANDERS,
+            main: decks::BEORN_THE_FIERCE_MAIN,
+        },
+        // Seat 2722: Bruenor Battlehammer's EDHREC average deck. `--pod-decks 2722`.
+        PodDeck {
+            name: "Bruenor Battlehammer (WR)",
+            commanders: decks::BRUENOR_BATTLEHAMMER_COMMANDERS,
+            main: decks::BRUENOR_BATTLEHAMMER_MAIN,
+        },
+        // Seat 2723: Jennifer Walters's EDHREC average deck. `--pod-decks 2723`.
+        PodDeck {
+            name: "Jennifer Walters (WG)",
+            commanders: decks::JENNIFER_WALTERS_COMMANDERS,
+            main: decks::JENNIFER_WALTERS_MAIN,
+        },
+        // Seat 2724: Lucky the Pizza Dog's EDHREC average deck. `--pod-decks 2724`.
+        PodDeck {
+            name: "Lucky the Pizza Dog (G)",
+            commanders: decks::LUCKY_THE_PIZZA_DOG_COMMANDERS,
+            main: decks::LUCKY_THE_PIZZA_DOG_MAIN,
+        },
+        // Seat 2725: Iymrith, Desert Doom's EDHREC average deck. `--pod-decks 2725`.
+        PodDeck {
+            name: "Iymrith, Desert Doom (U)",
+            commanders: decks::IYMRITH_COMMANDERS,
+            main: decks::IYMRITH_MAIN,
+        },
+        // Seat 2726: Madame Hydra, Reanimated's EDHREC average deck. `--pod-decks 2726`.
+        PodDeck {
+            name: "Madame Hydra, Reanimated (B)",
+            commanders: decks::MADAME_HYDRA_COMMANDERS,
+            main: decks::MADAME_HYDRA_MAIN,
+        },
     ]
 }
 
@@ -21332,6 +21368,12 @@ mod tests {
             ("Plargg, Dean of Chaos", &[0x14B4]),
             ("Aisha of Sparks and Smoke", &[0x14B5]),
             ("Witch-king, Sky Scourge", &[0x14B6]),
+            ("Beorn the Fierce", &[0x14B7]),
+            ("Bruenor Battlehammer", &[0x14B8]),
+            ("Jennifer Walters", &[0x14B9]),
+            ("Lucky the Pizza Dog", &[0x14BA]),
+            ("Iymrith, Desert Doom", &[0x14BB]),
+            ("Madame Hydra, Reanimated", &[0x14BC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
