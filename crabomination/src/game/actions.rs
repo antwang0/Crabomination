@@ -8885,7 +8885,7 @@ impl GameState {
         if !printed && granted.is_none() {
             return Err(GameError::CardNotInHand(card_id));
         }
-        if !self.on_active_team(p) {
+        if !self.on_active_team(p) && self.foretell_any_turn_statics(p) == 0 {
             return Err(GameError::SorcerySpeedOnly);
         }
         // The foretell *action* costs {2} — {0} for the first under Ranar.

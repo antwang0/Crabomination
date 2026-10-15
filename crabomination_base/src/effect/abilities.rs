@@ -4115,6 +4115,9 @@ pub enum StaticEffect {
     /// "The first card you foretell each turn costs {0} to foretell."
     /// (Ranar the Ever-Watchful.) Read by the foretell special action.
     FirstForetellEachTurnFree,
+    /// "Foretelling cards from your hand costs {1} less and can be done on
+    /// any player's turn" (Cosmos Charger). Read by the foretell special action.
+    ForetellCostsLessAnyTurn,
     /// CR 601 — "Players can cast spells only during their own turns." Dosan
     /// the Falling Leaf. Symmetric: gated at the cast dispatch for *every*
     /// seat that isn't the active player, including the static's controller.

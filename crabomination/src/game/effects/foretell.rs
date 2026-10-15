@@ -71,7 +71,19 @@ impl GameState {
             self.granted_foretell_cost(*id).is_none()
                 && self.exile.iter().any(|c| c.id == *id && c.owner == seat)
         });
-        ManaCost { symbols: if free { vec![] } else { vec![ManaSymbol::Generic(2)] } }
+        let less = self.foretell_any_turn_statics(seat) as u32;
+        ManaCost { symbols: if free || less >= 2 { vec![] } else { vec![ManaSymbol::Generic(2 - less)] } }
+    }
+
+    /// Cosmos Charger statics `seat` controls: each takes {1} off the foretell
+    /// action, and any one lets it foretell on another player's turn.
+    pub(crate) fn foretell_any_turn_statics(&self, seat: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, StaticEffect::ForetellCostsLessAnyTurn))
+            .count()
     }
 
     /// `Effect::ForetellFromHand` — the controller exiles a card from their

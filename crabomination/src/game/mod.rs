@@ -35636,6 +35636,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantCastDuringYourTurnWhileAttached
             // Ranar — read by the foretell special action; no layer.
             | StaticEffect::FirstForetellEachTurnFree
+            | StaticEffect::ForetellCostsLessAnyTurn
             // PlayersCastOnlyOnOwnTurn (Dosan) — consulted at the cast
             // dispatch; no layer effect.
             | StaticEffect::PlayersCastOnlyOnOwnTurn
