@@ -10016,6 +10016,25 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // gates now skip all six on a board with nothing for them.
     let scan = state.grant_scan();
     let restricted_floating = state.players[seat].mana_pool.restricted_total() > 0;
+    // An untapped source of restricted mana (Omen Hawker's "spend this mana
+    // only to activate abilities") is outside `have` too, so it keeps the
+    // gate open the way floating restricted mana does (an eight-seat audit
+    // pod asserted on Adric's {1}{U}, seed 930788). Asked only when a pip
+    // test is about to close the gate.
+    let restricted_source = std::cell::OnceCell::new();
+    let restricted_source = || {
+        *restricted_source.get_or_init(|| {
+            state.battlefield.iter().any(|c| {
+                c.controller == seat
+                    && !c.tapped
+                    && c.definition.activated_abilities.iter().any(|ab| {
+                        ab.effect.any_nested(&|e| {
+                            matches!(e, crate::effect::Effect::AddMana { pool: crate::effect::ManaPayload::Restricted(..), .. })
+                        })
+                    })
+            })
+        })
+    };
     // K'rrik — "for each {B} in a cost, you may pay 2 life": those pips need
     // no mana of their colour (a five-seat strict debug pod, seed 64036,
     // asserted on Champion of Stray Souls' {B}{B} with one Swamp untapped).
@@ -10117,6 +10136,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
                 && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
                 && !colors_coverable_paying_life(&ab.mana_cost, have.get(), life_pips)
+                && !restricted_source()
             {
                 continue;
             }
@@ -21991,6 +22011,20 @@ mod tests {
         g.priority.player_with_priority = 0;
         // The debug assertion inside `gated_pick!` is the check.
         let _ = main_phase_action(&g, 0);
+    }
+
+    /// An untapped Omen Hawker (abilities-only {C}{U}) can pay Adric's {1}{U}
+    /// sacrifice ability, so the sink gate stays open with every land tapped
+    /// (eight-seat audit pod, seed 930788). Bug fix.
+    #[test]
+    fn sink_gate_counts_an_untapped_restricted_mana_source() {
+        let mut g = crate::game::multi_player_game(3);
+        g.step = TurnStep::PostCombatMain;
+        let hawker = g.add_card_to_battlefield(0, catalog::omen_hawker());
+        g.clear_sickness(hawker);
+        g.add_card_to_battlefield(0, catalog::adric_mathematical_genius());
+        let have = SweepMana::new(&g, 0);
+        assert_ne!(sink_facts(&g, 0, &have) & sink::AB_SAC, 0);
     }
 
     /// A graveyard grant's filter decides which cards it reaches: Mishra, Tamer
