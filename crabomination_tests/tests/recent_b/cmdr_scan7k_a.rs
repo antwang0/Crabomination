@@ -3275,3 +3275,17 @@ fn beorn_till_and_tend_extra_land() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].extra_land_plays, before + 1);
 }
+
+/// Great Gilded Boat recruits when you attack: a nonland discard is a Soldier.
+#[test]
+fn great_gilded_boat_recruits_on_attack() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::great_gilded_boat());
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![wurm])]));
+    declare(&mut g, vec![(bear, 1)]);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm));
+    assert_eq!(named_count(&g, 0, "Human Soldier"), 1);
+}

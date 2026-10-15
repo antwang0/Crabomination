@@ -1638,3 +1638,40 @@ pub fn bearded_axe() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Great Gilded Boat — {2}{U} 4/4 Vehicle, crew 2. Whenever you attack,
+/// recruit: draw, then discard; a nonland discard makes a 1/1 white Human
+/// Soldier.
+pub fn great_gilded_boat() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Great Gilded Boat",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::If {
+                    cond: Predicate::DiscardedNonlandThisEffect { who: PlayerRef::You },
+                    then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(soldier) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

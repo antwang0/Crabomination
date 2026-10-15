@@ -15866,6 +15866,7 @@ static DECKS: &[Factory] = &[
     super::decks::spider_man_to_the_rescue,
     super::decks::west_wind_avatar,
     super::decks::bearded_axe,
+    super::decks::great_gilded_boat,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
