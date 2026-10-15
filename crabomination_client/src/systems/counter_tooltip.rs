@@ -1166,6 +1166,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::ManaOrLife(_, n) => {
                 format!("Ward—Pay the cost or {n} life")
             }
+            crabomination::card::WardCost::ManaOrMana(a, b) => {
+                format!("Ward—Pay {{{}}} or {{{}}}", a.cmc(), b.cmc())
+            }
             crabomination::card::WardCost::SacrificeAttachedHost => {
                 "Ward—Sacrifice the enchanted permanent".into()
             }
@@ -1674,6 +1677,10 @@ pub(crate) fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Unity => "Unity",
         CounterType::Ribbon => "Ribbon",
         CounterType::Brain => "Brain",
+        CounterType::Aegis => "Aegis",
+        CounterType::Egg => "Egg",
+        CounterType::Judgment => "Judgment",
+        CounterType::Phyresis => "Phyresis",
     }
 }
 

@@ -350,6 +350,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         RemoveCounterFromPermanent => "ctr-".into(),
         ManaCostOfAttached => "MC".into(),
         ManaOrLife(c, n) => format!("{}/{n}♥", c.cmc()),
+        ManaOrMana(a, b) => format!("{}/{}", a.cmc(), b.cmc()),
         SacrificeAttachedHost => "sacE".into(),
         GenericSourcePower => "P".into(),
         GenericXFromCost => "X".into(),

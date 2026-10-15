@@ -503,6 +503,10 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Unity => "Unity",
         CounterType::Ribbon => "Ribbon",
         CounterType::Brain => "Brain",
+        CounterType::Aegis => "Aegis",
+        CounterType::Egg => "Egg",
+        CounterType::Judgment => "Judgment",
+        CounterType::Phyresis => "Phyresis",
     }
 }
 
