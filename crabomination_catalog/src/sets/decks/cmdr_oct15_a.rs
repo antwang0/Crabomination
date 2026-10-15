@@ -607,3 +607,151 @@ pub fn thorin_oakenshield() -> CardDefinition {
         ..legend("Thorin Oakenshield", vec![CreatureType::Dwarf, CreatureType::Noble], 3, 2)
     }
 }
+
+/// Ordinary Bear — {3}{G} 4/5 Bear.
+pub fn ordinary_bear() -> CardDefinition {
+    creature("Ordinary Bear", cost(&[generic(3), g()]), vec![CreatureType::Bear], 4, 5)
+}
+
+/// Quake, Agent of S.H.I.E.L.D. — {2}{W} legendary 3/3 Inhuman Spy Hero.
+/// Whenever you cast a noncreature spell, tap target creature or land.
+pub fn quake_agent_of_shield() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(2), w()]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(R::Noncreature)),
+            effect: Effect::Tap { what: target_filtered(R::Creature.or(R::Land)) },
+        }],
+        ..legend("Quake, Agent of S.H.I.E.L.D.", vec![CreatureType::Inhuman, CreatureType::Spy, CreatureType::Hero], 3, 3)
+    }
+}
+
+/// Denzilore Fatehold — {1}{W}{U}{U} legendary 3/4 flash flying Elder
+/// Sphinx. Whenever you scry or surveil, a +1/+1 counter on each creature
+/// you control.
+pub fn denzilore_fatehold() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(1), w(), u(), u()]),
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..legend("Denzilore Fatehold", vec![CreatureType::Elder, CreatureType::Sphinx], 3, 4)
+    }
+}
+
+/// Gorging Vulture — {2}{B} 2/2 flying Bird. Enters: mill four, gain 1 life
+/// per creature card milled.
+pub fn gorging_vulture() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::GainLife { who: Selector::You, amount: Value::CreatureCardsMilledThisEffect },
+        ]))],
+        ..creature("Gorging Vulture", cost(&[generic(2), b()]), vec![CreatureType::Bird], 2, 2)
+    }
+}
+
+/// Sapphire Dragon — {5}{U}{U} 5/6 flying Dragon; attacking or blocking,
+/// scry 2. Adventure: Psionic Pulse {2}{U} instant — counter target
+/// noncreature spell.
+pub fn sapphire_dragon() -> CardDefinition {
+    let scry = || Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            on_attack(scry()),
+            TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: scry() },
+        ],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Psionic Pulse",
+            cost: cost(&[generic(2), u()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::Noncreature)) },
+        })),
+        ..creature("Sapphire Dragon", cost(&[generic(5), u(), u()]), vec![CreatureType::Dragon], 5, 6)
+    }
+}
+
+/// Shortcut to Mushrooms — {1}{G} enchantment. Enters: the Ring tempts you.
+/// At your end step, if a permanent you controlled left the battlefield this
+/// turn, a +1/+1 counter on target creature you control.
+pub fn shortcut_to_mushrooms() -> CardDefinition {
+    let revolt = Predicate::RevoltActive { who: PlayerRef::You };
+    CardDefinition {
+        name: "Shortcut to Mushrooms",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::RingTempts { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(revolt.clone()),
+                effect: Effect::If {
+                    cond: revolt,
+                    then: Box::new(Effect::AddCounter {
+                        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Restoration Specialist — {1}{W} 2/1 Dwarf Artificer. {W}, sacrifice it:
+/// return up to one target artifact card and up to one target enchantment
+/// card from your graveyard to your hand.
+pub fn restoration_specialist() -> CardDefinition {
+    let back = |slot: u8, kind: CardType| Effect::Move {
+        what: Selector::TargetFiltered { slot, filter: R::HasCardType(kind).and(R::InYourGraveyard) },
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            sac_cost: true,
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![back(0, CardType::Artifact), back(1, CardType::Enchantment)])),
+            },
+            ..Default::default()
+        }],
+        ..creature("Restoration Specialist", cost(&[generic(1), w()]), vec![CreatureType::Dwarf, CreatureType::Artificer], 2, 1)
+    }
+}
+
+/// Meddle — {1}{U} instant. If target spell has only one target and that
+/// target is a creature, change that spell's target to another creature.
+pub fn meddle() -> CardDefinition {
+    CardDefinition {
+        name: "Meddle",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChangeSpellCreatureTarget { what: target_filtered(R::IsSpellOnStack) },
+        ..Default::default()
+    }
+}
+
+/// Mizzium Meddler — {2}{U} 1/4 flash Vedalken Wizard. Enters: you may change
+/// a target of target spell or ability to this creature.
+pub fn mizzium_meddler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Change a target of that spell or ability to Mizzium Meddler?".into(),
+            body: Box::new(Effect::RedirectSpellTargetToSelf {
+                what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack)),
+            }),
+        })],
+        ..creature("Mizzium Meddler", cost(&[generic(2), u()]), vec![CreatureType::Vedalken, CreatureType::Wizard], 1, 4)
+    }
+}

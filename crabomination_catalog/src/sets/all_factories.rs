@@ -15818,6 +15818,15 @@ static DECKS: &[Factory] = &[
     super::decks::safe_passage,
     super::decks::dwalin_weaponmaster,
     super::decks::thorin_oakenshield,
+    super::decks::ordinary_bear,
+    super::decks::quake_agent_of_shield,
+    super::decks::denzilore_fatehold,
+    super::decks::gorging_vulture,
+    super::decks::sapphire_dragon,
+    super::decks::shortcut_to_mushrooms,
+    super::decks::restoration_specialist,
+    super::decks::meddle,
+    super::decks::mizzium_meddler,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

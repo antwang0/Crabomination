@@ -2655,3 +2655,163 @@ fn thorin_grants_ward_with_an_enduring_story() {
     g.check_state_based_actions();
     assert!(g.permanent_has_keyword(bear, &ward()));
 }
+
+/// Quake taps a creature whenever you cast a noncreature spell.
+#[test]
+fn quake_taps_on_a_noncreature_spell() {
+    let mut g = pod(3);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::quake_agent_of_shield());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let forge = g.add_card_to_hand(0, catalog::futurist_forge());
+    cast(&mut g, forge);
+    assert!(g.battlefield_find(wurm).unwrap().tapped);
+}
+
+/// Denzilore Fatehold counters the team on a scry.
+#[test]
+fn denzilore_counters_on_scry() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let den = ready(&mut g, 0, catalog::denzilore_fatehold());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let spell = g.add_card_to_hand(0, catalog::rokus_mastery());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: Some(4) })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!((plus(&g, den), plus(&g, bear)), (1, 1));
+}
+
+/// Gorging Vulture gains a life per creature card milled.
+#[test]
+fn gorging_vulture_counts_milled_creatures() {
+    let mut g = pod(2);
+    for def in [catalog::grizzly_bears(), catalog::island(), catalog::craw_wurm(), catalog::island()] {
+        g.add_card_to_library(0, def);
+    }
+    let v = g.add_card_to_hand(0, catalog::gorging_vulture());
+    cast(&mut g, v);
+    assert_eq!(g.players[0].life, 22);
+    assert_eq!(g.players[0].graveyard.len(), 4);
+}
+
+/// Psionic Pulse counters a noncreature spell and exiles the Dragon on an adventure.
+#[test]
+fn sapphire_dragon_psionic_pulse_counters() {
+    let mut g = pod(2);
+    let forge = g.add_card_to_hand(1, catalog::futurist_forge());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: forge, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("forge");
+    let dragon = g.add_card_to_hand(0, catalog::sapphire_dragon());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure { card_id: dragon, target: Some(Target::Permanent(forge)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("pulse");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != forge), "countered");
+    assert!(g.exile.iter().any(|c| c.id == dragon), "on an adventure");
+}
+
+/// Shortcut to Mushrooms counters a creature at end step after a permanent
+/// of yours left the battlefield.
+#[test]
+fn shortcut_to_mushrooms_counters_after_a_departure() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    library(&mut g, 1, 3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sm = g.add_card_to_hand(0, catalog::shortcut_to_mushrooms());
+    cast(&mut g, sm);
+    step_to(&mut g, 0, TurnStep::End);
+    assert_eq!(plus(&g, bear), 0, "nothing left: no counter");
+    let forge = ready(&mut g, 0, catalog::futurist_forge());
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    activate(&mut g, forge, 0, None);
+    step_to(&mut g, 0, TurnStep::End);
+    assert!(plus(&g, bear) >= 1, "the Forge left");
+}
+
+/// Restoration Specialist returns an artifact and an enchantment.
+#[test]
+fn restoration_specialist_returns_both_halves() {
+    let mut g = pod(2);
+    let rs = ready(&mut g, 0, catalog::restoration_specialist());
+    let art = g.add_card_to_graveyard(0, catalog::futurist_forge());
+    let ench = g.add_card_to_graveyard(0, catalog::shortcut_to_mushrooms());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rs, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: vec![Target::Permanent(ench)], x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let hand: Vec<CardId> = g.players[0].hand.iter().map(|c| c.id).collect();
+    assert!(hand.contains(&art) && hand.contains(&ench), "{hand:?}");
+}
+
+/// Meddle moves a single-creature-target spell to another creature, and
+/// leaves a spell aimed at a player alone (the 2004-10-04 ruling).
+#[test]
+fn meddle_moves_a_creature_target_only() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    let meddle = g.add_card_to_hand(0, catalog::meddle());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: meddle, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None }).expect("meddle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the Bear is spared");
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 3, "the Bolt hit the Wurm");
+
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    let meddle = g.add_card_to_hand(0, catalog::meddle());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: meddle, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None }).expect("meddle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "a player target isn't Meddle's");
+}
+
+/// Mizzium Meddler pulls a removal spell onto itself.
+#[test]
+fn mizzium_meddler_redirects_to_itself() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    let mm = g.add_card_to_hand(0, catalog::mizzium_meddler());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: mm, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("meddler");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.battlefield_find(mm).unwrap().damage, 3);
+}
+
+/// The auto-targeter fills both of Restoration Specialist's optional slots.
+#[test]
+fn restoration_specialist_auto_targets_both() {
+    let mut g = pod(2);
+    let rs = ready(&mut g, 0, catalog::restoration_specialist());
+    let art = g.add_card_to_graveyard(0, catalog::futurist_forge());
+    let ench = g.add_card_to_graveyard(0, catalog::shortcut_to_mushrooms());
+    let def = catalog::restoration_specialist();
+    let (t0, extra) = g.auto_targets_for_effect_all_slots_x(&def.activated_abilities[0].effect, 0, None, false, Some(rs), None);
+    assert_eq!(t0, Some(Target::Permanent(art)));
+    assert_eq!(extra, vec![Target::Permanent(ench)]);
+}
