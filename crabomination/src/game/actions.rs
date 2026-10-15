@@ -8541,7 +8541,10 @@ impl GameState {
         // CR 700.2 / 601.2b — "choose one; if …, choose more instead".
         let widen = self.players[p].hand.iter().find(|c| c.id == card_id).and_then(|c| {
             match c.definition.modes_widen.as_ref()? {
-                crate::card::ModesWiden::Kicked => c.definition.has_kicker().map(|_| true),
+                // An action kicker (teamwork — Go Nuts!) widens too.
+                crate::card::ModesWiden::Kicked => (c.definition.has_kicker().is_some()
+                    || c.definition.kicker_action_cost.is_some())
+                .then_some(true),
                 crate::card::ModesWiden::If(pred) => {
                     let ctx = crate::game::effects::EffectContext::for_trigger(c.id, p, None, 0);
                     self.evaluate_predicate(pred, &ctx).then_some(false)
@@ -12281,6 +12284,34 @@ impl GameState {
 
     /// CR 601.2b — can every additional cast cost be paid right now? Checked
     /// before mana so an unpayable spell reverts cleanly.
+    /// The untapped `filter` permanents `p` controls to tap for a total
+    /// power of at least `power`, biggest first (teamwork); `None` when the
+    /// whole set falls short.
+    pub(crate) fn tap_total_power_picks(
+        &self,
+        p: usize,
+        filter: &crate::card::SelectionRequirement,
+        power: u32,
+    ) -> Option<Vec<CardId>> {
+        let of = |id: CardId| self.computed_permanent(id).map_or(0, |c| c.power.max(0) as u32);
+        let mut cands: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && !c.tapped && self.evaluate_requirement_static_on(filter, c, p, None))
+            .map(|c| c.id)
+            .collect();
+        cands.sort_by_key(|&id| (std::cmp::Reverse(of(id)), id));
+        let (mut sum, mut picks) = (0, Vec::new());
+        for id in cands {
+            if sum >= power {
+                break;
+            }
+            sum += of(id);
+            picks.push(id);
+        }
+        (sum >= power).then_some(picks)
+    }
+
     pub(crate) fn additional_costs_payable(
         &self,
         p: usize,
@@ -12356,6 +12387,7 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
+            A::TapTotalPower { filter, power } => self.tap_total_power_picks(p, filter, *power).is_some(),
             // CR 119.4 — life can be paid only if the total is at least N.
             A::PayLife { amount } => self.cost_life_payable(p, self.players[p].life, *amount),
             A::ExilePermanent { filter, count } => {
@@ -12825,6 +12857,16 @@ impl GameState {
                     cands.sort_by_key(|c| (c.definition.is_land(), c.definition.cost.cmc()));
                     let ids: Vec<CardId> =
                         cands.iter().take(*count as usize).map(|c| c.id).collect();
+                    self.cost_tapped_for_cast = ids.first().copied();
+                    for id in ids {
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: false });
+                        }
+                    }
+                }
+                A::TapTotalPower { filter, power } => {
+                    let ids = self.tap_total_power_picks(p, filter, *power).unwrap_or_default();
                     self.cost_tapped_for_cast = ids.first().copied();
                     for id in ids {
                         if let Some(c) = self.battlefield_find_mut(id) {

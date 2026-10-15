@@ -6492,6 +6492,13 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         count: u32,
     },
+    /// "Tap any number of untapped [filter] you control with total power
+    /// `power` or more" — teamwork N (Go Nuts!), as an optional kicker-slot
+    /// cost. Auto-pays biggest first, so the fewest are tapped.
+    TapTotalPower {
+        filter: SelectionRequirement,
+        power: u32,
+    },
     /// "As an additional cost to cast this spell, pay N life." (CR 119.4 —
     /// payable only if life ≥ N.) Deep Analysis's "Flashback—{1}{U}, Pay 3
     /// life". Paid immediately during casting, so any "loses life" watcher
