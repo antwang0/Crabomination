@@ -15827,6 +15827,11 @@ static DECKS: &[Factory] = &[
     super::decks::restoration_specialist,
     super::decks::meddle,
     super::decks::mizzium_meddler,
+    super::decks::dains_company,
+    super::decks::picard_leading_by_example,
+    super::decks::ant_man_reformed_rogue,
+    super::decks::cosmos_charger,
+    super::decks::alrund_god_of_the_cosmos,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

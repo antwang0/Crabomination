@@ -755,3 +755,137 @@ pub fn mizzium_meddler() -> CardDefinition {
         ..creature("Mizzium Meddler", cost(&[generic(2), u()]), vec![CreatureType::Vedalken, CreatureType::Wizard], 1, 4)
     }
 }
+
+/// Dáin's Company — {R}{W} 2/2 Dwarf Warrior; lifelink while you control
+/// another Dwarf. Enters: look at the top four, you may reveal a Dwarf or
+/// Equipment card and put it into your hand, the rest on the bottom.
+pub fn dains_company() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has lifelink as long as you control another Dwarf.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Lifelink,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Dwarf).and(R::ControlledByYou).and(R::OtherThanSource),
+                )),
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            pick_filter: Some(R::HasCreatureType(CreatureType::Dwarf).or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))),
+            take: Some(Value::ONE),
+            optional: true,
+            ..Default::default()
+        })))],
+        ..creature("Dáin's Company", cost(&[r(), w()]), vec![CreatureType::Dwarf, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Picard, Leading by Example — {1}{W} legendary 2/2 Human Officer. {1}, {T}:
+/// another target creature gets +X/+X until end of turn, X = Picard's power.
+/// Sorcery speed.
+pub fn picard_leading_by_example() -> CardDefinition {
+    let x = || Value::PowerOf(Box::new(Selector::This));
+    CardDefinition {
+        cost: cost(&[generic(1), w()]),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                power: x(),
+                toughness: x(),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend("Picard, Leading by Example", vec![CreatureType::Human, CreatureType::Officer], 2, 2)
+    }
+}
+
+/// Ant-Man, Reformed Rogue — {2}{G/U} legendary 2/3 Human Rogue Hero. A green
+/// spell: +1/+0 and trample; a blue spell: -1/-0 and unblockable, until end
+/// of turn. Combat damage to a player draws a card.
+pub fn ant_man_reformed_rogue() -> CardDefinition {
+    let cast = |c: Color| EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(R::HasColor(c)));
+    let shift = |p: i32, kw: Keyword| {
+        Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::This, power: Value::Const(p), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::This, keyword: kw, duration: Duration::EndOfTurn },
+        ])
+    };
+    CardDefinition {
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::Blue)]),
+        triggered_abilities: vec![
+            TriggeredAbility { event: cast(Color::Green), effect: shift(1, Keyword::Trample) },
+            TriggeredAbility { event: cast(Color::Blue), effect: shift(-1, Keyword::Unblockable) },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..legend("Ant-Man, Reformed Rogue", vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Hero], 2, 3)
+    }
+}
+
+/// Cosmos Charger — {3}{U} 3/3 flash flying Horse Spirit. Foretelling cards
+/// from your hand costs {1} less and can be done on any player's turn.
+/// Foretell {2}{U}.
+pub fn cosmos_charger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        foretell_cost: Some(cost(&[generic(2), u()])),
+        static_abilities: vec![StaticAbility {
+            description: "Foretelling cards from your hand costs {1} less and can be done on any player's turn.",
+            effect: StaticEffect::ForetellCostsLessAnyTurn,
+        }],
+        ..creature("Cosmos Charger", cost(&[generic(3), u()]), vec![CreatureType::Horse, CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Alrund, God of the Cosmos — {3}{U}{U} legendary 1/1 God; +1/+1 for each
+/// card in your hand and each foretold card you own in exile. At your end
+/// step, choose a card type, reveal the top two, take the chosen type, bottom
+/// the rest. Back: Hakka, Whispering Raven — {1}{U} legendary 2/3 flying
+/// Bird; combat damage to a player returns it to its owner's hand, then scry 2.
+pub fn alrund_god_of_the_cosmos() -> CardDefinition {
+    let hakka = CardDefinition {
+        cost: cost(&[generic(1), u()]),
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ]),
+        }],
+        ..legend("Hakka, Whispering Raven", vec![CreatureType::Bird], 2, 3)
+    };
+    CardDefinition {
+        cost: cost(&[generic(3), u(), u()]),
+        static_abilities: vec![StaticAbility {
+            description: "Alrund gets +1/+1 for each card in your hand and each foretold card you own in exile.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::ForetoldCardsOwnedInExile(PlayerRef::You)]),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::ChooseCardTypeForSource,
+                Effect::RevealTopTakeMatchingToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    filter: R::IsSourceChosenCardType,
+                    distinct_powers: false,
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(hakka)),
+        ..legend("Alrund, God of the Cosmos", vec![CreatureType::God], 1, 1)
+    }
+}

@@ -2815,3 +2815,79 @@ fn restoration_specialist_auto_targets_both() {
     assert_eq!(t0, Some(Target::Permanent(art)));
     assert_eq!(extra, vec![Target::Permanent(ench)]);
 }
+
+/// Dáin's Company has lifelink only beside another Dwarf, and digs for one.
+#[test]
+fn dains_company_lifelink_and_dig() {
+    let mut g = pod(2);
+    for def in [catalog::island(), catalog::dwalin_weaponmaster(), catalog::island(), catalog::island(), catalog::island()] {
+        g.add_card_to_library(0, def);
+    }
+    let dc = g.add_card_to_hand(0, catalog::dains_company());
+    cast(&mut g, dc);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Dwalin, Weaponmaster"), "took the Dwarf");
+    assert!(!g.permanent_has_keyword(dc, &Keyword::Lifelink));
+    ready(&mut g, 0, catalog::dwalin_weaponmaster());
+    assert!(g.permanent_has_keyword(dc, &Keyword::Lifelink));
+}
+
+/// Picard pumps another creature by his power.
+#[test]
+fn picard_pumps_by_his_power() {
+    let mut g = pod(2);
+    let picard = ready(&mut g, 0, catalog::picard_leading_by_example());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, picard, 0, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (4, 4));
+}
+
+/// Ant-Man: a blue spell makes him unblockable at -1/-0.
+#[test]
+fn ant_man_shrinks_on_a_blue_spell() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let am = ready(&mut g, 0, catalog::ant_man_reformed_rogue());
+    let forge = g.add_card_to_hand(0, catalog::futurist_forge());
+    cast(&mut g, forge);
+    assert_eq!(pt(&g, am), (1, 3));
+    assert!(g.permanent_has_keyword(am, &Keyword::Unblockable));
+}
+
+/// Cosmos Charger: foretelling costs {1} and works on an opponent's turn.
+#[test]
+fn cosmos_charger_cheapens_and_frees_foretell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::cosmos_charger());
+    let card = g.add_card_to_hand(0, catalog::cosmos_charger());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Foretell { card_id: card }).expect("foretell on their turn for {1}");
+    assert!(g.exile.iter().any(|c| c.id == card && c.face_down));
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+/// Alrund counts cards in hand and foretold cards; Hakka bounces home.
+#[test]
+fn alrund_grows_with_hand_and_foretold_cards() {
+    let mut g = pod(2);
+    let al = ready(&mut g, 0, catalog::alrund_god_of_the_cosmos());
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    assert_eq!(pt(&g, al), (4, 4));
+}
+
+/// Alrund's end step: the chosen type (the headless pick, creature) comes to
+/// hand from the top two; the rest goes to the bottom.
+#[test]
+fn alrund_end_step_takes_the_chosen_type() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    let island = g.add_card_to_library(0, catalog::island());
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::alrund_god_of_the_cosmos());
+    step_to(&mut g, 0, TurnStep::End);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wurm));
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(island));
+}
