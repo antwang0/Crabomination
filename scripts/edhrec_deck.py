@@ -99,16 +99,18 @@ def rust(page, fns, const, name, theme):
     plural = lambda n, k: f"{k} {n}" + ("" if k == 1 or n.endswith("s") else "s")
     wrap = lambda t: textwrap.fill(t, 96, initial_indent="    ", subsequent_indent="    ")
     doc = textwrap.fill(f"{name} {theme}", 92, initial_indent="/// ", subsequent_indent="/// ")
+    basic_list = [slug(b) for b, k in basics.items() for _ in range(k)]
+    # A deck of only snow-covered basics has none here; an empty block left a
+    # lone "," (Titanium Man).
+    basics_block = f"\n    // Basics\n{wrap(', '.join(basic_list))}," if basic_list else ""
     print(f"""
 pub const {const}_COMMANDERS: &[CardFactory] = &[{", ".join(cmd)}];
 
 /// **{name}**'s EDHREC average deck, card for card:
-/// {len(main)} nonbasic cards + {" + ".join(plural(n, k) for n, k in basics.items())} = {len(main) + sum(basics.values())}.
+/// {len(main)} nonbasic cards{"".join(" + " + plural(n, k) for n, k in basics.items())} = {len(main) + sum(basics.values())}.
 {doc}
 pub const {const}_MAIN: &[CardFactory] = &[
-{wrap(", ".join(main))},
-    // Basics
-{wrap(", ".join(slug(b) for b, k in basics.items() for _ in range(k)))},
+{wrap(", ".join(main))},{basics_block}
 ];""")
 
 
