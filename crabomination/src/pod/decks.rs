@@ -70869,3 +70869,58 @@ pub const RAZIA_MAIN: &[CardFactory] = &[
     mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const AYESHA_TANAKA_COMMANDERS: &[CardFactory] = &[ayesha_tanaka_armorer];
+
+/// **Ayesha Tanaka, Armorer**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 9 Islands + 10 Plains = 99.
+/// Ayesha Tanaka, Armorer (EDHREC, fetched 2026-10-14).
+pub const AYESHA_TANAKA_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, azorius_signet, blackblade_reforged,
+    bloodforged_battle_axe, colossus_hammer, commanders_plate, excalibur_sword_of_eden,
+    fellwar_stone, genji_glove, hammer_of_nazahn, heros_heirloom, lightning_greaves,
+    liquimetal_torque, loxodon_warhammer, masterwork_of_ingenuity, maul_of_the_skyclaves,
+    mind_stone, mithril_coat, nettlecyst, shadowspear, sol_ring, strionic_resonator,
+    swiftfoot_boots, sword_of_vengeance, sword_of_the_animist, talisman_of_progress,
+    the_key_to_the_vault, thought_vessel, thran_power_suit, academy_ruins, adarkar_wastes,
+    ancient_den, archway_of_innovation, buried_ruin, command_tower, darksteel_citadel,
+    deserted_beach, glacial_fortress, hallowed_fountain, port_town, power_depot, prairie_stream,
+    razortide_bridge, rogues_passage, sea_of_clouds, seat_of_the_synod,
+    ardenn_intrepid_archaeologist, brass_squire, bronze_guardian, codsworth_handy_helper,
+    emry_lurker_of_the_loch, esper_sentinel, etherium_sculptor, foundry_inspector, gold_myr,
+    gold_forged_thopteryx, ironsoul_enforcer, kappa_cannoneer, lion_sash,
+    ornithopter_of_paradise, puresteel_paladin, silver_myr, solemn_simulacrum,
+    sram_senior_edificer, the_reality_chip, all_that_glitters, forge_anew, sigardas_aid,
+    an_offer_you_cant_refuse, brainstorm, counterspell, dispatch, dovins_veto, path_to_exile,
+    swords_to_plowshares, open_the_armory, steelshapers_gift, thoughtcast, voyage_home,
+    // Basics
+    island, island, island, island, island, island, island, island, island, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const TETSUO_UMEZAWA_COMMANDERS: &[CardFactory] = &[tetsuo_umezawa];
+
+/// **Tetsuo Umezawa**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 6 Islands + 5 Mountains + 6 Swamps = 99.
+/// Tetsuo Umezawa (EDHREC, fetched 2026-10-14).
+pub const TETSUO_UMEZAWA_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, icy_manipulator, izzet_signet,
+    lightning_greaves, rakdos_signet, sol_ring, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, badlands, blood_crypt, bloodstained_mire,
+    bojuka_bog, command_tower, crumbling_necropolis, dragonskull_summit, exotic_orchard,
+    luxury_suite, polluted_delta, shivan_reef, steam_vents, sulfur_falls, sulfurous_springs,
+    underground_river, volcanic_island, watery_grave, xanders_lounge, agitator_ant,
+    baleful_strix, bothersome_quasit, fatestitcher, firkraag_cunning_instigator, frost_titan,
+    fumiko_the_lowblood, geode_rager, grenzo_havoc_raiser, karazikar_the_eye_tyrant,
+    kardur_doomscourge, komainu_battle_armor, maeve_insidious_singer, nightscape_familiar,
+    red_death_shipwrecker, royal_assassin, solemn_simulacrum, toshiro_umezawa,
+    urabrask_the_hidden, vengeful_ancestor, xantcha_sleeper_agent, animate_dead, frozen_aether,
+    mystic_remora, phyrexian_arena, propaganda, rhystic_study, shiny_impetus, uphill_battle,
+    verity_circle, arcane_denial, backlash, bedevil, brainstorm, chaos_warp, counterspell,
+    dark_ritual, lightning_bolt, mana_drain, rakdos_charm, terminate, vampiric_tutor,
+    tamiyo_the_moon_sage, blasphemous_act, borrowing_100_000_arrows, damnation, demonic_tutor,
+    disrupt_decorum, feed_the_swarm, reanimate, spectacular_showdown, vandalblast,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+];

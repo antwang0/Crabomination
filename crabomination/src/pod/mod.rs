@@ -15588,6 +15588,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAZIA_COMMANDERS,
             main: decks::RAZIA_MAIN,
         },
+        // Seat 2523: Ayesha Tanaka, Armorer's EDHREC average deck. `--pod-decks 2523`.
+        PodDeck {
+            name: "Ayesha Tanaka, Armorer (WU)",
+            commanders: decks::AYESHA_TANAKA_COMMANDERS,
+            main: decks::AYESHA_TANAKA_MAIN,
+        },
+        // Seat 2524: Tetsuo Umezawa's EDHREC average deck. `--pod-decks 2524`.
+        PodDeck {
+            name: "Tetsuo Umezawa (UBR)",
+            commanders: decks::TETSUO_UMEZAWA_COMMANDERS,
+            main: decks::TETSUO_UMEZAWA_MAIN,
+        },
     ]
 }
 
@@ -19943,6 +19955,8 @@ mod tests {
             ("Tuknir Deathlock", &[0x13EE]),
             ("Samut, Hazoret's Champion", &[0x13EF]),
             ("Razia, Boros Archangel", &[0x13F0]),
+            ("Ayesha Tanaka, Armorer", &[0x13F1]),
+            ("Tetsuo Umezawa", &[0x13F2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
