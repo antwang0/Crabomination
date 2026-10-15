@@ -47332,6 +47332,13 @@ impl GameState {
                             false
                         }
                     }
+                    // Thrull Wizard — "{B} or {3}": the first menu the payer
+                    // can afford.
+                    WardCost::ManaOrMana(first, second) => {
+                        let (first, second) = (first.clone(), second.clone());
+                        self.pay_mana_cost_with_picks(payer, &first, picks, events)
+                            || self.pay_mana_cost_with_picks(payer, &second, picks, events)
+                    }
                     // Curse Artifact — sacrifice the permanent this Aura is on.
                     WardCost::SacrificeAttachedHost => {
                         let host = ctx

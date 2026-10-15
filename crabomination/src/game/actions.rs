@@ -293,6 +293,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Mana(c) => c.cmc() == 0,
         WardCost::Life(n) => *n == 0,
         WardCost::ManaAndLife(c, n) => c.cmc() == 0 && *n == 0,
+        WardCost::ManaOrMana(a, b) => a.cmc() == 0 || b.cmc() == 0,
         WardCost::Discard(n) | WardCost::DiscardRandom(n) => *n == 0,
         WardCost::DiscardMatching(_, n) => *n == 0,
         WardCost::RevealMatching(_) => false,

@@ -1191,6 +1191,10 @@ pub enum WardCost {
     /// "…unless that player pays {cost} or N life" — a two-way menu (Erosion).
     /// Auto-payment prefers the mana half and falls back to the life half.
     ManaOrLife(crate::mana::ManaCost, u32),
+    /// "…unless that spell's controller pays {B} or {3}" — two mana menus,
+    /// the payer's choice (Thrull Wizard). Auto-payment takes the first it
+    /// can afford.
+    ManaOrMana(crate::mana::ManaCost, crate::mana::ManaCost),
     /// "…unless they sacrifice that [permanent]" — the permanent the source
     /// Aura is attached to, specifically (Curse Artifact). Unpayable once the
     /// Aura has come unattached.
@@ -1250,6 +1254,7 @@ impl WardCost {
             }
             W::ManaCostOfAttached => "Ward—pay the enchanted permanent's mana cost".to_string(),
             W::ManaOrLife(c, n) => format!("Ward—{{{}}} or {n} life", c.cmc()),
+            W::ManaOrMana(a, b) => format!("Ward—{} or {}", a.summary(), b.summary()),
             W::SacrificeAttachedHost => "Ward—sacrifice the enchanted permanent".to_string(),
         }
     }
