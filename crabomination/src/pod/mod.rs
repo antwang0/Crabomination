@@ -16572,6 +16572,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STORM_COMMANDERS,
             main: decks::STORM_MAIN,
         },
+        // Seat 2687: M.O.D.O.K., Evil Intellect's EDHREC average deck. `--pod-decks 2687`.
+        PodDeck {
+            name: "M.O.D.O.K., Evil Intellect (B)",
+            commanders: decks::M_O_D_O_K_2_COMMANDERS,
+            main: decks::M_O_D_O_K_2_MAIN,
+        },
+        // Seat 2688: Kirk, Enterprising Captain's EDHREC average deck. `--pod-decks 2688`.
+        PodDeck {
+            name: "Kirk, Enterprising Captain (R)",
+            commanders: decks::KIRK_COMMANDERS,
+            main: decks::KIRK_MAIN,
+        },
+        // Seat 2689: Christine Chapel, Combat Medic's EDHREC average deck. `--pod-decks 2689`.
+        PodDeck {
+            name: "Christine Chapel, Combat Medic (G)",
+            commanders: decks::CHRISTINE_CHAPEL_COMMANDERS,
+            main: decks::CHRISTINE_CHAPEL_MAIN,
+        },
+        // Seat 2690: Trelane, Squire of Gothos's EDHREC average deck. `--pod-decks 2690`.
+        PodDeck {
+            name: "Trelane, Squire of Gothos (U)",
+            commanders: decks::TRELANE_COMMANDERS,
+            main: decks::TRELANE_MAIN,
+        },
+        // Seat 2691: Breeches, Brazen Plunderer and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 2691`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Ich-Tekik, Salvage Splicer (RG)",
+            commanders: decks::BREECHES_2_COMMANDERS,
+            main: decks::BREECHES_2_MAIN,
+        },
+        // Seat 2692: Glissa Sunslayer's EDHREC average deck. `--pod-decks 2692`.
+        PodDeck {
+            name: "Glissa Sunslayer (BG)",
+            commanders: decks::GLISSA_SUNSLAYER_COMMANDERS,
+            main: decks::GLISSA_SUNSLAYER_MAIN,
+        },
+        // Seat 2693: Saint Traft and Rem Karolus's EDHREC average deck. `--pod-decks 2693`.
+        PodDeck {
+            name: "Saint Traft and Rem Karolus (WUR)",
+            commanders: decks::SAINT_TRAFT_AND_REM_KAROLUS_COMMANDERS,
+            main: decks::SAINT_TRAFT_AND_REM_KAROLUS_MAIN,
+        },
+        // Seat 2694: Storm, Windrider's EDHREC average deck. `--pod-decks 2694`.
+        PodDeck {
+            name: "Storm, Windrider (WG)",
+            commanders: decks::STORM_2_COMMANDERS,
+            main: decks::STORM_2_MAIN,
+        },
+        // Seat 2695: Raff Capashen, Ship's Mage's EDHREC average deck. `--pod-decks 2695`.
+        PodDeck {
+            name: "Raff Capashen, Ship's Mage (WU)",
+            commanders: decks::RAFF_CAPASHEN_COMMANDERS,
+            main: decks::RAFF_CAPASHEN_MAIN,
+        },
+        // Seat 2696: Zuko, Seeking Honor's EDHREC average deck. `--pod-decks 2696`.
+        PodDeck {
+            name: "Zuko, Seeking Honor (BR)",
+            commanders: decks::ZUKO_5_COMMANDERS,
+            main: decks::ZUKO_5_MAIN,
+        },
+        // Seat 2697: Master Piandao's EDHREC average deck. `--pod-decks 2697`.
+        PodDeck {
+            name: "Master Piandao (W)",
+            commanders: decks::MASTER_PIANDAO_COMMANDERS,
+            main: decks::MASTER_PIANDAO_MAIN,
+        },
+        // Seat 2698: Myojin of Towering Might's EDHREC average deck. `--pod-decks 2698`.
+        PodDeck {
+            name: "Myojin of Towering Might (G)",
+            commanders: decks::MYOJIN_OF_TOWERING_MIGHT_COMMANDERS,
+            main: decks::MYOJIN_OF_TOWERING_MIGHT_MAIN,
+        },
+        // Seat 2699: Happy Hogan, Bodyguard's EDHREC average deck. `--pod-decks 2699`.
+        PodDeck {
+            name: "Happy Hogan, Bodyguard (U)",
+            commanders: decks::HAPPY_HOGAN_COMMANDERS,
+            main: decks::HAPPY_HOGAN_MAIN,
+        },
+        // Seat 2700: Pelia, Immortal Innovator's EDHREC average deck. `--pod-decks 2700`.
+        PodDeck {
+            name: "Pelia, Immortal Innovator (U)",
+            commanders: decks::PELIA_COMMANDERS,
+            main: decks::PELIA_MAIN,
+        },
+        // Seat 2701: Lyse Hext's EDHREC average deck. `--pod-decks 2701`.
+        PodDeck {
+            name: "Lyse Hext (WU)",
+            commanders: decks::LYSE_HEXT_COMMANDERS,
+            main: decks::LYSE_HEXT_MAIN,
+        },
+        // Seat 2702: Colfenor, the Last Yew's EDHREC average deck. `--pod-decks 2702`.
+        PodDeck {
+            name: "Colfenor, the Last Yew (WBG)",
+            commanders: decks::COLFENOR_COMMANDERS,
+            main: decks::COLFENOR_MAIN,
+        },
+        // Seat 2703: Iceman and Firestar's EDHREC average deck. `--pod-decks 2703`.
+        PodDeck {
+            name: "Iceman and Firestar (UR)",
+            commanders: decks::ICEMAN_AND_FIRESTAR_COMMANDERS,
+            main: decks::ICEMAN_AND_FIRESTAR_MAIN,
+        },
+        // Seat 2704: Chameleon, Master of Disguise's EDHREC average deck. `--pod-decks 2704`.
+        PodDeck {
+            name: "Chameleon, Master of Disguise (U)",
+            commanders: decks::CHAMELEON_COMMANDERS,
+            main: decks::CHAMELEON_MAIN,
+        },
+        // Seat 2705: Bebop, Warthog Warrior's EDHREC average deck. `--pod-decks 2705`.
+        PodDeck {
+            name: "Bebop, Warthog Warrior (B)",
+            commanders: decks::BEBOP_2_COMMANDERS,
+            main: decks::BEBOP_2_MAIN,
+        },
     ]
 }
 
@@ -21091,6 +21205,25 @@ mod tests {
             ("Zetalpa, Primal Dawn", &[0x1492]),
             ("Niambi, Esteemed Speaker", &[0x1493]),
             ("Storm, Queen of Wakanda", &[0x1494]),
+            ("M.O.D.O.K., Evil Intellect", &[0x1495]),
+            ("Kirk, Enterprising Captain", &[0x1496]),
+            ("Christine Chapel, Combat Medic", &[0x1497]),
+            ("Trelane, Squire of Gothos", &[0x1498]),
+            ("Breeches, Brazen Plunderer and Ich-Tekik, Salvage Splicer", &[0x1499]),
+            ("Glissa Sunslayer", &[0x149A]),
+            ("Saint Traft and Rem Karolus", &[0x149B]),
+            ("Storm, Windrider", &[0x149C]),
+            ("Raff Capashen, Ship's Mage", &[0x149D]),
+            ("Zuko, Seeking Honor", &[0x149E]),
+            ("Master Piandao", &[0x149F]),
+            ("Myojin of Towering Might", &[0x14A0]),
+            ("Happy Hogan, Bodyguard", &[0x14A1]),
+            ("Pelia, Immortal Innovator", &[0x14A2]),
+            ("Lyse Hext", &[0x14A3]),
+            ("Colfenor, the Last Yew", &[0x14A4]),
+            ("Iceman and Firestar", &[0x14A5]),
+            ("Chameleon, Master of Disguise", &[0x14A6]),
+            ("Bebop, Warthog Warrior", &[0x14A7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
