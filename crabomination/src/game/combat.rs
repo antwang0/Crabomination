@@ -3991,7 +3991,7 @@ impl GameState {
                 (self.battlefield_find(b).and_then(|c| c.protected_by), false)
             }
         };
-        let Some(d) = defender else { return None };
+        let d = defender?;
         // CR 508.1 — Island Sanctuary's shield bars attacks on the player.
         if matches!(atk.target, crate::game::types::AttackTarget::Player(_))
             && self.attacker_barred_by_shield(atk.attacker, d)
