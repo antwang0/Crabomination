@@ -29497,73 +29497,32 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CopyCardAndCastFree { what } => {
-                // Reenact the Crime — copy the card wherever it now is and
-                // offer the copy as a free cast (CR 707.12).
-                let Some(id) = self
+            Effect::CopyCardsAndCastFreeUpTo { what, max } => {
+                // Baron Helmut Zemo — every card is copied; up to `max` copies
+                // are cast, the priciest first.
+                let mut ids: Vec<(u32, CardId)> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
                     .filter_map(|e| e.as_card_id())
-                    .next()
-                else {
-                    return Ok(());
-                };
-                // A face-down permanent copies the card it hides (Magar's
-                // "the card with the noted name").
-                let Some(def) = self
-                    .find_card_anywhere(id)
-                    .map(|c| c.face_up_def.clone().unwrap_or_else(|| c.definition.arc()))
-                else {
-                    return Ok(());
-                };
-                // A copy of the face-down body notes no name (Magar's ruling).
-                if def.is_land() || def.name.is_empty() {
-                    return Ok(());
-                }
-                let copy = self.next_id();
-                self.players[ctx.controller]
-                    .hand
-                    .push(crate::card::CardInstance::new(copy, def, ctx.controller));
-                if let Some(c) = self.players[ctx.controller].hand.iter_mut().find(|c| c.id == copy)
-                {
-                    c.is_token = true;
-                }
-                // "You may cast the copy" is declined when the cast would carry
-                // the battlefield past the engine's bound (`MAX_BATTLEFIELD`,
-                // the same one a token batch is capped at): Surge to Victory
-                // copying a big spell over a board of Leitmotif Composers
-                // doubled an 8-seat pod to 1,000.
-                if self.battlefield.len() as i64 + self.spell_token_estimate(copy, ctx.controller)
-                    > crate::recommend::BOARD_GATE as i64
-                {
-                    self.players[ctx.controller].hand.retain(|c| c.id != copy);
-                    return Ok(());
-                }
-                let auto = self.auto_target_for_effect_avoiding(
-                    &self.players[ctx.controller]
-                        .hand
-                        .iter()
-                        .find(|c| c.id == copy)
-                        .map(|c| c.definition.effect.clone())
-                        .unwrap_or(Effect::Noop),
-                    ctx.controller,
-                    Some(copy),
-                );
-                let cast = self.cast_card_for_free(
-                    ctx.controller,
-                    copy,
-                    crate::card::Zone::Hand,
-                    auto,
-                    vec![],
-                    None,
-                    None,
-                    false,
-                );
-                match cast {
-                    Ok(mut evs) => events.append(&mut evs),
-                    Err(_) => {
-                        self.players[ctx.controller].hand.retain(|c| c.id != copy);
+                    .filter_map(|id| self.find_card_anywhere(id).map(|c| (c.definition.cost.cmc(), id)))
+                    .collect();
+                ids.sort_by_key(|&(mv, id)| (std::cmp::Reverse(mv), id));
+                let mut cast = 0;
+                for (_, id) in ids {
+                    if cast >= *max {
+                        break;
                     }
+                    if self.copy_card_and_cast_free(id, ctx, events) {
+                        cast += 1;
+                    }
+                }
+                Ok(())
+            }
+            Effect::CopyCardAndCastFree { what } => {
+                // Reenact the Crime — copy the card wherever it now is and
+                // offer the copy as a free cast (CR 707.12).
+                if let Some(id) = self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).next() {
+                    self.copy_card_and_cast_free(id, ctx, events);
                 }
                 Ok(())
             }

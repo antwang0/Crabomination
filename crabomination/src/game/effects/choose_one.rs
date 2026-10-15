@@ -24,6 +24,7 @@ fn pick_is_gain(e: &Effect) -> bool {
         | Effect::AttachAnyNumberTo { .. }
         | Effect::CastWithoutPayingImmediate { .. }
         | Effect::CopyCardAndCastFree { .. }
+        | Effect::CopyCardsAndCastFreeUpTo { .. }
         | Effect::CastImmediateForLife { .. }
         | Effect::CastImmediateAnyManaType { .. } => true,
         Effect::Move { to, .. } => matches!(

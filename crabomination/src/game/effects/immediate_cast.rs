@@ -249,4 +249,72 @@ impl GameState {
         events.extend(cast_events);
         Ok(())
     }
+
+    /// CR 707.12 — copy card `id` wherever it now is and offer the copy as a
+    /// free cast (Reenact the Crime, Baron Helmut Zemo). True when the copy
+    /// was cast; an uncast copy ceases to exist.
+    pub(super) fn copy_card_and_cast_free(
+        &mut self,
+        id: CardId,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        // A face-down permanent copies the card it hides (Magar's
+        // "the card with the noted name").
+        let Some(def) = self
+            .find_card_anywhere(id)
+            .map(|c| c.face_up_def.clone().unwrap_or_else(|| c.definition.arc()))
+        else {
+            return false;
+        };
+        // A copy of the face-down body notes no name (Magar's ruling).
+        if def.is_land() || def.name.is_empty() {
+            return false;
+        }
+        // CR 707.12 — the copy is created in the card's zone: a copy of an
+        // exiled card is cast from exile (so "cast from your hand" triggers —
+        // Baron Helmut Zemo's own connive — don't see it); any other copy is
+        // staged in hand.
+        let in_exile = self.exile.iter().any(|c| c.id == id);
+        let zone = if in_exile { Zone::Exile } else { Zone::Hand };
+        let copy = self.next_id();
+        let mut inst = crate::card::CardInstance::new(copy, def, ctx.controller);
+        inst.is_token = true;
+        let effect = inst.definition.effect.clone();
+        if in_exile {
+            self.exile.push(inst);
+        } else {
+            self.players[ctx.controller].hand.push(inst);
+        }
+        let drop_copy = |g: &mut GameState| {
+            if in_exile {
+                g.exile.retain(|c| c.id != copy);
+            } else {
+                g.players[ctx.controller].hand.retain(|c| c.id != copy);
+            }
+        };
+        // "You may cast the copy" is declined when the cast would carry
+        // the battlefield past the engine's bound (`MAX_BATTLEFIELD`,
+        // the same one a token batch is capped at): Surge to Victory
+        // copying a big spell over a board of Leitmotif Composers
+        // doubled an 8-seat pod to 1,000.
+        if self.battlefield.len() as i64 + self.spell_token_estimate(copy, ctx.controller)
+            > crate::recommend::BOARD_GATE as i64
+        {
+            drop_copy(self);
+            return false;
+        }
+        let auto = self.auto_target_for_effect_avoiding(&effect, ctx.controller, Some(copy));
+        let cast = self.cast_card_for_free(ctx.controller, copy, zone, auto, vec![], None, None, false);
+        match cast {
+            Ok(mut evs) => {
+                events.append(&mut evs);
+                true
+            }
+            Err(_) => {
+                drop_copy(self);
+                false
+            }
+        }
+    }
 }

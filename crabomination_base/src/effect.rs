@@ -6977,6 +6977,12 @@ pub enum Effect {
     /// (Reenact the Crime) — mints a token copy of the card `what` resolves to
     /// and offers a free cast of it.
     CopyCardAndCastFree { what: Selector },
+    /// "Copy those cards. You may cast up to `max` of the copies without
+    /// paying their mana costs" (Baron Helmut Zemo's boast, over
+    /// `Selector::CostExiledCards`): each card `what` resolves to is offered
+    /// as a `CopyCardAndCastFree`, priciest first, until `max` copies were
+    /// cast; the uncast copies cease to exist (CR 707.12).
+    CopyCardsAndCastFreeUpTo { what: Selector, max: u32 },
     /// Imprint payoff: turn the card exiled face down with this source face up
     /// and, if it's a creature card, put it onto the battlefield under the
     /// source's controller (Summoner's Egg). Non-creature cards stay exiled
