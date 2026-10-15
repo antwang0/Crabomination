@@ -702,3 +702,21 @@ pub fn saheeli_filigree_master() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dr. Beverly Crusher — {2}{W} legendary 2/2 Human Doctor. If you gaining
+/// life causes a triggered ability of a permanent you control to trigger, it
+/// triggers an additional time. Whenever you gain life, a +1/+1 counter on
+/// her.
+pub fn dr_beverly_crusher() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If you gaining life causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerLifeGainTriggers,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..legend("Dr. Beverly Crusher", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Doctor], 2, 2)
+    }
+}

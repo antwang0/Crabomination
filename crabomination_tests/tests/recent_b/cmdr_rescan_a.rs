@@ -1019,3 +1019,14 @@ fn saheeli_emblem_discounts_artifact_spells() {
     })
     .expect("{1} pays for Mind Stone under the emblem");
 }
+
+/// CR 603.2 — Dr. Beverly Crusher doubles the triggers her controller's life
+/// gain causes, her own included: one gain, two counters.
+#[test]
+fn dr_crusher_doubles_lifegain_triggers() {
+    let mut g = pod(2);
+    let crusher = ready(&mut g, 0, catalog::dr_beverly_crusher());
+    let spell = g.add_card_to_hand(0, catalog::healing_salve());
+    cast_with(&mut g, spell, Some(Target::Player(0)), vec![], None);
+    assert_eq!(plus(&g, crusher), 2);
+}
