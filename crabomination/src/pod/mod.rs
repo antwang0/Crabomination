@@ -16272,6 +16272,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZHANG_FEI_COMMANDERS,
             main: decks::ZHANG_FEI_MAIN,
         },
+        // Seat 2637: Wort, the Raidmother's EDHREC average deck. `--pod-decks 2637`.
+        PodDeck {
+            name: "Wort, the Raidmother (RG)",
+            commanders: decks::WORT_COMMANDERS,
+            main: decks::WORT_MAIN,
+        },
+        // Seat 2638: Sigurd, Jarl of Ravensthorpe's EDHREC average deck. `--pod-decks 2638`.
+        PodDeck {
+            name: "Sigurd, Jarl of Ravensthorpe (WRG)",
+            commanders: decks::SIGURD_COMMANDERS,
+            main: decks::SIGURD_MAIN,
+        },
+        // Seat 2639: Thada Adel, Acquisitor's EDHREC average deck. `--pod-decks 2639`.
+        PodDeck {
+            name: "Thada Adel, Acquisitor (U)",
+            commanders: decks::THADA_ADEL_COMMANDERS,
+            main: decks::THADA_ADEL_MAIN,
+        },
+        // Seat 2640: Tromell, Seymour's Butler's EDHREC average deck. `--pod-decks 2640`.
+        PodDeck {
+            name: "Tromell, Seymour's Butler (G)",
+            commanders: decks::TROMELL_COMMANDERS,
+            main: decks::TROMELL_MAIN,
+        },
+        // Seat 2641: Masako the Humorless's EDHREC average deck. `--pod-decks 2641`.
+        PodDeck {
+            name: "Masako the Humorless (W)",
+            commanders: decks::MASAKO_THE_HUMORLESS_COMMANDERS,
+            main: decks::MASAKO_THE_HUMORLESS_MAIN,
+        },
+        // Seat 2642: Goldberry, River-Daughter's EDHREC average deck. `--pod-decks 2642`.
+        PodDeck {
+            name: "Goldberry, River-Daughter (U)",
+            commanders: decks::GOLDBERRY_COMMANDERS,
+            main: decks::GOLDBERRY_MAIN,
+        },
+        // Seat 2643: Spider-Ham, Peter Porker's EDHREC average deck. `--pod-decks 2643`.
+        PodDeck {
+            name: "Spider-Ham, Peter Porker (G)",
+            commanders: decks::SPIDER_HAM_COMMANDERS,
+            main: decks::SPIDER_HAM_MAIN,
+        },
+        // Seat 2644: Egon, God of Death's EDHREC average deck. `--pod-decks 2644`.
+        PodDeck {
+            name: "Egon, God of Death (B)",
+            commanders: decks::EGON_COMMANDERS,
+            main: decks::EGON_MAIN,
+        },
+        // Seat 2645: Kumano, Master Yamabushi's EDHREC average deck. `--pod-decks 2645`.
+        PodDeck {
+            name: "Kumano, Master Yamabushi (R)",
+            commanders: decks::KUMANO_COMMANDERS,
+            main: decks::KUMANO_MAIN,
+        },
+        // Seat 2646: Spider-Girl, Legacy Hero's EDHREC average deck. `--pod-decks 2646`.
+        PodDeck {
+            name: "Spider-Girl, Legacy Hero (WG)",
+            commanders: decks::SPIDER_GIRL_COMMANDERS,
+            main: decks::SPIDER_GIRL_MAIN,
+        },
     ]
 }
 
@@ -20741,6 +20801,16 @@ mod tests {
             ("Moonstone, Harsh Mistress", &[0x1460]),
             ("Stature, Size Shifter", &[0x1461]),
             ("Zhang Fei, Fierce Warrior", &[0x1462]),
+            ("Wort, the Raidmother", &[0x1463]),
+            ("Sigurd, Jarl of Ravensthorpe", &[0x1464]),
+            ("Thada Adel, Acquisitor", &[0x1465]),
+            ("Tromell, Seymour's Butler", &[0x1466]),
+            ("Masako the Humorless", &[0x1467]),
+            ("Goldberry, River-Daughter", &[0x1468]),
+            ("Spider-Ham, Peter Porker", &[0x1469]),
+            ("Egon, God of Death", &[0x146A]),
+            ("Kumano, Master Yamabushi", &[0x146B]),
+            ("Spider-Girl, Legacy Hero", &[0x146C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
