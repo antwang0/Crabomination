@@ -10185,6 +10185,10 @@ pub enum Effect {
     },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
+    /// "Target land becomes the basic land type of your choice in addition to
+    /// its other types" (Navigator's Compass): the additive sibling of
+    /// `LandsBecomeChosenBasicType` — one layer-4 `AddLandType` per land.
+    GainChosenBasicLandType { what: Selector, duration: Duration },
     /// The controller chooses one basic land type, then every land picked by
     /// `what` becomes that type for `duration` (losing other types/abilities).
     /// Terraformer — "{1}: Choose a basic land type. Each land you control

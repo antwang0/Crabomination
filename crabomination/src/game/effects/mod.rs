@@ -12461,6 +12461,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GainChosenBasicLandType { what, duration } => {
+                self.gain_chosen_basic_land_type(what, *duration, ctx)
+            }
+
             Effect::EachPlayerKeepsCreaturesTotalPower { max_power } => {
                 self.each_player_keeps_creatures_total_power(*max_power, ctx, events, effect)
             }

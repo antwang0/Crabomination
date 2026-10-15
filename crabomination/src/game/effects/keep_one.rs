@@ -146,6 +146,52 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::GainChosenBasicLandType` — the controller picks a basic land
+    /// type (the mana it wants, as Terraformer picks), and each land `what`
+    /// names gains it in addition to its other types (CR 305.7 doesn't apply:
+    /// nothing is replaced).
+    pub(super) fn gain_chosen_basic_land_type(
+        &mut self,
+        what: &Selector,
+        duration: crate::effect::Duration,
+        ctx: &EffectContext,
+    ) -> Result<(), GameError> {
+        use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer, Modification};
+        let source = ctx.source.unwrap_or(CardId(0));
+        let lands: Vec<CardId> = self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
+        if lands.is_empty() {
+            return Ok(());
+        }
+        // A type the controller's lands lack first: it is new mana and new
+        // domain; with all five already there, any.
+        let lacked: Vec<crate::mana::Color> = crate::mana::Color::ALL
+            .into_iter()
+            .filter(|&c| {
+                let lt = super::basic_land_type_for(c);
+                !self.battlefield.iter().any(|p| {
+                    p.controller == ctx.controller
+                        && self.computed_permanent(p.id).is_some_and(|cp| cp.subtypes().land_types.contains(&lt))
+                })
+            })
+            .collect();
+        let options: &[crate::mana::Color] = if lacked.is_empty() { &crate::mana::Color::ALL } else { &lacked };
+        let land_type = super::basic_land_type_for(self.chosen_mana_color(ctx.controller, options, Some(source)));
+        let duration_kind = self.effect_duration_for(duration, ctx.controller);
+        for cid in lands {
+            let ts = self.next_timestamp();
+            self.add_continuous_effect(ContinuousEffect {
+                timestamp: ts,
+                source,
+                affected: AffectedPermanents::just(cid),
+                layer: Layer::L4Type,
+                sublayer: None,
+                duration: duration_kind.clone(),
+                modification: Modification::AddLandType(land_type),
+            });
+        }
+        Ok(())
+    }
+
     /// `Effect::EachPlayerChoosesOpponentPermanentExile` (The Legend of
     /// Yangchen): starting with the controller, each living seat chooses up
     /// to one `filter` permanent an opponent of the controller controls; the

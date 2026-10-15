@@ -3194,7 +3194,9 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::BecomeCopyOf { .. }
         | Effect::BecomeCopyOfFor { .. }
         | Effect::BecomeCopyOfExiledCard { .. } => "Become a copy",
-        Effect::LandsBecomeChosenBasicType { .. } | Effect::GainLandType { .. } => {
+        Effect::LandsBecomeChosenBasicType { .. }
+        | Effect::GainLandType { .. }
+        | Effect::GainChosenBasicLandType { .. } => {
             "Change land type"
         }
         Effect::MustBlockSource { .. } => "Force a block",

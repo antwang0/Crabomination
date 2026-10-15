@@ -2238,6 +2238,7 @@ impl Effect {
             | Effect::LandsBecomeChosenBasicType { what, .. }
             | Effect::GainAllBasicLandTypes { what, .. }
             | Effect::GainLandType { what, .. }
+            | Effect::GainChosenBasicLandType { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
             Effect::BecomeCopyOf { what, source, .. }
             | Effect::BecomeCopyKeepingIdentity { what, source }
@@ -2796,9 +2797,9 @@ impl Effect {
             }
             Effect::DealDamageFrom { source, to, .. } => sel_filter(to).or_else(|| sel_filter(source)),
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
-            Effect::BecomeBasicLand { what, .. } | Effect::GainLandType { what, .. } => {
-                sel_filter(what)
-            }
+            Effect::BecomeBasicLand { what, .. }
+            | Effect::GainLandType { what, .. }
+            | Effect::GainChosenBasicLandType { what, .. } => sel_filter(what),
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
@@ -4766,6 +4767,7 @@ impl Effect {
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
             | Effect::GainLandType { .. }
+            | Effect::GainChosenBasicLandType { .. }
             | Effect::Attach { .. }
             | Effect::ExchangeControl { .. }
             | Effect::ExchangeControlChoosing { .. }
@@ -5706,6 +5708,7 @@ impl Effect {
                 Effect::BecomeBasicLand { what, .. }
                 | Effect::LandsBecomeChosenBasicType { what, .. }
                 | Effect::GainLandType { what, .. }
+                | Effect::GainChosenBasicLandType { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::RevealUntilLandDamage { to, .. }
                 | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
