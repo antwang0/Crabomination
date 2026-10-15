@@ -15777,6 +15777,21 @@ static DECKS: &[Factory] = &[
     super::decks::leaf_crowned_elder,
     super::decks::elder_of_laurels,
     super::decks::swashbucklers_whip,
+    // cmdr_scan7k_k
+    super::decks::the_fantastic_four,
+    super::decks::wall_off,
+    super::decks::hedron_matrix,
+    super::decks::solid_footing,
+    super::decks::lost_isle_calling,
+    super::decks::councils_deliberation,
+    super::decks::the_astonishing_ant_man,
+    super::decks::ant_man_colony_commander,
+    super::decks::dorothea_vengeful_victim,
+    super::decks::invocation_of_saint_traft,
+    super::decks::jennifer_walters,
+    super::decks::storm_windrider,
+    super::decks::niambi_esteemed_speaker,
+    super::decks::linvala_shield_of_sea_gate,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

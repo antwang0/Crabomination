@@ -2141,3 +2141,173 @@ fn cr_604_3_kalonian_twingrove_token_counts_forests_live() {
     ready(&mut g, 0, catalog::forest());
     assert_eq!(pt(&g, token), (3, 3));
 }
+
+// ── decks::cmdr_scan7k_k ─────────────────────────────────────────────────────
+
+/// The Fantastic Four: the entry and each mana-value-4 spell pick a mode not
+/// yet chosen this turn, so three triggers make three different choices;
+/// Wall Off discounts per opposing creature.
+#[test]
+fn fantastic_four_rotates_modes_and_wall_off_discounts() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let life = g.players[1].life;
+    let ff = g.add_card_to_hand(0, catalog::the_fantastic_four());
+    cast(&mut g, ff);
+    for _ in 0..2 {
+        let giant = g.add_card_to_hand(0, catalog::hill_giant());
+        cast(&mut g, giant);
+    }
+    let counters: u32 = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| plus(&g, c.id)).sum();
+    let used = [
+        named_count(&g, 0, "Wall"),
+        usize::from(g.players[1].life == life - 3),
+        (counters / 2) as usize,
+        3 - g.players[0].library.len(),
+    ];
+    assert!(used.iter().all(|&n| n <= 1), "no mode twice in a turn: {used:?}");
+    assert_eq!(used.iter().sum::<usize>(), 3, "three triggers, three modes: {used:?}");
+    for _ in 0..3 {
+        ready(&mut g, 1, catalog::grizzly_bears());
+    }
+    let off = g.add_card_to_hand(0, catalog::wall_off());
+    flood(&mut g);
+    let before = g.players[0].mana_pool.total();
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: off, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(before - g.players[0].mana_pool.total(), 1, "{{3}}{{W}} minus three");
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Hedron Matrix adds its bearer's mana value; Solid Footing makes a vigilant
+/// creature hit with its toughness.
+#[test]
+fn hedron_matrix_and_solid_footing() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let matrix = ready(&mut g, 0, catalog::hedron_matrix());
+    g.battlefield_find_mut(matrix).unwrap().attached_to = Some(giant);
+    assert_eq!(pt(&g, giant), (3 + 4, 3 + 4));
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let footing = g.add_card_to_hand(0, catalog::solid_footing());
+    attach(&mut g, footing, bear);
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(!g.permanent_has_keyword(bear, &Keyword::AssignsCombatDamageByToughness), "no vigilance");
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    let footing = g.add_card_to_hand(0, catalog::solid_footing());
+    attach(&mut g, footing, angel);
+    assert!(g.permanent_has_keyword(angel, &Keyword::AssignsCombatDamageByToughness));
+}
+
+/// Lost Isle Calling gathers a verse per scry and cashes them in — CR 608.2h,
+/// the exile-itself cost leaves its verse count readable as last-known
+/// information; Council's Deliberation comes back from the graveyard on a
+/// scry.
+#[test]
+fn cr_608_2h_lost_isle_calling_and_councils_deliberation() {
+    let mut g = pod(2);
+    library(&mut g, 0, 8);
+    let isle = ready(&mut g, 0, catalog::lost_isle_calling());
+    ready(&mut g, 0, catalog::island());
+    let council = g.add_card_to_graveyard(0, catalog::councils_deliberation());
+    let top = g.players[0].library[0].id;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::ScryOrder { kept_top: vec![top], bottom: vec![] },
+        DecisionAnswer::Bool(true),
+    ]));
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, opt);
+    assert_eq!(g.battlefield_find(isle).unwrap().counter_count(CounterType::Verse), 1);
+    assert!(g.exile.iter().any(|c| c.id == council), "exiled from the graveyard");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "Opt's draw and the Deliberation's");
+    g.battlefield_find_mut(isle).unwrap().add_counters(CounterType::Verse, 2);
+    let hand = g.players[0].hand.len();
+    activate(&mut g, isle, 0, None);
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+}
+
+/// The Astonishing Ant-Man grows on draws and splits into Insects; Colony
+/// Commander makes an Insect on the first counter each turn.
+#[test]
+fn ant_men_grow_and_make_insects() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let ant = ready(&mut g, 0, catalog::the_astonishing_ant_man());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, div);
+    assert_eq!(plus(&g, ant), 2);
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ant, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2), mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, ant), 0);
+    assert_eq!(named_count(&g, 0, "Insect"), 2);
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ant_man_colony_commander());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        let growth = g.add_card_to_hand(0, catalog::battlegrowth());
+        cast_at(&mut g, growth, Some(Target::Permanent(bear)), vec![]);
+    }
+    assert_eq!(plus(&g, bear), 2);
+    assert_eq!(named_count(&g, 0, "Insect"), 1, "only once each turn");
+}
+
+/// Invocation of Saint Traft's creature brings an attacking Angel, exiled at
+/// end of combat; Dorothea is sacrificed after attacking.
+#[test]
+fn invocation_of_saint_traft_and_dorothea() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let inv = g.add_card_to_hand(0, catalog::invocation_of_saint_traft());
+    attach(&mut g, inv, bear);
+    let dot = ready(&mut g, 0, catalog::dorothea_vengeful_victim());
+    declare(&mut g, vec![(bear, 1), (dot, 1)]);
+    assert_eq!(named_count(&g, 0, "Angel"), 1);
+    no_blocks_through_combat(&mut g);
+    let evs = g.advance_step(Vec::new()).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(named_count(&g, 0, "Angel"), 0, "exiled at end of combat");
+    assert!(g.battlefield_find(dot).is_none(), "Dorothea was sacrificed");
+}
+
+/// Jennifer Walters transforms into She-Hulk; Storm gives your targeted
+/// creature flying.
+#[test]
+fn jennifer_walters_and_storm_windrider() {
+    let mut g = pod(2);
+    let jen = ready(&mut g, 0, catalog::jennifer_walters());
+    activate(&mut g, jen, 0, None);
+    assert_eq!(g.battlefield_find(jen).unwrap().definition.name, "The Sensational She-Hulk");
+    assert_eq!(pt(&g, jen), (6, 6));
+    ready(&mut g, 0, catalog::storm_windrider());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    cast_at(&mut g, growth, Some(Target::Permanent(bear)), vec![]);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Flying));
+}
+
+/// Niambi bounces your creature for life; Linvala's sacrifice protects the
+/// team.
+#[test]
+fn niambi_bounces_for_life_and_linvala_protects() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let niambi = g.add_card_to_hand(0, catalog::niambi_esteemed_speaker());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(giant))]));
+    cast(&mut g, niambi);
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant));
+    assert_eq!(g.players[0].life, life + 4);
+    let linvala = ready(&mut g, 0, catalog::linvala_shield_of_sea_gate());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    activate(&mut g, linvala, 0, None);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Indestructible));
+}
