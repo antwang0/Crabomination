@@ -902,3 +902,35 @@ pub fn fabrication_foundry() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Baron Helmut Zemo — {B}{B}{B} legendary 3/3 Human Noble Villain. Whenever
+/// you cast a black spell from your hand, he connives. Boast — exile any
+/// number of black cards from your graveyard with fifteen or more black mana
+/// symbols among their mana costs: copy those cards; cast up to three of the
+/// copies free. Approximation: the exiled set and the three casts are
+/// auto-picked (fewest cards, then the priciest copies). (The Master of
+/// Lake-town, M.O.D.O.K.)
+pub fn baron_helmut_zemo() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(R::HasColor(Color::Black)),
+                Predicate::CastSpellFromHand,
+            ])),
+            effect: crate::effect::shortcut::connive(1),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            exile_other_filter: Some((R::HasColor(Color::Black), 1)),
+            exile_other_total_pips: Some((Color::Black, 15)),
+            effect: Effect::CopyCardsAndCastFreeUpTo { what: Selector::CostExiledCards, max: 3 },
+            ..crate::effect::shortcut::boast(ManaCost::default(), Effect::Noop)
+        }],
+        ..legend(
+            "Baron Helmut Zemo",
+            cost(&[b(), b(), b()]),
+            vec![CreatureType::Human, CreatureType::Noble, CreatureType::Villain],
+            3,
+            3,
+        )
+    }
+}

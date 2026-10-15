@@ -1150,3 +1150,56 @@ fn fabrication_foundry_exiles_enough_mana_value_to_cover_the_target() {
     assert!(g.battlefield_find(signet).is_none());
     assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(thopter).is_some());
 }
+
+/// CR 702.142 / 707.12 — Zemo's boast needs fifteen black pips of exiled
+/// cards (twelve fall short); paid, it copies all four Obliterators and casts
+/// three of the copies, leaving the one-pip Duress in the graveyard. The
+/// copies are cast from exile, so Zemo's from-hand connive stays quiet (with
+/// an empty library it would have drawn him out of the game).
+#[test]
+fn baron_zemo_boast_counts_black_pips_and_casts_three_copies() {
+    let mut g = pod(2);
+    let zemo = ready(&mut g, 0, catalog::baron_helmut_zemo());
+    let duress = g.add_card_to_graveyard(0, catalog::duress());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::phyrexian_obliterator());
+    }
+    declare(&mut g, vec![(zemo, 1)]);
+    let boast = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: zemo,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(boast(&mut g).is_err(), "13 black pips");
+    g.add_card_to_graveyard(0, catalog::phyrexian_obliterator());
+    boast(&mut g).expect("16 black pips");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Obliterator").count();
+    assert_eq!(copies, 3);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == duress));
+    assert_eq!(g.players[0].graveyard.len(), 1);
+    assert!(g.game_over.is_none());
+}
+
+/// Zemo connives when you cast a black spell from your hand, not a red one.
+#[test]
+fn baron_zemo_connives_on_black_spells_from_hand() {
+    let mut g = pod(2);
+    let zemo = ready(&mut g, 0, catalog::baron_helmut_zemo());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Player(1)), vec![], None);
+    assert_eq!(g.players[0].hand.len(), 0);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let duress = g.add_card_to_hand(0, catalog::duress());
+    cast_with(&mut g, duress, Some(Target::Player(1)), vec![], None);
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name != "Lightning Bolt").count(), 2);
+    assert_eq!(plus(&g, zemo), 1, "a nonland discard");
+}
