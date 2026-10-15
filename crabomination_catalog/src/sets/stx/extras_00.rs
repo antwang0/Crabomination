@@ -1757,7 +1757,7 @@ pub fn verdant_mastery() -> CardDefinition {
             who: PlayerRef::You,
             filter: basic(),
             to: ZoneDest::Battlefield {
-                controller: PlayerRef::EachOpponent,
+                controller: PlayerRef::OpponentOf(Box::new(PlayerRef::You)),
                 tapped: true,
             },
         },

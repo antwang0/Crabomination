@@ -844,7 +844,7 @@ pub fn endless_whispers() -> CardDefinition {
                         body: Box::new(Effect::Move {
                             what: Selector::Target(0),
                             to: ZoneDest::Battlefield {
-                                controller: PlayerRef::EachOpponent,
+                                controller: PlayerRef::OpponentOf(Box::new(PlayerRef::You)),
                                 tapped: false,
                             },
                         }),

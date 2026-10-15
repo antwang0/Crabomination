@@ -1904,3 +1904,51 @@ fn the_cost_source_filter_admits_the_chosen_card_type_tax() {
     use crabomination::effect::{StaticEffect, static_affects_spell_cost};
     assert!(static_affects_spell_cost(&StaticEffect::ChosenCardTypeSpellsCostMore { amount: 1 }));
 }
+
+/// A move's destination names ONE player: `ZoneDest`'s controller / owner is
+/// read with the singular resolver, so a fan-out `PlayerRef` there drops every
+/// seat but one — a debug-assert panic in an N-seat pod (Verdant Mastery's
+/// "under an opponent's control", 14-seat pod seed 31501). Bug fix.
+#[test]
+fn no_move_destination_names_a_fan_out_player() {
+    use serde_json::Value;
+    const FAN_OUT: &[&str] = &["EachOpponent", "EachPlayer", "EachTeammate", "EachPlayerWithoutMaxSpeed"];
+    fn fans(v: &Value) -> bool {
+        v.as_str().is_some_and(|s| FAN_OUT.contains(&s))
+    }
+    fn dest_fans(v: &Value) -> bool {
+        let Value::Object(m) = v else { return false };
+        m.get("Hand").is_some_and(fans)
+            || m.get("Battlefield").and_then(|b| b.get("controller")).is_some_and(fans)
+            || m.get("Library").and_then(|b| b.get("who")).is_some_and(fans)
+    }
+    fn walk(v: &Value, hit: &mut bool) {
+        match v {
+            Value::Object(map) => {
+                for (k, inner) in map {
+                    if k == "to" && dest_fans(inner) {
+                        *hit = true;
+                    }
+                    walk(inner, hit);
+                }
+            }
+            Value::Array(a) => a.iter().for_each(|x| walk(x, hit)),
+            _ => {}
+        }
+    }
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        let mut hit = false;
+        walk(&serde_json::to_value(&def).expect("CardDefinition serializes"), &mut hit);
+        if hit {
+            bad.push(def.name);
+        }
+    }
+    bad.sort_unstable();
+    assert!(bad.is_empty(), "a move destination fans out: {bad:?}");
+}
