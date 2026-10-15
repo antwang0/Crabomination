@@ -802640,5 +802640,272 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=898500&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/154176?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Screeching Soulbreaker": {
+    "object": "card",
+    "id": "738667a1-c184-43ea-829f-49fbb69b6fc0",
+    "oracle_id": "47e33aa1-2f54-471c-a484-de13bcd2dceb",
+    "multiverse_ids": [],
+    "resource_id": "63225CCFD5CB9CBCF0FE7858E104E9E10FAB95A145393A4C638B6E9FF51E400F",
+    "mtgo_id": 155836,
+    "tcgplayer_id": 716964,
+    "cardmarket_id": 909239,
+    "name": "Screeching Soulbreaker",
+    "lang": "en",
+    "released_at": "2026-10-02",
+    "uri": "https://api.scryfall.com/cards/738667a1-c184-43ea-829f-49fbb69b6fc0",
+    "scryfall_uri": "https://scryfall.com/card/fra/65/screeching-soulbreaker?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-09-14T11:39:20Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.jpg?1789385960",
+      "normal": "https://cards.scryfall.io/normal/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.jpg?1789385960",
+      "large": "https://cards.scryfall.io/large/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.jpg?1789385960",
+      "png": "https://cards.scryfall.io/png/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.png?1789385960",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.jpg?1789385960",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.jpg?1789385960",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.webp?1789385960",
+      "grid": "https://cards.scryfall.io/grid/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.webp?1789385960",
+      "display": "https://cards.scryfall.io/display/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.webp?1789385960",
+      "art": "https://cards.scryfall.io/art/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.webp?1789385960",
+      "crop": "https://cards.scryfall.io/crop/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.webp?1789385960",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/3/738667a1-c184-43ea-829f-49fbb69b6fc0.jpg?1789385960"
+    },
+    "mana_cost": "{2}{B}",
+    "cmc": 3.0,
+    "type_line": "Creature — Siren Bard",
+    "oracle_text": "Flying\nWhenever this creature attacks, it deals 1 damage to each opponent and you gain 1 life.",
+    "power": "1",
+    "toughness": "4",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Flying"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "6595985e-39cf-4ca3-b43d-dd3e64749fdc",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/6595985e-39cf-4ca3-b43d-dd3e64749fdc",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Afra&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/fra?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/738667a1-c184-43ea-829f-49fbb69b6fc0/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A47e33aa1-2f54-471c-a484-de13bcd2dceb&unique=prints",
+    "collector_number": "65",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "She weaves brutal insults into hypnotizing melodies, enthralling her victims to stay and listen.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Pavel Kolomeyets",
+    "artist_ids": [
+      "13435e52-d47a-4143-adfa-2ae0a6858292"
+    ],
+    "illustration_id": "7f8233e1-f579-4e0a-9ead-f8e7bc04bc83",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 23693,
+    "prices": {
+      "usd": "0.15",
+      "usd_foil": "0.33",
+      "usd_etched": null,
+      "eur": "0.04",
+      "eur_foil": "0.09",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DScreeching%2BSoulbreaker",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DScreeching%2BSoulbreaker",
+      "edhrec": "https://edhrec.com/route/?cc=Screeching+Soulbreaker"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F716964%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=909239&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/155836?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Cloistered Telepath": {
+    "object": "card",
+    "id": "959318c1-3f7e-4418-91ce-be529af27972",
+    "oracle_id": "8656291d-8de7-4341-b1ee-0fcd65d629a4",
+    "multiverse_ids": [],
+    "name": "Cloistered Telepath",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/959318c1-3f7e-4418-91ce-be529af27972",
+    "scryfall_uri": "https://scryfall.com/card/trk/50/cloistered-telepath?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-06T01:56:31Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.jpg?1785981391",
+      "normal": "https://cards.scryfall.io/normal/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.jpg?1785981391",
+      "large": "https://cards.scryfall.io/large/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.jpg?1785981391",
+      "png": "https://cards.scryfall.io/png/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.png?1785981391",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.jpg?1785981391",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.jpg?1785981391",
+      "thumb": "https://cards.scryfall.io/thumb/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.webp?1785981391",
+      "grid": "https://cards.scryfall.io/grid/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.webp?1785981391",
+      "display": "https://cards.scryfall.io/display/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.webp?1785981391",
+      "art": "https://cards.scryfall.io/art/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.webp?1785981391",
+      "crop": "https://cards.scryfall.io/crop/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.webp?1785981391",
+      "jpeg": "https://cards.scryfall.io/normal/front/9/5/959318c1-3f7e-4418-91ce-be529af27972.jpg?1785981391"
+    },
+    "mana_cost": "{1}{U}",
+    "cmc": 2.0,
+    "type_line": "Creature — Talosian Advisor",
+    "oracle_text": "Flash\nWhen this creature enters, draw a card, then discard a card.",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Flash"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/959318c1-3f7e-4418-91ce-be529af27972/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A8656291d-8de7-4341-b1ee-0fcd65d629a4&unique=prints",
+    "collector_number": "50",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"She has an illusion, and you have reality. May you find your way as pleasant.\"\n—The Keeper, magistrate of Talos IV",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Monztre",
+    "artist_ids": [
+      "79f1426a-bb52-4801-ad62-eddf0daa5b22"
+    ],
+    "illustration_id": "df8bd945-2666-4dd7-acbd-be6e6dd7c44d",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 31976,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DCloistered%2BTelepath",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DCloistered%2BTelepath",
+      "edhrec": "https://edhrec.com/route/?cc=Cloistered+Telepath"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fmagic%2Fproduct%3FproductLineName%3Dmagic%26q%3DCloistered%2BTelepath%26view%3Dgrid",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Cloistered+Telepath&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Cloistered+Telepath&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }
