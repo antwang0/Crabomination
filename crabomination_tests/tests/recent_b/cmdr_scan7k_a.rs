@@ -1104,3 +1104,183 @@ fn photon_blast_barrage_copies_x_times() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(angel).unwrap().damage, 3);
 }
+
+// ── decks::cmdr_scan7k_f ─────────────────────────────────────────────────────
+
+/// Ezio grows each attack; at two counters he has first strike and is an
+/// Assassin.
+#[test]
+fn ezio_becomes_an_assassin_at_two_counters() {
+    let mut g = pod(2);
+    let ezio = ready(&mut g, 0, catalog::ezio_brash_novice());
+    declare(&mut g, vec![(ezio, 1)]);
+    assert!(!g.permanent_has_keyword(ezio, &Keyword::FirstStrike));
+    g.battlefield_find_mut(ezio).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.permanent_has_keyword(ezio, &Keyword::FirstStrike));
+    assert!(g.computed_permanent(ezio).unwrap().subtypes().creature_types.contains(&crabomination::card::CreatureType::Assassin));
+}
+
+/// Origin of the Hidden Ones III: each attacking Assassin brings another,
+/// tapped and attacking.
+#[test]
+fn origin_of_the_hidden_ones_chapter_three_multiplies_assassins() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    let saga = ready(&mut g, 0, catalog::origin_of_the_hidden_ones());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    let ezio = ready(&mut g, 0, catalog::ezio_brash_novice());
+    g.battlefield_find_mut(ezio).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    g.clear_sickness(ezio);
+    declare(&mut g, vec![(ezio, 1)]);
+    assert!(g.attacking().iter().any(|a| a.attacker != ezio), "a fresh Assassin joined the attack");
+}
+
+/// Thanos grows on any other creature's death; Visions of Villainy costs
+/// {1}{B} beside him.
+#[test]
+fn thanos_grows_and_visions_discount() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let thanos = ready(&mut g, 0, catalog::thanos_deaths_consort());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    assert_eq!(plus(&g, thanos), 1);
+    let visions = g.add_card_to_hand(0, catalog::visions_of_villainy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: visions, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{1}{B} with a Villain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2);
+}
+
+/// Villainous Wrath drains by the opponent's creature count, then wipes.
+#[test]
+fn villainous_wrath_drains_then_wipes() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 1, catalog::grizzly_bears());
+    }
+    let wrath = g.add_card_to_hand(0, catalog::villainous_wrath());
+    let life = g.players[1].life;
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("wrath");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()));
+}
+
+/// Lake-town's sacrifice puts two counters on a Human.
+#[test]
+fn lake_town_grows_a_human() {
+    let mut g = pod(2);
+    let town = ready(&mut g, 0, catalog::lake_town());
+    let sokka = ready(&mut g, 0, catalog::sokka_wolf_coves_protector());
+    activate(&mut g, town, 2, Some(Target::Permanent(sokka)));
+    assert_eq!(plus(&g, sokka), 2);
+    assert!(g.battlefield_find(town).is_none());
+}
+
+/// Sanctum of Calm Waters draws a card per Shrine and discards one.
+#[test]
+fn sanctum_of_calm_waters_draws_per_shrine() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    ready(&mut g, 0, catalog::sanctum_of_calm_waters());
+    ready(&mut g, 0, catalog::go_shintai_of_lost_wisdom());
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1 + 2 - 1, "draw step, two Shrines, one discard");
+}
+
+/// King's Assassin kills a tapped creature, but only before attacks on your
+/// turn.
+#[test]
+fn kings_assassin_kills_a_tapped_creature() {
+    let mut g = pod(2);
+    let assassin = ready(&mut g, 0, catalog::kings_assassin());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    activate(&mut g, assassin, 0, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// Tainted Adversary paid twice: two counters and four decayed Zombies.
+#[test]
+fn tainted_adversary_pays_repeatedly() {
+    let mut g = pod(2);
+    let adv = g.add_card_to_hand(0, catalog::tainted_adversary());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::CastSpell { card_id: adv, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, adv), 2);
+    assert_eq!(named_count(&g, 0, "Zombie"), 4);
+}
+
+/// Mockingbird grows when she survives damage.
+#[test]
+fn mockingbird_grows_on_damage() {
+    let mut g = pod(2);
+    let bird = ready(&mut g, 0, catalog::mockingbird_bobbi_morse());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Permanent(bird)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("shock");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, bird), 1);
+}
+
+/// Gandalf, White Rider pumps the team on each spell; dying, he goes fifth
+/// from the top.
+#[test]
+fn gandalf_white_rider_pumps_and_returns_to_the_library() {
+    let mut g = pod(2);
+    library(&mut g, 0, 8);
+    let gandalf = ready(&mut g, 0, catalog::gandalf_white_rider());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wisps = g.add_card_to_hand(0, catalog::niveous_wisps());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wisps, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("wisps");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (3, 2));
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, gandalf);
+    assert_eq!(g.players[0].library.get(4).map(|c| c.id), Some(gandalf));
+}
+
+/// Gideon's Avenger grows when an opposing creature taps.
+#[test]
+fn gideons_avenger_grows_on_opposing_taps() {
+    let mut g = pod(2);
+    let avenger = ready(&mut g, 0, catalog::gideons_avenger());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let wisps = g.add_card_to_hand(0, catalog::niveous_wisps());
+    library(&mut g, 0, 2);
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wisps, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("wisps");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, avenger), 1);
+}
