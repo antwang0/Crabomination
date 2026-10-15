@@ -17268,6 +17268,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DRALNU_COMMANDERS,
             main: decks::DRALNU_MAIN,
         },
+        // Seat 2803: Shredder, Shadow Master's EDHREC average deck. `--pod-decks 2803`.
+        PodDeck {
+            name: "Shredder, Shadow Master (B)",
+            commanders: decks::SHREDDER_COMMANDERS,
+            main: decks::SHREDDER_MAIN,
+        },
+        // Seat 2804: Shark Shredder, Killer Clone's EDHREC average deck. `--pod-decks 2804`.
+        PodDeck {
+            name: "Shark Shredder, Killer Clone (B)",
+            commanders: decks::SHARK_SHREDDER_COMMANDERS,
+            main: decks::SHARK_SHREDDER_MAIN,
+        },
     ]
 }
 
@@ -21906,6 +21918,8 @@ mod tests {
             ("Seluma, Light of Aysen", &[0x1506]),
             ("The Everforger", &[0x1507]),
             ("Dralnu, Lich Lord", &[0x1508]),
+            ("Shredder, Shadow Master", &[0x1509]),
+            ("Shark Shredder, Killer Clone", &[0x150A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

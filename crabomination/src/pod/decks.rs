@@ -78644,3 +78644,56 @@ pub const DRALNU_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SHREDDER_COMMANDERS: &[CardFactory] = &[shredder_shadow_master];
+
+/// **Shredder, Shadow Master**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Swamps = 99.
+/// Shredder, Shadow Master (EDHREC, fetched 2026-10-15).
+pub const SHREDDER_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, commanders_plate, genji_glove, helm_of_the_host,
+    jet_medallion, lightning_greaves, mind_stone, mithril_coat, silver_shroud_costume, sol_ring,
+    strionic_resonator, sundial_of_the_infinite, swiftfoot_boots, the_darkness_crystal,
+    the_soul_stone, whispersilk_cloak, bojuka_bog, cabal_coffers, cabal_stronghold,
+    nykthos_shrine_to_nyx, rogues_passage, shizo_deaths_storehouse, the_black_gate, turtle_lair,
+    urborg_tomb_of_yawgmoth, archfiend_of_despair, ayara_first_of_locthwain, blood_artist,
+    bloodletter_of_aclazotz, bloodthirsty_conqueror, crypt_ghast, enduring_tenacity,
+    falthis_shadowcat_familiar, gray_merchant_of_asphodel, mirkwood_bats, morbid_opportunist,
+    pitiless_plunderer, roaming_throne, shadow_alley_denizen, shark_shredder_killer_clone,
+    south_wind_avatar, super_shredder, unstoppable_slasher, vito_thorn_of_the_dusk_rose,
+    zulaport_cutthroat, black_market, black_market_connections, cover_of_darkness,
+    exquisite_blood, grave_pact, ninja_teen, phyrexian_arena, wound_reflection, dark_ritual,
+    deadly_dispute, deadly_rollick, defile, go_for_the_throat, imps_mischief, infernal_grasp,
+    malakir_rebirth, vampiric_tutor, withering_torment, damnation, demonic_tutor, exsanguinate,
+    feed_the_swarm, nights_whisper, reanimate, shredders_technique, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SHARK_SHREDDER_COMMANDERS: &[CardFactory] = &[shark_shredder_killer_clone];
+
+/// **Shark Shredder, Killer Clone**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Shark Shredder, Killer Clone (EDHREC, fetched 2026-10-15).
+pub const SHARK_SHREDDER_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, brotherhood_regalia, charcoal_diamond, genji_glove,
+    jet_medallion, lightning_greaves, mesmeric_orb, mindcrank, sol_ring, swiftfoot_boots,
+    the_soul_stone, trailblazers_boots, whispersilk_cloak, cabal_coffers, cabal_stronghold,
+    myriad_landscape, nykthos_shrine_to_nyx, rogues_passage, shizo_deaths_storehouse,
+    urborg_tomb_of_yawgmoth, accursed_marauder, armaggon_future_shark, changeling_outcast,
+    crypt_ghast, dauthi_horror, eye_collector, fleshbag_marauder, gray_merchant_of_asphodel,
+    ink_eyes_servant_of_oni, massacre_wurm, mindwrack_harpy, morbid_opportunist,
+    nirkana_revenant, plaguecrafter, rankle_master_of_pranks, screeching_scorchbeast,
+    sepulchral_primordial, sheoldred_whispering_one, syr_konrad_the_grim,
+    the_master_of_lake_town, tinybones_the_pickpocket, tormented_soul, twilight_diviner,
+    animate_dead, black_market_connections, ninja_teen, phyrexian_arena, tinybones_joins_up,
+    dark_ritual, deadly_dispute, defile, go_for_the_throat, imps_mischief, infernal_grasp,
+    malakir_rebirth, soul_shatter, withering_torment, blasphemous_edict, breach_the_multiverse,
+    dread_summons, feed_the_swarm, nights_whisper, reanimate, rise_of_the_dark_realms,
+    shredders_technique, sign_in_blood, syphon_mind, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
