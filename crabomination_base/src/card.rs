@@ -393,6 +393,8 @@ pub enum CreatureType {
     Officer,
     // Star Trek (Sickbay Orderly).
     Caitian,
+    // Marvel (Thanos, Death's Consort).
+    Eternal,
 }
 
 /// Land subtypes (basic land types + others).
