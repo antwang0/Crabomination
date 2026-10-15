@@ -16235,6 +16235,11 @@ static DECKS: &[Factory] = &[
     super::decks::blood_operative,
     super::decks::brotherhood_patriarch,
     super::decks::gixian_skullflayer,
+    super::decks::renari_merchant_of_marvels,
+    super::decks::silumgars_scorn,
+    super::decks::emerald_dragon,
+    super::decks::silumgar_monument,
+    super::decks::fearsome_awakening,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

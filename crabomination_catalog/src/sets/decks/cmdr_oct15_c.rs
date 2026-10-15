@@ -2857,3 +2857,133 @@ pub fn gixian_skullflayer() -> CardDefinition {
         )
     }
 }
+
+// ── Batch 9 ─────────────────────────────────────────────────────────────────
+
+/// Renari, Merchant of Marvels — {3}{U} legendary 2/4 Dragon Artificer; your
+/// Dragon and artifact spells have flash; choose a Background.
+pub fn renari_merchant_of_marvels() -> CardDefinition {
+    legendary(CardDefinition {
+        keywords: vec![Keyword::ChooseABackground],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast Dragon spells and artifact spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: R::HasCreatureType(CreatureType::Dragon).or(R::Artifact),
+            },
+        }],
+        ..creature(
+            "Renari, Merchant of Marvels",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Dragon, CreatureType::Artificer],
+            2,
+            4,
+        )
+    })
+}
+
+/// Silumgar's Scorn — {U}{U} instant. Counter a spell unless its controller
+/// pays {1}; with a Dragon revealed or controlled as you cast it, counter it
+/// outright. The free reveal is always made (`dragon_as_cast`).
+pub fn silumgars_scorn() -> CardDefinition {
+    let it = || target_filtered(R::IsSpellOnStack);
+    CardDefinition {
+        as_cast_condition: Some(crate::effect::shortcut::dragon_as_cast()),
+        ..spell(
+            "Silumgar's Scorn",
+            cost(&[u(), u()]),
+            true,
+            Effect::If {
+                cond: Predicate::CastConditionHeld,
+                then: Box::new(Effect::CounterSpell { what: it() }),
+                else_: Box::new(Effect::CounterUnlessPaid {
+                    what: it(),
+                    mana_cost: cost(&[generic(1)]),
+                    exile: false,
+                    extra_generic: None,
+                    if_paid: None,
+                }),
+            },
+        )
+    }
+}
+
+/// Emerald Dragon — {4}{G}{G} 4/4 flying, trample Dragon. Adventure: Dissonant
+/// Wave {2}{G} instant — counter an activated or triggered ability from a
+/// noncreature source.
+pub fn emerald_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Dissonant Wave",
+            cost: cost(&[generic(2), g()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::CounterAbility {
+                what: target_filtered(R::HasAbilityOnStack.and(R::Not(Box::new(R::Creature)))),
+            },
+        })),
+        ..creature("Emerald Dragon", cost(&[generic(4), g(), g()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Silumgar Monument — {3} artifact. {T}: {U} or {B}. {4}{U}{B}: a 4/4 blue
+/// and black flying Dragon artifact creature until end of turn.
+pub fn silumgar_monument() -> CardDefinition {
+    CardDefinition {
+        name: "Silumgar Monument",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::Blue, Color::Black], Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), u(), b()]),
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        creature_types: vec![CreatureType::Dragon],
+                        keywords: vec![Keyword::Flying],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::BecomeColor {
+                        what: Selector::This,
+                        colors: vec![Color::Blue, Color::Black],
+                        duration: Duration::EndOfTurn,
+                        additive: false,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fearsome Awakening — {4}{B} sorcery. Reanimate a creature card from your
+/// graveyard; a Dragon gets two +1/+1 counters.
+pub fn fearsome_awakening() -> CardDefinition {
+    spell(
+        "Fearsome Awakening",
+        cost(&[generic(4), b()]),
+        false,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: R::HasCreatureType(CreatureType::Dragon) },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}

@@ -1109,3 +1109,52 @@ fn gixian_skullflayer_needs_three_creature_cards() {
     step_to(&mut g, 0, TurnStep::Draw);
     assert_eq!(plus(&g, flayer), 1);
 }
+
+// ── Batch 9 ─────────────────────────────────────────────────────────────────
+
+/// Silumgar's Scorn: with a Dragon on the battlefield it counters outright;
+/// without one the spell's controller may pay {1}.
+#[test]
+fn silumgars_scorn_hard_counters_with_a_dragon() {
+    let run = |dragon: bool| {
+        let mut g = pod(2);
+        if dragon {
+            ready(&mut g, 0, catalog::emerald_dragon());
+        }
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.players[1].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        let scorn = g.add_card_to_hand(0, catalog::silumgars_scorn());
+        flood(&mut g);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: scorn, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("scorn");
+        drain_stack(&mut g);
+        g.players[0].life
+    };
+    assert_eq!(run(true), 20, "countered with a Dragon out");
+}
+
+/// Fearsome Awakening gives a reanimated Dragon two counters.
+#[test]
+fn fearsome_awakening_boosts_dragons() {
+    let mut g = pod(2);
+    let dragon = g.add_card_to_graveyard(0, catalog::emerald_dragon());
+    let spell = g.add_card_to_hand(0, catalog::fearsome_awakening());
+    cast_with(&mut g, spell, Some(Target::Permanent(dragon)), None);
+    assert_eq!(plus(&g, dragon), 2);
+}
+
+/// Renari lets you cast an artifact at instant speed.
+#[test]
+fn renari_gives_artifacts_flash() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::renari_merchant_of_marvels());
+    g.step = TurnStep::BeginCombat;
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring);
+    assert!(g.battlefield_find(ring).is_some());
+}
