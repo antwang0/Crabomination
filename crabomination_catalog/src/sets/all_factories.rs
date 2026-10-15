@@ -15660,6 +15660,21 @@ static DECKS: &[Factory] = &[
     super::decks::generous_stray,
     super::decks::old_man_willow,
     super::decks::dauntless_dourbark,
+    // cmdr_scan7k_e
+    super::decks::the_kingpin_of_crime,
+    super::decks::fisk_tower,
+    super::decks::liliana_the_repentant,
+    super::decks::dark_matter_manipulator,
+    super::decks::aang_a_lot_to_learn,
+    super::decks::algae_gharial,
+    super::decks::pathmaker_initiate,
+    super::decks::wildfire_eternal,
+    super::decks::leech_gauntlet,
+    super::decks::twisted_embrace,
+    super::decks::loyal_tutor,
+    super::decks::worzel_the_protector,
+    super::decks::vithian_stinger,
+    super::decks::photon_blast_barrage,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

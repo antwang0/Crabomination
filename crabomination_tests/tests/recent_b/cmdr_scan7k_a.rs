@@ -941,3 +941,166 @@ fn old_man_willow_and_dourbark_size_themselves() {
     assert_eq!(pt(&g, bark), (5, 5), "three Forests and two Treefolk");
     assert!(g.permanent_has_keyword(bark, &Keyword::Trample));
 }
+
+// ── decks::cmdr_scan7k_e ─────────────────────────────────────────────────────
+
+/// The Kingpin's attack trigger: pay 2 life and a 1/5 assigns 5.
+#[test]
+fn kingpin_of_crime_makes_walls_hit_by_toughness() {
+    let mut g = pod(2);
+    let king = ready(&mut g, 0, catalog::the_kingpin_of_crime());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[0].life;
+    let foe = g.players[1].life;
+    declare(&mut g, vec![(king, 1)]);
+    assert_eq!(g.players[0].life, life - 2);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, foe - 5);
+}
+
+/// Liliana the Repentant mills two as another creature enters; Dark Matter
+/// Manipulator gets +2/+0 at seven graveyard cards.
+#[test]
+fn liliana_mills_and_dark_matter_grows() {
+    let mut g = pod(2);
+    library(&mut g, 0, 10);
+    ready(&mut g, 0, catalog::liliana_the_repentant());
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    let dmm = g.add_card_to_hand(0, catalog::dark_matter_manipulator());
+    cast(&mut g, dmm);
+    assert_eq!(g.players[0].graveyard.len(), 2 + 3 + 2, "two seeded, its three, Liliana's two");
+    assert_eq!(pt(&g, dmm), (3, 2));
+}
+
+/// Liliana's exhaust returns a creature card and grows her, once.
+#[test]
+fn liliana_exhaust_reanimates_once() {
+    let mut g = pod(2);
+    let lili = ready(&mut g, 0, catalog::liliana_the_repentant());
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    activate(&mut g, lili, 0, Some(Target::Permanent(angel)));
+    assert!(g.battlefield_find(angel).is_some());
+    assert_eq!(plus(&g, lili), 1);
+    flood(&mut g);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: lili, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).is_err(), "exhaust: once");
+}
+
+/// Aang, A Lot to Learn grows when another creature of yours dies and has
+/// vigilance once a Lesson is in your graveyard.
+#[test]
+fn aang_a_lot_to_learn_grows_and_learns() {
+    let mut g = pod(2);
+    let aang = ready(&mut g, 0, catalog::aang_a_lot_to_learn());
+    assert!(!g.permanent_has_keyword(aang, &Keyword::Vigilance));
+    g.add_card_to_graveyard(0, catalog::sokkas_sword_training());
+    assert!(g.permanent_has_keyword(aang, &Keyword::Vigilance));
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    assert_eq!(plus(&g, aang), 1);
+}
+
+/// Pathmaker Initiate makes a 2-power creature unblockable this turn.
+#[test]
+fn pathmaker_initiate_unblocks_a_small_creature() {
+    let mut g = pod(2);
+    let initiate = ready(&mut g, 0, catalog::pathmaker_initiate());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, initiate, 0, Some(Target::Permanent(bear)));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Unblockable));
+}
+
+/// Wildfire Eternal unblocked: cast a sorcery from hand for free.
+#[test]
+fn wildfire_eternal_casts_free_when_unblocked() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let eternal = ready(&mut g, 0, catalog::wildfire_eternal());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    declare(&mut g, vec![(eternal, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == div), "Divination was cast");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "for free");
+}
+
+/// Twisted Embrace kills an opposing creature and pumps its host.
+#[test]
+fn twisted_embrace_kills_and_pumps() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::twisted_embrace());
+    attach(&mut g, aura, bear);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert_eq!(pt(&g, bear), (3, 3));
+}
+
+/// Leech Gauntlet reconfigured onto a creature gives it lifelink and stops
+/// being a creature.
+#[test]
+fn leech_gauntlet_reconfigures_for_lifelink() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let leech = ready(&mut g, 0, catalog::leech_gauntlet());
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: leech, target: bear }).expect("reconfigure {4}");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Lifelink));
+    assert!(!g.computed_permanent(leech).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+}
+
+/// Loyal Tutor stacks a planeswalker on top.
+#[test]
+fn loyal_tutor_stacks_a_planeswalker() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let pw = g.add_card_to_library(0, catalog::worzel_the_protector());
+    let tutor = g.add_card_to_hand(0, catalog::loyal_tutor());
+    cast(&mut g, tutor);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(pw));
+}
+
+/// Worzel's Cat adds loyalty to each planeswalker; Worzel can be a commander.
+#[test]
+fn worzel_cat_adds_loyalty() {
+    let mut g = pod(2);
+    assert!(catalog::worzel_the_protector().can_be_commander);
+    let pw = ready(&mut g, 0, catalog::worzel_the_protector());
+    loyalty(&mut g, pw, 0, None);
+    let before = g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty);
+    let cat = g.battlefield.iter().find(|c| c.definition.name == "Cat").map(|c| c.id).expect("a Cat");
+    g.clear_sickness(cat);
+    activate(&mut g, cat, 0, None);
+    assert_eq!(g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty), before + 1);
+}
+
+/// Photon Blast Barrage with X = 2 is three pings (the copies keep the
+/// original's target by default).
+#[test]
+fn photon_blast_barrage_copies_x_times() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::photon_blast_barrage());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 3);
+}
