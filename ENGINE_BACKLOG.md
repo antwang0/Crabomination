@@ -139,7 +139,7 @@ the handoff.
 
 - **Scan:** a fresh 6,799-commander EDHREC list (`/tmp/claude-0/edh`, the session's `fetch_list.py` +
   `prefetch.py` shape: 8-wide average-deck fetch, 36 s), then decks ranked by the *longest* oracle
-  text among their missing cards — the easy-deck finder; 53 seats (2729-2762, 2766-2784), 143 cards in
+  text among their missing cards — the easy-deck finder; 65 seats (2729-2762, 2766-2791, 2793-2797), 201 cards in
   `decks::cmdr_oct15_b`, tests at the end of `recent_b/cmdr_scan7k_a.rs`.
 - **Primitives:** `LookExileGrant::InstantSorceryMvAtMostCountFree` (Keldon Flamesage),
   `Effect::EachPlayerKeepsCreaturesTotalPower` (Destined Confrontation, `keep_one.rs`),
