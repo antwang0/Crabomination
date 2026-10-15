@@ -3959,6 +3959,7 @@ fn decide_pending_policy_inner(
         }
         crate::decision::Decision::ChooseModes { source, num_modes, default, .. } => {
             super::mode_life::trim_costly_modes(state, seat, *source, *num_modes, default)
+                .or_else(|| super::mode_life::trim_self_wipe_modes(state, seat, *source, *num_modes, default))
                 .unwrap_or_else(|| AutoDecider.decide(decision))
         }
         crate::decision::Decision::DivideDamage { total, targets, noun, .. } if !noun.starts_with("+1/+1") => {

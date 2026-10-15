@@ -395,6 +395,8 @@ pub enum CreatureType {
     Caitian,
     // Marvel (Thanos, Death's Consort).
     Eternal,
+    // Star Trek (Pelia, Immortal Innovator).
+    Lanthanite,
 }
 
 /// Land subtypes (basic land types + others).

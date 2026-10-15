@@ -1032,3 +1032,6 @@ pub use cmdr_scan7k_j::*;
 #[path = "../../../src/sets/decks/cmdr_scan7k_k.rs"]
 mod cmdr_scan7k_k;
 pub use cmdr_scan7k_k::*;
+#[path = "../../../src/sets/decks/cmdr_oct15_a.rs"]
+mod cmdr_oct15_a;
+pub use cmdr_oct15_a::*;

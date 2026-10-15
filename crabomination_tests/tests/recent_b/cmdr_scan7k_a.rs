@@ -2330,3 +2330,168 @@ fn niambi_bounces_for_life_and_linvala_protects() {
     activate(&mut g, linvala, 0, None);
     assert!(g.permanent_has_keyword(bear, &Keyword::Indestructible));
 }
+
+// ── decks::cmdr_oct15_a ──────────────────────────────────────────────────────
+
+/// Invasion of Fiora: "choose one or both" — picking only the nonlegendary
+/// wipe spares the legends.
+#[test]
+fn invasion_of_fiora_one_mode_spares_the_legends() {
+    let mut g = pod(2);
+    let legend = ready(&mut g, 1, catalog::isamaru_hound_of_konda());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_fiora());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+    cast(&mut g, inv);
+    assert!(g.battlefield_find(legend).is_some(), "legendary survives");
+    assert!(g.battlefield_find(bear).is_none(), "nonlegendary destroyed");
+}
+
+fn marchesa(g: &mut GameState) -> CardId {
+    let back = *catalog::invasion_of_fiora().back_face.expect("back face");
+    ready(g, 0, back)
+}
+
+/// Marchesa, Resolute Monarch — CR 603.4: the upkeep draw is an intervening
+/// "if" on not having been dealt combat damage since your last turn.
+#[test]
+fn marchesa_draws_unless_combat_damaged_since_your_turn() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    library(&mut g, 1, 5);
+    marchesa(&mut g);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    let hand = g.players[0].hand.len();
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "undamaged: the upkeep draw and the draw step's");
+    assert_eq!(g.players[0].life, 19);
+
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    step_to(&mut g, 1, TurnStep::End);
+    assert_eq!(g.players[0].life, 17, "the Bear connected");
+    let hand = g.players[0].hand.len();
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "damaged: the draw step's only");
+}
+
+/// Invasion of Segovia: two trampling Krakens; Caetus untaps up to four
+/// creatures at your end step.
+#[test]
+fn invasion_of_segovia_krakens_and_caetus_untaps() {
+    let mut g = pod(2);
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_segovia());
+    cast(&mut g, inv);
+    let krakens: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Kraken").map(|c| c.id).collect();
+    assert_eq!(krakens.len(), 2);
+    assert!(g.permanent_has_keyword(krakens[0], &Keyword::Trample));
+    let caetus = ready(&mut g, 0, *catalog::invasion_of_segovia().back_face.unwrap());
+    for &k in &krakens {
+        g.battlefield_find_mut(k).unwrap().tapped = true;
+    }
+    g.battlefield_find_mut(caetus).unwrap().tapped = true;
+    step_to(&mut g, 0, TurnStep::End);
+    assert!(krakens.iter().chain([&caetus]).all(|&k| !g.battlefield_find(k).unwrap().tapped), "untapped at end step");
+}
+
+/// Gathering Place: its {G}/{W} abilities need a basic land or the turn it
+/// entered; {C} always works.
+#[test]
+fn gathering_place_colors_need_a_basic_or_a_fresh_entry() {
+    let mut g = pod(2);
+    let gp = g.add_card_to_battlefield(0, catalog::gathering_place());
+    g.battlefield_find_mut(gp).unwrap().entered_turn = None;
+    let green = GameAction::ActivateAbility { card_id: gp, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None };
+    assert!(g.perform_action(green.clone()).is_err(), "no basic, not fresh: no {{G}}");
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(green).expect("a basic land unlocks {G}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+/// In Bolas's Clutches steals a permanent and makes it legendary.
+#[test]
+fn in_bolass_clutches_steals_and_makes_legendary() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::in_bolass_clutches());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert!(g.computed_permanent(bear).unwrap().supertypes().contains(&crabomination::card::Supertype::Legendary));
+}
+
+/// Roku's Mastery scries 2 only at X >= 4 (the scripted scry bottoms both).
+#[test]
+fn rokus_mastery_scries_at_four() {
+    for (x, scried) in [(3, false), (4, true)] {
+        let mut g = pod(2);
+        library(&mut g, 0, 4);
+        let top = g.players[0].library[0].id;
+        let wurm = ready(&mut g, 1, catalog::craw_wurm());
+        let spell = g.add_card_to_hand(0, catalog::rokus_mastery());
+        flood(&mut g);
+        let bottom: Vec<CardId> = g.players[0].library.iter().take(2).map(|c| c.id).collect();
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![], bottom }]));
+        g.perform_action(GameAction::CastSpell { card_id: spell, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: Some(x) })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(wurm).map(|c| c.damage), if x >= 4 { None } else { Some(x) });
+        assert_eq!(g.players[0].library[0].id != top, scried, "X = {x}");
+    }
+}
+
+/// Pet Avengers' power-up: a counter and a 3/2 vigilant Hero, once.
+#[test]
+fn pet_avengers_power_up_makes_a_hero() {
+    let mut g = pod(2);
+    let pa = ready(&mut g, 0, catalog::pet_avengers());
+    g.battlefield_find_mut(pa).unwrap().entered_turn = None;
+    activate(&mut g, pa, 0, None);
+    assert_eq!(plus(&g, pa), 1);
+    assert_eq!(named_count(&g, 0, "Hero"), 1);
+}
+
+/// Pelia bounces an opponent's creature; Happy Hogan tucks one second from
+/// the top (yes) or to the bottom.
+#[test]
+fn pelia_bounces_and_happy_hogan_tucks() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let pelia = g.add_card_to_hand(0, catalog::pelia_immortal_innovator());
+    cast(&mut g, pelia);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced to its owner's hand");
+
+    let mut g = pod(2);
+    library(&mut g, 1, 3);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let hogan = g.add_card_to_hand(0, catalog::happy_hogan_bodyguard());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, hogan);
+    assert_eq!(g.players[1].library.get(1).map(|c| c.id), Some(bear), "second from the top");
+}
+
+/// Forebear's Blade moves to another creature you control when its bearer dies.
+#[test]
+fn forebears_blade_follows_to_a_new_bearer() {
+    let mut g = pod(2);
+    let first = ready(&mut g, 0, catalog::grizzly_bears());
+    let heir = ready(&mut g, 0, catalog::craw_wurm());
+    let blade = g.add_card_to_battlefield(0, catalog::forebears_blade());
+    g.battlefield_find_mut(blade).unwrap().attached_to = Some(first);
+    assert_eq!(pt(&g, first), (5, 2));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(first)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(first).is_none());
+    assert_eq!(g.battlefield_find(blade).unwrap().attached_to, Some(heir));
+    assert_eq!(pt(&g, heir), (9, 4));
+}

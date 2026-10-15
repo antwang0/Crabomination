@@ -15792,6 +15792,16 @@ static DECKS: &[Factory] = &[
     super::decks::storm_windrider,
     super::decks::niambi_esteemed_speaker,
     super::decks::linvala_shield_of_sea_gate,
+    // cmdr_oct15_a
+    super::decks::invasion_of_fiora,
+    super::decks::invasion_of_segovia,
+    super::decks::gathering_place,
+    super::decks::in_bolass_clutches,
+    super::decks::rokus_mastery,
+    super::decks::pet_avengers,
+    super::decks::pelia_immortal_innovator,
+    super::decks::happy_hogan_bodyguard,
+    super::decks::forebears_blade,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
