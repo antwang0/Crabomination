@@ -4620,6 +4620,7 @@ static DECKS: &[Factory] = &[
     super::decks::baron_helmut_zemo,
     super::decks::blaster_combat_dj,
     super::decks::firesong_and_sunspeaker,
+    super::decks::koh_the_face_stealer,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

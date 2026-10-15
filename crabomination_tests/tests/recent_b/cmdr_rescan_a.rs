@@ -1301,3 +1301,44 @@ fn firesong_burns_when_a_white_spell_gains_you_life() {
     assert_eq!(g.players[0].life, me + 3);
     assert_eq!(g.players[1].life + g.players[2].life, p1 + p2 - 3);
 }
+
+/// Koh exiles a dying creature and wears it: paying 1 life lends the chosen
+/// exiled card's activated abilities, and a new choice replaces the old one
+/// (only the last chosen card lends).
+#[test]
+fn koh_wears_the_last_chosen_face() {
+    let mut g = pod(2);
+    let koh = ready(&mut g, 0, catalog::koh_the_face_stealer());
+    let elves = ready(&mut g, 1, catalog::llanowar_elves());
+    let sorcerer = ready(&mut g, 1, catalog::prodigal_sorcerer());
+    for victim in [elves, sorcerer] {
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast_with(&mut g, bolt, Some(Target::Permanent(victim)), vec![], None);
+        assert!(g.exile.iter().any(|c| c.id == victim && c.exiled_with == Some(koh)));
+    }
+    let own = g.battlefield_find(koh).unwrap().definition.activated_abilities.len();
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![elves])]));
+    activate(&mut g, koh, 0, None);
+    assert_eq!(g.players[0].life, life - 1);
+    let names = |g: &GameState| g.battlefield_find(koh).unwrap().definition.activated_abilities.len();
+    assert_eq!(names(&g), own + 1);
+    g.players[0].mana_pool.empty();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: koh,
+        ability_index: own,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the Elves' mana ability");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![sorcerer])]));
+    activate(&mut g, koh, 0, None);
+    assert_eq!(names(&g), own + 1, "the Sorcerer replaces the Elves");
+    let borrowed = &g.battlefield_find(koh).unwrap().definition.activated_abilities[own];
+    assert!(!matches!(borrowed.effect, crabomination::effect::Effect::AddMana { .. }));
+}

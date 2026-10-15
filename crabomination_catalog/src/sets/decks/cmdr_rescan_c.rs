@@ -1062,3 +1062,37 @@ pub fn firesong_and_sunspeaker() -> CardDefinition {
         )
     }
 }
+
+/// Koh, the Face Stealer — {4}{B}{B} legendary 6/6 Shapeshifter Spirit. When
+/// Koh enters, exile up to one other target creature. Whenever another
+/// nontoken creature dies, you may exile it. Pay 1 life: choose a creature
+/// card exiled with Koh; Koh has all activated and triggered abilities of the
+/// last chosen card. (Iname as One.)
+pub fn koh_the_face_stealer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::ExileLinked { what: target_filtered(R::Creature.and(R::OtherThanSource)) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken.and(R::OtherThanSource) },
+                ),
+                effect: Effect::MayDo {
+                    description: "Exile the creature with Koh?".into(),
+                    body: Box::new(Effect::ExileLinked { what: Selector::TriggerSource }),
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            effect: Effect::BorrowAbilitiesOfChosenExiled { filter: R::Creature },
+            ..Default::default()
+        }],
+        ..legend(
+            "Koh, the Face Stealer",
+            cost(&[generic(4), b(), b()]),
+            vec![CreatureType::Shapeshifter, CreatureType::Spirit],
+            6,
+            6,
+        )
+    }
+}
