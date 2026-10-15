@@ -1450,3 +1450,25 @@ pub fn azor_the_lawbringer() -> CardDefinition {
         )
     }
 }
+
+/// Shah of Naar Isle — {3}{R} 6/6 Efreet; trample, echo {0}. When its echo
+/// cost is paid, each opponent may draw up to three cards (three yes/no
+/// draws stand in for "up to three"). (Adamaro, First to Desire.)
+pub fn shah_of_naar_isle() -> CardDefinition {
+    let may_draw = || Effect::MayDo {
+        description: "Draw a card?".into(),
+        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Echo(ManaCost::default())],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Performed(crate::effect::KeywordAct::EchoPaid), EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsSource }),
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::EachOpponent,
+                body: Box::new(Effect::Seq(vec![may_draw(), may_draw(), may_draw()])),
+            },
+        }],
+        ..creature("Shah of Naar Isle", cost(&[generic(3), r()]), vec![CreatureType::Efreet], 6, 6)
+    }
+}

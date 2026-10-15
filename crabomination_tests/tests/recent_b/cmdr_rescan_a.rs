@@ -1607,3 +1607,20 @@ fn azor_silences_each_opponents_next_turn() {
     step_to(&mut g, 2, TurnStep::PreCombatMain);
     try_bolt(&mut g).expect("the lock lasted one turn");
 }
+
+/// CR 702.30a — paying Shah of Naar Isle's echo {0} lets each opponent draw
+/// up to three cards.
+#[test]
+fn shah_of_naar_isle_echo_paid_feeds_opponents() {
+    let mut g = pod(2);
+    let shah = ready(&mut g, 0, catalog::shah_of_naar_isle());
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 4]));
+    let evs = g.process_echo();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(shah).is_some_and(|c| c.echo_paid));
+    assert_eq!(g.players[1].hand.len(), 3);
+}
