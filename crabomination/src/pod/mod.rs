@@ -17580,6 +17580,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FALCON_COMMANDERS,
             main: decks::FALCON_MAIN,
         },
+        // Seat 2855: Bartolomé del Presidio's EDHREC average deck. `--pod-decks 2855`.
+        PodDeck {
+            name: "Bartolomé del Presidio (WB)",
+            commanders: decks::BARTOLOME_DEL_PRESIDIO_COMMANDERS,
+            main: decks::BARTOLOME_DEL_PRESIDIO_MAIN,
+        },
+        // Seat 2856: Akawalli, the Seething Tower's EDHREC average deck. `--pod-decks 2856`.
+        PodDeck {
+            name: "Akawalli, the Seething Tower (BG)",
+            commanders: decks::AKAWALLI_COMMANDERS,
+            main: decks::AKAWALLI_MAIN,
+        },
+        // Seat 2857: Venser, Fervent Forger's EDHREC average deck. `--pod-decks 2857`.
+        PodDeck {
+            name: "Venser, Fervent Forger (R)",
+            commanders: decks::VENSER_4_COMMANDERS,
+            main: decks::VENSER_4_MAIN,
+        },
+        // Seat 2858: Colleen Wing, Street Samurai's EDHREC average deck. `--pod-decks 2858`.
+        PodDeck {
+            name: "Colleen Wing, Street Samurai (W)",
+            commanders: decks::COLLEEN_WING_COMMANDERS,
+            main: decks::COLLEEN_WING_MAIN,
+        },
+        // Seat 2859: Winter, Tormented Loner's EDHREC average deck. `--pod-decks 2859`.
+        PodDeck {
+            name: "Winter, Tormented Loner (B)",
+            commanders: decks::WINTER_4_COMMANDERS,
+            main: decks::WINTER_4_MAIN,
+        },
+        // Seat 2860: Pavel Maliki's EDHREC average deck. `--pod-decks 2860`.
+        PodDeck {
+            name: "Pavel Maliki (BR)",
+            commanders: decks::PAVEL_MALIKI_COMMANDERS,
+            main: decks::PAVEL_MALIKI_MAIN,
+        },
+        // Seat 2861: Ori, Keeper of Songs's EDHREC average deck. `--pod-decks 2861`.
+        PodDeck {
+            name: "Ori, Keeper of Songs (W)",
+            commanders: decks::ORI_2_COMMANDERS,
+            main: decks::ORI_2_MAIN,
+        },
     ]
 }
 
@@ -22270,6 +22312,13 @@ mod tests {
             ("Hawkeye, Bowslinger", &[0x153A]),
             ("Fíli the Pathfinder", &[0x153B]),
             ("Falcon, Joaquin Torres", &[0x153C]),
+            ("Bartolomé del Presidio", &[0x153D]),
+            ("Akawalli, the Seething Tower", &[0x153E]),
+            ("Venser, Fervent Forger", &[0x153F]),
+            ("Colleen Wing, Street Samurai", &[0x1540]),
+            ("Winter, Tormented Loner", &[0x1541]),
+            ("Pavel Maliki", &[0x1542]),
+            ("Ori, Keeper of Songs", &[0x1543]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
