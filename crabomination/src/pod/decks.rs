@@ -78364,3 +78364,141 @@ pub const ZHAO_3_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const KAZAROV_COMMANDERS: &[CardFactory] = &[kazarov_sengir_pureblood];
+
+/// **Kazarov, Sengir Pureblood**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Mountains + 12 Swamps = 99.
+/// Kazarov, Sengir Pureblood (EDHREC, fetched 2026-10-15).
+pub const KAZAROV_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, caltrops, charcoal_diamond, commanders_sphere,
+    fellwar_stone, fiendlash, lightning_greaves, mind_stone, rakdos_signet, sol_ring,
+    swiftfoot_boots, talisman_of_indulgence, blood_crypt, bloodfell_caves, bojuka_bog,
+    command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge, myriad_landscape,
+    rakdos_carnarium, rogues_passage, smoldering_marsh, tainted_peak, temple_of_malice,
+    akroan_horse, brash_taunter, burnished_hart, clackbridge_troll, crypt_rats, dagger_caster,
+    deathbringer_thoctar, fire_ants, goblin_chainwhirler, harvester_of_souls,
+    mahadi_emporium_master, morbid_opportunist, pestilence_demon, pestilent_spirit,
+    plague_spitter, slaughter_specialist, solemn_simulacrum, thrashing_wumpus, aether_flash,
+    circle_of_flame, eternal_thirst, noxious_field, pestilence, phyrexian_arena, pyrohemia,
+    bedevil, chaos_warp, cinderclasm, dark_ritual, electrickery, rakdos_charm,
+    shake_the_foundations, souls_fire, starstorm, terminate, wail_of_the_nim,
+    you_are_already_dead, barrage_of_boulders, blasphemous_act, blazing_volley,
+    chandras_ignition, cosmotronic_wave, end_the_festivities, fiery_confluence, pyroclasm,
+    read_the_bones, scouring_sands, sign_in_blood, tectonic_hazard, tremor,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const SPIDER_MAN_4_COMMANDERS: &[CardFactory] = &[spider_man_miles_morales];
+
+/// **Spider-Man, Miles Morales**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Spider-Man, Miles Morales (EDHREC, fetched 2026-10-15).
+pub const SPIDER_MAN_4_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lightning_greaves, ozolith_the_shattered_spire, sol_ring,
+    swiftfoot_boots, the_earth_crystal, the_great_henge, boseiju_who_endures, karns_bastion,
+    mosswort_bridge, oran_rief_the_vastwood, reliquary_tower, rogues_passage,
+    arwen_weaver_of_hope, beast_whisperer, birds_of_paradise, bristly_bill_spine_sower,
+    champion_of_lambholt, craterhoof_behemoth, defiler_of_vigor, elvish_mystic, evolution_sage,
+    forgotten_ancient, fyndhorn_elves, guy_in_the_chair, gyre_sage, hulk_brutal_brawler,
+    incubation_druid, kalonian_hydra, kami_of_whispered_hopes, kodama_of_the_west_tree,
+    llanowar_elves, managorger_hydra, ohran_frostfang, ouroboroid, prowler_misguided_mentor,
+    renata_called_to_the_hunt, rishkar_peema_renegade, spider_man_brooklyn_visionary,
+    spider_rex_daring_dino, toski_bearer_of_secrets, twisted_spider_clone, vigor,
+    branching_evolution, garruks_uprising, hardened_scales, innkeepers_talent, sphere_grid,
+    terrasymbiosis, tribute_to_the_world_tree, unnatural_growth, beast_within, grow_extra_arms,
+    heroic_intervention, inspiring_call, ram_through, return_of_the_wildspeaker, snakeskin_veil,
+    strength_of_will, cultivate, harmonize, kapow, kodamas_reach, natures_lore,
+    overwhelming_stampede, rampant_growth, three_visits, venom_blast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const GHOST_SPIDER_COMMANDERS: &[CardFactory] = &[ghost_spider_gwen_stacy];
+
+/// **Ghost-Spider, Gwen Stacy**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Ghost-Spider, Gwen Stacy (EDHREC, fetched 2026-10-15).
+pub const GHOST_SPIDER_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, dolmen_gate, hazorets_monument, infantry_shield,
+    lightning_greaves, ruby_medallion, skullclamp, sol_ring, swiftfoot_boots, the_fire_crystal,
+    throne_of_the_god_pharaoh, arena_of_glory, castle_embereth, hanweir_battlements, kher_keep,
+    nykthos_shrine_to_nyx, rogues_passage, sokenzan_crucible_of_defiance, anger,
+    battle_cry_goblin, elturel_survivors, general_kreat_the_boltbringer, hanweir_garrison,
+    howlsquad_heavy, krenko_mob_boss, krenko_tin_street_kingpin, legion_warboss,
+    loyal_apprentice, neheb_the_eternal, professional_face_breaker, purphoros_god_of_the_forge,
+    rampaging_classmate, redoubled_stormsinger, searslicer_goblin, siege_gang_commander,
+    siege_gang_lieutenant, solphim_mayhem_dominus, spider_gwen_free_spirit, spider_punk,
+    squee_dubious_monarch, the_mary_janes, tilonallis_summoner, torbran_thane_of_red_fell,
+    weftstalker_ardent, witty_roastmaster, city_on_fire, court_of_embereth, echoing_assault,
+    goblin_bombardment, impact_tremors, rising_of_the_day, abrade, battle_hymn, big_score,
+    chaos_warp, double_trouble, goblin_surprise, thrill_of_possibility, unexpected_windfall,
+    zariel_archduke_of_avernus, blasphemous_act, dragon_fodder, faithless_looting,
+    hordeling_outburst, krenkos_command, romantic_rendezvous, song_of_totentanz,
+    tempt_with_vengeance, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const MYOJIN_OF_BLOOMING_DAWN_COMMANDERS: &[CardFactory] = &[myojin_of_blooming_dawn];
+
+/// **Myojin of Blooming Dawn**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Myojin of Blooming Dawn (EDHREC, fetched 2026-10-15).
+pub const MYOJIN_OF_BLOOMING_DAWN_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, campfire, contagion_clasp, erratic_portal,
+    essence_reliquary, everflowing_chalice, halo_fountain, hedron_archive, mind_stone,
+    oketras_monument, pearl_medallion, skullclamp, sol_ring, staff_of_compleation, thran_dynamo,
+    wayfarers_bauble, castle_ardenvale, command_beacon, karns_bastion, myriad_landscape,
+    nykthos_shrine_to_nyx, sanctum_of_eternity, temple_of_the_false_god, tyrite_sanctum,
+    war_room, defiler_of_faith, eagle_of_deliverance, geode_golem, grateful_apparition,
+    jeskai_barricade, keeper_of_the_accord, knight_of_the_white_orchid, kor_cartographer,
+    kor_skyfisher, laezel_vlaakiths_champion, loyal_warhound, mentor_of_the_meek,
+    metastatic_evangel, mondrak_glory_dominus, moonshaker_cavalry, norns_choirmaster,
+    proud_pack_rhino, rescuer_chwinga, rumor_gatherer, shepherd_of_the_flock, solemn_simulacrum,
+    stonecloaker, weathered_wayfarer, welcoming_vampire, whitemane_lion, anointed_procession,
+    cathars_crusade, divine_visitation, felidar_retreat, intangible_virtue,
+    meticulous_excavation, smothering_tithe, alley_evasion, generous_gift, light_the_way,
+    path_to_exile, reprieve, swords_to_plowshares, unbounded_potential,
+    youre_ambushed_on_the_road, your_temple_is_under_attack, elspeth_suns_champion,
+    austere_command, cut_a_deal, hour_of_reckoning, secret_rendezvous, wanderers_strike,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const SPIDER_MAN_2099_COMMANDERS: &[CardFactory] = &[spider_man_2099_miguel_ohara];
+
+/// **Spider-Man 2099, Miguel O'Hara**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Spider-Man 2099, Miguel O'Hara (EDHREC, fetched 2026-10-15).
+pub const SPIDER_MAN_2099_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, lightning_greaves, midnight_clock, mind_stone,
+    sapphire_medallion, sol_ring, spellbook, swiftfoot_boots, thopter_fabricator,
+    thought_vessel, myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, rogues_passage, alandra_sky_dreamer, chasm_skulker,
+    detective_of_the_month, emrakuls_messenger, enduring_curiosity, faerie_mastermind,
+    ghostly_pilferer, grazilaxx_illithid_scholar, homunculus_horde, jill_shivas_dominant,
+    laboratory_maniac, looter_il_kor, lyla_holographic_assistant, mischievous_mystic,
+    mist_cloaked_herald, nadir_kraken, psychosis_crawler, shoreline_looter, silent_hallcreeper,
+    slither_blade, spider_bot, spider_byte_web_warden, triton_shorestalker, twenty_toed_toad,
+    ultimecia_temporal_threat, coastal_piracy, dissipation_field, future_flight, ominous_seas,
+    reconnaissance_mission, teferis_ageless_insight, wizard_class, aetherize,
+    amazing_acrobatics, an_offer_you_cant_refuse, arcane_denial, brainstorm, consider,
+    counterspell, cyclonic_rift, frantic_search, opt, pongify, rapid_hybridization, snap,
+    spider_sense, whoosh, jace_reality_sculptor, chart_a_course, curse_of_the_swine, ponder,
+    preordain, temporal_mastery, time_warp,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];

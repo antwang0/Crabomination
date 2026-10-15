@@ -17208,6 +17208,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZHAO_3_COMMANDERS,
             main: decks::ZHAO_3_MAIN,
         },
+        // Seat 2793: Kazarov, Sengir Pureblood's EDHREC average deck. `--pod-decks 2793`.
+        PodDeck {
+            name: "Kazarov, Sengir Pureblood (BR)",
+            commanders: decks::KAZAROV_COMMANDERS,
+            main: decks::KAZAROV_MAIN,
+        },
+        // Seat 2794: Spider-Man, Miles Morales's EDHREC average deck. `--pod-decks 2794`.
+        PodDeck {
+            name: "Spider-Man, Miles Morales (G)",
+            commanders: decks::SPIDER_MAN_4_COMMANDERS,
+            main: decks::SPIDER_MAN_4_MAIN,
+        },
+        // Seat 2795: Ghost-Spider, Gwen Stacy's EDHREC average deck. `--pod-decks 2795`.
+        PodDeck {
+            name: "Ghost-Spider, Gwen Stacy (R)",
+            commanders: decks::GHOST_SPIDER_COMMANDERS,
+            main: decks::GHOST_SPIDER_MAIN,
+        },
+        // Seat 2796: Myojin of Blooming Dawn's EDHREC average deck. `--pod-decks 2796`.
+        PodDeck {
+            name: "Myojin of Blooming Dawn (W)",
+            commanders: decks::MYOJIN_OF_BLOOMING_DAWN_COMMANDERS,
+            main: decks::MYOJIN_OF_BLOOMING_DAWN_MAIN,
+        },
+        // Seat 2797: Spider-Man 2099, Miguel O'Hara's EDHREC average deck. `--pod-decks 2797`.
+        PodDeck {
+            name: "Spider-Man 2099, Miguel O'Hara (U)",
+            commanders: decks::SPIDER_MAN_2099_COMMANDERS,
+            main: decks::SPIDER_MAN_2099_MAIN,
+        },
     ]
 }
 
@@ -21836,6 +21866,11 @@ mod tests {
             ("Arashi, the Sky Asunder", &[0x14FC]),
             ("Cao Ren, Wei Commander", &[0x14FD]),
             ("Zhao, the Moon Slayer", &[0x14FE]),
+            ("Kazarov, Sengir Pureblood", &[0x14FF]),
+            ("Spider-Man, Miles Morales", &[0x1500]),
+            ("Ghost-Spider, Gwen Stacy", &[0x1501]),
+            ("Myojin of Blooming Dawn", &[0x1502]),
+            ("Spider-Man 2099, Miguel O'Hara", &[0x1503]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
