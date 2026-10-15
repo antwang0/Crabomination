@@ -3136,6 +3136,26 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-15 (Commander run, `01XShaqR`) — guardrail; 65 seats, 201 cards, a `{Q}` payment fix
+
+Hot-path touches: a `{Q}` cost now untaps its source after the mana payment
+rather than before it (CR 601.2g); `trade_counters_for_damage` carries the
+damage source; the draw path checks one more `DrawDig`. The two per-turn
+seat masks on `GameState` narrowed from `u64` to `u32` (size cap). None are
+in the fixed pool. Release `bot_ladder` at `78f020984`, toolchain 1.99.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; thread_determinism ok (3 vs 1); peak_rss
+                 39.0 MiB; games_per_s 156 (contended run, not comparable)
+golden traces    unchanged (13/13)
+suite            26,897 passed, 5 skipped; 8 structural-audit reds fixed and
+                 re-run green (284/284); the precon pod-games
+                 long pole outran the 5,400 s run budget (6,920 s last time)
+pod smoke        release, seed 9401, the Commander field at 4 / 6 / 8 seats x
+                 600: 1,800 games, 1,800 decided, 0 panics, 0 stalls (0.0 %)
+```
+
 ### 2026-10-15 (Commander run, `01ANcpHx`, second checkpoint) — guardrail; 107 seats, 181 cards
 
 Hot-path touches: an exile-self activation cost clones the source into
