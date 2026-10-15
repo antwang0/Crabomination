@@ -23392,7 +23392,7 @@ impl GameState {
             // empty library reveals nothing and draws (CR 104.3c).
             DrawDig::CreatureToGraveyard => {
                 let Some(top) = self.players[p].library.first() else { return false };
-                if !top.definition.is_creature() {
+                if !self.computed_is_creature(top) {
                     return false;
                 }
                 let id = top.id;
