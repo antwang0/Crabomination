@@ -1801,8 +1801,15 @@ impl GameState {
         // keywords via `computed_permanent` so layered grants (e.g.
         // Triumph of the Hordes-style anthems) are honored.
         let src_cp = source.and_then(|s| self.computed_permanent(s));
+        // CR 702.80a — a resolving spell's own printed keywords count too
+        // (Puncture Blast's wither): it has no computed permanent.
+        // Mid-resolution the spell is in no zone: read the resolving snapshot.
+        let spell_kws = match (&src_cp, &self.scratch.resolving_source, &self.scratch.resolving_spell_snapshot) {
+            (None, Some((rid, ..)), Some(snap)) if Some(*rid) == source => Some(snap.definition.keywords.as_slice()),
+            _ => None,
+        };
         let src_kws: &[crate::card::Keyword] =
-            src_cp.as_ref().map_or(&[], |cp| cp.keywords());
+            src_cp.as_ref().map_or(spell_kws.unwrap_or(&[]), |cp| cp.keywords());
         let source_has_infect = src_kws.has_kw(&crate::card::Keyword::Infect);
         // CR 702.80a / 702.90e — wither/infect damage to a creature lands as
         // -1/-1 counters instead of marked damage; CR 702.2c — nonzero
