@@ -203,6 +203,19 @@ the handoff.
   `fire_self_etb_triggers`) — a tapland under Blood Moon entered tapped and gained its life.
 - **FIXED (CR 400.7, audit sweep 9304):** a commander spell bounced to hand (Reprieve on Me, the
   Immortal) kept its counters; `MoveSpellToZone` / `CounterSpellToZone` drop them for the zone.
+- **Third leg (primitives + seats 2785, 2798-2804):** `CumulativeUpkeepCost::GainControlOfLand`
+  (Herald of Leshrac; `OwnersGainControlOf` now reads "you" as the effect's controller);
+  **Rulebreaker** deck construction — `StaticEffect::RulebreakerAnyColorIdentity { cards }` /
+  `RulebreakerNoMaxDeckSize`, read by `format::validate_commander_deck` (Maular, Seluma, The
+  Everforger, Whtz); `ReplaceDamageToSelfWithSacrifices` (Dralnu, ahead of the prevention gate);
+  `GraveyardCreaturesHaveSneak` (Ninja Teen L3) + **bot sneak window** (`server/sneak_pick.rs`
+  — printed sneak from hand had only ever been hard-cast). Tests: `recent_b/cmdr_oct15_a.rs`.
+- **Audit sweep 9305** (binary at `da558dc7`): 0 panics; 3 undecided board caps (Preston, the
+  Vanisher's Illusion copies; Chasm Skulker + Kianne + Anointed Procession). **OPEN (bot):**
+  8-seat seed 931516 (decks 1811,1835,1812,952,512,2191,1776,1444) runs one turn for hours —
+  Liberator untaps The Eternity Elevator per flash cast, Scrap Trawler + Echoes of Eternity
+  recur legend-rule casualties, Memnarch recast 64× from the command zone; a real engine the
+  bot repeats without a loop-breaker (only the action cap ends it; the block never finished).
 - **Blocked (primitive):** Jurin (each attacker's own defending player), The Neutrinos (flicker
   returning attacking), Linessa (grandeur discard cost), Auditore Ambush (target player in one
   mode of a `ChooseModesCast` searching), Jermane (a "legs" table), Reservoir Kraken (an accepter
