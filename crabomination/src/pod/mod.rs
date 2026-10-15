@@ -17640,6 +17640,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SPIDERS_MAN_COMMANDERS,
             main: decks::SPIDERS_MAN_MAIN,
         },
+        // Seat 2865: Sivitri, Dragon Master's EDHREC average deck. `--pod-decks 2865`.
+        PodDeck {
+            name: "Sivitri, Dragon Master (UB)",
+            commanders: decks::SIVITRI_COMMANDERS,
+            main: decks::SIVITRI_MAIN,
+        },
+        // Seat 2866: Silumgar, the Drifting Death's EDHREC average deck. `--pod-decks 2866`.
+        PodDeck {
+            name: "Silumgar, the Drifting Death (UB)",
+            commanders: decks::SILUMGAR_COMMANDERS,
+            main: decks::SILUMGAR_MAIN,
+        },
+        // Seat 2867: Korlessa, Scale Singer's EDHREC average deck. `--pod-decks 2867`.
+        PodDeck {
+            name: "Korlessa, Scale Singer (UG)",
+            commanders: decks::KORLESSA_COMMANDERS,
+            main: decks::KORLESSA_MAIN,
+        },
     ]
 }
 
@@ -22340,6 +22358,9 @@ mod tests {
             ("Desmond Miles", &[0x1544]),
             ("Marhault Elsdragon", &[0x1545]),
             ("Spiders-Man, Heroic Horde", &[0x1546]),
+            ("Sivitri, Dragon Master", &[0x1547]),
+            ("Silumgar, the Drifting Death", &[0x1548]),
+            ("Korlessa, Scale Singer", &[0x1549]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -80353,3 +80353,89 @@ pub const SPIDERS_MAN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest,
 ];
+
+pub const SIVITRI_COMMANDERS: &[CardFactory] = &[sivitri_dragon_master];
+
+/// **Sivitri, Dragon Master**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 10 Islands + 8 Swamps = 99.
+/// Sivitri, Dragon Master (EDHREC, fetched 2026-10-15).
+pub const SIVITRI_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, dragons_hoard, dragonstorm_globe, fellwar_stone, heralds_horn,
+    lapis_orb_of_dragonkind, mind_stone, sol_ring, talisman_of_dominance, thought_vessel,
+    urzas_incubator, bojuka_bog, choked_estuary, command_tower, crucible_of_the_spirit_dragon,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, haven_of_the_spirit_dragon,
+    maelstrom_of_the_spirit_dragon, morphic_pool, reliquary_tower, shipwreck_marsh,
+    sunken_hollow, tainted_isle, temple_of_deceit, underground_river, watery_grave,
+    ancient_brass_dragon, ancient_silver_dragon, astral_dragon, boneyard_scourge,
+    brainstealer_dragon, deathbringer_regent, deceptive_frostkite, dragon_turtle,
+    dragonlord_silumgar, dragonologist, ebondeath_dracolich, hammerhead_tyrant,
+    hidetsugu_and_kairi, icefall_regent, iymrith_desert_doom, junji_the_midnight_sky,
+    kairi_the_swirling_sky, keiga_the_tide_star, kokusho_the_evening_star, marang_river_regent,
+    renari_merchant_of_marvels, sapphire_dragon, scavenger_regent, silumgar_the_drifting_death,
+    kayas_ghostform, lilianas_talent, monastery_siege, propaganda, reflections_of_littjara,
+    roiling_dragonstorm, arcane_denial, brainstorm, counterspell, cyclonic_rift, dark_ritual,
+    draconic_lore, infernal_grasp, mana_drain, negate, silumgars_scorn, soul_manipulation,
+    withering_torment, ashiok_dream_render, vraska_betrayals_sting, crux_of_fate,
+    fearsome_awakening, feed_the_swarm, haunting_voyage, reanimate, settle_the_score,
+    toxic_deluge, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SILUMGAR_COMMANDERS: &[CardFactory] = &[silumgar_the_drifting_death];
+
+/// **Silumgar, the Drifting Death**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Swamps = 99.
+/// Silumgar, the Drifting Death (EDHREC, fetched 2026-10-15).
+pub const SILUMGAR_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, dragons_hoard, dragonstorm_globe, heralds_horn,
+    lapis_orb_of_dragonkind, mind_stone, silumgar_monument, sol_ring, talisman_of_dominance,
+    thought_vessel, urzas_incubator, bojuka_bog, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, haven_of_the_spirit_dragon,
+    maelstrom_of_the_spirit_dragon, morphic_pool, path_of_ancestry, shipwreck_marsh,
+    sunken_hollow, tainted_isle, underground_river, watery_grave, ancient_brass_dragon,
+    ancient_silver_dragon, astral_dragon, bone_devourer, boneyard_scourge, brainstealer_dragon,
+    changeling_outcast, deathbringer_regent, deceptive_frostkite, dragon_turtle,
+    dragonborn_looter, dragonlord_silumgar, ebondeath_dracolich, hammerhead_tyrant,
+    hidetsugu_and_kairi, icefall_regent, iymrith_desert_doom, junji_the_midnight_sky,
+    kairi_the_swirling_sky, keiga_the_tide_star, kokusho_the_evening_star,
+    maha_its_feathers_night, marang_river_regent, renari_merchant_of_marvels, scavenger_regent,
+    steel_hellkite, black_market_connections, corroding_dragonstorm, feywild_visitor,
+    kindred_discovery, reflections_of_littjara, roiling_dragonstorm, an_offer_you_cant_refuse,
+    counterspell, dark_ritual, draconic_lore, flatline, negate, polymorphists_jest,
+    silumgars_command, silumgars_scorn, sudden_spoiling, withering_torment,
+    sivitri_dragon_master, asinine_antics, crippling_fear, crux_of_fate, feed_the_swarm,
+    irenicuss_vile_duplication, mass_diminish, sign_in_blood, will_of_the_temur,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KORLESSA_COMMANDERS: &[CardFactory] = &[korlessa_scale_singer];
+
+/// **Korlessa, Scale Singer**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Forests + 11 Islands = 99.
+/// Korlessa, Scale Singer (EDHREC, fetched 2026-10-15).
+pub const KORLESSA_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_hoard, dragonstorm_globe, heralds_horn, jade_orb_of_dragonkind,
+    lapis_orb_of_dragonkind, mox_jasper, simic_signet, sol_ring, breeding_pool, command_tower,
+    crucible_of_the_spirit_dragon, dreamroot_cascade, flooded_grove, haven_of_the_spirit_dragon,
+    hinterland_harbor, maelstrom_of_the_spirit_dragon, mosswort_bridge, path_of_ancestry,
+    reliquary_tower, simic_growth_chamber, temple_of_mystery, temple_of_the_dragon_queen,
+    yavimaya_coast, ancient_bronze_dragon, ancient_silver_dragon, astral_dragon,
+    bloomvine_regent, broodcaller_scourge, canopy_gargantuan, deceptive_frostkite,
+    draconic_muralists, dragon_turtle, dragonborn_looter, dread_linnorm, earthquake_dragon,
+    emerald_dragon, iymrith_desert_doom, kairi_the_swirling_sky, keiga_the_tide_star,
+    kura_the_boundless_sky, marang_river_regent, nimbleclaw_adept, old_gnawbone,
+    renari_merchant_of_marvels, sagu_wildling, sapphire_dragon, scaled_nurturer,
+    skanos_dragonheart, sword_coast_serpent, transcendent_dragon, whirlwing_stormbrood,
+    young_blue_dragon, acolyte_of_bahamut, encroaching_dragonstorm, frontier_siege,
+    garruks_uprising, kindred_discovery, reflections_of_littjara, roiling_dragonstorm,
+    beast_within, brainstorm, counterspell, dispelling_exhale, draconic_lore, growth_spiral,
+    joint_exploration, negate, return_of_the_wildspeaker, silumgars_scorn, cultivate, explore,
+    kodamas_reach, natures_lore, ponder, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island, island,
+];
