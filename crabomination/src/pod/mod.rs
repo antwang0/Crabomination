@@ -16212,6 +16212,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JACOB_FRYE_COMMANDERS,
             main: decks::JACOB_FRYE_MAIN,
         },
+        // Seat 2627: Dack Fayden, Helping Hand's EDHREC average deck. `--pod-decks 2627`.
+        PodDeck {
+            name: "Dack Fayden, Helping Hand (W)",
+            commanders: decks::DACK_FAYDEN_COMMANDERS,
+            main: decks::DACK_FAYDEN_MAIN,
+        },
+        // Seat 2628: Katsumasa, the Animator's EDHREC average deck. `--pod-decks 2628`.
+        PodDeck {
+            name: "Katsumasa, the Animator (U)",
+            commanders: decks::KATSUMASA_COMMANDERS,
+            main: decks::KATSUMASA_MAIN,
+        },
+        // Seat 2629: Titanbones, Towering Heart's EDHREC average deck. `--pod-decks 2629`.
+        PodDeck {
+            name: "Titanbones, Towering Heart (G)",
+            commanders: decks::TITANBONES_COMMANDERS,
+            main: decks::TITANBONES_MAIN,
+        },
+        // Seat 2630: Mistform Ultimus's EDHREC average deck. `--pod-decks 2630`.
+        PodDeck {
+            name: "Mistform Ultimus (U)",
+            commanders: decks::MISTFORM_ULTIMUS_COMMANDERS,
+            main: decks::MISTFORM_ULTIMUS_MAIN,
+        },
+        // Seat 2631: Leonardo, Cutting Edge's EDHREC average deck. `--pod-decks 2631`.
+        PodDeck {
+            name: "Leonardo, Cutting Edge (W)",
+            commanders: decks::LEONARDO_COMMANDERS,
+            main: decks::LEONARDO_MAIN,
+        },
+        // Seat 2632: Katara, Seeking Revenge's EDHREC average deck. `--pod-decks 2632`.
+        PodDeck {
+            name: "Katara, Seeking Revenge (UB)",
+            commanders: decks::KATARA_5_COMMANDERS,
+            main: decks::KATARA_5_MAIN,
+        },
+        // Seat 2633: Edgar, Ancient Bloodlord's EDHREC average deck. `--pod-decks 2633`.
+        PodDeck {
+            name: "Edgar, Ancient Bloodlord (WB)",
+            commanders: decks::EDGAR_6_COMMANDERS,
+            main: decks::EDGAR_6_MAIN,
+        },
+        // Seat 2634: Moonstone, Harsh Mistress's EDHREC average deck. `--pod-decks 2634`.
+        PodDeck {
+            name: "Moonstone, Harsh Mistress (B)",
+            commanders: decks::MOONSTONE_COMMANDERS,
+            main: decks::MOONSTONE_MAIN,
+        },
+        // Seat 2635: Stature, Size Shifter's EDHREC average deck. `--pod-decks 2635`.
+        PodDeck {
+            name: "Stature, Size Shifter (U)",
+            commanders: decks::STATURE_COMMANDERS,
+            main: decks::STATURE_MAIN,
+        },
+        // Seat 2636: Zhang Fei, Fierce Warrior's EDHREC average deck. `--pod-decks 2636`.
+        PodDeck {
+            name: "Zhang Fei, Fierce Warrior (W)",
+            commanders: decks::ZHANG_FEI_COMMANDERS,
+            main: decks::ZHANG_FEI_MAIN,
+        },
     ]
 }
 
@@ -20671,6 +20731,16 @@ mod tests {
             ("Lord Jyscal Guado", &[0x1456]),
             ("Mockingbird, Bobbi Morse", &[0x1457]),
             ("Jacob Frye", &[0x1458]),
+            ("Dack Fayden, Helping Hand", &[0x1459]),
+            ("Katsumasa, the Animator", &[0x145A]),
+            ("Titanbones, Towering Heart", &[0x145B]),
+            ("Mistform Ultimus", &[0x145C]),
+            ("Leonardo, Cutting Edge", &[0x145D]),
+            ("Katara, Seeking Revenge", &[0x145E]),
+            ("Edgar, Ancient Bloodlord", &[0x145F]),
+            ("Moonstone, Harsh Mistress", &[0x1460]),
+            ("Stature, Size Shifter", &[0x1461]),
+            ("Zhang Fei, Fierce Warrior", &[0x1462]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
