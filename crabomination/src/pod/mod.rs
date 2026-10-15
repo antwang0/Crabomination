@@ -15882,6 +15882,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::M_O_D_O_K_COMMANDERS,
             main: decks::M_O_D_O_K_MAIN,
         },
+        // Seat 2572: Ms. Marvel, Kamala Khan's EDHREC average deck. `--pod-decks 2572`.
+        PodDeck {
+            name: "Ms. Marvel, Kamala Khan (U)",
+            commanders: decks::MS_MARVEL_COMMANDERS,
+            main: decks::MS_MARVEL_MAIN,
+        },
+        // Seat 2573: Medomai the Ageless's EDHREC average deck. `--pod-decks 2573`.
+        PodDeck {
+            name: "Medomai the Ageless (WU)",
+            commanders: decks::MEDOMAI_THE_AGELESS_COMMANDERS,
+            main: decks::MEDOMAI_THE_AGELESS_MAIN,
+        },
+        // Seat 2574: Songbird, Sonic Screamer's EDHREC average deck. `--pod-decks 2574`.
+        PodDeck {
+            name: "Songbird, Sonic Screamer (B)",
+            commanders: decks::SONGBIRD_COMMANDERS,
+            main: decks::SONGBIRD_MAIN,
+        },
+        // Seat 2575: The Falcon, Airship Restored's EDHREC average deck. `--pod-decks 2575`.
+        PodDeck {
+            name: "The Falcon, Airship Restored (B)",
+            commanders: decks::THE_FALCON_COMMANDERS,
+            main: decks::THE_FALCON_MAIN,
+        },
+        // Seat 2576: Lizard, Connors's Curse's EDHREC average deck. `--pod-decks 2576`.
+        PodDeck {
+            name: "Lizard, Connors's Curse (G)",
+            commanders: decks::LIZARD_COMMANDERS,
+            main: decks::LIZARD_MAIN,
+        },
+        // Seat 2577: Spider-Man, Brooklyn Visionary's EDHREC average deck. `--pod-decks 2577`.
+        PodDeck {
+            name: "Spider-Man, Brooklyn Visionary (G)",
+            commanders: decks::SPIDER_MAN_3_COMMANDERS,
+            main: decks::SPIDER_MAN_3_MAIN,
+        },
+        // Seat 2578: Armaggon, Future Shark's EDHREC average deck. `--pod-decks 2578`.
+        PodDeck {
+            name: "Armaggon, Future Shark (B)",
+            commanders: decks::ARMAGGON_COMMANDERS,
+            main: decks::ARMAGGON_MAIN,
+        },
+        // Seat 2579: Aang, the Last Airbender's EDHREC average deck. `--pod-decks 2579`.
+        PodDeck {
+            name: "Aang, the Last Airbender (W)",
+            commanders: decks::AANG_4_COMMANDERS,
+            main: decks::AANG_4_MAIN,
+        },
+        // Seat 2580: Reptil, Dinomorpher's EDHREC average deck. `--pod-decks 2580`.
+        PodDeck {
+            name: "Reptil, Dinomorpher (G)",
+            commanders: decks::REPTIL_COMMANDERS,
+            main: decks::REPTIL_MAIN,
+        },
     ]
 }
 
@@ -20286,6 +20340,15 @@ mod tests {
             ("Baron Helmut Zemo", &[0x141F]),
             ("The Master of Lake-town", &[0x1420]),
             ("M.O.D.O.K.", &[0x1421]),
+            ("Ms. Marvel, Kamala Khan", &[0x1422]),
+            ("Medomai the Ageless", &[0x1423]),
+            ("Songbird, Sonic Screamer", &[0x1424]),
+            ("The Falcon, Airship Restored", &[0x1425]),
+            ("Lizard, Connors's Curse", &[0x1426]),
+            ("Spider-Man, Brooklyn Visionary", &[0x1427]),
+            ("Armaggon, Future Shark", &[0x1428]),
+            ("Aang, the Last Airbender", &[0x1429]),
+            ("Reptil, Dinomorpher", &[0x142A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
