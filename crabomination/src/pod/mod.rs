@@ -15840,6 +15840,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAWKEYE_4_COMMANDERS,
             main: decks::HAWKEYE_4_MAIN,
         },
+        // Seat 2565: The Prydwen, Steel Flagship's EDHREC average deck. `--pod-decks 2565`.
+        PodDeck {
+            name: "The Prydwen, Steel Flagship (W)",
+            commanders: decks::THE_PRYDWEN_COMMANDERS,
+            main: decks::THE_PRYDWEN_MAIN,
+        },
+        // Seat 2566: Losheel, Clockwork Scholar's EDHREC average deck. `--pod-decks 2566`.
+        PodDeck {
+            name: "Losheel, Clockwork Scholar (W)",
+            commanders: decks::LOSHEEL_COMMANDERS,
+            main: decks::LOSHEEL_MAIN,
+        },
+        // Seat 2567: Lita, Mechanical Engineer's EDHREC average deck. `--pod-decks 2567`.
+        PodDeck {
+            name: "Lita, Mechanical Engineer (W)",
+            commanders: decks::LITA_2_COMMANDERS,
+            main: decks::LITA_2_MAIN,
+        },
     ]
 }
 
@@ -20237,6 +20255,9 @@ mod tests {
             ("Marwyn, the Clearcutter", &[0x1418]),
             ("Hawkeye, Avenging Archer", &[0x1419]),
             ("Hawkeye, Master Marksman", &[0x141A]),
+            ("The Prydwen, Steel Flagship", &[0x141B]),
+            ("Losheel, Clockwork Scholar", &[0x141C]),
+            ("Lita, Mechanical Engineer", &[0x141D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

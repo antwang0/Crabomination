@@ -72040,3 +72040,87 @@ pub const HAWKEYE_4_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const THE_PRYDWEN_COMMANDERS: &[CardFactory] = &[the_prydwen_steel_flagship];
+
+/// **The Prydwen, Steel Flagship**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// The Prydwen, Steel Flagship (EDHREC, fetched 2026-10-15).
+pub const THE_PRYDWEN_MAIN: &[CardFactory] = &[
+    aerial_surveyor, arcane_signet, archaeomancers_map, brotherhood_vertibird, cloud_key,
+    everflowing_chalice, fabrication_foundry, fellwar_stone, heraldic_banner, idol_of_oblivion,
+    marble_diamond, mind_stone, mystic_forge, panharmonicon, patchwork_banner, pearl_medallion,
+    salvation_engine, sculpting_steel, sol_ring, staff_of_the_storyteller,
+    the_circle_of_loyalty, the_mind_stone, thought_vessel, thousand_moons_smithy, thran_dynamo,
+    wayfarers_bauble, welding_jar, white_auracite, ancient_den, buried_ruin, darksteel_citadel,
+    ishgard_the_holy_see, monumental_henge, myriad_landscape, power_depot, scene_of_the_crime,
+    treasure_vault, war_room, adaptive_automaton, bronze_guardian, crashing_drawbridge,
+    dion_bahamuts_dominant, esper_sentinel, foundry_inspector, gandalf_the_white, gold_myr,
+    jhoiras_familiar, knight_exemplar, metallic_mimic, myr_retriever, ornithopter_of_paradise,
+    paladin_danse_steel_maverick, palladium_myr, scrap_trawler, securitron_squadron,
+    shimmer_myr, solemn_simulacrum, voyager_quickwelder, caretakers_talent, intangible_virtue,
+    renewed_solidarity, tocasias_welcome, akromas_will, dispatch, generous_gift, path_to_exile,
+    reprieve, stroke_of_midnight, swords_to_plowshares, austere_command, brilliant_restoration,
+    hour_of_reckoning, open_the_vaults,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const LOSHEEL_COMMANDERS: &[CardFactory] = &[losheel_clockwork_scholar];
+
+/// **Losheel, Clockwork Scholar**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Plains = 99.
+/// Losheel, Clockwork Scholar (EDHREC, fetched 2026-10-15).
+pub const LOSHEEL_MAIN: &[CardFactory] = &[
+    arcane_signet, fabrication_foundry, forsaken_monument, golem_foundry, liquimetal_torque,
+    mind_stone, mystic_forge, salvation_engine, sculpting_steel, sol_ring, swiftfoot_boots,
+    thopter_shop, thought_vessel, thousand_moons_smithy, unwinding_clock, ancient_den,
+    buried_ruin, darksteel_citadel, inventors_fair, monumental_henge, myriad_landscape,
+    reliquary_tower, war_room, windbrisk_heights, angel_of_the_ruins, bronze_guardian,
+    burnished_hart, chief_of_the_foundry, crashing_drawbridge, cyberman_patrol,
+    digsite_engineer, esper_sentinel, ethersworn_canonist, foundry_inspector, gold_myr,
+    illustrious_wanderglyph, jhoiras_familiar, liberator_urzas_battlethopter, lion_sash,
+    manakin, myr_battlesphere, myr_retriever, myrsmith, oltec_matterweaver,
+    ornithopter_of_paradise, palladium_myr, platoon_dispenser, rebbec_architect_of_ascension,
+    scrap_trawler, shimmer_myr, solemn_simulacrum, steel_hellkite, steel_overseer,
+    teshar_ancestors_apostle, threefold_thunderhulk, traxos_scourge_of_kroog,
+    voyager_quickwelder, all_that_glitters, skrelvs_hive, tempered_steel, tocasias_welcome,
+    blacksmiths_skill, disenchant, dispatch, generous_gift, path_to_exile, stroke_of_midnight,
+    swords_to_plowshares, unbreakable_formation, ugin_the_ineffable, austere_command,
+    brilliant_restoration, organic_extinction, srams_expertise,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const LITA_2_COMMANDERS: &[CardFactory] = &[lita_mechanical_engineer];
+
+/// **Lita, Mechanical Engineer**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Plains = 99.
+/// Lita, Mechanical Engineer (EDHREC, fetched 2026-10-15).
+pub const LITA_2_MAIN: &[CardFactory] = &[
+    aerial_surveyor, arcane_signet, archaeomancers_map, fabrication_foundry, mechtitan_core,
+    mind_stone, mystic_forge, parhelion_ii, peacewalker_colossus, reckoner_bankbuster,
+    salvation_engine, skysovereign_consul_flagship, smugglers_copter, sol_ring,
+    the_prydwen_steel_flagship, the_regalia, thousand_moons_smithy, unwinding_clock,
+    valors_flagship, weatherlight, adagia_windswept_bastion, ancient_den, buried_ruin,
+    darksteel_citadel, inventors_fair, mech_hangar, minas_tirith, monumental_henge,
+    myriad_landscape, war_room, automated_artificer, bronze_guardian, canoptek_spyder,
+    cryptothrall, digsite_engineer, drumbellower, esper_sentinel, foundry_inspector, gold_myr,
+    hedron_crawler, hotshot_mechanic, illustrious_wanderglyph, interface_ace,
+    iron_spider_stark_upgrade, liberator_urzas_battlethopter, losheel_clockwork_scholar,
+    manakin, oltec_matterweaver, ornithopter_of_paradise, palladium_myr, platoon_dispenser,
+    rebbec_architect_of_ascension, sanwell_avenger_ace, shimmer_myr, solemn_simulacrum,
+    sram_senior_edificer, steel_overseer, voyager_quickwelder, born_to_drive,
+    dazzling_theater_prop_room, land_tax, tempered_steel, akromas_will, armed_and_armored,
+    dispatch, generous_gift, path_to_exile, stroke_of_midnight, swords_to_plowshares,
+    ugin_the_ineffable, austere_command, brilliant_restoration, organic_extinction,
+    sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
