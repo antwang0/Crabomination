@@ -74322,3 +74322,31 @@ pub const SPIDER_GIRL_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const AZOR_COMMANDERS: &[CardFactory] = &[azor_the_lawbringer];
+
+/// **Azor, the Lawbringer**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 10 Islands + 10 Plains = 99.
+/// Azor, the Lawbringer (EDHREC, fetched 2026-10-15).
+pub const AZOR_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, commanders_sphere, conjurers_closet, fellwar_stone,
+    lightning_greaves, mind_stone, sol_ring, swiftfoot_boots, talisman_of_progress,
+    thought_vessel, adarkar_wastes, azorius_chancery, command_tower, deserted_beach,
+    flooded_strand, glacial_fortress, hallowed_fountain, irrigated_farmland, mystic_gate,
+    port_town, prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse,
+    temple_of_enlightenment, archaeomancer, cloudblazer, consecrated_sphinx, deadeye_navigator,
+    dream_trawler, esper_sentinel, grand_abolisher, grand_arbiter_augustin_iv,
+    isperia_supreme_judge, lavinia_of_the_tenth, lavinia_azorius_renegade,
+    loran_of_the_third_path, medomai_the_ageless, solemn_simulacrum, soulherder,
+    sphinx_of_the_second_sun, thassa_deep_dwelling, unesh_criosphinx_sovereign,
+    warden_of_evos_isle, watcher_of_the_spheres, windborn_muse, authority_of_the_consuls,
+    blind_obedience, ghostly_prison, land_tax, propaganda, rhystic_study, smothering_tithe,
+    teleportation_circle, absorb, an_offer_you_cant_refuse, arcane_denial, counterspell,
+    cyclonic_rift, dovins_veto, ephemerate, generous_gift, mana_drain, mystical_tutor, negate,
+    path_to_exile, render_silent, sphinxs_revelation, swords_to_plowshares, teferis_protection,
+    narset_parter_of_veils, teferi_time_raveler, approach_of_the_second_sun, austere_command,
+    farewell, supreme_verdict, time_wipe, wrath_of_god,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

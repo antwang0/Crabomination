@@ -16332,6 +16332,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SPIDER_GIRL_COMMANDERS,
             main: decks::SPIDER_GIRL_MAIN,
         },
+        // Seat 2647: Azor, the Lawbringer's EDHREC average deck. `--pod-decks 2647`.
+        PodDeck {
+            name: "Azor, the Lawbringer (WU)",
+            commanders: decks::AZOR_COMMANDERS,
+            main: decks::AZOR_MAIN,
+        },
     ]
 }
 
@@ -20811,6 +20817,7 @@ mod tests {
             ("Egon, God of Death", &[0x146A]),
             ("Kumano, Master Yamabushi", &[0x146B]),
             ("Spider-Girl, Legacy Hero", &[0x146C]),
+            ("Azor, the Lawbringer", &[0x146D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
