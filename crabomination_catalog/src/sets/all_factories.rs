@@ -4634,6 +4634,8 @@ static DECKS: &[Factory] = &[
     super::decks::knowledge_exploitation,
     super::decks::azor_the_lawbringer,
     super::decks::shah_of_naar_isle,
+    super::decks::go_nuts,
+    super::decks::the_irencrag,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

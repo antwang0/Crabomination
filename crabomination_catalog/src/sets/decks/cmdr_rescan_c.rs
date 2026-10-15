@@ -1465,3 +1465,69 @@ pub fn shah_of_naar_isle() -> CardDefinition {
         ..creature("Shah of Naar Isle", cost(&[generic(3), r()]), vec![CreatureType::Efreet], 6, 6)
     }
 }
+
+/// Go Nuts! — {G} sorcery; teamwork 3 (you may tap creatures you control
+/// with total power 3 or more as you cast it). Choose one — or both if
+/// teamwork was paid: a +1/+1 counter on target creature; target creature you
+/// control fights target creature an opponent controls. Teamwork rides the
+/// action-kicker slot. (Bushmaster, Tippy-Toe.)
+pub fn go_nuts() -> CardDefinition {
+    use crate::mana::g;
+    CardDefinition {
+        name: "Go Nuts!",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::TapTotalPower {
+            filter: R::Creature.and(R::ControlledByYou),
+            power: 3,
+        }),
+        modes_widen: Some(crate::card::ModesWiden::Kicked),
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+            modes: vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::Fight {
+                    attacker: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// The Irencrag — {2} legendary artifact. {T}: add {C}. Whenever a legendary
+/// creature you control enters, you may have it become a legendary Equipment
+/// artifact named Everflame, Heroes' Legacy with equip {3} and "Equipped
+/// creature gets +3/+3", losing all other abilities. (Yomiji, Adrestia.)
+pub fn the_irencrag() -> CardDefinition {
+    CardDefinition {
+        name: "The Irencrag",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![super::super::tap_add_colorless()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::HasSupertype(Supertype::Legendary)) },
+            ),
+            effect: Effect::MayDo {
+                description: "Have The Irencrag become Everflame, Heroes' Legacy?".into(),
+                body: Box::new(Effect::BecomeEquipment {
+                    what: Selector::This,
+                    name: "Everflame, Heroes' Legacy",
+                    equip: cost(&[generic(3)]),
+                    power: 3,
+                    toughness: 3,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}

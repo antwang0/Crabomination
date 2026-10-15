@@ -1618,3 +1618,64 @@ fn shah_of_naar_isle_echo_paid_feeds_opponents() {
     assert!(g.battlefield_find(shah).is_some_and(|c| c.echo_paid));
     assert_eq!(g.players[1].hand.len(), 3);
 }
+
+/// CR 702.33d / 700.2 — Go Nuts! takes both modes only when teamwork 3 is
+/// paid: the Hill Giant taps to cover it, the bear gets the counter, and the
+/// Giant fights their bear.
+#[test]
+fn go_nuts_teamwork_unlocks_both_modes() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::go_nuts());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: spell,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(giant), Target::Permanent(theirs)],
+        x_value: None,
+    })
+    .expect("teamwork pays for both");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).unwrap().tapped);
+    assert_eq!(plus(&g, bear), 1);
+    assert!(g.battlefield_find(theirs).is_none());
+
+    // Without 3 power to tap, both modes are out of reach.
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::go_nuts());
+    flood(&mut g);
+    assert!(g
+        .perform_action(GameAction::CastSpellSpree {
+            card_id: spell,
+            spree_modes: vec![0, 1],
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![Target::Permanent(bear), Target::Permanent(theirs)],
+            x_value: None,
+        })
+        .is_err());
+}
+
+/// CR 613.1 / 702.6 — a legend entering lets The Irencrag become Everflame:
+/// a legendary Equipment with equip {3} and +3/+3, without its mana ability.
+#[test]
+fn the_irencrag_becomes_everflame() {
+    let mut g = pod(2);
+    let crag = ready(&mut g, 0, catalog::the_irencrag());
+    let tomik = g.add_card_to_hand(0, catalog::tomik_orzhov_lawmage());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_with(&mut g, tomik, None, vec![], None);
+    let c = g.battlefield_find(crag).unwrap();
+    assert_eq!(c.definition.name, "Everflame, Heroes' Legacy");
+    assert!(c.definition.activated_abilities.is_empty(), "the {{T}}: Add {{C}} is gone");
+    assert!(c.definition.keywords.iter().any(|k| matches!(k, Keyword::Equip(_))));
+    g.clear_sickness(tomik);
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: crag, target: tomik }).expect("equip {3}");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, tomik), (5, 4));
+}
