@@ -17622,6 +17622,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ORI_2_COMMANDERS,
             main: decks::ORI_2_MAIN,
         },
+        // Seat 2862: Desmond Miles's EDHREC average deck. `--pod-decks 2862`.
+        PodDeck {
+            name: "Desmond Miles (B)",
+            commanders: decks::DESMOND_MILES_COMMANDERS,
+            main: decks::DESMOND_MILES_MAIN,
+        },
+        // Seat 2863: Marhault Elsdragon's EDHREC average deck. `--pod-decks 2863`.
+        PodDeck {
+            name: "Marhault Elsdragon (RG)",
+            commanders: decks::MARHAULT_ELSDRAGON_COMMANDERS,
+            main: decks::MARHAULT_ELSDRAGON_MAIN,
+        },
+        // Seat 2864: Spiders-Man, Heroic Horde's EDHREC average deck. `--pod-decks 2864`.
+        PodDeck {
+            name: "Spiders-Man, Heroic Horde (G)",
+            commanders: decks::SPIDERS_MAN_COMMANDERS,
+            main: decks::SPIDERS_MAN_MAIN,
+        },
     ]
 }
 
@@ -22319,6 +22337,9 @@ mod tests {
             ("Winter, Tormented Loner", &[0x1541]),
             ("Pavel Maliki", &[0x1542]),
             ("Ori, Keeper of Songs", &[0x1543]),
+            ("Desmond Miles", &[0x1544]),
+            ("Marhault Elsdragon", &[0x1545]),
+            ("Spiders-Man, Heroic Horde", &[0x1546]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

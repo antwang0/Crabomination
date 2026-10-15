@@ -80270,3 +80270,86 @@ pub const ORI_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const DESMOND_MILES_COMMANDERS: &[CardFactory] = &[desmond_miles];
+
+/// **Desmond Miles**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Desmond Miles (EDHREC, fetched 2026-10-15).
+pub const DESMOND_MILES_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, brotherhood_regalia, charcoal_diamond, hidden_blade,
+    jet_medallion, lightning_greaves, nightmare_lash, smoke_bomb, sol_ring, swiftfoot_boots,
+    the_darkness_crystal, vorrac_battlehorns, bojuka_bog, cabal_coffers, crypt_of_agadeem,
+    rogues_passage, shizo_deaths_storehouse, urborg_tomb_of_yawgmoth, war_room,
+    agate_blade_assassin, assassin_initiate, big_game_hunter, blood_operative,
+    brotherhood_ambushers, brotherhood_patriarch, changeling_outcast, dark_impostor,
+    gixian_skullflayer, guildsworn_prowler, guul_draz_assassin, hired_poisoner, hullcarver,
+    jacob_frye, mari_the_killing_quill, massacre_girl, massacre_girl_known_killer,
+    merciless_harlequin, midnight_assassin, nekrataal, poison_blade_mentor,
+    roshan_hidden_magister, royal_assassin, ruthless_ripper, shadow_mysterious_assassin,
+    termination_facilitator, thorn_of_the_black_rose, unscrupulous_contractor,
+    unstoppable_slasher, vein_ripper, black_market_connections, cover_of_darkness,
+    phyrexian_arena, ripples_of_undeath, the_revelations_of_ezio, chain_assassination,
+    dark_ritual, defile, go_for_the_throat, imps_mischief, murder, tragic_slip,
+    withering_torment, buried_alive, feed_the_swarm, nights_whisper, petty_larceny, reanimate,
+    restart_sequence, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const MARHAULT_ELSDRAGON_COMMANDERS: &[CardFactory] = &[marhault_elsdragon];
+
+/// **Marhault Elsdragon**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 15 Forests + 12 Mountains = 99.
+/// Marhault Elsdragon (EDHREC, fetched 2026-10-15).
+pub const MARHAULT_ELSDRAGON_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, dolmen_gate, fellwar_stone, gruul_signet, infiltration_lens,
+    nemesis_mask, sol_ring, swiftfoot_boots, cinder_glade, command_tower, game_trail,
+    gruul_turf, karplusan_forest, kessig_wolf_run, rockfall_vale, rootbound_crag,
+    skarrg_the_rage_pits, stomping_ground, aerathi_berserker, anzrag_the_quake_mole,
+    archetype_of_aggression, balduvian_war_makers, craw_giant, elvish_berserker, elvish_mystic,
+    eternal_witness, frost_giant, fyndhorn_elves, general_marhault_elsdragon,
+    goblin_anarchomancer, gorilla_berserkers, horrible_hordes, llanowar_elves,
+    neyith_of_the_dire_hunt, noble_quarry, ohran_frostfang, shinen_of_lifes_roar, teekas_dragon,
+    tempting_licid, toski_bearer_of_secrets, varchilds_war_riders, vigor, wolverine_pack,
+    wood_elves, garruks_uprising, grand_melee, invasion_plans, lure, rancor, retaliation,
+    rhythm_of_the_wild, setons_desire, beast_within, benefactors_draught, bloodscent,
+    chaos_warp, gaeas_gift, heroic_intervention, lightning_bolt, return_of_the_wildspeaker,
+    you_look_upon_the_tarrasque, alluring_scent, armed_dangerous, cultivate, declare_dominance,
+    kodamas_reach, natures_lore, rampant_growth, rishkars_expertise, roar_of_challenge,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const SPIDERS_MAN_COMMANDERS: &[CardFactory] = &[spiders_man_heroic_horde];
+
+/// **Spiders-Man, Heroic Horde**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Spiders-Man, Heroic Horde (EDHREC, fetched 2026-10-15).
+pub const SPIDERS_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, cloudstone_curio, emerald_medallion, heralds_horn, lifecrafters_bestiary,
+    patchwork_banner, rhonass_monument, sol_ring, spider_mobile, springleaf_drum,
+    the_earth_crystal, vanquishers_banner, evendo_waking_haven, nykthos_shrine_to_nyx,
+    path_of_ancestry, reliquary_tower, swarmyard, three_tree_city, yavimaya_cradle_of_growth,
+    arasta_of_the_endless_web, beast_whisperer, brood_weaver, canopy_spider, chainweb_aracnir,
+    deadly_recluse, enduring_vitality, ezekiel_sims_spider_totem, fyndhorn_elves,
+    llanowar_elves, mirkwood_spider, oran_rief_recluse, penumbra_spider, radioactive_spider,
+    realmwalker, roaming_throne, silklash_spider, spider_ham_peter_porker,
+    spider_man_brooklyn_visionary, spider_man_miles_morales, spider_rex_daring_dino,
+    spinner_of_souls, sporeweb_weaver, treetop_snarespinner, twin_silk_spider,
+    twisted_spider_clone, twitching_doll, watcher_in_the_web, concordant_crossroads,
+    cryptolith_rite, curse_of_clinging_webs, doubling_season, guardian_project, parallel_lives,
+    sylvan_anthem, wall_crawl, arachnogenesis, beast_within, grow_extra_arms,
+    heroic_intervention, kindred_summons, krosan_grip, natures_claim, second_harvest, cultivate,
+    harmonize, kodamas_reach, natures_lore, overrun, rampant_growth, shamanic_revelation,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
