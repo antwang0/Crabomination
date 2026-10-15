@@ -3151,7 +3151,8 @@ in the fixed pool. Release `bot_ladder` at `78f020984`, toolchain 1.99.
 golden traces    unchanged (13/13)
 suite            26,897 passed, 5 skipped; 8 structural-audit reds fixed and
                  re-run green (284/284); the precon pod-games
-                 long pole outran the 5,400 s run budget (6,920 s last time)
+                 long pole outran the 5,400 s run budget, then passed alone
+                 in 6,667 s (6,920 s last time)
 clippy           workspace (minus client) --all-targets: 0 warnings;
                  release-fast typecheck clean
 pod smoke        release, seed 9401, the Commander field at 4 / 6 / 8 seats x
