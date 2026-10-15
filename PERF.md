@@ -3136,6 +3136,26 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-15 (Commander run, `012vc8CU`, third leg) — guardrail; Blood Sun's strip, Rulebreaker, the bot sneak window
+
+Hot-path touches: `ComputedPermanent` gained Blood Sun's keeps-mana bit — first as a
+`bool` (72 -> 80 bytes, caught by the padding probe), then packed with
+`creature_types_set` into one `u8` (back to 72); the auto-tapper's source table reads
+it behind the existing strip gate. `trade_counters_for_damage` checks Dralnu's static
+before its prevention gate. None are in the fixed pool. Release `bot_ladder` at `acc33ed6f`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 37.7 MiB; games_per_s 247.9
+golden traces    unchanged (13/13)
+suite            26,928 / 26,929 + 5 skipped; the one red (the 80-byte probe) fixed
+                 and re-run green; precon pod-games long pole 7,245 s
+clippy           workspace (minus client) --all-targets: 0 warnings;
+                 release-fast typecheck clean
+pod smoke        release, seed 9406, every seat x 4 / 6 / 8: 3,094 games, 0 panics,
+                 2 undecided (0.06 %): a Preston board cap, a Repay in Kind true draw
+```
+
 ### 2026-10-15 (Commander run, `01XShaqR`) — guardrail; 65 seats, 201 cards, a `{Q}` payment fix
 
 Hot-path touches: a `{Q}` cost now untaps its source after the mana payment
