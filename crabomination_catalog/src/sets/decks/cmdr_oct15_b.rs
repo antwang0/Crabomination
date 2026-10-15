@@ -460,20 +460,21 @@ pub fn gift_of_the_deity() -> CardDefinition {
 
 /// Crush Underfoot — {1}{R} Kindred instant — Giant. Choose a Giant creature
 /// you control; it deals damage equal to its power to target creature.
+/// Residual: the choice is the Giant with the greatest power.
 pub fn crush_underfoot() -> CardDefinition {
     CardDefinition {
         name: "Crush Underfoot",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Kindred, CardType::Instant],
         subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
-        effect: Effect::ChooseOneAmong {
-            what: Selector::EachPermanent(R::Creature.and(R::HasCreatureType(CreatureType::Giant)).and(R::ControlledByYou)),
-            chooser: PlayerRef::You,
-            chosen: Box::new(Effect::DealDamageEqualToPower {
-                source: Selector::SeparatedPile { chosen: true },
-                target: target_filtered(R::Creature),
-            }),
-            other: Box::new(Effect::Noop),
+        effect: Effect::DealDamageEqualToPower {
+            source: Selector::TakeGreatestPower {
+                inner: Box::new(Selector::EachPermanent(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Giant)).and(R::ControlledByYou),
+                )),
+                count: Box::new(Value::ONE),
+            },
+            target: target_filtered(R::Creature),
         },
         ..Default::default()
     }
@@ -2140,8 +2141,8 @@ pub fn nighthaze() -> CardDefinition {
 /// Assembled Alphas — {5}{R} 5/5 Wolf. Whenever it blocks or becomes blocked
 /// by a creature, it deals 3 damage to that creature and 3 to its controller.
 pub fn assembled_alphas() -> CardDefinition {
-    let maul = |each: Selector| Effect::ForEach {
-        selector: each,
+    let maul = |them: Selector| Effect::ForEach {
+        selector: them,
         body: Box::new(Effect::Seq(vec![
             Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(3) },
             Effect::DealDamage {
@@ -2166,12 +2167,11 @@ pub fn assembled_alphas() -> CardDefinition {
 /// blocked by a creature, destroy that creature; you gain life equal to its
 /// toughness.
 pub fn engulfing_slagwurm() -> CardDefinition {
-    let engulf = |each: Selector| Effect::ForEach {
-        selector: each,
-        body: Box::new(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::ToughnessOf(Box::new(Selector::TriggerSource)) },
-            Effect::Destroy { what: Selector::TriggerSource },
-        ])),
+    let engulf = |them: Selector| {
+        Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::ToughnessOf(Box::new(them.clone())) },
+            Effect::Destroy { what: them },
+        ])
     };
     CardDefinition {
         triggered_abilities: vec![
@@ -2203,22 +2203,27 @@ fn make_food() -> Effect {
 
 /// Nimble Hobbit — {1}{W} 1/3 Halfling Peasant. Attacking: you may sacrifice a
 /// Food or pay {2}{W}; when you do, tap target creature an opponent controls.
+/// Residual: with a Food out, the Food is the offered cost.
 pub fn nimble_hobbit() -> CardDefinition {
     let tap = || Effect::ReflexiveTrigger {
         body: Box::new(Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) }),
     };
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
-            description: "Sacrifice a Food to tap a creature an opponent controls?".into(),
-            filter: food(),
-            count: Value::ONE,
-            then: Box::new(tap()),
-            else_: Some(Box::new(Effect::MayPay {
+        triggered_abilities: vec![on_attack(Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(food().and(R::ControlledByYou))),
+            then: Box::new(Effect::MaySacrifice {
+                description: "Sacrifice a Food to tap a creature an opponent controls?".into(),
+                filter: food(),
+                count: Value::ONE,
+                then: Box::new(tap()),
+                else_: None,
+            }),
+            else_: Box::new(Effect::MayPay {
                 description: "Pay {2}{W} to tap a creature an opponent controls?".into(),
                 mana_cost: cost(&[generic(2), w()]),
                 body: Box::new(tap()),
                 else_: None,
-            })),
+            }),
         })],
         ..creature("Nimble Hobbit", cost(&[generic(1), w()]), vec![CreatureType::Halfling, CreatureType::Peasant], 1, 3)
     }
