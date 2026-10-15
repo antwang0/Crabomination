@@ -3154,6 +3154,34 @@ pod sweeps       audit build: every deck x 4,6,8 seats, 2,774 games, 0 panics,
                  6 undecided (ENGINE_BACKLOG `01ANcpHx`)
 ```
 
+### 2026-10-15 (Commander run, `01BeJu7Q`, second leg) — guardrail; 154 seats in all, sixteen more primitives
+
+Hot-path touches: an instant/sorcery resolution scans its own events for a
+`LifeGained` before emitting `SpellCausedLifeGain`; `begin_turn_resets` reads
+one more empty `ColdState` list (Azor's next-turn locks); target legality asks
+a turn-stamped list for Detection Tower behind an `is_empty`;
+`paid_granted_offspring` reads one more `kicked_options` entry. None reaches
+the fixed pool's hot loop. Release `bot_ladder` at `04f9a9c8b` vs the
+previous baseline `a9e4ceee8`, both rebuilt here, toolchain 1.99, Xeon @
+2.80 GHz, 4 cores.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; thread_determinism ok (3 vs 1)
+ABBA x3          base 250.66 249.47 246.04 233.03 224.62 238.51 (mean 240.4)
+                 new  244.82 249.32 221.72 251.67 239.59 240.36 (mean 241.3)
+                 games/s — flat; the first single reading (235.98) was the host
+                 (host_calib_ms 46-51 against the baseline's 45)
+clippy           workspace --all-targets (no client): 0
+suite            nextest --workspace (no client) minus the long pole: 26,760 / 26,760
+release-fast     cargo check --profile release-fast -p crabomination --bin bot_ladder: ok
+pods (debug)     pod_sweep seed 104 over seats 2528-2679 x 4,8 seats x 20: 1,140
+                 games, 1 panic — Endless Whispers / Verdant Mastery naming
+                 EachOpponent as a battlefield controller, fixed upstream the same
+                 hour with its audit (no_move_destination_names_a_fan_out_player);
+                 3 undecided, all CR 104.4a draws (0.26 %)
+```
+
 ### 2026-10-14 (Commander run, `01BeJu7Q`) — guardrail; the ranks 1-5500 rescan, 81 seats, eleven primitives
 
 Hot-path touches: `adjust_life` multiplies a loss by `life_loss_multiplier_now`
