@@ -9179,6 +9179,25 @@ impl GameState {
                         None => false,
                     }
                 }
+                CumulativeUpkeepCost::OpponentGainsLife(per) => {
+                    // The payer's pick: the living opponent with the most life
+                    // (lowest seat breaks ties) gains it all.
+                    let pick = (0..self.players.len())
+                        .filter(|&s| self.players[s].is_alive() && !self.same_team(active, s))
+                        .min_by_key(|&s| (std::cmp::Reverse(self.players[s].life), s));
+                    match pick {
+                        Some(opp) => {
+                            let gain = crate::effect::Effect::GainLife {
+                                who: crate::effect::Selector::You,
+                                amount: crate::effect::Value::Const((per * n) as i32),
+                            };
+                            let ctx = crate::game::effects::EffectContext::for_ability(id, opp, None);
+                            let _ = self.run_effect(&gain, &ctx, &mut events);
+                            true
+                        }
+                        None => false,
+                    }
+                }
                 CumulativeUpkeepCost::PutCounterOnOpponentCreature(kind) => {
                     // The payer's pick: every counter on the opponents'
                     // smallest creature (lowest id breaks ties).

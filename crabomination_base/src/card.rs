@@ -2902,6 +2902,9 @@ pub enum CumulativeUpkeepCost {
     /// token" (Varchild's War-Riders): one token per age counter, all under
     /// one opponent's control. Payable while an opponent is alive.
     OpponentCreatesSurvivor,
+    /// "Cumulative upkeep—An opponent gains N life" (Wall of Shards): N life
+    /// per age counter, to one opponent. Payable while an opponent is alive.
+    OpponentGainsLife(u32),
 }
 
 impl CumulativeUpkeepCost {
@@ -2916,6 +2919,7 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
             CumulativeUpkeepCost::OpponentCreatesSurvivor => "Have an opponent create a 1/1 red Survivor".into(),
+            CumulativeUpkeepCost::OpponentGainsLife(n) => format!("An opponent gains {n} life"),
             CumulativeUpkeepCost::AddMana(c) => format!("Add one {c:?} mana"),
             CumulativeUpkeepCost::PutCounterOnOpponentCreature(k) => {
                 format!("Put a {k:?} counter on a creature an opponent controls")
