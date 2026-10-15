@@ -5748,6 +5748,12 @@ pub struct CardDefinition {
     /// the cast `kicked`, which `Predicate::SpellWasKicked` reads.
     #[serde(default)]
     pub kicker_action_cost: Option<AdditionalCastCost>,
+    /// CR 715.3 / 601.2b — "As an additional cost to cast this spell, …"
+    /// printed on the card's Adventure half (My Precious // Allure of Power's
+    /// "sacrifice a creature"): paid by an Adventure cast only, never by a
+    /// cast of the card's main half.
+    #[serde(default)]
+    pub adventure_additional_cast_cost: Vec<AdditionalCastCost>,
     /// CR 702.33b — "Kicker {A} and/or {B}": two independently payable kicker
     /// costs (the Apocalypse Volver cycle, Illuminate). Cast via
     /// `GameAction::CastSpellKickers`; each paid index is stamped onto the

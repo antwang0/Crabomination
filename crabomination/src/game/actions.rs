@@ -9341,6 +9341,17 @@ impl GameState {
         if let Some(ref tgt) = target {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
         }
+        // CR 601.2b — the Adventure half's own additional cost, checked before
+        // any mana is spent and paid after it.
+        let extra = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.adventure_additional_cast_cost.clone())
+            .unwrap_or_default();
+        if !extra.is_empty() && !self.additional_costs_payable(p, &extra) {
+            return Err(GameError::SelectionRequirementViolated);
+        }
         let mut cost = if adv.cost.has_x() {
             adv.cost.with_x_value(x_value.unwrap_or(0))
         } else {
@@ -9368,6 +9379,10 @@ impl GameState {
         card.cast_from_graveyard = self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
         card.adventuring = true;
         let mut events = receipt.auto_events;
+        if !extra.is_empty() {
+            let (mut paid, _) = self.pay_additional_costs(p, &extra, None, None);
+            events.append(&mut paid);
+        }
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(
             p,
