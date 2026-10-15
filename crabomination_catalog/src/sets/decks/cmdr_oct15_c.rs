@@ -2715,3 +2715,145 @@ pub fn gray_slaad() -> CardDefinition {
         ..creature("Gray Slaad", cost(&[generic(2), b()]), vec![CreatureType::Frog, CreatureType::Horror], 4, 1)
     }
 }
+
+// ── Batch 8 ─────────────────────────────────────────────────────────────────
+
+fn spiders_you_control() -> Value {
+    Value::CountOf(Box::new(Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Spider)))))
+}
+
+/// Spider-Mobile — {3} 3/3 trample Vehicle, crew 2. Attacking or blocking, it
+/// gets +1/+1 for each Spider you control.
+pub fn spider_mobile() -> CardDefinition {
+    let pump = || Effect::PumpPT { what: Selector::This, power: spiders_you_control(), toughness: spiders_you_control(), duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Spider-Mobile",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample, Keyword::Crew(2)],
+        triggered_abilities: vec![on_attack(pump()), crate::effect::shortcut::blocks(pump())],
+        ..Default::default()
+    }
+}
+
+/// Wall Crawl — {3}{G} enchantment. Enters: a 2/1 reach Spider, then gain 1
+/// life per Spider you control. Your Spiders get +1/+1 and can't be blocked by
+/// defenders.
+pub fn wall_crawl() -> CardDefinition {
+    let spiders = || Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Spider)));
+    CardDefinition {
+        name: "Wall Crawl",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            make(1, TokenDefinition { keywords: vec![Keyword::Reach], ..token("Spider", 2, 1, Some(Color::Green), vec![CreatureType::Spider], false) }),
+            Effect::GainLife { who: Selector::You, amount: spiders_you_control() },
+        ]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spiders you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: spiders(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Spiders you control can't be blocked by creatures with defender.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: spiders(),
+                    keyword: Keyword::CantBeBlockedBy(Box::new(R::HasKeyword(Keyword::Defender))),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gorilla Berserkers — {3}{G}{G} 2/3 Ape Berserker; trample, rampage 2; can't
+/// be blocked except by three or more creatures.
+pub fn gorilla_berserkers() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Rampage(2), Keyword::CantBeBlockedExceptByN(3)],
+        ..creature("Gorilla Berserkers", cost(&[generic(3), g(), g()]), vec![CreatureType::Ape, CreatureType::Berserker], 2, 3)
+    }
+}
+
+/// Alluring Scent — {1}{G}{G} sorcery. All creatures able to block a creature
+/// this turn do so.
+pub fn alluring_scent() -> CardDefinition {
+    spell(
+        "Alluring Scent",
+        cost(&[generic(1), g(), g()]),
+        false,
+        Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::AllMustBlock, duration: Duration::EndOfTurn },
+    )
+}
+
+/// Declare Dominance — {3}{G}{G} sorcery. A creature gets +3/+3 and all
+/// creatures able to block it this turn do so.
+pub fn declare_dominance() -> CardDefinition {
+    let it = || target_filtered(R::Creature);
+    spell(
+        "Declare Dominance",
+        cost(&[generic(3), g(), g()]),
+        false,
+        Effect::Seq(vec![
+            Effect::PumpPT { what: it(), power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: it(), keyword: Keyword::AllMustBlock, duration: Duration::EndOfTurn },
+        ]),
+    )
+}
+
+/// Blood Operative — {1}{B}{B} 3/1 lifelink Vampire Assassin. Enters: you may
+/// exile a card from a graveyard. Whenever you surveil while it's in your
+/// graveyard, you may pay 3 life to return it to your hand.
+pub fn blood_operative() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![
+            etb(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Move { what: target_filtered(R::InGraveyard), to: ZoneDest::Exile }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Surveilled, EventScope::FromYourGraveyard),
+                effect: Effect::MayPayLife {
+                    description: "Pay 3 life to return Blood Operative to your hand?".into(),
+                    amount: Value::Const(3),
+                    body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+                    else_: None,
+                },
+            },
+        ],
+        ..creature("Blood Operative", cost(&[generic(1), b(), b()]), vec![CreatureType::Vampire, CreatureType::Assassin], 3, 1)
+    }
+}
+
+/// Brotherhood Patriarch — {3}{B} 4/1 Human Assassin. Dies: each opponent
+/// loses 2 and you gain 2.
+pub fn brotherhood_patriarch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..creature("Brotherhood Patriarch", cost(&[generic(3), b()]), vec![CreatureType::Human, CreatureType::Assassin], 4, 1)
+    }
+}
+
+/// Gixian Skullflayer — {2}{B} 2/3 Phyrexian Human Assassin. Your upkeep: a
+/// +1/+1 counter if three or more creature cards are in your graveyard.
+pub fn gixian_skullflayer() -> CardDefinition {
+    let mut grow = at_your(TurnStep::Upkeep, Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE });
+    grow.event = grow.event.with_filter(Predicate::ValueAtLeast(creature_cards_in_your_graveyard(), Value::Const(3)));
+    CardDefinition {
+        triggered_abilities: vec![grow],
+        ..creature(
+            "Gixian Skullflayer",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Assassin],
+            2,
+            3,
+        )
+    }
+}

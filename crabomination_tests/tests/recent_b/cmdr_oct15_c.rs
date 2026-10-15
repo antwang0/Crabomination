@@ -1060,3 +1060,52 @@ fn winter_trades_a_sacrifice_with_each_opponent() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
     assert_eq!(g.players[0].graveyard.len(), 1, "one creature of yours paid for it");
 }
+
+// ── Batch 8 ─────────────────────────────────────────────────────────────────
+
+/// Wall Crawl makes a Spider, gains a life per Spider, and pumps Spiders.
+#[test]
+fn wall_crawl_spider_package() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::needlepeak_spider());
+    let life = g.players[0].life;
+    let crawl = g.add_card_to_hand(0, catalog::wall_crawl());
+    cast(&mut g, crawl);
+    assert_eq!(g.players[0].life, life + 2, "two Spiders");
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Spider").unwrap().id;
+    assert_eq!(pt(&g, token), (3, 2));
+}
+
+/// Blood Operative returns from the graveyard when you surveil and pay 3 life.
+#[test]
+fn blood_operative_returns_on_surveil() {
+    let mut g = pod(2);
+    let op = g.add_card_to_graveyard(0, catalog::blood_operative());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let fate = g.add_card_to_hand(0, catalog::your_fate_ends_here());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
+        DecisionAnswer::Bool(true),
+    ]));
+    cast_with(&mut g, fate, Some(Target::Permanent(wurm)), None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == op), "back in hand");
+    assert_eq!(g.players[0].life, life - 3);
+}
+
+/// Gixian Skullflayer grows at upkeep with three creature cards in your
+/// graveyard, not two.
+#[test]
+fn gixian_skullflayer_needs_three_creature_cards() {
+    let mut g = pod(2);
+    let flayer = ready(&mut g, 0, catalog::gixian_skullflayer());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert_eq!(plus(&g, flayer), 0);
+    g.add_card_to_graveyard(0, catalog::craw_wurm());
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert_eq!(plus(&g, flayer), 1);
+}

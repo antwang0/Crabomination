@@ -16227,6 +16227,14 @@ static DECKS: &[Factory] = &[
     super::decks::stone_giant_of_high_pass,
     super::decks::winter_tormented_loner,
     super::decks::gray_slaad,
+    super::decks::spider_mobile,
+    super::decks::wall_crawl,
+    super::decks::gorilla_berserkers,
+    super::decks::alluring_scent,
+    super::decks::declare_dominance,
+    super::decks::blood_operative,
+    super::decks::brotherhood_patriarch,
+    super::decks::gixian_skullflayer,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
