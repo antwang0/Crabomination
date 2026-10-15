@@ -978,3 +978,27 @@ fn maeve_draws_when_her_goaded_creature_hits_an_opponent() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// CR 615.12 — Volcano Hellion's entry damage goes through protection from
+/// red, and its echo is your life total in generic mana.
+#[test]
+fn volcano_hellion_burns_through_prevention_and_echoes_your_life() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let knight = ready(&mut g, 1, catalog::cho_manno_revolutionary());
+    let hellion = g.add_card_to_hand(0, catalog::volcano_hellion());
+    g.players[0].life = 10;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    cast_with(&mut g, hellion, None, vec![], None);
+    assert!(g.battlefield_find(knight).is_none(), "unpreventable damage through Cho-Manno's prevention");
+    assert_eq!(g.players[0].life, 8);
+    // Next upkeep: 8 generic owed and nothing to pay with — sacrificed.
+    g.players[0].mana_pool.empty();
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert!(g.battlefield_find(hellion).is_none(), "echo unpaid");
+}

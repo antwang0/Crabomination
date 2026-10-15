@@ -602,3 +602,25 @@ pub fn maeve_insidious_singer() -> CardDefinition {
         ..legend("Maeve, Insidious Singer", cost(&[generic(2), u(), u()]), vec![CreatureType::Siren], 3, 4)
     }
 }
+
+/// Volcano Hellion — {2}{R}{R} 6/5 Hellion; echo {X}, X your life total. When
+/// it enters, it deals an amount of damage of your choice to you and target
+/// creature; the damage can't be prevented. (Auntie Blyte.) The choice is
+/// offered up to the creature's toughness.
+pub fn volcano_hellion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::EchoLifeTotal],
+        triggered_abilities: vec![etb(Effect::DamageCantBePrevented {
+            body: Box::new(Effect::PlayerChoosesNumber {
+                who: Selector::You,
+                prompt: "Volcano Hellion: how much damage to you and the creature?".into(),
+                max: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::ChosenNumber },
+                    Effect::DealDamage { to: Selector::You, amount: Value::ChosenNumber },
+                ])),
+            }),
+        })],
+        ..creature("Volcano Hellion", cost(&[generic(2), r(), r()]), vec![CreatureType::Hellion], 6, 5)
+    }
+}
