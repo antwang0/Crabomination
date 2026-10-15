@@ -1929,82 +1929,11 @@ impl GameState {
             }
         }
 
-        // CR 508.1 — absolute "creatures can't attack you" prohibition (Blazing
-        // Archon). Reject the whole declaration if any attacker targets a player
-        // (or protected planeswalker) whose controller has the static.
+        // CR 508.1 — the prohibitions that read the attacked player, in the
+        // walker the bot's picker shares (`attack_target_prohibited`).
         for atk in &attacks {
-            let (defender, at_planeswalker) = match atk.target {
-                crate::game::types::AttackTarget::Player(d) => (Some(d), false),
-                crate::game::types::AttackTarget::Planeswalker(pw) => {
-                    (self.battlefield_find(pw).map(|c| c.controller), true)
-                }
-                crate::game::types::AttackTarget::Battle(b) => {
-                    (self.battlefield_find(b).and_then(|c| c.protected_by), false)
-                }
-            };
-            let Some(d) = defender else { continue };
-            // CR 508.1 — Island Sanctuary's shield bars attacks on the player.
-            if matches!(atk.target, crate::game::types::AttackTarget::Player(_))
-                && self.attacker_barred_by_shield(atk.attacker, d)
-            {
-                return Err(attack_reject(line!(), GameError::CannotAttack(atk.attacker)));
-            }
-            // CR 508.1 — Arboria: a player who did nothing on their own last
-            // turn can't be attacked at all.
-            if !self.acted_on_their_last_turn(d)
-                && self.battlefield.iter().any(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(crate::effect::StaticEffect::
-                                PlayersCantBeAttackedUnlessTheyActedLastTurn)
-                        )
-                    })
-                })
-            {
-                return Err(attack_reject(line!(), GameError::CannotAttack(atk.attacker)));
-            }
-            debug_assert!(
-                statics & attack_static::CANT_ATTACK_CONTROLLER != 0
-                    || !self.battlefield.iter().any(|c| c
-                        .definition
-                        .static_abilities
-                        .iter()
-                        .any(|sa| matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::CreaturesCantAttackController { .. }
-                        ))),
-                "attack_static_scan missed an attack prohibition",
-            );
-            // Each live prohibition, asked in one pass: the old form collected
-            // `(source id, cloned filter)` into a `Vec` and then ran `any` over
-            // it, i.e. one allocation and one `SelectionRequirement` clone per
-            // lock per attacker for a question that short-circuits.
-            let barred = statics & attack_static::CANT_ATTACK_CONTROLLER != 0
-                && self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == d)
-                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
-                .filter_map(|(c, sa)| self.active_static(&sa.effect, c).map(|e| (c.id, e)))
-                .any(|(src, e)| match e {
-                    crate::effect::StaticEffect::CreaturesCantAttackController {
-                        protect_planeswalkers,
-                        filter,
-                    } if !at_planeswalker || *protect_planeswalkers => {
-                        filter.as_ref().is_none_or(|f| {
-                            self.evaluate_requirement_static(
-                                f,
-                                &Target::Permanent(atk.attacker),
-                                d,
-                                Some(src),
-                            )
-                        })
-                    }
-                    _ => false,
-                });
-            if barred {
-                return Err(attack_reject(line!(), GameError::CannotAttack(atk.attacker)));
+            if let Some(line) = self.attack_target_prohibited(atk, statics) {
+                return Err(attack_reject(line, GameError::CannotAttack(atk.attacker)));
             }
         }
 
@@ -4045,6 +3974,88 @@ impl GameState {
                 c.must_block = None;
             }
         }
+    }
+
+    /// CR 508.1 — the prohibitions on `atk` that read the attacked player:
+    /// "creatures can't attack you" (Blazing Archon, the filtered Moat-style
+    /// locks), Island Sanctuary's shield, Arboria. `Some(line)` names the
+    /// first that bars it. One walker for `declare_attackers` and the bot's
+    /// picker, so a declaration the bot builds cannot trip one it never saw.
+    pub(crate) fn attack_target_prohibited(&self, atk: &Attack, statics: u32) -> Option<u32> {
+        let (defender, at_planeswalker) = match atk.target {
+            crate::game::types::AttackTarget::Player(d) => (Some(d), false),
+            crate::game::types::AttackTarget::Planeswalker(pw) => {
+                (self.battlefield_find(pw).map(|c| c.controller), true)
+            }
+            crate::game::types::AttackTarget::Battle(b) => {
+                (self.battlefield_find(b).and_then(|c| c.protected_by), false)
+            }
+        };
+        let Some(d) = defender else { return None };
+        // CR 508.1 — Island Sanctuary's shield bars attacks on the player.
+        if matches!(atk.target, crate::game::types::AttackTarget::Player(_))
+            && self.attacker_barred_by_shield(atk.attacker, d)
+        {
+            return Some(line!());
+        }
+        // CR 508.1 — Arboria: a player who did nothing on their own last
+        // turn can't be attacked at all.
+        if !self.acted_on_their_last_turn(d)
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::
+                            PlayersCantBeAttackedUnlessTheyActedLastTurn)
+                    )
+                })
+            })
+        {
+            return Some(line!());
+        }
+        debug_assert!(
+            statics & attack_static::CANT_ATTACK_CONTROLLER != 0
+                || !self.battlefield.iter().any(|c| c
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::CreaturesCantAttackController { .. }
+                    ))),
+            "attack_static_scan missed an attack prohibition",
+        );
+        // Each live prohibition, asked in one pass: the old form collected
+        // `(source id, cloned filter)` into a `Vec` and then ran `any` over
+        // it, i.e. one allocation and one `SelectionRequirement` clone per
+        // lock per attacker for a question that short-circuits.
+        let barred = statics & attack_static::CANT_ATTACK_CONTROLLER != 0
+            && self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == d)
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+            .filter_map(|(c, sa)| self.active_static(&sa.effect, c).map(|e| (c.id, e)))
+            .any(|(src, e)| match e {
+                crate::effect::StaticEffect::CreaturesCantAttackController {
+                    protect_planeswalkers,
+                    filter,
+                } if !at_planeswalker || *protect_planeswalkers => {
+                    filter.as_ref().is_none_or(|f| {
+                        self.evaluate_requirement_static(
+                            f,
+                            &Target::Permanent(atk.attacker),
+                            d,
+                            Some(src),
+                        )
+                    })
+                }
+                _ => false,
+            });
+        if barred {
+            return Some(line!());
+        }
+        None
     }
 
     /// CR 702.15 — does `defender` control a land with the given land type?

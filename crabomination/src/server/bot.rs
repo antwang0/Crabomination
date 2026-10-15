@@ -3448,6 +3448,7 @@ impl HeuristicBot {
                     }
                     let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
                     let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
+                    let attacks = super::pod_attack::reaim_prohibited_attacks(state, seat, attacks);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))

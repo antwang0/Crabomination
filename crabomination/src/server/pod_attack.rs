@@ -170,6 +170,45 @@ fn cant_be_spilled_at(state: &GameState, d: usize) -> bool {
     })
 }
 
+/// CR 508.1 — an attack a defender-reading prohibition bars (Island
+/// Sanctuary's shield, a filtered "can't attack you") re-aims at another
+/// player the attacker may attack, or the attacker stays home. A barred
+/// attack used to sink the whole declaration, so the seat attacked with
+/// nothing — two Sanctuary seats passed for 3,000 turns (8-seat pod, seed
+/// 31664). Commander games only; a declaration nothing bars is untouched.
+pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attacks: Vec<Attack>) -> Vec<Attack> {
+    if state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
+        return attacks;
+    }
+    let statics = crate::game::combat::attack_static_scan(state);
+    if attacks.iter().all(|a| state.attack_target_prohibited(a, statics).is_none()) {
+        return attacks;
+    }
+    let defenders = state.attackable_players_for(seat);
+    attacks.retain_mut(|a| {
+        if state.attack_target_prohibited(a, statics).is_none() {
+            return true;
+        }
+        let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
+        let open = defenders
+            .iter()
+            .map(|&d| Attack { attacker: a.attacker, target: AttackTarget::Player(d) })
+            .find(|c| {
+                let AttackTarget::Player(d) = c.target else { return false };
+                state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none()
+                    && state.attack_target_prohibited(c, statics).is_none()
+            });
+        match open {
+            Some(c) => {
+                *a = c;
+                true
+            }
+            None => false,
+        }
+    });
+    attacks
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -267,5 +306,26 @@ mod tests {
         );
         let mut g2 = g.clone();
         g2.declare_attackers(attacks).expect("a legal declaration");
+    }
+
+    /// CR 508.1 — bug fix: a Bear aimed at a player behind Island Sanctuary's
+    /// shield re-aims at an open opponent instead of sinking the declaration.
+    #[test]
+    fn a_shielded_player_s_attackers_re_aim() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        for &b in &bears {
+            g.clear_sickness(b);
+        }
+        g.players[1].attackable_only_by_until_next_turn =
+            Some(Box::new(crate::card::SelectionRequirement::HasKeyword(crate::card::Keyword::Flying)));
+        let attacks = vec![
+            Attack { attacker: bears[0], target: AttackTarget::Player(1) },
+            Attack { attacker: bears[1], target: AttackTarget::Player(2) },
+        ];
+        let out = reaim_prohibited_attacks(&g, 0, attacks);
+        assert_eq!(out.len(), 2);
+        assert!(out.iter().all(|a| a.target != AttackTarget::Player(1)));
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
     }
 }
