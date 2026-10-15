@@ -2201,3 +2201,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |
 | 🟡 Safe Passage | "creatures you control" are the ones you control as it resolves; a creature that enters later this turn is unshielded | two `PreventAllDamageThisTurn` |
 | 🟡 Dwalin, Weaponmaster | a hone counter pumps only through an Equipment that prints an `equipped_bonus` | `AddCounter { Hone }` + the equip-bonus gather |
+| 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |

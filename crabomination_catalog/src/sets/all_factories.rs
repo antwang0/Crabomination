@@ -15838,6 +15838,10 @@ static DECKS: &[Factory] = &[
     super::decks::absorb_identity,
     super::decks::nimbleclaw_adept,
     super::decks::dynaheir_invoker_adept,
+    super::decks::aisha_of_sparks_and_smoke,
+    super::decks::howl_of_the_horde,
+    super::decks::witch_king_sky_scourge,
+    super::decks::mordor_on_the_march,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

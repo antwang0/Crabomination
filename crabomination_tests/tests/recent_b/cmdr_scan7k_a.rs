@@ -3020,3 +3020,52 @@ fn endless_whispers_returns_under_one_opponent_in_a_pod() {
     let back = g.battlefield_find(bear).expect("returned at the end step");
     assert_ne!(back.controller, 0, "under an opponent's control");
 }
+
+/// Howl of the Horde copies the next instant or sorcery once, twice with raid.
+#[test]
+fn howl_of_the_horde_copies_the_next_spell() {
+    let mut g = pod(2);
+    let howl = g.add_card_to_hand(0, catalog::howl_of_the_horde());
+    cast(&mut g, howl);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "the Bolt and one copy");
+}
+
+/// Witch-king exiles the attacking Wraiths' total power to play this turn.
+#[test]
+fn witch_king_exiles_by_wraith_power() {
+    let mut g = pod(2);
+    library(&mut g, 0, 8);
+    let wk = ready(&mut g, 0, catalog::witch_king_sky_scourge());
+    declare(&mut g, vec![(wk, 1)]);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0 && c.may_play_until.is_some()).count(), 5);
+}
+
+/// Mordor on the March makes a hasty token copy of a graveyard creature.
+#[test]
+fn mordor_on_the_march_copies_a_graveyard_creature() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let m = g.add_card_to_hand(0, catalog::mordor_on_the_march());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: m, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Craw Wurm" && c.is_token).map(|c| c.id).expect("token");
+    assert!(g.permanent_has_keyword(tok, &Keyword::Haste));
+    assert!(g.exile.iter().any(|c| c.id == wurm));
+}
+
+/// Aisha casts a sorcery up to her combat damage for free.
+#[test]
+fn aisha_casts_a_sorcery_off_combat_damage() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let aisha = ready(&mut g, 0, catalog::aisha_of_sparks_and_smoke());
+    let howl = g.add_card_to_hand(0, catalog::howl_of_the_horde());
+    declare(&mut g, vec![(aisha, 1)]);
+    step_to(&mut g, 0, TurnStep::PostCombatMain);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == howl), "Howl was cast free");
+}

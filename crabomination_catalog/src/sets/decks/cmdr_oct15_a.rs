@@ -1066,3 +1066,103 @@ pub fn dynaheir_invoker_adept() -> CardDefinition {
         ..legend("Dynaheir, Invoker Adept", vec![CreatureType::Human, CreatureType::Wizard], 4, 4)
     }
 }
+
+/// Aisha of Sparks and Smoke — {1}{R}{R} legendary 4/2 prowess Human Warrior.
+/// {R/W}: first strike until end of turn. Whenever she deals combat damage,
+/// you may cast a sorcery from your hand with mana value up to that damage
+/// without paying its mana cost.
+pub fn aisha_of_sparks_and_smoke() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(1), r(), r()]),
+        keywords: vec![Keyword::Prowess],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[hybrid(Color::Red, Color::White)]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::SelfSource),
+            effect: Effect::MayCastFromHandFreeMatching {
+                filter: R::HasCardType(CardType::Sorcery),
+                max_mv: Value::TriggerEventAmount,
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..legend("Aisha of Sparks and Smoke", vec![CreatureType::Human, CreatureType::Warrior], 4, 2)
+    }
+}
+
+/// Howl of the Horde — {2}{R} sorcery. When you next cast an instant or
+/// sorcery spell this turn, copy it (twice with raid).
+pub fn howl_of_the_horde() -> CardDefinition {
+    CardDefinition {
+        name: "Howl of the Horde",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CopyNextInstantSorceryThisTurn {
+            count: Value::Sum(vec![Value::ONE, crate::effect::shortcut::raid_value(1)]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Witch-king, Sky Scourge — {5}{B}{R} legendary 5/5 flying undying Wraith
+/// Noble. Whenever you attack with one or more Wraiths, exile the top X cards
+/// of your library (X = their total power); you may play them this turn.
+pub fn witch_king_sky_scourge() -> CardDefinition {
+    let wraiths = || Selector::EachPermanent(R::HasCreatureType(CreatureType::Wraith).and(R::IsAttacking).and(R::ControlledByYou));
+    CardDefinition {
+        cost: cost(&[generic(5), b(), r()]),
+        keywords: vec![Keyword::Flying, Keyword::Undying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(Predicate::SelectorExists(wraiths())),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::PowerOf(Box::new(wraiths())),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        }],
+        ..legend("Witch-king, Sky Scourge", vec![CreatureType::Wraith, CreatureType::Noble], 5, 5)
+    }
+}
+
+/// Mordor on the March — {3}{B}{R} sorcery, storm. Exile a creature card from
+/// your graveyard; a token copy with haste, exiled at the next end step.
+/// (The card is targeted rather than chosen — see INCOMPLETE_CARDS.)
+pub fn mordor_on_the_march() -> CardDefinition {
+    CardDefinition {
+        name: "Mordor on the March",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::Seq(vec![
+            Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: false,
+                legendary: false,
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![],
+            },
+            Effect::GrantKeyword { what: Selector::LastCreatedToken, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::Exile { what: Selector::Target(0) },
+            Effect::DelayUntil {
+                kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
