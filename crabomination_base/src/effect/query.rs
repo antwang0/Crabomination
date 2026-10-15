@@ -998,6 +998,7 @@ impl Effect {
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
             | Effect::EachPlayerKeepsNSacrificesRest { .. }
+            | Effect::EachPlayerKeepsCreaturesTotalPower { .. }
             | Effect::EachPlayerReturnsAMatchingPermanent { .. }
             | Effect::RemoveAllCountersFromAnyNumber { .. }
             | Effect::DealDamageToEachPlayerPerPermanent { .. }

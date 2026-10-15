@@ -10983,6 +10983,14 @@ impl GameState {
         if self.players.iter().any(|p| p.may_play_hand_of.contains(&owner)) {
             return true;
         }
+        if self.battlefield.iter().any(|c| {
+            c.controller == owner
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::ControllerPlaysWithHandRevealed)
+                })
+        }) {
+            return true;
+        }
         !self.same_team(viewer, owner)
             && self.battlefield.iter().any(|c| {
                 c.controller == viewer
@@ -22691,6 +22699,18 @@ impl GameState {
         })
     }
 
+    /// CR 121.2a — `p` controls an Enduring Renewal draw replacement.
+    fn creature_draws_to_graveyard(&self, p: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::ReplaceDrawCreaturesToGraveyard)
+                )
+            })
+        })
+    }
+
     /// True while `seat`'s library top is public because a one-shot effect
     /// revealed it (Aven Windreader) — the reveal lasts only as long as that
     /// card stays on top.
@@ -22951,6 +22971,9 @@ impl GameState {
             }
             if self.exile_with_source_instead_of_drawing(p).is_some() {
                 applicable.push(DrawDig::ExileWithSource);
+            }
+            if self.creature_draws_to_graveyard(p) {
+                applicable.push(DrawDig::CreatureToGraveyard);
             }
             if self.player_may_tutor_instead_of_drawing(p) {
                 applicable.push(DrawDig::Tutor);
@@ -23335,6 +23358,23 @@ impl GameState {
                     &ctx,
                 ) {
                     events.append(&mut evs);
+                }
+                true
+            }
+            // Enduring Renewal — reveal the top card instead: a creature card
+            // goes to the graveyard and the draw is spent; otherwise "draw a
+            // card", which is the plain draw the caller falls through to
+            // (`false` here declines only this replacement, CR 614.5). An
+            // empty library reveals nothing and draws (CR 104.3c).
+            DrawDig::CreatureToGraveyard => {
+                let Some(top) = self.players[p].library.first() else { return false };
+                if !top.definition.is_creature() {
+                    return false;
+                }
+                let id = top.id;
+                let card = self.players[p].library.remove(0);
+                if !self.route_to_graveyard(card, events) {
+                    events.push(GameEvent::CardRevealedIntoGraveyard { player: p, card_id: id });
                 }
                 true
             }
@@ -34689,6 +34729,7 @@ fn static_effect_to_effects(
             // Read where the matching action happens: the hand-reveal
             // projection, the Cycling cost path, and `tap_for_mana`.
             | StaticEffect::OpponentsPlayWithHandsRevealed
+            | StaticEffect::ControllerPlaysWithHandRevealed
             | StaticEffect::CyclingCostReduction(_)
             | StaticEffect::FirstCyclingEachTurnFree
             | StaticEffect::CyclingFreeWhileHandAtLeast(_)
@@ -34784,6 +34825,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToSelfTradingCounters { .. }
             | StaticEffect::PreventDamageToSelfWhileCountersForRad { .. }
             | StaticEffect::PreventDamageToSelfOpponentGainsControl
+            | StaticEffect::PreventDamageToSelfSourceControllerDraws
             // OpponentsMustAttackWithAtLeastOne — read at the attack
             // declaration (`opponent_forces_an_attack`); no layer effect.
             | StaticEffect::OpponentsMustAttackWithAtLeastOne
@@ -35406,6 +35448,7 @@ fn static_effect_to_effects(
             | StaticEffect::FirstDrawEachTurnMillsOneOfTwo
             | StaticEffect::ReplaceDrawWithImpulse { .. }
             | StaticEffect::ReplaceDrawWithExileFaceDownWithSource
+            | StaticEffect::ReplaceDrawCreaturesToGraveyard
             | StaticEffect::DrawsRevealedTaxed { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
@@ -36660,6 +36703,9 @@ pub(crate) enum DrawDig {
     /// Scion of Halaster — the turn's first draw: bin one of the top two, then
     /// draw.
     MillOneOfTwo,
+    /// Enduring Renewal — reveal the top card; a creature card goes to the
+    /// graveyard, anything else is drawn.
+    CreatureToGraveyard,
 }
 
 impl DrawDig {
@@ -36673,6 +36719,7 @@ impl DrawDig {
             DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
             DrawDig::CounterOnSource => "Put a counter on it instead",
             DrawDig::MillOneOfTwo => "Look at the top two, bin one, then draw",
+            DrawDig::CreatureToGraveyard => "Reveal the top card; bin it if it's a creature",
         }
     }
 }

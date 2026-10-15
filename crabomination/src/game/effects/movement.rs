@@ -1700,7 +1700,7 @@ impl GameState {
         // CR 615 — Sekki, Seasons' Guide: prevent the damage, trading that
         // many +1/+1 counters for that many Spirit tokens.
         if let EntityRef::Permanent(tgt) = ent
-            && self.trade_counters_for_damage(tgt, amount, events)
+            && self.trade_counters_for_damage(tgt, amount, source, events)
         {
             return;
         }

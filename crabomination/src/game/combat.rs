@@ -5690,7 +5690,8 @@ impl GameState {
                     match *effect {
                         SE::PreventDamageToSelfTradingCounters { .. }
                         | SE::PreventDamageToSelfWhileCountersForRad { .. }
-                        | SE::PreventDamageToSelfOpponentGainsControl => sekki = true,
+                        | SE::PreventDamageToSelfOpponentGainsControl
+                        | SE::PreventDamageToSelfSourceControllerDraws => sekki = true,
                         SE::PreventCombatDamageToSelfAndGrow => grows = true,
                         SE::ReplaceDamageToSelfWithCounters { kind: k, how } => {
                             kind.get_or_insert((k, how, c.controller));
@@ -5711,7 +5712,7 @@ impl GameState {
         // Sekki trades counters for tokens instead of growing (CR 615). The
         // gate is exactly `trade_counters_for_damage`'s own: without the
         // static it returns `false`, and `dealt > 0` is checked above.
-        if sekki && self.trade_counters_for_damage(recipient, dealt as u32, events) {
+        if sekki && self.trade_counters_for_damage(recipient, dealt as u32, Some(source), events) {
             return 0;
         }
         // Ironscale Hydra ("prevent that damage and put a +1/+1 counter")
@@ -5832,10 +5833,28 @@ impl GameState {
         &mut self,
         recipient: CardId,
         dealt: u32,
+        source: Option<CardId>,
         events: &mut Vec<GameEvent>,
     ) -> bool {
         if dealt == 0 || self.prevention_off() {
             return false;
+        }
+        // Swans of Bryn Argoll — prevent it; the source's controller draws
+        // that many (CR 615.5: a sourceless or vanished source draws none).
+        if self.battlefield_find(recipient).is_some_and(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|s| matches!(s.effect, crate::effect::StaticEffect::PreventDamageToSelfSourceControllerDraws))
+        }) {
+            if let Some(p) = source.and_then(|s| self.damage_source_controller(s)) {
+                for _ in 0..dealt {
+                    if !self.draw_one_or_deck(p, events) {
+                        break;
+                    }
+                }
+            }
+            return true;
         }
         // Khârn the Betrayer — prevent it, and it changes hands (CR 800.4:
         // never to a player who has left the game).

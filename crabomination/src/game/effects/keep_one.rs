@@ -81,6 +81,71 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::EachPlayerKeepsCreaturesTotalPower` (Destined Confrontation):
+    /// each living seat, APNAP (CR 101.4), keeps any creatures whose total
+    /// power is at most `max_power`; the rest are sacrificed at once. A
+    /// headless seat keeps greedily by mana value; a pick over the cap is cut
+    /// back in the order given.
+    pub(super) fn each_player_keeps_creatures_total_power(
+        &mut self,
+        max_power: i32,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let seats = self.apnap_sort(self.living_seats().collect());
+        let mut cursor = 0;
+        let mut doomed: Vec<(usize, CardId)> = Vec::new();
+        for p in seats {
+            let mut mine: Vec<(u32, i32, CardId, String)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && self.computed_is_creature(c))
+                .map(|c| (c.definition.cost.cmc(), self.effective_power(c), c.id, c.definition.name.to_string()))
+                .collect();
+            if mine.is_empty() {
+                continue;
+            }
+            mine.sort_by_key(|(mv, _, id, _)| (std::cmp::Reverse(*mv), *id));
+            let fit = |order: &mut dyn Iterator<Item = CardId>| -> Vec<CardId> {
+                let mut total = 0;
+                let mut kept = Vec::new();
+                for id in order {
+                    let Some(&(_, pw, _, _)) = mine.iter().find(|m| m.2 == id) else { continue };
+                    if total + pw <= max_power && !kept.contains(&id) {
+                        total += pw;
+                        kept.push(id);
+                    }
+                }
+                kept
+            };
+            let auto = fit(&mut mine.iter().map(|m| m.2));
+            let n = mine.len() as u32;
+            let Some(picked) = self.ask_seat_cards_logged(
+                &mut cursor,
+                p,
+                format!("Choose creatures with total power {max_power} or less to keep"),
+                source,
+                mine.iter().map(|m| (m.2, m.3.clone())).collect(),
+                0,
+                n,
+                PickValue::Gain,
+                effect,
+                auto,
+            ) else {
+                return Ok(());
+            };
+            let kept = fit(&mut picked.into_iter());
+            doomed.extend(mine.iter().map(|m| m.2).filter(|id| !kept.contains(id)).map(|id| (p, id)));
+        }
+        self.clear_answer_log();
+        for (p, id) in doomed {
+            self.sacrifice_one(id, p, events);
+        }
+        Ok(())
+    }
+
     /// `Effect::EachPlayerChoosesOpponentPermanentExile` (The Legend of
     /// Yangchen): starting with the controller, each living seat chooses up
     /// to one `filter` permanent an opponent of the controller controls; the

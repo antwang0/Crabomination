@@ -3290,6 +3290,10 @@ pub enum StaticEffect {
         #[serde(default)]
         rest_to_graveyard: bool,
     },
+    /// CR 121.2a — "If you would draw a card, reveal the top card of your
+    /// library instead. If it's a creature card, put it into your graveyard.
+    /// Otherwise, draw a card" (Enduring Renewal). Mandatory.
+    ReplaceDrawCreaturesToGraveyard,
     /// CR 121.2a — "If you would draw a card, exile the top `count` cards of
     /// your library instead. You may play those cards this turn" (Eruth,
     /// Tormented Prophet).
@@ -3489,6 +3493,10 @@ pub enum StaticEffect {
     /// `PreventDamageToSelfTradingCounters`; the new controller is the next
     /// living opponent in turn order.
     PreventDamageToSelfOpponentGainsControl,
+    /// CR 615 — "If a source would deal damage to this creature, prevent
+    /// that damage. The source's controller draws cards equal to the damage
+    /// prevented this way" (Swans of Bryn Argoll).
+    PreventDamageToSelfSourceControllerDraws,
     /// CR 508.1d — "Each opponent must attack with at least one creature
     /// each combat if able" (Seeker of Slaanesh). An empty declaration by an
     /// opponent of this permanent's controller is rejected while one of their
@@ -4200,6 +4208,9 @@ pub enum StaticEffect {
     /// each opponent's hand to the controller through
     /// `GameState.hands_revealed_to` while the source is on the battlefield.
     OpponentsPlayWithHandsRevealed,
+    /// "Play with your hand revealed" (Enduring Renewal): every player sees
+    /// the controller's hand while the source is on the battlefield.
+    ControllerPlaysWithHandRevealed,
     /// "Cycling abilities you activate cost {N} less to activate"
     /// (Fluctuator). Consulted where the Cycling keyword's cost is paid.
     CyclingCostReduction(u32),

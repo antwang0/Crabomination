@@ -397,6 +397,7 @@ pub enum CreatureType {
     Eternal,
     // Star Trek (Pelia, Immortal Innovator).
     Lanthanite,
+    Talosian,
 }
 
 /// Land subtypes (basic land types + others).

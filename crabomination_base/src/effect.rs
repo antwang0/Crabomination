@@ -5835,6 +5835,10 @@ pub enum Effect {
     /// them" (Thoughtpicker Witch). The rest stay on top in their original
     /// order; the auto picker exiles the highest-mana-value card.
     LookTopExileOneOfN { who: PlayerRef, count: Value },
+    /// "Each player chooses any number of creatures they control with total
+    /// power `max_power` or less, then sacrifices all other creatures they
+    /// control" (Destined Confrontation).
+    EachPlayerKeepsCreaturesTotalPower { max_power: i32 },
     /// "Each player chooses `keep` permanents they control, then sacrifices the
     /// rest" (Razia's Purification). Each player's own pick — the auto picker
     /// keeps their highest-mana-value permanents.
@@ -14157,6 +14161,9 @@ pub enum LookExileGrant {
     /// Djeru and Hazoret: you MAY exile a legendary creature card, face up;
     /// cast it this turn without paying its mana cost.
     LegendaryCreatureFreeThisTurn,
+    /// Keldon Flamesage: you MAY exile an instant or sorcery card with mana
+    /// value at most the look count, then cast it now without paying its cost.
+    InstantSorceryMvAtMostCountFree,
 }
 
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).

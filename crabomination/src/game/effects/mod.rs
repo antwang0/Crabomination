@@ -12461,6 +12461,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerKeepsCreaturesTotalPower { max_power } => {
+                self.each_player_keeps_creatures_total_power(*max_power, ctx, events, effect)
+            }
+
             Effect::EachPlayerKeepsNSacrificesRest { keep, filter, destroy } => {
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -28835,6 +28839,9 @@ impl GameState {
                     .filter_map(|&id| self.players[opp].library.iter().find(|c| c.id == id))
                     .filter(|c| match grant {
                         G::CastFreeNonland => !c.definition.is_land(),
+                        G::InstantSorceryMvAtMostCountFree => {
+                            (c.definition.is_instant() || c.definition.is_sorcery()) && c.definition.cost.cmc() as usize <= n
+                        }
                         G::CreatureMayWhileExiled => self.computed_is_creature(c),
                         G::LegendaryCreatureFreeThisTurn => {
                             self.computed_is_creature(c)
@@ -28846,8 +28853,13 @@ impl GameState {
                 let auto = eligible.iter().max_by_key(|c| c.definition.cost.cmc()).map(|c| c.id);
                 let candidates: Vec<(CardId, String)> =
                     eligible.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
-                let optional =
-                    matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled | G::LegendaryCreatureFreeThisTurn);
+                let optional = matches!(
+                    grant,
+                    G::CastFreeNonland
+                        | G::CreatureMayWhileExiled
+                        | G::LegendaryCreatureFreeThisTurn
+                        | G::InstantSorceryMvAtMostCountFree
+                );
                 let min = u32::from(!optional && !candidates.is_empty());
                 let mut cursor = 0;
                 let Some(picked) = self.ask_seat_cards_logged(
@@ -28874,9 +28886,10 @@ impl GameState {
                         G::AnyTypeWhileExiled | G::CreatureWhileExiled => {
                             (true, crate::card::MayPlayDuration::WhileExiled)
                         }
-                        G::PlayThisTurn | G::CastFreeNonland | G::LegendaryCreatureFreeThisTurn => {
-                            (false, crate::card::MayPlayDuration::EndOfThisTurn)
-                        }
+                        G::PlayThisTurn
+                        | G::CastFreeNonland
+                        | G::LegendaryCreatureFreeThisTurn
+                        | G::InstantSorceryMvAtMostCountFree => (false, crate::card::MayPlayDuration::EndOfThisTurn),
                         G::CreatureMayWhileExiled => (false, crate::card::MayPlayDuration::WhileExiled),
                     };
                     card.face_down = face_down;
@@ -28884,7 +28897,7 @@ impl GameState {
                     // card in exile keeps its types, so the card decides now.
                     let grants = match grant {
                         G::CreatureWhileExiled => card.definition.is_creature(),
-                        G::CastFreeNonland => false,
+                        G::CastFreeNonland | G::InstantSorceryMvAtMostCountFree => false,
                         _ => true,
                     };
                     if grants {
@@ -28915,7 +28928,7 @@ impl GameState {
                     self.note_exiled_from_library(opp, cid, events);
                     // Read back by the free cast, and by Durnan's count of
                     // the cards it bottomed.
-                    if matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled) {
+                    if matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled | G::InstantSorceryMvAtMostCountFree) {
                         self.scratch.exiled_card_ids_this_resolution.push(cid);
                     }
                 }
@@ -28929,7 +28942,7 @@ impl GameState {
                         self.players[opp].library.push(card);
                     }
                 }
-                if *grant == G::CastFreeNonland && pick.is_some() {
+                if matches!(grant, G::CastFreeNonland | G::InstantSorceryMvAtMostCountFree) && pick.is_some() {
                     return self.cast_exiled_free(
                         &Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Nonland },
                         false,
