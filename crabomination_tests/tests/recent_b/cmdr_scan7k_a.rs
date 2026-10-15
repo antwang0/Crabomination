@@ -2575,3 +2575,83 @@ fn royal_scions_ultimate_burns_for_hand_size() {
     assert_eq!(g.players[0].life, 20);
     assert_eq!(g.players[1].life + g.players[2].life, 36, "four damage to an opponent");
 }
+
+/// Katerina: the chosen letter (scripted "G") makes a Cat off Grizzly Bears,
+/// not off Llanowar Elves.
+#[test]
+fn katerina_makes_a_cat_off_the_chosen_letter() {
+    let mut g = pod(2);
+    let kat = g.add_card_to_hand(0, catalog::katerina_of_myras_marvels());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(6)]));
+    cast(&mut g, kat);
+    for (def, cats) in [(catalog::llanowar_elves(), 0), (catalog::grizzly_bears(), 1)] {
+        let id = g.add_card_to_hand(0, def);
+        cast(&mut g, id);
+        assert_eq!(named_count(&g, 0, "Cat"), cats);
+    }
+}
+
+/// Headless, Katerina names the commonest initial among her controller's spells.
+#[test]
+fn katerina_headless_pick_is_the_commonest_initial() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let kat = g.add_card_to_hand(0, catalog::katerina_of_myras_marvels());
+    cast(&mut g, kat);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(named_count(&g, 0, "Cat"), 1, "L for Lightning");
+}
+
+/// Safe Passage prevents a Bolt to you and to your creature.
+#[test]
+fn safe_passage_shields_you_and_your_creatures() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sp = g.add_card_to_hand(0, catalog::safe_passage());
+    cast(&mut g, sp);
+    for t in [Target::Permanent(bear), Target::Player(0)] {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        flood(&mut g);
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(t), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Dwalin hones each Equipment you control; each hone counter is +1/+0.
+#[test]
+fn dwalin_hone_counters_pump_the_bearer() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::forebears_blade());
+    g.battlefield_find_mut(blade).unwrap().attached_to = Some(bear);
+    let dwalin = g.add_card_to_hand(0, catalog::dwalin_weaponmaster());
+    cast(&mut g, dwalin);
+    assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::Hone), 1);
+    assert_eq!(pt(&g, bear), (6, 2), "2 + 3 Blade + 1 hone");
+}
+
+/// Thorin: with an enduring story (three legendaries), your artifacts and
+/// creatures have ward {1}.
+#[test]
+fn thorin_grants_ward_with_an_enduring_story() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let thorin = g.add_card_to_hand(0, catalog::thorin_oakenshield());
+    cast(&mut g, thorin);
+    let ward = || Keyword::Ward(crabomination::card::WardCost::generic(1));
+    assert!(!g.permanent_has_keyword(bear, &ward()), "no story yet");
+    ready(&mut g, 0, catalog::isamaru_hound_of_konda());
+    ready(&mut g, 0, catalog::dwalin_weaponmaster());
+    g.check_state_based_actions();
+    assert!(g.permanent_has_keyword(bear, &ward()));
+}

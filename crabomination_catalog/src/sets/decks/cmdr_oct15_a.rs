@@ -5,13 +5,13 @@ use crate::card::{
     LoyaltyAbility, PlaneswalkerSubtype,
     ActivatedAbility, ArtifactSubtype, BattleSubtype, CounterType, EnchantmentSubtype, EquipBonus, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
-    Value,
+    Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_attack};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, x};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w, x};
 use crate::sets::tap_add_colorless;
 use std::sync::Arc;
 
@@ -516,5 +516,94 @@ pub fn the_royal_scions() -> CardDefinition {
             },
         ],
         ..Default::default()
+    }
+}
+
+/// Katerina of Myra's Marvels — {2}{W}{W} legendary 3/3 Human Performer,
+/// partner. As it enters, choose a letter; casting a spell whose name begins
+/// with it makes a 2/2 white flying Cat.
+pub fn katerina_of_myras_marvels() -> CardDefinition {
+    let cat = TokenDefinition {
+        name: "Cat".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        cost: cost(&[generic(2), w(), w()]),
+        keywords: vec![Keyword::Partner],
+        as_enters_effect: Some(Effect::ChooseLetterForSource),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(trigger_is(R::NameBeginsWithChosenLetterOfSource)),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(cat) },
+        }],
+        ..legend("Katerina of Myra's Marvels", vec![CreatureType::Human, CreatureType::Performer], 3, 3)
+    }
+}
+
+/// Safe Passage — {2}{W} instant. Prevent all damage that would be dealt to
+/// you and creatures you control this turn. (The creatures are the ones you
+/// control as it resolves — see INCOMPLETE_CARDS.)
+pub fn safe_passage() -> CardDefinition {
+    CardDefinition {
+        name: "Safe Passage",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventAllDamageThisTurn { target: Selector::Player(PlayerRef::You), redirect_to: None },
+            Effect::PreventAllDamageThisTurn {
+                target: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                redirect_to: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dwalin, Weaponmaster — {1}{R/W} legendary 2/1 first strike Dwarf Warrior.
+/// Entering or attacking, a hone counter on each Equipment you control (each
+/// grants +1/+0 to the equipped creature).
+pub fn dwalin_weaponmaster() -> CardDefinition {
+    let hone = || Effect::AddCounter {
+        what: Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou)),
+        kind: CounterType::Hone,
+        amount: Value::ONE,
+    };
+    CardDefinition {
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::White)]),
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![etb(hone()), on_attack(hone())],
+        ..legend("Dwalin, Weaponmaster", vec![CreatureType::Dwarf, CreatureType::Warrior], 2, 1)
+    }
+}
+
+/// Thorin Oakenshield — {R}{W} legendary 3/2 trample Dwarf Noble, storied.
+/// With an enduring story, artifacts and creatures you control have ward {1}.
+pub fn thorin_oakenshield() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[r(), w()]),
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Storied (If you control three or more artifacts, legendaries, and/or Sagas, you have an enduring story for the rest of the game.)",
+                effect: StaticEffect::Storied,
+            },
+            StaticAbility {
+                description: "As long as you have an enduring story, artifacts and creatures you control have ward {1}.",
+                effect: StaticEffect::WhileCondition {
+                    condition: Predicate::HasEnduringStory { who: PlayerRef::You },
+                    inner: Box::new(StaticEffect::GrantKeyword {
+                        applies_to: Selector::EachPermanent(R::Artifact.or(R::Creature).and(R::ControlledByYou)),
+                        keyword: Keyword::Ward(WardCost::generic(1)),
+                    }),
+                },
+            },
+        ],
+        ..legend("Thorin Oakenshield", vec![CreatureType::Dwarf, CreatureType::Noble], 3, 2)
     }
 }

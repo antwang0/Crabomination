@@ -15814,6 +15814,10 @@ static DECKS: &[Factory] = &[
     super::decks::true_polymorph,
     super::decks::iceman_and_firestar,
     super::decks::the_royal_scions,
+    super::decks::katerina_of_myras_marvels,
+    super::decks::safe_passage,
+    super::decks::dwalin_weaponmaster,
+    super::decks::thorin_oakenshield,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
