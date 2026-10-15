@@ -1150,3 +1150,271 @@ pub fn detection_tower() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn saga(name: &'static str, mana: ManaCost, chapters: Vec<(u32, Effect)>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: chapters,
+        ..Default::default()
+    }
+}
+
+/// Fall of the Impostor — {1}{G}{W} Saga. I, II — a +1/+1 counter on up to
+/// one target creature. III — exile a creature with the greatest power among
+/// creatures target opponent controls. Approximation: a power tie exiles the
+/// first in battlefield order rather than your choice. (Sigurd, Jarl of
+/// Ravensthorpe.)
+pub fn fall_of_the_impostor() -> CardDefinition {
+    use crate::mana::g;
+    let pump = Effect::OptionalTargets {
+        min: 0,
+        body: Box::new(Effect::AddCounter {
+            what: target_filtered(R::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        }),
+    };
+    saga(
+        "Fall of the Impostor",
+        cost(&[generic(1), g(), w()]),
+        vec![
+            (1, pump.clone()),
+            (2, pump),
+            (
+                3,
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::Exile {
+                        what: Selector::TakeGreatestPower {
+                            inner: Box::new(Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature }),
+                            count: Box::new(Value::ONE),
+                        },
+                    }),
+                },
+            ),
+        ],
+    )
+}
+
+/// The Phasing of Zhalfir — {2}{U}{U} Saga, read ahead. I, II — another
+/// target nonland permanent phases out and can't phase in while this Saga
+/// remains. III — destroy all creatures; each one's controller creates a 2/2
+/// black Phyrexian per creature of theirs destroyed. Approximation: the lock
+/// ends when the Saga leaves, not when you lose control of it. (Goldberry,
+/// River-Daughter.)
+pub fn the_phasing_of_zhalfir() -> CardDefinition {
+    let po = Effect::PhaseOut { what: target_filtered(R::Nonland.and(R::OtherThanSource)), until_source_leaves: true };
+    CardDefinition {
+        read_ahead: true,
+        ..saga(
+            "The Phasing of Zhalfir",
+            cost(&[generic(2), u(), u()]),
+            vec![
+                (1, po.clone()),
+                (2, po),
+                (
+                    3,
+                    Effect::Seq(vec![
+                        Effect::Destroy { what: Selector::EachPermanent(R::Creature) },
+                        Effect::EachPlayerDoes {
+                            who: PlayerRef::EachPlayer,
+                            body: Box::new(Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::CreaturesDestroyedThisResolutionControlledBy(PlayerRef::You),
+                                definition: Arc::new(token("Phyrexian", 2, 2, vec![Color::Black], vec![CreatureType::Phyrexian], vec![])),
+                            }),
+                        },
+                    ]),
+                ),
+            ],
+        )
+    }
+}
+
+/// Spiders-Man, Heroic Horde — {1}{G} legendary 2/3 Spider Hero. Web-slinging
+/// {4}{G}{G}. When it enters, if cast using web-slinging, gain 3 life and
+/// create two 2/1 green Spiders with reach. (Spider-Ham, Peter Porker.)
+pub fn spiders_man_heroic_horde() -> CardDefinition {
+    use crate::mana::g;
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            return_to_hand: Some((R::Creature.and(R::Tapped), 1)),
+            marks_kicked: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: Arc::new(token("Spider", 2, 1, vec![Color::Green], vec![CreatureType::Spider], vec![Keyword::Reach])),
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..legend(
+            "Spiders-Man, Heroic Horde",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Spider, CreatureType::Hero],
+            2,
+            3,
+        )
+    }
+}
+
+/// Grim Reaper's Scythe — {2}{B} legendary artifact. Whenever one or more
+/// creature cards leave your graveyard, create a 2/2 black Zombie. {3}{B},
+/// {T}, sacrifice two creatures: return target creature card from your
+/// graveyard to the battlefield with a finality counter; sorcery speed.
+/// Approximation: the finality counter goes on just after it enters. (Egon,
+/// God of Death.)
+pub fn grim_reapers_scythe() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Reaper's Scythe",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature })
+                .once_per_batch(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(token("Zombie", 2, 2, vec![Color::Black], vec![CreatureType::Zombie], vec![])),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            sac_other_filter: Some((R::Creature, 2)),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.from_your_graveyard()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Devout Invocation — {6}{W} sorcery. Tap any number of untapped creatures
+/// you control; a 4/4 white flying Angel for each one tapped. Approximation:
+/// a yes/no per creature rather than one subset pick. (Masako the
+/// Humorless.)
+pub fn devout_invocation() -> CardDefinition {
+    CardDefinition {
+        name: "Devout Invocation",
+        cost: cost(&[generic(6), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::Untapped)),
+                body: Box::new(Effect::MayDo {
+                    description: "Tap this creature for an Angel?".into(),
+                    body: Box::new(Effect::Tap { what: Selector::TriggerSource }),
+                }),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::PermanentsTappedThisEffect,
+                definition: Arc::new(token("Angel", 4, 4, vec![Color::White], vec![CreatureType::Angel], vec![Keyword::Flying])),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Raiding Schemes — {3}{R}{G} enchantment. Each noncreature spell you cast
+/// has conspire. (Wort, the Raidmother.)
+pub fn raiding_schemes() -> CardDefinition {
+    use crate::mana::g;
+    CardDefinition {
+        name: "Raiding Schemes",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each noncreature spell you cast has conspire.",
+            effect: StaticEffect::GrantConspireToSpells { filter: R::Noncreature, from_exile: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spry and Mighty — {4}{G} sorcery. Choose exactly two creatures you
+/// control; draw X and they get +X/+X and trample until end of turn, X the
+/// difference between their powers. (Tromell, Seymour's Butler.)
+pub fn spry_and_mighty() -> CardDefinition {
+    use crate::mana::g;
+    let pile = || Selector::SeparatedPile { chosen: true };
+    let max = Value::PowerOf(Box::new(Selector::TakeGreatestPower { inner: Box::new(pile()), count: Box::new(Value::ONE) }));
+    // |p1 − p2| = 2·max − (p1 + p2).
+    let x = Value::Diff(Box::new(Value::Sum(vec![max.clone(), max])), Box::new(Value::PowerOf(Box::new(pile()))));
+    CardDefinition {
+        name: "Spry and Mighty",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseSomeAmong {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            chooser: PlayerRef::You,
+            count: Value::Const(2),
+            up_to: false,
+            other: Box::new(Effect::Noop),
+            chosen: Box::new(Effect::WithX {
+                x,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+                    Effect::PumpPT { what: pile(), power: Value::XFromCost, toughness: Value::XFromCost, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: pile(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                ])),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Knowledge Exploitation — {5}{U}{U} Kindred Sorcery — Rogue; prowl {3}{U}.
+/// Search target opponent's library for an instant or sorcery card; you may
+/// cast it free; then that player shuffles. (Thada Adel, Acquisitor.)
+pub fn knowledge_exploitation() -> CardDefinition {
+    CardDefinition {
+        name: "Knowledge Exploitation",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rogue], ..Default::default() },
+        alternative_cost: Some(crate::effect::shortcut::prowl(cost(&[generic(3), u()]), vec![CreatureType::Rogue])),
+        effect: Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::Seq(vec![
+                Effect::ChooseOneAmong {
+                    what: Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Library(PlayerRef::Target(0)),
+                        filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    },
+                    chooser: PlayerRef::You,
+                    other: Box::new(Effect::Noop),
+                    chosen: Box::new(Effect::CastWithoutPayingImmediate {
+                        what: Selector::SeparatedPile { chosen: true },
+                        source_zone: Zone::Library,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    }),
+                },
+                Effect::ShuffleLibrary { who: PlayerRef::Target(0) },
+            ])),
+        },
+        ..Default::default()
+    }
+}

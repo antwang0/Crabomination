@@ -1411,3 +1411,169 @@ fn detection_tower_strips_opponents_hexproof_for_the_turn() {
         "the grant ends with the turn"
     );
 }
+
+fn lore(g: &mut GameState, saga: CardId) {
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::AddCounter {
+                what: crabomination::effect::Selector::ExactObjects(vec![saga]),
+                kind: CounterType::Lore,
+                amount: crabomination::card::Value::ONE,
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// CR 714.2 — Fall of the Impostor's chapter III exiles the target
+/// opponent's greatest-power creature.
+#[test]
+fn fall_of_the_impostor_exiles_the_biggest() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::fall_of_the_impostor());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    lore(&mut g, saga);
+    assert!(g.battlefield_find(angel).is_none());
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// CR 714.2 — The Phasing of Zhalfir's III wipes creatures and pays each
+/// controller a 2/2 Phyrexian per creature of theirs destroyed.
+#[test]
+fn phasing_of_zhalfir_replaces_the_dead_with_phyrexians() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::the_phasing_of_zhalfir());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::serra_angel());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    lore(&mut g, saga);
+    let phyrexians = |seat: usize| {
+        g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian" && c.controller == seat).count()
+    };
+    assert_eq!((phyrexians(0), phyrexians(1)), (1, 2));
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// CR 702.188 — Spiders-Man cast with web-slinging gains 3 and makes two
+/// Spiders; cast normally it does neither.
+#[test]
+fn spiders_man_rewards_web_slinging() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let horde = g.add_card_to_hand(0, catalog::spiders_man_heroic_horde());
+    flood(&mut g);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: horde,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("web-slinging");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert_eq!(g.players[0].life, life + 3);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spider").count(), 2);
+    // The web-slinging kick is no granted offspring: no 1/1 copy of a legend
+    // to send the original to the graveyard.
+    assert!(g.battlefield_find(horde).is_some());
+}
+
+/// Grim Reaper's Scythe returns a creature card with a finality counter, and
+/// the card leaving the graveyard mints a Zombie (CR 603.2c, once per batch).
+#[test]
+fn grim_reapers_scythe_reanimates_and_mints_a_zombie() {
+    let mut g = pod(2);
+    let scythe = ready(&mut g, 0, catalog::grim_reapers_scythe());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    activate(&mut g, scythe, 0, Some(Target::Permanent(giant)));
+    let back = g.battlefield_find(giant).expect("returned");
+    assert_eq!(back.counter_count(CounterType::Finality), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
+}
+
+/// Devout Invocation makes an Angel per creature actually tapped.
+#[test]
+fn devout_invocation_angels_per_creature_tapped() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::devout_invocation());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),
+    ]));
+    cast_with(&mut g, spell, None, vec![], None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Angel").count(), 2);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.tapped).count(), 2);
+}
+
+/// Spry and Mighty: X is the difference in power — a 4/4 and a 2/2 draw two
+/// and each get +2/+2 and trample.
+#[test]
+fn spry_and_mighty_reads_the_power_gap() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = g.add_card_to_hand(0, catalog::spry_and_mighty());
+    cast_with(&mut g, spell, None, vec![], None);
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert_eq!(pt(&g, angel), (6, 6));
+    assert_eq!(pt(&g, bear), (4, 4));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Trample));
+}
+
+/// Knowledge Exploitation casts an instant out of the target opponent's
+/// library for free (CR 601.2, 118.9).
+#[test]
+fn knowledge_exploitation_casts_from_their_library() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::knowledge_exploitation());
+    let lives = g.players[0].life + g.players[1].life;
+    cast_with(&mut g, spell, Some(Target::Player(1)), vec![], None);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "the Bolt resolved into its owner's graveyard");
+    assert_eq!(g.players[1].library.len(), 1);
+    assert_eq!(g.players[0].life + g.players[1].life, lives - 3);
+}
+
+/// CR 702.78 — Raiding Schemes gives your noncreature spells conspire: two
+/// red creatures tapped copy a Bolt from hand.
+#[test]
+fn raiding_schemes_conspires_noncreature_spells() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::raiding_schemes());
+    let a = ready(&mut g, 0, catalog::hill_giant());
+    let b = ready(&mut g, 0, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: bolt,
+        conspire_creatures: [a, b],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("conspired Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6);
+}
