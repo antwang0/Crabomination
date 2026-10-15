@@ -15606,6 +15606,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AUNTIE_BLYTE_COMMANDERS,
             main: decks::AUNTIE_BLYTE_MAIN,
         },
+        // Seat 2526: Saheeli, Jewel of Avishkar's EDHREC average deck. `--pod-decks 2526`.
+        PodDeck {
+            name: "Saheeli, Jewel of Avishkar (UR)",
+            commanders: decks::SAHEELI_3_COMMANDERS,
+            main: decks::SAHEELI_3_MAIN,
+        },
+        // Seat 2527: Dr. Beverly Crusher's EDHREC average deck. `--pod-decks 2527`.
+        PodDeck {
+            name: "Dr. Beverly Crusher (W)",
+            commanders: decks::DR_BEVERLY_CRUSHER_COMMANDERS,
+            main: decks::DR_BEVERLY_CRUSHER_MAIN,
+        },
     ]
 }
 
@@ -19964,6 +19976,8 @@ mod tests {
             ("Ayesha Tanaka, Armorer", &[0x13F1]),
             ("Tetsuo Umezawa", &[0x13F2]),
             ("Auntie Blyte, Bad Influence", &[0x13F3]),
+            ("Saheeli, Jewel of Avishkar", &[0x13F4]),
+            ("Dr. Beverly Crusher", &[0x13F5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

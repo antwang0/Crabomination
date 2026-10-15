@@ -791952,5 +791952,160 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=909971&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/155648?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Saheeli, Jewel of Avishkar": {
+    "object": "card",
+    "id": "28d84ef6-e190-46d4-882d-1cea5e111e2a",
+    "oracle_id": "83705258-1f42-41db-a32e-de99ffd759eb",
+    "multiverse_ids": [],
+    "resource_id": "3C1BEC73649FFA8A4A70570A6AEB8D6467DE413E44CED05FB55711CF8D823D3F",
+    "mtgo_id": 155696,
+    "tcgplayer_id": 717900,
+    "cardmarket_id": 909972,
+    "name": "Saheeli, Jewel of Avishkar",
+    "lang": "en",
+    "released_at": "2026-10-02",
+    "uri": "https://api.scryfall.com/cards/28d84ef6-e190-46d4-882d-1cea5e111e2a",
+    "scryfall_uri": "https://scryfall.com/card/fra/275/saheeli-jewel-of-avishkar?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-09-17T11:34:43Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.jpg?1789644883",
+      "normal": "https://cards.scryfall.io/normal/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.jpg?1789644883",
+      "large": "https://cards.scryfall.io/large/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.jpg?1789644883",
+      "png": "https://cards.scryfall.io/png/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.png?1789644883",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.jpg?1789644883",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.jpg?1789644883",
+      "thumb": "https://cards.scryfall.io/thumb/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.webp?1789644883",
+      "grid": "https://cards.scryfall.io/grid/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.webp?1789644883",
+      "display": "https://cards.scryfall.io/display/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.webp?1789644883",
+      "art": "https://cards.scryfall.io/art/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.webp?1789644883",
+      "crop": "https://cards.scryfall.io/crop/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.webp?1789644883",
+      "jpeg": "https://cards.scryfall.io/normal/front/2/8/28d84ef6-e190-46d4-882d-1cea5e111e2a.jpg?1789644883"
+    },
+    "mana_cost": "{2}{U}{R}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Artificer",
+    "oracle_text": "Thopters you control have haste.\nWhenever you cast a noncreature spell, create a 1/1 colorless Thopter artifact creature token with flying.",
+    "power": "2",
+    "toughness": "4",
+    "colors": [
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "R",
+      "U"
+    ],
+    "keywords": [],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "bfd6132f-c96b-4ce0-ac4d-c46356afc767",
+        "component": "token",
+        "name": "Thopter",
+        "type_line": "Token Artifact Creature — Thopter",
+        "uri": "https://api.scryfall.com/cards/bfd6132f-c96b-4ce0-ac4d-c46356afc767"
+      },
+      {
+        "object": "related_card",
+        "id": "28d84ef6-e190-46d4-882d-1cea5e111e2a",
+        "component": "combo_piece",
+        "name": "Saheeli, Jewel of Avishkar",
+        "type_line": "Legendary Creature — Human Artificer",
+        "uri": "https://api.scryfall.com/cards/28d84ef6-e190-46d4-882d-1cea5e111e2a"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "6595985e-39cf-4ca3-b43d-dd3e64749fdc",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/6595985e-39cf-4ca3-b43d-dd3e64749fdc",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Afra&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/fra?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/28d84ef6-e190-46d4-882d-1cea5e111e2a/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A83705258-1f42-41db-a32e-de99ffd759eb&unique=prints",
+    "collector_number": "275",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"Life isn't worth living without freedom of expression.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Billy Christian",
+    "artist_ids": [
+      "10f26f94-64fc-4174-856e-701bea4f1521"
+    ],
+    "illustration_id": "6432d640-5173-4fde-a002-286b8513b24f",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 17372,
+    "prices": {
+      "usd": "0.24",
+      "usd_foil": "0.33",
+      "usd_etched": null,
+      "eur": "0.11",
+      "eur_foil": "0.16",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DSaheeli%252C%2BJewel%2Bof%2BAvishkar",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DSaheeli%252C%2BJewel%2Bof%2BAvishkar",
+      "edhrec": "https://edhrec.com/route/?cc=Saheeli%2C+Jewel+of+Avishkar"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F717900%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=909972&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/155696?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

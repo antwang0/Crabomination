@@ -70950,3 +70950,60 @@ pub const AUNTIE_BLYTE_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const SAHEELI_3_COMMANDERS: &[CardFactory] = &[saheeli_jewel_of_avishkar];
+
+/// **Saheeli, Jewel of Avishkar**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Islands + 9 Mountains = 99.
+/// Saheeli, Jewel of Avishkar (EDHREC, fetched 2026-10-15).
+pub const SAHEELI_3_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, fellwar_stone, idol_of_oblivion, izzet_signet,
+    lightning_greaves, mind_stone, patchwork_banner, retrofitter_foundry, skullclamp, sol_ring,
+    swiftfoot_boots, talisman_of_creativity, thopter_fabricator, thought_vessel,
+    uthros_research_craft, cascade_bluffs, command_tower, darksteel_citadel, frostboil_snarl,
+    great_furnace, reliquary_tower, scorched_geyser, seat_of_the_synod, shivan_reef,
+    silverbluff_bridge, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    chief_of_the_foundry, craterclaw_colossus, enthusiastic_mechanaut, etherium_sculptor,
+    geist_of_saint_thalia, jhoira_weatherlight_captain, kappa_cannoneer, leonardo_da_vinci,
+    loyal_apprentice, master_of_etherium, ornithopter_of_paradise, reckless_fireweaver,
+    sai_master_thopterist, sharding_sphinx, steel_overseer, stridehangar_automaton,
+    thought_monitor, weftstalker_ardent, efficient_construction, fateful_discovery,
+    impact_tremors, mechanized_production, shared_animosity, thopter_spy_network, abrade,
+    access_denied, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm, chaos_warp,
+    counterspell, frantic_search, negate, opt, pongify, rapid_hybridization, reality_shift,
+    saheeli_filigree_master, saheeli_sublime_artificer, blasphemous_act, distant_melody,
+    fabricate, ponder, preordain, thoughtcast, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const DR_BEVERLY_CRUSHER_COMMANDERS: &[CardFactory] = &[dr_beverly_crusher];
+
+/// **Dr. Beverly Crusher**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Plains = 99.
+/// Dr. Beverly Crusher (EDHREC, fetched 2026-10-15).
+pub const DR_BEVERLY_CRUSHER_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, alhammarrets_archive, arcane_signet, caduceus_staff_of_hermes,
+    excalibur_ii, oketras_monument, pearl_medallion, pristine_talisman, sol_ring,
+    the_mind_stone, the_wind_crystal, well_of_lost_dreams, abandoned_air_temple,
+    adventurers_inn, eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith,
+    nykthos_shrine_to_nyx, radiant_fountain, rogues_passage, war_room, aerith_gainsborough,
+    ajanis_pridemate, archangel_of_thune, archivist_of_oghma, auriok_champion,
+    daxos_blessed_by_the_sun, doctor_strange_surgeon, elendas_hierophant, enlightened_confidant,
+    esper_sentinel, essence_channeler, exemplar_of_light, guide_of_souls,
+    haliya_guided_by_light, heliod_sun_crowned, hinterland_sanctifier, leonardo_cutting_edge,
+    liliana_the_faultless, linden_the_steadfast_queen, mj_rising_star, minwu_white_mage,
+    mother_of_runes, ocelot_pride, qala_ajanis_pridemate, serra_ascendant, soul_warden,
+    souls_attendant, suture_priest, the_destined_white_mage, the_gaffer, twinblade_paladin,
+    voice_of_the_blessed, ajanis_welcome, authority_of_the_consuls, case_of_the_uneaten_feast,
+    cleric_class, dawn_of_hope, land_tax, leyline_of_hope, light_of_promise, akromas_will,
+    clever_concealment, flare_of_fortitude, flawless_maneuver, generous_gift, path_to_exile,
+    swords_to_plowshares, teferis_protection, ajani_resolute, ajani_strength_of_the_pride,
+    austere_command, damning_verdict, fumigate,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
