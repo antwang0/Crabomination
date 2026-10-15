@@ -17046,6 +17046,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FRODO_BAGGINS_COMMANDERS,
             main: decks::FRODO_BAGGINS_MAIN,
         },
+        // Seat 2766: Arasta of the Endless Web's EDHREC average deck. `--pod-decks 2766`.
+        PodDeck {
+            name: "Arasta of the Endless Web (G)",
+            commanders: decks::ARASTA_OF_THE_ENDLESS_WEB_COMMANDERS,
+            main: decks::ARASTA_OF_THE_ENDLESS_WEB_MAIN,
+        },
+        // Seat 2767: Jacques le Vert's EDHREC average deck. `--pod-decks 2767`.
+        PodDeck {
+            name: "Jacques le Vert (WRG)",
+            commanders: decks::JACQUES_LE_VERT_COMMANDERS,
+            main: decks::JACQUES_LE_VERT_MAIN,
+        },
+        // Seat 2768: Ihsan's Shade's EDHREC average deck. `--pod-decks 2768`.
+        PodDeck {
+            name: "Ihsan's Shade (B)",
+            commanders: decks::IHSANS_SHADE_COMMANDERS,
+            main: decks::IHSANS_SHADE_MAIN,
+        },
+        // Seat 2769: The Lady of the Mountain's EDHREC average deck. `--pod-decks 2769`.
+        PodDeck {
+            name: "The Lady of the Mountain (RG)",
+            commanders: decks::THE_LADY_OF_THE_MOUNTAIN_COMMANDERS,
+            main: decks::THE_LADY_OF_THE_MOUNTAIN_MAIN,
+        },
+        // Seat 2770: Syr Alin, the Lion's Claw's EDHREC average deck. `--pod-decks 2770`.
+        PodDeck {
+            name: "Syr Alin, the Lion's Claw (W)",
+            commanders: decks::SYR_ALIN_COMMANDERS,
+            main: decks::SYR_ALIN_MAIN,
+        },
+        // Seat 2771: Flatman's EDHREC average deck. `--pod-decks 2771`.
+        PodDeck {
+            name: "Flatman (G)",
+            commanders: decks::FLATMAN_COMMANDERS,
+            main: decks::FLATMAN_MAIN,
+        },
+        // Seat 2772: Guan Yu, Sainted Warrior's EDHREC average deck. `--pod-decks 2772`.
+        PodDeck {
+            name: "Guan Yu, Sainted Warrior (W)",
+            commanders: decks::GUAN_YU_COMMANDERS,
+            main: decks::GUAN_YU_MAIN,
+        },
+        // Seat 2773: Iroh, Firebending Instructor's EDHREC average deck. `--pod-decks 2773`.
+        PodDeck {
+            name: "Iroh, Firebending Instructor (R)",
+            commanders: decks::IROH_3_COMMANDERS,
+            main: decks::IROH_3_MAIN,
+        },
+        // Seat 2774: Lu Meng, Wu General's EDHREC average deck. `--pod-decks 2774`.
+        PodDeck {
+            name: "Lu Meng, Wu General (U)",
+            commanders: decks::LU_MENG_COMMANDERS,
+            main: decks::LU_MENG_MAIN,
+        },
+        // Seat 2775: Smaug, the Great Calamity's EDHREC average deck. `--pod-decks 2775`.
+        PodDeck {
+            name: "Smaug, the Great Calamity (R)",
+            commanders: decks::SMAUG_2_COMMANDERS,
+            main: decks::SMAUG_2_MAIN,
+        },
+        // Seat 2776: Dori, Bearer of Friends's EDHREC average deck. `--pod-decks 2776`.
+        PodDeck {
+            name: "Dori, Bearer of Friends (R)",
+            commanders: decks::DORI_COMMANDERS,
+            main: decks::DORI_MAIN,
+        },
     ]
 }
 
@@ -21647,6 +21713,17 @@ mod tests {
             ("Mishra, Artificer Prodigy", &[0x14E1]),
             ("Arwen, Mortal Queen", &[0x14E2]),
             ("Frodo Baggins", &[0x14E3]),
+            ("Arasta of the Endless Web", &[0x14E4]),
+            ("Jacques le Vert", &[0x14E5]),
+            ("Ihsan's Shade", &[0x14E6]),
+            ("The Lady of the Mountain", &[0x14E7]),
+            ("Syr Alin, the Lion's Claw", &[0x14E8]),
+            ("Flatman", &[0x14E9]),
+            ("Guan Yu, Sainted Warrior", &[0x14EA]),
+            ("Iroh, Firebending Instructor", &[0x14EB]),
+            ("Lu Meng, Wu General", &[0x14EC]),
+            ("Smaug, the Great Calamity", &[0x14ED]),
+            ("Dori, Bearer of Friends", &[0x14EE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
