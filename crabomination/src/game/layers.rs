@@ -929,16 +929,28 @@ pub struct ComputedPermanent {
     /// abilities, not just keywords. Defaults to false so pre-push snapshots
     /// keep their existing behavior.
     pub lost_all_abilities: bool,
-    /// CR 113.10b — the strip behind `lost_all_abilities` is only Blood Sun's
-    /// "except mana abilities": the printed mana abilities still activate.
-    pub keeps_mana_abilities: bool,
+    /// [`Self::creature_types_set`] and [`Self::keeps_mana_abilities`] as bits:
+    /// one byte, so the struct stays 72 (PERF's padding probe).
+    flags: u8,
+}
+
+const CREATURE_TYPES_SET: u8 = 1;
+const KEEPS_MANA_ABILITIES: u8 = 2;
+
+impl ComputedPermanent {
     /// CR 702.73a / 613.1d — a layer-4 effect set this permanent's creature
     /// types (Curse of Conformity's "lose all creature types"), which
     /// overrides changeling's characteristic-defining "every type".
-    pub creature_types_set: bool,
-}
+    pub fn creature_types_set(&self) -> bool {
+        self.flags & CREATURE_TYPES_SET != 0
+    }
 
-impl ComputedPermanent {
+    /// CR 113.10b — the strip behind `lost_all_abilities` is only Blood Sun's
+    /// "except mana abilities": the printed mana abilities still activate.
+    pub fn keeps_mana_abilities(&self) -> bool {
+        self.flags & KEEPS_MANA_ABILITIES != 0
+    }
+
     /// CR 613.4 — base power and toughness (see `base_pt_nibbles`): exact in
     /// 0..=13, `-1` standing for any negative value, `i32::MAX` for 14 or more
     /// — so `==`/`<=` against a small nonnegative N answer exactly.
@@ -991,8 +1003,8 @@ impl std::fmt::Debug for ComputedPermanent {
             .field("power", &self.power)
             .field("toughness", &self.toughness)
             .field("lost_all_abilities", &self.lost_all_abilities)
-            .field("keeps_mana_abilities", &self.keeps_mana_abilities)
-            .field("creature_types_set", &self.creature_types_set)
+            .field("keeps_mana_abilities", &self.keeps_mana_abilities())
+            .field("creature_types_set", &self.creature_types_set())
             .finish()
     }
 }
@@ -1265,7 +1277,7 @@ fn compute_permanent_second_pass(
     // CR 613.1d — a layer-4 "set creature types" overrides changeling's CDA,
     // so the type-gated re-run stops reading the keyword as every type; a
     // changeling a static granted (Maskwood Nexus) is every type to it too.
-    let changeling = if pass1.creature_types_set {
+    let changeling = if pass1.creature_types_set() {
         ChangelingRead::Off
     } else if pass1.keywords().contains(&Keyword::Changeling) {
         ChangelingRead::Every
@@ -1747,8 +1759,8 @@ fn compute_permanent_pass(
         toughness,
         base_pt_nibbles,
         lost_all_abilities,
-        keeps_mana_abilities: lost_all_abilities && !full_strip,
-        creature_types_set,
+        flags: if creature_types_set { CREATURE_TYPES_SET } else { 0 }
+            | if lost_all_abilities && !full_strip { KEEPS_MANA_ABILITIES } else { 0 },
     }
 }
 

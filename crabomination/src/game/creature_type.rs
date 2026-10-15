@@ -27,7 +27,7 @@ impl GameState {
         // CR 613.1d — a later layer-4 "set" (Curse of Conformity) overrides
         // changeling's every-type CDA.
         match self.computed_permanent_on(c) {
-            Some(cp) if cp.creature_types_set => cp.subtypes().creature_types.contains(&ct),
+            Some(cp) if cp.creature_types_set() => cp.subtypes().creature_types.contains(&ct),
             Some(cp) => self.permanent_is_changeling(c) || cp.subtypes().creature_types.contains(&ct),
             None => self.permanent_is_changeling(c) || c.definition.subtypes.creature_types.contains(&ct),
         }

@@ -20119,7 +20119,7 @@ impl GameState {
         // here and would need the gate to widen; `activate_ability`'s own
         // check, which pays `ability_strip_in_scope`, still refuses it.
         // Blood Sun's strip spares mana abilities (CR 113.10b).
-        let lost_all = computed.as_ref().is_some_and(|cp| cp.lost_all_abilities && !cp.keeps_mana_abilities);
+        let lost_all = computed.as_ref().is_some_and(|cp| cp.lost_all_abilities && !cp.keeps_mana_abilities());
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
                 && !lost_all
@@ -21726,7 +21726,7 @@ impl GameState {
             // CR 113.10b — `lost_all_abilities`, behind both legs of the
             // ability-strip presence gate.
             let (stripped, keeps_mana) = if self.ability_strip_in_scope() {
-                bf_cp!().as_ref().map_or((false, false), |c| (c.lost_all_abilities, c.keeps_mana_abilities))
+                bf_cp!().as_ref().map_or((false, false), |c| (c.lost_all_abilities, c.keeps_mana_abilities()))
             } else {
                 (false, false)
             };
