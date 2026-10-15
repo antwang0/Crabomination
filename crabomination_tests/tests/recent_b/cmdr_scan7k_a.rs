@@ -757,3 +757,187 @@ fn donatello_gadget_master_copies_an_artifact() {
     }
     assert_eq!(named_count(&g, 0, "Sol Ring"), 2);
 }
+
+// ── decks::cmdr_scan7k_d ─────────────────────────────────────────────────────
+
+fn attach(g: &mut GameState, aura: CardId, host: CardId) {
+    flood(g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("aura");
+    drain_stack(g);
+}
+
+/// Invisibility: only a Wall may block the enchanted creature.
+#[test]
+fn invisibility_admits_only_walls() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::invisibility());
+    attach(&mut g, aura, bear);
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    let wall = ready(&mut g, 1, catalog::wall_of_shards());
+    declare(&mut g, vec![(bear, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(other, bear)])).is_err(), "a Bear can't block");
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).expect("a Wall can");
+}
+
+/// Stonebrow pumps each attacking trampler — Khenra Charioteer gives the
+/// team trample.
+#[test]
+fn stonebrow_pumps_tramplers_from_khenra() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::stonebrow_krosan_hero());
+    ready(&mut g, 0, catalog::khenra_charioteer());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(g.permanent_has_keyword(bear, &Keyword::Trample));
+    declare(&mut g, vec![(bear, 1)]);
+    assert_eq!(pt(&g, bear), (4, 4));
+}
+
+/// Overwhelming Remorse costs {1} less per creature card in your graveyard.
+#[test]
+fn overwhelming_remorse_discounts_by_graveyard_creatures() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::lurching_rotbeast());
+    }
+    let theirs = ready(&mut g, 1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::overwhelming_remorse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{4}{B} less four");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == theirs));
+}
+
+/// Dragon Egg hatches a firebreathing flier.
+#[test]
+fn dragon_egg_hatches_a_firebreathing_dragon() {
+    let mut g = pod(2);
+    let egg = ready(&mut g, 0, catalog::dragon_egg());
+    kill(&mut g, egg);
+    let dragon = g.battlefield.iter().find(|c| c.definition.name == "Dragon").map(|c| c.id).expect("hatched");
+    g.clear_sickness(dragon);
+    activate(&mut g, dragon, 0, None);
+    assert_eq!(pt(&g, dragon), (3, 2));
+    assert!(g.permanent_has_keyword(dragon, &Keyword::Flying));
+}
+
+/// Daghatar moves a +1/+1 counter between two creatures.
+#[test]
+fn daghatar_moves_a_counter() {
+    let mut g = pod(2);
+    let dag = g.add_card_to_hand(0, catalog::daghatar_the_adamant());
+    cast(&mut g, dag);
+    assert_eq!(plus(&g, dag), 4);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dag, ability_index: 0, target: Some(Target::Permanent(dag)),
+        additional_targets: vec![Target::Permanent(bear)], x_value: None, mode: None,
+    })
+    .expect("move");
+    drain_stack(&mut g);
+    assert_eq!((plus(&g, dag), plus(&g, bear)), (3, 1));
+}
+
+/// Wall of Shards' cumulative upkeep feeds an opponent one life per age
+/// counter.
+#[test]
+fn wall_of_shards_upkeep_gives_an_opponent_life() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    library(&mut g, 1, 4);
+    let wall = ready(&mut g, 0, catalog::wall_of_shards());
+    let life = g.players[1].life;
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert!(g.battlefield_find(wall).is_some(), "paid");
+    assert_eq!(g.players[1].life, life + 1);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert_eq!(g.players[1].life, life + 1 + 2, "two age counters");
+}
+
+/// Refuse to Yield untaps and pumps +2/+7.
+#[test]
+fn refuse_to_yield_untaps_and_pumps() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::refuse_to_yield());
+    attach(&mut g, spell, bear);
+    assert_eq!(pt(&g, bear), (4, 9));
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+}
+
+/// Lord of Tresserhorn's entry: 2 life, two creatures, two cards to an
+/// opponent.
+#[test]
+fn lord_of_tresserhorn_pays_its_entry() {
+    let mut g = pod(2);
+    library(&mut g, 1, 3);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let lord = g.add_card_to_hand(0, catalog::lord_of_tresserhorn());
+    let life = g.players[0].life;
+    cast(&mut g, lord);
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(named_count(&g, 0, "Grizzly Bears"), 0);
+    assert!(g.battlefield_find(lord).is_some(), "the Lord keeps itself when two others can go");
+    assert_eq!(g.players[1].hand.len(), 2);
+}
+
+/// Defabricate exiles a countered artifact spell.
+#[test]
+fn defabricate_exiles_an_artifact_spell() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_hand(1, catalog::sol_ring());
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("ring");
+    let spell = g.add_card_to_hand(0, catalog::defabricate());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(ring)), additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == ring));
+}
+
+/// Frondland Felidar gives a vigilant creature "{1}, {T}: tap target
+/// creature."
+#[test]
+fn frondland_felidar_grants_a_tapper() {
+    let mut g = pod(2);
+    let cat = ready(&mut g, 0, catalog::frondland_felidar());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    activate(&mut g, cat, 0, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Old Man Willow is as big as your land count; Dauntless Dourbark counts
+/// Forests and Treefolk and tramples beside another Treefolk.
+#[test]
+fn old_man_willow_and_dourbark_size_themselves() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let willow = ready(&mut g, 0, catalog::old_man_willow());
+    let bark = ready(&mut g, 0, catalog::dauntless_dourbark());
+    assert_eq!(pt(&g, willow), (3, 3));
+    assert_eq!(pt(&g, bark), (5, 5), "three Forests and two Treefolk");
+    assert!(g.permanent_has_keyword(bark, &Keyword::Trample));
+}
