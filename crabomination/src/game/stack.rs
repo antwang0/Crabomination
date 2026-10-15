@@ -2767,8 +2767,14 @@ impl GameState {
                     // is on the battlefield (CR 603.4) — the inline resolution
                     // path used to drop it, firing filtered self-ETB triggers
                     // unconditionally (Corrupted / kicker-gated ETBs).
-                    let mut etb_triggers: Vec<(Effect, Option<crate::card::Predicate>)> = card
-                        .definition
+                    // CR 701.28 / 712.14 — a spell cast converted enters back
+                    // face up: its ETB triggers and enters-with-counters are
+                    // the back face's (Blaster, Morale Booster's modular 3).
+                    let entering_def: &crate::card::CardDefinition = match &card.definition.back_face {
+                        Some(back) if card.cast_converted => back,
+                        _ => &card.definition,
+                    };
+                    let mut etb_triggers: Vec<(Effect, Option<crate::card::Predicate>)> = entering_def
                         .triggered_abilities
                         .iter()
                         .filter(|t| t.event.kind == EventKind::EntersBattlefield
@@ -2782,7 +2788,7 @@ impl GameState {
                     // we apply the counters immediately after pushing,
                     // BEFORE the next state-based-action sweep, so a printed
                     // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
-                    let enters_spec = card.definition.enters_with_counters.clone();
+                    let enters_spec = entering_def.enters_with_counters.clone();
                     // CR 614.12 — Patched Plaything's "enters with two -1/-1
                     // counters if you cast it from your hand" reads the cast
                     // zone via `Predicate::CastFromHand`.
