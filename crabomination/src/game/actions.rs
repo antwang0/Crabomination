@@ -2628,6 +2628,18 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             reduction = reduction.saturating_add(t.amount);
         }
     }
+    // CR 114.4 — an emblem's "[filter] spells you cast cost {N} less"
+    // (Saheeli, Filigree Master's −4): emblems have no battlefield object,
+    // so the source walk above never reaches them.
+    for emblem in &state.players[caster].emblems {
+        for sa in &emblem.statics {
+            if let StaticEffect::CostReduction { filter, amount } = &sa.effect
+                && state.evaluate_requirement_on_card(filter, card, caster)
+            {
+                reduction = reduction.saturating_add(*amount);
+            }
+        }
+    }
     // Transient "sacrifice any number, {N} less each" additional-cost
     // reduction (Awaken the Blood Avatar). Stamped on the state for the
     // duration of one cast by `cast_spell_sacrifice_reduce`.
