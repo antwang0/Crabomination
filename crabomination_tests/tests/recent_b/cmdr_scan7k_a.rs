@@ -1868,3 +1868,276 @@ fn vances_blasting_cannons_impulses_and_transforms() {
     }
     assert_eq!(g.battlefield_find(cannons).unwrap().definition.name, "Spitfire Bastion");
 }
+
+// ── decks::cmdr_scan7k_j ─────────────────────────────────────────────────────
+
+/// Tura makes a Soldier per instant; Stonybrook Schoolmaster makes a Merfolk
+/// Wizard when it becomes tapped.
+#[test]
+fn tura_and_stonybrook_make_tokens() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::tura_kennerud_skyknight());
+    let school = ready(&mut g, 0, catalog::stonybrook_schoolmaster());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!(named_count(&g, 0, "Soldier"), 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    declare(&mut g, vec![(school, 1)]);
+    assert_eq!(named_count(&g, 0, "Merfolk Wizard"), 1);
+}
+
+/// Esgaroth Garrison recruits on entry and counts your creatures for power.
+#[test]
+fn esgaroth_garrison_recruits_and_counts() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let top = g.add_card_to_library(0, catalog::opt());
+    g.players[0].library.rotate_right(1);
+    assert_eq!(g.players[0].library[0].id, top);
+    let garrison = g.add_card_to_hand(0, catalog::esgaroth_garrison());
+    cast(&mut g, garrison);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "drew Opt and discarded it");
+    assert_eq!(named_count(&g, 0, "Human Soldier"), 1, "a nonland discard recruits");
+    assert_eq!(pt(&g, garrison), (2, 5));
+}
+
+/// Dissenter's Deliverance kills an artifact; Beneath the Sands fetches a
+/// tapped basic.
+#[test]
+fn jolrael_cyclers_destroy_and_ramp() {
+    let mut g = pod(2);
+    let rock = ready(&mut g, 1, catalog::network_terminal());
+    let dd = g.add_card_to_hand(0, catalog::dissenters_deliverance());
+    cast_at(&mut g, dd, Some(Target::Permanent(rock)), vec![]);
+    assert!(g.battlefield_find(rock).is_none());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let sands = g.add_card_to_hand(0, catalog::beneath_the_sands());
+    cast(&mut g, sands);
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped));
+}
+
+/// Bebop gives Rhinos menace; Rocksteady stops Boars being blocked by more
+/// than one creature.
+#[test]
+fn bebop_and_rocksteady_share_their_evasion() {
+    let mut g = pod(2);
+    let bebop = ready(&mut g, 0, catalog::bebop_warthog_warrior());
+    let rock = ready(&mut g, 0, catalog::rocksteady_crash_courser());
+    assert!(g.permanent_has_keyword(rock, &Keyword::Menace));
+    assert!(g.permanent_has_keyword(bebop, &Keyword::CantBeBlockedByMoreThanOne));
+}
+
+/// Baleful Ammit shrinks your own creature; Fell Beast drains by its counters.
+#[test]
+fn baleful_ammit_and_fell_beast() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ammit = g.add_card_to_hand(0, catalog::baleful_ammit());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast(&mut g, ammit);
+    assert_eq!(pt(&g, bear), (1, 1));
+    let beast = ready(&mut g, 0, catalog::fell_beast_of_mordor());
+    g.battlefield_find_mut(beast).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    declare(&mut g, vec![(beast, 1)]);
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 2, theirs - 2));
+}
+
+/// The Destined Black Mage pings each opponent per noncreature spell.
+#[test]
+fn destined_black_mage_pings_each_opponent() {
+    let mut g = pod(3);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::the_destined_black_mage());
+    let lives = (g.players[1].life, g.players[2].life);
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!((g.players[1].life, g.players[2].life), (lives.0 - 1, lives.1 - 1));
+}
+
+/// Stalactite Dagger makes a changeling and makes its bearer every type.
+#[test]
+fn stalactite_dagger_shapeshifts_its_bearer() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let dagger = g.add_card_to_hand(0, catalog::stalactite_dagger());
+    cast(&mut g, dagger);
+    assert_eq!(named_count(&g, 0, "Shapeshifter"), 1);
+    g.battlefield_find_mut(dagger).unwrap().attached_to = Some(bear);
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(g.computed_permanent(bear).is_some_and(|c| c.keywords().contains(&Keyword::Changeling)));
+}
+
+/// Loki steals the lone creature a spell of yours targets, untapped and hasty
+/// on your turn; Bionic Blow pumps and punches.
+#[test]
+fn loki_steals_and_bionic_blow_punches() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::loki_god_of_lies());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    cast_at(&mut g, growth, Some(Target::Permanent(theirs)), vec![]);
+    let c = g.battlefield_find(theirs).unwrap();
+    assert_eq!(c.controller, 0);
+    assert!(!c.tapped);
+    assert!(g.permanent_has_keyword(theirs, &Keyword::Haste));
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let blow = g.add_card_to_hand(0, catalog::bionic_blow());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blow,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(giant)],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("blow");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "3 power killed the Hill Giant");
+}
+
+/// Network Terminal loots by tapping another artifact.
+#[test]
+fn network_terminal_loots_off_another_artifact() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let term = ready(&mut g, 0, catalog::network_terminal());
+    let other = ready(&mut g, 0, catalog::ornithopter());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, term, 1, None);
+    assert!(g.battlefield_find(other).unwrap().tapped);
+    assert_eq!(g.players[0].graveyard.len(), 1, "drew, then discarded");
+}
+
+/// Urza's Command: a tapped Powerstone and a Construct that counts artifacts.
+#[test]
+fn urzas_command_makes_a_powerstone_and_a_construct() {
+    let mut g = pod(2);
+    let cmd = g.add_card_to_hand(0, catalog::urzas_command());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: cmd, spree_modes: vec![1, 2], target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("command");
+    drain_stack(&mut g);
+    let stone = g.battlefield.iter().find(|c| c.definition.name == "Powerstone").unwrap();
+    assert!(stone.tapped);
+    let construct = g.battlefield.iter().find(|c| c.definition.name == "Construct").map(|c| c.id).unwrap();
+    assert_eq!(pt(&g, construct), (2, 2), "the Powerstone and itself");
+    ready(&mut g, 0, catalog::ornithopter());
+    assert_eq!(pt(&g, construct), (3, 3), "counted live");
+}
+
+/// Ajani Goldmane's −6 Avatar tracks your life total as it changes.
+#[test]
+fn ajani_goldmane_avatar_tracks_life() {
+    let mut g = pod(2);
+    let pw = ready(&mut g, 0, catalog::ajani_goldmane());
+    g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 6);
+    loyalty(&mut g, pw, 2, None);
+    let avatar = g.battlefield.iter().find(|c| c.definition.name == "Avatar").map(|c| c.id).unwrap();
+    let life = g.players[0].life;
+    assert_eq!(pt(&g, avatar), (life, life));
+    g.players[0].life -= 7;
+    assert_eq!(pt(&g, avatar), (life - 7, life - 7));
+}
+
+/// Astonishing Spider-Man refills a discarded hand; Spider-Sense counters an
+/// instant.
+#[test]
+fn astonishing_spider_man_and_spider_sense() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    let spidey = ready(&mut g, 0, catalog::astonishing_spider_man());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    declare(&mut g, vec![(spidey, 1)]);
+    assert_eq!(g.players[0].graveyard.len(), 2);
+    assert_eq!(g.players[0].hand.len(), 2);
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    let sense = g.add_card_to_hand(0, catalog::spider_sense());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: opt, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("opt");
+    g.perform_action(GameAction::CastSpell {
+        card_id: sense, target: Some(Target::Permanent(opt)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("sense");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 2, "Opt never resolved");
+}
+
+/// Centaur Omenreader discounts creatures by {2} only while tapped.
+#[test]
+fn centaur_omenreader_discounts_while_tapped() {
+    let mut g = pod(2);
+    let centaur = ready(&mut g, 0, catalog::centaur_omenreader());
+    let spent = |g: &mut GameState| {
+        let giant = g.add_card_to_hand(0, catalog::hill_giant());
+        flood(g);
+        let before = g.players[0].mana_pool.total();
+        g.perform_action(GameAction::CastSpell { card_id: giant, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(g);
+        before - g.players[0].mana_pool.total()
+    };
+    assert_eq!(spent(&mut g), 4);
+    g.battlefield_find_mut(centaur).unwrap().tapped = true;
+    assert_eq!(spent(&mut g), 2);
+}
+
+/// Leaf-Crowned Elder casts a kin creature off the top for free.
+#[test]
+fn leaf_crowned_elder_casts_a_kin_for_free() {
+    let mut g = pod(2);
+    library(&mut g, 1, 3);
+    library(&mut g, 0, 3);
+    let kin = g.add_card_to_library(0, catalog::leaf_crowned_elder());
+    g.players[0].library.rotate_right(1);
+    ready(&mut g, 0, catalog::leaf_crowned_elder());
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![kin])]));
+    step_to(&mut g, 0, TurnStep::Upkeep);
+    assert!(g.battlefield_find(kin).is_some(), "the Treefolk Shaman shares a type");
+}
+
+/// Elder of Laurels pumps per creature; Swashbuckler's Whip grants reach and
+/// a tapper.
+#[test]
+fn elder_of_laurels_and_swashbucklers_whip() {
+    let mut g = pod(2);
+    let elder = ready(&mut g, 0, catalog::elder_of_laurels());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, elder, 0, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (4, 4));
+    let whip = ready(&mut g, 0, catalog::swashbucklers_whip());
+    g.battlefield_find_mut(whip).unwrap().attached_to = Some(elder);
+    assert!(g.permanent_has_keyword(elder, &Keyword::Reach));
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    activate(&mut g, elder, 1, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// CR 604.3 / 613.4a — a token whose printed text says its power and
+/// toughness *are* a count reads it live (a characteristic-defining ability),
+/// not as a snapshot from when it was made: Kalonian Twingrove's Treefolk
+/// grows with the next Forest.
+#[test]
+fn cr_604_3_kalonian_twingrove_token_counts_forests_live() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let grove = g.add_card_to_hand(0, catalog::kalonian_twingrove());
+    cast(&mut g, grove);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Treefolk Warrior").map(|c| c.id).unwrap();
+    assert_eq!(pt(&g, token), (2, 2));
+    ready(&mut g, 0, catalog::forest());
+    assert_eq!(pt(&g, token), (3, 3));
+}

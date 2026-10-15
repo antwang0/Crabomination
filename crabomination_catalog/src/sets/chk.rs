@@ -5947,7 +5947,10 @@ pub fn budoka_gardener() -> CardDefinition {
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],
                     subtypes: spirit(vec![CreatureType::Elemental]),
-                    dynamic_pt: Some((lands_you_control(), lands_you_control())),
+                    static_abilities: vec![crate::card::StaticAbility {
+                        description: "This creature's power and toughness are each equal to the number of lands you control.",
+                        effect: crate::card::StaticEffect::SelfBasePtFromValue { power: lands_you_control(), toughness: lands_you_control() },
+                    }],
                     ..Default::default()
                 }),
             },

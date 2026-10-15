@@ -96,10 +96,9 @@ pub fn ezuri_claw_of_progress() -> CardDefinition {
     }
 }
 
-/// A white/black Spirit enchantment-creature token whose P/T track the
-/// controller's experience at mint time (Daxos the Returned). Live-updating
-/// P/T would need a card-level `DynamicPt` on the token; the mint-time snapshot
-/// matches how the engine stamps other CDA tokens (Shark Typhoon).
+/// A white/black Spirit enchantment-creature token whose P/T are each its
+/// controller's experience counters (Daxos the Returned) — a live
+/// characteristic-defining static, not a mint-time `dynamic_pt` snapshot.
 fn daxos_spirit_token() -> TokenDefinition {
     TokenDefinition {
         name: "Spirit".into(),
@@ -111,7 +110,10 @@ fn daxos_spirit_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        dynamic_pt: Some((Value::ControllerExperience, Value::ControllerExperience)),
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This creature's power and toughness are each equal to the number of experience counters you have.",
+            effect: crate::card::StaticEffect::SelfBasePtFromValue { power: Value::ControllerExperience, toughness: Value::ControllerExperience },
+        }],
         ..Default::default()
     }
 }

@@ -84,7 +84,15 @@ pub fn ajani_goldmane() -> CardDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
-        dynamic_pt: Some((Value::LifeOf(PlayerRef::You), Value::LifeOf(PlayerRef::You))),
+        // A characteristic-defining static, read live — `dynamic_pt` would
+        // freeze the life total at mint time.
+        static_abilities: vec![StaticAbility {
+            description: "This creature's power and toughness are each equal to your life total.",
+            effect: StaticEffect::SelfBasePtFromValue {
+                power: Value::LifeOf(PlayerRef::You),
+                toughness: Value::LifeOf(PlayerRef::You),
+            },
+        }],
         ..Default::default()
     };
     CardDefinition {

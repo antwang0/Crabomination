@@ -846,7 +846,10 @@ pub fn kalonian_twingrove() -> CardDefinition {
                     creature_types: vec![CreatureType::Treefolk, CreatureType::Warrior],
                     ..Default::default()
                 },
-                dynamic_pt: Some((forest_count(), forest_count())),
+                static_abilities: vec![crate::card::StaticAbility {
+                    description: "This creature's power and toughness are each equal to the number of Forests you control.",
+                    effect: crate::card::StaticEffect::SelfBasePtFromValue { power: forest_count(), toughness: forest_count() },
+                }],
                 ..Default::default()
             }),
         })],

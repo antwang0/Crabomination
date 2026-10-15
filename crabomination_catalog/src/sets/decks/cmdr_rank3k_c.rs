@@ -844,7 +844,10 @@ pub fn baru_fist_of_krosa() -> CardDefinition {
                 count: Value::ONE,
                 definition: Arc::new(TokenDefinition {
                     name: "Wurm".into(),
-                    dynamic_pt: Some((lands(), lands())),
+                    static_abilities: vec![crate::card::StaticAbility {
+                        description: "This creature's power and toughness are each equal to the number of lands you control.",
+                        effect: crate::card::StaticEffect::SelfBasePtFromValue { power: lands(), toughness: lands() },
+                    }],
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],
                     subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
