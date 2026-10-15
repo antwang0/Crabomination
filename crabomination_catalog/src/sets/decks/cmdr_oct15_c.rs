@@ -1010,3 +1010,364 @@ pub fn triclopean_sight() -> CardDefinition {
         )
     }
 }
+
+// ── Batch 3 ─────────────────────────────────────────────────────────────────
+
+fn spore_thallid(name: &'static str, mana: ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![at_your(
+            TurnStep::Upkeep,
+            Effect::AddCounter { what: Selector::This, kind: CounterType::Spore, amount: Value::ONE },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Spore, 3)),
+            effect: make(1, saproling()),
+            ..Default::default()
+        }],
+        ..creature(name, mana, vec![CreatureType::Fungus], p, t)
+    }
+}
+
+fn equipment(name: &'static str, mana: ManaCost, equip: ManaCost, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+fn spider_hero() -> Vec<CreatureType> {
+    vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero]
+}
+
+/// Spider-Man, Web-Spinner — {3}{R} legendary 2/3 double strike, haste. Attacking:
+/// a creature can't block this turn.
+pub fn spider_man_web_spinner() -> CardDefinition {
+    legendary(CardDefinition {
+        keywords: vec![Keyword::DoubleStrike, Keyword::Haste],
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(R::Creature),
+            keyword: Keyword::CantBlock,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Spider-Man, Web-Spinner", cost(&[generic(3), r()]), spider_hero(), 2, 3)
+    })
+}
+
+/// Spider-Man, Hometown Hero — {4}{R} legendary 5/4 reach. Enters: a creature
+/// with power 2 or less can't be blocked this turn.
+pub fn spider_man_hometown_hero() -> CardDefinition {
+    legendary(CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(R::Creature.and(R::PowerAtMost(2))),
+            keyword: Keyword::Unblockable,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Spider-Man, Hometown Hero", cost(&[generic(4), r()]), spider_hero(), 5, 4)
+    })
+}
+
+/// Needlepeak Spider — {3}{R} 4/2 reach Spider.
+pub fn needlepeak_spider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        ..creature("Needlepeak Spider", cost(&[generic(3), r()]), vec![CreatureType::Spider], 4, 2)
+    }
+}
+
+/// Wisecrack — {2}{R} instant. A creature deals damage equal to its power to
+/// itself; if it's attacking, 2 damage to its controller.
+pub fn wisecrack() -> CardDefinition {
+    let it = || target_filtered(R::Creature);
+    spell(
+        "Wisecrack",
+        cost(&[generic(2), r()]),
+        true,
+        Effect::Seq(vec![
+            Effect::DealDamageEqualToPower { source: it(), target: it() },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: it(), filter: R::IsAttacking },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(it()))),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Giantfall — {1}{R} instant. Choose one: your creature deals damage equal
+/// to its power to an opponent's creature; or destroy an artifact.
+pub fn giantfall() -> CardDefinition {
+    spell(
+        "Giantfall",
+        cost(&[generic(1), r()]),
+        true,
+        Effect::ChooseMode(vec![
+            Effect::DealDamageEqualToPower {
+                source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            },
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+        ]),
+    )
+}
+
+/// Shadowfax, Lord of Horses — {3}{R}{W} legendary 4/4 Horse. Your Horses have
+/// haste; attacking, put a lesser-power creature card from hand onto the
+/// battlefield tapped and attacking.
+pub fn shadowfax_lord_of_horses() -> CardDefinition {
+    legendary(CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Horses you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Horse).and(R::ControlledByYou)),
+                keyword: Keyword::Haste,
+            },
+        }],
+        triggered_abilities: vec![on_attack(Effect::DeployCreatureFromHandAttacking {
+            filter: R::Creature.and(R::PowerLessThanSource),
+            return_to_hand_eot: false,
+        })],
+        ..creature("Shadowfax, Lord of Horses", cost(&[generic(3), r(), w()]), vec![CreatureType::Horse], 4, 4)
+    })
+}
+
+/// Lightning Mare — {R}{R} 3/1 Elemental Horse. Can't be countered or blocked
+/// by blue creatures; {1}{R}: +1/+0.
+pub fn lightning_mare() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeCountered, Keyword::CantBeBlockedBy(Box::new(R::HasColor(Color::Blue)))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Lightning Mare", cost(&[r(), r()]), vec![CreatureType::Elemental, CreatureType::Horse], 3, 1)
+    }
+}
+
+/// Thallid Shell-Dweller — {1}{G} 0/5 defender Fungus with Thallid's spores.
+pub fn thallid_shell_dweller() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Defender], ..spore_thallid("Thallid Shell-Dweller", cost(&[generic(1), g()]), 0, 5) }
+}
+
+/// Vitaspore Thallid — {1}{G} 1/1 Fungus with Thallid's spores; sacrifice a
+/// Saproling: a creature gains haste.
+pub fn vitaspore_thallid() -> CardDefinition {
+    let mut d = spore_thallid("Vitaspore Thallid", cost(&[generic(1), g()]), 1, 1);
+    d.activated_abilities.push(ActivatedAbility {
+        sac_other_filter: Some((R::HasCreatureType(CreatureType::Saproling), 1)),
+        effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+        ..Default::default()
+    });
+    d
+}
+
+/// Blood Knight — {R}{R} 2/2 first strike, protection from white.
+pub fn blood_knight() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Protection(Color::White)],
+        ..creature("Blood Knight", cost(&[r(), r()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Bogardan Lancer — {1}{R} 1/1 Knight; bloodthirst 1, flanking.
+pub fn bogardan_lancer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bloodthirst(1), Keyword::Flanking],
+        ..creature("Bogardan Lancer", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Knight], 1, 1)
+    }
+}
+
+/// Ogre Errant — {3}{R} 3/4 Ogre Knight. Attacking: another attacking Knight
+/// gains menace.
+pub fn ogre_errant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(R::HasCreatureType(CreatureType::Knight).and(R::IsAttacking).and(R::OtherThanSource)),
+            keyword: Keyword::Menace,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Ogre Errant", cost(&[generic(3), r()]), vec![CreatureType::Ogre, CreatureType::Knight], 3, 4)
+    }
+}
+
+/// Hookblade — {1}{W} Equipment; enters attached to your creature; +1/+0,
+/// flying during your turn. Equip {2}.
+pub fn hookblade() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        ..equipment(
+            "Hookblade",
+            cost(&[generic(1), w()]),
+            cost(&[generic(2)]),
+            EquipBonus { power: 1, during_your_turn_keywords: vec![Keyword::Flying], ..Default::default() },
+        )
+    }
+}
+
+/// Raven Clan War-Axe — {1}{R}{W} Equipment, +2/+0 and trample, equip {2}.
+/// Enters: Eivor, Battle-Ready from your graveyard or library to hand.
+pub fn raven_clan_war_axe() -> CardDefinition {
+    let eivor = || R::HasName("Eivor, Battle-Ready".into());
+    let in_gy = Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: eivor() };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(in_gy.clone())), Value::ONE),
+            then: Box::new(Effect::Move { what: Selector::take(in_gy, Value::ONE), to: ZoneDest::Hand(PlayerRef::You) }),
+            else_: Box::new(Effect::Search { who: PlayerRef::You, filter: eivor(), to: ZoneDest::Hand(PlayerRef::You) }),
+        })],
+        ..equipment(
+            "Raven Clan War-Axe",
+            cost(&[generic(1), r(), w()]),
+            cost(&[generic(2)]),
+            EquipBonus { power: 2, keywords: vec![Keyword::Trample], ..Default::default() },
+        )
+    }
+}
+
+/// Settlement Blacksmith — {2}{W} 3/3 Human Artificer. Enters: draw if you
+/// control an Equipment.
+pub fn settlement_blacksmith() -> CardDefinition {
+    let equipment = Value::CountOf(Box::new(Selector::EachPermanent(
+        R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+    )));
+    let mut draw = etb(Effect::Draw { who: Selector::You, amount: Value::ONE });
+    draw.event = draw.event.with_filter(Predicate::ValueAtLeast(equipment, Value::ONE));
+    CardDefinition {
+        triggered_abilities: vec![draw],
+        ..creature("Settlement Blacksmith", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 3)
+    }
+}
+
+/// Silver Sable, Mercenary Leader — {2}{W} legendary 2/3. Enters: a +1/+1
+/// counter on another creature. Attacking: a modified creature of yours gains
+/// lifelink.
+pub fn silver_sable_mercenary_leader() -> CardDefinition {
+    legendary(CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+            on_attack(Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::IsModified).and(R::ControlledByYou)),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        ..creature(
+            "Silver Sable, Mercenary Leader",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Mercenary, CreatureType::Hero],
+            2,
+            3,
+        )
+    })
+}
+
+/// Daily Bugle Reporters — {3}{W} 2/3 Human Citizen. Enters: counters on up
+/// to two creatures, or a creature card of mana value 2 or less to hand.
+pub fn daily_bugle_reporters() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::SupportCounters { max_targets: 2, filter: R::Creature },
+            Effect::Move {
+                what: target_filtered(R::InYourGraveyard.and(R::Creature).and(R::ManaValueAtMost(2))),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]))],
+        ..creature("Daily Bugle Reporters", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Citizen], 2, 3)
+    }
+}
+
+/// Wild Pack Squad — {2}{W} 2/3 Human Mercenary. Your beginning of combat: up
+/// to one creature gains first strike and vigilance.
+pub fn wild_pack_squad() -> CardDefinition {
+    let it = || target_filtered(R::Creature);
+    CardDefinition {
+        triggered_abilities: vec![at_your(
+            TurnStep::BeginCombat,
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::GrantKeyword { what: it(), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: it(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                ])),
+            },
+        )],
+        ..creature("Wild Pack Squad", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Mercenary], 2, 3)
+    }
+}
+
+/// Titanium Man — {2}{B}{B} legendary 3/4 artifact creature. Attacking: choose
+/// flying, or 1 damage to any target.
+pub fn titanium_man() -> CardDefinition {
+    legendary(CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![on_attack(Effect::ChooseMode(vec![
+            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
+        ]))],
+        ..creature("Titanium Man", cost(&[generic(2), b(), b()]), vec![CreatureType::Human, CreatureType::Villain], 3, 4)
+    })
+}
+
+/// Reaper's Talisman — {B} Equipment, equip {2}. Equipped creature attacking
+/// gains deathtouch; attacking alone, its defender loses 2 and you gain 2.
+pub fn reapers_talisman() -> CardDefinition {
+    equipment(
+        "Reaper's Talisman",
+        cost(&[b()]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            triggered_abilities: vec![
+                on_attack(Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn }),
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::AttackingAlone),
+                    effect: Effect::Seq(vec![
+                        Effect::LoseLife { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(2) },
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    ]),
+                },
+            ],
+            ..Default::default()
+        },
+    )
+}
+
+/// Pain 101 — {1}{B} instant. A creature gains deathtouch and "dies: return
+/// it tapped under its owner's control" until end of turn.
+pub fn pain_101() -> CardDefinition {
+    let it = || target_filtered(R::Creature);
+    spell(
+        "Pain 101",
+        cost(&[generic(1), b()]),
+        true,
+        Effect::Seq(vec![
+            Effect::GrantKeyword { what: it(), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            Effect::GrantTriggeredAbility {
+                what: it(),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                    effect: Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}

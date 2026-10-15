@@ -536,3 +536,118 @@ fn old_bird_adventure_takes_an_instant() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt));
 }
+
+// ── Batch 3 ─────────────────────────────────────────────────────────────────
+
+/// Wisecrack: a creature hits itself, and an attacker's controller takes 2.
+#[test]
+fn wisecrack_self_damage_and_attacker_tax() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    g.attacking.push(Attack { attacker: wurm, target: AttackTarget::Player(0) });
+    let life = g.players[1].life;
+    let spell = g.add_card_to_hand(0, catalog::wisecrack());
+    cast_with(&mut g, spell, Some(Target::Permanent(wurm)), None);
+    assert!(g.battlefield_find(wurm).is_none(), "6 damage to a 6/4");
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// Giantfall's first mode bites; its second destroys an artifact.
+#[test]
+fn giantfall_bites_or_breaks() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::giantfall());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![Target::Permanent(bears)],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 0, "one-sided");
+}
+
+/// Shadowfax puts a lesser-power creature card from hand onto the battlefield
+/// attacking; a bigger one stays in hand.
+#[test]
+fn shadowfax_deploys_a_smaller_creature_attacking() {
+    let mut g = pod(2);
+    let fax = ready(&mut g, 0, catalog::shadowfax_lord_of_horses());
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    attack_unblocked(&mut g, vec![(fax, 1)]);
+    assert!(g.battlefield_find(bears).is_some(), "the 2-power Bears came in");
+    assert!(g.players[0].hand.iter().any(|c| c.id == wurm), "the 6-power Wurm can't");
+}
+
+/// Vitaspore Thallid sacrifices a Saproling to give haste.
+#[test]
+fn vitaspore_thallid_hastes_with_a_saproling() {
+    let mut g = pod(2);
+    let vita = ready(&mut g, 0, catalog::vitaspore_thallid());
+    g.battlefield_find_mut(vita).unwrap().add_counters(CounterType::Spore, 3);
+    activate(&mut g, vita, 0, None);
+    assert_eq!(named_count(&g, 0, "Saproling"), 1);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, vita, 1, Some(Target::Permanent(bears)));
+    assert_eq!(named_count(&g, 0, "Saproling"), 0);
+    assert!(g.permanent_has_keyword(bears, &Keyword::Haste));
+}
+
+/// Raven Clan War-Axe finds Eivor in the graveyard before the library.
+#[test]
+fn raven_clan_war_axe_finds_eivor() {
+    let mut g = pod(2);
+    let eivor = g.add_card_to_graveyard(0, catalog::eivor_battle_ready());
+    let axe = g.add_card_to_hand(0, catalog::raven_clan_war_axe());
+    cast(&mut g, axe);
+    assert!(g.players[0].hand.iter().any(|c| c.id == eivor));
+}
+
+/// Settlement Blacksmith draws only with an Equipment out.
+#[test]
+fn settlement_blacksmith_needs_equipment() {
+    let mut g = pod(2);
+    let hand = g.players[0].hand.len();
+    let a = g.add_card_to_hand(0, catalog::settlement_blacksmith());
+    cast(&mut g, a);
+    assert_eq!(g.players[0].hand.len(), hand);
+    ready(&mut g, 0, catalog::bonesplitter());
+    let b = g.add_card_to_hand(0, catalog::settlement_blacksmith());
+    cast(&mut g, b);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Reaper's Talisman: attacking alone drains the defending player for 2 and
+/// grants deathtouch.
+#[test]
+fn reapers_talisman_drains_a_lone_attacker() {
+    let mut g = pod(3);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let tal = ready(&mut g, 0, catalog::reapers_talisman());
+    g.battlefield_find_mut(tal).unwrap().attached_to = Some(bears);
+    let life = g.players[2].life;
+    attack_unblocked(&mut g, vec![(bears, 2)]);
+    assert_eq!(g.players[2].life, life - 2 - 2);
+    assert_eq!(g.players[1].life, life, "only the defending player");
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Pain 101: the creature comes back tapped after dying this turn.
+#[test]
+fn pain_101_returns_the_creature_tapped() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::pain_101());
+    cast_with(&mut g, spell, Some(Target::Permanent(bears)), None);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(bears)), None);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned");
+    assert!(back.tapped);
+}
