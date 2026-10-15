@@ -17112,6 +17112,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DORI_COMMANDERS,
             main: decks::DORI_MAIN,
         },
+        // Seat 2777: Admiral Beckett Brass's EDHREC average deck. `--pod-decks 2777`.
+        PodDeck {
+            name: "Admiral Beckett Brass (UBR)",
+            commanders: decks::ADMIRAL_BECKETT_BRASS_COMMANDERS,
+            main: decks::ADMIRAL_BECKETT_BRASS_MAIN,
+        },
+        // Seat 2778: Horobi, Death's Wail's EDHREC average deck. `--pod-decks 2778`.
+        PodDeck {
+            name: "Horobi, Death's Wail (B)",
+            commanders: decks::HOROBI_COMMANDERS,
+            main: decks::HOROBI_MAIN,
+        },
+        // Seat 2779: General Marhault Elsdragon's EDHREC average deck. `--pod-decks 2779`.
+        PodDeck {
+            name: "General Marhault Elsdragon (RG)",
+            commanders: decks::GENERAL_MARHAULT_ELSDRAGON_COMMANDERS,
+            main: decks::GENERAL_MARHAULT_ELSDRAGON_MAIN,
+        },
+        // Seat 2780: Aryel, Knight of Windgrace's EDHREC average deck. `--pod-decks 2780`.
+        PodDeck {
+            name: "Aryel, Knight of Windgrace (WB)",
+            commanders: decks::ARYEL_COMMANDERS,
+            main: decks::ARYEL_MAIN,
+        },
+        // Seat 2781: Bill the Pony's EDHREC average deck. `--pod-decks 2781`.
+        PodDeck {
+            name: "Bill the Pony (W)",
+            commanders: decks::BILL_THE_PONY_COMMANDERS,
+            main: decks::BILL_THE_PONY_MAIN,
+        },
+        // Seat 2782: Baldin, Century Herdmaster's EDHREC average deck. `--pod-decks 2782`.
+        PodDeck {
+            name: "Baldin, Century Herdmaster (W)",
+            commanders: decks::BALDIN_COMMANDERS,
+            main: decks::BALDIN_MAIN,
+        },
+        // Seat 2783: Butterbur, Bree Innkeeper's EDHREC average deck. `--pod-decks 2783`.
+        PodDeck {
+            name: "Butterbur, Bree Innkeeper (WG)",
+            commanders: decks::BUTTERBUR_COMMANDERS,
+            main: decks::BUTTERBUR_MAIN,
+        },
+        // Seat 2784: Swarm, Being of Bees's EDHREC average deck. `--pod-decks 2784`.
+        PodDeck {
+            name: "Swarm, Being of Bees (B)",
+            commanders: decks::SWARM_COMMANDERS,
+            main: decks::SWARM_MAIN,
+        },
     ]
 }
 
@@ -21724,6 +21772,14 @@ mod tests {
             ("Lu Meng, Wu General", &[0x14EC]),
             ("Smaug, the Great Calamity", &[0x14ED]),
             ("Dori, Bearer of Friends", &[0x14EE]),
+            ("Admiral Beckett Brass", &[0x14EF]),
+            ("Horobi, Death's Wail", &[0x14F0]),
+            ("General Marhault Elsdragon", &[0x14F1]),
+            ("Aryel, Knight of Windgrace", &[0x14F2]),
+            ("Bill the Pony", &[0x14F3]),
+            ("Baldin, Century Herdmaster", &[0x14F4]),
+            ("Butterbur, Bree Innkeeper", &[0x14F5]),
+            ("Swarm, Being of Bees", &[0x14F6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

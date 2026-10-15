@@ -77925,3 +77925,226 @@ pub const DORI_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ADMIRAL_BECKETT_BRASS_COMMANDERS: &[CardFactory] = &[admiral_beckett_brass];
+
+/// **Admiral Beckett Brass**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 7 Islands + 6 Mountains + 5 Swamps = 99.
+/// Admiral Beckett Brass (EDHREC, fetched 2026-10-15).
+pub const ADMIRAL_BECKETT_BRASS_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, dimir_signet, fell_flagship, heralds_horn, izzet_signet,
+    rakdos_signet, sol_ring, the_indomitable, treasure_map, vanquishers_banner, blood_crypt,
+    command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb, evolving_wilds,
+    exotic_orchard, path_of_ancestry, rogues_passage, secluded_courtyard, shipwreck_marsh,
+    smoldering_marsh, steam_vents, sulfur_falls, sunken_hollow, unclaimed_territory,
+    watery_grave, xanders_lounge, admiral_brass_unsinkable, breeches_brazen_plunderer,
+    breeches_eager_pillager, captain_lannery_storm, captain_storm_cosmium_raider,
+    captivating_crew, coercive_recruiter, corsair_captain, departed_deckhand,
+    dire_fleet_captain, dire_fleet_daredevil, dire_fleet_neckbreaker, dire_fleet_poisoner,
+    don_andres_the_renegade, fathom_fleet_captain, forerunner_of_the_coalition,
+    francisco_fowl_marauder, gemcutter_buccaneer, hostage_taker, kari_zev_skyship_raider,
+    malcolm_alluring_scoundrel, malcolm_keen_eyed_navigator, merchant_raiders,
+    pitiless_plunderer, port_razer, ragavan_nimble_pilferer, ramirez_depietro_pillager,
+    siren_stormtamer, spectral_sailor, storm_fleet_sprinter, warkite_marauder,
+    zara_renegade_recruiter, black_market_connections, coastal_piracy, cover_of_darkness,
+    daring_piracy, double_down, revel_in_riches, admirals_order, chaos_warp, counterspell,
+    fiery_cannonade, lookouts_dispersal, spell_swindle, terminate, back_in_town,
+    blasphemous_act, blood_money, brasss_bounty, chart_a_course, march_of_the_drowned,
+    walk_the_plank,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const HOROBI_COMMANDERS: &[CardFactory] = &[horobi_deaths_wail];
+
+/// **Horobi, Death's Wail**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Horobi, Death's Wail (EDHREC, fetched 2026-10-15).
+pub const HOROBI_MAIN: &[CardFactory] = &[
+    arcane_signet, bloodthirsty_blade, cauldron_of_souls, charcoal_diamond, distorting_lens,
+    glaring_spotlight, jet_medallion, liquimetal_coating, liquimetal_torque, mind_stone,
+    scale_of_chiss_goria, sol_ring, squees_toy, tooth_of_chiss_goria, tower_of_coireall,
+    arcane_lighthouse, bojuka_bog, cabal_coffers, desert, detection_tower, maze_of_ith,
+    myriad_landscape, oasis, urborg_tomb_of_yawgmoth, blood_artist, crypt_ghast, dread_presence,
+    falkenrath_noble, gisa_glorious_resurrector, gray_merchant_of_asphodel, harvester_of_souls,
+    hex_parasite, inversion_behemoth, kaervek_the_punisher, massacre_wurm, mogiss_marauder,
+    morbid_opportunist, nefashu, ogre_slumlord, orc_sureshot, rathi_trapper, sangromancer,
+    scuttlemutt, shadow_alley_denizen, syr_konrad_the_grim, tetzimoc_primal_death, black_market,
+    grave_betrayal, nowhere_to_run, phyrexian_arena, retreat_to_hagra,
+    retribution_of_the_ancients, revel_in_riches, aphotic_wisps, bladebrand, dark_ritual,
+    defile, dissection_practice, imps_mischief, lose_hope, subtle_strike, touch_of_darkness,
+    tragic_slip, liliana_of_the_dark_realms, feed_the_swarm, nights_whisper, nighthaze,
+    profane_command, read_the_bones, reanimate, rise_of_the_dark_realms, sign_in_blood,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const GENERAL_MARHAULT_ELSDRAGON_COMMANDERS: &[CardFactory] = &[general_marhault_elsdragon];
+
+/// **General Marhault Elsdragon**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 14 Forests + 10 Mountains = 99.
+/// General Marhault Elsdragon (EDHREC, fetched 2026-10-15).
+pub const GENERAL_MARHAULT_ELSDRAGON_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, infiltration_lens, lightning_greaves, nemesis_mask, sol_ring,
+    swiftfoot_boots, cinder_glade, command_tower, game_trail, gruul_turf, karplusan_forest,
+    kessig_wolf_run, mossfire_valley, rockfall_vale, rootbound_crag, skarrg_the_rage_pits,
+    spire_garden, stomping_ground, anzrag_the_quake_mole, archetype_of_aggression,
+    assembled_alphas, atalan_jackal, beast_whisperer, brash_taunter, elvish_mystic,
+    engulfing_slagwurm, fear_of_being_hunted, goblin_anarchomancer, goblin_grappler,
+    golgari_decoy, jangling_automaton, khenra_charioteer, llanowar_elves,
+    neyith_of_the_dire_hunt, noble_quarry, ohran_frostfang, primeval_herald, prized_unicorn,
+    proud_wildbonder, quartzwood_crasher, ruby_daring_tracker, saryth_the_vipers_fang,
+    shinen_of_lifes_roar, spawnwrithe, taunting_elf, tempting_licid, thunderfoot_baloth,
+    toski_bearer_of_secrets, treeshaker_chimera, fires_of_yavimaya, garruks_uprising,
+    invasion_plans, lure, pain_for_all, rancor, rhythm_of_the_wild, beast_within,
+    benefactors_draught, chaos_warp, heroic_intervention, hunters_insight, ram_through,
+    return_of_the_wildspeaker, temur_battle_rage, you_look_upon_the_tarrasque, armed_dangerous,
+    cultivate, farseek, kodamas_reach, natures_lore, rampant_growth, rishkars_expertise,
+    roar_of_challenge, youve_been_caught_stealing,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const ARYEL_COMMANDERS: &[CardFactory] = &[aryel_knight_of_windgrace];
+
+/// **Aryel, Knight of Windgrace**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Plains + 9 Swamps = 99.
+/// Aryel, Knight of Windgrace (EDHREC, fetched 2026-10-15).
+pub const ARYEL_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, heralds_horn, icon_of_ancestry, orzhov_signet,
+    patchwork_banner, sigiled_sword_of_valeron, sol_ring, talisman_of_hierarchy,
+    the_circle_of_loyalty, vanquishers_banner, bojuka_bog, caves_of_koilos, command_tower,
+    fetid_heath, godless_shrine, isolated_chapel, orzhov_basilica, path_of_ancestry,
+    scoured_barrens, shineshadow_snarl, tainted_field, temple_of_silence,
+    vault_of_the_archangel, acclaimed_contender, adeline_resplendent_cathar, ayaras_oathsworn,
+    basris_lieutenant, belle_of_the_brawl, benalish_marshal, blacklance_paragon, corpse_knight,
+    dauntless_bodyguard, dion_bahamuts_dominant, exsanguinator_cavalry, foulmire_knight,
+    guardian_of_faith, josu_vess_lich_knight, kinsbaile_cavalier, knight_exemplar,
+    knight_of_dusks_shadow, knight_of_grace, knight_of_malice, knight_of_the_white_orchid,
+    knights_of_the_black_rose, locthwain_lancer, midnight_reaper, murderous_rider,
+    order_of_midnight, silverwing_squadron, smitten_swordmaster, summon_knights_of_round,
+    valiant_knight, wintermoor_commander, worthy_knight, cathars_crusade, chivalric_alliance,
+    etchings_of_the_chosen, history_of_benalia, knights_charge, rally_the_ranks,
+    virtue_of_loyalty, anguished_unmaking, despark, dire_tactics, fracture, mortify,
+    path_to_exile, swords_to_plowshares, unbreakable_formation, gideon_ally_of_zendikar,
+    call_the_cavalry, damn, read_the_bones, righteous_confluence, sign_in_blood,
+    valiant_endeavor,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const BILL_THE_PONY_COMMANDERS: &[CardFactory] = &[bill_the_pony];
+
+/// **Bill the Pony**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Bill the Pony (EDHREC, fetched 2026-10-15).
+pub const BILL_THE_PONY_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_end_banquet, captain_americas_shield, cathars_shield,
+    field_tested_frying_pan, lembas, marble_diamond, mind_stone, nuka_cola_vending_machine,
+    pearl_medallion, slagwurm_armor, sol_ring, the_underworld_cookbook, witchs_oven,
+    access_tunnel, emeria_the_sky_ruin, forbidding_watchtower, myriad_landscape, rogues_passage,
+    war_room, academy_manufactor, apothecary_white, astrid_peth, baldin_century_herdmaster,
+    crested_sunmare, daxos_blessed_by_the_sun, eastfarthing_farmer, essence_of_antiquity,
+    ghalta_the_immovable, giant_ox, gilraen_dunedain_protector, indomitable_ancients,
+    kami_of_old_stone, knight_of_the_white_orchid, looming_altisaur, mentor_of_the_meek,
+    nyx_fleece_ram, oathsworn_giant, rasaad_yn_bashir, rosie_cotton_of_south_lane,
+    sierra_nukas_biggest_fan, the_gaffer, troop_of_ponies, wall_of_omens, yoked_ox,
+    zetalpa_primal_dawn, brave_the_sands, conclaves_blessing, eland_umbra, far_traveler,
+    food_coma, fortifying_provisions, of_herbs_and_stewed_rabbit, stoneskin,
+    teleportation_circle, aegis_of_the_heavens, bar_the_door, cloudshift, ephemerate,
+    flicker_of_fate, generous_gift, hobbits_sting, path_to_exile, refuse_to_yield,
+    swords_to_plowshares, dusk_dawn, fell_the_mighty, late_to_dinner, secret_rendezvous,
+    the_battle_of_bywater,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const BALDIN_COMMANDERS: &[CardFactory] = &[baldin_century_herdmaster];
+
+/// **Baldin, Century Herdmaster**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Baldin, Century Herdmaster (EDHREC, fetched 2026-10-15).
+pub const BALDIN_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, decanter_of_endless_water, lightning_greaves,
+    marble_diamond, mind_stone, oketras_monument, pearl_medallion, slagwurm_armor, sol_ring,
+    swiftfoot_boots, thought_vessel, access_tunnel, castle_ardenvale, emeria_the_sky_ruin,
+    minas_tirith, myriad_landscape, reliquary_tower, rogues_passage, war_room,
+    armored_armadillo, crashing_drawbridge, daxos_blessed_by_the_sun, delney_streetwise_lookout,
+    enduring_innocence, esper_sentinel, essence_of_antiquity, flumph, ghalta_the_immovable,
+    giant_ox, god_eternal_oketra, indomitable_ancients, kami_of_old_stone, keeper_of_the_accord,
+    knight_of_the_white_orchid, looming_altisaur, mangara_the_diplomat, mentor_of_the_meek,
+    nyx_fleece_ram, oathsworn_giant, prava_of_the_steel_legion, rasaad_yn_bashir,
+    reverent_hoplite, springjack_shepherd, tasseled_dromedary, wall_of_omens, welcoming_vampire,
+    yoked_ox, zetalpa_primal_dawn, assemble_the_players, brave_the_sands, eland_umbra, land_tax,
+    smothering_tithe, stoneskin, tocasias_welcome, akromas_will, bar_the_door, generous_gift,
+    path_to_exile, refuse_to_yield, secure_the_wastes, solidarity, stroke_of_midnight,
+    swords_to_plowshares, your_temple_is_under_attack, elspeth_suns_champion, cut_a_deal,
+    dusk_dawn, fell_the_mighty, gift_of_estates, secret_rendezvous, slaughter_the_strong,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const BUTTERBUR_COMMANDERS: &[CardFactory] = &[butterbur_bree_innkeeper];
+
+/// **Butterbur, Bree Innkeeper**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 15 Forests + 11 Plains = 99.
+/// Butterbur, Bree Innkeeper (EDHREC, fetched 2026-10-15).
+pub const BUTTERBUR_MAIN: &[CardFactory] = &[
+    arcane_signet, bumbleflowers_sharepot, commanders_sphere, field_tested_frying_pan,
+    idol_of_oblivion, lembas, nuka_cola_vending_machine, sol_ring, blossoming_sands,
+    bountiful_promenade, canopy_vista, command_tower, evolving_wilds, fortified_village,
+    gingerbread_cabin, graypelt_refuge, overgrown_farmland, sunpetal_grove, the_shire,
+    academy_manufactor, astrid_peth, banquet_guests, bill_the_pony, brandywine_farmer,
+    eastfarthing_farmer, elanor_gardner, farmer_cotton, feasting_hobbit, generous_ent,
+    gilded_goose, lathiel_the_bounteous_dawn, llanowar_elves, meriadoc_brandybuck,
+    mushroom_watchdogs, nimble_hobbit, peregrin_took, prosperous_innkeeper, provisions_merchant,
+    rosie_cotton_of_south_lane, sam_loyal_attendant, samwise_gamgee, shire_shirriff, the_gaffer,
+    tireless_provisioner, tough_cookie, treebeard_gracious_host, unlucky_cabbage_merchant,
+    yotian_dissident, food_coma, killer_service, night_of_the_sweets_revenge, ninja_pizza,
+    of_herbs_and_stewed_rabbit, shortcut_to_mushrooms, trail_of_crumbs, welcome_to_sweettooth,
+    beast_within, heroic_intervention, hobbits_sting, insatiable_appetite, path_to_exile,
+    pippins_bravery, second_breakfast, stew_the_coneys, swords_to_plowshares, cultivate,
+    farseek, giant_opportunity, many_partings, natures_lore, rampant_growth, revive_the_shire,
+    the_battle_of_bywater,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const SWARM_COMMANDERS: &[CardFactory] = &[swarm_being_of_bees];
+
+/// **Swarm, Being of Bees**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Swarm, Being of Bees (EDHREC, fetched 2026-10-15).
+pub const SWARM_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bontus_monument, caged_sun, charcoal_diamond, desecrated_tomb,
+    jet_medallion, mind_stone, netherborn_altar, sol_ring, swiftfoot_boots,
+    the_darkness_crystal, wayfarers_bauble, bojuka_bog, cabal_coffers, cabal_stronghold,
+    command_beacon, eumidian_hatchery, geier_reach_sanitarium, phyrexian_tower, rogues_passage,
+    swarmyard, accursed_marauder, battlefly_swarm, blightbeetle, bloatfly_swarm, bone_miser,
+    burnished_hart, canoptek_scarab_swarm, circuit_mender, crypt_ghast, devouring_swarm,
+    foundry_hornet, fumulus_the_infestation, gray_merchant_of_asphodel, great_fierce_bee,
+    huskburster_swarm, infesting_radroach, insatiable_skittermaw, kraul_swarm,
+    morbid_opportunist, necrosquito, solemn_simulacrum, swarm_of_bloodflies,
+    syr_konrad_the_grim, tormod_the_desecrator, troll_of_khazad_dum, black_market, grave_pact,
+    grave_venerations, oversold_cemetery, phyrexian_arena, the_meathook_massacre,
+    archenemys_charm, bitter_triumph, corrupted_conviction, dark_ritual, deadly_dispute,
+    deadly_rollick, defile, village_rites, withering_torment, liliana_dreadhorde_general,
+    bone_shards, call_to_the_netherworld, damnation, diabolic_intent, feed_the_swarm,
+    nights_whisper, reanimate, sign_in_blood,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
