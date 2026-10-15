@@ -1361,3 +1361,53 @@ fn lethal_exploit_counts_your_modified_creatures() {
     cast_with(&mut g, spell, Some(Target::Permanent(other)), vec![], None);
     assert!(g.battlefield_find(other).is_none());
 }
+
+/// CR 702.11 — after Detection Tower's ability, an opponent's hexproof
+/// creature and the hexproof opponent themself are legal targets for you this
+/// turn, and only this turn.
+#[test]
+fn detection_tower_strips_opponents_hexproof_for_the_turn() {
+    let mut g = pod(2);
+    let tower = ready(&mut g, 0, catalog::detection_tower());
+    let bogle = ready(&mut g, 1, catalog::slippery_bogle());
+    ready(&mut g, 1, catalog::leyline_of_sanctity());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    let cast = |g: &mut GameState, t: Target| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(t), additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(cast(&mut g, Target::Permanent(bogle)).is_err());
+    assert!(cast(&mut g, Target::Player(1)).is_err());
+    activate(&mut g, tower, 1, None);
+    cast(&mut g, Target::Player(1)).expect("hexproof player is fair game");
+    drain_stack(&mut g);
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2,
+        target: Some(Target::Permanent(bogle)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("hexproof creature is fair game");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bogle).is_none());
+    g.turn_number += 1;
+    let bolt3 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let _ = bolt3;
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt3,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the grant ends with the turn"
+    );
+}

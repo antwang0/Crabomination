@@ -4623,6 +4623,7 @@ static DECKS: &[Factory] = &[
     super::decks::koh_the_face_stealer,
     super::decks::asgardian_citadel,
     super::decks::lethal_exploit,
+    super::decks::detection_tower,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

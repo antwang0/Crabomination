@@ -1129,3 +1129,24 @@ pub fn lethal_exploit() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Detection Tower — land. {T}: add {C}. {1}, {T}: until end of turn, your
+/// opponents and creatures your opponents control with hexproof can be the
+/// targets of spells and abilities you control as though they didn't have
+/// hexproof. (Kumano, Loki, Diaochan.)
+pub fn detection_tower() -> CardDefinition {
+    CardDefinition {
+        name: "Detection Tower",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::IgnoreOpponentHexproofThisTurn,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
