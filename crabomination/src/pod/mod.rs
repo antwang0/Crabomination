@@ -17160,6 +17160,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SWARM_COMMANDERS,
             main: decks::SWARM_MAIN,
         },
+        // Seat 2785: Thurid, Mare of Destiny's EDHREC average deck. `--pod-decks 2785`.
+        PodDeck {
+            name: "Thurid, Mare of Destiny (W)",
+            commanders: decks::THURID_COMMANDERS,
+            main: decks::THURID_MAIN,
+        },
+        // Seat 2786: Zeriam, Golden Wind's EDHREC average deck. `--pod-decks 2786`.
+        PodDeck {
+            name: "Zeriam, Golden Wind (W)",
+            commanders: decks::ZERIAM_COMMANDERS,
+            main: decks::ZERIAM_MAIN,
+        },
+        // Seat 2787: Breeches, Eager Pillager's EDHREC average deck. `--pod-decks 2787`.
+        PodDeck {
+            name: "Breeches, Eager Pillager (R)",
+            commanders: decks::BREECHES_3_COMMANDERS,
+            main: decks::BREECHES_3_MAIN,
+        },
+        // Seat 2788: Yuriko, Blade of the Mighty's EDHREC average deck. `--pod-decks 2788`.
+        PodDeck {
+            name: "Yuriko, Blade of the Mighty (W)",
+            commanders: decks::YURIKO_2_COMMANDERS,
+            main: decks::YURIKO_2_MAIN,
+        },
+        // Seat 2789: Zar Ojanen, Scion of Efrava's EDHREC average deck. `--pod-decks 2789`.
+        PodDeck {
+            name: "Zar Ojanen, Scion of Efrava (WG)",
+            commanders: decks::ZAR_OJANEN_COMMANDERS,
+            main: decks::ZAR_OJANEN_MAIN,
+        },
+        // Seat 2790: Arashi, the Sky Asunder's EDHREC average deck. `--pod-decks 2790`.
+        PodDeck {
+            name: "Arashi, the Sky Asunder (G)",
+            commanders: decks::ARASHI_COMMANDERS,
+            main: decks::ARASHI_MAIN,
+        },
+        // Seat 2791: Cao Ren, Wei Commander's EDHREC average deck. `--pod-decks 2791`.
+        PodDeck {
+            name: "Cao Ren, Wei Commander (B)",
+            commanders: decks::CAO_REN_COMMANDERS,
+            main: decks::CAO_REN_MAIN,
+        },
     ]
 }
 
@@ -21780,6 +21822,13 @@ mod tests {
             ("Baldin, Century Herdmaster", &[0x14F4]),
             ("Butterbur, Bree Innkeeper", &[0x14F5]),
             ("Swarm, Being of Bees", &[0x14F6]),
+            ("Thurid, Mare of Destiny", &[0x14F7]),
+            ("Zeriam, Golden Wind", &[0x14F8]),
+            ("Breeches, Eager Pillager", &[0x14F9]),
+            ("Yuriko, Blade of the Mighty", &[0x14FA]),
+            ("Zar Ojanen, Scion of Efrava", &[0x14FB]),
+            ("Arashi, the Sky Asunder", &[0x14FC]),
+            ("Cao Ren, Wei Commander", &[0x14FD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
