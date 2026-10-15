@@ -934,3 +934,101 @@ pub fn baron_helmut_zemo() -> CardDefinition {
         )
     }
 }
+
+/// Blaster, Combat DJ // Blaster, Morale Booster — {3}{R}{G} legendary 3/3
+/// artifact creature Robot; More Than Meets the Eye {1}{R}{G}. Other nontoken
+/// artifact creatures and Vehicles you control have modular 1; whenever you
+/// put +1/+1 counters on Blaster, convert it. Back: legendary artifact with
+/// modular 3 and "{X}, {T}: move X +1/+1 counters from Blaster onto another
+/// target artifact; it gains haste; with no counters left, convert Blaster"
+/// (sorcery speed). Approximation: the granted modular's death trigger is the
+/// creature one, so a Vehicle that isn't a creature when it dies doesn't move
+/// its counters. (Balthier and Fran.)
+pub fn blaster_combat_dj() -> CardDefinition {
+    use crate::card::{AlternativeCost, ArtifactSubtype};
+    use crate::mana::{g, x};
+    let granted = R::NotToken
+        .and(R::OtherThanSource)
+        .and(R::ControlledByYou)
+        .and(R::Artifact.and(R::Creature).or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)));
+    let back = CardDefinition {
+        name: "Blaster, Morale Booster",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        color_indicator: vec![Color::Red, Color::Green],
+        keywords: vec![Keyword::Modular(3)],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        // CR 702.43a — modular's "put into a graveyard from the battlefield"
+        // on a noncreature artifact.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            ..crate::effect::shortcut::modular_dies()
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::new(vec![x()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::MoveCounters {
+                    from: Selector::This,
+                    to: target_filtered(R::Artifact.and(R::OtherThanSource)),
+                    counter: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                Effect::If {
+                    cond: Predicate::ValueEquals(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+                        Value::Const(0),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Blaster, Combat DJ",
+        cost: cost(&[generic(3), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), r(), g()]),
+            converted: true,
+            ..Default::default()
+        }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other nontoken artifact creatures and Vehicles you control have modular 1.",
+                effect: StaticEffect::MatchingEntersWithExtraCounters {
+                    filter: granted.clone(),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "(Modular 1: when they die, their +1/+1 counters may move to an artifact creature.)",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: granted.clone(),
+                    ability: Box::new(crate::effect::shortcut::modular_dies()),
+                },
+            },
+            StaticAbility {
+                description: "(They have modular 1.)",
+                effect: StaticEffect::GrantKeyword { applies_to: Selector::EachPermanent(granted), keyword: Keyword::Modular(1) },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::YouPutCounters)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsSource }),
+            effect: Effect::Transform { what: Selector::This },
+        }],
+        back_face: Some(Box::new(back)),
+        ..Default::default()
+    }
+}

@@ -1203,3 +1203,75 @@ fn baron_zemo_connives_on_black_spells_from_hand() {
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name != "Lightning Bolt").count(), 2);
     assert_eq!(plus(&g, zemo), 1, "a nonland discard");
 }
+
+/// CR 701.28 / 702.43a — Blaster cast converted enters back face up with its
+/// modular 3 counters; moving them all away converts it back to the Robot.
+#[test]
+fn blaster_cast_converted_enters_with_modular_counters_and_spends_them() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let blaster = g.add_card_to_hand(0, catalog::blaster_combat_dj());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: blaster,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("More Than Meets the Eye");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(blaster).expect("in play");
+    assert_eq!(b.definition.name, "Blaster, Morale Booster");
+    assert_eq!(plus(&g, blaster), 3);
+    let shift = |g: &mut GameState, x: u32| {
+        flood(g);
+        g.battlefield_find_mut(blaster).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: blaster,
+            ability_index: 0,
+            target: Some(Target::Permanent(ring)),
+            additional_targets: vec![],
+            x_value: Some(x),
+            mode: None,
+        })
+        .expect("move counters");
+        drain_stack(g);
+    };
+    shift(&mut g, 2);
+    assert_eq!(plus(&g, ring), 2);
+    assert!(g.permanent_has_keyword(ring, &Keyword::Haste));
+    assert_eq!(g.battlefield_find(blaster).unwrap().definition.name, "Blaster, Morale Booster");
+    shift(&mut g, 1);
+    assert_eq!(plus(&g, ring), 3);
+    assert_eq!(g.battlefield_find(blaster).unwrap().definition.name, "Blaster, Combat DJ");
+}
+
+/// Blaster's front grants modular 1 to your other nontoken artifact
+/// creatures (CR 702.43a), and a +1/+1 counter put on Blaster converts it.
+#[test]
+fn blaster_grants_modular_and_converts_on_counters() {
+    let mut g = pod(2);
+    let blaster = ready(&mut g, 0, catalog::blaster_combat_dj());
+    let thopter = g.add_card_to_hand(0, catalog::ornithopter());
+    cast_with(&mut g, thopter, None, vec![], None);
+    assert_eq!(plus(&g, thopter), 1);
+    assert!(g.permanent_has_keyword(thopter, &Keyword::Modular(1)));
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(plus(&g, bear), 0, "not an artifact");
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::AddCounter {
+                what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Artifact.and(crabomination::card::SelectionRequirement::Creature)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: crabomination::card::Value::ONE,
+            },
+            &ctx,
+        )
+        .expect("counters");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blaster).unwrap().definition.name, "Blaster, Morale Booster");
+}
