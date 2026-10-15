@@ -10264,6 +10264,9 @@ pub enum Effect {
     /// auto-decider is a no-op). A spell with zero or several targets is
     /// left alone. Shunt, Deflection.
     ChangeSpellTarget { what: Selector },
+    /// Meddle — `ChangeSpellTarget` when the single target is a creature,
+    /// and only to another creature.
+    ChangeSpellCreatureTarget { what: Selector },
     /// Test of Talents — "Counter target instant or sorcery spell. Search
     /// its controller's graveyard, hand, and library for any number of
     /// cards with the same name as that spell and exile them. That player

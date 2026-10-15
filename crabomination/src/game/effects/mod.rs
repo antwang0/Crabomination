@@ -2533,6 +2533,22 @@ impl GameState {
         original: &Option<crate::game::types::Target>,
         taken: &[crate::game::types::Target],
     ) -> Option<crate::game::types::Target> {
+        self.retarget_slot_matching(effect, name, chooser, slot, original, taken, None)
+    }
+
+    /// `retarget_slot` with the new target also matching `only` (Meddle's
+    /// "to another creature").
+    #[allow(clippy::too_many_arguments)]
+    fn retarget_slot_matching(
+        &mut self,
+        effect: &crate::effect::Effect,
+        name: &str,
+        chooser: usize,
+        slot: u8,
+        original: &Option<crate::game::types::Target>,
+        taken: &[crate::game::types::Target],
+        only: Option<&crate::card::SelectionRequirement>,
+    ) -> Option<crate::game::types::Target> {
         use crate::decision::{Decision, DecisionAnswer};
         use crate::game::types::Target;
         let slot_filter = effect.target_filter_for_slot(slot).cloned();
@@ -2546,6 +2562,7 @@ impl GameState {
                     self.evaluate_requirement_static(f, t, chooser, None)
                 })
             })
+            .filter(|t| only.is_none_or(|f| self.evaluate_requirement_static(f, t, chooser, None)))
             .collect();
         if legal.is_empty() {
             return original.clone();
@@ -37637,9 +37654,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChangeSpellTarget { what } => {
+            Effect::ChangeSpellTarget { what } | Effect::ChangeSpellCreatureTarget { what } => {
                 // CR 115.7 — repoint a single-target spell. `additional_targets`
                 // non-empty means "several targets", which this can't touch.
+                let only = matches!(effect, Effect::ChangeSpellCreatureTarget { .. })
+                    .then_some(crate::card::SelectionRequirement::Creature);
                 let Some(spell_id) = self
                     .resolve_selector(what, ctx)
                     .into_iter()
@@ -37661,11 +37680,19 @@ impl GameState {
                     _ => None,
                 });
                 let Some((idx, def, current)) = found else { return Ok(()) };
+                // Meddle — "and that target is a creature".
+                if only.is_some()
+                    && !matches!(&current, Some(Target::Permanent(id))
+                        if self.battlefield_find(*id).is_some_and(|c| self.computed_is_creature(c)))
+                {
+                    return Ok(());
+                }
                 // CR 115.7a — this *must* move the spell if any other legal
                 // target exists, so it goes through `retarget_spell` (which
                 // excludes the original) rather than the copy repointer
                 // (which offers the original first and so never moved it).
-                let chosen = self.retarget_spell(&def.effect, def.name, ctx.controller, &current);
+                let chosen =
+                    self.retarget_slot_matching(&def.effect, def.name, ctx.controller, 0, &current, &[], only.as_ref());
                 if chosen != current
                     && let Some(StackItem::Spell { target, .. }) = self.stack.get_mut(idx)
                 {

@@ -2027,6 +2027,7 @@ impl Effect {
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what, .. }
             | Effect::ChangeSpellTarget { what }
+            | Effect::ChangeSpellCreatureTarget { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
@@ -5510,6 +5511,7 @@ impl Effect {
             | Effect::CloakPileWithTop { what, .. }
             | Effect::PutFaceDownAsCyberman { what, .. }
                 | Effect::ChangeSpellTarget { what }
+                | Effect::ChangeSpellCreatureTarget { what }
                 | Effect::CounterSpell { what }
                 | Effect::CopySpellForEachOtherLegalTarget { what }
                 | Effect::CounterSpellIfNameExiledWithSource { what }
