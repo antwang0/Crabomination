@@ -74350,3 +74350,31 @@ pub const AZOR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ADAMARO_COMMANDERS: &[CardFactory] = &[adamaro_first_to_desire];
+
+/// **Adamaro, First to Desire**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Adamaro, First to Desire (EDHREC, fetched 2026-10-15).
+pub const ADAMARO_MAIN: &[CardFactory] = &[
+    anvil_of_bogardan, arcane_signet, black_vise, coveted_jewel, ebony_owl_netsuke,
+    empyrial_plate, fire_diamond, font_of_mythos, horn_of_greed, howling_mine, iron_maiden,
+    mind_stone, otherworld_atlas, ruby_medallion, skullcage, sol_ring, swiftfoot_boots,
+    sword_of_war_and_peace, temple_bell, thought_vessel, buried_ruin,
+    mikokoro_center_of_the_sea, myriad_landscape, reliquary_tower, rogues_passage,
+    spinerock_knoll, valakut_the_molten_pinnacle, balor, barbed_shocker, clockwork_fox,
+    dragon_mage, emberwilde_captain, howling_golem, humble_defector, kediss_emberclaw_familiar,
+    magus_of_the_wheel, psychosis_crawler, razorkin_needlehead, scrawling_crawler,
+    shah_of_naar_isle, silent_arbiter, solemn_simulacrum, stormbreath_dragon, viseling,
+    zenith_chronicler, zurzoth_chaos_rider, dictate_of_the_twin_gods, fiery_emancipation,
+    unquenchable_fury, vicious_shadows, abrade, bolt_bend, chaos_warp, gaze_of_adamaro,
+    lightning_bolt, reverberate, runeflare_trap, souls_fire, sudden_impact, temur_battle_rage,
+    unleash_fury, blasphemous_act, chandras_ignition, jeskas_will, khorvaths_fury,
+    molten_psyche, reforge_the_soul, rousing_refrain, vandalblast, wheel_of_fate,
+    winds_of_change,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

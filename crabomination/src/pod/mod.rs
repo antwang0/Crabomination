@@ -16338,6 +16338,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AZOR_COMMANDERS,
             main: decks::AZOR_MAIN,
         },
+        // Seat 2648: Adamaro, First to Desire's EDHREC average deck. `--pod-decks 2648`.
+        PodDeck {
+            name: "Adamaro, First to Desire (R)",
+            commanders: decks::ADAMARO_COMMANDERS,
+            main: decks::ADAMARO_MAIN,
+        },
     ]
 }
 
@@ -20818,6 +20824,7 @@ mod tests {
             ("Kumano, Master Yamabushi", &[0x146B]),
             ("Spider-Girl, Legacy Hero", &[0x146C]),
             ("Azor, the Lawbringer", &[0x146D]),
+            ("Adamaro, First to Desire", &[0x146E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
