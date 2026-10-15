@@ -1046,3 +1046,228 @@ fn tomik_caps_attackers_per_planeswalker() {
     g.perform_action(GameAction::DeclareAttackers(vec![at_pw(a), Attack { attacker: b, target: AttackTarget::Player(1) }]))
         .expect("one at the planeswalker");
 }
+
+// ── decks::cmdr_scan7k_a ─────────────────────────────────────────────────────
+
+/// Elspeth, Knight-Errant's −8 emblem makes your lands and creatures
+/// indestructible, not an opponent's.
+#[test]
+fn elspeth_knight_errant_emblem_grants_indestructible() {
+    let mut g = pod(2);
+    let pw = ready(&mut g, 0, catalog::elspeth_knight_errant());
+    g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 6);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let land = ready(&mut g, 0, catalog::forest());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    loyalty(&mut g, pw, 2, None);
+    for id in [bear, land] {
+        assert!(g.permanent_has_keyword(id, &Keyword::Indestructible));
+    }
+    assert!(!g.permanent_has_keyword(theirs, &Keyword::Indestructible));
+}
+
+/// Nighthawk triggers on another Hero entering, not on a non-Hero.
+#[test]
+fn nighthawk_pumps_when_a_hero_enters() {
+    let mut g = pod(2);
+    let hawk = ready(&mut g, 0, catalog::nighthawk_dark_defender());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast_with(&mut g, elves, None, vec![], None);
+    assert_eq!(pt(&g, bear), (2, 2), "an Elf is no Hero");
+    let cap = g.add_card_to_hand(0, catalog::captain_america_super_soldier());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast_with(&mut g, cap, None, vec![], None);
+    let total: i32 = [hawk, bear, cap].iter().map(|id| pt(&g, *id).0).sum();
+    assert_eq!(total, 2 + 2 + 3 + 1, "one +1/+1 for the Hero");
+}
+
+/// Training Regimen counters a creature at your beginning of combat, and the
+/// countered creature has trample.
+#[test]
+fn training_regimen_counters_at_combat_and_grants_trample() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::training_regimen());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(!g.permanent_has_keyword(bear, &Keyword::Trample));
+    step_to(&mut g, 0, TurnStep::BeginCombat);
+    assert_eq!(plus(&g, bear), 1);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Trample));
+}
+
+/// Heroes for Hire makes three Treasures and turns one into an impulse draw.
+#[test]
+fn heroes_for_hire_sacrifices_treasure_to_impulse() {
+    let mut g = pod(2);
+    let top = g.add_card_to_library(0, catalog::island());
+    let hfh = g.add_card_to_hand(0, catalog::heroes_for_hire());
+    cast_with(&mut g, hfh, None, vec![], None);
+    assert_eq!(named_count(&g, 0, "Treasure"), 3);
+    activate(&mut g, hfh, 0, None);
+    assert_eq!(named_count(&g, 0, "Treasure"), 2);
+    assert!(g.exile.iter().any(|c| c.id == top), "the top card is exiled to play");
+}
+
+/// Greatsword of Tyr: the equipped attacker gets a counter and taps a
+/// creature the defending player controls.
+#[test]
+fn greatsword_of_tyr_counters_and_taps_a_defender() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sword = ready(&mut g, 0, catalog::greatsword_of_tyr());
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip {W}");
+    let blocker = ready(&mut g, 2, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(blocker))]));
+    declare(&mut g, vec![(bear, 2)]);
+    assert_eq!(plus(&g, bear), 1);
+    assert!(g.battlefield_find(blocker).unwrap().tapped);
+}
+
+/// Livaan pumps by the noncreature spell's mana value and ignores creatures.
+#[test]
+fn livaan_pumps_by_the_spells_mana_value() {
+    let mut g = pod(2);
+    let liv = ready(&mut g, 0, catalog::livaan_cultist_of_tiamat());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_with(&mut g, bear, None, vec![], None);
+    assert_eq!(pt(&g, liv).0 + pt(&g, bear).0, 1 + 2, "a creature spell: no trigger");
+    let div = g.add_card_to_hand(0, catalog::divination());
+    cast_with(&mut g, div, None, vec![], None);
+    assert_eq!(pt(&g, liv).0 + pt(&g, bear).0, 1 + 2 + 3, "+X/+0, X = 3");
+}
+
+/// The Black Arrow's 1 damage destroys a Dragon, whatever its toughness.
+#[test]
+fn the_black_arrow_slays_a_dragon() {
+    let mut g = pod(2);
+    let dragon = ready(&mut g, 1, catalog::shivan_dragon());
+    ready(&mut g, 1, catalog::leyline_of_sanctity()); // the Dragon is the one hostile target
+    let arrow = g.add_card_to_hand(0, catalog::the_black_arrow());
+    cast_with(&mut g, arrow, None, vec![], None);
+    assert!(g.battlefield_find(dragon).is_none());
+}
+
+/// Captain America shields his controller from an opponent's targeting
+/// while he keeps his shield counter.
+#[test]
+fn captain_america_gives_hexproof_while_shielded() {
+    let mut g = pod(2);
+    let cap = g.add_card_to_hand(0, catalog::captain_america_super_soldier());
+    cast_with(&mut g, cap, None, vec![], None);
+    assert_eq!(g.battlefield_find(cap).unwrap().counter_count(CounterType::Shield), 1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "you have hexproof");
+}
+
+/// Meager Meal counters a creature and gains a target player 2 life, then
+/// Gollum is castable from exile.
+#[test]
+fn gollum_meager_meal_counters_and_gains_life() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gollum = g.add_card_to_hand(0, catalog::gollum_silent_slinker());
+    flood(&mut g);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastAdventure {
+        card_id: gollum,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(0)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("adventure");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, bear), 1);
+    assert_eq!(g.players[0].life, life + 2);
+    assert!(g.exile.iter().any(|c| c.id == gollum));
+}
+
+/// Origin of Thor's chapter III has your creature deal its power to each
+/// opponent.
+#[test]
+fn origin_of_thor_chapter_three_hits_each_opponent() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let saga = ready(&mut g, 0, catalog::origin_of_thor());
+    for seat in 0..3 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    let before = [g.players[1].life, g.players[2].life];
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PostCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert_eq!([g.players[1].life, g.players[2].life], [before[0] - 2, before[1] - 2]);
+}
+
+/// Triskaidekaphobia: a player at exactly 13 loses at your upkeep; the rest
+/// gain 1.
+#[test]
+fn triskaidekaphobia_kills_at_thirteen() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::triskaidekaphobia());
+    for seat in 0..3 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.players[1].life = 13;
+    g.players[2].life = 14;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert!(g.players[1].eliminated);
+    assert_eq!(g.players[2].life, 15);
+}
+
+/// CR 903 pods: Avatar of Growth costs {1} less per opponent, and each
+/// player fetches two basics.
+#[test]
+fn avatar_of_growth_discounts_per_opponent_and_ramps_everyone() {
+    let mut g = pod(4);
+    for seat in 0..4 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let avatar = g.add_card_to_hand(0, catalog::avatar_of_growth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: avatar, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{4}{G}{G} less three");
+    drain_stack(&mut g);
+    for seat in 0..4 {
+        assert_eq!(named_count(&g, seat, "Forest"), 2, "seat {seat}");
+    }
+}
+
+/// Dragonrage adds {R} per attacker and grants each a firebreathing ability.
+#[test]
+fn dragonrage_adds_red_per_attacker() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(a, 1), (b, 1)]);
+    let rage = g.add_card_to_hand(0, catalog::dragonrage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: rage, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+    activate(&mut g, a, 0, None);
+    assert_eq!(pt(&g, a), (3, 2), "{{R}}: +1/+0 until end of turn");
+}
