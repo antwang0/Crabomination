@@ -15948,6 +15948,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLASTER_COMMANDERS,
             main: decks::BLASTER_MAIN,
         },
+        // Seat 2583: Garnet, Princess of Alexandria's EDHREC average deck. `--pod-decks 2583`.
+        PodDeck {
+            name: "Garnet, Princess of Alexandria (WG)",
+            commanders: decks::GARNET_COMMANDERS,
+            main: decks::GARNET_MAIN,
+        },
+        // Seat 2584: Ashnod, Flesh Mechanist's EDHREC average deck. `--pod-decks 2584`.
+        PodDeck {
+            name: "Ashnod, Flesh Mechanist (B)",
+            commanders: decks::ASHNOD_COMMANDERS,
+            main: decks::ASHNOD_MAIN,
+        },
+        // Seat 2585: Stangg, Echo Warrior's EDHREC average deck. `--pod-decks 2585`.
+        PodDeck {
+            name: "Stangg, Echo Warrior (RG)",
+            commanders: decks::STANGG_2_COMMANDERS,
+            main: decks::STANGG_2_MAIN,
+        },
+        // Seat 2586: Hansk, Slayer Zealot's EDHREC average deck. `--pod-decks 2586`.
+        PodDeck {
+            name: "Hansk, Slayer Zealot (RG)",
+            commanders: decks::HANSK_COMMANDERS,
+            main: decks::HANSK_MAIN,
+        },
+        // Seat 2587: Silk, Web Weaver's EDHREC average deck. `--pod-decks 2587`.
+        PodDeck {
+            name: "Silk, Web Weaver (WG)",
+            commanders: decks::SILK_COMMANDERS,
+            main: decks::SILK_MAIN,
+        },
+        // Seat 2588: Donatello, Mutant Mechanic's EDHREC average deck. `--pod-decks 2588`.
+        PodDeck {
+            name: "Donatello, Mutant Mechanic (U)",
+            commanders: decks::DONATELLO_COMMANDERS,
+            main: decks::DONATELLO_MAIN,
+        },
+        // Seat 2589: Monica Rambeau's EDHREC average deck. `--pod-decks 2589`.
+        PodDeck {
+            name: "Monica Rambeau (WR)",
+            commanders: decks::MONICA_RAMBEAU_COMMANDERS,
+            main: decks::MONICA_RAMBEAU_MAIN,
+        },
+        // Seat 2590: Donatello, Gadget Master's EDHREC average deck. `--pod-decks 2590`.
+        PodDeck {
+            name: "Donatello, Gadget Master (U)",
+            commanders: decks::DONATELLO_2_COMMANDERS,
+            main: decks::DONATELLO_2_MAIN,
+        },
+        // Seat 2591: Sundial, Dawn Tyrant's EDHREC average deck. `--pod-decks 2591`.
+        PodDeck {
+            name: "Sundial, Dawn Tyrant (W)",
+            commanders: decks::SUNDIAL_COMMANDERS,
+            main: decks::SUNDIAL_MAIN,
+        },
+        // Seat 2592: Captain Marvel, Apex Avenger's EDHREC average deck. `--pod-decks 2592`.
+        PodDeck {
+            name: "Captain Marvel, Apex Avenger (WR)",
+            commanders: decks::CAPTAIN_MARVEL_3_COMMANDERS,
+            main: decks::CAPTAIN_MARVEL_3_MAIN,
+        },
     ]
 }
 
@@ -20363,6 +20423,16 @@ mod tests {
             ("Reptil, Dinomorpher", &[0x142A]),
             ("Balthier and Fran", &[0x142B]),
             ("Blaster, Combat DJ", &[0x142C]),
+            ("Garnet, Princess of Alexandria", &[0x142D]),
+            ("Ashnod, Flesh Mechanist", &[0x142E]),
+            ("Stangg, Echo Warrior", &[0x142F]),
+            ("Hansk, Slayer Zealot", &[0x1430]),
+            ("Silk, Web Weaver", &[0x1431]),
+            ("Donatello, Mutant Mechanic", &[0x1432]),
+            ("Monica Rambeau", &[0x1433]),
+            ("Donatello, Gadget Master", &[0x1434]),
+            ("Sundial, Dawn Tyrant", &[0x1435]),
+            ("Captain Marvel, Apex Avenger", &[0x1436]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
