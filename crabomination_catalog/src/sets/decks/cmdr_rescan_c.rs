@@ -7,7 +7,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, generic, hybrid, r, u, w};
 use std::sync::Arc;
@@ -742,5 +742,124 @@ pub fn tomik_orzhov_lawmage() -> CardDefinition {
             ..Default::default()
         }],
         ..legend("Tomik, Orzhov Lawmage", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Advisor], 2, 1)
+    }
+}
+
+/// Hew the Entwood — {3}{R}{R} sorcery. Sacrifice any number of lands, reveal
+/// that many, and put any number of the revealed artifact and/or land cards
+/// onto the battlefield (lands tapped); the rest go to the bottom at random.
+/// Approximation: chosen cards enter one at a time in pick order rather than
+/// all nonlands first, then all lands. (Koth, the Geomancer; Marwyn.)
+pub fn hew_the_entwood() -> CardDefinition {
+    CardDefinition {
+        name: "Hew the Entwood",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAnyNumber { who: PlayerRef::You, filter: R::Land, per_each: Box::new(Effect::Noop) },
+            Effect::LookPickToHand(Box::new(LookPick {
+                count: Value::SacrificedCount,
+                take: Some(Value::SacrificedCount),
+                pick_filter: Some(R::Artifact.or(R::Land)),
+                optional: true,
+                picked_lands_to_battlefield: true,
+                picked_matching_to_battlefield: Some(R::Artifact),
+                rest_bottom_random: true,
+                ..Default::default()
+            })),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hawkeye, Master Marksman — {1}{R} legendary 2/2 Human Archer Hero; first
+/// strike, reach. Whenever he becomes tapped, you may pay {1} up to three
+/// times; choose up to that many: target creature can't block this turn / 2
+/// damage to target player / discard a card, then draw a card. Approximation:
+/// the {X} is paid from floating mana (no mid-resolution land taps, like every
+/// `MayPayGenericUpTo`), modes are chosen as the trigger resolves, and each
+/// targeted mode is its own reflexive trigger.
+pub fn hawkeye_master_marksman() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::MayPayGenericUpTo {
+                max: Value::Const(3),
+                body: Box::new(Effect::ChooseUpToN {
+                    max: Box::new(Value::TriggerEventAmount),
+                    modes: vec![
+                        Effect::Reflexive {
+                            body: Box::new(Effect::GrantKeyword {
+                                what: target_filtered(R::Creature),
+                                keyword: Keyword::CantBlock,
+                                duration: Duration::EndOfTurn,
+                            }),
+                        },
+                        Effect::Reflexive {
+                            body: Box::new(Effect::DealDamage { to: target_filtered(R::Player), amount: Value::Const(2) }),
+                        },
+                        Effect::Seq(vec![
+                            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                            draw(1),
+                        ]),
+                    ],
+                }),
+            },
+        }],
+        ..legend(
+            "Hawkeye, Master Marksman",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Human, CreatureType::Archer, CreatureType::Hero],
+            2,
+            2,
+        )
+    }
+}
+
+/// Zareth San, the Trickster — {3}{U}{B} legendary 4/4 Merfolk Rogue; flash.
+/// {2}{U}{B}, return an unblocked attacking Rogue you control to its owner's
+/// hand: put this card from your hand onto the battlefield tapped and
+/// attacking (a ninjutsu-shaped ability that isn't ninjutsu, so ninjutsu
+/// reducers skip it; you choose the defender, CR 508.4). Combat damage to a
+/// player: you may put target permanent card from their graveyard onto the
+/// battlefield under your control. Approximation: the returned Rogue is
+/// auto-picked. (Krydle of Baldur's Gate.)
+pub fn zareth_san_the_trickster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u(), b()]),
+            from_hand: true,
+            bounce_other_filter: Some((
+                R::Creature.and(R::HasCreatureType(CreatureType::Rogue)).and(R::IsAttacking).and(R::IsUnblocked),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::JoinCombatAttackingChosen { what: Selector::LastMoved, cleanup: Default::default() },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Put a permanent card from their graveyard onto the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::PermanentCard.and(R::InGraveyard).and(R::ControlledByTriggerPlayer)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..legend(
+            "Zareth San, the Trickster",
+            cost(&[generic(3), u(), b()]),
+            vec![CreatureType::Merfolk, CreatureType::Rogue],
+            4,
+            4,
+        )
     }
 }

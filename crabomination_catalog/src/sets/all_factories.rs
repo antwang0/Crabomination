@@ -4628,6 +4628,9 @@ static DECKS: &[Factory] = &[
     super::decks::triskaidekaphobia,
     super::decks::avatar_of_growth,
     super::decks::dragonrage,
+    super::decks::hew_the_entwood,
+    super::decks::hawkeye_master_marksman,
+    super::decks::zareth_san_the_trickster,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

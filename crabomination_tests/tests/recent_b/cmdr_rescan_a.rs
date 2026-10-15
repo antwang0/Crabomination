@@ -1271,3 +1271,76 @@ fn dragonrage_adds_red_per_attacker() {
     activate(&mut g, a, 0, None);
     assert_eq!(pt(&g, a), (3, 2), "{{R}}: +1/+0 until end of turn");
 }
+
+/// Hew the Entwood: sacrifice N lands, reveal N, and the chosen artifact and
+/// land cards enter — lands tapped, nonland artifacts untapped (CR 701.21).
+#[test]
+fn hew_the_entwood_trades_lands_for_revealed_artifacts() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let citadel = g.add_card_to_library(0, catalog::darksteel_citadel());
+    let ring = g.add_card_to_library(0, catalog::sol_ring());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    let hew = g.add_card_to_hand(0, catalog::hew_the_entwood());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(3),
+        DecisionAnswer::Cards(vec![citadel, ring]),
+    ]));
+    cast_with(&mut g, hew, None, vec![], None);
+    let forests = g.battlefield.iter().filter(|c| c.definition.name == "Forest").count();
+    assert_eq!(forests, 0);
+    assert!(g.battlefield_find(citadel).is_some_and(|c| c.tapped));
+    assert!(g.battlefield_find(ring).is_some_and(|c| !c.tapped));
+    assert!(g.battlefield_find(bolt).is_none() && !g.players[0].hand.iter().any(|c| c.id == bolt));
+}
+
+/// Hawkeye: becoming tapped lets you pay up to {3} and choose that many modes
+/// (CR 700.2); paying {2} picks Explosive and Boomerang here. In a pod the
+/// damage mode's auto-target is an opponent.
+#[test]
+fn hawkeye_trick_arrows_pay_two_for_two_modes() {
+    let mut g = pod(3);
+    let hawk = ready(&mut g, 0, catalog::hawkeye_master_marksman());
+    let filler = g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    flood(&mut g);
+    let pool = g.players[0].mana_pool.total();
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2), DecisionAnswer::Modes(vec![1, 2])]));
+    declare(&mut g, vec![(hawk, 1)]);
+    assert_eq!(g.players[0].mana_pool.total(), pool - 2);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == filler));
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// Zareth San swaps in for an unblocked attacking Rogue (tapped and attacking,
+/// CR 508.4), then connects to steal a permanent card from their graveyard.
+#[test]
+fn zareth_san_swaps_for_an_unblocked_rogue_and_steals() {
+    let mut g = pod(2);
+    let rogue = ready(&mut g, 0, catalog::nephalia_smuggler());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let zareth = g.add_card_to_hand(0, catalog::zareth_san_the_trickster());
+    let ring = g.add_card_to_graveyard(1, catalog::sol_ring());
+    declare(&mut g, vec![(rogue, 1), (bear, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    activate(&mut g, zareth, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == rogue));
+    let z = g.battlefield.iter().find(|c| c.definition.name == "Zareth San, the Trickster").expect("in play");
+    assert!(z.tapped);
+    let z = z.id;
+    assert!(g.attacking.iter().any(|a| a.attacker == z));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Sol Ring" && c.controller == 0), "{ring:?}");
+}
