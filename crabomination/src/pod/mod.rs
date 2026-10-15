@@ -16746,6 +16746,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PICARD_COMMANDERS,
             main: decks::PICARD_MAIN,
         },
+        // Seat 2716: Dynaheir, Invoker Adept's EDHREC average deck. `--pod-decks 2716`.
+        PodDeck {
+            name: "Dynaheir, Invoker Adept (WUR)",
+            commanders: decks::DYNAHEIR_COMMANDERS,
+            main: decks::DYNAHEIR_MAIN,
+        },
+        // Seat 2717: Moritte of the Frost's EDHREC average deck. `--pod-decks 2717`.
+        PodDeck {
+            name: "Moritte of the Frost (UG)",
+            commanders: decks::MORITTE_OF_THE_FROST_COMMANDERS,
+            main: decks::MORITTE_OF_THE_FROST_MAIN,
+        },
+        // Seat 2718: Plargg, Dean of Chaos's EDHREC average deck. `--pod-decks 2718`.
+        PodDeck {
+            name: "Plargg, Dean of Chaos (WR)",
+            commanders: decks::PLARGG_COMMANDERS,
+            main: decks::PLARGG_MAIN,
+        },
     ]
 }
 
@@ -21294,6 +21312,9 @@ mod tests {
             ("Ant-Man, Reformed Rogue", &[0x14AF]),
             ("Katerina of Myra's Marvels", &[0x14B0]),
             ("Picard, Leading by Example", &[0x14B1]),
+            ("Dynaheir, Invoker Adept", &[0x14B2]),
+            ("Moritte of the Frost", &[0x14B3]),
+            ("Plargg, Dean of Chaos", &[0x14B4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -76250,3 +76250,89 @@ pub const PICARD_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const DYNAHEIR_COMMANDERS: &[CardFactory] = &[dynaheir_invoker_adept];
+
+/// **Dynaheir, Invoker Adept**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 7 Islands + 4 Mountains + 4 Plains = 99.
+/// Dynaheir, Invoker Adept (EDHREC, fetched 2026-10-15).
+pub const DYNAHEIR_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, battlemages_bracers, boros_signet, chaos_wand,
+    illusionists_bracers, izzet_signet, lithoform_engine, patriars_seal, planar_bridge,
+    sol_ring, talisman_of_conviction, talisman_of_creativity, talisman_of_progress,
+    the_enigma_jewel, thousand_year_elixir, treasure_chest, wand_of_wonder, adarkar_wastes,
+    azorius_chancery, battlefield_forge, clifftop_retreat, command_tower, exotic_orchard,
+    glacial_fortress, hall_of_tagsin, hallowed_fountain, izzet_boilerworks, mystic_monastery,
+    prairie_stream, raugrin_triome, sacred_foundry, sea_of_clouds, shivan_reef, steam_vents,
+    sulfur_falls, training_center, treasure_vault, amphin_mutineer, aphetto_alchemist,
+    arcanis_the_omnipotent, bhaals_invoker, captivating_crew, champion_of_wits, clever_conjurer,
+    fatestitcher, forensic_researcher, gogo_master_of_mimicry, impulsive_pilferer,
+    ioreth_of_the_healing_house, kelpie_guide, marvin_murderous_mimic, nimbleclaw_adept,
+    omen_hawker, ornithopter_of_paradise, orthion_hero_of_lavabrink, palladium_myr,
+    phyrexian_triniform, plargg_dean_of_chaos, queen_kayla_bin_kroog, silver_myr,
+    timestream_navigator, triskaidekaphile, vhal_candlekeep_researcher, vizier_of_many_faces,
+    vizier_of_tumbling_sands, freed_from_the_real, jeskai_ascendancy, unstoppable_plan,
+    verity_circle, chaos_warp, counterspell, dramatic_reversal, frantic_search, generous_gift,
+    negate, path_to_exile, swords_to_plowshares, to_arms, teferi_who_slows_the_sunset,
+    austere_command, blasphemous_act, faithless_looting, sevinnes_reclamation,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains,
+];
+
+pub const MORITTE_OF_THE_FROST_COMMANDERS: &[CardFactory] = &[moritte_of_the_frost];
+
+/// **Moritte of the Frost**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 6 Forests + 5 Islands = 99.
+/// Moritte of the Frost (EDHREC, fetched 2026-10-15).
+pub const MORITTE_OF_THE_FROST_MAIN: &[CardFactory] = &[
+    arcane_signet, maskwood_nexus, mirage_mirror, mirror_box, replicating_ring, simic_signet,
+    sol_ring, breeding_pool, command_tower, dreamroot_cascade, faceless_haven, flooded_grove,
+    hinterland_harbor, littjara_mirrorlake, path_of_ancestry, rejuvenating_springs,
+    reliquary_tower, rimewood_falls, simic_growth_chamber, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, vineglimmer_snarl, yavimaya_coast, altered_ego, amoeboid_changeling,
+    biovisionary, biowaste_blob, bloodline_pretender, chameleon_colossus, chomping_changeling,
+    clever_impersonator, clone_card, elvish_archdruid, eternal_witness, glasspool_mimic,
+    guardian_gladewalker, lord_of_the_unreal, masked_vandal, mirror_image, mirrorhall_mimic,
+    mistwalker, mutable_explorer, naga_fleshcrafter, omni_changeling, phyrexian_metamorph,
+    progenitor_mimic, realmwalker, risen_reef, shapesharer, spark_double, stunt_double,
+    undercover_operative, universal_automaton, call_to_the_kindred, extravagant_replication,
+    marit_lages_slumber, mirrormade, reflections_of_littjara, springleaf_parade,
+    the_bears_of_littjara, absorb_identity, beast_within, counterspell, double_major,
+    growth_spiral, heroic_intervention, negate, pongify, reality_shift, see_double, cultivate,
+    distant_melody, doppelgang, farseek, kodamas_reach, natures_lore, rampant_growth,
+    rite_of_replication, three_visits, whelming_wave,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+];
+
+pub const PLARGG_COMMANDERS: &[CardFactory] = &[plargg_dean_of_chaos];
+
+/// **Plargg, Dean of Chaos**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 16 Mountains + 10 Plains = 99.
+/// Plargg, Dean of Chaos (EDHREC, fetched 2026-10-15).
+pub const PLARGG_MAIN: &[CardFactory] = &[
+    arcane_signet, brasss_tunnel_grinder, chimil_the_inner_sun, hedron_archive,
+    phial_of_galadriel, sol_ring, stonespeaker_crystal, the_celestus, the_irencrag,
+    thran_dynamo, arid_mesa, battlefield_forge, boros_garrison, clifftop_retreat, command_tower,
+    eiganjo_seat_of_the_empire, elegant_parlor, furycalm_snarl, myriad_landscape,
+    rugged_prairie, sacred_foundry, spectator_seating, sunbaked_canyon, sundown_pass,
+    sunscorched_divide, temple_of_triumph, angel_of_the_ruins, anger, aurelia_the_warleader,
+    avacyn_angel_of_hope, blightsteel_colossus, darksteel_colossus, etali_primal_storm,
+    feldon_of_the_third_path, galactus_devourer_of_worlds, gisela_blade_of_goldnight,
+    karmic_guide, loran_of_the_third_path, magda_brazen_outlaw, pinnacle_monk,
+    skrelv_defector_mite, solemn_simulacrum, sun_titan, ulamog_the_ceaseless_hunger,
+    ulamog_the_infinite_gyre, witch_enchanter, zetalpa_primal_dawn, zirda_the_dawnwaker,
+    rain_of_riches, shifting_shadow, smothering_tithe, sunbirds_invocation, triple_triad,
+    big_score, clever_concealment, heartwarming_redemption, not_of_this_world,
+    olorins_searing_light, swords_to_plowshares, unexpected_windfall, chandra_torch_of_defiance,
+    nahiri_the_harbinger, austere_command, blasphemous_act, campus_renovation,
+    chandras_ignition, creative_technique, mana_geyser, mizzixs_mastery, pirates_pillage,
+    reconstruct_history, repair_and_recharge, snort,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
