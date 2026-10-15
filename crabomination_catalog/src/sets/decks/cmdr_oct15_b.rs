@@ -2,12 +2,12 @@
 //! EDHREC commanders). Tests at the end of `tests/recent_b/cmdr_scan7k_a.rs`.
 
 use crate::card::{
-    AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
+    AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{enlist, etb, flurry, on_attack, target_filtered};
+use crate::effect::shortcut::{enlist, enrage, etb, flurry, on_attack, target_filtered};
 use crate::effect::DelayedTriggerKind;
 use crate::effect::{ActivatedAbility, Duration, Effect, LookExileGrant, PlayerRef, Selector, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
@@ -597,6 +597,348 @@ pub fn swans_of_bryn_argoll() -> CardDefinition {
             "Swans of Bryn Argoll",
             cost(&[generic(2), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
             vec![CreatureType::Bird, CreatureType::Spirit],
+            4,
+            3,
+        )
+    }
+}
+
+/// Dragon-Scarred Bear — {2}{G} 3/2 Bear. Formidable — {1}{G}: regenerate it.
+pub fn dragon_scarred_bear() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            condition: Some(Predicate::FormidableActive { who: PlayerRef::You }),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..creature("Dragon-Scarred Bear", cost(&[generic(2), g()]), vec![CreatureType::Bear], 3, 2)
+    }
+}
+
+/// River Bear — {3}{G} 3/3 Bear with islandwalk.
+pub fn river_bear() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(LandType::Island)],
+        ..creature("River Bear", cost(&[generic(3), g()]), vec![CreatureType::Bear], 3, 3)
+    }
+}
+
+/// Cacophodon — {3}{G} 2/5 Dinosaur. Enrage — untap target permanent.
+pub fn cacophodon() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![enrage(Effect::Untap { what: target_filtered(R::Permanent), up_to: None })],
+        ..creature("Cacophodon", cost(&[generic(3), g()]), vec![CreatureType::Dinosaur], 2, 5)
+    }
+}
+
+/// Needletooth Raptor — {3}{R} 2/2 Dinosaur. Enrage — 5 damage to target
+/// creature an opponent controls.
+pub fn needletooth_raptor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![enrage(Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            amount: Value::Const(5),
+        })],
+        ..creature("Needletooth Raptor", cost(&[generic(3), r()]), vec![CreatureType::Dinosaur], 2, 2)
+    }
+}
+
+/// Alpine Watchdog — {1}{W} 2/2 vigilance Dog.
+pub fn alpine_watchdog() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        ..creature("Alpine Watchdog", cost(&[generic(1), w()]), vec![CreatureType::Dog], 2, 2)
+    }
+}
+
+/// Blink Dog — {2}{W} 1/1 double strike Dog. Teleport — {3}{W}: it phases out.
+pub fn blink_dog() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::PhaseOut { what: Selector::This, until_source_leaves: false },
+            ..Default::default()
+        }],
+        ..creature("Blink Dog", cost(&[generic(2), w()]), vec![CreatureType::Dog], 1, 1)
+    }
+}
+
+/// Pitiless Gorgon — {1}{B/G}{B/G} 2/2 deathtouch Gorgon.
+pub fn pitiless_gorgon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        ..creature(
+            "Pitiless Gorgon",
+            cost(&[generic(1), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+            vec![CreatureType::Gorgon],
+            2,
+            2,
+        )
+    }
+}
+
+/// Xathrid Gorgon — {5}{B} 3/6 deathtouch Gorgon. {2}{B}, {T}: a
+/// petrification counter on target creature; it gains defender, becomes a
+/// colorless artifact in addition to its other types, and its activated
+/// abilities can't be activated. Residual: its mana abilities still can.
+pub fn xathrid_gorgon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::Petrification, amount: Value::ONE },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Defender, duration: Duration::Permanent },
+                Effect::AddCardTypeIndefinitely { what: Selector::Target(0), card_type: CardType::Artifact, until_eot: false },
+                Effect::BecomeColor { what: Selector::Target(0), colors: vec![], duration: Duration::Permanent, additive: false },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::CantActivateAbilities,
+                    duration: Duration::Permanent,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Xathrid Gorgon", cost(&[generic(5), b()]), vec![CreatureType::Gorgon], 3, 6)
+    }
+}
+
+fn you_control_a_legendary_creature() -> Predicate {
+    Predicate::SelectorExists(Selector::EachPermanent(
+        R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou),
+    ))
+}
+
+/// Errand-Rider of Gondor — {2}{W} 3/2 Human Soldier. Enters: draw a card;
+/// then without a legendary creature, put a card from your hand on the bottom.
+pub fn errand_rider_of_gondor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::If {
+                cond: Predicate::Not(Box::new(you_control_a_legendary_creature())),
+                then: Box::new(Effect::PutCardsFromHandOnBottom { who: Selector::You, count: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..creature("Errand-Rider of Gondor", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 2)
+    }
+}
+
+/// Esquire of the King — {W} 1/1 Human Soldier. {4}{W}, {T}: creatures you
+/// control get +1/+1 until end of turn; {2} less with a legendary creature.
+pub fn esquire_of_the_king() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w()]),
+            tap_cost: true,
+            cost_reduction_if_control: Some((R::Creature.and(R::HasSupertype(Supertype::Legendary)), 2)),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Esquire of the King", cost(&[w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Recruit: draw a card, then discard a card; a discarded nonland card makes
+/// a 1/1 white Human Soldier.
+fn recruit() -> Effect {
+    Effect::Seq(vec![
+        Effect::Draw { who: Selector::You, amount: Value::ONE },
+        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        Effect::If {
+            cond: Predicate::DiscardedNonlandThisEffect { who: PlayerRef::You },
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    name: "Human Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    ])
+}
+
+/// Patient Instructor — {2}{W/U} 2/2 vigilance Human Citizen. Enters: recruit.
+pub fn patient_instructor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(recruit())],
+        ..creature(
+            "Patient Instructor",
+            cost(&[generic(2), hybrid(Color::White, Color::Blue)]),
+            vec![CreatureType::Human, CreatureType::Citizen],
+            2,
+            2,
+        )
+    }
+}
+
+/// Eerie Soultender — {2}{B} 3/1 Spirit Cleric. Enters: mill three. {4}{B},
+/// exile it from your graveyard: return another target creature card from
+/// your graveyard to your hand.
+pub fn eerie_soultender() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..creature("Eerie Soultender", cost(&[generic(2), b()]), vec![CreatureType::Spirit, CreatureType::Cleric], 3, 1)
+    }
+}
+
+/// Spider-Man Noir — {4}{B} legendary 4/4 menace Spider Human Hero. Whenever a
+/// creature you control attacks alone, a +1/+1 counter on it, then surveil X
+/// (X = counters on it).
+pub fn spider_man_noir() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::TriggerSource, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
+                },
+            ]),
+        }],
+        ..creature(
+            "Spider-Man Noir",
+            cost(&[generic(4), b()]),
+            vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            4,
+            4,
+        )
+    }
+}
+
+/// Mister Immortal — {1}{G} legendary 2/1 Mutant Hero. {2}{G}: return it from
+/// your graveyard or from exile to the battlefield tapped.
+pub fn mister_immortal() -> CardDefinition {
+    let back = |from_graveyard: bool| ActivatedAbility {
+        mana_cost: cost(&[generic(2), g()]),
+        from_graveyard,
+        from_exile: !from_graveyard,
+        effect: Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![back(true), back(false)],
+        ..creature("Mister Immortal", cost(&[generic(1), g()]), vec![CreatureType::Mutant, CreatureType::Hero], 2, 1)
+    }
+}
+
+/// Flatman — {3}{G} legendary 1/10 Mutant Hero. Origami-Fu — {2}{G}: switch
+/// its power and toughness until end of turn.
+pub fn flatman() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::SwitchPT { what: Selector::This, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Flatman", cost(&[generic(3), g()]), vec![CreatureType::Mutant, CreatureType::Hero], 1, 10)
+    }
+}
+
+/// Pestered Wellguard — {3}{U} 3/2 Merfolk Soldier. Whenever it becomes
+/// tapped, a 1/1 blue and black flying Faerie.
+pub fn pestered_wellguard() -> CardDefinition {
+    let faerie = TokenDefinition {
+        name: "Faerie".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue, Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(faerie) },
+        }],
+        ..creature("Pestered Wellguard", cost(&[generic(3), u()]), vec![CreatureType::Merfolk, CreatureType::Soldier], 3, 2)
+    }
+}
+
+/// Tocasia, Dig Site Mentor — {1}{G}{W}{U} legendary 4/3 Human Artificer.
+/// Creatures you control have vigilance and "{T}: Surveil 1." From your
+/// graveyard, {2}{G}{G}{W}{W}{U}{U}, exile it: return artifact cards with
+/// total mana value 10 or less from your graveyard to the battlefield
+/// (sorcery speed). Residual: the return picks cheapest-first rather than
+/// targeting.
+pub fn tocasia_dig_site_mentor() -> CardDefinition {
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control have vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours(), keyword: Keyword::Vigilance },
+            },
+            StaticAbility {
+                description: "Creatures you control have \"{T}: Surveil 1.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: yours(),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                        ..Default::default()
+                    },
+                    condition: None,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g(), g(), w(), w(), u(), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::MoveWithinTotalManaValue {
+                from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Artifact },
+                filter: R::Artifact,
+                cap: Value::Const(10),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                max_count: None,
+                by_power: false,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Tocasia, Dig Site Mentor",
+            cost(&[generic(1), g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
             4,
             3,
         )

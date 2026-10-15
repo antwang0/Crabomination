@@ -3669,3 +3669,147 @@ fn swans_of_bryn_argoll_turns_damage_into_cards() {
     assert_eq!(g.battlefield_find(swans).unwrap().damage, 0);
     assert_eq!(g.players[1].hand.len(), 3);
 }
+
+/// Enrage: Needletooth Raptor burns an opposing creature when it's dealt
+/// damage; Cacophodon untaps a permanent.
+#[test]
+fn needletooth_raptor_and_cacophodon_enrage() {
+    let mut g = pod(2);
+    let raptor = ready(&mut g, 0, catalog::needletooth_raptor());
+    let caco = ready(&mut g, 0, catalog::cacophodon());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let land = ready(&mut g, 0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    for (who, n) in [(raptor, 1), (caco, 1)] {
+        let mut evs = Vec::new();
+        g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(who), n, Some(giant), &mut evs);
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(giant).is_none(), "5 damage to the Giant");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "Cacophodon untapped the land");
+}
+
+/// CR 702.26 — Blink Dog's teleport phases it out.
+#[test]
+fn blink_dog_teleports() {
+    let mut g = pod(2);
+    let dog = ready(&mut g, 0, catalog::blink_dog());
+    activate(&mut g, dog, 0, None);
+    assert!(g.battlefield_find(dog).is_none(), "phased out");
+}
+
+/// Xathrid Gorgon petrifies: a defender, colorless artifact that can't activate.
+#[test]
+fn xathrid_gorgon_petrifies_a_creature() {
+    let mut g = pod(2);
+    let gorgon = ready(&mut g, 0, catalog::xathrid_gorgon());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    activate(&mut g, gorgon, 0, Some(Target::Permanent(elf)));
+    let cp = g.computed_permanent(elf).unwrap();
+    assert!(cp.keywords().contains(&Keyword::Defender));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
+    assert!(cp.colors.is_empty());
+    assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::Petrification), 1);
+}
+
+/// Errand-Rider bottoms a card without a legendary creature; Esquire of the
+/// King's pump costs {2} less with one.
+#[test]
+fn errand_rider_and_esquire_read_legendary_creatures() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let er = g.add_card_to_hand(0, catalog::errand_rider_of_gondor());
+    g.add_card_to_hand(0, catalog::island());
+    cast(&mut g, er);
+    assert_eq!(g.players[0].hand.len(), 1, "drew one, bottomed one");
+    ready(&mut g, 0, catalog::ib_halfheart_goblin_tactician());
+    let esq = ready(&mut g, 0, catalog::esquire_of_the_king());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: esq, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("{2}{W} with a legend");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, esq), (2, 2));
+}
+
+/// Patient Instructor recruits: discarding a nonland makes a Human Soldier.
+#[test]
+fn patient_instructor_recruits() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let pi = g.add_card_to_hand(0, catalog::patient_instructor());
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![wurm])]));
+    cast(&mut g, pi);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm));
+    assert_eq!(named_count(&g, 0, "Human Soldier"), 1);
+}
+
+/// Spider-Man Noir: a lone attacker gets a counter and surveils that many.
+#[test]
+fn spider_man_noir_grows_a_lone_attacker() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::spider_man_noir());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(bear, 1)]);
+    assert_eq!(plus(&g, bear), 1);
+}
+
+/// Eerie Soultender mills three, then trades itself from the graveyard for
+/// another creature card.
+#[test]
+fn eerie_soultender_mills_then_regrows() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let es = g.add_card_to_hand(0, catalog::eerie_soultender());
+    cast(&mut g, es);
+    assert_eq!(g.players[0].graveyard.len(), 3);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    kill(&mut g, es);
+    activate(&mut g, es, 0, Some(Target::Permanent(bear)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert!(g.exile.iter().any(|c| c.id == es));
+}
+
+/// Mister Immortal returns from the graveyard tapped; Flatman switches.
+#[test]
+fn mister_immortal_returns_and_flatman_switches() {
+    let mut g = pod(2);
+    let mi = ready(&mut g, 0, catalog::mister_immortal());
+    kill(&mut g, mi);
+    activate(&mut g, mi, 0, None);
+    assert!(g.battlefield_find(mi).unwrap().tapped);
+    let fm = ready(&mut g, 0, catalog::flatman());
+    activate(&mut g, fm, 0, None);
+    assert_eq!(pt(&g, fm), (10, 1));
+}
+
+/// Pestered Wellguard makes a Faerie when tapped; Tocasia grants "{T}:
+/// Surveil 1" and vigilance.
+#[test]
+fn pestered_wellguard_and_tocasia() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let pw = ready(&mut g, 0, catalog::pestered_wellguard());
+    ready(&mut g, 0, catalog::tocasia_dig_site_mentor());
+    assert!(g.permanent_has_keyword(pw, &Keyword::Vigilance));
+    let n = g.battlefield.iter().find(|c| c.id == pw).map(|c| c.definition.activated_abilities.len()).unwrap();
+    activate(&mut g, pw, n, None);
+    assert!(g.battlefield_find(pw).unwrap().tapped);
+    assert_eq!(named_count(&g, 0, "Faerie"), 1);
+}
+
+/// River Bear has islandwalk; Dragon-Scarred Bear regenerates with formidable.
+#[test]
+fn dragon_scarred_bear_regenerates_only_when_formidable() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::dragon_scarred_bear());
+    flood(&mut g);
+    assert!(g.perform_action(GameAction::ActivateAbility { card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None }).is_err());
+    ready(&mut g, 0, catalog::ancient_brontodon());
+    activate(&mut g, bear, 0, None);
+}
