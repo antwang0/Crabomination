@@ -4243,14 +4243,17 @@ impl GameState {
                     i != p && !pl.eliminated && !self.same_team(i, p) && pl.poison_counters >= 3
                 })
             }
-            Predicate::ControlsGreatestPowerCreature { who } => {
+            Predicate::ControlsGreatestPowerCreature { who }
+            | Predicate::ControlsGreatestToughnessCreature { who } => {
+                let by_toughness = matches!(p, Predicate::ControlsGreatestToughnessCreature { .. });
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let powers: Vec<(usize, i32)> = self
                     .battlefield
                     .iter()
                     .filter(|c| self.computed_is_creature(c))
                     .filter_map(|c| {
-                        self.computed_permanent(c.id).map(|cp| (c.controller, cp.power))
+                        self.computed_permanent(c.id)
+                            .map(|cp| (c.controller, if by_toughness { cp.toughness } else { cp.power }))
                     })
                     .collect();
                 let Some(max) = powers.iter().map(|(_, pow)| *pow).max() else { return false };

@@ -2943,6 +2943,9 @@ pub enum Predicate {
     /// the greatest power, or one tied for it (Summon: Fenrir III "Ecliptic
     /// Growl"). False if `who` controls no creature.
     ControlsGreatestPowerCreature { who: PlayerRef },
+    /// The toughness twin of `ControlsGreatestPowerCreature` (Abzan
+    /// Beastmaster's "the creature with the greatest toughness or tied").
+    ControlsGreatestToughnessCreature { who: PlayerRef },
     /// True when exactly one creature is attacking this combat — the
     /// CR 702.83a "attacks alone" condition that gates Exalted. Read
     /// from `GameState.attacking.len() == 1`. Outside a combat with
