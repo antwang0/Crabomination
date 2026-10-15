@@ -560,6 +560,8 @@ pub enum PlaneswalkerSubtype {
     Thomil,
     // Worzel, the Protector (Basri, Tomorrow's Champion's deck).
     Worzel,
+    // Feroz, Ulgrotha's Warden (its own EDHREC deck).
+    Feroz,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

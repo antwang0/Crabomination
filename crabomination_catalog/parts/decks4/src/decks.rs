@@ -1023,3 +1023,6 @@ pub use cmdr_scan7k_g::*;
 #[path = "../../../src/sets/decks/cmdr_scan7k_h.rs"]
 mod cmdr_scan7k_h;
 pub use cmdr_scan7k_h::*;
+#[path = "../../../src/sets/decks/cmdr_scan7k_i.rs"]
+mod cmdr_scan7k_i;
+pub use cmdr_scan7k_i::*;

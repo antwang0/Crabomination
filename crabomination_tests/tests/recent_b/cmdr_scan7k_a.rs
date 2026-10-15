@@ -1568,3 +1568,303 @@ fn gimli_fights_on_the_third_death() {
     assert!(g.permanent_has_keyword(gimli, &Keyword::Indestructible));
     assert!(g.battlefield_find(theirs).is_none(), "the third resolution's fight");
 }
+
+// ── decks::cmdr_scan7k_i ─────────────────────────────────────────────────────
+
+fn no_blocks_through_combat(g: &mut GameState) {
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    }
+}
+
+fn cast_at(g: &mut GameState, id: CardId, target: Option<Target>, additional_targets: Vec<Target>) {
+    flood(g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets, mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(g);
+}
+
+/// Slinza: a Beast costs {2} less and enters with an extra counter (Woodland
+/// Liege draws for it); its power-4 entry lets Slinza fight for {1}{R/G}.
+#[test]
+fn slinza_discounts_counters_and_fights_a_big_entry() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::slinza_the_spiked_stampede());
+    ready(&mut g, 0, catalog::woodland_liege());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let baloth = g.add_card_to_hand(0, catalog::enormous_baloth());
+    let hand = g.players[0].hand.len();
+    flood(&mut g);
+    let before = g.players[0].mana_pool.total();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Target(Target::Permanent(theirs))]));
+    g.perform_action(GameAction::CastSpell { card_id: baloth, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(before - g.players[0].mana_pool.total(), 5 + 2, "{{4}}{{G}} for the Baloth, {{1}}{{R/G}} for the fight");
+    assert_eq!(plus(&g, baloth), 1, "the Beast's extra counter");
+    assert_eq!(g.players[0].hand.len(), hand, "the Liege replaced the cast Beast");
+    assert!(g.battlefield_find(theirs).is_none(), "Slinza fought the Bears");
+}
+
+/// Zagras gives your other creatures deathtouch, and a creature of yours that
+/// hits a planeswalker destroys it.
+#[test]
+fn zagras_destroys_a_damaged_planeswalker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::zagras_thief_of_heartbeats());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(g.permanent_has_keyword(bear, &Keyword::Deathtouch));
+    let pw = ready(&mut g, 1, catalog::ajani_goldmane());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Planeswalker(pw) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    no_blocks_through_combat(&mut g);
+    assert!(g.battlefield_find(pw).is_none(), "two damage left Ajani at 2; the trigger destroyed him");
+}
+
+/// Power of Fire's host taps to ping any target.
+#[test]
+fn power_of_fire_grants_a_pinger() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::power_of_fire());
+    attach(&mut g, aura, bear);
+    let life = g.players[1].life;
+    activate(&mut g, bear, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 1);
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+}
+
+/// Feroz: +2 makes two flying Birds, 0 draws and drops a cheap permanent, −7
+/// makes the Ban that taxes creature spells.
+#[test]
+fn feroz_birds_drop_and_ban() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let pw = ready(&mut g, 0, catalog::feroz_ulgrothas_warden());
+    loyalty(&mut g, pw, 0, None);
+    assert_eq!(named_count(&g, 0, "Bird"), 2);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    g.battlefield_find_mut(pw).unwrap().loyalty_uses_this_turn = 0;
+    loyalty(&mut g, pw, 1, None);
+    assert!(g.battlefield_find(bear).is_some(), "the Bears were put onto the battlefield");
+    g.battlefield_find_mut(pw).unwrap().loyalty_uses_this_turn = 0;
+    g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 7);
+    loyalty(&mut g, pw, 2, None);
+    assert_eq!(named_count(&g, 0, "Feroz's Ban"), 1);
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    flood(&mut g);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::CastSpell { card_id: elves, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    assert_eq!(before - g.players[0].mana_pool.total(), 3, "{{G}} plus the Ban's {{2}}");
+}
+
+/// Oath of Ajani counters the team and discounts a planeswalker by {1}.
+#[test]
+fn oath_of_ajani_counters_and_discounts_walkers() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let oath = g.add_card_to_hand(0, catalog::oath_of_ajani());
+    cast(&mut g, oath);
+    assert_eq!(plus(&g, bear), 1);
+    let ajani = g.add_card_to_hand(0, catalog::ajani_goldmane());
+    flood(&mut g);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::CastSpell { card_id: ajani, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    assert_eq!(before - g.players[0].mana_pool.total(), 3);
+}
+
+/// The Spot exiles a permanent and a graveyard card; dying, he goes to the
+/// bottom of the library and both cards return to their owners' hands.
+#[test]
+fn the_spot_exiles_and_returns_on_death() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let angel = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let spot = g.add_card_to_hand(0, catalog::the_spot_living_portal());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(bear)),
+        DecisionAnswer::Target(Target::Permanent(angel)),
+    ]));
+    cast(&mut g, spot);
+    assert!(g.exile.iter().any(|c| c.id == bear) && g.exile.iter().any(|c| c.id == angel));
+    kill(&mut g, spot);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(spot), "on the bottom");
+    for id in [bear, angel] {
+        assert!(g.players[1].hand.iter().any(|c| c.id == id), "back in its owner's hand");
+    }
+}
+
+/// The Spot's Portal bottoms a creature; the 2 life is waived with a Villain.
+#[test]
+fn the_spots_portal_bottoms_and_charges_without_a_villain() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let portal = g.add_card_to_hand(0, catalog::the_spots_portal());
+    let life = g.players[0].life;
+    cast_at(&mut g, portal, Some(Target::Permanent(bear)), vec![]);
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear));
+    assert_eq!(g.players[0].life, life - 2);
+    ready(&mut g, 0, catalog::the_spot_living_portal());
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    let portal = g.add_card_to_hand(0, catalog::the_spots_portal());
+    cast_at(&mut g, portal, Some(Target::Permanent(other)), vec![]);
+    assert_eq!(g.players[0].life, life - 2, "a Villain waives the life");
+}
+
+/// Justice grows when another of your nonland permanents is bounced; Spider-Man
+/// 2099's entry bounces a creature and he draws on combat damage.
+#[test]
+fn justice_grows_on_a_bounce_and_spider_man_2099_draws() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let justice = ready(&mut g, 0, catalog::justice_vance_astrovik());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let unsummon = g.add_card_to_hand(0, catalog::unsummon());
+    cast_at(&mut g, unsummon, Some(Target::Permanent(bear)), vec![]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert_eq!(plus(&g, justice), 1);
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let spidey = g.add_card_to_hand(0, catalog::spider_man_2099_miguel_ohara());
+    cast(&mut g, spidey);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "Spider-Man's entry bounced the Bears");
+    assert_eq!(plus(&g, justice), 1, "not a permanent you control");
+    g.clear_sickness(spidey);
+    let hand = g.players[0].hand.len();
+    declare(&mut g, vec![(spidey, 1), (justice, 1)]);
+    no_blocks_through_combat(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for the batch");
+}
+
+/// Agent 13 investigates only when a creature attacks alone.
+#[test]
+fn agent_13_investigates_on_a_lone_attack() {
+    let mut g = pod(3);
+    let agent = ready(&mut g, 0, catalog::agent_13_sharon_carter());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(agent, 1), (bear, 2)]);
+    assert_eq!(named_count(&g, 0, "Clue"), 0, "two attackers");
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::agent_13_sharon_carter());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(bear, 2)]);
+    assert_eq!(named_count(&g, 0, "Clue"), 1);
+}
+
+/// Political Triumph's fourth plan counter sacrifices it for a draw and a
+/// counter on each creature.
+#[test]
+fn political_triumph_pays_off_on_the_fourth_entry() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    let plan = ready(&mut g, 0, catalog::political_triumph());
+    let mut bears = Vec::new();
+    for _ in 0..4 {
+        let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+        cast(&mut g, b);
+        bears.push(b);
+    }
+    assert!(g.battlefield_find(plan).is_none());
+    assert!(bears.iter().all(|b| plus(&g, *b) == 1));
+    assert_eq!(g.players[0].hand.len(), 1, "drew one");
+}
+
+/// Fire Nation Sentinels grow the team on an opposing nontoken death; Fire
+/// Nation Occupation makes a Soldier on entry and on an off-turn cast.
+#[test]
+fn fire_nation_sentinels_and_occupation() {
+    let mut g = pod(2);
+    let sentinels = ready(&mut g, 0, catalog::fire_nation_sentinels());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    kill(&mut g, theirs);
+    assert_eq!(plus(&g, sentinels), 1);
+    let occ = g.add_card_to_hand(0, catalog::fire_nation_occupation());
+    cast(&mut g, occ);
+    assert_eq!(named_count(&g, 0, "Soldier"), 1);
+    library(&mut g, 0, 2);
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!(named_count(&g, 0, "Soldier"), 1, "not on your own turn");
+    g.active_player_idx = 1;
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!(named_count(&g, 0, "Soldier"), 2);
+}
+
+/// Bard the Bowman: the second draw of a turn counters a creature and gives it
+/// lifelink.
+#[test]
+fn bard_the_bowman_rewards_the_second_draw() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let bard = ready(&mut g, 0, catalog::bard_the_bowman());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bard))]));
+    cast(&mut g, div);
+    assert_eq!(plus(&g, bard), 1);
+    assert!(g.permanent_has_keyword(bard, &Keyword::Lifelink));
+}
+
+/// Raff taps two creatures to draw off an instant, and pumps the team.
+#[test]
+fn raff_taps_two_to_draw_and_pumps() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let raff = ready(&mut g, 0, catalog::raff_weatherlight_stalwart());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    cast(&mut g, opt);
+    assert!(g.battlefield_find(raff).unwrap().tapped && g.battlefield_find(bear).unwrap().tapped);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "Opt's draw and Raff's");
+    activate(&mut g, raff, 0, None);
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Vigilance));
+}
+
+/// Leering Emblem pumps its creature on each spell.
+#[test]
+fn leering_emblem_pumps_on_cast() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let emblem = ready(&mut g, 0, catalog::leering_emblem());
+    g.battlefield_find_mut(emblem).unwrap().attached_to = Some(bear);
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!(pt(&g, bear), (4, 4));
+}
+
+/// Vance's Blasting Cannons: the upkeep exile is castable when nonland; the
+/// third spell of a turn transforms it into Spitfire Bastion.
+#[test]
+fn vances_blasting_cannons_impulses_and_transforms() {
+    let mut g = pod(2);
+    library(&mut g, 1, 3);
+    library(&mut g, 0, 3);
+    let top = g.add_card_to_library(0, catalog::opt());
+    g.players[0].library.rotate_right(1);
+    assert_eq!(g.players[0].library[0].id, top);
+    let cannons = ready(&mut g, 0, catalog::vances_blasting_cannons());
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Upkeep);
+    assert!(g.exile.iter().any(|c| c.id == top && c.may_play_until.is_some()));
+    g.step = TurnStep::PreCombatMain;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    for _ in 0..3 {
+        let thopter = g.add_card_to_hand(0, catalog::ornithopter());
+        cast(&mut g, thopter);
+    }
+    assert_eq!(g.battlefield_find(cannons).unwrap().definition.name, "Spitfire Bastion");
+}
