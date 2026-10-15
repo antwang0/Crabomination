@@ -15860,6 +15860,12 @@ static DECKS: &[Factory] = &[
     super::decks::bard_heir_of_girion,
     super::decks::lucky_the_pizza_dog,
     super::decks::mind_control,
+    super::decks::beorn_reluctant_host,
+    super::decks::young_blue_dragon,
+    super::decks::venomized_cat,
+    super::decks::spider_man_to_the_rescue,
+    super::decks::west_wind_avatar,
+    super::decks::bearded_axe,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

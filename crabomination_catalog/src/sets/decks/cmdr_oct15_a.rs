@@ -1513,3 +1513,128 @@ pub fn mind_control() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Beorn, Reluctant Host — {4}{G} legendary 5/5 trample Human Bear
+/// Shapeshifter. Adventure: Till and Tend {1}{G} sorcery — you may play an
+/// additional land this turn.
+pub fn beorn_reluctant_host() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(4), g()]),
+        keywords: vec![Keyword::Trample],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Till and Tend",
+            cost: cost(&[generic(1), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE },
+        })),
+        ..legend("Beorn, Reluctant Host", vec![CreatureType::Human, CreatureType::Bear, CreatureType::Shapeshifter], 5, 5)
+    }
+}
+
+/// Young Blue Dragon — {4}{U} 3/3 flying Dragon. Adventure: Sand Augury
+/// {1}{U} sorcery — scry 1, then draw a card.
+pub fn young_blue_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Sand Augury",
+            cost: cost(&[generic(1), u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        })),
+        ..creature("Young Blue Dragon", cost(&[generic(4), u()]), vec![CreatureType::Dragon], 3, 3)
+    }
+}
+
+/// Venomized Cat — {2}{B} 2/3 deathtouch Symbiote Cat Villain; enters: mill two.
+pub fn venomized_cat() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(2) })],
+        ..creature("Venomized Cat", cost(&[generic(2), b()]), vec![CreatureType::Symbiote, CreatureType::Cat, CreatureType::Villain], 2, 3)
+    }
+}
+
+/// Spider-Man, To the Rescue — {2}{G/W} legendary 3/2 flash reach vigilance
+/// Spider Human Hero. Enters: you may tap him; when you do, another target
+/// nonattacking creature you control gains indestructible until end of turn.
+pub fn spider_man_to_the_rescue() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(2), hybrid(Color::Green, Color::White)]),
+        keywords: vec![Keyword::Flash, Keyword::Reach, Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Tap Spider-Man to make another creature indestructible?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::This },
+                Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::GrantKeyword {
+                        what: target_filtered(
+                            R::Creature.and(R::ControlledByYou).and(R::OtherThanSource).and(R::Not(Box::new(R::IsAttacking))),
+                        ),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    }),
+                },
+            ])),
+        })],
+        ..legend("Spider-Man, To the Rescue", vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero], 3, 2)
+    }
+}
+
+/// West Wind Avatar — {5}{G}{G} 7/7 trample Cat Spirit Avatar. Entering or
+/// attacking, you may sacrifice a token or a land to gain 3 life. Disappear —
+/// at your end step, if a permanent left the battlefield under your control
+/// this turn, draw a card.
+pub fn west_wind_avatar() -> CardDefinition {
+    let feed = || Effect::MaySacrifice {
+        description: "Sacrifice a token or a land to gain 3 life?".into(),
+        filter: R::IsToken.or(R::Land),
+        count: Value::ONE,
+        then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+        else_: None,
+    };
+    let revolt = Predicate::RevoltActive { who: PlayerRef::You };
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            etb(feed()),
+            on_attack(feed()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(revolt.clone()),
+                effect: Effect::If {
+                    cond: revolt,
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..creature("West Wind Avatar", cost(&[generic(5), g(), g()]), vec![CreatureType::Cat, CreatureType::Spirit, CreatureType::Avatar], 7, 7)
+    }
+}
+
+/// Bearded Axe — {2}{R} Equipment. Equipped creature gets +1/+1 for each
+/// Dwarf, Equipment, and/or Vehicle you control. Equip {2}.
+pub fn bearded_axe() -> CardDefinition {
+    CardDefinition {
+        name: "Bearded Axe",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(crate::card::EquipScale {
+                filter: R::HasCreatureType(CreatureType::Dwarf)
+                    .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                    .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                per_power: 1,
+                per_toughness: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

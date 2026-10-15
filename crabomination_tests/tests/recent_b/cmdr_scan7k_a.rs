@@ -3227,3 +3227,51 @@ fn stalwarts_grow_on_the_second_draw() {
     activate(&mut g, f, 0, None);
     assert_eq!(plus(&g, st), 1, "the second draw");
 }
+
+/// Bearded Axe counts Dwarves, Equipment and Vehicles you control.
+#[test]
+fn bearded_axe_counts_dwarves_and_equipment() {
+    let mut g = pod(2);
+    let dwarf = ready(&mut g, 0, catalog::dains_company());
+    let axe = g.add_card_to_battlefield(0, catalog::bearded_axe());
+    g.battlefield_find_mut(axe).unwrap().attached_to = Some(dwarf);
+    g.add_card_to_battlefield(0, catalog::web_shooters());
+    assert_eq!(pt(&g, dwarf), (5, 5), "one Dwarf + two Equipment");
+}
+
+/// West Wind Avatar sacrifices a token to gain 3 as it enters.
+#[test]
+fn west_wind_avatar_feeds_on_a_token() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::lucky_the_pizza_dog());
+    let dog = g.add_card_to_hand(0, catalog::lucky_the_pizza_dog());
+    cast(&mut g, dog);
+    let wwa = g.add_card_to_hand(0, catalog::west_wind_avatar());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, wwa);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Spider-Man, To the Rescue taps to make another creature indestructible.
+#[test]
+fn spider_man_to_the_rescue_shields_a_friend() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sm = g.add_card_to_hand(0, catalog::spider_man_to_the_rescue());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, sm);
+    assert!(g.battlefield_find(sm).unwrap().tapped);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Indestructible));
+}
+
+/// Beorn's Till and Tend grants an extra land play.
+#[test]
+fn beorn_till_and_tend_extra_land() {
+    let mut g = pod(2);
+    let beorn = g.add_card_to_hand(0, catalog::beorn_reluctant_host());
+    flood(&mut g);
+    let before = g.players[0].extra_land_plays;
+    g.perform_action(GameAction::CastAdventure { card_id: beorn, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("adventure");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_land_plays, before + 1);
+}
