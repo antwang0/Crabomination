@@ -4372,3 +4372,147 @@ fn eland_umbra_and_springjack_shepherd() {
     cast(&mut g, ss);
     assert_eq!(named_count(&g, 0, "Goat"), 2, "Eland Umbra's {{W}} and the Shepherd's {{W}}");
 }
+
+/// Charging Griffin grows attacking; Zhang He pumps the team as he attacks.
+#[test]
+fn charging_griffin_and_zhang_he_attack_pumps() {
+    let mut g = pod(2);
+    let cg = ready(&mut g, 0, catalog::charging_griffin());
+    let zh = ready(&mut g, 0, catalog::zhang_he_wei_general());
+    declare(&mut g, vec![(cg, 1), (zh, 1)]);
+    assert_eq!(pt(&g, cg), (4, 3), "+1/+1 own, +1/+0 from Zhang He");
+    assert_eq!(pt(&g, zh), (4, 2));
+}
+
+/// Cao Ren costs 3 life on entry.
+#[test]
+fn cao_ren_drains_its_controller() {
+    let mut g = pod(2);
+    let cr = g.add_card_to_hand(0, catalog::cao_ren_wei_commander());
+    cast(&mut g, cr);
+    assert_eq!(g.players[0].life, 17);
+}
+
+/// The anti-flier package: Gravity Well grounds attacking fliers, Raking
+/// Canopy hits fliers attacking you, Windstorm sweeps them.
+#[test]
+fn gravity_well_raking_canopy_and_windstorm() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::gravity_well());
+    ready(&mut g, 1, catalog::raking_canopy());
+    let wg = ready(&mut g, 0, catalog::wild_griffin());
+    let sg = ready(&mut g, 0, catalog::silverbeak_griffin());
+    declare(&mut g, vec![(wg, 1)]);
+    assert!(g.battlefield_find(wg).is_none(), "4 damage from the Canopy");
+    let _ = sg;
+    let ws = g.add_card_to_hand(1, catalog::windstorm());
+    g.players[1].mana_pool.add(Color::Green, 3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: ws, target: None, additional_targets: vec![], mode: None, x_value: Some(2) }).expect("windstorm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sg).is_none());
+}
+
+/// Gravity Well alone: an attacking flier loses flying until end of turn.
+#[test]
+fn gravity_well_grounds_an_attacking_flier() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::gravity_well());
+    let wg = ready(&mut g, 0, catalog::wild_griffin());
+    declare(&mut g, vec![(wg, 1)]);
+    assert!(!g.permanent_has_keyword(wg, &Keyword::Flying));
+}
+
+/// Unholy Indenture brings the enchanted creature back to you with a counter.
+#[test]
+fn unholy_indenture_returns_with_a_counter() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let ui = g.add_card_to_hand(0, catalog::unholy_indenture());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: ui, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("aura");
+    drain_stack(&mut g);
+    kill(&mut g, bear);
+    let c = g.battlefield_find(bear).expect("back");
+    assert_eq!(c.controller, 0);
+    assert_eq!(plus(&g, bear), 1);
+}
+
+/// Exalted (Sigiled Paladin) and Peggy Carter's indestructible on a lone attacker.
+#[test]
+fn sigiled_paladin_and_peggy_carter_reward_a_lone_attacker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::sigiled_paladin());
+    ready(&mut g, 0, catalog::peggy_carter_secret_agent());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(bear, 1)]);
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Indestructible));
+}
+
+/// Thurid copies a Unicorn spell and pumps the other steeds.
+#[test]
+fn thurid_copies_a_unicorn_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::thurid_mare_of_destiny());
+    let mu = g.add_card_to_hand(0, catalog::mesa_unicorn());
+    cast(&mut g, mu);
+    assert_eq!(named_count(&g, 0, "Mesa Unicorn"), 2, "the card and its token copy");
+    assert_eq!(pt(&g, mu), (3, 3));
+}
+
+/// Shield Mare gains 3 entering and 3 more when an opponent targets it.
+#[test]
+fn shield_mare_gains_on_entry_and_when_targeted() {
+    let mut g = pod(2);
+    let sm = g.add_card_to_hand(0, catalog::shield_mare());
+    cast(&mut g, sm);
+    assert_eq!(g.players[0].life, 23);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(sm)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 26);
+}
+
+/// Rigging Runner's raid counter; Crimson Fleet Commodore makes you monarch.
+#[test]
+fn rigging_runner_raid_and_commodore_monarch() {
+    let mut g = pod(2);
+    let rr = g.add_card_to_hand(0, catalog::rigging_runner());
+    cast(&mut g, rr);
+    assert_eq!(plus(&g, rr), 0, "no attack yet");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(bear, 1)]);
+    g.step = TurnStep::PostCombatMain;
+    let rr2 = g.add_card_to_hand(0, catalog::rigging_runner());
+    cast(&mut g, rr2);
+    assert_eq!(plus(&g, rr2), 1, "raid");
+    library(&mut g, 0, 2);
+    let cfc = g.add_card_to_hand(0, catalog::crimson_fleet_commodore());
+    cast(&mut g, cfc);
+    assert_eq!(g.monarch, Some(0));
+}
+
+/// Nishoba Brawler's power is domain; Navigator's Compass adds a basic type
+/// the lands lack; Zar Ojanen counters small creatures as it taps.
+#[test]
+fn zar_ojanen_domain_package() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::forest());
+    ready(&mut g, 0, catalog::plains());
+    let nb = ready(&mut g, 0, catalog::nishoba_brawler());
+    assert_eq!(pt(&g, nb).0, 2);
+    let nc = ready(&mut g, 0, catalog::navigators_compass());
+    let f = g.battlefield.iter().find(|c| c.definition.name == "Forest").unwrap().id;
+    activate(&mut g, nc, 0, Some(Target::Permanent(f)));
+    let lts = g.computed_permanent(f).unwrap().subtypes().land_types.clone();
+    assert_eq!(lts.len(), 2, "the Forest gained a basic type it lacked: {lts:?}");
+    assert!(!lts.contains(&crabomination::card::LandType::Plains), "not one already there");
+    let zar = ready(&mut g, 0, catalog::zar_ojanen_scion_of_efrava());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    declare(&mut g, vec![(zar, 1)]);
+    assert_eq!(plus(&g, elf), 1, "toughness 1 < 3 types");
+    assert_eq!(plus(&g, zar), 0, "toughness 4");
+}
