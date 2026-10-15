@@ -16692,6 +16692,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GOLLUM_4_COMMANDERS,
             main: decks::GOLLUM_4_MAIN,
         },
+        // Seat 2707: Diaochan, Artful Beauty's EDHREC average deck. `--pod-decks 2707`.
+        PodDeck {
+            name: "Diaochan, Artful Beauty (R)",
+            commanders: decks::DIAOCHAN_COMMANDERS,
+            main: decks::DIAOCHAN_MAIN,
+        },
     ]
 }
 
@@ -21231,6 +21237,7 @@ mod tests {
             ("Chameleon, Master of Disguise", &[0x14A6]),
             ("Bebop, Warthog Warrior", &[0x14A7]),
             ("Gollum, Riddle Master", &[0x14A8]),
+            ("Diaochan, Artful Beauty", &[0x14A9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -76002,3 +76002,32 @@ pub const GOLLUM_4_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const DIAOCHAN_COMMANDERS: &[CardFactory] = &[diaochan_artful_beauty];
+
+/// **Diaochan, Artful Beauty**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 14 Mountains = 99.
+/// Diaochan, Artful Beauty (EDHREC, fetched 2026-10-15).
+pub const DIAOCHAN_MAIN: &[CardFactory] = &[
+    arcane_signet, battlemages_bracers, cursed_mirror, darksteel_plate, fire_diamond,
+    hammer_of_nazahn, illusionists_bracers, lightning_greaves, mind_stone, mithril_coat,
+    patriars_seal, ruby_medallion, sol_ring, swiftfoot_boots, sword_of_fire_and_ice,
+    sword_of_forge_and_frontier, sword_of_sinew_and_steel, sword_of_war_and_peace,
+    thornbite_staff, thousand_year_elixir, whispersilk_cloak, arcane_lighthouse, arena_of_glory,
+    buried_ruin, detection_tower, inventors_fair, myriad_landscape, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    valakut_the_molten_pinnacle, war_room, anger, atsushi_the_blazing_sky, brash_taunter,
+    creepy_doll, etali_primal_storm, giggling_skitterspike, goblin_engineer, goblin_welder,
+    godo_bandit_warlord, humble_defector, imperial_recruiter, magus_of_the_wheel, pinnacle_monk,
+    solemn_simulacrum, stuffy_doll, treasure_nabber, blood_moon, curse_of_opulence, smoke,
+    spiteful_banditry, stolen_strategy, vicious_shadows, big_score, chaos_warp, deflecting_swat,
+    reverberate, thrill_of_possibility, tibalts_trickery, untimely_malfunction,
+    valakut_awakening, wild_magic_surge, chandra_torch_of_defiance, koth_fire_of_resistance,
+    blasphemous_act, chain_reaction, faithless_looting, gamble, insurrection, jeskas_will,
+    mana_geyser, reforge_the_soul, vandalblast, wheel_of_misfortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
