@@ -1275,3 +1275,29 @@ fn blaster_grants_modular_and_converts_on_counters() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(blaster).unwrap().definition.name, "Blaster, Morale Booster");
 }
+
+/// CR 702.15 — Firesong gives red instants and sorceries lifelink; a red
+/// spell's lifelink gain isn't a white spell's, so the 3-damage trigger stays
+/// quiet.
+#[test]
+fn firesong_lends_lifelink_to_red_spells_only() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::firesong_and_sunspeaker());
+    let (me, p1, p2) = (g.players[0].life, g.players[1].life, g.players[2].life);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Player(1)), vec![], None);
+    assert_eq!(g.players[0].life, me + 3);
+    assert_eq!(g.players[1].life + g.players[2].life, p1 + p2 - 3);
+}
+
+/// A white instant that gains you life sets off Firesong's 3 damage.
+#[test]
+fn firesong_burns_when_a_white_spell_gains_you_life() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::firesong_and_sunspeaker());
+    let (me, p1, p2) = (g.players[0].life, g.players[1].life, g.players[2].life);
+    let salve = g.add_card_to_hand(0, catalog::healing_salve());
+    cast_with(&mut g, salve, Some(Target::Player(0)), vec![], Some(0));
+    assert_eq!(g.players[0].life, me + 3);
+    assert_eq!(g.players[1].life + g.players[2].life, p1 + p2 - 3);
+}

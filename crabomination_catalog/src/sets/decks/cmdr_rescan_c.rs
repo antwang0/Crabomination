@@ -1032,3 +1032,33 @@ pub fn blaster_combat_dj() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Firesong and Sunspeaker — {4}{R}{W} legendary 4/6 Minotaur Cleric. Red
+/// instant and sorcery spells you control have lifelink. Whenever a white
+/// instant or sorcery spell causes you to gain life, it deals 3 damage to
+/// target creature or player. (Rem Karolus, Stalwart Slayer.)
+pub fn firesong_and_sunspeaker() -> CardDefinition {
+    let instant_or_sorcery = R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Red instant and sorcery spells you control have lifelink.",
+            effect: StaticEffect::YourMatchingInstantSorcerySpellsHaveLifelink { filter: R::HasColor(Color::Red) },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Performed(crate::effect::KeywordAct::SpellCausedLifeGain), EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasColor(Color::White).and(instant_or_sorcery),
+                },
+            ),
+            effect: Effect::DealDamage { to: target_filtered(R::Creature.or(R::Player)), amount: Value::Const(3) },
+        }],
+        ..legend(
+            "Firesong and Sunspeaker",
+            cost(&[generic(4), r(), w()]),
+            vec![CreatureType::Minotaur, CreatureType::Cleric],
+            4,
+            6,
+        )
+    }
+}
