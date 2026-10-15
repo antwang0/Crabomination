@@ -23,7 +23,7 @@ fn deals_damage(e: &Effect) -> bool {
 /// is prevented (and perhaps thrown back).
 fn unhurt(state: &GameState, id: crate::card::CardId) -> bool {
     let Some(c) = state.computed_permanent(id) else { return false };
-    let preventable = !state.damage_cant_be_prevented_this_turn;
+    let preventable = !state.prevention_off();
     c.keywords().contains(&crate::card::Keyword::Indestructible)
         || state.permanent_prevents_all_damage_to_self(id)
         || preventable

@@ -389,7 +389,7 @@ impl GameState {
     /// CR 615.7 — true while every point of damage `source` would deal is
     /// prevented for the turn (Hallow, Burrenton Forge-Tender's chosen source).
     pub(crate) fn source_damage_fully_prevented(&self, source: crate::card::CardId) -> bool {
-        !self.damage_cant_be_prevented_this_turn
+        !self.prevention_off()
             && self.damage_prevented_sources.iter().any(|sh| sh.source == source)
     }
 
@@ -512,7 +512,7 @@ impl GameState {
         source: Option<crate::card::CardId>,
         statics: u32,
     ) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || (statics & prevent_static::CANT_PREVENT != 0 && self.damage_cant_be_prevented_now())
         {
             return true;
@@ -1464,7 +1464,7 @@ impl GameState {
         // `permanent_prevents_all_damage_to_self`).
         if let Some(src) = source
             && (self.damage_sealed_by_aura(src, false)
-                || (!self.damage_cant_be_prevented_this_turn
+                || (!self.prevention_off()
                     && (self.all_damage_prevented_by_this_turn.contains(&src)
                         || self.all_damage_from_source_matches_a_shield(src))))
         {
@@ -1590,7 +1590,7 @@ impl GameState {
         // CR 615 — "… by creatures" (Istvan): a creature source's noncombat
         // damage; the combat half is `combat_damage_prevented_to_self`.
         if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
-            && !self.damage_cant_be_prevented_this_turn
+            && !self.prevention_off()
             && self.battlefield_find(tgt).is_some_and(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
                     matches!(

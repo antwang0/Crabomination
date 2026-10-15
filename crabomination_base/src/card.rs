@@ -2029,6 +2029,9 @@ pub enum Keyword {
     /// (Rakdos Headliner). Processed by the same `process_echo` turn-based
     /// check as `Echo`.
     EchoDiscard,
+    /// Echo {X} where X is your life total, read at the upkeep it is paid
+    /// (Volcano Hellion). Processed by `process_echo` with `Echo`.
+    EchoLifeTotal,
     /// CR 702.24 — Cumulative upkeep: at the controller's upkeep, add an age
     /// counter, then pay the cost once per age counter or sacrifice this.
     CumulativeUpkeep(CumulativeUpkeepCost),

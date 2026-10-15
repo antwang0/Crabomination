@@ -2386,6 +2386,10 @@ pub struct ResolutionScratch {
     /// for the same size cap; written only while that replacement applies.
     #[serde(skip)]
     pub(crate) in_first_draw_replacement: bool,
+    /// CR 615.12 — set while an `Effect::DamageCantBePrevented` body runs
+    /// ("The damage can't be prevented", Volcano Hellion); written only there.
+    #[serde(skip)]
+    pub(crate) damage_unpreventable_in_effect: bool,
     /// CR 603.3d — a prompting seat's targeted self-death trigger that fired
     /// mid-resolution, held until the resolution ends so its controller names
     /// the targets (`resolve_top_of_stack` drains it). Empty in bot play.
@@ -9360,6 +9364,10 @@ impl GameState {
             .filter_map(|c| {
                 c.definition.keywords.iter().find_map(|k| match k {
                     Keyword::Echo(cost) => Some((c.id, Some(cost.clone()))),
+                    Keyword::EchoLifeTotal => Some((
+                        c.id,
+                        Some(crate::mana::cost(&[crate::mana::generic(self.effective_life(active).max(0) as u32)])),
+                    )),
                     Keyword::EchoDiscard => Some((c.id, None)),
                     _ => None,
                 })
@@ -9924,10 +9932,18 @@ impl GameState {
         )
     }
 
+    /// CR 615.12 — is damage prevention switched off right now: the turn's
+    /// "damage can't be prevented" (Leyline of Punishment's kin) or a resolving
+    /// `Effect::DamageCantBePrevented` body (Volcano Hellion). Every
+    /// prevention site reads this one gate.
+    pub(crate) fn prevention_off(&self) -> bool {
+        self.damage_cant_be_prevented_this_turn || self.scratch.damage_unpreventable_in_effect
+    }
+
     /// True when `tgt` prevents all damage to itself (combat or noncombat) via
     /// an active `PreventAllDamageToThis` self-static and prevention isn't off.
     pub(crate) fn permanent_prevents_all_damage_to_self(&self, tgt: crate::card::CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.prevention_off() {
             return false;
         }
         self.battlefield_find(tgt).is_some_and(|c| {
@@ -9941,7 +9957,7 @@ impl GameState {
 
     pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId, incoming: bool) -> bool {
         use crate::effect::StaticEffect;
-        if self.damage_cant_be_prevented_this_turn {
+        if self.prevention_off() {
             return false;
         }
         self.battlefield.iter().any(|src| {
@@ -9969,7 +9985,7 @@ impl GameState {
     /// dealer is by construction one of `tgt`'s blockers.
     pub fn combat_damage_from_blockers_prevented(&self, tgt: crate::card::CardId) -> bool {
         use crate::effect::StaticEffect;
-        !self.damage_cant_be_prevented_this_turn
+        !self.prevention_off()
             && self.battlefield_find(tgt).is_some_and(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThisFromBlockers)
@@ -9985,7 +10001,7 @@ impl GameState {
         dealer: crate::card::CardId,
     ) -> bool {
         use crate::effect::StaticEffect;
-        if self.damage_cant_be_prevented_this_turn {
+        if self.prevention_off() {
             return false;
         }
         let filters: Vec<_> = self
@@ -10017,7 +10033,7 @@ impl GameState {
         dealer: crate::card::CardId,
     ) -> bool {
         use crate::effect::StaticEffect;
-        !self.damage_cant_be_prevented_this_turn
+        !self.prevention_off()
             && self.blocks(tgt, dealer)
             && self.battlefield_find(tgt).is_some_and(|c| {
                 c.definition
@@ -10040,7 +10056,7 @@ impl GameState {
     /// funnel still asks it.
     pub fn combat_damage_prevented_to_self(&self, tgt: crate::card::CardId) -> bool {
         use crate::effect::StaticEffect as SE;
-        if self.damage_cant_be_prevented_this_turn {
+        if self.prevention_off() {
             return false;
         }
         if self.combat_damage_prevented_to_this_turn.contains(&tgt) {
@@ -10119,7 +10135,7 @@ impl GameState {
         tgt: crate::card::CardId,
         src: crate::card::CardId,
     ) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.prevention_off() {
             return false;
         }
         // The combat resolver's per-pair freeze scope reaches this second,
@@ -10178,7 +10194,7 @@ impl GameState {
     /// the same fusion: four battlefield passes become one find and one walk.
     pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
         use crate::effect::StaticEffect as SE;
-        if self.damage_cant_be_prevented_this_turn {
+        if self.prevention_off() {
             return false;
         }
         if self.combat_damage_prevented_by_this_turn.contains(&dealer)
@@ -18693,7 +18709,7 @@ impl GameState {
     /// has a `PreventDamageToYourAttackers` static in play (Iroas, God of
     /// Victory). Overridden by "damage can't be prevented" (CR 615.12).
     pub(crate) fn damage_to_attacker_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -18716,7 +18732,7 @@ impl GameState {
     /// "prevent all damage that would be dealt to you" static (Glacial Chasm),
     /// unless prevention is shut off this turn (615.12).
     pub(crate) fn all_damage_to_player_prevented(&self, player: usize) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -18768,7 +18784,7 @@ impl GameState {
     /// "prevent all noncombat damage to creatures you control" static (Mark of
     /// Asylum). Consulted only at the noncombat damage funnel.
     pub(crate) fn noncombat_damage_to_creature_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -18804,7 +18820,7 @@ impl GameState {
     /// its controller/owner controls. Consulted only at the noncombat funnel.
     pub(crate) fn noncombat_damage_to_you_and_permanents_prevented(&self, victim: crate::game::effects::EntityRef) -> bool {
         use crate::game::effects::EntityRef;
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -18831,7 +18847,7 @@ impl GameState {
     /// creature tokens you control." True when `target` is a token creature
     /// whose controller has the static. Consulted on both damage paths.
     pub(crate) fn all_damage_to_creature_token_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -18855,7 +18871,7 @@ impl GameState {
     /// CR 615 — Rune-Tail's Essence: "prevent all damage that would be dealt
     /// to creatures you control." Consulted on both damage paths.
     pub(crate) fn all_damage_to_your_creature_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -18894,7 +18910,7 @@ impl GameState {
         src: CardId,
         tgt: CardId,
     ) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || src == tgt
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
@@ -18992,7 +19008,7 @@ impl GameState {
         source: CardId,
         target: CardId,
     ) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;
@@ -19021,7 +19037,7 @@ impl GameState {
     /// [color] creatures." True when `source` has the static and `target` is a
     /// creature of the named color.
     pub(crate) fn source_damage_to_color_prevented(&self, source: CardId, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn
+        if self.prevention_off()
             || !self.battlefield.has_damage_shield(card_can_shield_damage)
         {
             return false;

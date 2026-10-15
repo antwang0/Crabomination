@@ -21,7 +21,7 @@ impl GameState {
         amount: u32,
         events: &mut Vec<GameEvent>,
     ) -> bool {
-        if amount == 0 || self.damage_cant_be_prevented_this_turn {
+        if amount == 0 || self.prevention_off() {
             return false;
         }
         let (Some(src), Some(caster)) = (source, self.resolving_spell_caster) else { return false };

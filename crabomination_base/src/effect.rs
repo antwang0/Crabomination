@@ -13344,6 +13344,9 @@ pub enum Effect {
     /// flag that suppresses every prevention shield for the rest of the
     /// turn. Skullcrack, Heated Debate, Impractical Joke's rider.
     DamageCantBePreventedThisTurn,
+    /// CR 615.12 — "The damage can't be prevented" scoped to the damage
+    /// `body` deals (Volcano Hellion's entry), not the rest of the turn.
+    DamageCantBePrevented { body: Box<Effect> },
 
     /// "Players can't search libraries this turn." (Shadow of Doubt.) Sets a
     /// global flag; library searches that turn find nothing.

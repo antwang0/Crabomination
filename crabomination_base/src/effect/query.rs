@@ -509,6 +509,7 @@ impl Effect {
             | Effect::WhenTargetDiesThisTurn { body, .. }
             | Effect::WhenTargetDies { body, .. }
             | Effect::WhenTargetAttacksOpponentThisTurn { body, .. }
+            | Effect::DamageCantBePrevented { body }
             | Effect::CreaturesYouControlEnteringThisTurn { body, .. }
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { body, .. }
             | Effect::CreaturesYouControlDyingThisTurn { body, .. }
@@ -2344,6 +2345,7 @@ impl Effect {
             // `capture: LastMoved` body's `Target(0)` is not a cast target).
             Effect::DelayUntilWithCapture { capture, .. } => sel_has_target(capture),
             Effect::DelayUntil { body, .. } => body.requires_target(),
+            Effect::DamageCantBePrevented { body } => body.requires_target(),
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. }
             | Effect::WhenTargetDies { .. }

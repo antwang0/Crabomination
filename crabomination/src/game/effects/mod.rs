@@ -35228,6 +35228,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DamageCantBePrevented { body } => {
+                let was = self.scratch.damage_unpreventable_in_effect;
+                self.scratch.damage_unpreventable_in_effect = true;
+                let r = self.run_effect(body, ctx, events);
+                if !was {
+                    self.scratch.damage_unpreventable_in_effect = false;
+                }
+                r
+            }
+
             Effect::WhenTargetAttacksOpponentThisTurn { body, slot } => {
                 if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned() {
                     self.delayed_triggers.push(DelayedTrigger {

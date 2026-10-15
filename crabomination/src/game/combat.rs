@@ -5796,7 +5796,7 @@ impl GameState {
         dealt: u32,
         events: &mut Vec<GameEvent>,
     ) -> bool {
-        if dealt == 0 || self.damage_cant_be_prevented_this_turn {
+        if dealt == 0 || self.prevention_off() {
             return false;
         }
         // Khârn the Betrayer — prevent it, and it changes hands (CR 800.4:
@@ -5977,7 +5977,7 @@ impl GameState {
                 // Both report the prevention (CR 615.5): "whenever damage is
                 // prevented" and "for each damage prevented this way" read it.
                 if self.all_damage_to_player_prevented(p)
-                    || !self.damage_cant_be_prevented_this_turn
+                    || !self.prevention_off()
                         && self.combat_damage_prevented_to_players_this_turn.contains(&p)
                 {
                     if amount > 0 {
@@ -6000,7 +6000,7 @@ impl GameState {
                 self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {
-                if !self.damage_cant_be_prevented_this_turn
+                if !self.prevention_off()
                     && !self.combat_damage_prevented_to_walkers_this_turn.is_empty()
                     && self
                         .battlefield_find(pw)
@@ -6126,7 +6126,7 @@ impl GameState {
                 // CR 615 — Sokrates's Sokratic Dialogue: prevented, and the
                 // attacker's controller and the player each draw half.
                 if amount > 0
-                    && !self.damage_cant_be_prevented_this_turn
+                    && !self.prevention_off()
                     && self.turn.combat_damage_becomes_draws.contains(&atk.id)
                 {
                     events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });

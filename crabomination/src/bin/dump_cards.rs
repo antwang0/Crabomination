@@ -145,7 +145,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Kicker(_) => "Kicker",
         Keyword::Multikicker(_) => "Multikicker",
         Keyword::Buyback(_) => "Buyback",
-        Keyword::Echo(_) | Keyword::EchoDiscard => "Echo",
+        Keyword::Echo(_) | Keyword::EchoDiscard | Keyword::EchoLifeTotal => "Echo",
         Keyword::ProtectionFromCardType(_) => "Protection",
         Keyword::DoesntUntapWhileCounter(_)
         | Keyword::MayChooseNotToUntap
