@@ -760,3 +760,253 @@ pub fn agent_maria_hill() -> CardDefinition {
         ..creature("Agent Maria Hill", cost(&[w()]), vec![CreatureType::Human, CreatureType::Spy, CreatureType::Hero], 2, 1)
     })
 }
+
+// ── Batch 2 ─────────────────────────────────────────────────────────────────
+
+fn creature_aura(name: &'static str, mana: ManaCost, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+fn combat_damage_to_player() -> EventSpec {
+    EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
+}
+
+/// Alchemist's Apprentice — {1}{U} 1/1 Human Wizard. Sacrifice it: draw.
+pub fn alchemists_apprentice() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Alchemist's Apprentice", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Wizard], 1, 1)
+    }
+}
+
+/// Most Decrepit Old Bird — {U} 1/1 flying Bird, threshold +1/+1. Adventure:
+/// {1}{U} sorcery — mill four, an instant or sorcery among them to hand.
+pub fn most_decrepit_old_bird() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — This creature gets +1/+1 as long as there are seven or more cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+            },
+        }],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Bird Watching",
+            cost: cost(&[generic(1), u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::MillThenToHand {
+                amount: Value::Const(4),
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                otherwise: None,
+            },
+        })),
+        ..creature("Most Decrepit Old Bird", cost(&[u()]), vec![CreatureType::Bird], 1, 1)
+    }
+}
+
+/// Stature, Young Avenger — {1}{R/G} legendary 2/2 reach Human Hero. Casting
+/// a noncreature spell makes her base 4/4 until end of turn.
+pub fn stature_young_avenger() -> CardDefinition {
+    legendary(CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_noncreature()),
+            effect: Effect::SetBasePT {
+                what: Selector::This,
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature(
+            "Stature, Young Avenger",
+            cost(&[generic(1), hybrid(Color::Red, Color::Green)]),
+            vec![CreatureType::Human, CreatureType::Hero],
+            2,
+            2,
+        )
+    })
+}
+
+/// Markov Blademaster — {1}{R}{R} 1/1 double strike Vampire Warrior; its
+/// combat damage to a player puts a +1/+1 counter on it.
+pub fn markov_blademaster() -> CardDefinition {
+    let grow = Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE };
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility { event: combat_damage_to_player(), effect: grow }],
+        ..creature("Markov Blademaster", cost(&[generic(1), r(), r()]), vec![CreatureType::Vampire, CreatureType::Warrior], 1, 1)
+    }
+}
+
+/// Talons of Wildwood — {1}{G} Aura, +1/+1 and trample. {2}{G}: return it
+/// from your graveyard to your hand.
+pub fn talons_of_wildwood() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            from_graveyard: true,
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..creature_aura(
+            "Talons of Wildwood",
+            cost(&[generic(1), g()]),
+            EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Trample], ..Default::default() },
+        )
+    }
+}
+
+/// Deadeye Brawler — {2}{U}{B} 2/4 deathtouch Human Pirate, ascend. Its combat
+/// damage to a player draws a card while you have the city's blessing.
+pub fn deadeye_brawler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        static_abilities: vec![crate::sets::ascend()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: combat_damage_to_player().with_filter(Predicate::HasCityBlessing { who: PlayerRef::You }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..creature("Deadeye Brawler", cost(&[generic(2), u(), b()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 4)
+    }
+}
+
+/// Depths of Desire — {2}{U} instant. Bounce a creature; make a Treasure.
+pub fn depths_of_desire() -> CardDefinition {
+    spell(
+        "Depths of Desire",
+        cost(&[generic(2), u()]),
+        true,
+        Effect::Seq(vec![
+            crate::effect::shortcut::return_target_creature_to_hand(),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(crabomination_base::tokens::treasure_token()),
+            },
+        ]),
+    )
+}
+
+/// Gilded Assault Cart — {1}{R}{R} 5/1 trample Vehicle, crew 2. Sacrifice two
+/// Treasures: return it from your graveyard to your hand.
+pub fn gilded_assault_cart() -> CardDefinition {
+    CardDefinition {
+        name: "Gilded Assault Cart",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Crew(2)],
+        activated_abilities: vec![ActivatedAbility {
+            from_graveyard: true,
+            sac_other_filter: Some((R::HasArtifactSubtype(ArtifactSubtype::Treasure), 2)),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Volatile Fjord — snow Island Mountain; enters tapped.
+pub fn volatile_fjord() -> CardDefinition {
+    CardDefinition {
+        name: "Volatile Fjord",
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![crate::card::LandType::Island, crate::card::LandType::Mountain],
+            ..Default::default()
+        },
+        activated_abilities: vec![crate::sets::tap_add(Color::Blue), crate::sets::tap_add(Color::Red)],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        ..Default::default()
+    }
+}
+
+/// Skyswimmer Koi — {3}{U} 3/3 flying Fish. An artifact of yours entering:
+/// you may draw, then discard.
+pub fn skyswimmer_koi() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+            effect: Effect::MayDo {
+                description: "Draw a card, then discard a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ])),
+            },
+        }],
+        ..creature("Skyswimmer Koi", cost(&[generic(3), u()]), vec![CreatureType::Fish], 3, 3)
+    }
+}
+
+/// Eidolon of Astral Winds — {2}{W} 2/4 vigilance enchantment creature Spirit.
+/// Constellation: a creature you control is base 4/4 with flying this turn.
+pub fn eidolon_of_astral_winds() -> CardDefinition {
+    let mine = || target_filtered(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Enchantment }),
+            effect: Effect::Seq(vec![
+                Effect::SetBasePT { what: mine(), power: Value::Const(4), toughness: Value::Const(4), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: mine(), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..creature("Eidolon of Astral Winds", cost(&[generic(2), w()]), vec![CreatureType::Spirit], 2, 4)
+    }
+}
+
+/// Temporal Isolation — {1}{W} flash Aura. Enchanted creature has shadow and
+/// deals no damage.
+pub fn temporal_isolation() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all damage that would be dealt by enchanted creature.",
+            effect: StaticEffect::PreventAllDamageByEnchanted,
+        }],
+        ..creature_aura(
+            "Temporal Isolation",
+            cost(&[generic(1), w()]),
+            EquipBonus { keywords: vec![Keyword::Shadow], ..Default::default() },
+        )
+    }
+}
+
+/// Triclopean Sight — {1}{W} flash Aura, +1/+1 and vigilance. Enters: untap
+/// enchanted creature.
+pub fn triclopean_sight() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Untap { what: Selector::attached_to(Selector::This), up_to: None })],
+        ..creature_aura(
+            "Triclopean Sight",
+            cost(&[generic(1), w()]),
+            EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Vigilance], ..Default::default() },
+        )
+    }
+}

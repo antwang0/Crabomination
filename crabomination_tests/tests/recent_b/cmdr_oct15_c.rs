@@ -414,3 +414,125 @@ fn agent_maria_hill_triggers_on_teamwork_taps() {
     assert_eq!(plus(&g, hill), 1);
     assert_eq!(g.players[0].hand.len(), hand, "Go Nuts! left, a card came");
 }
+
+// ── Batch 2 ─────────────────────────────────────────────────────────────────
+
+/// Stature becomes base 4/4 when you cast a noncreature spell, not a creature.
+#[test]
+fn stature_grows_on_noncreature_spells() {
+    let mut g = pod(2);
+    let stature = ready(&mut g, 0, catalog::stature_young_avenger());
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast(&mut g, elves);
+    assert_eq!(pt(&g, stature), (2, 2));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Player(1)), None);
+    assert_eq!(pt(&g, stature), (4, 4));
+}
+
+/// Markov Blademaster's double strike grows it between the two damage steps.
+#[test]
+fn markov_blademaster_grows_per_strike() {
+    let mut g = pod(2);
+    let blade = ready(&mut g, 0, catalog::markov_blademaster());
+    let life = g.players[1].life;
+    attack_unblocked(&mut g, vec![(blade, 1)]);
+    assert_eq!(plus(&g, blade), 2);
+    assert_eq!(g.players[1].life, life - 1 - 2, "1 first strike, then 2");
+}
+
+/// Talons of Wildwood and Gilded Assault Cart come back from the graveyard
+/// to hand by their own costs.
+#[test]
+fn graveyard_returns_to_hand() {
+    let mut g = pod(2);
+    let talons = g.add_card_to_graveyard(0, catalog::talons_of_wildwood());
+    activate(&mut g, talons, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == talons));
+    let cart = g.add_card_to_graveyard(0, catalog::gilded_assault_cart());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let make = Effect::CreateToken {
+        who: crabomination::effect::PlayerRef::You,
+        count: crabomination::effect::Value::Const(2),
+        definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+    };
+    g.resolve_effect(&make, &ctx).unwrap();
+    activate(&mut g, cart, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == cart));
+    assert_eq!(named_count(&g, 0, "Treasure"), 0, "both Treasures paid");
+}
+
+/// Deadeye Brawler draws on combat damage only with the city's blessing.
+#[test]
+fn deadeye_brawler_draws_with_the_citys_blessing() {
+    let mut g = pod(2);
+    let brawler = ready(&mut g, 0, catalog::deadeye_brawler());
+    let hand = g.players[0].hand.len();
+    attack_unblocked(&mut g, vec![(brawler, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand, "no blessing, no card");
+    g.players[0].city_blessing = true;
+    g.step = TurnStep::PreCombatMain;
+    g.battlefield_find_mut(brawler).unwrap().tapped = false;
+    attack_unblocked(&mut g, vec![(brawler, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Skyswimmer Koi loots when an artifact enters under your control.
+#[test]
+fn skyswimmer_koi_loots_on_artifacts() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::skyswimmer_koi());
+    g.add_card_to_hand(0, catalog::island());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let gy = g.players[0].graveyard.len();
+    cast(&mut g, ring);
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "drew and discarded");
+}
+
+/// Eidolon of Astral Winds: an enchantment entering makes a creature you
+/// control a 4/4 flier until end of turn.
+#[test]
+fn eidolon_constellation_makes_a_4_4_flier() {
+    let mut g = pod(2);
+    let elves = ready(&mut g, 0, catalog::llanowar_elves());
+    let eidolon = g.add_card_to_hand(0, catalog::eidolon_of_astral_winds());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(elves))]));
+    cast(&mut g, eidolon);
+    assert_eq!(pt(&g, elves), (4, 4));
+    assert!(g.permanent_has_keyword(elves, &Keyword::Flying));
+}
+
+/// Temporal Isolation gives shadow and stops its creature's damage; Triclopean
+/// Sight untaps its creature and pumps it.
+#[test]
+fn isolation_and_sight_auras() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let iso = g.add_card_to_hand(0, catalog::temporal_isolation());
+    cast_with(&mut g, iso, Some(Target::Permanent(wurm)), None);
+    assert!(g.permanent_has_keyword(wurm, &Keyword::Shadow));
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().tapped = true;
+    let sight = g.add_card_to_hand(0, catalog::triclopean_sight());
+    cast_with(&mut g, sight, Some(Target::Permanent(bears)), None);
+    assert!(!g.battlefield_find(bears).unwrap().tapped);
+    assert_eq!(pt(&g, bears), (3, 3));
+}
+
+/// Most Decrepit Old Bird's adventure mills four and takes an instant.
+#[test]
+fn old_bird_adventure_takes_an_instant() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bird = g.add_card_to_hand(0, catalog::most_decrepit_old_bird());
+    flood(&mut g);
+    g.perform_action(GameAction::CastAdventure { card_id: bird, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("adventure");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt));
+}
