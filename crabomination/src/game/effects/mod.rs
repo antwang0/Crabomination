@@ -32836,6 +32836,30 @@ impl GameState {
             }
 
             Effect::CopySpellForPlayer { what, who } => self.copy_spell_for_player(what, who, ctx, events),
+            Effect::BecomeEquipment { what, name, equip, power, toughness } => {
+                for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let def = c.bake_grant();
+                        def.name = name;
+                        def.supertypes = vec![crate::card::Supertype::Legendary];
+                        def.card_types = vec![crate::card::CardType::Artifact];
+                        def.subtypes = crate::card::Subtypes {
+                            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+                            ..Default::default()
+                        };
+                        def.keywords = vec![crate::card::Keyword::Equip(equip.clone())];
+                        def.activated_abilities.clear();
+                        def.triggered_abilities.clear();
+                        def.static_abilities.clear();
+                        def.equipped_bonus = Some(crate::card::EquipBonus {
+                            power: *power,
+                            toughness: *toughness,
+                            ..Default::default()
+                        });
+                    }
+                }
+                Ok(())
+            }
             Effect::BecomeNamed { what, name } => {
                 for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
                     if let Some(c) = self.battlefield_find_mut(id) {

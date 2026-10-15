@@ -823,6 +823,7 @@ impl Effect {
             | Effect::TruceThisTurnAndNext
             | Effect::LegendRuleOffThisTurn { .. }
             | Effect::IgnoreOpponentHexproofThisTurn
+            | Effect::BecomeEquipment { .. }
             | Effect::NextLossThisTurnDrawSevenAtOne
             | Effect::EachCreatureSacrificedUnlessLife { .. }
             | Effect::MayRepeat { .. }

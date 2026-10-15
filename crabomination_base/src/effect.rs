@@ -10074,6 +10074,19 @@ pub enum Effect {
     /// control as though they didn't have hexproof" (Detection Tower): the
     /// turn-scoped `IgnoreOpponentsCreatureHexproof` plus opponent players.
     IgnoreOpponentHexproofThisTurn,
+    /// "Have [this] become a legendary Equipment artifact named `name`. If
+    /// you do, it gains equip `equip` and 'Equipped creature gets
+    /// +`power`/+`toughness`' and loses all other abilities" (The Irencrag
+    /// becoming Everflame, Heroes' Legacy). Baked over the permanent's
+    /// definition (`CardInstance::bake_grant`) until it leaves.
+    BecomeEquipment {
+        what: Selector,
+        #[serde(with = "crate::static_str_serde")]
+        name: crate::static_str_serde::StaticStr,
+        equip: crate::mana::ManaCost,
+        power: i32,
+        toughness: i32,
+    },
     BecomeCopyOf {
         what: Selector,
         source: Selector,
