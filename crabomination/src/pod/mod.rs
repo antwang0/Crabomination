@@ -16008,6 +16008,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_MARVEL_3_COMMANDERS,
             main: decks::CAPTAIN_MARVEL_3_MAIN,
         },
+        // Seat 2593: Lord of Tresserhorn's EDHREC average deck. `--pod-decks 2593`.
+        PodDeck {
+            name: "Lord of Tresserhorn (UBR)",
+            commanders: decks::LORD_OF_TRESSERHORN_COMMANDERS,
+            main: decks::LORD_OF_TRESSERHORN_MAIN,
+        },
+        // Seat 2594: Tahngarth, First Mate's EDHREC average deck. `--pod-decks 2594`.
+        PodDeck {
+            name: "Tahngarth, First Mate (RG)",
+            commanders: decks::TAHNGARTH_2_COMMANDERS,
+            main: decks::TAHNGARTH_2_MAIN,
+        },
+        // Seat 2595: Callaphe, Beloved of the Sea's EDHREC average deck. `--pod-decks 2595`.
+        PodDeck {
+            name: "Callaphe, Beloved of the Sea (U)",
+            commanders: decks::CALLAPHE_COMMANDERS,
+            main: decks::CALLAPHE_MAIN,
+        },
+        // Seat 2596: Ghalta the Immovable's EDHREC average deck. `--pod-decks 2596`.
+        PodDeck {
+            name: "Ghalta the Immovable (W)",
+            commanders: decks::GHALTA_THE_IMMOVABLE_COMMANDERS,
+            main: decks::GHALTA_THE_IMMOVABLE_MAIN,
+        },
+        // Seat 2597: Kaheera, the Orphanguard's EDHREC average deck. `--pod-decks 2597`.
+        PodDeck {
+            name: "Kaheera, the Orphanguard (WG)",
+            commanders: decks::KAHEERA_COMMANDERS,
+            main: decks::KAHEERA_MAIN,
+        },
+        // Seat 2598: Gorex, the Tombshell's EDHREC average deck. `--pod-decks 2598`.
+        PodDeck {
+            name: "Gorex, the Tombshell (B)",
+            commanders: decks::GOREX_COMMANDERS,
+            main: decks::GOREX_MAIN,
+        },
+        // Seat 2599: Stonebrow, Krosan Hero's EDHREC average deck. `--pod-decks 2599`.
+        PodDeck {
+            name: "Stonebrow, Krosan Hero (RG)",
+            commanders: decks::STONEBROW_COMMANDERS,
+            main: decks::STONEBROW_MAIN,
+        },
+        // Seat 2600: Old Man Willow's EDHREC average deck. `--pod-decks 2600`.
+        PodDeck {
+            name: "Old Man Willow (BG)",
+            commanders: decks::OLD_MAN_WILLOW_COMMANDERS,
+            main: decks::OLD_MAN_WILLOW_MAIN,
+        },
+        // Seat 2601: Daghatar the Adamant's EDHREC average deck. `--pod-decks 2601`.
+        PodDeck {
+            name: "Daghatar the Adamant (WBG)",
+            commanders: decks::DAGHATAR_THE_ADAMANT_COMMANDERS,
+            main: decks::DAGHATAR_THE_ADAMANT_MAIN,
+        },
+        // Seat 2602: Verix Bladewing's EDHREC average deck. `--pod-decks 2602`.
+        PodDeck {
+            name: "Verix Bladewing (R)",
+            commanders: decks::VERIX_BLADEWING_COMMANDERS,
+            main: decks::VERIX_BLADEWING_MAIN,
+        },
     ]
 }
 
@@ -20433,6 +20493,16 @@ mod tests {
             ("Donatello, Gadget Master", &[0x1434]),
             ("Sundial, Dawn Tyrant", &[0x1435]),
             ("Captain Marvel, Apex Avenger", &[0x1436]),
+            ("Lord of Tresserhorn", &[0x1437]),
+            ("Tahngarth, First Mate", &[0x1438]),
+            ("Callaphe, Beloved of the Sea", &[0x1439]),
+            ("Ghalta the Immovable", &[0x143A]),
+            ("Kaheera, the Orphanguard", &[0x143B]),
+            ("Gorex, the Tombshell", &[0x143C]),
+            ("Stonebrow, Krosan Hero", &[0x143D]),
+            ("Old Man Willow", &[0x143E]),
+            ("Daghatar the Adamant", &[0x143F]),
+            ("Verix Bladewing", &[0x1440]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
