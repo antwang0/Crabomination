@@ -16104,6 +16104,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EXAVA_COMMANDERS,
             main: decks::EXAVA_MAIN,
         },
+        // Seat 2609: The Kingpin of Crime's EDHREC average deck. `--pod-decks 2609`.
+        PodDeck {
+            name: "The Kingpin of Crime (WB)",
+            commanders: decks::THE_KINGPIN_OF_CRIME_COMMANDERS,
+            main: decks::THE_KINGPIN_OF_CRIME_MAIN,
+        },
+        // Seat 2610: Liliana the Repentant's EDHREC average deck. `--pod-decks 2610`.
+        PodDeck {
+            name: "Liliana the Repentant (B)",
+            commanders: decks::LILIANA_THE_REPENTANT_COMMANDERS,
+            main: decks::LILIANA_THE_REPENTANT_MAIN,
+        },
+        // Seat 2611: Red Hulk's EDHREC average deck. `--pod-decks 2611`.
+        PodDeck {
+            name: "Red Hulk (R)",
+            commanders: decks::RED_HULK_COMMANDERS,
+            main: decks::RED_HULK_MAIN,
+        },
+        // Seat 2612: Mannichi, the Fevered Dream's EDHREC average deck. `--pod-decks 2612`.
+        PodDeck {
+            name: "Mannichi, the Fevered Dream (R)",
+            commanders: decks::MANNICHI_COMMANDERS,
+            main: decks::MANNICHI_MAIN,
+        },
+        // Seat 2613: Naomi, Pillar of Order's EDHREC average deck. `--pod-decks 2613`.
+        PodDeck {
+            name: "Naomi, Pillar of Order (WB)",
+            commanders: decks::NAOMI_COMMANDERS,
+            main: decks::NAOMI_MAIN,
+        },
+        // Seat 2614: Basri, Tomorrow's Champion's EDHREC average deck. `--pod-decks 2614`.
+        PodDeck {
+            name: "Basri, Tomorrow's Champion (W)",
+            commanders: decks::BASRI_COMMANDERS,
+            main: decks::BASRI_MAIN,
+        },
+        // Seat 2615: Aang, A Lot to Learn's EDHREC average deck. `--pod-decks 2615`.
+        PodDeck {
+            name: "Aang, A Lot to Learn (WG)",
+            commanders: decks::AANG_5_COMMANDERS,
+            main: decks::AANG_5_MAIN,
+        },
     ]
 }
 
@@ -20545,6 +20587,13 @@ mod tests {
             ("Iname as One", &[0x1444]),
             ("Thor Odinson", &[0x1445]),
             ("Exava, Rakdos Blood Witch", &[0x1446]),
+            ("The Kingpin of Crime", &[0x1447]),
+            ("Liliana the Repentant", &[0x1448]),
+            ("Red Hulk", &[0x1449]),
+            ("Mannichi, the Fevered Dream", &[0x144A]),
+            ("Naomi, Pillar of Order", &[0x144B]),
+            ("Basri, Tomorrow's Champion", &[0x144C]),
+            ("Aang, A Lot to Learn", &[0x144D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
