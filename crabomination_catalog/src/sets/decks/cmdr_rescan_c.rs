@@ -624,3 +624,81 @@ pub fn volcano_hellion() -> CardDefinition {
         ..creature("Volcano Hellion", cost(&[generic(2), r(), r()]), vec![CreatureType::Hellion], 6, 5)
     }
 }
+
+/// Saheeli, Filigree Master — {2}{U}{R} legendary planeswalker, loyalty 3.
+/// +1: scry 1, then you may tap an untapped artifact you control; if you do,
+/// draw a card. −2: two 1/1 flying Thopter artifact creatures with haste
+/// until end of turn. −4: an emblem with "Artifact creatures you control get
+/// +1/+1" and "Artifact spells you cast cost {1} less to cast." (Saheeli,
+/// Jewel of Avishkar.)
+pub fn saheeli_filigree_master() -> CardDefinition {
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Saheeli, Filigree Master",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Saheeli], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                    Effect::MayTap {
+                        description: "Tap an untapped artifact you control to draw a card?".into(),
+                        filter: R::Artifact.and(R::ControlledByYou),
+                        count: Value::ONE,
+                        then: Box::new(draw(1)),
+                        else_: None,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: Arc::new(thopter) },
+                    Effect::GrantKeyword {
+                        what: Selector::LastCreatedTokens,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Saheeli, Filigree Master".into(),
+                    triggered: vec![],
+                    statics: vec![
+                        StaticAbility {
+                            description: "Artifact creatures you control get +1/+1.",
+                            effect: StaticEffect::PumpPT {
+                                applies_to: Selector::EachPermanent(R::Artifact.and(R::Creature).and(R::ControlledByYou)),
+                                power: 1,
+                                toughness: 1,
+                            },
+                        },
+                        StaticAbility {
+                            description: "Artifact spells you cast cost {1} less to cast.",
+                            effect: StaticEffect::CostReduction { filter: R::Artifact, amount: 1 },
+                        },
+                    ],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

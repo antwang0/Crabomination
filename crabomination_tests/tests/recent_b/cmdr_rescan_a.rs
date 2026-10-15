@@ -1002,3 +1002,20 @@ fn volcano_hellion_burns_through_prevention_and_echoes_your_life() {
     step_to(&mut g, 0, TurnStep::Draw);
     assert!(g.battlefield_find(hellion).is_none(), "echo unpaid");
 }
+
+/// CR 114.4 — Saheeli's −4 emblem pumps artifact creatures and discounts
+/// artifact spells: Mind Stone ({2}) casts off {1}.
+#[test]
+fn saheeli_emblem_discounts_artifact_spells() {
+    let mut g = pod(2);
+    let saheeli = ready(&mut g, 0, catalog::saheeli_filigree_master());
+    g.battlefield_find_mut(saheeli).unwrap().add_counters(CounterType::Loyalty, 2);
+    loyalty(&mut g, saheeli, 2, None);
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{1} pays for Mind Stone under the emblem");
+}
