@@ -1090,7 +1090,7 @@ fn worzel_cat_adds_loyalty() {
 }
 
 /// Photon Blast Barrage with X = 2 is three pings (the copies keep the
-/// original's target by default).
+/// original's target while it isn't yet lethal).
 #[test]
 fn photon_blast_barrage_copies_x_times() {
     let mut g = pod(2);
@@ -1103,6 +1103,25 @@ fn photon_blast_barrage_copies_x_times() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(angel).unwrap().damage, 3);
+}
+
+/// CR 702.40a / 608.2b — bug fix: once the shots already aimed at a creature
+/// are lethal, a storm-style copy defaults to another opposing creature, so
+/// X = 2 kills three 1/1s instead of one 1/1 and two fizzles.
+#[test]
+fn photon_blast_barrage_copies_spread_past_a_lethal_target() {
+    let mut g = pod(3);
+    let elves: Vec<CardId> = [1, 1, 2].iter().map(|&s| ready(&mut g, s, catalog::llanowar_elves())).collect();
+    let spell = g.add_card_to_hand(0, catalog::photon_blast_barrage());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(elves[0])), additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    for e in elves {
+        assert!(g.battlefield_find(e).is_none(), "every 1/1 dies");
+    }
 }
 
 // ── decks::cmdr_scan7k_f ─────────────────────────────────────────────────────

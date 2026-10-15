@@ -60,3 +60,72 @@ impl CastChoices {
         c.cast_collected_evidence = self.cast_collected_evidence;
     }
 }
+
+impl crate::game::GameState {
+    /// What one shot of `effect` spends on the permanent it aims at, for the
+    /// copy-spread default: a removal shot takes the whole object, a fixed or
+    /// X damage shot its amount. `None` for every other effect (keep aim).
+    fn copy_shot_weight(effect: &crate::effect::Effect, x: u32) -> Option<u32> {
+        use crate::effect::{Effect, Value};
+        match effect {
+            Effect::Destroy { .. } | Effect::Exile { .. } => Some(u32::MAX),
+            Effect::Move { to: crate::effect::ZoneDest::Hand(_), .. } => Some(u32::MAX),
+            Effect::DealDamage { amount: Value::Const(n), .. } => Some((*n).max(0) as u32),
+            Effect::DealDamage { amount: Value::XFromCost, .. } => Some(x),
+            _ => None,
+        }
+    }
+
+    /// Bot default for the next storm-style copy (CR 702.40a "you may choose
+    /// new targets for the copies"): once the shots already `aimed` at the
+    /// original's opposing permanent cover it — any removal, or damage summing
+    /// to lethal (CR 120.6) — default to another opposing permanent so the
+    /// rest don't fizzle on a dead target (CR 608.2b).
+    pub(crate) fn storm_copy_default(
+        &self,
+        def: &crate::card::CardDefinition,
+        caster: usize,
+        original: &Option<crate::game::types::Target>,
+        aimed: &[(crate::card::CardId, u32)],
+        x: u32,
+    ) -> Option<crate::game::types::Target> {
+        use crate::game::types::Target;
+        let Some(weight) = Self::copy_shot_weight(&def.effect, x) else {
+            return original.clone();
+        };
+        let Some(Target::Permanent(first)) = original else {
+            return original.clone();
+        };
+        let covered = |s: &Self, id: crate::card::CardId, aimed: &[(crate::card::CardId, u32)]| {
+            let spent = aimed.iter().filter(|(a, _)| *a == id).fold(0u32, |n, (_, w)| n.saturating_add(*w));
+            spent > 0 && (weight == u32::MAX || s.lethal_damage_needed(id, false).is_none_or(|need| spent >= need))
+        };
+        if covered(self, *first, aimed) {
+            let mut avoid = vec![crate::card::CardId(u32::MAX)];
+            avoid.extend(aimed.iter().map(|(a, _)| *a).filter(|a| covered(self, *a, aimed)));
+            match self.auto_target_for_effect_avoiding_set_x(&def.effect, caster, &avoid, x) {
+                Some(Target::Permanent(other))
+                    if self.battlefield_find(other).is_some_and(|c| !self.same_team(c.controller, caster)) =>
+                {
+                    Some(Target::Permanent(other))
+                }
+                _ => original.clone(),
+            }
+        } else {
+            original.clone()
+        }
+    }
+
+    /// Record one shot (the original or a copy) at `target` for
+    /// [`Self::storm_copy_default`].
+    pub(crate) fn note_copy_aim(
+        def: &crate::card::CardDefinition,
+        x: u32,
+        target: &Option<crate::game::types::Target>,
+        aimed: &mut Vec<(crate::card::CardId, u32)>,
+    ) {
+        if let (Some(w), Some(crate::game::types::Target::Permanent(id))) = (Self::copy_shot_weight(&def.effect, x), target) {
+            aimed.push((*id, w));
+        }
+    }
+}

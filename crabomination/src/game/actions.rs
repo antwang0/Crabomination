@@ -13515,9 +13515,14 @@ impl GameState {
             } else {
                 n
             };
+            let mut aimed = Vec::new();
+            Self::note_copy_aim(&def, x_value, &target, &mut aimed);
             for _ in 0..n {
                 let copy_target = if target.is_some() {
-                    self.repoint_copy_target(&def, p, &target)
+                    let default = self.storm_copy_default(&def, p, &target, &aimed, x_value);
+                    let t = self.repoint_copy_target(&def, p, &default);
+                    Self::note_copy_aim(&def, x_value, &t, &mut aimed);
+                    t
                 } else {
                     None
                 };
