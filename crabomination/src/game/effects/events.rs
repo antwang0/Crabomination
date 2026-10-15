@@ -104,7 +104,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         | E::Enlisted { .. }
         | E::BecameRenowned { .. }
         | E::DieResult { .. }
-        | E::Bent { .. } => {
+        | E::Bent { .. }
+        | E::SpellCausedLifeGain { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
@@ -291,6 +292,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         | (A::BecameRenowned, GameEvent::BecameRenowned { .. })
         | (A::DieResult, GameEvent::DieResult { .. }) => true,
         (A::Bent(want), GameEvent::Bent { kind, .. }) => want.is_none_or(|w| w == *kind),
+        (A::SpellCausedLifeGain, GameEvent::SpellCausedLifeGain { .. }) => true,
         _ => false,
     }
 }
@@ -1469,6 +1471,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::LandPlayed { player, .. }
         | GameEvent::SpellCast { player, .. }
         | GameEvent::LifeGained { player, .. }
+        | GameEvent::SpellCausedLifeGain { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::CardExiledFrom { player, .. }
         | GameEvent::CreatureFought { controller: player, .. }
@@ -1671,6 +1674,8 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Paranormal Analyst's "put a card you put into your graveyard this way
         // into your hand" can return it.
         GameEvent::ManifestedDread { milled, .. } => Some(EntityRef::Card(*milled)),
+        // The spell that caused the gain (Firesong and Sunspeaker's filter).
+        GameEvent::SpellCausedLifeGain { spell, .. } => Some(EntityRef::Card(*spell)),
         GameEvent::LifeGained { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::LifeLost { player, .. }
@@ -2012,6 +2017,7 @@ mod tests {
             E::DamagePrevented { amount: 1, to_player: Some(0), to_card: None },
             E::LifeLost { player: 0, amount: 1 },
             E::LifeGained { player: 0, amount: 1 },
+            E::SpellCausedLifeGain { player: 0, spell: c, amount: 1 },
             E::CardsExiledFromHandOrBy { player: 0, count: 1 },
             E::CreatureFought { card_id: c, controller: 0 },
             E::PaidLife { player: 0, amount: 1 },
@@ -2197,6 +2203,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::BecameRenowned),
             K::Performed(crate::effect::KeywordAct::DieResult),
             K::Performed(crate::effect::KeywordAct::Bent(None)),
+            K::Performed(crate::effect::KeywordAct::SpellCausedLifeGain),
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,

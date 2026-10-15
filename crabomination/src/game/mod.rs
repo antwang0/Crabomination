@@ -33203,6 +33203,7 @@ fn event_amount(event: &GameEvent) -> u32 {
             (true, false) => 2,
         },
         GameEvent::LifeGained { amount, .. }
+        | GameEvent::SpellCausedLifeGain { amount, .. }
         | GameEvent::LifeLost { amount, .. }
         | GameEvent::PaidLife { amount, .. }
         | GameEvent::DamageDealt { amount, .. }
@@ -35429,6 +35430,7 @@ fn static_effect_to_effects(
             // YourInstantSorcerySpellsHaveLifelink (Radiant Scrollwielder) —
             // consulted in the non-combat damage path; no layer effect.
             | StaticEffect::YourInstantSorcerySpellsHaveLifelink
+            | StaticEffect::YourMatchingInstantSorcerySpellsHaveLifelink { .. }
             // SelfCostReducedByGreatestPower (The Great Henge) — read by
             // `cost_reduction_for_spell` off the spell being cast; no layer.
             | StaticEffect::SelfCostReducedByGreatestPower

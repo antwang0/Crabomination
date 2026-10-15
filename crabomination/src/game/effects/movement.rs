@@ -2321,12 +2321,18 @@ impl GameState {
 
     /// True if `seat` controls a permanent granting
     /// `StaticEffect::YourInstantSorcerySpellsHaveLifelink` (Radiant Scrollwielder).
-    pub(crate) fn controller_grants_spell_lifelink(&self, seat: usize) -> bool {
+    /// `StaticEffect::YourMatchingInstantSorcerySpellsHaveLifelink` whose
+    /// filter `spell` matches (Firesong and Sunspeaker's red ones).
+    pub(crate) fn controller_grants_spell_lifelink(&self, seat: usize, spell: &crate::card::CardInstance) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
             c.controller == seat
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::YourInstantSorcerySpellsHaveLifelink)
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::YourInstantSorcerySpellsHaveLifelink => true,
+                    StaticEffect::YourMatchingInstantSorcerySpellsHaveLifelink { filter } => {
+                        self.evaluate_requirement_on_card(filter, spell, seat)
+                    }
+                    _ => false,
                 })
         })
     }

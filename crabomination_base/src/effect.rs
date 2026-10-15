@@ -4128,6 +4128,12 @@ pub enum KeywordAct {
     /// paid), 702.189b firebend (a firebending ability resolved). The bender
     /// is the actor (Avatar Aang).
     Bent(Option<BendKind>),
+    /// An instant or sorcery spell's resolution made a player gain life ("a
+    /// white instant or sorcery spell causes you to gain life" — Firesong and
+    /// Sunspeaker). The spell is the subject (filter its color/type with
+    /// `Predicate::EntityMatches` on `TriggerSource`), the gainer the actor,
+    /// the total gained the event amount; one event per gainer.
+    SpellCausedLifeGain,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.

@@ -4086,6 +4086,10 @@ pub enum StaticEffect {
     /// an instant/sorcery spell whose controller has this static deals damage,
     /// that controller gains that much life. Radiant Scrollwielder.
     YourInstantSorcerySpellsHaveLifelink,
+    /// `YourInstantSorcerySpellsHaveLifelink` for only the instant and sorcery
+    /// spells matching `filter` ("Red instant and sorcery spells you control
+    /// have lifelink" — Firesong and Sunspeaker).
+    YourMatchingInstantSorcerySpellsHaveLifelink { filter: SelectionRequirement },
     /// "Spells and abilities your opponents control can't cause you to
     /// sacrifice permanents." Consulted in the `Effect::Sacrifice` resolver:
     /// when an opponent-controlled effect would force this static's controller

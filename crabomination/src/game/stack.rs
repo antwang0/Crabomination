@@ -3528,7 +3528,7 @@ impl GameState {
                     let granted_dt = self.spell_granted_keyword(card.id, &Keyword::Deathtouch);
                     retain_cold!(self.spell_keyword_grants, |(id, _)| *id != card.id);
                     self.resolving_spell_lifelink_seat = (is_is
-                        && (granted_ll || self.controller_grants_spell_lifelink(caster)))
+                        && (granted_ll || self.controller_grants_spell_lifelink(caster, &card)))
                     .then_some(caster);
                     // Pestilent Spirit — the resolving I/S has deathtouch while
                     // its controller has the granting static.
@@ -3540,6 +3540,7 @@ impl GameState {
                     // (Blaze Commando), once per resolution.
                     self.resolving_spell_caster = is_is.then_some(caster);
                     self.spell_damage_trigger_fired = false;
+                    let spell_id = card.id;
                     let mut spell_events = self.continue_spell_resolution(
                         card,
                         caster,
@@ -3555,6 +3556,23 @@ impl GameState {
                     self.resolving_spell_lifelink_seat = None;
                     self.resolving_spell_deathtouch_seat = None;
                     self.resolving_spell_caster = None;
+                    // "Whenever a [color] instant or sorcery spell causes you
+                    // to gain life" (Firesong and Sunspeaker): one event per
+                    // gainer, totalling the resolution's gains.
+                    if is_is && spell_events.iter().any(|e| matches!(e, GameEvent::LifeGained { .. })) {
+                        let mut gains: Vec<(usize, u32)> = Vec::new();
+                        for e in &spell_events {
+                            if let GameEvent::LifeGained { player, amount } = e {
+                                match gains.iter_mut().find(|(p, _)| p == player) {
+                                    Some((_, n)) => *n += amount,
+                                    None => gains.push((*player, *amount)),
+                                }
+                            }
+                        }
+                        for (player, amount) in gains {
+                            spell_events.push(GameEvent::SpellCausedLifeGain { player, spell: spell_id, amount });
+                        }
+                    }
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {
                         return Ok(events);

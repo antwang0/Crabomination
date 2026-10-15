@@ -2911,6 +2911,9 @@ pub enum GameEvent {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// `player` gained `amount` life during the resolution of instant or
+    /// sorcery spell `spell` (its own gain or its lifelink damage).
+    SpellCausedLifeGain { player: usize, spell: CardId, amount: u32 },
     /// `count` cards left `player`'s hand for exile, or were exiled from the
     /// battlefield by a spell or ability `player` controlled, since the last
     /// trigger dispatch — synthesized there from `pending_exile_tally`
