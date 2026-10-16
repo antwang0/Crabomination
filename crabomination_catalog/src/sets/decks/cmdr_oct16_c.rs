@@ -1073,3 +1073,73 @@ pub fn mirrormere_guardian() -> CardDefinition {
         ..creature("Mirrormere Guardian", cost(&[generic(2), g()]), vec![CreatureType::Dwarf, CreatureType::Soldier], 4, 2)
     }
 }
+
+// ── The Destined Thief ──────────────────────────────────────────────────────
+
+fn full_party() -> Predicate {
+    Predicate::ValueAtLeast(Value::PartyCount, Value::Const(4))
+}
+
+/// The Destined Thief — {2}{U} legendary 2/2 unblockable Human Rogue. {U},
+/// {T}: another target creature you control can't be blocked this turn.
+/// One or more of your creatures dealing combat damage to one or more
+/// players: loot, or draw three with a full party.
+pub fn the_destined_thief() -> CardDefinition {
+    let draw = |n| Effect::Draw { who: Selector::You, amount: Value::Const(n) };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Unblockable],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[u()]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).once_per_batch_across_players(),
+            effect: Effect::If {
+                cond: full_party(),
+                then: Box::new(draw(3)),
+                else_: Box::new(Effect::Seq(vec![
+                    draw(1),
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ])),
+            },
+        }],
+        ..creature("The Destined Thief", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 2)
+    }
+}
+
+/// Nimble Trapfinder — {1}{U} 2/1 Human Rogue. Unblockable if another Cleric,
+/// Rogue, Warrior or Wizard entered under your control this turn. At the
+/// beginning of combat on your turn, with a full party, your creatures gain
+/// "combat damage to a player: draw a card" until end of turn.
+pub fn nimble_trapfinder() -> CardDefinition {
+    let roles = [CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard];
+    let entered = Value::Sum(roles.iter().map(|&t| Value::OtherCreaturesOfTypeEnteredThisTurn(t)).collect());
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature can't be blocked if you had another Cleric, Rogue, Warrior, or Wizard enter the battlefield under your control this turn.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Unblockable,
+                condition: Predicate::ValueAtLeast(entered, Value::ONE),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer).with_filter(full_party()),
+            effect: Effect::GrantTriggeredAbility {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Nimble Trapfinder", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 1)
+    }
+}

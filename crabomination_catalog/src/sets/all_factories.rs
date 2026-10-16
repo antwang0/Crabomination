@@ -16318,6 +16318,8 @@ static DECKS: &[Factory] = &[
     super::decks::rhinos_rampage,
     super::decks::smeagol_helpful_guide,
     super::decks::mirrormere_guardian,
+    super::decks::the_destined_thief,
+    super::decks::nimble_trapfinder,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

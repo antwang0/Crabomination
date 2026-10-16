@@ -1042,3 +1042,41 @@ fn smeagol_steals_a_land_when_the_ring_tempts() {
     assert!(l.controller == 0 && l.tapped);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
 }
+
+/// The Destined Thief loots once when creatures connect with two different
+/// players in the same damage step (CR 603.2c "one or more players").
+#[test]
+fn destined_thief_loots_once_across_players() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 5);
+    let thief = ready(&mut g, 0, catalog::the_destined_thief());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: thief, target: AttackTarget::Player(1) },
+        Attack { attacker: bears, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert_eq!((g.players[0].hand.len(), g.players[0].graveyard.len()), (1, 1), "one loot");
+}
+
+/// Nimble Trapfinder can't be blocked once another Rogue entered this turn.
+#[test]
+fn nimble_trapfinder_unblockable_after_a_rogue_enters() {
+    let mut g = pod(2);
+    let t = ready(&mut g, 0, catalog::nimble_trapfinder());
+    let has = |g: &GameState| g.computed_permanent(t).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable);
+    assert!(!has(&g));
+    let thief = g.add_card_to_hand(0, catalog::the_destined_thief());
+    cast(&mut g, thief);
+    assert!(has(&g));
+}
