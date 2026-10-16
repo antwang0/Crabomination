@@ -81639,3 +81639,138 @@ pub const IAN_CHESTERTON_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const DORAN_COMMANDERS: &[CardFactory] = &[doran_the_siege_tower];
+
+/// **Doran, the Siege Tower**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 9 Forests + 5 Plains + 4 Swamps = 99.
+/// Doran, the Siege Tower (EDHREC, fetched 2026-10-16).
+pub const DORAN_MAIN: &[CardFactory] = &[
+    arcane_signet, colfenors_urn, meekstone, slagwurm_armor, sol_ring, swiftfoot_boots,
+    access_tunnel, bojuka_bog, canopy_vista, command_tower, evolving_wilds, exotic_orchard,
+    godless_shrine, indatha_triome, isolated_chapel, murmuring_bosk, overgrown_tomb,
+    path_of_ancestry, sandsteppe_citadel, sunpetal_grove, temple_garden, windswept_heath,
+    woodland_cemetery, yavimaya_cradle_of_growth, abzan_beastmaster, ancient_lumberknot,
+    bedrock_tortoise, black_poplar_shaman, bosk_banneret, colfenor_the_last_yew,
+    dauntless_dourbark, doran_besieged_by_time, faeburrow_elder, fangorn_tree_shepherd,
+    fecund_greenshell, great_forest_druid, heartwood_storyteller, ikra_shidiqi_the_usurper,
+    indomitable_ancients, leaf_crowned_elder, magnigoth_treefolk, nemata_primeval_warden,
+    nyx_fleece_ram, orchard_warden, quickbeam_upstart_ent, sapling_of_colfenor, seedguide_ash,
+    timber_protector, tree_of_perdition, treebeard_gracious_host, treefolk_harbinger,
+    trostani_selesnyas_voice, ulvenwald_observer, unstoppable_ash, assault_formation,
+    behind_the_scenes, brave_the_sands, dormant_grove, primal_rage, sapling_nursery,
+    spidersilk_armor, stoneskin, abzan_charm, assassins_trophy, heroic_intervention, mortify,
+    path_to_exile, putrefy, reach_of_branches, swords_to_plowshares, tower_defense,
+    huatli_the_suns_heart, cultivate, dusk_dawn, farseek, fell_the_mighty, kodamas_reach,
+    last_march_of_the_ents, natures_lore, rampant_growth, wave_of_reckoning,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, plains, plains,
+    plains, plains, plains, swamp, swamp, swamp, swamp,
+];
+
+pub const POLUKRANOS_REBORN_COMMANDERS: &[CardFactory] = &[polukranos_reborn];
+
+/// **Polukranos Reborn**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 15 Forests + 7 Plains = 99.
+/// Polukranos Reborn (EDHREC, fetched 2026-10-16).
+pub const POLUKRANOS_REBORN_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, selesnya_signet, sol_ring, swiftfoot_boots,
+    the_great_henge, bountiful_promenade, brushland, canopy_vista, castle_garenbrig,
+    command_tower, fortified_village, hushwood_verge, lair_of_the_hydra, overgrown_farmland,
+    path_of_ancestry, selesnya_sanctuary, sunpetal_grove, temple_garden, temple_of_plenty,
+    benevolent_hydra, capricopian, elvish_mystic, feral_hydra, gargos_vicious_watcher,
+    genesis_hydra, goldvein_hydra, guiding_hydra, hooded_hydra, hungering_hydra, kalonian_hydra,
+    lifeblood_hydra, llanowar_elves, luminous_broodmoth, managorger_hydra, mistcutter_hydra,
+    mossborn_hydra, neverwinter_hydra, nyxborn_hydra, primordial_hydra, protean_hydra,
+    rampant_rejuvenator, sakura_tribe_elder, steelbane_hydra, sun_titan, vastwood_hydra,
+    voracious_hydra, warden_of_the_grove, wildwood_scourge, wrens_run_hydra, abiding_grace,
+    anointed_procession, doubling_season, elemental_bond, garruks_uprising, greater_good,
+    parallel_lives, tribute_to_the_world_tree, unbound_flourishing, beast_within, generous_gift,
+    heroic_intervention, path_to_exile, rally_the_ancestors, return_of_the_wildspeaker,
+    sundering_growth, swords_to_plowshares, ascend_from_avernus, cultivate, farseek,
+    kodamas_reach, natures_lore, patch_up, raise_the_past, rampant_growth, return_to_the_ranks,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const KORLASH_COMMANDERS: &[CardFactory] = &[korlash_heir_to_blackblade];
+
+/// **Korlash, Heir to Blackblade**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Korlash, Heir to Blackblade (EDHREC, fetched 2026-10-16).
+pub const KORLASH_MAIN: &[CardFactory] = &[
+    arcane_signet, bitterthorn_nissas_animus, blackblade_reforged, caged_sun, expedition_map,
+    jet_medallion, lashwrithe, lightning_greaves, loxodon_warhammer, mask_of_griselbrand,
+    navigation_orb, nightmare_lash, shadowspear, sol_ring, strata_scythe, swiftfoot_boots,
+    sword_of_the_animist, wayfarers_bauble, bojuka_bog, cabal_coffers, cabal_stronghold,
+    myriad_landscape, rogues_passage, urborg_tomb_of_yawgmoth, witchs_cottage,
+    activated_sleeper, burnished_hart, canoptek_wraith, crypt_ghast, disciple_of_bolas,
+    dread_presence, filth, gray_merchant_of_asphodel, lilianas_shade, magus_of_the_coffers,
+    nightmare, nirkana_revenant, ob_nixilis_the_fallen, pupu_ufo, scampering_surveyor,
+    solemn_simulacrum, squelching_leeches, walking_atlas, black_market_connections, greed,
+    phyrexian_arena, phyrexian_reclamation, retreat_to_hagra, consuming_corruption, dark_ritual,
+    defile, imps_mischief, infernal_grasp, snuff_out, tendrils_of_corruption, withering_torment,
+    liliana_of_the_dark_realms, bubbling_muck, corrupt, exsanguinate, feed_the_swarm,
+    mandate_of_abaddon, mutilate, nights_whisper, read_the_bones, sign_in_blood,
+    torment_of_hailfire, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GRIMA_WORMTONGUE_COMMANDERS: &[CardFactory] = &[grima_wormtongue];
+
+/// **Gríma Wormtongue**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Gríma Wormtongue (EDHREC, fetched 2026-10-16).
+pub const GRIMA_WORMTONGUE_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, charcoal_diamond, grond_the_gatebreaker, inherited_envelope,
+    jet_medallion, sol_ring, swiftfoot_boots, vat_of_rebirth, barad_dur, bojuka_bog,
+    cabal_coffers, myriad_landscape, rogues_passage, urborg_tomb_of_yawgmoth,
+    ayara_first_of_locthwain, blood_artist, crypt_ghast, gollum_patient_plotter,
+    gollum_scheming_guide, gorbag_of_minas_morgul, gothmog_morgul_lieutenant,
+    gray_merchant_of_asphodel, jadar_ghoulcaller_of_nephalia, junji_the_midnight_sky,
+    kingpin_wilson_fisk, kokusho_the_evening_star, lobelia_sackville_baggins, mirkwood_bats,
+    moira_urborg_haunt, morbid_opportunist, orcish_bowmasters, ozox_the_clattering_king,
+    pitiless_plunderer, reassembling_skeleton, sauron_the_necromancer, sheoldred_whispering_one,
+    solemn_simulacrum, syr_konrad_the_grim, viconia_drow_apostate, vraan_executioner_thane,
+    warg_rider, whisper_blood_liturgist, zulaport_cutthroat, along_the_crooked_way,
+    bastion_of_remembrance, call_of_the_ring, dreadhorde_invasion, march_from_the_black_gate,
+    one_ring_to_rule_them_all, phyrexian_arena, dark_ritual, deadly_dispute, defile,
+    go_for_the_throat, infernal_grasp, nasty_end, orcish_medicine, village_rites,
+    claim_the_precious, dread_return, exsanguinate, feed_the_swarm, mordor_muster,
+    nights_whisper, reanimate, sams_desperate_rescue, sign_in_blood, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const CELEBORN_THE_WISE_COMMANDERS: &[CardFactory] = &[celeborn_the_wise];
+
+/// **Celeborn the Wise**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Forests = 99.
+/// Celeborn the Wise (EDHREC, fetched 2026-10-16).
+pub const CELEBORN_THE_WISE_MAIN: &[CardFactory] = &[
+    arcane_signet, crystal_ball, emerald_medallion, lifecrafters_bestiary, lothlorien_blade,
+    mirror_of_galadriel, seers_lantern, sol_ring, swiftfoot_boots, isolated_watchtower,
+    path_of_ancestry, roiling_canopy, the_grey_havens, zhalfirin_void, arbor_elf,
+    beast_whisperer, canopy_tactician, chance_met_elves, dwynens_elite, dwynen_gilt_leaf_daen,
+    eladamri_korvecdal, elvish_archdruid, elvish_harbinger, elvish_mystic, elvish_visionary,
+    elvish_warmaster, ezuri_renegade_leader, fyndhorn_elves, galadhrim_guide,
+    galion_elvenkings_butler, glorfindel_dauntless_rescuer, haldir_lorien_lieutenant,
+    immaculate_magistrate, imperious_perfect, ivy_lane_denizen, leaf_crowned_visionary,
+    llanowar_elves, llanowar_empath, lothlorien_lookout, lys_alana_huntmaster,
+    marwyn_the_nurturer, priest_of_titania, reclamation_sage, wood_elves, elven_chorus,
+    elvish_guidance, fall_of_gil_galad, gift_of_strands, in_search_of_greatness,
+    season_of_growth, sylvan_anthem, beast_within, elven_ambush, ferocious_charge, fog,
+    galadhrim_ambush, shower_of_arrows, tel_jilad_justice, windswift_slice, cultivate,
+    elven_farsight, explore, nissas_revelation, peregrination, rampant_growth, track_down,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];

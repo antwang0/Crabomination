@@ -17916,6 +17916,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IAN_CHESTERTON_COMMANDERS,
             main: decks::IAN_CHESTERTON_MAIN,
         },
+        // Seat 2911: Doran, the Siege Tower's EDHREC average deck. `--pod-decks 2911`.
+        PodDeck {
+            name: "Doran, the Siege Tower (WBG)",
+            commanders: decks::DORAN_COMMANDERS,
+            main: decks::DORAN_MAIN,
+        },
+        // Seat 2912: Polukranos Reborn's EDHREC average deck. `--pod-decks 2912`.
+        PodDeck {
+            name: "Polukranos Reborn (WG)",
+            commanders: decks::POLUKRANOS_REBORN_COMMANDERS,
+            main: decks::POLUKRANOS_REBORN_MAIN,
+        },
+        // Seat 2913: Korlash, Heir to Blackblade's EDHREC average deck. `--pod-decks 2913`.
+        PodDeck {
+            name: "Korlash, Heir to Blackblade (B)",
+            commanders: decks::KORLASH_COMMANDERS,
+            main: decks::KORLASH_MAIN,
+        },
+        // Seat 2914: Gríma Wormtongue's EDHREC average deck. `--pod-decks 2914`.
+        PodDeck {
+            name: "Gríma Wormtongue (B)",
+            commanders: decks::GRIMA_WORMTONGUE_COMMANDERS,
+            main: decks::GRIMA_WORMTONGUE_MAIN,
+        },
+        // Seat 2915: Celeborn the Wise's EDHREC average deck. `--pod-decks 2915`.
+        PodDeck {
+            name: "Celeborn the Wise (G)",
+            commanders: decks::CELEBORN_THE_WISE_COMMANDERS,
+            main: decks::CELEBORN_THE_WISE_MAIN,
+        },
     ]
 }
 
@@ -22710,6 +22740,11 @@ mod tests {
             ("Shaun & Rebecca, Agents", &[0x1572]),
             ("Lady Evangela", &[0x1573]),
             ("Ian Chesterton", &[0x1574]),
+            ("Doran, the Siege Tower", &[0x1575]),
+            ("Polukranos Reborn", &[0x1576]),
+            ("Korlash, Heir to Blackblade", &[0x1577]),
+            ("Gríma Wormtongue", &[0x1578]),
+            ("Celeborn the Wise", &[0x1579]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
