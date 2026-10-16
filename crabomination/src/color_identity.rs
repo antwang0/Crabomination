@@ -329,6 +329,16 @@ mod tests {
         assert_eq!(color_identity(&catalog::jodah_archmage_eternal()).len(), 5);
     }
 
+    /// CR 111.10 / 903.4 — a Heartwood token's "{T}: Add {R} or {G}" is
+    /// reminder text on the card that makes it: Hungering Puppetbeast is
+    /// mono-green.
+    #[test]
+    fn cr_903_4_a_predefined_tokens_reminder_mana_adds_no_identity() {
+        let id = color_identity(&catalog::hungering_puppetbeast());
+        assert!(id.contains(Color::Green));
+        assert_eq!(id.len(), 1, "the Heartwood's red is reminder text");
+    }
+
     #[test]
     fn tag_names_are_unambiguous() {
         // Protection from a color is not color identity (CR 903.4 counts mana

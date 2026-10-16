@@ -1065,3 +1065,128 @@ fn feed_the_pack_makes_wolves_per_toughness() {
     assert!(g.battlefield_find(wurm).is_none());
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Wolf").count(), 4);
 }
+
+/// Yuan Shao: a creature you control can't be blocked by two creatures.
+#[test]
+fn yuan_shao_limits_blockers_to_one() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::yuan_shao_the_indecisive());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::llanowar_elves());
+    attack(&mut g, bears);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(a, bears), (b, bears)])).is_err(), "two blockers");
+    g.perform_action(GameAction::DeclareBlockers(vec![(a, bears)])).expect("one blocker");
+}
+
+/// CR 604.3 — Horde of Boggarts counts red permanents (itself included);
+/// Pyreheart Wolf's attack gives your team menace.
+#[test]
+fn horde_of_boggarts_and_pyreheart_wolf() {
+    let mut g = pod(2);
+    let horde = ready(&mut g, 0, catalog::horde_of_boggarts());
+    let wolf = ready(&mut g, 0, catalog::pyreheart_wolf());
+    let cp = g.computed_permanent(horde).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    attack(&mut g, wolf);
+    assert!(g.computed_permanent(horde).unwrap().keywords().contains(&Keyword::Menace));
+}
+
+/// CR 700.8 — party: a Warrior (Emeria Captain itself) and a Cleric make two;
+/// Concerted Defense taxes {1} plus that.
+#[test]
+fn emeria_captain_counts_the_party() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hedron_field_purists());
+    let e = g.add_card_to_hand(0, catalog::emeria_captain());
+    cast(&mut g, e, None);
+    assert_eq!(g.battlefield_find(e).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Journey to Oblivion exiles until it leaves, and costs {1} less per party
+/// member.
+#[test]
+fn journey_to_oblivion_is_cheaper_with_a_party() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hedron_field_purists());
+    ready(&mut g, 0, catalog::kargan_intimidator());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let j = g.add_card_to_hand(0, catalog::journey_to_oblivion());
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.perform_action(GameAction::CastSpell { card_id: j, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("3 mana with two in the party");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none());
+}
+
+/// Hungering Puppetbeast eats another artifact for a counter and a keyword;
+/// Tenured Tethermage taps two artifacts for two counters.
+#[test]
+fn puppetbeast_and_tethermage_use_heartwoods() {
+    let mut g = pod(2);
+    let p = g.add_card_to_hand(0, catalog::hungering_puppetbeast());
+    cast(&mut g, p, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Heartwood").count(), 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
+    activate(&mut g, p, None).expect("eat the Heartwood");
+    let cp = g.computed_permanent(p).unwrap();
+    assert_eq!(cp.power, 6);
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Heartwood").count(), 0);
+
+    g.add_card_to_battlefield(0, catalog::forest());
+    let t = g.add_card_to_hand(0, catalog::tenured_tethermage());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, t, None);
+    let hw: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Heartwood").collect();
+    assert_eq!(hw.len(), 2);
+    assert!(hw.iter().all(|c| c.tapped), "they enter tapped");
+    for c in g.battlefield.iter_mut().filter(|c| c.definition.name == "Heartwood") {
+        c.tapped = false;
+    }
+    g.clear_sickness(t);
+    activate(&mut g, t, None).expect("tap two artifacts");
+    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Woodwork Prodigy re-prepares at your upkeep; its Soul Tether makes a
+/// Heartwood.
+#[test]
+fn woodwork_prodigy_reprepares_each_upkeep() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let w = ready(&mut g, 0, catalog::woodwork_prodigy());
+    assert_eq!(g.battlefield_find(w).unwrap().counter_count(CounterType::Prepared), 0);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert_eq!(g.battlefield_find(w).unwrap().counter_count(CounterType::Prepared), 1);
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastPrepareSpell { creature_id: w, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("Soul Tether");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Heartwood").count(), 1);
+}
+
+/// Diviner of Victory enters prepared; Unwind History bounces and surveils,
+/// which pumps the Diviner and lets Proft pay for a card.
+#[test]
+fn diviner_of_victory_unwinds_and_proft_draws() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let proft = ready(&mut g, 0, catalog::proft_consulting_detective());
+    let d = g.add_card_to_hand(0, catalog::diviner_of_victory());
+    cast(&mut g, d, None);
+    assert_eq!(g.battlefield_find(d).unwrap().counter_count(CounterType::Prepared), 1);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    let top = g.players[0].library[0].id;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![top], bottom: vec![] }, DecisionAnswer::Bool(true)]));
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::CastPrepareSpell { creature_id: d, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None }).expect("Unwind History");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    assert_eq!(g.computed_permanent(d).unwrap().power, 2, "surveil pumped it");
+    assert_eq!(g.battlefield_find(proft).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), h + 1);
+}

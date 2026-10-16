@@ -2352,3 +2352,236 @@ pub fn feed_the_pack() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Yuan Shao, the Indecisive ───────────────────────────────────────────────
+
+/// Yuan Shao, the Indecisive — {4}{R} legendary 2/3 horsemanship Human
+/// Soldier. Each creature you control can't be blocked by more than one
+/// creature.
+pub fn yuan_shao_the_indecisive() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Horsemanship],
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control can't be blocked by more than one creature.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::CantBeBlockedByMoreThanOne,
+            },
+        }],
+        ..creature("Yuan Shao, the Indecisive", cost(&[generic(4), r()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 3)
+    }
+}
+
+/// Horde of Boggarts — {3}{R} */* menace Goblin; P/T = red permanents you
+/// control (CR 604.3 characteristic-defining).
+pub fn horde_of_boggarts() -> CardDefinition {
+    let reds = Value::CountOf(Box::new(Selector::EachPermanent(R::HasColor(Color::Red).and(R::ControlledByYou))));
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "Horde of Boggarts's power and toughness are each equal to the number of red permanents you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: reds.clone(), toughness: reds },
+        }],
+        ..creature("Horde of Boggarts", cost(&[generic(3), r()]), vec![CreatureType::Goblin], 0, 0)
+    }
+}
+
+/// Pyreheart Wolf — {2}{R} 1/1 undying Wolf. Attacks: creatures you control
+/// gain menace until end of turn.
+pub fn pyreheart_wolf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Undying],
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            keyword: Keyword::Menace,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Pyreheart Wolf", cost(&[generic(2), r()]), vec![CreatureType::Wolf], 1, 1)
+    }
+}
+
+// ── Linvala, Shield of Sea Gate: party ──────────────────────────────────────
+
+/// Emeria Captain — {3}{W} 1/1 flying, vigilance Angel Warrior. Enters: a
+/// +1/+1 counter per creature in your party (CR 700.8).
+pub fn emeria_captain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![etb(counters(Selector::This, Value::PartyCount))],
+        ..creature("Emeria Captain", cost(&[generic(3), w()]), vec![CreatureType::Angel, CreatureType::Warrior], 1, 1)
+    }
+}
+
+/// Journey to Oblivion — {4}{W} enchantment, {1} less per creature in your
+/// party. Enters: exile target nonland permanent an opponent controls until it
+/// leaves.
+pub fn journey_to_oblivion() -> CardDefinition {
+    CardDefinition {
+        name: "Journey to Oblivion",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast for each creature in your party.",
+            effect: StaticEffect::SelfCostReducedByValue { amount: Value::PartyCount },
+        }],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Nonland.and(R::ControlledByOpponent)),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Concerted Defense — {U} instant. Counter target noncreature spell unless
+/// its controller pays {1} plus {1} per creature in your party.
+pub fn concerted_defense() -> CardDefinition {
+    spell(
+        "Concerted Defense",
+        cost(&[u()]),
+        true,
+        Effect::CounterUnlessPaid {
+            what: target_filtered(R::IsSpellOnStack.and(R::Noncreature)),
+            mana_cost: cost(&[generic(1)]),
+            exile: false,
+            extra_generic: Some(Value::PartyCount),
+            if_paid: None,
+        },
+    )
+}
+
+// ── Aerid Konstrari: Heartwoods ─────────────────────────────────────────────
+
+fn heartwood() -> Arc<TokenDefinition> {
+    Arc::new(TokenDefinition {
+        name: "Heartwood".into(),
+        card_types: vec![CardType::Artifact],
+        colors: vec![Color::Red, Color::Green],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    })
+}
+
+/// Soul Tether — {2}{R/G} sorcery: create a Heartwood token (a prepare spell).
+fn soul_tether() -> Arc<CardDefinition> {
+    Arc::new(spell(
+        "Soul Tether",
+        cost(&[generic(2), hybrid(Color::Red, Color::Green)]),
+        false,
+        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: heartwood() },
+    ))
+}
+
+/// Hungering Puppetbeast — {3}{G}{G} 5/5 artifact Beast Construct. Enters: a
+/// Heartwood token. {1}, sacrifice another artifact: a +1/+1 counter, and your
+/// choice of trample, hexproof or haste until end of turn.
+pub fn hungering_puppetbeast() -> CardDefinition {
+    let gain = |k: Keyword| Effect::GrantKeyword { what: Selector::This, keyword: k, duration: Duration::EndOfTurn };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(make(heartwood()))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Artifact, 1)),
+            effect: Effect::Seq(vec![
+                counters(Selector::This, Value::ONE),
+                Effect::ChooseMode(vec![gain(Keyword::Trample), gain(Keyword::Hexproof), gain(Keyword::Haste)]),
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Hungering Puppetbeast", cost(&[generic(3), g(), g()]), vec![CreatureType::Beast, CreatureType::Construct], 5, 5)
+    }
+}
+
+/// Tenured Tethermage — {1}{R}{G} 1/1 Human Artificer. Enters: you may
+/// sacrifice a land; if you do, two tapped Heartwoods. Tap two untapped
+/// artifacts you control: two +1/+1 counters on it.
+pub fn tenured_tethermage() -> CardDefinition {
+    let tapped = Arc::new(TokenDefinition { tapped: true, ..(*heartwood()).clone() });
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice a land for two tapped Heartwoods?".into(),
+            filter: R::Land,
+            count: Value::ONE,
+            then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: tapped }),
+            else_: None,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_others_cost: Some((R::Artifact, 2)),
+            effect: counters(Selector::This, Value::Const(2)),
+            ..Default::default()
+        }],
+        ..creature("Tenured Tethermage", cost(&[generic(1), r(), g()]), vec![CreatureType::Human, CreatureType::Artificer], 1, 1)
+    }
+}
+
+/// Woodwork Prodigy — {2}{R/G} 3/3 Cat Druid with the prepare spell Soul
+/// Tether. At the beginning of your upkeep, if it isn't prepared, it becomes
+/// prepared.
+pub fn woodwork_prodigy() -> CardDefinition {
+    let unprepared = Predicate::Not(Box::new(Predicate::SourceHasCountersAtLeast { counter: CounterType::Prepared, n: 1 }));
+    CardDefinition {
+        prepare_spell: Some(soul_tether()),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(unprepared.clone()),
+            effect: Effect::If { cond: unprepared, then: Box::new(counters_of(CounterType::Prepared)), else_: Box::new(Effect::Noop) },
+        }],
+        ..creature("Woodwork Prodigy", cost(&[generic(2), hybrid(Color::Red, Color::Green)]), vec![CreatureType::Cat, CreatureType::Druid], 3, 3)
+    }
+}
+
+// ── Elrond, Lord of Rivendell: scry and surveil ─────────────────────────────
+
+/// Diviner of Victory — {U} 1/1 Dwarf Wizard, enters prepared; prepare spell
+/// Unwind History ({1}{U} sorcery: return target creature an opponent controls
+/// with mana value 3 or less to its owner's hand, surveil 1). Whenever you
+/// scry or surveil, +1/+1 until end of turn.
+pub fn diviner_of_victory() -> CardDefinition {
+    let unwind = spell(
+        "Unwind History",
+        cost(&[generic(1), u()]),
+        false,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::ManaValueAtMost(3))),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+    );
+    CardDefinition {
+        prepare_spell: Some(Arc::new(unwind)),
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+        }],
+        ..creature("Diviner of Victory", cost(&[u()]), vec![CreatureType::Dwarf, CreatureType::Wizard], 1, 1)
+    }
+}
+
+/// Proft, Consulting Detective — {1}{U} legendary 2/2 Human Detective.
+/// Whenever you scry or surveil, you may pay {2}; if you do, a +1/+1 counter
+/// on Proft and draw a card.
+pub fn proft_consulting_detective() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {2}: a +1/+1 counter on Proft and draw a card?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::Seq(vec![
+                    counters(Selector::This, Value::ONE),
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ])),
+                else_: None,
+            },
+        }],
+        ..creature("Proft, Consulting Detective", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Detective], 2, 2)
+    }
+}
