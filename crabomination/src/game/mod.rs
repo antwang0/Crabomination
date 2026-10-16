@@ -24625,6 +24625,7 @@ impl GameState {
             ninjutsu: true,
             mana: false,
             loyalty: false,
+            power_up: false,
         });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
@@ -28904,6 +28905,7 @@ impl GameState {
                 ninjutsu: false,
                 mana: false,
                 loyalty: true,
+                power_up: false,
             },
             GameEvent::LoyaltyChanged {
                 card_id,

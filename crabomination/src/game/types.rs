@@ -2875,6 +2875,8 @@ pub enum GameEvent {
         /// CR 606.1 — a loyalty ability (Way of the Paradox's "whenever you
         /// activate a loyalty ability"); `source` is the planeswalker.
         loyalty: bool,
+        /// CR 702.193 — a power-up ability (Marvel Boy, Noh-Varr).
+        power_up: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

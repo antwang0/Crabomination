@@ -4225,6 +4225,8 @@ pub enum ActivationTrait {
     Ninjutsu,
     /// CR 606.1 — a loyalty ability (Way of the Paradox).
     Loyalty,
+    /// CR 702.193 — a power-up ability (Marvel Boy, Noh-Varr).
+    PowerUp,
     /// CR 605.1a — a mana ability without `{T}` in its cost (Elrond's
     /// "an ability of a creature" counts mana abilities; the `{T}` ones are
     /// `EventKind::TappedForMana`).

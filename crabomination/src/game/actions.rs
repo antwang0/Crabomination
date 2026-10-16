@@ -24431,6 +24431,7 @@ impl GameState {
                 ninjutsu: false,
                 mana: ability_is_mana,
                 loyalty: false,
+                power_up: ability.power_up,
             });
         }
 
