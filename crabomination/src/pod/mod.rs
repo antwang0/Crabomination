@@ -17658,6 +17658,90 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KORLESSA_COMMANDERS,
             main: decks::KORLESSA_MAIN,
         },
+        // Seat 2868: Galadriel of Lothlórien's EDHREC average deck. `--pod-decks 2868`.
+        PodDeck {
+            name: "Galadriel of Lothlórien (UG)",
+            commanders: decks::GALADRIEL_OF_LOTHLORIEN_COMMANDERS,
+            main: decks::GALADRIEL_OF_LOTHLORIEN_MAIN,
+        },
+        // Seat 2869: Elrond, Master of Healing's EDHREC average deck. `--pod-decks 2869`.
+        PodDeck {
+            name: "Elrond, Master of Healing (UG)",
+            commanders: decks::ELROND_2_COMMANDERS,
+            main: decks::ELROND_2_MAIN,
+        },
+        // Seat 2870: Arwen Undómiel's EDHREC average deck. `--pod-decks 2870`.
+        PodDeck {
+            name: "Arwen Undómiel (UG)",
+            commanders: decks::ARWEN_UNDOMIEL_COMMANDERS,
+            main: decks::ARWEN_UNDOMIEL_MAIN,
+        },
+        // Seat 2871: Michelangelo, Weirdness to 11's EDHREC average deck. `--pod-decks 2871`.
+        PodDeck {
+            name: "Michelangelo, Weirdness to 11 (G)",
+            commanders: decks::MICHELANGELO_COMMANDERS,
+            main: decks::MICHELANGELO_MAIN,
+        },
+        // Seat 2872: Michelangelo, On the Scene's EDHREC average deck. `--pod-decks 2872`.
+        PodDeck {
+            name: "Michelangelo, On the Scene (G)",
+            commanders: decks::MICHELANGELO_2_COMMANDERS,
+            main: decks::MICHELANGELO_2_MAIN,
+        },
+        // Seat 2873: Michelangelo, Improviser's EDHREC average deck. `--pod-decks 2873`.
+        PodDeck {
+            name: "Michelangelo, Improviser (G)",
+            commanders: decks::MICHELANGELO_3_COMMANDERS,
+            main: decks::MICHELANGELO_3_MAIN,
+        },
+        // Seat 2874: Donatello, the Brains and Splinter, the Mentor's EDHREC average deck. `--pod-decks 2874`.
+        PodDeck {
+            name: "Donatello, the Brains and Splinter, the Mentor (UB)",
+            commanders: decks::DONATELLO_3_COMMANDERS,
+            main: decks::DONATELLO_3_MAIN,
+        },
+        // Seat 2875: Iwamori of the Open Fist's EDHREC average deck. `--pod-decks 2875`.
+        PodDeck {
+            name: "Iwamori of the Open Fist (G)",
+            commanders: decks::IWAMORI_OF_THE_OPEN_FIST_COMMANDERS,
+            main: decks::IWAMORI_OF_THE_OPEN_FIST_MAIN,
+        },
+        // Seat 2876: Kogla and Yidaro's EDHREC average deck. `--pod-decks 2876`.
+        PodDeck {
+            name: "Kogla and Yidaro (RG)",
+            commanders: decks::KOGLA_AND_YIDARO_COMMANDERS,
+            main: decks::KOGLA_AND_YIDARO_MAIN,
+        },
+        // Seat 2877: Ezio, Brash Novice's EDHREC average deck. `--pod-decks 2877`.
+        PodDeck {
+            name: "Ezio, Brash Novice (WR)",
+            commanders: decks::EZIO_2_COMMANDERS,
+            main: decks::EZIO_2_MAIN,
+        },
+        // Seat 2878: Raphael, the Muscle and Splinter, the Mentor's EDHREC average deck. `--pod-decks 2878`.
+        PodDeck {
+            name: "Raphael, the Muscle and Splinter, the Mentor (BR)",
+            commanders: decks::RAPHAEL_3_COMMANDERS,
+            main: decks::RAPHAEL_3_MAIN,
+        },
+        // Seat 2879: Ramirez DePietro's EDHREC average deck. `--pod-decks 2879`.
+        PodDeck {
+            name: "Ramirez DePietro (UB)",
+            commanders: decks::RAMIREZ_DEPIETRO_2_COMMANDERS,
+            main: decks::RAMIREZ_DEPIETRO_2_MAIN,
+        },
+        // Seat 2880: Elektra, Daughter of the Hand's EDHREC average deck. `--pod-decks 2880`.
+        PodDeck {
+            name: "Elektra, Daughter of the Hand (B)",
+            commanders: decks::ELEKTRA_COMMANDERS,
+            main: decks::ELEKTRA_MAIN,
+        },
+        // Seat 2881: Koya, Death from Above's EDHREC average deck. `--pod-decks 2881`.
+        PodDeck {
+            name: "Koya, Death from Above (WB)",
+            commanders: decks::KOYA_COMMANDERS,
+            main: decks::KOYA_MAIN,
+        },
     ]
 }
 
@@ -22361,6 +22445,20 @@ mod tests {
             ("Sivitri, Dragon Master", &[0x1547]),
             ("Silumgar, the Drifting Death", &[0x1548]),
             ("Korlessa, Scale Singer", &[0x1549]),
+            ("Galadriel of Lothlórien", &[0x154A]),
+            ("Elrond, Master of Healing", &[0x154B]),
+            ("Arwen Undómiel", &[0x154C]),
+            ("Michelangelo, Weirdness to 11", &[0x154D]),
+            ("Michelangelo, On the Scene", &[0x154E]),
+            ("Michelangelo, Improviser", &[0x154F]),
+            ("Donatello, the Brains and Splinter, the Mentor", &[0x1550]),
+            ("Iwamori of the Open Fist", &[0x1551]),
+            ("Kogla and Yidaro", &[0x1552]),
+            ("Ezio, Brash Novice", &[0x1553]),
+            ("Raphael, the Muscle and Splinter, the Mentor", &[0x1554]),
+            ("Ramirez DePietro", &[0x1555]),
+            ("Elektra, Daughter of the Hand", &[0x1556]),
+            ("Koya, Death from Above", &[0x1557]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
