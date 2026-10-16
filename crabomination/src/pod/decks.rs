@@ -84551,3 +84551,57 @@ pub const THRANDUIL_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const UCHBENBAK_COMMANDERS: &[CardFactory] = &[uchbenbak_the_great_mistake];
+
+/// **Uchbenbak, the Great Mistake**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 9 Islands + 14 Swamps = 99.
+/// Uchbenbak, the Great Mistake (EDHREC, fetched 2026-10-16).
+pub const UCHBENBAK_MAIN: &[CardFactory] = &[
+    altar_of_the_wretched, arcane_signet, commanders_sphere, dimir_signet, heralds_horn,
+    skullclamp, sol_ring, talisman_of_dominance, vanquishers_banner, visage_of_dread,
+    bojuka_bog, choked_estuary, command_tower, darkwater_catacombs, dimir_aqueduct,
+    drowned_catacomb, evolving_wilds, fetid_pools, path_of_ancestry, sunken_hollow,
+    tainted_isle, temple_of_deceit, watery_grave, bone_dragon, champion_of_stray_souls,
+    clattering_augur, death_baron, death_tyrant, death_priest_of_myrkul, dimir_house_guard,
+    drudge_skeletons, emperor_of_bones, forsaken_miner, ghastly_death_tyrant,
+    gisa_the_hellraiser, gutterbones, hunted_bonebrute, kathari_remnant, manor_skeleton,
+    mortus_strider, ozox_the_clattering_king, paragon_of_open_graves, persistent_specimen,
+    reassembling_skeleton, restless_dead, sanitarium_skeleton, skeletal_vampire, skeleton_crew,
+    skithiryx_the_blight_dragon, tenacious_dead, tinybones_the_pickpocket, underworld_sentinel,
+    case_of_the_stashed_skeleton, corpses_of_the_lost, eaten_by_piranhas, grave_pact,
+    oversold_cemetery, reflections_of_littjara, ripples_of_undeath, another_chance,
+    counterspell, dark_ritual, deadly_dispute, frantic_search, negate, songs_of_the_damned,
+    soul_manipulation, village_rites, blood_for_bones, bone_shards, bone_splinters,
+    feed_the_swarm, living_death, read_the_bones, victimize, wail_of_the_forgotten,
+    // Basics
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const PROFT_COMMANDERS: &[CardFactory] = &[proft_consulting_detective];
+
+/// **Proft, Consulting Detective**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Proft, Consulting Detective (EDHREC, fetched 2026-10-16).
+pub const PROFT_MAIN: &[CardFactory] = &[
+    arcane_signet, crystal_ball, eye_of_jace, mazemind_tome, planetarium_of_wan_shi_tong,
+    seers_lantern, sol_ring, the_temporal_anchor, thought_vessel, worn_powerstone,
+    castle_vantress, crystal_grotto, isolated_watchtower, reliquary_tower, rivendell,
+    rumble_arena, the_grey_havens, diviner_of_victory, eligeth_crossroads_augur, elvish_mariner,
+    geist_of_saint_thalia, geist_of_the_archives, lyla_holographic_assistant,
+    matoya_archon_elder, overwhelmed_apprentice, princess_yue, ravenhill_flock,
+    samut_tyrant_of_naktamun, sigiled_starfish, silver_raven, sphinx_of_false_conclusions,
+    sphinx_of_foresight, surveillance_phantasm, thassa_god_of_the_sea, traxos_academy_guardian,
+    aqueous_form, eyes_everywhere, lost_isle_calling, plan_for_all_outcomes,
+    profts_eidetic_memory, psychic_impetus, wizard_class, aetherize, banes_contingency,
+    banishing_betrayal, behold_the_multiverse, chain_to_memory, consider, councils_deliberation,
+    counterspell, deliberate, dissolve, fading_hope, hithlain_knots, opt, rewind,
+    select_for_inspection, slip_out_the_back, unauthorized_exit, unexplained_disappearance,
+    voyages_end, jace_reality_sculptor, foresee, impede_momentum, mystic_speculation, preordain,
+    scour_all_possibilities, serum_visions, tamiyos_epiphany,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];

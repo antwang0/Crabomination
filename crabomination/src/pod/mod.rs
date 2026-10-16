@@ -18546,6 +18546,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THRANDUIL_2_COMMANDERS,
             main: decks::THRANDUIL_2_MAIN,
         },
+        // Seat 3016: Uchbenbak, the Great Mistake's EDHREC average deck. `--pod-decks 3016`.
+        PodDeck {
+            name: "Uchbenbak, the Great Mistake (UB)",
+            commanders: decks::UCHBENBAK_COMMANDERS,
+            main: decks::UCHBENBAK_MAIN,
+        },
+        // Seat 3017: Proft, Consulting Detective's EDHREC average deck. `--pod-decks 3017`.
+        PodDeck {
+            name: "Proft, Consulting Detective (U)",
+            commanders: decks::PROFT_COMMANDERS,
+            main: decks::PROFT_MAIN,
+        },
     ]
 }
 
@@ -23445,6 +23457,8 @@ mod tests {
             ("Shessra, Death's Whisper", &[0x15DB]),
             ("Rhino, Barreling Brute", &[0x15DC]),
             ("Thranduil, Sindarin Liege", &[0x15DD]),
+            ("Uchbenbak, the Great Mistake", &[0x15DE]),
+            ("Proft, Consulting Detective", &[0x15DF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
