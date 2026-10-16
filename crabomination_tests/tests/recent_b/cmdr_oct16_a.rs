@@ -271,3 +271,115 @@ fn splinters_technique_sneaks_from_an_unblocked_attacker() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bears), "the attacker went back to hand");
 }
+
+// ── cmdr_oct16_b ────────────────────────────────────────────────────────────
+
+/// Final-Sting Faerie and Hooded Assassin destroy only a creature that was
+/// dealt damage this turn.
+#[test]
+fn final_sting_faerie_kills_a_damaged_creature() {
+    for damaged in [true, false] {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 5);
+        let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+        if damaged {
+            let ctx = EffectContext::for_spell(0, None, 0, 0);
+            let dmg = Effect::DealDamage { to: crabomination::effect::Selector::ExactObjects(vec![theirs]), amount: crabomination::card::Value::ONE };
+            let evs = g.resolve_effect(&dmg, &ctx).unwrap();
+            g.dispatch_triggers_for_events(&evs);
+        }
+        let faerie = g.add_card_to_hand(0, catalog::final_sting_faerie());
+        cast_with(&mut g, faerie, None, vec![]).expect("cast");
+        assert_eq!(g.battlefield_find(theirs).is_none(), damaged);
+    }
+}
+
+/// Abomination grows by the combat damage another Villain deals a player.
+#[test]
+fn abomination_counts_a_villains_combat_damage() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let abom = ready(&mut g, 0, catalog::abomination_irradiated_brute());
+    attack_unblocked(&mut g, abom, 1);
+    assert_eq!(g.battlefield_find(abom).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+/// Repulsor Blast: with teamwork paid it also hits the creature's
+/// controller for 2.
+#[test]
+fn repulsor_blast_teamwork_hits_the_controller() {
+    for kicked in [false, true] {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 5);
+        ready(&mut g, 0, catalog::grizzly_bears());
+        let theirs = ready(&mut g, 1, catalog::craw_wurm());
+        let blast = g.add_card_to_hand(0, catalog::repulsor_blast());
+        let life = g.players[1].life;
+        flood(&mut g);
+        let (target, additional_targets, mode, x_value) = (Some(Target::Permanent(theirs)), vec![], None, None);
+        let action = if kicked {
+            GameAction::CastSpellKicked { card_id: blast, target, additional_targets, mode, x_value }
+        } else {
+            GameAction::CastSpell { card_id: blast, target, additional_targets, mode, x_value }
+        };
+        g.perform_action(action).expect("cast");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(theirs).is_none());
+        assert_eq!(life - g.players[1].life, if kicked { 2 } else { 0 });
+    }
+}
+
+/// CR 506.4 / 702.190a — The Last Ronin's Technique: sneak returns the only
+/// attacker, but the combat goes on, so the Spirits still enter tapped and
+/// attacking (they did nothing with no attacker left). Bug fix.
+#[test]
+fn last_ronins_technique_sneaked_spirits_attack() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let tech = g.add_card_to_hand(0, catalog::the_last_ronins_technique());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative { card_id: tech, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("sneak");
+    drain_stack(&mut g);
+    let spirits: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Ninja Turtle Spirit").collect();
+    assert_eq!(spirits.len(), 3);
+    assert!(spirits.iter().all(|c| c.tapped));
+    assert_eq!(g.attacking.len(), 3, "the Bears went home, the Spirits attack");
+}
+
+/// Colossus is indestructible only during its controller's turn, and pumps
+/// other Mutants.
+#[test]
+fn colossus_indestructible_on_your_turn_only() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let colossus = ready(&mut g, 0, catalog::colossus_steel_stalwart());
+    let quick = ready(&mut g, 0, catalog::quicksilver_brash_blur());
+    assert!(g.computed_permanent(colossus).unwrap().keywords().contains(&Keyword::Indestructible));
+    assert_eq!(g.computed_permanent(quick).unwrap().power, 2);
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(colossus).unwrap().keywords().contains(&Keyword::Indestructible));
+}
+
+/// Legolas pings when you cast a spell targeting a creature you don't
+/// control.
+#[test]
+fn legolas_pings_off_a_spell_targeting_theirs() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::legolas_master_archer());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let elves = ready(&mut g, 1, catalog::llanowar_elves());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(wurm)), vec![]).expect("bolt");
+    // Bolt's 3 alone leaves the 6/4 Wurm alive; one creature took Legolas's 1.
+    assert!(g.battlefield_find(elves).is_none() || g.battlefield_find(wurm).is_none(), "Legolas dealt his 1");
+}
