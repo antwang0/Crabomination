@@ -3148,6 +3148,9 @@ are in the fixed pool. Release `bot_ladder` at `010157c4b`.
                  determinism ok; peak_rss 37.4 MiB; games_per_s 201.5 (host_calib 116 ms —
                  a different box from 247.9's; wall clock is not comparable across boxes)
 golden traces    unchanged (suite 27,167 / 27,167)
+--bench (again, after CastProfile.mana_value — still 4 bytes)
+                 decisions 196,176 / 27.64 / 0 stalls — byte-identical; determinism ok;
+                 peak_rss 37.7 MiB; games_per_s 208.2
 ```
 
 ### 2026-10-15 (Commander run, `012vc8CU`, third leg) — guardrail; Blood Sun's strip, Rulebreaker, the bot sneak window

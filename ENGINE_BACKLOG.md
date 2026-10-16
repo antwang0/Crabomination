@@ -174,8 +174,7 @@ the handoff.
 - **Seats** 2949-2952, 2955-2969, 2973-2975, 2981-2985, 2989-2992, 2998-3002 (98 cards, `decks::cmdr_oct16_e`,
   tests `recent_b/cmdr_oct16_e.rs`); 3007-3009 the three Captain America decks (closed jointly with `014Q2Gfw`);
   3014 Rhino Barreling Brute (batch 10 — its commit subject says 3010, a seat race; 3014 is right).
-- **CLAIMED (batch 11) — don't duplicate:** Sethron Hurloon General, Akoum Warrior // Akoum Teeth, Lord of
-  Shatterskull Pass, Neheb the Worthy (Sethron).
+- Batch 11 (Sethron's four) landed as seat 3018. No open claim.
 - **Primitive (batch 10):** `CastProfile.mana_value` (the struct stays 4 bytes, `const` asserted) +
   `Predicate::CastSpellWithManaValueAtLeastThisTurn`.
 - **Pods:** 15-seat (100 games), 8-seat (150), 6-seat (200), 4-seat (200+200) blocks plus `pod_sweep.py` seeds
