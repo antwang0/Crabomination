@@ -16304,6 +16304,8 @@ static DECKS: &[Factory] = &[
     super::decks::way_of_the_mind_sculptor,
     super::decks::era_of_enlightenment,
     super::decks::the_fall_of_lord_konda,
+    super::decks::polukranos_reborn,
+    super::decks::patch_up,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

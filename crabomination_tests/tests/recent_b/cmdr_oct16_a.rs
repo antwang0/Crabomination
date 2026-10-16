@@ -840,3 +840,34 @@ fn fall_of_lord_konda_returns_stolen_permanents_then_transforms() {
     step_to(&mut g, 0, TurnStep::PreCombatMain);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Fragment of Konda"), "chapter III");
 }
+
+/// Polukranos Reborn transforms at sorcery speed for {6}{W/P}; the Engine of
+/// Ruin's death makes its two 3/3 Hydras.
+#[test]
+fn polukranos_transforms_and_leaves_two_hydras() {
+    let mut g = pod(2);
+    let p = ready(&mut g, 0, catalog::polukranos_reborn());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility { card_id: p, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("transform");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(p).unwrap().power, 6);
+    let bolt = Effect::Destroy { what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature) };
+    let evs = g.resolve_effect(&bolt, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Hydra").count(), 2);
+}
+
+/// Patch Up returns up to three creature cards whose mana values total 3 or
+/// less: two two-drops can't both come.
+#[test]
+fn patch_up_respects_the_total_mana_value() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::patch_up());
+    cast(&mut g, spell);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 2, "elves + one bears");
+}

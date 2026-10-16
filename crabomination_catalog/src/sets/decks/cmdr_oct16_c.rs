@@ -12,7 +12,7 @@ use crate::effect::shortcut::{boast, etb, landfall, on_dies, target_filtered};
 use crate::game::TurnStep;
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::mana::SpendRestriction;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, phyrexian, r, u, w};
 use std::sync::Arc;
 
 fn saga(name: &'static str, mana: ManaCost, chapters: Vec<(u32, Effect)>) -> CardDefinition {
@@ -699,5 +699,70 @@ pub fn the_fall_of_lord_konda() -> CardDefinition {
                 (3, Effect::ExileSelfReturnTransformed),
             ],
         )
+    }
+}
+
+// ── Polukranos Reborn ───────────────────────────────────────────────────────
+
+/// Polukranos Reborn — {G}{G}{G} legendary 4/5 reach Hydra. {6}{W/P}, sorcery
+/// speed: transform into Polukranos, Engine of Ruin (6/6 reach, lifelink; it or
+/// another nontoken Hydra of yours dying makes a 3/3 reach Phyrexian Hydra and
+/// a 3/3 lifelink one).
+pub fn polukranos_reborn() -> CardDefinition {
+    let hydra = |kw: Keyword| TokenDefinition {
+        name: "Phyrexian Hydra".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian, CreatureType::Hydra], ..Default::default() },
+        keywords: vec![kw],
+        ..Default::default()
+    };
+    let mint = |kw| Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(hydra(kw)) };
+    let engine = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        color_indicator: vec![Color::Green, Color::White],
+        keywords: vec![Keyword::Reach, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCreatureType(CreatureType::Hydra).and(R::NotToken),
+            }),
+            effect: Effect::Seq(vec![mint(Keyword::Reach), mint(Keyword::Lifelink)]),
+        }],
+        ..creature("Polukranos, Engine of Ruin", ManaCost::default(), vec![CreatureType::Phyrexian, CreatureType::Hydra], 6, 6)
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), phyrexian(Color::White)]),
+            sorcery_speed: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(engine)),
+        ..creature("Polukranos Reborn", cost(&[g(), g(), g()]), vec![CreatureType::Hydra], 4, 5)
+    }
+}
+
+/// Patch Up — {2}{W} sorcery. Return up to three creature cards with total
+/// mana value 3 or less from your graveyard to the battlefield (cheapest
+/// first, the `MoveWithinTotalManaValue` shape March from the Tomb uses).
+pub fn patch_up() -> CardDefinition {
+    CardDefinition {
+        name: "Patch Up",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::MoveWithinTotalManaValue {
+            from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+            filter: R::Creature,
+            cap: Value::Const(3),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            max_count: Some(3),
+            by_power: false,
+        },
+        ..Default::default()
     }
 }
