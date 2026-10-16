@@ -178,7 +178,9 @@ the handoff.
 - **LANDED (batch 4):** Glacian Powerstone Engineer, Countervailing Winds, Flash Photography, Vibrance, Sakashima's
   Will — seats 3045-3087. **CLAIMED (batch 5) — don't duplicate:** Serra's Guardian, Alpine Meadow, Timetwister,
   Stoic Rebuttal, Dark Fortress, Avenging Hunter, Elvish Doomsayer, Shadows of the Past, Darklight Phoenix, Reason
-  // Believe, Elvish Dreadlord, Tomb of Horrors Adventurer, Corrosive Ooze.
+  // Believe, Elvish Dreadlord, Tomb of Horrors Adventurer (LANDED, seats 3089-3134); Corrosive Ooze unclaimed.
+- **CLAIMED (batch 6) — don't duplicate:** Sulfurous Mire, Giant's Boulder, Warg Tactics, Konstrari Charm, Imoen
+  Mystic Trickster, Vrock, Glamer Gifter, Prismatic Undercurrents, Ajani Unrelenting, Earth's Mightiest Heroes.
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
