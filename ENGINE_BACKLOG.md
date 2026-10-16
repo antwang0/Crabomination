@@ -185,8 +185,10 @@ the handoff.
   Thief in the Night. Researched, open: Harness the Storm (a "same name as the triggering spell" target leaf),
   Corrosive Ooze (an end-of-combat destroy of the other combatant's Equipment), Golden Guardian (self "dies this
   turn" delayed transform-return), Nocturno / Ignacio of Myra's Marvels (rules-text word / card-art object).
-- **LANDED (batch 7):** seats 3168-3188. **CLAIMED (batch 8):** Golden Guardian, Rootwire Amalgam, Talas Explorer,
-  Talas Scout.
+- **LANDED (batch 7):** seats 3168-3188. **LANDED (batch 8):** Golden Guardian, Rootwire Amalgam, Talas Explorer,
+  Talas Scout, Unpredictable Cyclone, Shimmerwilds Growth — seats 3189-3213. **CLAIMED (batch 9):** Demon of Dark
+  Schemes, Loot the Nexus, Plunder the Trollshaws, Yuriko Hope from the Shadows, Garruk Curse Breaker, Founding the
+  Third Path, Raph & Leo Sibling Rivals.
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
