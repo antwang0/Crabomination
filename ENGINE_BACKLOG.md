@@ -254,6 +254,8 @@ the handoff.
   Minotaur, Grisly Survivor (one `CardDiscarded` trigger covers cycling, CR 702.29a), Merciless Javelineer,
   Minotaur Sureshot, Benalish Faithbonder, Coalition Skyknight, Guardian of New Benalia (`EnlistThen`), Veteran
   of the Depths. Sweep 9608 (seats 3010-3020 × 4/6/8): 140 games, 0 bad.
+- **CLAIMED (`014Q2Gfw`, batch 19) — don't duplicate:** The Archimandrite, Ojutai Exemplars, Student of Ojutai
+  (The Archimandrite); Upriser Renegade, War-Spike Changeling, The Shattered States Era (Iizuka the Ruthless).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
