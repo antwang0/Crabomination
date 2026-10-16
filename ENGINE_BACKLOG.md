@@ -192,6 +192,8 @@ the handoff.
   Black Panther Claws of Bast, Cache Raiders, Disruptor of Currents, Voidmage Husher) and seated Atogatog, Black
   Widow Intel Expert, Justice — drop those two from batch 11. Captain America Wings of Freedom / Super-Soldier /
   Skybound are zero-gap now (Hyperion + `01VDk2LU`'s Wings of Freedom); **`014Q2Gfw` seats them**, `01VDk2LU` won't.
+- **CLAIMED (`01VDk2LU`, batch 6) — don't duplicate:** Vadrik Astral Archmage + Invert // Invent (Vadrik);
+  Westgate Regent + Grasping Shadows (Spider-Man Noir; adds `CounterType::Dread`).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
