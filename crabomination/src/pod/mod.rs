@@ -18540,6 +18540,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RHINO_2_COMMANDERS,
             main: decks::RHINO_2_MAIN,
         },
+        // Seat 3015: Thranduil, Sindarin Liege's EDHREC average deck. `--pod-decks 3015`.
+        PodDeck {
+            name: "Thranduil, Sindarin Liege (UG)",
+            commanders: decks::THRANDUIL_2_COMMANDERS,
+            main: decks::THRANDUIL_2_MAIN,
+        },
     ]
 }
 
@@ -23438,6 +23444,7 @@ mod tests {
             ("Rosheen Meanderer", &[0x15DA]),
             ("Shessra, Death's Whisper", &[0x15DB]),
             ("Rhino, Barreling Brute", &[0x15DC]),
+            ("Thranduil, Sindarin Liege", &[0x15DD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

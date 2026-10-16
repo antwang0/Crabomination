@@ -84522,3 +84522,32 @@ pub const RHINO_2_MAIN: &[CardFactory] = &[
     forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const THRANDUIL_2_COMMANDERS: &[CardFactory] = &[thranduil_sindarin_liege];
+
+/// **Thranduil, Sindarin Liege**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 14 Forests + 9 Islands = 99.
+/// Thranduil, Sindarin Liege (EDHREC, fetched 2026-10-16).
+pub const THRANDUIL_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chronicle_of_victory, conduit_of_worlds, lightning_greaves, sol_ring,
+    command_tower, dreamroot_cascade, elven_passage, elvenkings_halls, evolving_wilds,
+    fabled_passage, flooded_grove, hinterland_harbor, hobbit_hole, path_of_ancestry,
+    rejuvenating_springs, simic_growth_chamber, terramorphic_expanse, vineglimmer_snarl,
+    arbor_elf, arwen_weaver_of_hope, beast_whisperer, boughside_wanderers, cantankerous_keepers,
+    champions_of_the_perfect, dwynen_gilt_leaf_daen, elfsworn_giant, elrond_moon_reader,
+    elven_raft_steerer, elvish_archdruid, elvish_mystic, elvish_warmaster, farhaven_elf,
+    guardian_of_the_halls, imperious_perfect, leaf_crowned_visionary, llanowar_elves,
+    marwyn_the_nurturer, mirkwood_nurturer, mirkwood_pathmaker, oracle_of_mul_daya,
+    priest_of_titania, reclamation_sage, silvan_reveler, springbloom_druid,
+    tatyova_benthic_druid, thranduils_company, tireless_provisioner, wood_elves,
+    woodland_weavemaster, beorns_hospitality, down_in_the_valley, enchanted_rivers_grasp,
+    exploration, kindred_discovery, retreat_to_coralhelm, arcane_denial, beast_within,
+    confusticate_and_bebother, counterspell, entish_restoration, galadhrim_ambush,
+    growth_spiral, harrow, heroic_intervention, negate, thranduils_decree, cultivate, explore,
+    farseek, kodamas_reach, natures_lore, overwhelming_stampede, raise_the_palisade,
+    rampant_growth, through_the_forest_gate,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, island, island, island, island, island, island, island, island,
+    island,
+];
