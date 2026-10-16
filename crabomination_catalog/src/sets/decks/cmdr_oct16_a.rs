@@ -428,8 +428,10 @@ pub fn hog_monkey_rampage() -> CardDefinition {
         true,
         Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::EntityMatches { what: your_creature(), filter: R::PowerAtLeast(4) },
-                then: Box::new(Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+                // The slot is declared in `then`: CR 601.2c's cast-time walker
+                // reads effect positions, not a condition.
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::PowerAtLeast(4) },
+                then: Box::new(Effect::AddCounter { what: your_creature(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
                 else_: Box::new(Effect::Noop),
             },
             yours_fights_theirs(),
