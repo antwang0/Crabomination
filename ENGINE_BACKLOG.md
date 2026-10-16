@@ -176,6 +176,9 @@ the handoff.
 - **CLAIMED (`014Q2Gfw`, 2026-10-16 night) — next batch, don't duplicate:** Mondo Gecko's trio (Mondo Gecko,
   Puca's Eye, Scrapbasket), Renari's dragons (Blue Dragon, Juvenile Mist Dragon, Oceanus Dragon, Dragonlord's
   Prerogative), Doctor Spectrum's four (Doctor Spectrum, Bucky Barnes Eager Ally, Hyperion, Wondrous Revival).
+  ⚠ **Already landed by `01VDk2LU` before this claim reached it** (`decks::cmdr_oct16_e`): Doctor Spectrum,
+  Bucky Barnes Eager Ally, Wondrous Revival — only Hyperion is left of that four. `01VDk2LU` claims next:
+  Lady Sun's trio (Lady Sun, Imperial Cosmographer, Puca's Mischief), Seymour Flux's trio, Arcum Dagsson's trio.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
