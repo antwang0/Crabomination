@@ -90010,3 +90010,116 @@ pub const THE_TWELFTH_DOCTOR_2_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, mountain, mountain, mountain, plains, plains,
 ];
+
+pub const ARDENN_2_COMMANDERS: &[CardFactory] = &[ardenn_intrepid_archaeologist, kamahl_heart_of_krosa];
+
+/// **Ardenn, Intrepid Archaeologist and Kamahl, Heart of Krosa**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 7 Forests + 6 Plains = 98.
+/// Ardenn, Intrepid Archaeologist and Kamahl, Heart of Krosa (EDHREC, fetched 2026-10-16).
+pub const ARDENN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, behemoth_sledge, blackblade_reforged, colossus_hammer, lightning_greaves,
+    loxodon_warhammer, mask_of_memory, robe_of_stars, skullclamp, sol_ring, swiftfoot_boots,
+    sword_of_the_animist, arctic_treeline, blighted_woodland, brushland, cactus_preserve,
+    canopy_vista, command_tower, myriad_landscape, overgrown_farmland, radiant_grove,
+    rogues_passage, scattered_groves, selesnya_sanctuary, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, sunpetal_grove, temple_of_plenty, windswept_heath,
+    yavimaya_cradle_of_growth, arbor_elf, archon_of_emeria, ashaya_soul_of_the_wild,
+    aven_mindcensor, boromir_warden_of_the_tower, collector_ouphe, destiny_spinner,
+    elvish_mystic, eternal_witness, heliods_pilgrim, kutzil_malamet_exemplar, manglehorn,
+    mesa_enchantress, puresteel_paladin, rustvine_cultivator, satyr_enchanter,
+    shalai_voice_of_plenty, sram_senior_edificer, sun_titan, sythis_harvests_hand,
+    verduran_enchantress, voyaging_satyr, darksteel_mutation, dawns_reflection, fertile_ground,
+    kenriths_transformation, mantle_of_the_ancients, market_festival, overgrowth, rest_in_peace,
+    shimmerwilds_growth, sterling_grove, stony_silence, utopia_sprawl, wild_growth,
+    wolfwillow_haven, beast_within, chord_of_calling, crop_rotation, eladamris_call,
+    path_to_exile, return_of_the_wildspeaker, swords_to_plowshares, cultivate,
+    eldritch_evolution, explore, natures_lore, open_the_armory, tempt_with_discovery,
+    three_visits, traverse_the_ulvenwald,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const DURNAN_OF_THE_YAWNING_PORTAL_5_COMMANDERS: &[CardFactory] = &[durnan_of_the_yawning_portal, flaming_fist];
+
+/// **Durnan of the Yawning Portal and Flaming Fist**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Forests + 11 Plains = 98.
+/// Durnan of the Yawning Portal and Flaming Fist (EDHREC, fetched 2026-10-16).
+pub const DURNAN_OF_THE_YAWNING_PORTAL_5_MAIN: &[CardFactory] = &[
+    arcane_signet, mithril_coat, scroll_rack, selesnya_signet, sol_ring, bountiful_promenade,
+    branchloft_pathway, brushland, canopy_vista, command_tower, fortified_village,
+    hushwood_verge, overgrown_farmland, sunpetal_grove, temple_garden, windswept_heath,
+    wooded_bastion, ancient_gold_dragon, angel_of_the_ruins, angelic_field_marshal,
+    apex_devastator, avacyns_pilgrim, avenging_hunter, beast_whisperer, birds_of_paradise,
+    burnished_hart, celestial_archon, conclave_evangelist, destiny_spinner, eidolon_of_blossoms,
+    eidolon_of_countless_battles, elvish_mystic, emergent_woodwurm, eternal_witness,
+    fyndhorn_elves, glyph_elemental, goreclaw_terror_of_qal_sisma, guardian_augmenter,
+    hammers_of_moradin, hua_tuo_honored_physician, jukai_naturalist, karametra_god_of_harvests,
+    llanowar_elves, mesa_enchantress, mother_of_runes, ohran_frostfang, restoration_angel,
+    sanctum_weaver, satyr_enchanter, savvy_trader, solemn_simulacrum, sythis_harvests_hand,
+    tlincalli_hunter, toski_bearer_of_secrets, verduran_enchantress, white_plume_adventurer,
+    worldspine_wurm, all_that_glitters, bear_umbra, enchantresss_presence, fertile_ground,
+    garruks_uprising, kenriths_transformation, shimmerwilds_growth, song_of_the_dryads,
+    strength_of_the_harvest, wild_growth, beast_within, heroic_intervention, path_to_exile,
+    return_of_the_wildspeaker, swords_to_plowshares, farseek, kodamas_reach, natures_lore,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const GALE_6_COMMANDERS: &[CardFactory] = &[gale_waterdeep_prodigy, hardy_outlander];
+
+/// **Gale, Waterdeep Prodigy and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 12 Forests + 13 Islands = 98.
+/// Gale, Waterdeep Prodigy and Hardy Outlander (EDHREC, fetched 2026-10-16).
+pub const GALE_6_MAIN: &[CardFactory] = &[
+    glamdring_foe_hammer, sol_ring, breeding_pool, command_tower, dreamroot_cascade,
+    flooded_grove, hedge_maze, hinterland_harbor, rain_slicked_copse, sodden_verdure,
+    vineglimmer_snarl, yavimaya_coast, archmage_emeritus, archmage_of_runes,
+    bilbo_thief_in_the_night, cold_eyed_selkie, disciple_of_freyalise,
+    doc_aurlock_grizzled_genius, exhibition_tidecaller, haughty_djinn, ivy_gleeful_spellthief,
+    kitsa_otterball_elite, ledger_shredder, mocking_sprite, talrand_sky_summoner,
+    thunderclap_drake, wizards_of_thay, glacierwood_siege, shimmerwilds_growth, wild_growth,
+    wilderness_reclamation, berserk, brainstorm, consider, curate, embrace_the_paradox,
+    eureka_moment, fact_or_fiction, frantic_search, giant_growth, growth_spiral, harrow,
+    invigorate, joint_exploration, mutagenic_growth, natures_claim, overprotect, planar_genesis,
+    pongify, silundi_vision, snakeskin_veil, snap, thought_scour, turnabout, cultivate,
+    enter_the_enigma, explore, farseek, kodamas_reach, lessons_from_life, lorien_revealed,
+    mind_into_matter, natures_lore, overwhelming_stampede, pest_infestation, ponder, preordain,
+    rampant_growth, rishkars_expertise, see_the_truth, shared_roots, skyshroud_claim,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
+
+pub const HALANA_COMMANDERS: &[CardFactory] = &[halana_kessig_ranger, tana_the_bloodsower];
+
+/// **Halana, Kessig Ranger and Tana, the Bloodsower**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 15 Forests + 8 Mountains = 98.
+/// Halana, Kessig Ranger and Tana, the Bloodsower (EDHREC, fetched 2026-10-16).
+pub const HALANA_MAIN: &[CardFactory] = &[
+    arcane_signet, bow_of_nylea, cursed_mirror, druidic_satchel, gruul_signet, idol_of_oblivion,
+    prowlers_helm, sol_ring, talisman_of_impulse, whispersilk_cloak, castle_embereth,
+    cinder_glade, command_tower, evolving_wilds, karplusan_forest, kazandu_refuge,
+    kessig_wolf_run, mikokoro_center_of_the_sea, myriad_landscape, rockfall_vale,
+    stomping_ground, temple_of_the_false_god, thespians_stage, timber_gorge,
+    archetype_of_endurance, deadly_recluse, elvish_mystic, enduring_courage, gala_greeters,
+    goblin_smuggler, goblin_tunneler, hexing_squelcher, ilharg_the_raze_boar, managorger_hydra,
+    molten_gatekeeper, mwonvuli_beast_tracker, mycoloth, nyxbloom_ancient, ohran_frostfang,
+    oracle_of_mul_daya, pathmaker_initiate, purphoros_god_of_the_forge, questing_beast,
+    renata_called_to_the_hunt, rose_room_treasurer, subira_tulzidi_caravanner, verdant_force,
+    witty_roastmaster, yisan_the_wanderer_bard, yorvo_lord_of_garenbrig, aggravated_assault,
+    break_through_the_line, city_on_fire, gratuitous_violence, mana_reflection,
+    path_of_discovery, raid_bombardment, shimmerwilds_growth, the_legend_of_kyoshi,
+    tribute_to_the_world_tree, arachnogenesis, archdruids_charm, artifact_mutation,
+    beast_within, chorus_of_might, destructive_revelry, fog, vivien_reid, clan_defiance,
+    cultivate, decimate, explore, farseek, saproling_symbiosis, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

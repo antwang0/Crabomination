@@ -19710,6 +19710,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TWELFTH_DOCTOR_2_COMMANDERS,
             main: decks::THE_TWELFTH_DOCTOR_2_MAIN,
         },
+        // Seat 3210: Ardenn, Intrepid Archaeologist and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 3210`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Kamahl, Heart of Krosa (WG)",
+            commanders: decks::ARDENN_2_COMMANDERS,
+            main: decks::ARDENN_2_MAIN,
+        },
+        // Seat 3211: Durnan of the Yawning Portal and Flaming Fist's EDHREC average deck. `--pod-decks 3211`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Flaming Fist (WG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_5_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_5_MAIN,
+        },
+        // Seat 3212: Gale, Waterdeep Prodigy and Hardy Outlander's EDHREC average deck. `--pod-decks 3212`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Hardy Outlander (UG)",
+            commanders: decks::GALE_6_COMMANDERS,
+            main: decks::GALE_6_MAIN,
+        },
+        // Seat 3213: Halana, Kessig Ranger and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 3213`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Tana, the Bloodsower (RG)",
+            commanders: decks::HALANA_COMMANDERS,
+            main: decks::HALANA_MAIN,
+        },
     ]
 }
 
@@ -24803,6 +24827,10 @@ mod tests {
             ("The Fugitive Doctor and Jo Grant", &[0x169D]),
             ("The Ninth Doctor and Jo Grant", &[0x169E]),
             ("The Twelfth Doctor and Jo Grant", &[0x169F]),
+            ("Ardenn, Intrepid Archaeologist and Kamahl, Heart of Krosa", &[0x16A0]),
+            ("Durnan of the Yawning Portal and Flaming Fist", &[0x16A1]),
+            ("Gale, Waterdeep Prodigy and Hardy Outlander", &[0x16A2]),
+            ("Halana, Kessig Ranger and Tana, the Bloodsower", &[0x16A3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
