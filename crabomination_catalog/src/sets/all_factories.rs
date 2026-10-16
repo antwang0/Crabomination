@@ -16310,6 +16310,10 @@ static DECKS: &[Factory] = &[
     super::decks::activated_sleeper,
     super::decks::unstoppable_ash,
     super::decks::reach_of_branches,
+    super::decks::galion_elvenkings_butler,
+    super::decks::llanowar_empath,
+    super::decks::grond_the_gatebreaker,
+    super::decks::gorbag_of_minas_morgul,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

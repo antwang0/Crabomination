@@ -939,3 +939,54 @@ fn unstoppable_ash_toughens_a_blocked_creature() {
     assert_eq!(g.computed_permanent(bears).unwrap().toughness, 7);
     assert!(g.battlefield_find(ash).is_some());
 }
+
+/// Grond is a creature only on its controller's turn with an Army out.
+#[test]
+fn grond_animates_on_your_turn_with_an_army() {
+    use crabomination::card::CardType;
+    let mut g = pod(2);
+    let grond = ready(&mut g, 0, catalog::grond_the_gatebreaker());
+    let is_creature = |g: &GameState| g.computed_permanent(grond).unwrap().card_types().contains(&CardType::Creature);
+    assert!(!is_creature(&g), "no Army");
+    let amass = Effect::Amass { who: PlayerRef::You, count: crabomination::card::Value::ONE, extra_type: None };
+    g.resolve_effect(&amass, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert!(is_creature(&g), "your turn, an Army");
+    g.active_player_idx = 1;
+    assert!(!is_creature(&g), "not your turn");
+}
+
+/// Gorbag: an Orc that connects may be sacrificed for a card.
+#[test]
+fn gorbag_cashes_in_a_connecting_orc() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let gorbag = ready(&mut g, 0, catalog::gorbag_of_minas_morgul());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack_unblocked(&mut g, gorbag, 1);
+    assert!(g.battlefield_find(gorbag).is_none(), "sacrificed");
+    assert_eq!(g.players[0].hand.len() + g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
+}
+
+/// Llanowar Empath keeps a creature it reveals after the scry.
+#[test]
+fn llanowar_empath_takes_a_revealed_creature() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    stock_libraries(&mut g, 5);
+    let e = g.add_card_to_hand(0, catalog::llanowar_empath());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![bears], bottom: vec![] }]));
+    cast(&mut g, e);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears));
+}
+
+/// Galion makes another attacker's base P/T its own 4/4.
+#[test]
+fn galion_copies_its_size_onto_a_creature() {
+    let mut g = pod(2);
+    let galion = ready(&mut g, 0, catalog::galion_elvenkings_butler());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: galion, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 4);
+}

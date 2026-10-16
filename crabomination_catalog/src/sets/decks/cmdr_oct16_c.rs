@@ -3,12 +3,12 @@
 //! Lozhan). Tests in `tests/recent_b/cmdr_oct16_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EnchantmentSubtype, EntersAsCopy, EventKind,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EnchantmentSubtype, EntersAsCopy, EventKind,
     EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::ActivationTrait;
-use crate::effect::shortcut::{boast, etb, landfall, on_dies, target_filtered};
+use crate::effect::shortcut::{boast, etb, landfall, on_attack, on_dies, target_filtered};
 use crate::game::TurnStep;
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::mana::SpendRestriction;
@@ -869,5 +869,107 @@ pub fn reach_of_branches() -> CardDefinition {
             },
         }],
         ..Default::default()
+    }
+}
+
+// ── Celeborn the Wise ───────────────────────────────────────────────────────
+
+/// Galion, Elvenking's Butler — {2}{G}{G} legendary 4/4 Elf Advisor. Attacking:
+/// up to one other target creature you control has base P/T equal to Galion's
+/// until end of turn.
+pub fn galion_elvenkings_butler() -> CardDefinition {
+    let mine = || Box::new(Selector::This);
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![on_attack(Effect::SetBasePT {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            power: Value::PowerOf(mine()),
+            toughness: Value::ToughnessOf(mine()),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Galion, Elvenking's Butler", cost(&[generic(2), g(), g()]), vec![CreatureType::Elf, CreatureType::Advisor], 4, 4)
+    }
+}
+
+/// Llanowar Empath — {3}{G} 2/2 Elf Shaman. Enters: scry 2, then reveal the
+/// top card; a creature card goes to your hand.
+pub fn llanowar_empath() -> CardDefinition {
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: top(), filter: R::Creature },
+                then: Box::new(Effect::Move { what: top(), to: ZoneDest::Hand(PlayerRef::You) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..creature("Llanowar Empath", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Shaman], 2, 2)
+    }
+}
+
+// ── Gríma Wormtongue ────────────────────────────────────────────────────────
+
+/// Grond, the Gatebreaker — {3}{B} legendary 5/5 trample Vehicle, crew 3. An
+/// artifact creature while it's your turn and you control an Army.
+pub fn grond_the_gatebreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Grond, the Gatebreaker",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Crew(3)],
+        static_abilities: vec![StaticAbility {
+            description: "As long as it's your turn and you control an Army, Grond is an artifact creature.",
+            effect: StaticEffect::SelfIsCreatureIf {
+                condition: Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::SelectorExists(Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Army).and(R::ControlledByYou),
+                    )),
+                ]),
+                creature_types: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gorbag of Minas Morgul — {1}{B} legendary 2/2 Orc Soldier. A Goblin or Orc
+/// of yours dealing combat damage to a player may be sacrificed; when it is,
+/// draw a card or create a Treasure.
+pub fn gorbag_of_minas_morgul() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Goblin).or(R::HasCreatureType(CreatureType::Orc)),
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Sacrifice it to draw a card or make a Treasure?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SacrificePermanent { what: Selector::TriggerSource },
+                    Effect::If {
+                        cond: Predicate::SelectorExists(Selector::SacrificedThisResolution { filter: R::Any }),
+                        then: Box::new(Effect::ChooseMode(vec![
+                            Effect::Draw { who: Selector::You, amount: Value::ONE },
+                            Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                definition: Arc::new(crabomination_base::tokens::treasure_token()),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
+        }],
+        ..creature("Gorbag of Minas Morgul", cost(&[generic(1), b()]), vec![CreatureType::Orc, CreatureType::Soldier], 2, 2)
     }
 }
