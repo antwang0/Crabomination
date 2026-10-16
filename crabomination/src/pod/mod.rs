@@ -18366,6 +18366,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SPIDER_MAN_NOIR_COMMANDERS,
             main: decks::SPIDER_MAN_NOIR_MAIN,
         },
+        // Seat 2986: Gornog, the Red Reaper's EDHREC average deck. `--pod-decks 2986`.
+        PodDeck {
+            name: "Gornog, the Red Reaper (R)",
+            commanders: decks::GORNOG_COMMANDERS,
+            main: decks::GORNOG_MAIN,
+        },
+        // Seat 2987: Ojutai, Soul of Winter's EDHREC average deck. `--pod-decks 2987`.
+        PodDeck {
+            name: "Ojutai, Soul of Winter (WU)",
+            commanders: decks::OJUTAI_COMMANDERS,
+            main: decks::OJUTAI_MAIN,
+        },
+        // Seat 2988: Hixus, Prison Warden's EDHREC average deck. `--pod-decks 2988`.
+        PodDeck {
+            name: "Hixus, Prison Warden (W)",
+            commanders: decks::HIXUS_COMMANDERS,
+            main: decks::HIXUS_MAIN,
+        },
     ]
 }
 
@@ -23235,6 +23253,9 @@ mod tests {
             ("Justice, Vance Astrovik", &[0x15BD]),
             ("Vadrik, Astral Archmage", &[0x15BE]),
             ("Spider-Man Noir", &[0x15BF]),
+            ("Gornog, the Red Reaper", &[0x15C0]),
+            ("Ojutai, Soul of Winter", &[0x15C1]),
+            ("Hixus, Prison Warden", &[0x15C2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

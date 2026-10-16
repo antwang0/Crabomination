@@ -83711,3 +83711,88 @@ pub const SPIDER_MAN_NOIR_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const GORNOG_COMMANDERS: &[CardFactory] = &[gornog_the_red_reaper];
+
+/// **Gornog, the Red Reaper**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Gornog, the Red Reaper (EDHREC, fetched 2026-10-16).
+pub const GORNOG_MAIN: &[CardFactory] = &[
+    arcane_signet, hazorets_monument, heralds_horn, heraldic_banner, infantry_shield,
+    lightning_greaves, obsidian_battle_axe, patchwork_banner, ruby_medallion, sol_ring,
+    swiftfoot_boots, vanquishers_banner, arena_of_glory, castle_embereth, ghitu_encampment,
+    path_of_ancestry, rogues_passage, war_room, anep_vizier_of_hazoret, archetype_of_aggression,
+    ash_zealot, bloodmark_mentor, boldwyr_intimidator, brighthearth_banneret,
+    chaos_terminator_lord, combat_celebrant, flamerush_rider, frontier_warmonger,
+    gimli_of_the_glittering_caves, goma_fada_vanguard, jaxis_the_troublemaker,
+    kargan_intimidator, kazuul_tyrant_of_the_cliffs, laelia_the_blade_reforged, lovisa_coldeyes,
+    markov_blademaster, moraug_fury_of_akoum, neheb_dreadhorde_champion, neheb_the_eternal,
+    ogre_battledriver, paragon_of_fierce_defiance, professional_face_breaker,
+    rograkh_son_of_rohgahh, samut_hazorets_champion, sardian_avenger, stadium_headliner,
+    star_athlete, taurean_mauler, warchief_giant, aggravated_assault, berserkers_onslaught,
+    gratuitous_violence, rising_of_the_day, shared_animosity, abrade, big_score, chaos_warp,
+    demand_answers, great_train_heist, return_the_favor, thrill_of_possibility,
+    untimely_malfunction, blasphemous_act, crash_through, faithless_looting, full_throttle,
+    jeskas_will, overpowering_attack, relentless_assault, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const OJUTAI_COMMANDERS: &[CardFactory] = &[ojutai_soul_of_winter];
+
+/// **Ojutai, Soul of Winter**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Islands + 10 Plains = 99.
+/// Ojutai, Soul of Winter (EDHREC, fetched 2026-10-16).
+pub const OJUTAI_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, dragons_hoard, dragonstorm_globe, heralds_horn,
+    hyldas_crown_of_winter, kefnets_monument, lapis_orb_of_dragonkind, ojutai_monument,
+    sol_ring, talisman_of_progress, thought_vessel, azorius_chancery, cave_of_the_frost_dragon,
+    command_tower, crucible_of_the_spirit_dragon, glacial_fortress, hallowed_fountain,
+    haven_of_the_spirit_dragon, maelstrom_of_the_spirit_dragon, path_of_ancestry, port_town,
+    prairie_stream, reliquary_tower, skyline_cascade, temple_of_enlightenment,
+    ancient_gold_dragon, ancient_silver_dragon, ao_the_dawn_sky, deceptive_frostkite,
+    dragon_turtle, dragonlord_ojutai, dragonologist, guardian_scalelord, hammerhead_tyrant,
+    icefall_regent, icingdeath_frost_tyrant, iymrith_desert_doom, juvenile_mist_dragon,
+    kairi_the_swirling_sky, keiga_the_tide_star, pristine_skywise, renari_merchant_of_marvels,
+    sapphire_dragon, scalelord_reckoner, sunscorch_regent, taigam_ojutai_master,
+    timeless_dragon, transcendent_dragon, wardscale_dragon, watcher_of_the_spheres,
+    white_dragon, yosei_the_morning_star, brave_the_sands, citadel_siege, ghostly_prison,
+    monastery_siege, propaganda, roiling_dragonstorm, solitary_sanctuary, verity_circle,
+    blustersquall, counterspell, dovins_veto, draconic_lore, generous_gift, icy_blast, negate,
+    ojutais_breath, path_to_exile, swords_to_plowshares, tamiyo_the_moon_sage,
+    borrowing_100_000_arrows, sleep, split_up, supreme_verdict, theft_of_dreams,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const HIXUS_COMMANDERS: &[CardFactory] = &[hixus_prison_warden];
+
+/// **Hixus, Prison Warden**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Hixus, Prison Warden (EDHREC, fetched 2026-10-16).
+pub const HIXUS_MAIN: &[CardFactory] = &[
+    arcane_signet, endless_atlas, hedron_archive, marble_diamond, mind_stone, pearl_medallion,
+    sol_ring, thought_vessel, throne_of_eldraine, arch_of_orazca, castle_ardenvale,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, myriad_landscape, reliquary_tower,
+    scavenger_grounds, war_room, alms_collector, angel_of_the_dire_hour, archivist_of_oghma,
+    aven_interrupter, aven_mindcensor, baird_steward_of_argive, banisher_priest,
+    captain_marvel_earths_protector, cathar_commando, containment_priest,
+    deep_gnome_terramancer, esper_sentinel, fairgrounds_warden, fiend_hunter, guardian_of_faith,
+    herald_of_eternal_dawn, hyperion_supreme_hero, keeper_of_the_accord,
+    knight_of_the_white_orchid, mangara_the_diplomat, palace_jailer, red_guardian_super_soldier,
+    selfless_squire, sun_titan, arrest, banishing_light, blind_obedience, cast_out,
+    celebrate_the_mountain_king, ghostly_prison, land_tax, luminarch_ascension, martial_law,
+    oblivion_ring, prison_sentence, prison_term, trouble_in_pairs, cloudshift, comeuppance,
+    condemn, final_showdown, generous_gift, hallowed_moonlight, mana_tithe, mandate_of_peace,
+    path_to_exile, reprieve, settle_the_wreckage, swords_to_plowshares, teferis_protection,
+    the_wandering_emperor, approach_of_the_second_sun, councils_judgment, rout,
+    secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
