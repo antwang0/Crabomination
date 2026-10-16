@@ -752,3 +752,129 @@ fn tomb_of_horrors_adventurer_copies_the_second_spell() {
     }
     assert_eq!(g.players[1].life, opp - 9, "3 + 3 + the copy's 3");
 }
+
+/// Warg Tactics' kill mode reaches only fliers.
+#[test]
+fn warg_tactics_destroys_only_a_flier() {
+    let mut g = pod(2);
+    let bird = ready(&mut g, 1, catalog::ornithopter());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let wt = g.add_card_to_hand(0, catalog::warg_tactics());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let cast_mode = |g: &mut GameState, t| {
+        g.perform_action(GameAction::CastSpell { card_id: wt, target: Some(Target::Permanent(t)), additional_targets: vec![], mode: Some(0), x_value: None })
+    };
+    assert!(cast_mode(&mut g, bears).is_err(), "no flying");
+    cast_mode(&mut g, bird).expect("the flier");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bird).is_none());
+}
+
+/// Imoen draws at your end step with the initiative — two after a dungeon.
+#[test]
+fn imoen_draws_with_the_initiative() {
+    for (initiative, completed, want) in [(false, false, 0), (true, false, 1), (true, true, 2)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::imoen_mystic_trickster());
+        if initiative {
+            g.initiative = Some(0);
+        }
+        if completed {
+            g.players[0].dungeons_completed = 1;
+        }
+        let hand = g.players[0].hand.len();
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + want, "initiative {initiative} dungeon {completed}");
+    }
+}
+
+/// Vrock's Toxic Spores fire only after one of your permanents left.
+#[test]
+fn vrock_drains_after_a_permanent_left() {
+    for left in [false, true] {
+        let mut g = pod(3);
+        ready(&mut g, 0, catalog::vrock());
+        if left {
+            let b = ready(&mut g, 0, catalog::grizzly_bears());
+            let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+            g.players[0].mana_pool.add(Color::Red, 1);
+            cast(&mut g, bolt, Some(Target::Permanent(b))).expect("Bolt");
+        }
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        for seat in 1..3 {
+            assert_eq!(g.players[seat].life, if left { 17 } else { 20 }, "left {left}");
+        }
+    }
+}
+
+/// Glamer Gifter makes another creature a base 4/4 with every creature type.
+#[test]
+fn glamer_gifter_makes_a_four_four_of_every_type() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let gg = g.add_card_to_hand(0, catalog::glamer_gifter());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, gg, None).expect("Glamer Gifter");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords().contains(&Keyword::Changeling), "every creature type (CR 205.3)");
+}
+
+/// Prismatic Undercurrents fetches one basic per color among your permanents.
+#[test]
+fn prismatic_undercurrents_fetches_per_color() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::goblin_guide());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let pu = g.add_card_to_hand(0, catalog::prismatic_undercurrents());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, pu, None).expect("Undercurrents");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "green and red");
+}
+
+/// Ajani Unrelenting: each loyalty activation makes a Cadet; −3 spares your tokens.
+#[test]
+fn ajani_unrelenting_cadets_survive_his_sweep() {
+    let mut g = pod(2);
+    let ajani = ready(&mut g, 0, catalog::ajani_unrelenting());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ajani, ability_index: 2, target: None, x_value: None }).expect("−3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    let cadets: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Cadet").collect();
+    assert_eq!(cadets.len(), 1);
+    assert_eq!(cadets[0].damage, 0, "your tokens are spared");
+}
+
+/// Earth's Mightiest Heroes: one creature of the top eight, all of them with teamwork.
+#[test]
+fn earths_mightiest_heroes_teamwork_takes_every_creature() {
+    for teamwork in [false, true] {
+        let mut g = pod(2);
+        for _ in 0..3 {
+            on_top(&mut g, 0, catalog::grizzly_bears());
+        }
+        if teamwork {
+            ready(&mut g, 0, catalog::craw_wurm());
+        }
+        let emh = g.add_card_to_hand(0, catalog::earths_mightiest_heroes());
+        g.players[0].mana_pool.add(Color::Green, 6);
+        let action = if teamwork {
+            GameAction::CastSpellKicked { card_id: emh, target: None, additional_targets: vec![], mode: None, x_value: None }
+        } else {
+            GameAction::CastSpell { card_id: emh, target: None, additional_targets: vec![], mode: None, x_value: None }
+        };
+        g.perform_action(action).expect("cast");
+        drain_stack(&mut g);
+        let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+        assert_eq!(bears, if teamwork { 3 } else { 1 }, "teamwork {teamwork}");
+    }
+}

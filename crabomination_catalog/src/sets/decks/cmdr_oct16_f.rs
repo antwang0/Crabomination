@@ -1092,3 +1092,257 @@ pub fn tomb_of_horrors_adventurer() -> CardDefinition {
         ..creature("Tomb of Horrors Adventurer", cost(&[generic(5), crate::mana::u()]), vec![CreatureType::Elf, CreatureType::Monk], 4, 4)
     }
 }
+
+// ── batch 6 ─────────────────────────────────────────────────────────────────
+
+/// Sulfurous Mire — Snow Land — Swamp Mountain, enters tapped.
+pub fn sulfurous_mire() -> CardDefinition {
+    let mut d = crate::sets::dual_land_with(
+        "Sulfurous Mire",
+        crate::card::LandType::Swamp,
+        crate::card::LandType::Mountain,
+        Color::Black,
+        Color::Red,
+        vec![],
+    );
+    d.supertypes.push(Supertype::Snow);
+    d.static_abilities.push(crate::sets::enters_tapped());
+    d
+}
+
+/// Giant's Boulder — {1} artifact. ETB scry 2; {1}, {T}: any color; {7}, {T},
+/// sacrifice it: destroy target permanent.
+pub fn giants_boulder() -> CardDefinition {
+    CardDefinition {
+        name: "Giant's Boulder",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(7)]),
+                effect: Effect::Destroy { what: target_filtered(R::Permanent) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Warg Tactics — {1}{G} instant. Choose one: destroy target creature with
+/// flying; or a +1/+1 counter on target creature you control, which gains
+/// trample and hexproof until end of turn.
+pub fn warg_tactics() -> CardDefinition {
+    CardDefinition {
+        name: "Warg Tactics",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))) },
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Konstrari Charm — {R}{G} instant. Choose one: 6 damage to target creature
+/// with flying; two +1/+1 counters on target creature and trample this turn;
+/// or add {C}{C}{C}.
+pub fn konstrari_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Konstrari Charm",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))), amount: Value::Const(6) },
+            Effect::Seq(vec![
+                Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(3)) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Imoen, Mystic Trickster — {2}{U} legendary 2/3 Human Rogue Wizard, ward {2},
+/// Choose a Background. Your end step with the initiative draws a card, two
+/// once you've completed a dungeon.
+pub fn imoen_mystic_trickster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)]))), Keyword::ChooseABackground],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::HasInitiative { who: PlayerRef::You }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Sum(vec![
+                    Value::ONE,
+                    Value::OneIf(Box::new(Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE))),
+                ]),
+            },
+        }],
+        ..legend(creature(
+            "Imoen, Mystic Trickster",
+            cost(&[generic(2), crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Wizard],
+            2,
+            3,
+        ))
+    }
+}
+
+/// Vrock — {3}{B}{B} 3/3 flying Bird Demon. Toxic Spores: your end step, if a
+/// permanent you controlled left the battlefield this turn, each opponent
+/// loses 3 life.
+pub fn vrock() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::RevoltActive { who: PlayerRef::You }),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(3) },
+        }],
+        ..creature("Vrock", cost(&[generic(3), b(), b()]), vec![CreatureType::Bird, CreatureType::Demon], 3, 3)
+    }
+}
+
+/// Glamer Gifter — {1}{U} 1/2 flash, flying Faerie Wizard. ETB: up to one
+/// other target creature is a base 4/4 with all creature types this turn.
+pub fn glamer_gifter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            min_targets: 0,
+            max_targets: 1,
+            filter: R::Creature.and(R::OtherThanSource),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::SetBasePtLive { what: Selector::Target(0), power: Value::Const(4), toughness: Value::Const(4), duration: Duration::EndOfTurn },
+                Effect::GainAllCreatureTypes { what: Selector::Target(0), duration: Duration::EndOfTurn },
+            ])),
+        })],
+        ..creature("Glamer Gifter", cost(&[generic(1), crate::mana::u()]), vec![CreatureType::Faerie, CreatureType::Wizard], 1, 2)
+    }
+}
+
+/// Prismatic Undercurrents — {3}{G} enchantment. Vivid: ETB, search for up to
+/// X basic lands to hand (X = colors among your permanents). One extra land
+/// each turn.
+pub fn prismatic_undercurrents() -> CardDefinition {
+    CardDefinition {
+        name: "Prismatic Undercurrents",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+            count: Value::DistinctColorsAmong(Box::new(Selector::EachPermanent(R::ControlledByYou))),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ajani Unrelenting — {4}{R}{R} Ajani, loyalty 5. Each loyalty activation
+/// makes a 2/2 Cadet. +1: team +1/+0 and haste; −2: discard your hand, draw
+/// one per creature you control; −3: 4 damage to each creature but your tokens.
+pub fn ajani_unrelenting() -> CardDefinition {
+    let cadet = TokenDefinition {
+        name: "Cadet".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Ajani Unrelenting",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Ajani], ..Default::default() },
+        base_loyalty: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Loyalty), EventScope::YourControl),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(cadet) },
+        }],
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT { what: team(), power: Value::ONE, toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: team(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::Const(100), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::count(team()) },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::DealDamage {
+                    to: Selector::EachPermanent(R::Creature.and(R::IsToken.and(R::ControlledByYou).negate())),
+                    amount: Value::Const(4),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Earth's Mightiest Heroes — {4}{G}{G} sorcery, teamwork 5. Reveal the top
+/// eight: one creature onto the battlefield (any number with teamwork); the
+/// rest into your graveyard.
+pub fn earths_mightiest_heroes() -> CardDefinition {
+    let pick = |take: Value| {
+        Effect::LookPickToHand(Box::new(LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(8),
+            pick_filter: Some(R::Creature),
+            take: Some(take),
+            to_battlefield: true,
+            optional: true,
+            rest_to_graveyard: true,
+            ..Default::default()
+        }))
+    };
+    CardDefinition {
+        name: "Earth's Mightiest Heroes",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        kicker_action_cost: Some(AdditionalCastCost::TapTotalPower { filter: R::Creature.and(R::ControlledByYou), power: 5 }),
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(pick(Value::Const(8))),
+            else_: Box::new(pick(Value::ONE)),
+        },
+        ..Default::default()
+    }
+}

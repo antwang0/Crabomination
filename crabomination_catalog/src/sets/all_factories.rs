@@ -16650,6 +16650,16 @@ static DECKS: &[Factory] = &[
     super::decks::reason_believe,
     super::decks::elvish_dreadlord,
     super::decks::tomb_of_horrors_adventurer,
+    super::decks::sulfurous_mire,
+    super::decks::giants_boulder,
+    super::decks::warg_tactics,
+    super::decks::konstrari_charm,
+    super::decks::imoen_mystic_trickster,
+    super::decks::vrock,
+    super::decks::glamer_gifter,
+    super::decks::prismatic_undercurrents,
+    super::decks::ajani_unrelenting,
+    super::decks::earths_mightiest_heroes,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
