@@ -455,3 +455,27 @@ pub fn dunedain_rangers() -> CardDefinition {
         ..creature("Dúnedain Rangers", cost(&[generic(3), g()]), vec![CreatureType::Human, CreatureType::Ranger], 4, 4)
     }
 }
+
+// ── Gimli, Counter of Kills ─────────────────────────────────────────────────
+
+/// Fear, Fire, Foes! — {X}{R} sorcery. Damage can't be prevented this turn;
+/// X damage to target creature and 1 to each other creature its controller
+/// controls.
+pub fn fear_fire_foes() -> CardDefinition {
+    spell(
+        "Fear, Fire, Foes!",
+        cost(&[crate::mana::x(), r()]),
+        false,
+        Effect::Seq(vec![
+            Effect::DamageCantBePreventedThisTurn,
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::XFromCost },
+            Effect::DealDamage {
+                to: Selector::ControlledBy {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    filter: R::Creature.and(R::OtherThanTargetSlot(0)),
+                },
+                amount: Value::ONE,
+            },
+        ]),
+    )
+}

@@ -420,3 +420,23 @@ fn savage_thallid_sacrifices_a_saproling_to_regenerate() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(), 2);
     assert_eq!(g.battlefield_find(thallid).unwrap().regeneration_shields, 1);
 }
+
+/// Fear, Fire, Foes!: X to the target, 1 to each of its controller's other
+/// creatures, and none to anyone else's.
+#[test]
+fn fear_fire_foes_splashes_the_targets_controller_only() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 5);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let elves = ready(&mut g, 1, catalog::llanowar_elves());
+    let bystander = ready(&mut g, 2, catalog::llanowar_elves());
+    let mine = ready(&mut g, 0, catalog::llanowar_elves());
+    let spell = g.add_card_to_hand(0, catalog::fear_fire_foes());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: Some(4) })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "4 to the 6/4");
+    assert!(g.battlefield_find(elves).is_none(), "1 to its controller's other creature");
+    assert!(g.battlefield_find(bystander).is_some() && g.battlefield_find(mine).is_some());
+}
