@@ -1232,3 +1232,59 @@ pub fn dismiss_into_dream() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── King of the Oathbreakers ────────────────────────────────────────────────
+
+/// King of the Oathbreakers — {2}{W}{B} legendary 3/3 flying Spirit Noble. A
+/// Spirit you control becoming the target of a spell phases out; a Spirit you
+/// control phasing in makes a tapped 1/1 white flying Spirit.
+pub fn king_of_the_oathbreakers() -> CardDefinition {
+    let spirit = || Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Spirit) };
+    let token = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
+                    .caused_by(R::IsSpellOnStack)
+                    .with_filter(spirit()),
+                effect: Effect::PhaseOut { what: Selector::TriggerSource, until_source_leaves: false },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PhasesIn, EventScope::YourControl).with_filter(spirit()),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(token) },
+                    Effect::Tap { what: Selector::LastCreatedToken },
+                ]),
+            },
+        ],
+        ..creature("King of the Oathbreakers", cost(&[generic(2), w(), b()]), vec![CreatureType::Spirit, CreatureType::Noble], 3, 3)
+    }
+}
+
+/// Cauldron Haze — {1}{W/B} instant. Any number of target creatures gain
+/// persist until end of turn.
+pub fn cauldron_haze() -> CardDefinition {
+    CardDefinition {
+        name: "Cauldron Haze",
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Persist, duration: Duration::EndOfTurn }),
+        },
+        ..Default::default()
+    }
+}

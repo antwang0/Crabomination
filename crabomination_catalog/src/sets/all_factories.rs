@@ -16323,6 +16323,8 @@ static DECKS: &[Factory] = &[
     super::decks::tresserhorns_lord_returned,
     super::decks::psychic_pickpocket,
     super::decks::dismiss_into_dream,
+    super::decks::king_of_the_oathbreakers,
+    super::decks::cauldron_haze,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

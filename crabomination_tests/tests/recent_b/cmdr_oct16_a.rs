@@ -1134,3 +1134,38 @@ fn psychic_pickpocket_connives_and_bounces() {
     cast(&mut g, pp);
     assert!(g.players[1].hand.iter().any(|c| c.id == angel));
 }
+
+/// King of the Oathbreakers phases out when a spell targets it (the Bolt
+/// fizzles), then makes a tapped Spirit when it phases back in.
+#[test]
+fn king_of_the_oathbreakers_phases_out_from_a_spell() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let king = ready(&mut g, 0, catalog::king_of_the_oathbreakers());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(king)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.phased_out.iter().any(|c| c.id == king), "phased out, not dead");
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(g.battlefield_find(king).is_some(), "phased back in");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit" && c.tapped));
+}
+
+/// Cauldron Haze: a persisted creature comes back with a -1/-1 counter.
+#[test]
+fn cauldron_haze_grants_persist() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let haze = g.add_card_to_hand(0, catalog::cauldron_haze());
+    cast_with(&mut g, haze, Some(Target::Permanent(bears)), vec![]).expect("haze");
+    let kill = Effect::Destroy { what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature) };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("persisted");
+    assert_eq!(back.counter_count(CounterType::MinusOneMinusOne), 1);
+}
