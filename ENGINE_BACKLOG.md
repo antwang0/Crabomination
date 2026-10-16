@@ -179,11 +179,15 @@ the handoff.
   `cmdr_oct16_e`). Primitives: `Effect::BecomeChosenColorWithHexproof`, `Keyword::CantBeCounteredIfCastCondition`
   (reads the CR 601.2 as-cast stamp), `StaticEffect::PreventAllButOneDamageToYouAndYourHeroes` (CR 615, the
   prevent-static lane). `ForEachOpponentTarget` wants `max_targets` ≥ the opponent count (it caps per seat).
-- **CLAIMED (`014Q2Gfw`, batch 10) — don't duplicate:** the Intimidator cluster (Obsidian Battle-Axe, Boldwyr
-  Intimidator, Kargan Intimidator, Falkenrath Marauders, Dragon Grip → Barktooth Warbeard, Lovisa Coldeyes,
-  Tyrox) and Nick Fury Spymaster, Zarda, Orbs of Warding (→ Agent Phil Coulson, Hyperion Supreme Hero).
-  Researched, open: Rielle the Everwise's Nahiri's Wrath (a spell's discard-X cost needs the discarded cards'
-  total mana value at resolution — only the activation path records a cost-discard MV, and only the max).
+- **LANDED (`014Q2Gfw`, batch 10) — seats 2976-2980** Lovisa Coldeyes, Barktooth Warbeard, Tyrox, Agent Phil
+  Coulson, Hyperion: Obsidian Battle-Axe, Boldwyr/Kargan Intimidator ("Cowards can't block Warriors" =
+  `GrantKeyword(CantBeBlockedByCreatureType(Coward))` over every Warrior), Falkenrath Marauders, Dragon Grip,
+  Nick Fury Spymaster (`DeployCreatureFromHandAttacking` now records `LastMoved`), Zarda (granted `exalted()`),
+  Orbs of Warding. Researched, open: Rielle the Everwise's Nahiri's Wrath (a spell's discard-X cost needs the
+  discarded cards' total mana value at resolution — only the activation path records a cost-discard MV, the max).
+- **CLAIMED (`014Q2Gfw`, batch 11) — don't duplicate:** Ojutai Monument + Ojutai's Breath (Ojutai, Soul of
+  Winter); Anep + Goma Fada Vanguard (Gornog); Hixus + Prison Sentence; Reservoir Kraken, Pearl Lake Ancient,
+  Undulating Witness (Thassa God of the Sea, Slinn Voda); Chronatog Totem + Barren Glory (Atogatog).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
