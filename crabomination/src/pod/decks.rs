@@ -84801,3 +84801,32 @@ pub const IIZUKA_THE_RUTHLESS_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const SHAGRAT_COMMANDERS: &[CardFactory] = &[shagrat_loot_bearer];
+
+/// **Shagrat, Loot Bearer**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Mountains + 10 Swamps = 99.
+/// Shagrat, Loot Bearer (EDHREC, fetched 2026-10-16).
+pub const SHAGRAT_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, basilisk_collar, beamtown_beatstick, blackblade_reforged,
+    bloodforged_battle_axe, colossus_hammer, cranial_plating, cranial_ram, diamond_pick_axe,
+    hammer_of_nazahn, lightning_greaves, loxodon_warhammer, mask_of_griselbrand,
+    masterwork_of_ingenuity, mind_stone, mithril_coat, nazgul_battle_mace, nettlecyst,
+    rakdos_signet, shadowspear, sol_ring, swiftfoot_boots, sword_of_vengeance,
+    sword_of_the_animist, talisman_of_indulgence, the_reaver_cleaver, thran_power_suit,
+    trailblazers_boots, barad_dur, blood_crypt, command_tower, dragonskull_summit,
+    foreboding_ruins, haunted_ridge, luxury_suite, mount_doom, rakdos_carnarium, rogues_passage,
+    smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice, bladegraft_aspirant,
+    bothersome_noisemaker, brass_squire, foundry_inspector, gothmog_morgul_lieutenant,
+    grishnakh_brash_instigator, kediss_emberclaw_familiar, lizard_blades,
+    mauhur_uruk_hai_captain, mordor_trebuchet, moria_marauder, orcish_bowmasters,
+    orcish_siegemaster, the_great_goblin, ugluk_of_the_white_hand, warg_rider,
+    blacksmiths_talent, book_of_mazarbul, march_from_the_black_gate, phyrexian_arena, bedevil,
+    chaos_warp, dark_ritual, orcish_medicine, rakdos_charm, terminate, thrill_of_possibility,
+    assault_on_osgiliath, blasphemous_act, feed_the_swarm, foray_of_orcs, mordor_muster,
+    swarming_of_moria, widespread_brutality,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];

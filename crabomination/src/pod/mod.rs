@@ -18600,6 +18600,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IIZUKA_THE_RUTHLESS_COMMANDERS,
             main: decks::IIZUKA_THE_RUTHLESS_MAIN,
         },
+        // Seat 3025: Shagrat, Loot Bearer's EDHREC average deck. `--pod-decks 3025`.
+        PodDeck {
+            name: "Shagrat, Loot Bearer (BR)",
+            commanders: decks::SHAGRAT_COMMANDERS,
+            main: decks::SHAGRAT_MAIN,
+        },
     ]
 }
 
@@ -23508,6 +23514,7 @@ mod tests {
             ("Aradesh, the Founder", &[0x15E4]),
             ("The Archimandrite", &[0x15E5]),
             ("Iizuka the Ruthless", &[0x15E6]),
+            ("Shagrat, Loot Bearer", &[0x15E7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
