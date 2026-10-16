@@ -17982,6 +17982,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABOSHAN_COMMANDERS,
             main: decks::ABOSHAN_MAIN,
         },
+        // Seat 2922: Skeleton Ship's EDHREC average deck. `--pod-decks 2922`.
+        PodDeck {
+            name: "Skeleton Ship (UB)",
+            commanders: decks::SKELETON_SHIP_COMMANDERS,
+            main: decks::SKELETON_SHIP_MAIN,
+        },
+        // Seat 2923: Ezio, Blade of Vengeance's EDHREC average deck. `--pod-decks 2923`.
+        PodDeck {
+            name: "Ezio, Blade of Vengeance (UB)",
+            commanders: decks::EZIO_3_COMMANDERS,
+            main: decks::EZIO_3_MAIN,
+        },
+        // Seat 2924: Demonlord Belzenlok's EDHREC average deck. `--pod-decks 2924`.
+        PodDeck {
+            name: "Demonlord Belzenlok (B)",
+            commanders: decks::DEMONLORD_BELZENLOK_COMMANDERS,
+            main: decks::DEMONLORD_BELZENLOK_MAIN,
+        },
+        // Seat 2925: Reveka, Wizard Savant's EDHREC average deck. `--pod-decks 2925`.
+        PodDeck {
+            name: "Reveka, Wizard Savant (U)",
+            commanders: decks::REVEKA_COMMANDERS,
+            main: decks::REVEKA_MAIN,
+        },
+        // Seat 2926: Achilles Davenport's EDHREC average deck. `--pod-decks 2926`.
+        PodDeck {
+            name: "Achilles Davenport (UB)",
+            commanders: decks::ACHILLES_DAVENPORT_COMMANDERS,
+            main: decks::ACHILLES_DAVENPORT_MAIN,
+        },
+        // Seat 2927: Altanak, the Thrice-Called's EDHREC average deck. `--pod-decks 2927`.
+        PodDeck {
+            name: "Altanak, the Thrice-Called (G)",
+            commanders: decks::ALTANAK_COMMANDERS,
+            main: decks::ALTANAK_MAIN,
+        },
+        // Seat 2928: Beorn, Reluctant Host's EDHREC average deck. `--pod-decks 2928`.
+        PodDeck {
+            name: "Beorn, Reluctant Host (G)",
+            commanders: decks::BEORN_COMMANDERS,
+            main: decks::BEORN_MAIN,
+        },
+        // Seat 2929: Galion, Elvenking's Butler's EDHREC average deck. `--pod-decks 2929`.
+        PodDeck {
+            name: "Galion, Elvenking's Butler (G)",
+            commanders: decks::GALION_COMMANDERS,
+            main: decks::GALION_MAIN,
+        },
     ]
 }
 
@@ -22787,6 +22835,14 @@ mod tests {
             ("King of the Oathbreakers", &[0x157D]),
             ("Tresserhorn's Lord, Returned", &[0x157E]),
             ("Aboshan, Cephalid Emperor", &[0x157F]),
+            ("Skeleton Ship", &[0x1580]),
+            ("Ezio, Blade of Vengeance", &[0x1581]),
+            ("Demonlord Belzenlok", &[0x1582]),
+            ("Reveka, Wizard Savant", &[0x1583]),
+            ("Achilles Davenport", &[0x1584]),
+            ("Altanak, the Thrice-Called", &[0x1585]),
+            ("Beorn, Reluctant Host", &[0x1586]),
+            ("Galion, Elvenking's Butler", &[0x1587]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
