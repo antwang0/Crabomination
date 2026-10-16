@@ -1837,6 +1837,11 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
             {
                 tax += pay;
             }
+            crate::card::AdditionalCastCost::BlightOrPay { pay, .. }
+                if !state.battlefield.iter().any(|c| c.controller == caster && state.computed_is_creature(c)) =>
+            {
+                tax += pay;
+            }
             crate::card::AdditionalCastCost::ForageOrPay { pay }
                 if !state.can_forage(caster) =>
             {
@@ -12460,7 +12465,7 @@ impl GameState {
             }
             // Forage-or-pay is always announceable: with no forage material the
             // pay half is folded into the cost.
-            A::ForageOrPay { .. } | A::DiscardOrPay { .. } => true,
+            A::ForageOrPay { .. } | A::DiscardOrPay { .. } | A::BlightOrPay { .. } => true,
             A::PayLifeOrPay { .. } => true,
             A::TapOrPay { .. } => true,
             // Need a creature to point at — one you control or one to reveal.
@@ -13083,6 +13088,14 @@ impl GameState {
                             None,
                             discard_override.take(),
                         );
+                        events.append(&mut ev);
+                    }
+                }
+                A::BlightOrPay { n, .. } => {
+                    // A creature pays the blight half; else the pay half was
+                    // already folded into the cost.
+                    if self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c)) {
+                        let (mut ev, _) = self.pay_additional_costs(p, &[A::Blight { n: *n }], None, None);
                         events.append(&mut ev);
                     }
                 }

@@ -3386,6 +3386,11 @@ pub enum SelectionRequirement {
     /// equal toughness" — V.A.T.S.). Vacuously true while that slot is
     /// unchosen; read like `SameControllerAsTargetSlot`.
     SameToughnessAsTargetSlot(u8),
+    /// CR 601.2c — the candidate's mana value is at most slot N's ("target
+    /// nonland permanent an opponent controls with equal or lesser mana
+    /// value", Puca's Mischief). Vacuously true while slot N is unchosen;
+    /// read like `SameToughnessAsTargetSlot`.
+    ManaValueAtMostTargetSlot(u8),
     /// CR 601.2c — cross-slot filter: shares a creature type with the
     /// creature already chosen for slot `.0` ("two target creatures you
     /// control that share a creature type" — Secret Tunnel). Vacuously true
@@ -4751,6 +4756,7 @@ impl SelectionRequirement {
             | Self::DifferentControllerFromTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
+            | Self::ManaValueAtMostTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
@@ -4773,6 +4779,7 @@ impl SelectionRequirement {
             | Self::DifferentControllerFromTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
+            | Self::ManaValueAtMostTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
@@ -4794,6 +4801,7 @@ impl SelectionRequirement {
             Self::SameControllerAsTargetSlot(n) => Self::SameControllerAsTargetSlot(s(n)),
             Self::OtherThanTargetSlot(n) => Self::OtherThanTargetSlot(s(n)),
             Self::SameToughnessAsTargetSlot(n) => Self::SameToughnessAsTargetSlot(s(n)),
+            Self::ManaValueAtMostTargetSlot(n) => Self::ManaValueAtMostTargetSlot(s(n)),
             Self::SharesCreatureTypeWithTargetSlot(n) => Self::SharesCreatureTypeWithTargetSlot(s(n)),
             Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
             Self::And(a, b) => Self::And(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
@@ -6617,6 +6625,10 @@ pub enum AdditionalCastCost {
     /// you control (Burning Curiosity's optional "you may blight 1", as a
     /// `kicker_action_cost`). Payable while you control a creature.
     Blight { n: u32 },
+    /// "As an additional cost, blight N or pay {P}" (Bogslither's Embrace):
+    /// the `…OrPay` shape — with a creature to blight the blight half is paid,
+    /// else the pay half joins the cost (CR 601.2b, 701.68b).
+    BlightOrPay { n: u32, pay: u32 },
     /// CR 701.68a + 601.2b — "blight X. X can't be greater than the greatest
     /// toughness among creatures you control" (Soul Immolation): X -1/-1
     /// counters on a creature you control, X threaded into the spell's X

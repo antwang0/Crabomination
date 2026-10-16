@@ -4673,6 +4673,10 @@ impl GameState {
                     self.graveyard_holding(o).is_some() && self.graveyard_holding(o) == self.graveyard_holding(target)
                 })
             }
+            R::ManaValueAtMostTargetSlot(slot) => slots
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|o| self.target_mana_value(target) <= self.target_mana_value(o)),
             R::SameToughnessAsTargetSlot(slot) => {
                 slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
                     self.target_toughness(o).is_some() && self.target_toughness(o) == self.target_toughness(target)
@@ -4763,6 +4767,14 @@ impl GameState {
                 (ca && !tb.is_empty()) || (cb && !ta.is_empty()) || (ca && cb) || ta.iter().any(|t| tb.contains(t))
             }
             _ => false,
+        }
+    }
+
+    /// A targeted object's mana value (CR 202.3); 0 for a player.
+    fn target_mana_value(&self, t: &Target) -> u32 {
+        match t {
+            Target::Permanent(id) => self.find_card_anywhere(*id).map_or(0, |c| c.definition.cost.cmc()),
+            Target::Player(_) => 0,
         }
     }
 
@@ -5513,6 +5525,11 @@ impl GameState {
                     None => true,
                 }
             }
+            R::ManaValueAtMostTargetSlot(slot) => self
+                .target_slots_scratch
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|other| self.target_mana_value(target) <= self.target_mana_value(other)),
             R::SameToughnessAsTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => {
@@ -7513,6 +7530,7 @@ impl GameState {
             | R::DifferentControllerFromTargetSlot(_)
             | R::OtherThanTargetSlot(_)
             | R::SameToughnessAsTargetSlot(_)
+            | R::ManaValueAtMostTargetSlot(_)
             | R::SharesCreatureTypeWithTargetSlot(_)
             | R::NameDiffersFromOtherTargets
             | R::SameGraveyardAsTargetSlot(_) => true,
