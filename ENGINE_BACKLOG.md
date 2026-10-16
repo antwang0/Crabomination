@@ -222,6 +222,9 @@ the handoff.
   Flame of Keld (chapter III is a this-turn damage static — no this-turn static emblem yet) and Magmatic
   Channeler; Meneldor / Doc Aurlock's Shifting Loyalties (a "shares a card type with target slot 0" leaf) and
   Extraordinary Journey.
+- **CLAIMED (`014Q2Gfw`, batch 15) — don't duplicate:** Elvenking's Halls, Mirkwood Nurturer, Silvan Reveler,
+  Thranduil's Decree (Thranduil, Sindarin Liege). Researched, open: Henry Wu (exploit is only an event —
+  `GameEvent::Exploited` — with no granted-exploit or "exploits a non-Human" reader).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
