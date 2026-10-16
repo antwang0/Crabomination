@@ -261,6 +261,8 @@ the handoff.
   Swarming of Moria. ⚠ A trigger reading `Selector::TriggerSource`'s types at RESOLUTION misses a dying token
   (gone after the SBA) — Uglúk's Goblin/Orc check is the event filter instead. Researched, open: Rory Williams's
   Planar Atlas (LookPick has no "put the pick on top" option).
+- **CLAIMED (`014Q2Gfw`, batch 21) — don't duplicate:** Planar Atlas, Elite Inquisitor, Loyal Sentry, Savior of
+  Ollenbock (Rory Williams).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
