@@ -44,8 +44,8 @@ fn howling_abomination_punishes_every_opponent_when_targeted_by_a_spell() {
     cast(&mut g, growth, Some(Target::Permanent(abom))).expect("Giant Growth");
     assert_eq!(g.computed_permanent(abom).unwrap().power, 5 + 3 + 2);
     assert_eq!(g.players[0].life, life[0]);
-    for seat in 1..4 {
-        assert_eq!(g.players[seat].life, life[seat] - 2, "seat {seat}");
+    for (seat, before) in life.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].life, before - 2, "seat {seat}");
     }
     for _ in 0..2 {
         assert!(!has(&g, abom, &Keyword::Trample));

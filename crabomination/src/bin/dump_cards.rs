@@ -295,6 +295,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::HexproofUnlessAttackingOrBlocking
         | Keyword::CanBlockOnlyFlying
         | Keyword::CantBeCounteredIfXAtLeast(_)
+        | Keyword::CantBeCounteredIfCastCondition
         | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor => return None,
         Keyword::Unleash => "Unleash",
         Keyword::Riot => "Riot",
