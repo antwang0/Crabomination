@@ -18126,6 +18126,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LORD_DREGG_COMMANDERS,
             main: decks::LORD_DREGG_MAIN,
         },
+        // Seat 2946: Roshan, Hidden Magister's EDHREC average deck. `--pod-decks 2946`.
+        PodDeck {
+            name: "Roshan, Hidden Magister (B)",
+            commanders: decks::ROSHAN_COMMANDERS,
+            main: decks::ROSHAN_MAIN,
+        },
+        // Seat 2947: Marvel Boy, Noh-Varr's EDHREC average deck. `--pod-decks 2947`.
+        PodDeck {
+            name: "Marvel Boy, Noh-Varr (WR)",
+            commanders: decks::MARVEL_BOY_COMMANDERS,
+            main: decks::MARVEL_BOY_MAIN,
+        },
     ]
 }
 
@@ -22955,6 +22967,8 @@ mod tests {
             ("Depala, Pilot Exemplar", &[0x1595]),
             ("Doc Ock, Evil Inventor", &[0x1596]),
             ("Lord Dregg, Insect Invader", &[0x1597]),
+            ("Roshan, Hidden Magister", &[0x1598]),
+            ("Marvel Boy, Noh-Varr", &[0x1599]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

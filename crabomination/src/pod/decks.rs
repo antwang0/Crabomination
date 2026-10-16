@@ -82596,3 +82596,59 @@ pub const LORD_DREGG_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ROSHAN_COMMANDERS: &[CardFactory] = &[roshan_hidden_magister];
+
+/// **Roshan, Hidden Magister**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Roshan, Hidden Magister (EDHREC, fetched 2026-10-16).
+pub const ROSHAN_MAIN: &[CardFactory] = &[
+    arcane_signet, conductive_machete, dissection_tools, dream_chisel, heralds_horn,
+    hidden_blade, jet_medallion, killers_mask, mind_stone, panoptic_projektor, patchwork_banner,
+    scroll_of_fate, sol_ring, urzas_incubator, vanquishers_banner, bojuka_bog,
+    branch_of_vitu_ghazi, cabal_coffers, cabal_stronghold, path_of_ancestry, rogues_passage,
+    witchs_cottage, zoetic_cavern, alley_assailant, aphetto_exterminator, bane_of_the_living,
+    basilica_stalker, cabal_executioner, crypt_ghast, desmond_miles, grim_haruspex,
+    haunted_cadaver, headhunter, hunted_bonebrute, innocuous_rat, jacob_frye,
+    kozilek_the_broken_reality, mari_the_killing_quill, nightdrinker_moroii, orochi_soul_reaver,
+    poison_blade_mentor, proteus_machine, qarsi_high_priest, ruthless_ripper, silumgar_assassin,
+    skinthinner, solemn_simulacrum, soul_collector, sultai_emissary, thieving_amalgam,
+    black_market_connections, cover_of_darkness, gift_of_doom, the_revelations_of_ezio,
+    ugins_mastery, chain_assassination, dark_ritual, defile, go_for_the_throat, murder,
+    raise_the_draugr, withering_torment, ugin_the_ineffable, back_in_town, crippling_fear,
+    feed_the_swarm, ghastly_conscription, kindred_dominance, petty_larceny, restart_sequence,
+    sign_in_blood,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const MARVEL_BOY_COMMANDERS: &[CardFactory] = &[marvel_boy_noh_varr];
+
+/// **Marvel Boy, Noh-Varr**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 10 Mountains + 15 Plains = 99.
+/// Marvel Boy, Noh-Varr (EDHREC, fetched 2026-10-16).
+pub const MARVEL_BOY_MAIN: &[CardFactory] = &[
+    arcade_cabinet, arcane_signet, boros_signet, commanders_plate, idol_of_oblivion,
+    infantry_shield, lightning_greaves, oketras_monument, skullclamp, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, clifftop_retreat, command_tower, furycalm_snarl, radiant_summit,
+    rogues_passage, sacred_foundry, spectator_seating, sunbillow_verge, sundown_pass,
+    thriving_bluff, adeline_resplendent_cathar, agate_instigator, ainok_strike_leader, anger,
+    anim_pakal_thousandth_moon, arabella_abandoned_doll, bastion_protector, brave_brawler,
+    devilish_valet, epf_point_squad, enduring_courage, enduring_innocence, esper_sentinel,
+    general_kreat_the_boltbringer, invisible_woman_sue_storm, jack_of_hearts_volatile_hero,
+    krenko_mob_boss, krenko_tin_street_kingpin, loyal_apprentice, mabel_valley_hero,
+    mondrak_glory_dominus, okoye_dora_milaje_leader, quicksilver_brash_blur,
+    slash_reptile_rampager, voice_of_victory, weftstalker_ardent, welcoming_vampire,
+    wonder_man_hollywood_hero, dollmakers_shop_porcelain_gallery, endless_foot_assault,
+    impact_tremors, super_villain_lockup, tocasias_welcome, warleaders_call, warstorm_surge,
+    web_up, boros_charm, chaos_warp, deflecting_palm, frontline_rush, generous_gift,
+    legion_leadership, path_to_exile, swords_to_plowshares, take_up_the_shield,
+    will_of_the_mardu, austere_command, blasphemous_act, dragon_fodder, seize_the_spoils,
+    sevinnes_reclamation, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
