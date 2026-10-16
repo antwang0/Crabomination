@@ -878,3 +878,69 @@ fn earths_mightiest_heroes_teamwork_takes_every_creature() {
         assert_eq!(bears, if teamwork { 3 } else { 1 }, "teamwork {teamwork}");
     }
 }
+
+/// Abby: one Cordyceps Infected per mana spent, and she enters under an opponent.
+#[test]
+fn abby_makes_infected_per_mana_and_joins_an_opponent() {
+    let mut g = pod(3);
+    let abby = g.add_card_to_hand(0, catalog::abby_merciless_soldier());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, abby, None).expect("Abby");
+    let infected = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Cordyceps Infected" && c.controller == 0).count();
+    assert_eq!(infected, 3);
+    assert_ne!(g.battlefield_find(abby).unwrap().controller, 0, "an opponent of your choice");
+}
+
+/// Gale's Redirection exiles a spell; a low roll lets you cast it paying, a
+/// d20 plus its mana value of 15+ casts it free.
+#[test]
+fn gales_redirection_steals_the_spell() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 6);
+    g.perform_action(GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("Wurm");
+    let gale = g.add_card_to_hand(0, catalog::gales_redirection());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    g.perform_action(GameAction::CastSpell { card_id: gale, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("Gale's Redirection");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == wurm).expect("exiled");
+    assert!(exiled.may_play_until.is_some_and(|p| p.player == 0), "you may cast it");
+}
+
+/// Bilbo, Thief in the Night recasts a sorcery from the graveyard on attack,
+/// {1} cheaper, and exiles it after.
+#[test]
+fn bilbo_recasts_from_the_graveyard_and_exiles_it() {
+    let mut g = pod(2);
+    let bilbo = ready(&mut g, 0, catalog::bilbo_thief_in_the_night());
+    let rite = g.add_card_to_graveyard(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![rite]), DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    attack(&mut g, &[(bilbo, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "Divination resolved");
+    assert!(g.exile.iter().any(|c| c.id == rite), "exiled instead of the graveyard");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{2}}{{U}} less {{1}}");
+}
+
+/// Lukka −2 trades a creature up for a bigger one; +1's creature exiles stay
+/// castable only while you control a Lukka.
+#[test]
+fn lukka_polymorphs_up_and_gates_exiles_on_a_lukka() {
+    let mut g = pod(2);
+    let lukka = ready(&mut g, 0, catalog::lukka_coppercoat_outcast());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    on_top(&mut g, 0, catalog::craw_wurm());
+    on_top(&mut g, 0, catalog::llanowar_elves());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: lukka, ability_index: 1, target: Some(Target::Permanent(bears)), x_value: None })
+        .expect("−2");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Craw Wurm" && c.controller == 0), "skipped the cheaper Elves");
+}

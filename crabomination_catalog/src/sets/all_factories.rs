@@ -16660,6 +16660,10 @@ static DECKS: &[Factory] = &[
     super::decks::prismatic_undercurrents,
     super::decks::ajani_unrelenting,
     super::decks::earths_mightiest_heroes,
+    super::decks::abby_merciless_soldier,
+    super::decks::gales_redirection,
+    super::decks::bilbo_thief_in_the_night,
+    super::decks::lukka_coppercoat_outcast,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

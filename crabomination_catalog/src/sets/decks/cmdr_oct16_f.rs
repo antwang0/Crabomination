@@ -1346,3 +1346,158 @@ pub fn earths_mightiest_heroes() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 7 ─────────────────────────────────────────────────────────────────
+
+/// Abby, Merciless Soldier — {1}{R}{G} legendary 4/4 Human Survivor,
+/// Partner—Survivors. Cast: a 1/1 black Fungus Zombie named Cordyceps Infected
+/// per mana spent; she enters under an opponent of your choice.
+pub fn abby_merciless_soldier() -> CardDefinition {
+    let infected = TokenDefinition {
+        name: "Cordyceps Infected".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus, CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::PartnerLabel("Survivors".into())],
+        enters_under_opponent_control: true,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::CastSpellManaSpent, definition: Arc::new(infected) },
+        }],
+        ..legend(creature(
+            "Abby, Merciless Soldier",
+            cost(&[generic(1), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Survivor],
+            4,
+            4,
+        ))
+    }
+}
+
+/// Gale's Redirection — {3}{U}{U} instant. Exile target spell, roll a d20 plus
+/// its mana value: 1-14, you may cast it while it stays exiled, spending mana
+/// as any color; 15+, you may cast it free while it stays exiled.
+pub fn gales_redirection() -> CardDefinition {
+    use crate::mana::u;
+    let grant = |free: bool| Effect::GrantMayPlay {
+        what: Selector::CardExiledWithSource,
+        duration: crate::card::MayPlayDuration::WhileExiled,
+        to_owner: false,
+        exile_after: false,
+        pay_own_cost: !free,
+        any_color: !free,
+    };
+    CardDefinition {
+        name: "Gale's Redirection",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::MoveSpellToZone {
+                what: target_filtered(R::IsSpellOnStack),
+                zone: crate::effect::CounteredSpellZone::ExileWithSource,
+            },
+            Effect::RollDie {
+                sides: 20,
+                count: Value::ONE,
+                modifier: Value::ManaValueOf(Box::new(Selector::CardExiledWithSource)),
+                reroll_at_most: 0,
+                ignore_lowest: 0,
+                results: vec![(1, 14, grant(false)), (15, u8::MAX, grant(true))],
+                on_doubles: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bilbo, Thief in the Night — {1}{U} legendary 2/2 Halfling Rogue. Spells you
+/// cast from anywhere but your hand cost {1} less. Attacking, you may cast an
+/// artifact, instant or sorcery from your graveyard (paying for it); an instant
+/// or sorcery cast this way is exiled instead of going to the graveyard.
+pub fn bilbo_thief_in_the_night() -> CardDefinition {
+    use crate::effect::shortcut::{choose_one_then, chosen_one, on_attack};
+    let castable = R::Artifact.or(R::HasCardType(CardType::Instant)).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast from anywhere other than your hand cost {1} less to cast.",
+            effect: StaticEffect::NonHandCastCostReduction { amount: 1 },
+        }],
+        triggered_abilities: vec![on_attack(Effect::MayDo {
+            description: "Cast an artifact, instant or sorcery spell from your graveyard?".into(),
+            body: Box::new(choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: castable },
+                PlayerRef::You,
+                Effect::CastWithoutPayingImmediate {
+                    what: chosen_one(),
+                    source_zone: Zone::Graveyard,
+                    exile_after: true,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: true,
+                },
+            )),
+        })],
+        ..legend(creature(
+            "Bilbo, Thief in the Night",
+            cost(&[generic(1), crate::mana::u()]),
+            vec![CreatureType::Halfling, CreatureType::Rogue],
+            2,
+            2,
+        ))
+    }
+}
+
+/// Lukka, Coppercoat Outcast — {3}{R}{R} Lukka, loyalty 5. +1: exile the top
+/// three; creature cards among them may be cast from exile while you control a
+/// Lukka. −2: exile target creature you control, then reveal until a creature
+/// card of greater mana value, put it onto the battlefield, rest on the bottom.
+/// −7: each creature you control deals damage equal to its power to each
+/// opponent.
+pub fn lukka_coppercoat_outcast() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype};
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Lukka, Coppercoat Outcast",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Lukka], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::Const(3), link_to_source: false, face_down: false },
+                    Effect::GrantMayPlay {
+                        what: Selector::ExiledThisResolution { filter: R::Creature },
+                        duration: MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { subtype: PlaneswalkerSubtype::Lukka },
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Move { what: target_filtered(R::Creature.and(R::ControlledByYou)), to: ZoneDest::Exile },
+                    Effect::RevealUntilCreatureAboveLastMovedToBattlefield,
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::EachDealsDamageEqualToPower { dealers: yours(), target: Selector::Player(PlayerRef::EachOpponent) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
