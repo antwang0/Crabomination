@@ -2506,6 +2506,10 @@ pub enum Keyword {
     /// steps (CR 510.1c — the substitution is unconditional, so a 5/1 bearer
     /// assigns 1).
     AssignsCombatDamageByToughness,
+    /// CR 510.1a — "If this creature's power is negative, it assigns combat
+    /// damage as though its power were positive" (Loot, the Anomaly): read off
+    /// the computed keyword set in `combat.rs`, the bearer assigns |power|.
+    AssignsCombatDamageAsThoughPowerPositive,
     /// CR 509.1c — "This creature must be blocked if able" (Lure-style
     /// block requirement, also Academic Dispute's rider). Enforced in
     /// `declare_blockers`: if an attacker carrying this keyword is left

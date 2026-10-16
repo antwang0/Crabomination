@@ -266,6 +266,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackUnlessMoreCreaturesThanDefender
         | Keyword::CantBlockUnlessMoreCreaturesThanAttacker
         | Keyword::DealsNoCombatDamage | Keyword::AssignsCombatDamageByToughness
+        | Keyword::AssignsCombatDamageAsThoughPowerPositive
         | Keyword::DividesCombatDamageAmongDefenders
         | Keyword::PreventDamageFromMatching(_)
         | Keyword::CantBeTargetedByAbilitiesFromMatching(_)

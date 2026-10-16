@@ -8474,11 +8474,14 @@ impl GameState {
 
 /// The combat-damage value a creature assigns: its toughness when it has
 /// `Keyword::AssignsCombatDamageByToughness` (Doran, the Siege Tower; Bill the
-/// Pony), otherwise its power (CR 510.1c). The substitution is unconditional —
-/// a 5/1 Doran-creature assigns 1.
+/// Pony), |power| for a negative-power `AssignsCombatDamageAsThoughPowerPositive`
+/// bearer (Loot, the Anomaly), otherwise its power (CR 510.1c). The toughness
+/// substitution is unconditional — a 5/1 Doran-creature assigns 1.
 fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
     if cp.keywords().has_kw(&Keyword::AssignsCombatDamageByToughness) {
         cp.toughness
+    } else if cp.power < 0 && cp.keywords().has_kw(&Keyword::AssignsCombatDamageAsThoughPowerPositive) {
+        -cp.power
     } else {
         cp.power
     }

@@ -4240,6 +4240,8 @@ fn attacker_damage_value_hinted(
     if let Some(cp) = computed {
         let mut base = if cp.keywords().has_kw(&Keyword::AssignsCombatDamageByToughness) {
             cp.toughness
+        } else if cp.power < 0 && cp.keywords().has_kw(&Keyword::AssignsCombatDamageAsThoughPowerPositive) {
+            -cp.power
         } else {
             cp.power
         };
