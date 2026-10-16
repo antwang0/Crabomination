@@ -83796,3 +83796,119 @@ pub const HIXUS_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const DIRECTOR_NICK_FURY_COMMANDERS: &[CardFactory] = &[director_nick_fury];
+
+/// **Director Nick Fury**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 4 Islands + 4 Mountains + 6 Plains = 99.
+/// Director Nick Fury (EDHREC, fetched 2026-10-16).
+pub const DIRECTOR_NICK_FURY_MAIN: &[CardFactory] = &[
+    arcane_signet, avengers_quinjet, captain_americas_shield, door_of_destinies, fellwar_stone,
+    heralds_horn, hulkbuster_armor, relic_of_legends, sol_ring, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, thought_vessel, avengers_tower,
+    clifftop_retreat, command_tower, exotic_orchard, frostboil_snarl, furycalm_snarl,
+    glacial_fortress, glittering_massif, irrigated_farmland, mystic_monastery, path_of_ancestry,
+    plaza_of_heroes, port_town, prairie_stream, radiant_summit, scavenger_grounds,
+    scorched_geyser, secluded_courtyard, spectator_seating, sulfur_falls, unclaimed_territory,
+    agent_phil_coulson, ant_man_elusive_avenger, black_widow_agile_avenger,
+    captain_america_living_legend, captain_america_super_soldier, captain_america_team_leader,
+    captain_america_wings_of_freedom, captain_marvel_apex_avenger, daredevil_man_without_fear,
+    falcon_and_redwing, firebird_blazing_ranger, hawkeye_trick_shot, hercules_olympian_hero,
+    iron_man_armored_avenger, jarvis_earths_mightiest_butler, king_tchalla, metallic_mimic,
+    photon_mighty_marvel, professor_hulk, quicksilver_speedster, rescue_pepper_potts,
+    sp_dr_piloted_by_peni, scarlet_witch_chaotic_avenger, shang_chi_and_the_ten_rings,
+    she_hulk_wallbreaker, spectacular_spider_man, spider_woman_stunning_savior,
+    the_wasp_winsome_avenger, thor_asgards_avenger, war_machine_avenging_arsenal,
+    winter_soldier_reborn_avenger, avengers_assemble, folk_hero, gift_of_immortality,
+    kindred_discovery, origin_of_the_avengers, reconnaissance_mission, arcane_denial,
+    counterspell, destroy_evil, heroic_return, heroic_sacrifice, make_your_move,
+    methods_of_the_mighty, path_to_exile, swords_to_plowshares, austere_command, avenge,
+    raise_the_palisade, rip_apart, west_coast_expansion,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const GOTHMOG_COMMANDERS: &[CardFactory] = &[gothmog_morgul_lieutenant];
+
+/// **Gothmog, Morgul Lieutenant**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Gothmog, Morgul Lieutenant (EDHREC, fetched 2026-10-16).
+pub const GOTHMOG_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bontus_monument, charcoal_diamond, heraldic_banner,
+    idol_of_oblivion, jet_medallion, mind_stone, skullclamp, sol_ring, swiftfoot_boots,
+    barad_dur, bojuka_bog, cabal_coffers, cabal_stronghold, myriad_landscape, reliquary_tower,
+    witchs_cottage, ayara_first_of_locthwain, blood_artist, chittering_witch, death_tyrant,
+    dunland_crebain, easterling_vanguard, endrek_sahr_master_breeder, ghoulcaller_gisa,
+    gorbag_of_minas_morgul, grave_titan, gray_merchant_of_asphodel, grima_wormtongue,
+    jadar_ghoulcaller_of_nephalia, mirkwood_bats, morbid_opportunist, mordor_trebuchet,
+    nadiers_nightblade, nadier_agent_of_the_duskenel, ogre_slumlord, ophiomancer,
+    orcish_bowmasters, overseer_of_the_damned, underworld_hermit, voracious_fell_beast,
+    warg_rider, zulaport_cutthroat, bastion_of_remembrance, bitterblossom, dreadhorde_invasion,
+    endless_ranks_of_the_dead, march_from_the_black_gate, open_the_graves, phyrexian_arena,
+    corrupted_conviction, dark_ritual, deadly_dispute, defile, go_for_the_throat, murder,
+    nasty_end, orcish_medicine, rise_of_the_dread_marn, village_rites,
+    liliana_dreadhorde_general, army_of_the_damned, dread_summons, feed_the_swarm,
+    lash_of_the_balrog, mordor_muster, read_the_bones, sams_desperate_rescue,
+    the_torment_of_gollum, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const HAPPY_HOGAN_2_COMMANDERS: &[CardFactory] = &[happy_hogan_dauntless_driver];
+
+/// **Happy Hogan, Dauntless Driver**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Happy Hogan, Dauntless Driver (EDHREC, fetched 2026-10-16).
+pub const HAPPY_HOGAN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, beamtown_beatstick, bessie_the_doctors_roadster,
+    blackblade_reforged, brotherhood_regalia, brotherhood_vertibird, buster_sword,
+    commanders_plate, diamond_pick_axe, gastal_thrillroller, hoard_hauler,
+    masterwork_of_ingenuity, mechtitan_core, midnight_crusader_shuttle, mithril_coat, mox_amber,
+    reckoner_bankbuster, ruby_medallion, shadowspear, sky_cycle, smugglers_copter, sol_ring,
+    swiftfoot_boots, the_reaver_cleaver, the_regalia, the_thanos_copter, arena_of_glory,
+    buried_ruin, inventors_fair, mech_hangar, rogues_passage, urzas_saga, war_room,
+    brass_squire, dynamite_diver, foundry_inspector, freya_crescent, goblin_engineer,
+    goblin_welder, hexing_squelcher, intrepid_ace, iron_myr, iron_spider_stark_upgrade,
+    lizard_blades, ornithopter_of_paradise, professional_face_breaker, pyre_rhymer,
+    ravenous_robots, reckless_racer, solemn_simulacrum, taxi_driver, aggravated_assault,
+    blacksmiths_talent, siege_modification, sticky_fingers, abrade, big_score, chaos_warp,
+    deflecting_swat, lightning_bolt, redirect_lightning, thrill_of_possibility,
+    untimely_malfunction, chandra_spark_hunter, blasphemous_act, chandras_ignition,
+    faithless_looting, mana_geyser, start_your_engines, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const ABOMINATION_2_COMMANDERS: &[CardFactory] = &[abomination_world_ravager];
+
+/// **Abomination, World Ravager**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Abomination, World Ravager (EDHREC, fetched 2026-10-16).
+pub const ABOMINATION_2_MAIN: &[CardFactory] = &[
+    arcane_signet, campfire, collectors_vault, colossus_hammer, cursed_mirror, diamond_pick_axe,
+    erratic_portal, excalibur_sword_of_eden, goldvein_pick, key_to_the_city, lightning_greaves,
+    mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, the_reaver_cleaver, thought_vessel,
+    throne_of_eldraine, treasure_map, two_handed_axe, arena_of_glory, command_beacon,
+    dwarven_mine, mines_of_moria, rogues_passage, urzas_cave, valakut_the_molten_pinnacle,
+    war_room, ancient_copper_dragon, anger, bonehoard_dracosaur, contract_hero,
+    goblin_glasswright, goldspan_dragon, impulsive_pilferer, j_jonah_jameson,
+    killmonger_ruthless_usurper, knuckles_the_echidna, kree_sentinel, machinesmith_automaton,
+    ornithopter_of_paradise, piggy_bank, raging_goblinoids, rapacious_dragon, surly_badgersaur,
+    terror_of_the_peaks, xorn, alchemists_talent, descent_into_avernus,
+    fable_of_the_mirror_breaker, spiteful_banditry, warstorm_surge, abrade, big_score,
+    chaos_warp, demand_answers, lightning_bolt, thrill_of_possibility, unexpected_windfall,
+    wild_magic_surge, jeska_thrice_reborn, avengers_disassembled, bionic_blow, blasphemous_act,
+    faithless_looting, imposing_grandeur, pirates_pillage, repulsor_rays, seize_the_spoils,
+    smash_to_dust,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

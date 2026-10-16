@@ -18384,6 +18384,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HIXUS_COMMANDERS,
             main: decks::HIXUS_MAIN,
         },
+        // Seat 2989: Director Nick Fury's EDHREC average deck. `--pod-decks 2989`.
+        PodDeck {
+            name: "Director Nick Fury (WUR)",
+            commanders: decks::DIRECTOR_NICK_FURY_COMMANDERS,
+            main: decks::DIRECTOR_NICK_FURY_MAIN,
+        },
+        // Seat 2990: Gothmog, Morgul Lieutenant's EDHREC average deck. `--pod-decks 2990`.
+        PodDeck {
+            name: "Gothmog, Morgul Lieutenant (B)",
+            commanders: decks::GOTHMOG_COMMANDERS,
+            main: decks::GOTHMOG_MAIN,
+        },
+        // Seat 2991: Happy Hogan, Dauntless Driver's EDHREC average deck. `--pod-decks 2991`.
+        PodDeck {
+            name: "Happy Hogan, Dauntless Driver (R)",
+            commanders: decks::HAPPY_HOGAN_2_COMMANDERS,
+            main: decks::HAPPY_HOGAN_2_MAIN,
+        },
+        // Seat 2992: Abomination, World Ravager's EDHREC average deck. `--pod-decks 2992`.
+        PodDeck {
+            name: "Abomination, World Ravager (R)",
+            commanders: decks::ABOMINATION_2_COMMANDERS,
+            main: decks::ABOMINATION_2_MAIN,
+        },
     ]
 }
 
@@ -23256,6 +23280,10 @@ mod tests {
             ("Gornog, the Red Reaper", &[0x15C0]),
             ("Ojutai, Soul of Winter", &[0x15C1]),
             ("Hixus, Prison Warden", &[0x15C2]),
+            ("Director Nick Fury", &[0x15C3]),
+            ("Gothmog, Morgul Lieutenant", &[0x15C4]),
+            ("Happy Hogan, Dauntless Driver", &[0x15C5]),
+            ("Abomination, World Ravager", &[0x15C6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
