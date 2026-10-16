@@ -18408,6 +18408,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABOMINATION_2_COMMANDERS,
             main: decks::ABOMINATION_2_MAIN,
         },
+        // Seat 2993: Yasova Dragonclaw's EDHREC average deck. `--pod-decks 2993`.
+        PodDeck {
+            name: "Yasova Dragonclaw (URG)",
+            commanders: decks::YASOVA_DRAGONCLAW_COMMANDERS,
+            main: decks::YASOVA_DRAGONCLAW_MAIN,
+        },
+        // Seat 2994: Reidane, God of the Worthy's EDHREC average deck. `--pod-decks 2994`.
+        PodDeck {
+            name: "Reidane, God of the Worthy (W)",
+            commanders: decks::REIDANE_COMMANDERS,
+            main: decks::REIDANE_MAIN,
+        },
+        // Seat 2995: Alexi, Zephyr Mage's EDHREC average deck. `--pod-decks 2995`.
+        PodDeck {
+            name: "Alexi, Zephyr Mage (U)",
+            commanders: decks::ALEXI_COMMANDERS,
+            main: decks::ALEXI_MAIN,
+        },
+        // Seat 2996: Orim, Samite Healer's EDHREC average deck. `--pod-decks 2996`.
+        PodDeck {
+            name: "Orim, Samite Healer (W)",
+            commanders: decks::ORIM_COMMANDERS,
+            main: decks::ORIM_MAIN,
+        },
+        // Seat 2997: Hisoka, Minamo Sensei's EDHREC average deck. `--pod-decks 2997`.
+        PodDeck {
+            name: "Hisoka, Minamo Sensei (U)",
+            commanders: decks::HISOKA_COMMANDERS,
+            main: decks::HISOKA_MAIN,
+        },
     ]
 }
 
@@ -23284,6 +23314,11 @@ mod tests {
             ("Gothmog, Morgul Lieutenant", &[0x15C4]),
             ("Happy Hogan, Dauntless Driver", &[0x15C5]),
             ("Abomination, World Ravager", &[0x15C6]),
+            ("Yasova Dragonclaw", &[0x15C7]),
+            ("Reidane, God of the Worthy", &[0x15C8]),
+            ("Alexi, Zephyr Mage", &[0x15C9]),
+            ("Orim, Samite Healer", &[0x15CA]),
+            ("Hisoka, Minamo Sensei", &[0x15CB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

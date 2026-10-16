@@ -83912,3 +83912,137 @@ pub const ABOMINATION_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const YASOVA_DRAGONCLAW_COMMANDERS: &[CardFactory] = &[yasova_dragonclaw];
+
+/// **Yasova Dragonclaw**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 7 Forests + 6 Islands + 5 Mountains = 99.
+/// Yasova Dragonclaw (EDHREC, fetched 2026-10-16).
+pub const YASOVA_DRAGONCLAW_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, birthing_pod, blackblade_reforged, conjurers_closet,
+    demonmail_hauberk, heros_blade, sol_ring, swiftfoot_boots, breeding_pool, cinder_glade,
+    command_tower, exotic_orchard, frontier_bivouac, high_market, hinterland_harbor,
+    ketria_triome, rejuvenating_springs, rootbound_crag, shivan_reef, spire_garden, steam_vents,
+    stomping_ground, sulfur_falls, training_center, wooded_foothills, yavimaya_coast,
+    birds_of_paradise, captivating_crew, dominus_of_fealty, eternal_witness, fanatic_of_rhonas,
+    forgotten_ancient, guardian_augmenter, halana_and_alena, ilysian_caryatid,
+    jalira_master_polymorphist, llanowar_elves, molten_primordial, prime_speaker_vannifar,
+    profaner_of_the_dead, rattleclaw_mystic, reclamation_sage, sakura_tribe_elder,
+    scourge_of_skola_vale, shaman_of_the_great_hunt, thassa_deep_dwelling, willbreaker,
+    zara_renegade_recruiter, zealous_conscripts, birthing_ritual, evolutionary_leap,
+    feed_the_pack, goblin_bombardment, greater_good, industrial_advancement, rhythm_of_the_wild,
+    temur_ascendancy, beast_within, chaos_warp, counterspell, fling, ghostly_flicker,
+    growth_spiral, heroic_intervention, kazuuls_fury, momentous_fall, negate, stubborn_denial,
+    minsc_boo_timeless_heroes, blasphemous_act, cultivate, eldritch_evolution, farseek,
+    kodamas_reach, lifes_legacy, mob_rule, natures_lore, neoform, rampant_growth,
+    seize_the_spotlight,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const REIDANE_COMMANDERS: &[CardFactory] = &[reidane_god_of_the_worthy];
+
+/// **Reidane, God of the Worthy**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Reidane, God of the Worthy (EDHREC, fetched 2026-10-16).
+pub const REIDANE_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, endless_atlas, god_pharaohs_statue, marble_diamond,
+    mind_stone, oketras_monument, orbs_of_warding, pearl_medallion, sol_ring, thought_vessel,
+    throne_of_eldraine, thunderstaff, castle_ardenvale, eiganjo_seat_of_the_empire,
+    emeria_the_sky_ruin, maze_of_ith, myriad_landscape, nykthos_shrine_to_nyx, war_room,
+    archangel_of_tithes, archivist_of_oghma, archon_of_emeria, aven_mindcensor,
+    containment_priest, drannith_magistrate, elesh_norn_grand_cenobite, esper_sentinel,
+    grand_abolisher, guardian_seraph, hedron_field_purists, hyperion_supreme_hero,
+    keeper_of_the_accord, knight_of_the_white_orchid, leonin_arbiter, loran_of_the_third_path,
+    mangara_the_diplomat, mother_of_runes, soul_warden, sun_titan, thalia_guardian_of_thraben,
+    thalia_heretic_cathar, weathered_wayfarer, windborn_muse, aura_of_silence,
+    authority_of_the_consuls, blind_obedience, deafening_silence, ghostly_prison, land_tax,
+    paladin_class, protection_of_the_hekma, smothering_tithe, sphere_of_safety,
+    trouble_in_pairs, generous_gift, mana_tithe, path_to_exile, rebuff_the_wicked, reprieve,
+    stroke_of_midnight, swords_to_plowshares, teferis_protection, ajani_steadfast,
+    the_eternal_wanderer, approach_of_the_second_sun, austere_command, farewell,
+    secret_rendezvous, vanquish_the_horde, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const ALEXI_COMMANDERS: &[CardFactory] = &[alexi_zephyr_mage];
+
+/// **Alexi, Zephyr Mage**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Alexi, Zephyr Mage (EDHREC, fetched 2026-10-16).
+pub const ALEXI_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, library_of_leng, lightning_greaves, midnight_clock,
+    mind_stone, sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel,
+    wayfarers_bauble, worn_powerstone, lonely_sandbar, myriad_landscape, mystic_sanctuary,
+    nykthos_shrine_to_nyx, reliquary_tower, war_room, aether_channeler, all_seeing_arbiter,
+    arcanis_the_omnipotent, archaeomancer, barrin_tolarian_archmage, containment_construct,
+    curator_of_mysteries, defiler_of_dreams, dreamscape_artist, gadwick_the_wizened,
+    jaces_archivist, laboratory_maniac, mulldrifter, nezahal_primal_tide, psychosis_crawler,
+    scourge_of_fleets, silver_myr, solemn_simulacrum, stronghold_machinist,
+    venser_shaper_savant, waterfront_bouncer, dismiss_into_dream, drake_haven, propaganda,
+    rhystic_study, teferis_ageless_insight, training_grounds, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, blue_suns_zenith, brainstorm, circular_logic,
+    counterspell, cyclonic_rift, flow_of_knowledge, frantic_search, high_tide, just_the_wind,
+    negate, obsessive_search, pongify, pull_from_tomorrow, rapid_hybridization, deep_analysis,
+    fabricate, nagging_thoughts, ponder, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const ORIM_COMMANDERS: &[CardFactory] = &[orim_samite_healer];
+
+/// **Orim, Samite Healer**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Orim, Samite Healer (EDHREC, fetched 2026-10-16).
+pub const ORIM_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, archaeomancers_map, cosmos_elixir, endless_atlas,
+    mind_stone, orbs_of_warding, pearl_medallion, sol_ring, emeria_the_sky_ruin,
+    hall_of_heliods_generosity, karoo_land, kor_haven, maze_of_ith, myriad_landscape,
+    nykthos_shrine_to_nyx, war_room, ancestors_prophet, angel_of_destiny, atalya_samite_master,
+    aven_redeemer, battlefield_medic, battletide_alchemist, clergy_en_vec, devoted_caretaker,
+    doubtless_one, drumbellower, eight_and_a_half_tails, femeref_healer, giver_of_runes,
+    hallowed_healer, hedron_field_purists, mangara_the_diplomat, master_apothecary,
+    master_healer, mother_of_runes, oriss_samite_guardian, righteous_valkyrie,
+    sanctum_custodian, soul_warden, souls_attendant, suture_priest, true_believer,
+    weathered_wayfarer, whipgrass_entangler, celestial_convergence, cleric_class,
+    divine_presence, ghostly_prison, land_tax, mark_of_asylum, orims_prayer,
+    rune_of_protection_blue, rune_of_protection_red, rune_of_protection_white, samite_sanctuary,
+    test_of_endurance, comeuppance, dawn_charm, disenchant, ethereal_haze, flare_of_fortitude,
+    generous_gift, holy_day, orims_chant, path_to_exile, riot_control, swords_to_plowshares,
+    the_wanderer, approach_of_the_second_sun, cut_a_deal, mass_calcify, secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const HISOKA_COMMANDERS: &[CardFactory] = &[hisoka_minamo_sensei];
+
+/// **Hisoka, Minamo Sensei**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Hisoka, Minamo Sensei (EDHREC, fetched 2026-10-16).
+pub const HISOKA_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_holding, heartstone, midnight_clock, mind_stone, sapphire_medallion,
+    sky_diamond, sol_ring, swiftfoot_boots, thought_vessel, castle_vantress, myriad_landscape,
+    mystic_sanctuary, reliquary_tower, riptide_laboratory, theorists_sanctum,
+    all_seeing_arbiter, archaeomancer, archmage_emeritus, azami_lady_of_scrolls,
+    baral_chief_of_compliance, containment_construct, curator_of_mysteries,
+    disciple_of_the_ring, guile, hisokas_guard, jin_gitaxias_progress_tyrant, laboratory_maniac,
+    lullmage_mentor, malevolent_hermit, mirrorhall_mimic, murmuring_mystic, patron_wizard,
+    silver_myr, talrand_sky_summoner, triskaidekaphile, vedalken_aethermage, arcane_laboratory,
+    counterbalance, mystic_remora, propaganda, rhystic_study, training_grounds, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, dig_through_time,
+    flow_of_knowledge, frantic_search, glen_elendras_answer, high_tide, just_the_wind,
+    mana_drain, muddle_the_mixture, negate, obsessive_search, opt, rewind, unwind,
+    deep_analysis, nagging_thoughts, ponder, preordain, step_through, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
