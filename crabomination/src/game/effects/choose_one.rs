@@ -27,6 +27,8 @@ fn pick_is_gain(e: &Effect) -> bool {
         | Effect::CopyCardsAndCastFreeUpTo { .. }
         | Effect::CastImmediateForLife { .. }
         | Effect::CastImmediateAnyManaType { .. } => true,
+        // The pick is the model the rest copy (Sakashima's Will): the best one.
+        Effect::BecomeCopyOfFor { source: Selector::SeparatedPile { chosen: true }, .. } => true,
         Effect::Move { to, .. } => matches!(
             to,
             ZoneDest::Hand(PlayerRef::You | PlayerRef::OwnerOfMoved)

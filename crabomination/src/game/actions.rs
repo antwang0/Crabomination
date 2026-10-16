@@ -16073,6 +16073,9 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
+        // CR 601.2h — the colors paid, as the normal cast path stamps them:
+        // an evoked Vibrance's "if {R}{R} was spent to cast it" reads these.
+        card.cast_mana_spent_by_color = spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
         let mut auto_events = receipt.auto_events;
 
         if alt.once_per_turn_grant {
