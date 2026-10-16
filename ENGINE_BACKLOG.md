@@ -180,7 +180,11 @@ the handoff.
   Stoic Rebuttal, Dark Fortress, Avenging Hunter, Elvish Doomsayer, Shadows of the Past, Darklight Phoenix, Reason
   // Believe, Elvish Dreadlord, Tomb of Horrors Adventurer (LANDED, seats 3089-3134); Corrosive Ooze unclaimed.
 - **CLAIMED (batch 6) — don't duplicate:** Sulfurous Mire, Giant's Boulder, Warg Tactics, Konstrari Charm, Imoen
-  Mystic Trickster, Vrock, Glamer Gifter, Prismatic Undercurrents, Ajani Unrelenting, Earth's Mightiest Heroes.
+  Mystic Trickster, Vrock, Glamer Gifter, Prismatic Undercurrents, Ajani Unrelenting, Earth's Mightiest Heroes. (LANDED, seats
+  3135-3167). **CLAIMED (batch 7):** Lukka Coppercoat Outcast, Abby Merciless Soldier, Gale's Redirection, Bilbo
+  Thief in the Night. Researched, open: Harness the Storm (a "same name as the triggering spell" target leaf),
+  Corrosive Ooze (an end-of-combat destroy of the other combatant's Equipment), Golden Guardian (self "dies this
+  turn" delayed transform-return), Nocturno / Ignacio of Myra's Marvels (rules-text word / card-art object).
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
