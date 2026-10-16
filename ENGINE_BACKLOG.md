@@ -165,7 +165,16 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `014Q2Gfw`) — 29 seats off the rescan's one- and two-card gaps
 
-- **Seats** 2893-2921 (52 cards, `decks::cmdr_oct16_c`, tests at the end of `recent_b/cmdr_oct16_a.rs`).
+- **Seats** 2893-2921 (52 cards, `decks::cmdr_oct16_c`, tests at the end of `recent_b/cmdr_oct16_a.rs`);
+  2922-2948 (98 cards, `decks::cmdr_oct16_d`, tests `recent_b/cmdr_oct16_d.rs`).
+- **Second-half primitives:** `ActivationTrait::PowerUp` (`AbilityActivated.power_up` — Marvel Boy),
+  `StaticEffect::EnchantedPlayerCantActivateNonManaAbilities` + a live-resolved player-scoped
+  `MatchingLoseAllAbilities` (Overwhelming Splendor: the `ControlledBy { EnchantedPlayer }` form emitted
+  nothing before).
+- **FIXED:** `SharesCreatureTypeWithTargetSlot` read only battlefield permanents, so two graveyard
+  targets never shared a type (Raise the Draugr; `raise_the_draugr_returns_two_sharing_a_type`).
+- **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
+  6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
   `HasNoAbilities` as a block-filter leaf (Jasmine Boreal of the Seven); `StaticEffect::PowerUpOnceMore`
   (Wonder Man, CR 702.193 — `exhausted_abilities` now records a power-up per activation);
