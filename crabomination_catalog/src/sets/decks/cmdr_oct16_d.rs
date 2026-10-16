@@ -1973,3 +1973,137 @@ pub fn orbs_of_warding() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ojutai, Soul of Winter ──────────────────────────────────────────────────
+
+/// Ojutai Monument — {3} artifact. {T}: {W} or {U}. {4}{W}{U}: a 4/4 white and
+/// blue flying Dragon artifact creature until end of turn.
+pub fn ojutai_monument() -> CardDefinition {
+    CardDefinition {
+        name: "Ojutai Monument",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::White, Color::Blue], Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), w(), u()]),
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        creature_types: vec![CreatureType::Dragon],
+                        keywords: vec![Keyword::Flying],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::BecomeColor { what: Selector::This, colors: vec![Color::White, Color::Blue], duration: Duration::EndOfTurn, additive: false },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ojutai's Breath — {2}{U} instant. Tap target creature; it doesn't untap
+/// during its controller's next untap step. Rebound.
+pub fn ojutais_breath() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Rebound],
+        ..spell(
+            "Ojutai's Breath",
+            cost(&[generic(2), u()]),
+            true,
+            Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
+            ]),
+        )
+    }
+}
+
+// ── Gornog, the Red Reaper ──────────────────────────────────────────────────
+
+/// Anep, Vizier of Hazoret — {2}{R} legendary 4/2 trample Jackal Warrior. You
+/// may exert it as it attacks; when you do, exile the top two cards of your
+/// library — you may play them until the end of your next turn.
+pub fn anep_vizier_of_hazoret() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample, Keyword::Exert],
+        triggered_abilities: vec![crate::effect::shortcut::on_exert(Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: false,
+            max_mana_value: None,
+            pay_own_cost: true,
+            uncast_penalty: None,
+        })],
+        ..creature("Anep, Vizier of Hazoret", cost(&[generic(2), r()]), vec![CreatureType::Jackal, CreatureType::Warrior], 4, 2)
+    }
+}
+
+/// Goma Fada Vanguard — {1}{R} 2/2 Human Warrior. Attacks: target creature an
+/// opponent controls with power at most the number of Warriors you control
+/// can't block this turn.
+pub fn goma_fada_vanguard() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(
+                R::Creature.and(R::ControlledByOpponent).and(R::PowerAtMostYourCount(Box::new(R::Creature.and(warrior())))),
+            ),
+            keyword: Keyword::CantBlock,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Goma Fada Vanguard", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Warrior], 2, 2)
+    }
+}
+
+// ── Hixus, Prison Warden ────────────────────────────────────────────────────
+
+/// Hixus, Prison Warden — {3}{W}{W} legendary 4/4 flash Human Soldier.
+/// Whenever a creature deals combat damage to you, if Hixus entered this
+/// turn, exile that creature until Hixus leaves the battlefield.
+pub fn hixus_prison_warden() -> CardDefinition {
+    let entered = Predicate::EntityMatches { what: Selector::This, filter: R::EnteredThisTurn };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                Predicate::SamePlayer(PlayerRef::TriggerEventPlayer, PlayerRef::You),
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                entered.clone(),
+            ])),
+            effect: Effect::If {
+                cond: entered,
+                then: Box::new(Effect::ExileUntilSourceLeaves {
+                    what: Selector::TriggerSource,
+                    return_to: crate::card::ExileReturnZone::Battlefield,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Hixus, Prison Warden", cost(&[generic(3), w(), w()]), vec![CreatureType::Human, CreatureType::Soldier], 4, 4)
+    }
+}
+
+/// Prison Sentence — {2}{W} Aura. Enters: scry 2. Enchanted creature can't
+/// attack or block, and its activated abilities can't be activated.
+pub fn prison_sentence() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        ..aura(
+            "Prison Sentence",
+            cost(&[generic(2), w()]),
+            R::Creature,
+            false,
+            EquipBonus { keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities], ..Default::default() },
+        )
+    }
+}

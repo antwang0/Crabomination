@@ -823,3 +823,93 @@ fn dragon_grip_flashes_in_with_ferocious() {
     assert_eq!(cp.power, 4);
     assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
+
+/// CR 702.88 — Ojutai's Breath taps and stuns, then rebounds from exile.
+#[test]
+fn ojutais_breath_rebounds() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = g.add_card_to_hand(0, catalog::ojutais_breath());
+    cast(&mut g, b, Some(Target::Permanent(bears)));
+    let c = g.battlefield_find(bears).unwrap();
+    assert!(c.tapped && c.skip_next_untap);
+    assert!(g.exile.iter().any(|c| c.id == b), "rebound exiles it");
+}
+
+/// Ojutai Monument animates into a 4/4 flying white-blue Dragon.
+#[test]
+fn ojutai_monument_becomes_a_dragon() {
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::ojutai_monument());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    g.perform_action(GameAction::ActivateAbility { card_id: m, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(m).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+}
+
+/// Goma Fada Vanguard's target is capped by your Warrior count: with two
+/// Warriors a 2-power creature can be stopped from blocking.
+#[test]
+fn goma_fada_vanguard_stops_a_small_blocker() {
+    let mut g = pod(2);
+    let v = ready(&mut g, 0, catalog::goma_fada_vanguard());
+    ready(&mut g, 0, catalog::kargan_intimidator());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    attack(&mut g, v);
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::CantBlock));
+}
+
+/// Hixus exiles a creature that hit you the turn Hixus came in, until Hixus
+/// leaves.
+#[test]
+fn hixus_jails_an_attacker_on_its_first_turn() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    let hixus = g.add_card_to_hand(0, catalog::hixus_prison_warden());
+    cast(&mut g, hixus, None);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(0) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, 18, "the Bears connected");
+    assert_eq!(g.battlefield_find(hixus).unwrap().entered_turn, Some(g.turn_number), "Hixus entered this turn");
+    assert!(g.battlefield_find(bears).is_none(), "exiled");
+    let destroy = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let ctx = crabomination::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(hixus)), 0, 0);
+    let evs = g.resolve_effect(&destroy, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "back when Hixus leaves");
+}
+
+/// Prison Sentence locks the enchanted creature's attacks, blocks and
+/// activated abilities.
+#[test]
+fn prison_sentence_locks_its_host() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let ship = ready(&mut g, 1, catalog::skeleton_ship());
+    g.add_card_to_battlefield(1, catalog::island());
+    let s = g.add_card_to_hand(0, catalog::prison_sentence());
+    cast(&mut g, s, Some(Target::Permanent(ship)));
+    let cp = g.computed_permanent(ship).unwrap();
+    let kws = cp.keywords();
+    assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
+    g.priority.player_with_priority = 1;
+    assert!(activate(&mut g, ship, Some(Target::Player(0))).is_err());
+}

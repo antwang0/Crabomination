@@ -16424,6 +16424,12 @@ static DECKS: &[Factory] = &[
     super::decks::nick_fury_spymaster,
     super::decks::zarda_the_power_princess,
     super::decks::orbs_of_warding,
+    super::decks::ojutai_monument,
+    super::decks::ojutais_breath,
+    super::decks::anep_vizier_of_hazoret,
+    super::decks::goma_fada_vanguard,
+    super::decks::hixus_prison_warden,
+    super::decks::prison_sentence,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,
