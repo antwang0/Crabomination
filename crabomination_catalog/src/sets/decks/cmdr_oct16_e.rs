@@ -7,7 +7,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, ModesWiden, Predicate, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{deal, each_opponent, etb, gain_life, on_attack, on_dies, on_you_attack, target_filtered, unearth};
+use crate::effect::shortcut::{deal, each_opponent, etb, gain_life, on_attack, on_dies, on_exert, on_you_attack, target_filtered, unearth};
 use crate::effect::{Duration, Effect, LookPick, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
@@ -1824,5 +1824,218 @@ pub fn the_torment_of_gollum() -> CardDefinition {
             Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Orc) },
         ]),
         ..Default::default()
+    }
+}
+
+// ── Wonder Man, Hollywood Hero ──────────────────────────────────────────────
+
+/// A power-up ability (CR 702.193): two +1/+1 counters on it, then `rider`.
+fn power_up(mana: ManaCost, rider: Option<Effect>) -> ActivatedAbility {
+    let counters = Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) };
+    ActivatedAbility {
+        mana_cost: mana,
+        power_up: true,
+        effect: match rider {
+            Some(r) => Effect::Seq(vec![counters, r]),
+            None => counters,
+        },
+        ..Default::default()
+    }
+}
+
+/// Extremis Elite — {1}{R} 2/2 Human Mercenary Villain. Power-up — {4}{R}: two
+/// +1/+1 counters and 1 damage to any target.
+pub fn extremis_elite() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![power_up(
+            cost(&[generic(4), r()]),
+            Some(Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE }),
+        )],
+        ..creature("Extremis Elite", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Mercenary, CreatureType::Villain], 2, 2)
+    }
+}
+
+/// Molly Hayes, Runaway — {2}{R} legendary 3/3 Mutant Hero. Power-up —
+/// {5}{R}: two +1/+1 counters; exile your top card, playable until the end of
+/// your next turn.
+pub fn molly_hayes_runaway() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![power_up(
+            cost(&[generic(5), r()]),
+            Some(Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            }),
+        )],
+        ..legend(creature("Molly Hayes, Runaway", cost(&[generic(2), r()]), vec![CreatureType::Mutant, CreatureType::Hero], 3, 3))
+    }
+}
+
+/// Volcanic Villain — {2}{R} 3/2 haste Elemental Villain. Power-up — {5}{R}:
+/// two +1/+1 counters.
+pub fn volcanic_villain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![power_up(cost(&[generic(5), r()]), None)],
+        ..creature("Volcanic Villain", cost(&[generic(2), r()]), vec![CreatureType::Elemental, CreatureType::Villain], 3, 2)
+    }
+}
+
+// ── Grim Reaper, Lethal Legionnaire ─────────────────────────────────────────
+
+/// Grim Reaper, Lethal Legionnaire — {3}{B} legendary 3/4 Human Villain.
+/// Attacks: you may pay {3}{B}; when you do, return target creature card from
+/// your graveyard tapped and attacking with a finality counter on it.
+pub fn grim_reaper_lethal_legionnaire() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "Pay {3}{B} to return a creature card attacking?".into(),
+            mana_cost: cost(&[generic(3), b()]),
+            body: Box::new(Effect::Reflexive {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
+                    Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                ])),
+            }),
+            else_: None,
+        })],
+        ..legend(creature("Grim Reaper, Lethal Legionnaire", cost(&[generic(3), b()]), vec![CreatureType::Human, CreatureType::Villain], 3, 4))
+    }
+}
+
+/// Ultimo, Civilization's End — {4}{B}{B} legendary 6/5 menace artifact
+/// creature Robot Villain. ETB: each opponent sacrifices a creature. {2}{B},
+/// discard it: each opponent sacrifices a creature.
+pub fn ultimo_civilizations_end() -> CardDefinition {
+    let edict = || Effect::Sacrifice { who: Selector::Player(PlayerRef::EachOpponent), count: Value::ONE, filter: R::Creature };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(edict())],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: edict(),
+            ..Default::default()
+        }],
+        ..legend(creature(
+            "Ultimo, Civilization's End",
+            cost(&[generic(4), b(), b()]),
+            vec![CreatureType::Robot, CreatureType::Villain],
+            6,
+            5,
+        ))
+    }
+}
+
+/// Yellowjacket, Heartless Marauder — {1}{B} legendary 1/2 flying Human Rogue
+/// Villain. Another Villain of yours entering: +1/+0 and lifelink until end of
+/// turn.
+pub fn yellowjacket_heartless_marauder() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCreatureType(CreatureType::Villain),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                eot_keyword(Selector::This, Keyword::Lifelink),
+            ]),
+        }],
+        ..legend(creature(
+            "Yellowjacket, Heartless Marauder",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Villain],
+            1,
+            2,
+        ))
+    }
+}
+
+// ── Anep, Vizier of Hazoret ─────────────────────────────────────────────────
+
+fn on_any_exert(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::Exerted, EventScope::YourControl), effect }
+}
+
+fn loot() -> Effect {
+    Effect::MayDo {
+        description: "Discard a card to draw a card?".into(),
+        body: Box::new(Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ])),
+    }
+}
+
+/// Battlefield Scavenger — {1}{R} 2/2 Jackal Rogue; may exert as it attacks.
+/// Whenever you exert a creature, you may discard a card to draw a card.
+pub fn battlefield_scavenger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![on_any_exert(loot())],
+        ..creature("Battlefield Scavenger", cost(&[generic(1), r()]), vec![CreatureType::Jackal, CreatureType::Rogue], 2, 2)
+    }
+}
+
+/// Khenra Scrapper — {2}{R} 2/3 menace Jackal Warrior; exerted as it attacks,
+/// +2/+0 until end of turn.
+pub fn khenra_scrapper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace, Keyword::Exert],
+        triggered_abilities: vec![on_exert(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Khenra Scrapper", cost(&[generic(2), r()]), vec![CreatureType::Jackal, CreatureType::Warrior], 2, 3)
+    }
+}
+
+/// Sandstorm Crasher — {3}{R} 3/4 trample Minotaur Berserker Wizard; exerted
+/// as it attacks, a tapped and attacking token copy of target creature you
+/// control, sacrificed at the next end step.
+pub fn sandstorm_crasher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Exert],
+        triggered_abilities: vec![on_exert(Effect::Seq(vec![
+            Effect::TokenCopyTappedAttacking { source: target_filtered(yours(R::Creature)) },
+            Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedToken },
+        ]))],
+        ..creature(
+            "Sandstorm Crasher",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Minotaur, CreatureType::Berserker, CreatureType::Wizard],
+            3,
+            4,
+        )
+    }
+}
+
+/// Trueheart Twins — {4}{R} 4/4 Jackal Warrior; may exert as it attacks.
+/// Whenever you exert a creature, your creatures get +1/+0 until end of turn.
+pub fn trueheart_twins() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![on_any_exert(Effect::PumpPT {
+            what: Selector::EachPermanent(yours(R::Creature)),
+            power: Value::ONE,
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Trueheart Twins", cost(&[generic(4), r()]), vec![CreatureType::Jackal, CreatureType::Warrior], 4, 4)
     }
 }

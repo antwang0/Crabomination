@@ -16524,6 +16524,16 @@ static DECKS: &[Factory] = &[
     super::decks::daredevil_man_without_fear,
     super::decks::mordor_trebuchet,
     super::decks::the_torment_of_gollum,
+    super::decks::extremis_elite,
+    super::decks::molly_hayes_runaway,
+    super::decks::volcanic_villain,
+    super::decks::grim_reaper_lethal_legionnaire,
+    super::decks::ultimo_civilizations_end,
+    super::decks::yellowjacket_heartless_marauder,
+    super::decks::battlefield_scavenger,
+    super::decks::khenra_scrapper,
+    super::decks::sandstorm_crasher,
+    super::decks::trueheart_twins,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -525,3 +525,56 @@ fn daredevil_pumps_on_an_exiled_hero() {
         assert_eq!(g.computed_permanent(dd).unwrap().power, power, "Hero on top: {hero}");
     }
 }
+
+/// CR 702.193 — Extremis Elite's power-up: counters and a ping, then never
+/// again.
+#[test]
+fn extremis_elite_powers_up_once() {
+    let mut g = pod(2);
+    let elite = ready(&mut g, 0, catalog::extremis_elite());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(8);
+    let life = g.players[1].life;
+    let act = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility { card_id: elite, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None })
+    };
+    act(&mut g).expect("power-up");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+    assert_eq!(g.battlefield_find(elite).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(act(&mut g).is_err(), "once");
+}
+
+/// Grim Reaper: paying {3}{B} returns a creature card attacking with a
+/// finality counter.
+#[test]
+fn grim_reaper_returns_an_attacker_with_finality() {
+    let mut g = pod(2);
+    let reaper = ready(&mut g, 0, catalog::grim_reaper_lethal_legionnaire());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, &[(reaper, 1)]);
+    let c = g.battlefield_find(bears).expect("returned");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+    assert!(c.tapped && g.attacking.iter().any(|a| a.attacker == bears));
+}
+
+/// Trueheart Twins: exerting any creature pumps the team.
+#[test]
+fn trueheart_twins_pump_the_team_on_exert() {
+    let mut g = pod(2);
+    let twins = ready(&mut g, 0, catalog::trueheart_twins());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackersExerting {
+        attacks: vec![Attack { attacker: twins, target: AttackTarget::Player(1) }],
+        exert: vec![twins],
+    })
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(twins).unwrap().skip_next_untap, "exerted");
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(twins).unwrap().power, 5);
+}
