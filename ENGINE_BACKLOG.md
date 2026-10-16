@@ -175,6 +175,10 @@ the handoff.
 - **CLAIMED (batch 3) — don't duplicate:** Dungeoneer's Pack, Trailblazer's Torch, Harnessed Snubhorn, Hamato
   Guardian Stance, Veteran Soldier, Veteran Armorsmith (Rasaad yn Bashir's three decks); Lurebound Scarecrow,
   Midnight Oil (Faceless One // Criminal Past).
+- **LANDED (batch 4):** Glacian Powerstone Engineer, Countervailing Winds, Flash Photography, Vibrance, Sakashima's
+  Will — seats 3045-3087. **CLAIMED (batch 5) — don't duplicate:** Serra's Guardian, Alpine Meadow, Timetwister,
+  Stoic Rebuttal, Dark Fortress, Avenging Hunter, Elvish Doomsayer, Shadows of the Past, Darklight Phoenix, Reason
+  // Believe, Elvish Dreadlord, Tomb of Horrors Adventurer, Corrosive Ooze.
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
