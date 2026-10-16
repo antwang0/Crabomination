@@ -1660,3 +1660,253 @@ pub fn shimmerwilds_growth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 9 ─────────────────────────────────────────────────────────────────
+
+/// Demon of Dark Schemes — {3}{B}{B}{B} 5/5 flying Demon. ETB: all other
+/// creatures -2/-2 this turn. Another creature dying gives you {E}. {2}{B},
+/// pay {E}{E}{E}{E}: put target creature card from a graveyard onto the
+/// battlefield under your control tapped.
+pub fn demon_of_dark_schemes() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource }),
+                effect: Effect::AddEnergy(Value::ONE),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            energy_cost: 4,
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..creature("Demon of Dark Schemes", cost(&[generic(3), b(), b(), b()]), vec![CreatureType::Demon], 5, 5)
+    }
+}
+
+/// Loot, the Nexus — {2}{G} legendary 2/1 Beast Noble. {T}: one mana of a
+/// color per distinct power among creatures you control.
+pub fn loot_the_nexus() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::DistinctPowersAmongCreaturesControlled(PlayerRef::You)),
+            },
+            ..Default::default()
+        }],
+        ..legend(creature("Loot, the Nexus", cost(&[generic(2), g()]), vec![CreatureType::Beast, CreatureType::Noble], 2, 1))
+    }
+}
+
+/// Plunder the Trollshaws — {1}{U} instant: draw a card, two if cast from a
+/// graveyard. Flashback {3}{U}.
+pub fn plunder_the_trollshaws() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        name: "Plunder the Trollshaws",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
+        effect: Effect::If {
+            cond: Predicate::CastFromGraveyard,
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Yuriko, Hope from the Shadows — {U} legendary 1/1 flash Human Ninja. ETB,
+/// choose one: target creature gets -X/-0 this turn (X = cards in your
+/// graveyard); or surveil 2.
+pub fn yuriko_hope_from_the_shadows() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Times(
+                    Box::new(Value::Const(-1)),
+                    Box::new(Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Any }),
+                ),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        ]))],
+        ..legend(creature(
+            "Yuriko, Hope from the Shadows",
+            cost(&[crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Ninja],
+            1,
+            1,
+        ))
+    }
+}
+
+/// Garruk, Curse Breaker — {3}{G}{G} Garruk, loyalty 5. A power-4+ creature
+/// entering under you draws a card. +2: untap up to two target lands; −3: a
+/// 4/4 trample Beast; −4: until your next turn, creatures attacking your
+/// opponents get +2/+2 and trample.
+pub fn garruk_curse_breaker() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    let beast = TokenDefinition {
+        name: "Beast".into(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Garruk, Curse Breaker",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Garruk], ..Default::default() },
+        base_loyalty: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::PowerAtLeast(4)),
+            }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::ApplyToTargets {
+                    min_targets: 0,
+                    max_targets: 2,
+                    filter: R::Land,
+                    effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(beast) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::TriggersUntilYourNextTurn {
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: R::IsAttackingOpponentPlayer,
+                        }),
+                        effect: Effect::Seq(vec![
+                            Effect::PumpPT {
+                                what: Selector::TriggerSource,
+                                power: Value::Const(2),
+                                toughness: Value::Const(2),
+                                duration: Duration::EndOfTurn,
+                            },
+                            Effect::GrantKeyword { what: Selector::TriggerSource, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                        ]),
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Founding the Third Path — {1}{U} read-ahead Saga. I: you may cast an
+/// instant or sorcery with mana value 1 or 2 from your hand free. II: target
+/// player mills four. III: exile target instant or sorcery card from your
+/// graveyard; you may cast a copy of it (paying for it).
+pub fn founding_the_third_path() -> CardDefinition {
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
+    let spell = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Founding the Third Path",
+        cost: cost(&[generic(1), crate::mana::u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        read_ahead: true,
+        saga_chapters: vec![
+            (
+                1,
+                choose_one_then(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: spell().and(R::ManaValueAtLeast(1)).and(R::ManaValueAtMost(2)),
+                    },
+                    PlayerRef::You,
+                    Effect::CastWithoutPayingImmediate {
+                        what: chosen_one(),
+                        source_zone: Zone::Hand,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    },
+                ),
+            ),
+            (2, Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(4) }),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::Move { what: target_filtered(R::InYourGraveyard.and(spell())), to: ZoneDest::Exile },
+                    Effect::CastWithoutPayingImmediate {
+                        what: Selector::LastMoved,
+                        source_zone: Zone::Exile,
+                        exile_after: false,
+                        copy: true,
+                        reduce_generic: 0,
+                        pay_own_cost: true,
+                    },
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Raph & Leo, Sibling Rivals — {1}{R/W}{R/W} legendary 2/4 Mutant Ninja
+/// Turtle. Attacking in the turn's first combat: untap one or two target
+/// attacking creatures, and there is an additional combat phase.
+pub fn raph_and_leo_sibling_rivals() -> CardDefinition {
+    let rw = || hybrid(Color::Red, Color::White);
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::IsFirstCombatPhaseThisTurn),
+            effect: Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    min_targets: 1,
+                    max_targets: 2,
+                    filter: R::Creature.and(R::IsAttacking),
+                    effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+                },
+                Effect::AdditionalCombatPhase { count: Value::ONE },
+            ]),
+        }],
+        ..legend(creature(
+            "Raph & Leo, Sibling Rivals",
+            cost(&[generic(1), rw(), rw()]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle],
+            2,
+            4,
+        ))
+    }
+}

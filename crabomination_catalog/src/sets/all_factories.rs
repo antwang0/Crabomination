@@ -16670,6 +16670,13 @@ static DECKS: &[Factory] = &[
     super::decks::talas_scout,
     super::decks::unpredictable_cyclone,
     super::decks::shimmerwilds_growth,
+    super::decks::demon_of_dark_schemes,
+    super::decks::loot_the_nexus,
+    super::decks::plunder_the_trollshaws,
+    super::decks::yuriko_hope_from_the_shadows,
+    super::decks::garruk_curse_breaker,
+    super::decks::founding_the_third_path,
+    super::decks::raph_and_leo_sibling_rivals,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

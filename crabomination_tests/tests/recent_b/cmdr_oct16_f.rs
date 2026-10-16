@@ -1008,3 +1008,77 @@ fn shimmerwilds_growth_colors_and_doubles_its_land() {
     activate(&mut g, wastes, 0, None).expect("tap for R");
     assert_eq!(g.players[0].mana_pool.total(), 2, "R plus the chosen G");
 }
+
+/// Demon of Dark Schemes: its -2/-2 sweep feeds it energy, which buys a
+/// reanimation from any graveyard.
+#[test]
+fn demon_of_dark_schemes_banks_energy_from_its_sweep() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+        ready(&mut g, 1, catalog::grizzly_bears());
+    }
+    let demon = g.add_card_to_hand(0, catalog::demon_of_dark_schemes());
+    g.players[0].mana_pool.add(Color::Black, 6);
+    cast(&mut g, demon, None).expect("Demon");
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 4, "four Bears died");
+    let target = g.players[1].graveyard.iter().find(|c| c.definition.name == "Grizzly Bears").unwrap().id;
+    g.players[0].mana_pool.add(Color::Black, 3);
+    activate(&mut g, demon, 0, Some(Target::Permanent(target))).expect("reanimate");
+    let b = g.battlefield_find(target).expect("on the battlefield");
+    assert_eq!(b.controller, 0);
+    assert!(b.tapped);
+}
+
+/// Loot, the Nexus taps for one mana per distinct power among your creatures.
+#[test]
+fn loot_the_nexus_counts_distinct_powers() {
+    let mut g = pod(2);
+    let loot = ready(&mut g, 0, catalog::loot_the_nexus());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::craw_wurm());
+    activate(&mut g, loot, 0, None).expect("tap Loot");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "powers {{2, 6}} (Loot is a 2 too)");
+}
+
+/// Plunder the Trollshaws draws two when flashed back.
+#[test]
+fn plunder_the_trollshaws_draws_two_from_the_graveyard() {
+    let mut g = pod(2);
+    let p = g.add_card_to_graveyard(0, catalog::plunder_the_trollshaws());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastFlashback { card_id: p, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("flashback");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// Garruk, Curse Breaker's −4: until your next turn, your attackers at an
+/// opponent get +2/+2 and trample.
+#[test]
+fn garruk_curse_breaker_emblem_pumps_attackers() {
+    let mut g = pod(2);
+    let garruk = ready(&mut g, 0, catalog::garruk_curse_breaker());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: garruk, ability_index: 2, target: None, x_value: None }).expect("−4");
+    drain_stack(&mut g);
+    attack(&mut g, &[(bears, 1)]);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&Keyword::Trample));
+}
+
+/// Raph & Leo grant an extra combat only in the turn's first combat.
+#[test]
+fn raph_and_leo_add_a_combat_from_the_first_one() {
+    let mut g = pod(2);
+    let rl = ready(&mut g, 0, catalog::raph_and_leo_sibling_rivals());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, &[(rl, 1), (bears, 1)]);
+    assert!(!g.battlefield_find(bears).unwrap().tapped || !g.battlefield_find(rl).unwrap().tapped, "an attacker untapped");
+    assert_eq!(g.additional_combat_phases, 1);
+}
