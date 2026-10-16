@@ -165,10 +165,11 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
-- **Seats** 2949-2952, 2955-2969, 2973-2975, 2981-2985, 2989-2992, 2998-3000 (`decks::cmdr_oct16_e`, tests
-  `recent_b/cmdr_oct16_e.rs`).
-- **CLAIMED (batch 9) — don't duplicate:** Elder Auntie, Raphael Most Attitude, Mouser Attack!, Skateboard, Raph's
-  Bravado (Raphael Tough Turtle, Raphael the Nightwatcher).
+- **Seats** 2949-2952, 2955-2969, 2973-2975, 2981-2985, 2989-2992, 2998-3002 (98 cards, `decks::cmdr_oct16_e`,
+  tests `recent_b/cmdr_oct16_e.rs`). No open claim.
+- **Pods:** 15-seat (100 games), 8-seat (150), 6-seat (200), 4-seat (200+200) blocks plus `pod_sweep.py` seeds
+  9611-9615 over 2920-3000 at 3/4/6/8 seats (1,555 games): 0 panics after the CR 508.4 fix; three CR 104.4a draws
+  at seed 9619 (6 seats) are Descent into Avernus killing every remaining player at once.
 - **Primitives:** `PlayerRef::EachPlayerYouAreAttacking`, `R::ManaValueAtMostTargetSlot`,
   `AdditionalCastCost::BlightOrPay`, `CounterType::Dread`, `CreatureType::Vorta`; "whenever you exert a creature"
   (`Exerted` + `YourControl`) now fires and the exert policy pays for it (CR 701.43).
