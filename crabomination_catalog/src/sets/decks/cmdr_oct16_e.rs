@@ -1488,3 +1488,119 @@ pub fn barren_glory() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Vadrik, Astral Archmage ─────────────────────────────────────────────────
+
+/// Vadrik, Astral Archmage — {1}{U}{R} legendary 1/2 Human Wizard. It becomes
+/// day as it enters if it's neither (CR 726.2). Your instants and sorceries
+/// cost {X} less, X its power. Day/night changing: a +1/+1 counter on it.
+pub fn vadrik_astral_archmage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::Any(vec![Predicate::IsDay, Predicate::IsNight]))),
+                then: Box::new(Effect::BecomeDay),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {X} less, where X is Vadrik's power.",
+            effect: StaticEffect::CostReductionBySourcePower { filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)) },
+        }],
+        ..legend(creature("Vadrik, Astral Archmage", cost(&[generic(1), u(), r()]), vec![CreatureType::Human, CreatureType::Wizard], 1, 2))
+    }
+}
+
+/// Invert // Invent — {U/R} instant: switch the P/T of each of up to two target
+/// creatures until end of turn. // {4}{U}{R} instant: search for an instant
+/// and/or a sorcery card, put them into your hand.
+pub fn invert_invent() -> CardDefinition {
+    use crate::card::{SplitCard, SplitHalf};
+    let tutor = |filter: R| Effect::Search { who: PlayerRef::You, filter, to: ZoneDest::Hand(PlayerRef::You) };
+    CardDefinition {
+        name: "Invert // Invent",
+        cost: cost(&[hybrid(Color::Blue, Color::Red)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::SwitchPowerToughness { what: Selector::Target(0), duration: Duration::EndOfTurn }),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), u(), r()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![tutor(R::HasCardType(CardType::Instant)), tutor(R::HasCardType(CardType::Sorcery))]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+// ── Spider-Man Noir ─────────────────────────────────────────────────────────
+
+/// Westgate Regent — {3}{B}{B} 4/4 flying Vampire, ward—discard a card.
+/// Combat damage to a player: that many +1/+1 counters on it.
+pub fn westgate_regent() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Discard(1))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::TriggerEventAmount },
+        }],
+        ..creature("Westgate Regent", cost(&[generic(3), b(), b()]), vec![CreatureType::Vampire], 4, 4)
+    }
+}
+
+/// Grasping Shadows // Shadows' Lair — {3}{B} enchantment. A creature of yours
+/// attacking alone gains deathtouch and lifelink until end of turn; a dread
+/// counter here, then at three or more it transforms. Shadows' Lair — Land —
+/// Cave: {T}: {B}. {B},{T}, remove a dread counter: draw a card, lose 1 life.
+pub fn grasping_shadows() -> CardDefinition {
+    let lair = CardDefinition {
+        name: "Shadows' Lair",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Black),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[b()]),
+                remove_counter_cost: Some((CounterType::Dread, 1)),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Grasping Shadows",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
+            effect: Effect::Seq(vec![
+                eot_keyword(Selector::TriggerSource, Keyword::Deathtouch),
+                eot_keyword(Selector::TriggerSource, Keyword::Lifelink),
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Dread, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Dread, n: 3 },
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(lair)),
+        ..Default::default()
+    }
+}

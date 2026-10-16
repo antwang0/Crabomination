@@ -16495,6 +16495,10 @@ static DECKS: &[Factory] = &[
     super::decks::voidmage_husher,
     super::decks::chronatog_totem,
     super::decks::barren_glory,
+    super::decks::vadrik_astral_archmage,
+    super::decks::invert_invent,
+    super::decks::westgate_regent,
+    super::decks::grasping_shadows,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

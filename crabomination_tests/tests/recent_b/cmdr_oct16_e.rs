@@ -435,3 +435,36 @@ fn chronatog_totem_pumps_only_as_a_creature() {
     let cp = g.computed_permanent(totem).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 5));
 }
+
+/// CR 726.2 — Vadrik makes it day as it enters, and its discount reads its
+/// power: a counter from day/night flipping cheapens instants by one more.
+#[test]
+fn vadrik_makes_day_and_discounts_by_power() {
+    let mut g = pod(2);
+    let v = g.add_card_to_hand(0, catalog::vadrik_astral_archmage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, v, None).expect("cast");
+    assert!(g.day_night.is_some(), "it became day");
+    // Power 1: Divination's {2}{U} costs {1}{U}.
+    let opt = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, opt, None).expect("Divination for {1}{U}");
+}
+
+/// Grasping Shadows: three lone attacks transform it into Shadows' Lair.
+#[test]
+fn grasping_shadows_transforms_on_the_third_dread_counter() {
+    let mut g = pod(2);
+    let shadows = ready(&mut g, 0, catalog::grasping_shadows());
+    for n in 1..=3 {
+        let bears = ready(&mut g, 0, catalog::grizzly_bears());
+        attack(&mut g, &[(bears, 1)]);
+        assert!(has(&g, bears, &Keyword::Deathtouch) && has(&g, bears, &Keyword::Lifelink));
+        g.attacking.clear();
+        let name = g.battlefield_find(shadows).unwrap().definition.name;
+        assert_eq!(name, if n < 3 { "Grasping Shadows" } else { "Shadows' Lair" }, "after attack {n}");
+    }
+}
