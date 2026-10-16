@@ -1614,3 +1614,20 @@ pub fn talas_scout() -> CardDefinition {
         )
     }
 }
+
+/// Unpredictable Cyclone — {3}{R}{R} enchantment, cycling {2}. Another nonland
+/// card's cycling draw becomes: exile from the top until a card sharing a card
+/// type with it, which you may cast free; the rest go to the bottom.
+pub fn unpredictable_cyclone() -> CardDefinition {
+    CardDefinition {
+        name: "Unpredictable Cyclone",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        static_abilities: vec![StaticAbility {
+            description: "If a cycling ability of another nonland card would cause you to draw a card, instead exile cards from the top of your library until you exile a card that shares a card type with the cycled card. You may cast that card without paying its mana cost. Then put the exiled cards that weren't cast this way on the bottom of your library in a random order.",
+            effect: StaticEffect::CyclingDrawBecomesSharedTypeCast,
+        }],
+        ..Default::default()
+    }
+}

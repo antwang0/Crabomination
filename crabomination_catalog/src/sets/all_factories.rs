@@ -16668,6 +16668,7 @@ static DECKS: &[Factory] = &[
     super::decks::rootwire_amalgam,
     super::decks::talas_explorer,
     super::decks::talas_scout,
+    super::decks::unpredictable_cyclone,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

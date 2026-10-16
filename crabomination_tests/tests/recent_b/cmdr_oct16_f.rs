@@ -974,3 +974,21 @@ fn rootwire_amalgam_sacrifices_into_a_triple_golem() {
     assert_eq!((cp.power, cp.toughness), (15, 15));
     assert!(cp.keywords().contains(&Keyword::Haste));
 }
+
+/// CR 614.1a — Unpredictable Cyclone replaces a cycled creature's draw: exile
+/// until a creature, cast it free, bottom the rest; no card is drawn.
+#[test]
+fn unpredictable_cyclone_turns_cycling_into_a_free_cast() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::unpredictable_cyclone());
+    let mako = g.add_card_to_hand(0, catalog::marauding_mako());
+    let wurm = on_top(&mut g, 0, catalog::craw_wurm());
+    let land = on_top(&mut g, 0, catalog::mountain());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: mako, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "nothing drawn");
+    assert!(g.battlefield_find(wurm).is_some(), "the Wurm cast free");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(land), "the Mountain went to the bottom");
+}
