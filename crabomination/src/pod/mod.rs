@@ -18564,6 +18564,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SETHRON_COMMANDERS,
             main: decks::SETHRON_MAIN,
         },
+        // Seat 3019: Captain Vargus Wrath's EDHREC average deck. `--pod-decks 3019`.
+        PodDeck {
+            name: "Captain Vargus Wrath (UR)",
+            commanders: decks::CAPTAIN_VARGUS_WRATH_COMMANDERS,
+            main: decks::CAPTAIN_VARGUS_WRATH_MAIN,
+        },
+        // Seat 3020: Hapatra, the Desert Fang's EDHREC average deck. `--pod-decks 3020`.
+        PodDeck {
+            name: "Hapatra, the Desert Fang (BG)",
+            commanders: decks::HAPATRA_3_COMMANDERS,
+            main: decks::HAPATRA_3_MAIN,
+        },
     ]
 }
 
@@ -23466,6 +23478,8 @@ mod tests {
             ("Uchbenbak, the Great Mistake", &[0x15DE]),
             ("Proft, Consulting Detective", &[0x15DF]),
             ("Sethron, Hurloon General", &[0x15E0]),
+            ("Captain Vargus Wrath", &[0x15E1]),
+            ("Hapatra, the Desert Fang", &[0x15E2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

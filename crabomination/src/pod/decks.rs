@@ -84633,3 +84633,58 @@ pub const SETHRON_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const CAPTAIN_VARGUS_WRATH_COMMANDERS: &[CardFactory] = &[captain_vargus_wrath];
+
+/// **Captain Vargus Wrath**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Islands + 12 Mountains = 99.
+/// Captain Vargus Wrath (EDHREC, fetched 2026-10-16).
+pub const CAPTAIN_VARGUS_WRATH_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, fell_flagship, izzet_signet, pirates_cutlass, sol_ring,
+    swiftfoot_boots, the_belligerent, the_indomitable, treasure_map, vanquishers_banner,
+    command_tower, frostboil_snarl, izzet_boilerworks, opal_palace, path_of_ancestry,
+    reliquary_tower, rogues_passage, shivan_reef, stormcarved_coast, sulfur_falls,
+    swiftwater_cliffs, temple_of_epiphany, angraths_marauders, azure_fleet_admiral,
+    boarding_party, breeches_brazen_plunderer, breeches_eager_pillager, captain_lannery_storm,
+    captain_storm_cosmium_raider, captivating_crew, coastline_marauders, coercive_recruiter,
+    corsair_captain, cutthroat_negotiator, daring_saboteur, dire_fleet_daredevil,
+    emberwilde_captain, fathom_fleet_swordjack, gemcutter_buccaneer, impulsive_pilferer,
+    lightning_rig_crew, malcolm_keen_eyed_navigator, merchant_raiders, port_razer,
+    prosperous_pirates, protean_raider, sailor_of_means, siren_stormtamer, spectral_sailor,
+    storm_fleet_sprinter, warkite_marauder, zara_renegade_recruiter, coastal_piracy,
+    daring_piracy, double_down, reflections_of_littjara, shared_animosity, big_score,
+    buccaneers_bravado, chaos_warp, counterspell, fiery_cannonade, hornswoggle,
+    lookouts_dispersal, negate, opt, sirens_ruse, blasphemous_act, brasss_bounty,
+    chart_a_course, distant_melody, mutiny, pirates_pillage, pirates_prize,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const HAPATRA_3_COMMANDERS: &[CardFactory] = &[hapatra_the_desert_fang];
+
+/// **Hapatra, the Desert Fang**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Forests + 11 Swamps = 99.
+/// Hapatra, the Desert Fang (EDHREC, fetched 2026-10-16).
+pub const HAPATRA_3_MAIN: &[CardFactory] = &[
+    altar_of_bhaal, arcane_signet, cauldron_of_essence, contagion_clasp, mesmeric_orb, sol_ring,
+    talisman_of_resilience, command_tower, llanowar_wastes, necroblossom_snarl, overgrown_tomb,
+    tainted_wood, twilight_mire, underground_mortuary, undergrowth_stadium,
+    urborg_tomb_of_yawgmoth, verdant_catacombs, vernal_fen, wastewood_verge, woodland_cemetery,
+    aftermath_analyst, apprentice_necromancer, avacyn_angel_of_horror, birds_of_paradise,
+    carnifex_demon, channeler_initiate, darksteel_angel, draco, dread_tiller, dusk_urchins,
+    earthquake_dragon, eternal_witness, ghalta_the_unstoppable, ghalta_primal_hunger,
+    hapatra_vizier_of_poisons, hells_caretaker, honest_rutstein, liliana_the_repentant,
+    massacre_girl_known_killer, midnight_banshee, necroskitter, nyx_weaver, obelisk_spider,
+    oft_nabbed_goat, pia_aether_ascetic, sepulchral_primordial, syr_konrad_the_grim,
+    vile_entomber, world_shaper, yawgmoth_thran_physician, blowfly_infestation, crumbling_ashes,
+    flourishing_defenses, gardenize, grave_betrayal, nest_of_scarabs, bitter_triumph, entomb,
+    feign_death, heroic_intervention, malakir_rebirth, not_dead_after_all,
+    something_worth_saving, undying_malice, village_rites, liliana_death_wielder,
+    black_suns_zenith, buried_alive, cast_away_doubt, cultivate, dread_return, farseek,
+    incremental_blight, natures_lore, persist, reanimate, three_visits, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
