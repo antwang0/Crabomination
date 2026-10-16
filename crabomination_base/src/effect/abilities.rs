@@ -1736,6 +1736,13 @@ pub enum StaticEffect {
     /// CR 702.29 — "Players can't cycle cards" (Stabilizer). Checked in
     /// `cycle_card` before any cost is paid.
     PlayersCantCycle,
+    /// "If a cycling ability of another nonland card would cause you to draw a
+    /// card, instead exile cards from the top of your library until you exile a
+    /// card that shares a card type with the cycled card. You may cast that
+    /// card without paying its mana cost. Then put the exiled cards that weren't
+    /// cast this way on the bottom of your library in a random order"
+    /// (Unpredictable Cyclone). Read by `cycle_card` in place of the draw.
+    CyclingDrawBecomesSharedTypeCast,
     /// CR 702.36b — "All morph costs cost {amount} more" (Exiled Doomsayer).
     /// Applies to the turn-face-up cost, not to casting a card face down.
     MorphCostsMore { amount: u32 },

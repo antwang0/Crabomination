@@ -6597,6 +6597,11 @@ pub enum Effect {
     /// card." The exiled cards stay in exile; the stopping card's mana value
     /// is published as `Value::LastExiledManaValue` (Undying Flames).
     ExileTopUntilNonland { who: PlayerRef },
+    /// "Exile cards from the top of your library until you exile a [filter]
+    /// card": every exiled card is recorded for `Selector::ExiledThisResolution`
+    /// (Unpredictable Cyclone's cycling replacement chains the free cast and
+    /// the bottoming off it).
+    ExileTopUntilMatching { filter: crate::card::SelectionRequirement },
     /// "Exile cards from the top of your library until you exile a nonland
     /// card, then put that card into your hand. If the card's mana value is
     /// `again_at_least` or greater, repeat this process. [This] deals

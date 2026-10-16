@@ -43323,6 +43323,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopUntilMatching { filter } => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                while let Some(top) = self.players[p].library.first() {
+                    let cid = top.id;
+                    let hit = crate::game::layers::requirement_matches_card(filter, top, p);
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if !self.scratch.exiled_card_ids_this_resolution.contains(&cid) {
+                        self.scratch.exiled_card_ids_this_resolution.push(cid);
+                    }
+                    if hit {
+                        break;
+                    }
+                }
+                Ok(())
+            }
             Effect::Discover { n, filter } => {
                 // CR 701.57: exile cards from the top of the controller's
                 // library until a nonland card with MV ≤ n is exiled; the

@@ -22310,6 +22310,47 @@ impl GameState {
             // more cards" batch fires alongside the per-card event.
             events.push(GameEvent::DiscardedBatch { player: seat, count: 1 });
         }
+        // Unpredictable Cyclone — the draw of another nonland card's cycling
+        // becomes an exile-until-shared-type free cast (a replacement, so the
+        // card is not drawn).
+        let cycled_types: Vec<crate::card::CardType> =
+            self.find_card_anywhere(card_id).map(|c| c.definition.card_types.clone()).unwrap_or_default();
+        let cyclone = (!cycled_types.is_empty() && !cycled_types.contains(&crate::card::CardType::Land))
+            .then(|| {
+                self.battlefield
+                    .iter()
+                    .find(|c| {
+                        c.controller == seat
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(sa.effect, crate::effect::StaticEffect::CyclingDrawBecomesSharedTypeCast)
+                            })
+                    })
+                    .map(|c| c.id)
+            })
+            .flatten();
+        if let Some(cyclone) = cyclone {
+            use crate::card::SelectionRequirement as R;
+            let shares = cycled_types
+                .iter()
+                .map(|t| R::HasCardType(t.clone()))
+                .reduce(|a, b| a.or(b))
+                .unwrap_or(R::Any);
+            let body = Effect::Seq(vec![
+                Effect::ExileTopUntilMatching { filter: shares.clone() },
+                Effect::CastWithoutPayingImmediate {
+                    what: crate::effect::Selector::ExiledThisResolution { filter: shares },
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                },
+                Effect::BottomInRandomOrder { what: crate::effect::Selector::ExiledThisResolution { filter: R::Any } },
+            ]);
+            let ctx = crate::game::effects::EffectContext::for_ability(cyclone, seat, None);
+            events.extend(self.resolve_effect(&body, &ctx)?);
+            return Ok(events);
+        }
         // Draw a card (Dredge can replace this draw, CR 702.52).
         self.draw_one_or_deck(seat, &mut events);
         Ok(events)
@@ -34800,6 +34841,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PreventAllDamageToThisFromCreatures
             | StaticEffect::PlayersCantCycle
+            | StaticEffect::CyclingDrawBecomesSharedTypeCast
             | StaticEffect::MorphCostsMore { .. }
             | StaticEffect::PreventSmallDamageToThis { .. }
             | StaticEffect::CapLargeDamage { .. }

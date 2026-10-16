@@ -2402,7 +2402,8 @@ impl Effect {
             // Reveals from your own library — no target slot.
             Effect::RevealUntilLandsToBattlefield { .. }
             | Effect::RevealUntilOneToBattlefieldRestBottom { .. }
-            | Effect::RevealUntilCreatureAboveLastMovedToBattlefield => false,
+            | Effect::RevealUntilCreatureAboveLastMovedToBattlefield
+            | Effect::ExileTopUntilMatching { .. } => false,
             Effect::CopyAttackersAsBlockers => false,
             Effect::ChooseGraveyardCreaturesEachMayReturn
             | Effect::ExileTypeSpreadReturnPermanent { .. } => false,
