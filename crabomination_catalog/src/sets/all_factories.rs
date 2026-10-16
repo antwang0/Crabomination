@@ -16403,6 +16403,19 @@ static DECKS: &[Factory] = &[
     super::decks::demonic_lore,
     super::decks::demonic_pact,
     super::decks::overwhelming_splendor,
+    // cmdr_oct16_e
+    super::decks::black_widow_natasha_romanoff,
+    super::decks::happy_hogan_dauntless_driver,
+    super::decks::falkenrath_reaver,
+    super::decks::trained_orgg,
+    super::decks::the_whizzer_classic_speedster,
+    super::decks::storm_shaker_of_skies,
+    super::decks::wolfsbane_highland_hero,
+    super::decks::the_howling_abomination,
+    super::decks::radioactive_man,
+    super::decks::hexhaven_dueling_arena,
+    super::decks::rampart_hunter,
+    super::decks::extended_absence,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
