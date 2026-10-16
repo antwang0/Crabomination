@@ -633,3 +633,135 @@ fn jasmine_boreal_feeds_and_shields_vanilla_creatures() {
         assert_eq!(r.is_ok(), legal);
     }
 }
+
+/// Web of Life and Destiny drops a creature from the top five at the
+/// beginning of combat on its controller's turn.
+#[test]
+fn web_of_life_and_destiny_deploys_at_beginning_of_combat() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::web_of_life_and_destiny());
+    step_to(&mut g, 0, TurnStep::BeginCombat);
+    assert!(g.battlefield_find(wurm).is_some());
+}
+
+/// Cantankerous Keepers: two Elves out cut its cost by two, and every Elf
+/// among the four milled goes to hand while the rest stay binned.
+#[test]
+fn cantankerous_keepers_takes_every_milled_elf() {
+    let mut g = pod(2);
+    let elves: Vec<_> = (0..2).map(|_| g.add_card_to_library(0, catalog::llanowar_elves())).collect();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::llanowar_elves());
+    ready(&mut g, 0, catalog::llanowar_elves());
+    let keepers = g.add_card_to_hand(0, catalog::cantankerous_keepers());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: keepers, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{3}{G} with two Elves");
+    drain_stack(&mut g);
+    assert!(elves.iter().all(|e| g.players[0].hand.iter().any(|c| c.id == *e)));
+    assert_eq!(g.players[0].graveyard.len(), 2);
+}
+
+/// Sentinel Totem exiles every graveyard, not just one.
+#[test]
+fn sentinel_totem_exiles_all_graveyards() {
+    let mut g = pod(3);
+    for s in 0..3 {
+        g.add_card_to_graveyard(s, catalog::grizzly_bears());
+    }
+    let totem = ready(&mut g, 0, catalog::sentinel_totem());
+    g.perform_action(GameAction::ActivateAbility { card_id: totem, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players.iter().all(|p| p.graveyard.is_empty()));
+    assert!(g.exile.iter().any(|c| c.id == totem));
+}
+
+/// Nissa's Revelation reads the revealed creature's power and toughness
+/// before the draw takes it: Craw Wurm (6/4) draws six and gains four.
+#[test]
+fn nissas_revelation_draws_power_gains_toughness() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    stock_libraries(&mut g, 10);
+    let spell = g.add_card_to_hand(0, catalog::nissas_revelation());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![wurm], bottom: vec![] }]));
+    let life = g.players[0].life;
+    cast(&mut g, spell);
+    assert_eq!(g.players[0].hand.len(), 6);
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Along the Crooked Way's return fires both "creature card leaves your
+/// graveyard" triggers: Undead Hand Ninja drains one, the Way amasses one.
+#[test]
+fn along_the_crooked_way_return_drains_and_amasses() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::undead_hand_ninja());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let way = g.add_card_to_hand(0, catalog::along_the_crooked_way());
+    let life = (g.players[0].life, g.players[1].life, g.players[2].life);
+    cast(&mut g, way);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears));
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (life.0 + 1, life.1 - 1, life.2 - 1));
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name.contains("Army")).expect("amassed");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Balin, Loremaster with an enduring story: wheel the hand, then hit each
+/// opponent for the number discarded.
+#[test]
+fn balin_wheels_and_burns_with_an_enduring_story() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::sol_ring());
+    ready(&mut g, 0, catalog::sol_ring());
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    let balin = g.add_card_to_hand(0, catalog::balin_loremaster());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    cast(&mut g, balin);
+    assert_eq!(g.players[0].hand.len(), 3, "three discarded, three drawn");
+    assert_eq!(g.players[1].life, life - 3);
+    assert_eq!(g.players[2].life, life - 3);
+}
+
+/// K'un-Lun Warrior: sacrifices an artifact to draw when it has one.
+#[test]
+fn kun_lun_warrior_sacrifices_an_artifact_to_draw() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let w = g.add_card_to_hand(0, catalog::kun_lun_warrior());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, w);
+    assert!(g.battlefield_find(ring).is_none());
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// CR 702.193 — power-up is once per object; Wonder Man, Hollywood Hero lets
+/// each of your power-ups go once more, and no further.
+#[test]
+fn cr_702_193_wonder_man_allows_a_second_power_up() {
+    let mut g = pod(2);
+    let wm = ready(&mut g, 0, catalog::wonder_man_hollywood_hero());
+    let up = |g: &mut GameState| {
+        flood(g);
+        let r = g.perform_action(GameAction::ActivateAbility { card_id: wm, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None });
+        drain_stack(g);
+        r
+    };
+    up(&mut g).expect("first");
+    up(&mut g).expect("second, Wonder Man's");
+    assert!(up(&mut g).is_err(), "no third");
+    assert_eq!(g.battlefield_find(wm).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}

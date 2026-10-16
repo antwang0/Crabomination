@@ -16288,6 +16288,17 @@ static DECKS: &[Factory] = &[
     super::decks::sailors_bane,
     super::decks::symbiote_spider_man,
     super::decks::jasmine_boreal_of_the_seven,
+    super::decks::web_of_life_and_destiny,
+    super::decks::boughside_wanderers,
+    super::decks::cantankerous_keepers,
+    super::decks::sentinel_totem,
+    super::decks::nissas_revelation,
+    super::decks::undead_hand_ninja,
+    super::decks::along_the_crooked_way,
+    super::decks::balin_loremaster,
+    super::decks::fearless_liberator,
+    super::decks::kun_lun_warrior,
+    super::decks::wonder_man_hollywood_hero,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
