@@ -119,6 +119,14 @@ the handoff.
 
 # Bugs & robustness
 
+## The Commander NEXT's session lines as `0128tsCy` found them (moved verbatim from TODO.md, 2026-10-16)
+
+8. **`cmdr_rescan_*` (`01BeJu7Q`, 2026-10-15): 156 seats (DECK_FEATURES line 39), cards in `decks::cmdr_rescan_a`..`c`.** Primitives this leg: pip-measured graveyard exile cost, `CopyCardsAndCastFreeUpTo` (copies of exiled cards now cast from exile), converted casts read the back face's ETB data, `KeywordAct::{SpellCausedLifeGain, EchoPaid}` (**the `EventKind` mask is full at 128 — new watch kinds go in `KeywordAct`**), `BorrowAbilitiesOfChosenExiled`, `IgnoreOpponentHexproofThisTurn`, `PlayerCantCastMatchingDuringTheirNextTurn`, `TapTotalPower` teamwork, `BecomeEquipment`; fixed an alt-cost `marks_kicked` passing as a paid granted offspring. `adventure_additional_cast_cost` (My Precious). Still blocked: Vesuvan Doppelganger, Portal Manipulator, Herald of Leshrac.
+9. **`012vc8CU` (2026-10-15): ~60 seats, `decks::cmdr_oct15_a`** (early tests end of `recent_b/cmdr_scan7k_a.rs`, later ones `recent_b/cmdr_oct15_a.rs` — append there, not to scan7k_a, to dodge rebase collisions). Primitives this leg: Blood Sun's `RemoveAllAbilitiesButMana`, Rulebreaker deck construction, Herald's land-steal upkeep, Dralnu's damage→sacrifice, Ninja Teen's graveyard sneak + the bot sneak window. **Audit sweeps are the bug mine** (`target-audit/overflow/bot_ladder`, `scripts/pod_sweep.py BIN SEED 4,6,8 2 --jobs 2 --classify`); next seed 9306. Open: the Eternity Elevator / Scrap Trawler loop (ENGINE_BACKLOG `012vc8CU`).
+10. **`01XShaqR` (2026-10-15 afternoon): 65 seats (2729-2762, 2766-2791, 2793-2797), 201 cards in `decks::cmdr_oct15_b`** (tests at the end of `recent_b/cmdr_scan7k_a.rs`; ENGINE_BACKLOG `01XShaqR` has the primitives, the {Q}-cost fix and what's blocked). **The easy-deck finder:** rank gap decks by the LONGEST oracle text among their missing cards (scryfall `/cards/collection` 70 at a time also gives legality) — vanilla/short-text decks close in one batch. ⚠ After a rebase, count `cmdr_scan7k_a.rs`'s tests: a concurrent merge dropped 22 of them once. ⚠ Rebase *before* `seat_decks.py`, never during a conflict.
+11. **`01Xb59Dm` (2026-10-15/16): 63 seats (2805-2867), 160 cards in `decks::cmdr_oct15_c` (nine batches; tests `recent_b/cmdr_oct15_c.rs`). FIXED: the bot offered Ninja Teen's graveyard sneak outside declare blockers (debug-assert panic in pods, seat 2855); seeds 31001-31007 now 340 games, 0 panics. Gates 2026-10-16: workspace clippy 0; suite 26,999/27,000 (the blank-stub audit caught Lens of Clarity; fixed, re-run green) less the precon long pole (~6,700 s alone); release-fast typecheck clean.** Primitives: `Effect::TriggersUntilYourNextTurn` (CR 611.2b emblem), `Effect::ExileAtYourNextUpkeep`, `StaticEffect::{SelfDealsDoubleCombatDamageToPlayers, FirstPowerUpEachYourTurnFree}`, `KeywordAct::TappedForTeamwork` (+ `GameEvent`), `SpendRestriction::DwarfEquipmentOrSagaSpells`, a resolving spell's printed wither/infect/deathtouch (CR 702.80a), `DeployCreatureFromHandAttacking` reads `PowerLessThanSource` (Shadowfax). `edhrec_deck.py` no longer emits an empty Basics block (snow-only decks). **Easy-deck finder:** `/tmp/claude-0/decks_easy.txt`-style ranking — max oracle length among a deck's missing cards, ascending — the next short-text decks: Verdeloth (Life and Limb, Spore Swarm), Vargus (Protean Raider needs an `EntersAsCopy` raid condition), Nadaar ("a player you're attacking has the initiative"), Baru (Panglacial Wurm, Elderscale Wurm), Doran (champion), Destined Thief (party). Pods at seeds 31001-31004: 220 games, one board cap (Ferrafor's counters/token engine).
+12. **`01P5K4L5` (2026-10-16): 25 seats (2868-2892), 41 cards in `decks::cmdr_oct16_a`/`_b`, tests `recent_b/cmdr_oct16_a.rs`.** Primitives: `KeywordAct::ScryBottomed`, `Effect::ExileBottomOfLibraryLinked`, `MayPlayDuration::HolderTurnsWhileSource { flash }` (was Azula's flash-only variant), `LookPick::total_mana_value_cap`. FIXED: sneak keyword without its alt cost (Raphael's Technique, Elektra, Leonardo — `structural_audit::every_sneak_keyword_has_its_alternative_cost`), Lens of Clarity blank, tokens created attacking after sneak returned the only attacker (CR 506.4). Bot census: Ooze Spill and Gorilla War Cry go uncast.
+
 ## The Commander NEXT's session lines as `01ANcpHx` found them (moved verbatim from TODO.md, 2026-10-15)
 
 1. ⚠ **Several sessions share this branch: fetch before you start and before every push; rebase, never force — and `cargo check -p crabomination_catalog` AFTER the rebase: two sessions landing one card make its glob re-export ambiguous (`emerge_unscathed`, 2026-10-13).** New pod seats go at the END of `target_decks()` and into `cr_903_5a_the_official_precon_seats_play_pod_games`' seed table. ⚠ **One optimized build at a time, nothing else compiling beside it.** Pods are golden-pinned (`golden_trace::POD_DIGESTS`). Earlier NEXT lines: ENGINE_BACKLOG "The Commander NEXT's session lines as …".
@@ -191,8 +199,18 @@ the handoff.
   Third Path, Raph & Leo Sibling Rivals (LANDED, seats 3214-3235). **CLAIMED (batch 10):** Splicer's Skill,
   Lifecrafter's Gift, Stone by Sunlight, Pore Over the Pages, Goblin Bangchuckers, Darksteel Sentinel, Implement of
   Ferocity, Koma's Faithful, Primal Druid, Riddlemaster Sphinx, Alchemist's Vial, Gluttonous Slime, Soul Summons,
-  Nature's Way, Pummeler for Hire, Center Soul, Price of Loyalty, Noggle the Mind, Dreamcaller Siren, Thornmantle
-  Striker.
+  Nature's Way, Pummeler for Hire, Center Soul, Price of Loyalty, Noggle the Mind, Dreamcaller Siren (LANDED,
+  seats 3236-3275). Researched, open: Thornmantle Striker ("remove X counters from target permanent" of any kinds —
+  only single-kind removal exists), Precursor Golem (7 decks; `014Q2Gfw`'s note), Splicer's-Skill-style splice now
+  exists for any instant or sorcery.
+- **FIXED (`0128tsCy`):** `cast_spell_alternative_from` stamped no `cast_mana_spent_by_color` (an evoked Vibrance's
+  "if {R}{R} was spent" was false, "if no mana was spent" true), passed converge 0 and `from_hand: true` for a
+  command-zone alt cast; `finalize_cast` counted hop casts as hand casts. The Prismatic Piper never carried
+  `CommanderChoosesColorBeforeGame`. A `BecomeCopyOfFor` from the chosen pile picks as a gain.
+- **Sweeps:** 9701 (seats 3021-3033 as first numbered, 280 games), 9702 (3026-3087, 1,680), 9703 (3135-3188, 1,440):
+  0 panics; undecided = 4 board caps (Nuka-Cola + Peregrin Took; Ocelot Pride + Caretaker's Talent + Flash
+  Photography; Boromir + Song of the Worldsoul; Mutual Destruction + Puca's Eye) and 2 CR 104.4a draws (Descent into
+  Avernus).
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
