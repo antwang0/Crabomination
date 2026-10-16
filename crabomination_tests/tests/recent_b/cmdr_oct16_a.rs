@@ -398,7 +398,7 @@ fn life_and_limb_makes_forests_saprolings_and_saprolings_forests() {
     let f = g.computed_permanent(forest).unwrap();
     assert!(f.card_types().contains(&CardType::Creature) && f.subtypes().creature_types.contains(&CreatureType::Saproling));
     assert_eq!((f.power, f.toughness), (1, 1));
-    assert!(f.colors.contains(&Color::Green));
+    assert!(f.colors.contains(Color::Green));
     let token = g.battlefield.iter().find(|c| c.definition.name == "Saproling").map(|c| c.id).unwrap();
     let t = g.computed_permanent(token).unwrap();
     assert!(t.card_types().contains(&CardType::Land) && t.subtypes().land_types.contains(&LandType::Forest));
