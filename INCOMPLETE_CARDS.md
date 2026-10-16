@@ -2225,3 +2225,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Rhino's Rampage | the excess-damage check reads the creature's excess damage this turn, so excess dealt to it earlier the same turn also counts | `ExcessDamageDealtThisTurnTo` + `ReflexiveTrigger` |
 | 🟡 Sméagol, Helpful Guide | "target opponent" is the most hostile opponent, not a target (no ward/hexproof check) | `RevealUntilFind { who: HostileOpponent }` |
 | 🟡 Glamerdye / Sleight of Mind | the color-word swap targets a permanent only; "target spell" isn't offered | `ReplaceColorWord` |
+| 🟡 Kargan Intimidator | the mode and its target are picked at resolution (auto-targeted), not as the ability is activated (CR 700.2) | `ChooseUnchosenModeThisTurn` |
+| 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
+| 🟡 Nick Fury, Spymaster | the put-in creature attacks the attacker's defender or the most hostile opponent, not a chosen one (CR 508.4) | `DeployCreatureFromHandAttacking` |
+| 🟡 Feed the Pack | the sacrificed nontoken creature is auto-picked (weakest first), so X isn't the toughness you'd choose | `MaySacrifice` + `SacrificedToughness` |

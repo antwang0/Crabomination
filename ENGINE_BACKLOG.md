@@ -189,14 +189,11 @@ the handoff.
   Ojutai's Breath, Anep, Goma Fada Vanguard, Hixus, Prison Sentence (Atogatog's two landed first via
   `01VDk2LU`). Open: Reservoir Kraken (Thassa God of the Sea, Slinn Voda) — "any opponent may tap an untapped
   creature they control" needs a selector the accepting seat picks from.
-- **CLAIMED (`014Q2Gfw`, batch 12) — don't duplicate:** Hedron-Field Purists, Guardian Seraph, Protection of the
-  Hekma (Orim Samite Healer, Reidane); All-Seeing Arbiter, Just the Wind, Nagging Thoughts, Disciple of the Ring
-  (Alexi Zephyr Mage, Hisoka); Yasova Dragonclaw, Demonmail Hauberk, Feed the Pack; Precursor Golem (Golden
-  Argosy).
-- **CLAIMED (`01VDk2LU`, batch 8) — don't duplicate:** Extremis Elite, Molly Hayes, Volcanic Villain (Wonder
-  Man); Grim Reaper, Ultimo, Yellowjacket (Grim Reaper); Battlefield Scavenger, Khenra Scrapper, Sandstorm Crasher,
-  Trueheart Twins (Anep). `01VDk2LU`'s batches 1-7 landed as seats 2949-2952, 2955-2969, 2973-2975, 2981-2985,
-  2989-2992 (`decks::cmdr_oct16_e`).
+- **LANDED (`014Q2Gfw`, batch 12) — seats 2993-2997** Yasova Dragonclaw, Reidane, Alexi Zephyr Mage, Orim,
+  Hisoka: Hedron-Field Purists (level-gated `WhileCountersAtLeast` shields, stacked at 1 and 5), Guardian Seraph,
+  Protection of the Hekma, All-Seeing Arbiter, Just the Wind, Nagging Thoughts, Disciple of the Ring, Yasova,
+  Demonmail Hauberk, Feed the Pack. **Open:** Precursor Golem (Golden Argosy) — needs
+  `CopySpellForEachOtherTarget` restricted to Golems and a "spell targets only a single [filter]" leaf.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
