@@ -20106,6 +20106,162 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_THIRTEENTH_DOCTOR_COMMANDERS,
             main: decks::THE_THIRTEENTH_DOCTOR_MAIN,
         },
+        // Seat 3276: Brinelin, the Moon Kraken and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 3276`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Jeska, Thrice Reborn (UR)",
+            commanders: decks::BRINELIN_6_COMMANDERS,
+            main: decks::BRINELIN_6_MAIN,
+        },
+        // Seat 3277: Burakos, Party Leader and Master Chef's EDHREC average deck. `--pod-decks 3277`.
+        PodDeck {
+            name: "Burakos, Party Leader and Master Chef (BG)",
+            commanders: decks::BURAKOS_3_COMMANDERS,
+            main: decks::BURAKOS_3_MAIN,
+        },
+        // Seat 3278: Burakos, Party Leader and Raised by Giants's EDHREC average deck. `--pod-decks 3278`.
+        PodDeck {
+            name: "Burakos, Party Leader and Raised by Giants (BG)",
+            commanders: decks::BURAKOS_4_COMMANDERS,
+            main: decks::BURAKOS_4_MAIN,
+        },
+        // Seat 3279: Halsin, Emerald Archdruid and Criminal Past's EDHREC average deck. `--pod-decks 3279`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Criminal Past (BG)",
+            commanders: decks::HALSIN_2_COMMANDERS,
+            main: decks::HALSIN_2_MAIN,
+        },
+        // Seat 3280: Ikra Shidiqi, the Usurper and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 3280`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Tana, the Bloodsower (BRG)",
+            commanders: decks::IKRA_SHIDIQI_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_MAIN,
+        },
+        // Seat 3281: Jaheira, Friend of the Forest and Candlekeep Sage's EDHREC average deck. `--pod-decks 3281`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Candlekeep Sage (UG)",
+            commanders: decks::JAHEIRA_4_COMMANDERS,
+            main: decks::JAHEIRA_4_MAIN,
+        },
+        // Seat 3282: Kydele, Chosen of Kruphix and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 3282`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Numa, Joraga Chieftain (UG)",
+            commanders: decks::KYDELE_4_COMMANDERS,
+            main: decks::KYDELE_4_MAIN,
+        },
+        // Seat 3283: Malcolm, Keen-Eyed Navigator and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 3283`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Nadier, Agent of the Duskenel (UB)",
+            commanders: decks::MALCOLM_10_COMMANDERS,
+            main: decks::MALCOLM_10_MAIN,
+        },
+        // Seat 3284: Prava of the Steel Legion and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3284`.
+        PodDeck {
+            name: "Prava of the Steel Legion and Siani, Eye of the Storm (WU)",
+            commanders: decks::PRAVA_OF_THE_STEEL_LEGION_2_COMMANDERS,
+            main: decks::PRAVA_OF_THE_STEEL_LEGION_2_MAIN,
+        },
+        // Seat 3285: Rebbec, Architect of Ascension and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 3285`.
+        PodDeck {
+            name: "Rebbec, Architect of Ascension and Sengir, the Dark Baron (WB)",
+            commanders: decks::REBBEC_COMMANDERS,
+            main: decks::REBBEC_MAIN,
+        },
+        // Seat 3286: Renari, Merchant of Marvels and Cultist of the Absolute's EDHREC average deck. `--pod-decks 3286`.
+        PodDeck {
+            name: "Renari, Merchant of Marvels and Cultist of the Absolute (UB)",
+            commanders: decks::RENARI_3_COMMANDERS,
+            main: decks::RENARI_3_MAIN,
+        },
+        // Seat 3287: Renari, Merchant of Marvels and Haunted One's EDHREC average deck. `--pod-decks 3287`.
+        PodDeck {
+            name: "Renari, Merchant of Marvels and Haunted One (UB)",
+            commanders: decks::RENARI_4_COMMANDERS,
+            main: decks::RENARI_4_MAIN,
+        },
+        // Seat 3288: Shadowheart, Dark Justiciar and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3288`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Acolyte of Bahamut (BG)",
+            commanders: decks::SHADOWHEART_4_COMMANDERS,
+            main: decks::SHADOWHEART_4_MAIN,
+        },
+        // Seat 3289: Shadowheart, Dark Justiciar and Criminal Past's EDHREC average deck. `--pod-decks 3289`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Criminal Past (B)",
+            commanders: decks::SHADOWHEART_5_COMMANDERS,
+            main: decks::SHADOWHEART_5_MAIN,
+        },
+        // Seat 3290: Shadowheart, Dark Justiciar and Sword Coast Sailor's EDHREC average deck. `--pod-decks 3290`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Sword Coast Sailor (UB)",
+            commanders: decks::SHADOWHEART_6_COMMANDERS,
+            main: decks::SHADOWHEART_6_MAIN,
+        },
+        // Seat 3291: Sivriss, Nightmare Speaker and Popular Entertainer's EDHREC average deck. `--pod-decks 3291`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Popular Entertainer (BR)",
+            commanders: decks::SIVRISS_3_COMMANDERS,
+            main: decks::SIVRISS_3_MAIN,
+        },
+        // Seat 3292: Skanos Dragonheart and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 3292`.
+        PodDeck {
+            name: "Skanos Dragonheart and Agent of the Shadow Thieves (BG)",
+            commanders: decks::SKANOS_DRAGONHEART_5_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_5_MAIN,
+        },
+        // Seat 3293: The Fifth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 3293`.
+        PodDeck {
+            name: "The Fifth Doctor and K-9, Mark I (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_2_MAIN,
+        },
+        // Seat 3294: The Fourteenth Doctor and Martha Jones's EDHREC average deck. `--pod-decks 3294`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Martha Jones (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_4_MAIN,
+        },
+        // Seat 3295: Viconia, Drow Apostate and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3295`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Acolyte of Bahamut (BG)",
+            commanders: decks::VICONIA_3_COMMANDERS,
+            main: decks::VICONIA_3_MAIN,
+        },
+        // Seat 3296: Viconia, Drow Apostate and Criminal Past's EDHREC average deck. `--pod-decks 3296`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Criminal Past (B)",
+            commanders: decks::VICONIA_4_COMMANDERS,
+            main: decks::VICONIA_4_MAIN,
+        },
+        // Seat 3297: Viconia, Drow Apostate and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3297`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Passionate Archaeologist (BR)",
+            commanders: decks::VICONIA_5_COMMANDERS,
+            main: decks::VICONIA_5_MAIN,
+        },
+        // Seat 3298: Viconia, Drow Apostate and Scion of Halaster's EDHREC average deck. `--pod-decks 3298`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Scion of Halaster (B)",
+            commanders: decks::VICONIA_6_COMMANDERS,
+            main: decks::VICONIA_6_MAIN,
+        },
+        // Seat 3299: Zellix, Sanity Flayer and Tavern Brawler's EDHREC average deck. `--pod-decks 3299`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Tavern Brawler (UR)",
+            commanders: decks::ZELLIX_4_COMMANDERS,
+            main: decks::ZELLIX_4_MAIN,
+        },
+        // Seat 3300: Zellix, Sanity Flayer and Veteran Soldier's EDHREC average deck. `--pod-decks 3300`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Veteran Soldier (WU)",
+            commanders: decks::ZELLIX_5_COMMANDERS,
+            main: decks::ZELLIX_5_MAIN,
+        },
+        // Seat 3301: Cloud of Darkness's EDHREC average deck. `--pod-decks 3301`.
+        PodDeck {
+            name: "Cloud of Darkness (BG)",
+            commanders: decks::CLOUD_OF_DARKNESS_COMMANDERS,
+            main: decks::CLOUD_OF_DARKNESS_MAIN,
+        },
     ]
 }
 
@@ -25265,6 +25421,32 @@ mod tests {
             ("Shadowheart, Dark Justiciar and Street Urchin", &[0x16DF]),
             ("Sivriss, Nightmare Speaker and Raised by Giants", &[0x16E0]),
             ("The Thirteenth Doctor and Sarah Jane Smith", &[0x16E1]),
+            ("Brinelin, the Moon Kraken and Jeska, Thrice Reborn", &[0x16E2]),
+            ("Burakos, Party Leader and Master Chef", &[0x16E3]),
+            ("Burakos, Party Leader and Raised by Giants", &[0x16E4]),
+            ("Halsin, Emerald Archdruid and Criminal Past", &[0x16E5]),
+            ("Ikra Shidiqi, the Usurper and Tana, the Bloodsower", &[0x16E6]),
+            ("Jaheira, Friend of the Forest and Candlekeep Sage", &[0x16E7]),
+            ("Kydele, Chosen of Kruphix and Numa, Joraga Chieftain", &[0x16E8]),
+            ("Malcolm, Keen-Eyed Navigator and Nadier, Agent of the Duskenel", &[0x16E9]),
+            ("Prava of the Steel Legion and Siani, Eye of the Storm", &[0x16EA]),
+            ("Rebbec, Architect of Ascension and Sengir, the Dark Baron", &[0x16EB]),
+            ("Renari, Merchant of Marvels and Cultist of the Absolute", &[0x16EC]),
+            ("Renari, Merchant of Marvels and Haunted One", &[0x16ED]),
+            ("Shadowheart, Dark Justiciar and Acolyte of Bahamut", &[0x16EE]),
+            ("Shadowheart, Dark Justiciar and Criminal Past", &[0x16EF]),
+            ("Shadowheart, Dark Justiciar and Sword Coast Sailor", &[0x16F0]),
+            ("Sivriss, Nightmare Speaker and Popular Entertainer", &[0x16F1]),
+            ("Skanos Dragonheart and Agent of the Shadow Thieves", &[0x16F2]),
+            ("The Fifth Doctor and K-9, Mark I", &[0x16F3]),
+            ("The Fourteenth Doctor and Martha Jones", &[0x16F4]),
+            ("Viconia, Drow Apostate and Acolyte of Bahamut", &[0x16F5]),
+            ("Viconia, Drow Apostate and Criminal Past", &[0x16F6]),
+            ("Viconia, Drow Apostate and Passionate Archaeologist", &[0x16F7]),
+            ("Viconia, Drow Apostate and Scion of Halaster", &[0x16F8]),
+            ("Zellix, Sanity Flayer and Tavern Brawler", &[0x16F9]),
+            ("Zellix, Sanity Flayer and Veteran Soldier", &[0x16FA]),
+            ("Cloud of Darkness", &[0x16FB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
