@@ -770,8 +770,8 @@ pub fn bullseye_death_dealer() -> CardDefinition {
     let gun = |sac: bool| ActivatedAbility {
         tap_cost: true,
         mana_cost: cost(&[generic(3)]),
-        sac_other_filter: sac.then(|| (R::Artifact, 1)),
-        discard_cost: (!sac).then(|| (R::Nonland, 1)),
+        sac_other_filter: sac.then_some((R::Artifact, 1)),
+        discard_cost: (!sac).then_some((R::Nonland, 1)),
         effect: shot(),
         ..Default::default()
     };
