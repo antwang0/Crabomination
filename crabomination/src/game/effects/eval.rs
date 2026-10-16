@@ -4744,10 +4744,18 @@ impl GameState {
 
     /// Two permanent targets share a creature type (a changeling shares all).
     fn targets_share_creature_type(&self, a: &Target, b: &Target) -> bool {
+        // A card off the battlefield (Raise the Draugr's two graveyard
+        // cards) has no computed state; its printed type line answers.
         let types = |t: &Target| match t {
-            Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| {
-                (cp.subtypes().creature_types.clone(), cp.keywords().contains(&crate::card::Keyword::Changeling))
-            }),
+            Target::Permanent(cid) => self
+                .computed_permanent(*cid)
+                .map(|cp| (cp.subtypes().creature_types.clone(), cp.keywords().contains(&crate::card::Keyword::Changeling)))
+                .or_else(|| {
+                    self.find_card_anywhere(*cid).map(|c| {
+                        let d = &c.definition;
+                        (d.subtypes.creature_types.clone(), d.keywords.has_kw(&crate::card::Keyword::Changeling))
+                    })
+                }),
             Target::Player(_) => None,
         };
         match (types(a), types(b)) {
