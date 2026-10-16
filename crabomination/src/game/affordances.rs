@@ -2001,12 +2001,14 @@ impl GameState {
         seat: usize,
     ) -> Vec<(CardId, Vec<CardId>)> {
         use crate::card::Keyword;
-        let splicers: Vec<(CardId, crate::card::SpellSubtype)> = self.players[seat]
+        // `None` quality: "splice onto instant or sorcery" (any such host).
+        let splicers: Vec<(CardId, Option<crate::card::SpellSubtype>)> = self.players[seat]
             .hand
             .iter()
             .filter_map(|c| {
                 c.definition.keywords.iter().find_map(|k| match k {
-                    Keyword::Splice(_, quality) => Some((c.id, *quality)),
+                    Keyword::Splice(_, quality) => Some((c.id, Some(*quality))),
+                    Keyword::SpliceOntoInstantOrSorcery(_) => Some((c.id, None)),
                     _ => None,
                 })
             })
@@ -2014,20 +2016,24 @@ impl GameState {
         if splicers.is_empty() {
             return Vec::new();
         }
-        let hosts: Vec<(CardId, Vec<crate::card::SpellSubtype>)> = self.players[seat]
+        let any_instant_or_sorcery = splicers.iter().any(|(_, q)| q.is_none());
+        let hosts: Vec<(CardId, Vec<crate::card::SpellSubtype>, bool)> = self.players[seat]
             .hand
             .iter()
-            .filter(|c| !c.definition.subtypes.spell_subtypes.is_empty())
-            .map(|c| (c.id, c.definition.subtypes.spell_subtypes.clone()))
+            .filter(|c| {
+                !c.definition.subtypes.spell_subtypes.is_empty()
+                    || (any_instant_or_sorcery && (c.definition.is_instant() || c.definition.is_sorcery()))
+            })
+            .map(|c| (c.id, c.definition.subtypes.spell_subtypes.clone(), (c.definition.is_instant() || c.definition.is_sorcery())))
             .collect();
         hosts
             .into_iter()
-            .filter_map(|(host, subtypes)| {
+            .filter_map(|(host, subtypes, instant_or_sorcery)| {
                 let usable: Vec<CardId> = splicers
                     .iter()
                     .filter(|(sid, quality)| {
                         *sid != host
-                            && subtypes.contains(quality)
+                            && quality.map_or(instant_or_sorcery, |q| subtypes.contains(&q))
                             && Self::would_accept_on(template, GameAction::CastSpellSpliced {
                                 card_id: host,
                                 splice_cards: vec![*sid],

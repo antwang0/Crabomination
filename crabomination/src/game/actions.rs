@@ -8405,11 +8405,11 @@ impl GameState {
             return Err(GameError::InvalidTarget);
         }
         let mut seen = crate::fxhash::HashSet::default();
-        let spell_subtypes = self.players[p]
+        let (spell_subtypes, instant_or_sorcery) = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| c.definition.subtypes.spell_subtypes.clone())
+            .map(|c| (c.definition.subtypes.spell_subtypes.clone(), (c.definition.is_instant() || c.definition.is_sorcery())))
             .ok_or(GameError::CardNotInHand(card_id))?;
         let mut spliced_effects = Vec::new();
         let mut spliced_names = Vec::new();
@@ -8429,11 +8429,12 @@ impl GameState {
                 .keywords
                 .iter()
                 .find_map(|k| match k {
-                    Keyword::Splice(cost, quality) => Some((cost.clone(), *quality)),
+                    Keyword::Splice(cost, quality) => Some((cost.clone(), Some(*quality))),
+                    Keyword::SpliceOntoInstantOrSorcery(cost) => Some((cost.clone(), None)),
                     _ => None,
                 })
                 .ok_or(GameError::InvalidTarget)?;
-            if !spell_subtypes.contains(&quality) {
+            if !quality.map_or(instant_or_sorcery, |q| spell_subtypes.contains(&q)) {
                 return Err(GameError::InvalidTarget);
             }
             let extra = splicer.definition.splice_extra_cost.clone();

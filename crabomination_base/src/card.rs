@@ -2042,6 +2042,9 @@ pub enum Keyword {
     /// you cast a matching spell to add this card's rules text to it for the
     /// cost. Cast via `GameAction::CastSpellSpliced` (Glacial Ray).
     Splice(crate::mana::ManaCost, SpellSubtype),
+    /// CR 702.47a — "Splice onto instant or sorcery [cost]" (Splicer's Skill):
+    /// [`Self::Splice`] whose quality is the host's card type, not a subtype.
+    SpliceOntoInstantOrSorcery(crate::mana::ManaCost),
     /// CR 702.29 — Cycling whose cost is a life payment instead of mana
     /// ("Cycling—Pay 2 life", Street Wraith).
     CyclingLife(u32),

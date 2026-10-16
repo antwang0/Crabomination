@@ -7584,7 +7584,7 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
                 Keyword::Entwine(_) => spec::ENTWINE,
                 Keyword::Squad(_) => spec::SQUAD,
                 Keyword::Casualty(_) | Keyword::Bargain => spec::SAC_EXTRA,
-                Keyword::Splice(..) => spec::SPLICE,
+                Keyword::Splice(..) | Keyword::SpliceOntoInstantOrSorcery(_) => spec::SPLICE,
                 _ => 0,
             };
         }
