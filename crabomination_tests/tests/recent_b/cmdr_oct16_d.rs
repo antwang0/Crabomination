@@ -558,3 +558,39 @@ fn demonic_pact_picks_each_mode_once() {
     step_to(&mut g, 0, TurnStep::PreCombatMain);
     assert!(g.players[0].eliminated, "the fourth upkeep has only the loss left");
 }
+
+/// CR 702.80a — Spinerock Tyrant gives the single-target spell it copies
+/// wither, so a Bolt leaves -1/-1 counters instead of marked damage.
+#[test]
+fn spinerock_tyrant_gives_the_spell_wither() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::spinerock_tyrant());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let tough = crabomination::effect::Effect::PumpPT {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::HasName("Craw Wurm".into())),
+        power: crabomination::card::Value::ZERO,
+        toughness: crabomination::card::Value::Const(10),
+        duration: crabomination::effect::Duration::EndOfTurn,
+    };
+    g.resolve_effect(&tough, &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, bolt, Some(Target::Permanent(wurm)));
+    let w = g.battlefield_find(wurm).expect("a 6/14 survives");
+    assert_eq!(w.counter_count(CounterType::MinusOneMinusOne), 6, "both Bolts' damage lands as counters");
+    assert_eq!(w.damage, 0);
+}
+
+/// Fin Fang Foom copies an artifact-targeting spell and grows by two; Smashing
+/// Success's destroyed artifact leaves a Treasure.
+#[test]
+fn fin_fang_foom_copies_artifact_removal() {
+    let mut g = pod(2);
+    let foom = ready(&mut g, 0, catalog::fin_fang_foom());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let ss = g.add_card_to_hand(0, catalog::smashing_success());
+    cast(&mut g, ss, Some(Target::Permanent(ring)));
+    assert!(g.battlefield_find(ring).is_none());
+    assert_eq!(g.battlefield_find(foom).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
+}

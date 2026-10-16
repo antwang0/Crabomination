@@ -16403,6 +16403,11 @@ static DECKS: &[Factory] = &[
     super::decks::demonic_lore,
     super::decks::demonic_pact,
     super::decks::overwhelming_splendor,
+    super::decks::spinerock_tyrant,
+    super::decks::fin_fang_foom,
+    super::decks::smashing_success,
+    super::decks::hard_won_jitte,
+    super::decks::borrowed_hostility,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,

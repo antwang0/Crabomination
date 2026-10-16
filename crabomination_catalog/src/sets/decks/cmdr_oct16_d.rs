@@ -1524,3 +1524,112 @@ pub fn overwhelming_splendor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ant-Man, Elusive Avenger / Fin Fang Foom ────────────────────────────────
+
+fn instant_or_sorcery() -> R {
+    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))
+}
+
+/// Spinerock Tyrant — {3}{R}{R} 6/6 flying, wither Dragon. Casting an instant
+/// or sorcery with a single target: you may copy it; if you do, both gain
+/// wither (granted before the copy, which copies it).
+pub fn spinerock_tyrant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Wither],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(instant_or_sorcery()),
+                Predicate::CastSpellTargetsOnlyOneMatching(R::Any),
+            ])),
+            effect: Effect::MayDo {
+                description: "Copy that spell? Both gain wither.".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SpellGainsKeyword { what: Selector::TriggerSource, keyword: Keyword::Wither },
+                    Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+                ])),
+            },
+        }],
+        ..creature("Spinerock Tyrant", cost(&[generic(3), r(), r()]), vec![CreatureType::Dragon], 6, 6)
+    }
+}
+
+/// Fin Fang Foom — {2}{R}{R} legendary 3/5 flying Alien Dragon Villain. Casting
+/// an instant or sorcery that targets an artifact or land copies it (new
+/// targets allowed) and puts two +1/+1 counters on Fin Fang Foom.
+pub fn fin_fang_foom() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(instant_or_sorcery()),
+                Predicate::CastSpellTargetsMatch(R::Artifact.or(R::Land)),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+                counters(Selector::This, Value::Const(2)),
+            ]),
+        }],
+        ..creature(
+            "Fin Fang Foom",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Alien, CreatureType::Dragon, CreatureType::Villain],
+            3,
+            5,
+        )
+    }
+}
+
+/// Smashing Success — {3}{R} instant. Destroy target artifact or land; an
+/// artifact destroyed this way leaves a Treasure.
+pub fn smashing_success() -> CardDefinition {
+    spell(
+        "Smashing Success",
+        cost(&[generic(3), r()]),
+        true,
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Land)) },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::DestroyedThisResolution { filter: R::Artifact }),
+                then: Box::new(make(Arc::new(crabomination_base::tokens::treasure_token()))),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Hard-Won Jitte — {1}{R} Equipment: double strike. Equip {2}.
+pub fn hard_won_jitte() -> CardDefinition {
+    CardDefinition {
+        name: "Hard-Won Jitte",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::DoubleStrike], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Borrowed Hostility — {R} instant, escalate {3}. Choose one or both: target
+/// creature gets +3/+0; target creature gains first strike (until end of turn).
+pub fn borrowed_hostility() -> CardDefinition {
+    CardDefinition {
+        escalate: Some(crate::card::Escalate::Mana(cost(&[generic(3)]))),
+        ..spell(
+            "Borrowed Hostility",
+            cost(&[r()]),
+            true,
+            Effect::ChooseModesCast {
+                modes: vec![
+                    Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(3), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+                ],
+                min: 1,
+                max: 2,
+                allow_repeats: false,
+            },
+        )
+    }
+}
