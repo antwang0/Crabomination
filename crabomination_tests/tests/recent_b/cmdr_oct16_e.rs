@@ -666,3 +666,47 @@ fn terrific_team_up_two_creatures_bite() {
     assert!(g.battlefield_find(victim).is_none(), "3 + 7 damage");
     assert_eq!(g.computed_permanent(a).unwrap().power, 3);
 }
+
+/// Sethron makes a Minotaur for itself and for a nontoken Minotaur — not for
+/// its own token.
+#[test]
+fn sethron_makes_minotaurs_for_nontoken_minotaurs() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::sethron_hurloon_general());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, s, None).expect("cast");
+    let tokens = |g: &GameState| g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Minotaur").count();
+    assert_eq!(tokens(&g), 1);
+    let w = g.add_card_to_hand(0, catalog::akoum_warrior());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, w, None).expect("Akoum Warrior");
+    assert_eq!(tokens(&g), 2);
+}
+
+/// Lord of Shatterskull Pass sweeps the defender's board only at level 6.
+#[test]
+fn lord_of_shatterskull_pass_sweeps_at_level_six() {
+    for (levels, swept) in [(5, false), (6, true)] {
+        let mut g = pod(2);
+        let lord = ready(&mut g, 0, catalog::lord_of_shatterskull_pass());
+        let bears = ready(&mut g, 1, catalog::grizzly_bears());
+        g.battlefield_find_mut(lord).unwrap().add_counters(CounterType::Level, levels);
+        assert_eq!(g.computed_permanent(lord).unwrap().power, 6);
+        attack(&mut g, &[(lord, 1)]);
+        assert_eq!(g.battlefield_find(bears).is_none(), swept, "level {levels}");
+    }
+}
+
+/// Neheb pumps Minotaurs only with one or fewer cards in hand.
+#[test]
+fn neheb_pumps_minotaurs_with_an_empty_hand() {
+    let mut g = pod(2);
+    let neheb = ready(&mut g, 0, catalog::neheb_the_worthy());
+    g.players[0].hand.clear();
+    assert_eq!(g.computed_permanent(neheb).unwrap().power, 4);
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    assert_eq!(g.computed_permanent(neheb).unwrap().power, 2);
+}

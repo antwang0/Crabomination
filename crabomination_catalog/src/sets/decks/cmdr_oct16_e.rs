@@ -2263,3 +2263,124 @@ pub fn terrific_team_up() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Sethron, Hurloon General ────────────────────────────────────────────────
+
+fn minotaur() -> R {
+    R::HasCreatureType(CreatureType::Minotaur)
+}
+
+/// Sethron, Hurloon General — {3}{R}{R} legendary 4/4 Minotaur Warrior. It or
+/// another nontoken Minotaur of yours entering: a 2/3 red Minotaur token.
+/// {2}{B/R}: Minotaurs you control get +1/+0, menace and haste until end of
+/// turn.
+pub fn sethron_hurloon_general() -> CardDefinition {
+    let token = TokenDefinition {
+        name: "Minotaur".into(),
+        power: 2,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Minotaur], ..Default::default() },
+        ..Default::default()
+    };
+    let mine = || Selector::EachPermanent(yours(R::Creature.and(minotaur())));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: minotaur().and(R::Not(Box::new(R::IsToken))),
+            }),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(token) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), hybrid(Color::Black, Color::Red)]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: mine(), power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                eot_keyword(mine(), Keyword::Menace),
+                eot_keyword(mine(), Keyword::Haste),
+            ]),
+            ..Default::default()
+        }],
+        ..legend(creature("Sethron, Hurloon General", cost(&[generic(3), r(), r()]), vec![CreatureType::Minotaur, CreatureType::Warrior], 4, 4))
+    }
+}
+
+/// Akoum Warrior // Akoum Teeth — {5}{R} 4/5 trample Minotaur Warrior; back
+/// face a land that enters tapped and taps for {R} (CR 712.2, a modal DFC).
+pub fn akoum_warrior() -> CardDefinition {
+    let teeth = CardDefinition {
+        name: "Akoum Teeth",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        activated_abilities: vec![crate::sets::tap_add(Color::Red)],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        back_face: Some(Box::new(teeth)),
+        ..creature("Akoum Warrior", cost(&[generic(5), r()]), vec![CreatureType::Minotaur, CreatureType::Warrior], 4, 5)
+    }
+}
+
+/// Lord of Shatterskull Pass — {3}{R} 3/3 Minotaur Shaman. Level up {1}{R}.
+/// Level 1-5: 6/6. Level 6+: 6/6, and attacking it deals 6 damage to each
+/// creature the defending player controls.
+pub fn lord_of_shatterskull_pass() -> CardDefinition {
+    use crate::card::LevelBand;
+    let level6 = Predicate::SourceHasCountersAtLeast { counter: CounterType::Level, n: 6 };
+    CardDefinition {
+        level_bands: vec![
+            LevelBand { min: 1, max: Some(5), power: 6, toughness: 6, keywords: vec![] },
+            LevelBand { min: 6, max: None, power: 6, toughness: 6, keywords: vec![] },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Level, amount: Value::ONE },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(level6),
+            effect: Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.and(R::ControlledByDefendingPlayer)),
+                amount: Value::Const(6),
+            },
+        }],
+        ..creature("Lord of Shatterskull Pass", cost(&[generic(3), r()]), vec![CreatureType::Minotaur, CreatureType::Shaman], 3, 3)
+    }
+}
+
+/// Neheb, the Worthy — {1}{B}{R} legendary 2/2 first strike Minotaur Warrior.
+/// Other Minotaurs you control have first strike; with one or fewer cards in
+/// your hand, Minotaurs you control get +2/+0. Combat damage to a player: each
+/// player discards a card.
+pub fn neheb_the_worthy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Minotaurs you control have first strike.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(yours(R::Creature.and(minotaur())).and(R::OtherThanSource)),
+                    keyword: Keyword::FirstStrike,
+                },
+            },
+            StaticAbility {
+                description: "As long as you have one or fewer cards in hand, Minotaurs you control get +2/+0.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: Predicate::Not(Box::new(Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::Const(2)))),
+                    applies_to: Selector::EachPermanent(yours(R::Creature.and(minotaur()))),
+                    power: 2,
+                    toughness: 0,
+                    keywords: vec![],
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Discard { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE, random: false },
+        }],
+        ..legend(creature("Neheb, the Worthy", cost(&[generic(1), b(), r()]), vec![CreatureType::Minotaur, CreatureType::Warrior], 2, 2))
+    }
+}

@@ -16574,6 +16574,10 @@ static DECKS: &[Factory] = &[
     super::decks::damage_control_crew,
     super::decks::kraven_proud_predator,
     super::decks::terrific_team_up,
+    super::decks::sethron_hurloon_general,
+    super::decks::akoum_warrior,
+    super::decks::lord_of_shatterskull_pass,
+    super::decks::neheb_the_worthy,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
