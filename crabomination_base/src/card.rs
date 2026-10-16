@@ -8265,6 +8265,7 @@ impl CardDefinition {
             multicolored: colors.len() >= 2,
             planeswalker: self.is_planeswalker(),
             legendary: self.supertypes.contains(&Supertype::Legendary),
+            no_abilities: creature && self.has_no_abilities(),
             creature_mana_only: self.spend_only_creature_mana,
             room_or_door: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Room),
             name: Some(self.name),

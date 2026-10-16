@@ -912,6 +912,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast Dwarf, Equipment, and Saga spells"
     /// (Fíli and Kíli, Joyous).
     DwarfEquipmentOrSagaSpells,
+    /// "Spend this mana only to cast creature spells with no abilities"
+    /// (Jasmine Boreal of the Seven). Read off the printed card.
+    CreatureSpellWithNoAbilities,
     /// "Spend this mana only to cast Mount or Vehicle spells." (Intrepid
     /// Stablemaster.) Spells only; a changeling spell is a Mount.
     MountOrVehicleSpells,
@@ -992,6 +995,7 @@ impl SpendRestriction {
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
             SpendRestriction::KnightOrEquipmentSpells => "only Knight and Equipment spells",
             SpendRestriction::DwarfEquipmentOrSagaSpells => "only Dwarf, Equipment, and Saga spells",
+            SpendRestriction::CreatureSpellWithNoAbilities => "only creature spells with no abilities",
             SpendRestriction::MountOrVehicleSpells => "only Mount and Vehicle spells",
             SpendRestriction::PilotOrVehicleSpells => "only Pilot and Vehicle spells",
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
@@ -1147,6 +1151,9 @@ impl SpendRestriction {
                         || kind.saga
                         || kind.changeling
                         || kind.creature_types.contains(&crate::card::CreatureType::Dwarf))
+            }
+            SpendRestriction::CreatureSpellWithNoAbilities => {
+                !kind.activating_ability && kind.creature && kind.no_abilities
             }
             SpendRestriction::MountOrVehicleSpells => {
                 !kind.activating_ability
@@ -1337,6 +1344,9 @@ pub struct SpellKind {
     pub planeswalker: bool,
     /// Casting a legendary spell (Untaidake, the Cloud Keeper).
     pub legendary: bool,
+    /// A creature spell whose printed card has no abilities (Jasmine Boreal
+    /// of the Seven's mana).
+    pub no_abilities: bool,
     /// CR 106.6 — "spend only mana produced by creatures to cast this spell"
     /// (Myr Superion). Unlike every other field this *narrows* what may pay:
     /// [`ManaPool::pay_for_spell`] routes to [`ManaPool::pay_creature_only`].
