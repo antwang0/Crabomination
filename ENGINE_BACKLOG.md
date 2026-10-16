@@ -163,6 +163,17 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
+
+- **Seats** 2949-2952, 2955-2969, 2973-2975, 2981-2985, 2989-2992, 2998-3000 (`decks::cmdr_oct16_e`, tests
+  `recent_b/cmdr_oct16_e.rs`).
+- **CLAIMED (batch 9) — don't duplicate:** Elder Auntie, Raphael Most Attitude, Mouser Attack!, Skateboard, Raph's
+  Bravado (Raphael Tough Turtle, Raphael the Nightwatcher).
+- **Primitives:** `PlayerRef::EachPlayerYouAreAttacking`, `R::ManaValueAtMostTargetSlot`,
+  `AdditionalCastCost::BlightOrPay`, `CounterType::Dread`, `CreatureType::Vorta`; "whenever you exert a creature"
+  (`Exerted` + `YourControl`) now fires and the exert policy pays for it (CR 701.43).
+- **FIXED:** `CreateTokenAttacking` resolved a fan-out defender singularly (CR 508.4; 15-seat pod debug-assert).
+
 ## FIXED/OPEN 2026-10-16 (Commander run, `014Q2Gfw`) — 29 seats off the rescan's one- and two-card gaps
 
 - **Seats** 2893-2921 (52 cards, `decks::cmdr_oct16_c`, tests at the end of `recent_b/cmdr_oct16_a.rs`);
