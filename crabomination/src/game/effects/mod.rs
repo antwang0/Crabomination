@@ -34620,6 +34620,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealUntilCreatureAboveLastMovedToBattlefield => {
+                let Some(&moved) = self.scratch.last_moved_cards.last() else { return Ok(()) };
+                let mv = self.find_card_anywhere(moved).map_or(0, |c| c.definition.cost.cmc());
+                let body = Effect::RevealUntilOneToBattlefieldRestBottom {
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtLeast(mv + 1)),
+                    damage_controller: false,
+                    may: false,
+                };
+                self.run_effect(&body, ctx, events)
+            }
             Effect::RevealUntilOneToBattlefieldRestBottom { filter, damage_controller, may } => {
                 self.reveal_until_one_to_battlefield_rest_bottom(filter, *damage_controller, *may, ctx, events, effect)
             }

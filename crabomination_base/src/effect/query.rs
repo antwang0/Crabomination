@@ -2399,7 +2399,8 @@ impl Effect {
             Effect::RevealUntilNonlandDamage { to } => sel_has_target(to),
             // Reveals from your own library — no target slot.
             Effect::RevealUntilLandsToBattlefield { .. }
-            | Effect::RevealUntilOneToBattlefieldRestBottom { .. } => false,
+            | Effect::RevealUntilOneToBattlefieldRestBottom { .. }
+            | Effect::RevealUntilCreatureAboveLastMovedToBattlefield => false,
             Effect::CopyAttackersAsBlockers => false,
             Effect::ChooseGraveyardCreaturesEachMayReturn
             | Effect::ExileTypeSpreadReturnPermanent { .. } => false,

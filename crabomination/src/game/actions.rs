@@ -5156,6 +5156,13 @@ impl GameState {
                         )
                 })
             }
+            crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { subtype } => {
+                self.battlefield.iter().any(|c| {
+                    c.controller == perm.player
+                        && c.definition.is_planeswalker()
+                        && c.definition.subtypes.planeswalker_subtypes.contains(&subtype)
+                })
+            }
             // A land is never cast, so it is never played this way.
             crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell => {
                 self.players.get(perm.player).is_some_and(|p| p.spells_cast_this_game_turn > 0)

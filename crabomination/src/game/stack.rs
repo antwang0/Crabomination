@@ -5990,6 +5990,7 @@ impl GameState {
                     }
                     crate::card::MayPlayDuration::WhileExiled
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControls { .. }
+                    | crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { .. }
                     | crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell
                     | crate::card::MayPlayDuration::UntilSourceExilesAnother => false,
                     // Ends with its source; re-armed below.

@@ -11242,6 +11242,13 @@ pub enum Effect {
     /// cards revealed this way" (Audacious Reshapers).
     /// `may`: "you may put that card onto the battlefield" (Genesis Storm) —
     /// declined, it goes to the bottom with the rest.
+    /// "…then reveal cards from the top of your library until you reveal a
+    /// creature card with greater mana value. Put that card onto the
+    /// battlefield and the rest on the bottom in a random order" (Lukka,
+    /// Coppercoat Outcast's −2): [`Self::RevealUntilOneToBattlefieldRestBottom`]
+    /// over creatures above the mana value of the card the resolution last
+    /// moved (`Selector::LastMoved` — the creature it just exiled).
+    RevealUntilCreatureAboveLastMovedToBattlefield,
     RevealUntilOneToBattlefieldRestBottom {
         filter: SelectionRequirement,
         damage_controller: bool,

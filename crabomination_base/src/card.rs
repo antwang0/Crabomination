@@ -1371,6 +1371,9 @@ pub enum MayPlayDuration {
     /// only while the holder controls a creature of `creature_type` —
     /// checked as the card is played (`GameState::may_play_usable`).
     WhileExiledIfHolderControls { creature_type: CreatureType },
+    /// The planeswalker twin: "you may cast this card from exile as long as you
+    /// control a [subtype] planeswalker" (Lukka, Coppercoat Outcast's +1).
+    WhileExiledIfHolderControlsPlaneswalker { subtype: PlaneswalkerSubtype },
     /// "For as long as it remains exiled, it has 'You may cast this card from
     /// exile as long as you've cast another spell this turn'" (Monk Class):
     /// `WhileExiled`, castable (never played as a land) only once the holder
