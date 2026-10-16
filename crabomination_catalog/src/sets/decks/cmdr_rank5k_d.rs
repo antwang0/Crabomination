@@ -7,7 +7,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{etb, sneak, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{ManaCost, cost, generic, r, u, w};
@@ -219,6 +219,7 @@ pub fn iron_fist_hero_for_hire() -> CardDefinition {
 pub fn leonardo_cutting_edge() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Sneak(cost(&[w()])), Keyword::Lifelink],
+        alternative_cost: Some(sneak(cost(&[w()]))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },

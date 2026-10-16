@@ -1952,3 +1952,25 @@ fn no_move_destination_names_a_fan_out_player() {
     bad.sort_unstable();
     assert!(bad.is_empty(), "a move destination fans out: {bad:?}");
 }
+
+/// CR 702.190a — a printed `Keyword::Sneak(cost)` is display only; the cast
+/// lives in `alternative_cost`. Raphael's Technique, Elektra and Leonardo,
+/// Cutting Edge carried the keyword alone and could never be sneaked. Bug fix.
+#[test]
+fn every_sneak_keyword_has_its_alternative_cost() {
+    use crabomination::card::Keyword;
+    let mut bad = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        for kw in def.keywords.iter() {
+            if let Keyword::Sneak(c) = kw
+                && !def.alternative_cost.as_ref().is_some_and(|a| a.sneak && a.mana_cost == *c)
+            {
+                bad.push(def.name);
+            }
+        }
+    }
+    bad.sort_unstable();
+    bad.dedup();
+    assert!(bad.is_empty(), "sneak keyword without its alt cost: {bad:?}");
+}

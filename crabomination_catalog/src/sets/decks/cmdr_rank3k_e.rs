@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
     Value,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, sneak, target_filtered};
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
@@ -685,6 +685,7 @@ pub fn boss_uramon_shadows_reach() -> CardDefinition {
 pub fn elektra_daughter_of_the_hand() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Sneak(cost(&[generic(1), b(), b()]))],
+        alternative_cost: Some(sneak(cost(&[generic(1), b(), b()]))),
         triggered_abilities: vec![etb(Effect::Destroy {
             what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::PowerAtMost(3))),
         })],

@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
     Value,
 };
-use crate::effect::shortcut::{enrage, target_filtered};
+use crate::effect::shortcut::{enrage, sneak, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, cost, generic, r, w};
@@ -110,6 +110,7 @@ pub fn raphael_ninja_destroyer() -> CardDefinition {
 pub fn raphaels_technique() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Sneak(cost(&[generic(2), r()]))],
+        alternative_cost: Some(sneak(cost(&[generic(2), r()]))),
         ..spell(
             "Raphael's Technique",
             cost(&[generic(4), r(), r()]),
