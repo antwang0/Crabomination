@@ -17844,6 +17844,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MICHELANGELO_4_COMMANDERS,
             main: decks::MICHELANGELO_4_MAIN,
         },
+        // Seat 2899: Jasmine Boreal of the Seven's EDHREC average deck. `--pod-decks 2899`.
+        PodDeck {
+            name: "Jasmine Boreal of the Seven (WG)",
+            commanders: decks::JASMINE_BOREAL_OF_THE_SEVEN_COMMANDERS,
+            main: decks::JASMINE_BOREAL_OF_THE_SEVEN_MAIN,
+        },
+        // Seat 2900: Superior Spider-Man's EDHREC average deck. `--pod-decks 2900`.
+        PodDeck {
+            name: "Superior Spider-Man (UB)",
+            commanders: decks::SUPERIOR_SPIDER_MAN_COMMANDERS,
+            main: decks::SUPERIOR_SPIDER_MAN_MAIN,
+        },
+        // Seat 2901: Jasmine Boreal's EDHREC average deck. `--pod-decks 2901`.
+        PodDeck {
+            name: "Jasmine Boreal (WG)",
+            commanders: decks::JASMINE_BOREAL_COMMANDERS,
+            main: decks::JASMINE_BOREAL_MAIN,
+        },
     ]
 }
 
@@ -22626,6 +22644,9 @@ mod tests {
             ("Spectacular Spider-Man", &[0x1566]),
             ("Bortuk Bonerattle", &[0x1567]),
             ("Michelangelo, Mutant BFF", &[0x1568]),
+            ("Jasmine Boreal of the Seven", &[0x1569]),
+            ("Superior Spider-Man", &[0x156A]),
+            ("Jasmine Boreal", &[0x156B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

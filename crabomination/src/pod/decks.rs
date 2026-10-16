@@ -81297,3 +81297,87 @@ pub const MICHELANGELO_4_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const JASMINE_BOREAL_OF_THE_SEVEN_COMMANDERS: &[CardFactory] = &[jasmine_boreal_of_the_seven];
+
+/// **Jasmine Boreal of the Seven**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Plains = 99.
+/// Jasmine Boreal of the Seven (EDHREC, fetched 2026-10-16).
+pub const JASMINE_BOREAL_OF_THE_SEVEN_MAIN: &[CardFactory] = &[
+    arcane_signet, lifecrafters_bestiary, selesnya_signet, sol_ring, spear_of_heliod,
+    swiftfoot_boots, bountiful_promenade, canopy_vista, command_tower, fortified_village,
+    gavony_township, mosswort_bridge, overgrown_farmland, selesnya_sanctuary, sungrass_prairie,
+    sunpetal_grove, temple_garden, temple_of_plenty, alpine_grizzly, ancient_brontodon,
+    beast_whisperer, blade_of_the_sixth_pride, cheeky_house_mouse, devilthorn_fox,
+    elite_vanguard, fang_druid_summoner, garruks_gorehorn, gigantosaurus,
+    isamaru_hound_of_konda, jibbirik_omnivore, kalonian_tusker, kutzil_malamet_exemplar,
+    leatherback_baloth, orazca_frillback, primordial_wurm, quakestrider_ceratops,
+    quilled_slagwurm, raptor_companion, ruxa_patient_professor, savai_sabertooth,
+    savannah_lions, shepherd_of_the_flock, sundial_dawn_tyrant, swordwise_centaur,
+    terrain_elemental, terrian_world_tyrant, toski_bearer_of_secrets, vorstclaw, watchwolf,
+    anthem_of_champions, beastmaster_ascension, collective_blessing, elemental_bond,
+    gaeas_anthem, miraris_wake, muraganda_petroglyphs, sandwurm_convergence,
+    tribute_to_the_world_tree, unnatural_growth, aura_mutation, beast_within, fog,
+    generous_gift, heroic_intervention, hunters_insight, path_to_exile,
+    return_of_the_wildspeaker, swords_to_plowshares, garruk_primal_hunter, cultivate,
+    ezuris_predation, farseek, harmonize, kodamas_reach, natures_lore, rampant_growth,
+    shamanic_revelation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const SUPERIOR_SPIDER_MAN_COMMANDERS: &[CardFactory] = &[superior_spider_man];
+
+/// **Superior Spider-Man**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 9 Islands + 9 Swamps = 99.
+/// Superior Spider-Man (EDHREC, fetched 2026-10-16).
+pub const SUPERIOR_SPIDER_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, lightning_greaves, mesmeric_orb, mind_stone,
+    sol_ring, talisman_of_dominance, the_soul_stone, bojuka_bog, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, exotic_orchard, gloomlake_verge,
+    morphic_pool, otawara_soaring_city, polluted_delta, shipwreck_marsh, sunken_hollow,
+    tainted_isle, undercity_sewers, underground_river, watery_grave, archon_of_cruelty,
+    ardyn_the_usurper, baleful_strix, body_double, bringer_of_the_last_gift,
+    chameleon_master_of_disguise, clever_impersonator, consuming_aberration, cruel_somnophage,
+    doctor_octopus_master_planner, doomsday_excruciator, hullbreaker_horror,
+    jin_gitaxias_core_augur, ledger_shredder, likeness_looter, massacre_wurm,
+    nezahal_primal_tide, phyrexian_metamorph, psychic_frog, sepulchral_primordial,
+    sheoldred_whispering_one, stitchers_supplier, symbiote_spider_man, syr_konrad_the_grim,
+    valgavoth_terror_eater, animate_dead, mystic_remora, rhystic_study, ripples_of_undeath,
+    an_offer_you_cant_refuse, bitter_triumph, cabal_ritual, counterspell, dark_ritual,
+    drown_in_the_loch, entomb, fact_or_fiction, fell_the_profane, frantic_search, negate,
+    saw_in_half, sink_into_stupor, spider_sense, swan_song, breach_the_multiverse, buried_alive,
+    demonic_tutor, feed_the_swarm, lively_dirge, reanimate, singularity_rupture, toxic_deluge,
+    unmarked_grave, victimize, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const JASMINE_BOREAL_COMMANDERS: &[CardFactory] = &[jasmine_boreal];
+
+/// **Jasmine Boreal**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 15 Forests + 13 Plains = 99.
+/// Jasmine Boreal (EDHREC, fetched 2026-10-16).
+pub const JASMINE_BOREAL_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_totem, lifecrafters_bestiary, selesnya_signet, sol_ring,
+    spear_of_heliod, brushland, canopy_vista, command_tower, fortified_village,
+    overgrown_farmland, selesnya_sanctuary, sungrass_prairie, sunpetal_grove, temple_garden,
+    temple_of_plenty, alpine_grizzly, ancient_brontodon, armored_warhorse, armored_wolf_rider,
+    blade_of_the_sixth_pride, devilthorn_fox, dromoka_warrior, elite_vanguard, elvish_warrior,
+    expedition_envoy, garruks_gorehorn, gigantosaurus, grizzled_leotau, grizzly_bears,
+    indomitable_ancients, isamaru_hound_of_konda, jasmine_boreal_of_the_seven,
+    jibbirik_omnivore, kalonian_tusker, leatherback_baloth, memnite, primordial_wurm,
+    quakestrider_ceratops, quilled_slagwurm, runeclaw_bear, savannah_lions, sundial_dawn_tyrant,
+    swordwise_centaur, terrain_elemental, terrian_world_tyrant, vorstclaw, watchwolf,
+    anthem_of_champions, beastmaster_ascension, collective_blessing, elemental_bond,
+    gaeas_anthem, glorious_anthem, guardian_project, miraris_wake, muraganda_petroglyphs,
+    unnatural_growth, beast_within, disenchant, fog, generous_gift, heroic_intervention,
+    path_to_exile, swords_to_plowshares, cultivate, harmonize, kodamas_reach, natures_lore,
+    rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
