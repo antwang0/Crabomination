@@ -7,6 +7,7 @@ use crate::card::{
     Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::card::{StaticAbility, StaticEffect};
+use crate::effect::ActivationTrait;
 use crate::effect::shortcut::{boast, etb, landfall, target_filtered};
 use crate::game::TurnStep;
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
@@ -615,6 +616,29 @@ pub fn pull_from_eternity() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move { what: target_filtered(R::InExile.and(R::Not(Box::new(R::FaceDown)))), to: ZoneDest::Graveyard },
+        ..Default::default()
+    }
+}
+
+// ── Lady Evangela ───────────────────────────────────────────────────────────
+
+/// Way of the Mind Sculptor — {4}{U} legendary enchantment. Enters: empower
+/// Jace 5. A loyalty ability you activate by removing two or more loyalty
+/// counters draws a card (the activation event's amount is the counters paid).
+pub fn way_of_the_mind_sculptor() -> CardDefinition {
+    CardDefinition {
+        name: "Way of the Mind Sculptor",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::EmpowerJace { who: PlayerRef::You, count: Value::Const(5) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivatedWith(ActivationTrait::Loyalty), EventScope::YourControl)
+                    .with_filter(Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(2))),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
         ..Default::default()
     }
 }

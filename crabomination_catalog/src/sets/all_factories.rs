@@ -16301,6 +16301,7 @@ static DECKS: &[Factory] = &[
     super::decks::wonder_man_hollywood_hero,
     super::decks::shaun_rebecca_agents,
     super::decks::pull_from_eternity,
+    super::decks::way_of_the_mind_sculptor,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

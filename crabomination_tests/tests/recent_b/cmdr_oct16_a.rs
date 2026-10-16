@@ -793,3 +793,26 @@ fn pull_from_eternity_returns_an_exiled_card_to_the_graveyard() {
     cast_with(&mut g, spell, Some(Target::Permanent(exiled)), vec![]).expect("cast");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == exiled));
 }
+
+/// Way of the Mind Sculptor: its Jace token's −3 removes three loyalty and
+/// draws an extra card; the −1 removes one and doesn't.
+#[test]
+fn way_of_the_mind_sculptor_draws_off_a_big_minus() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let way = g.add_card_to_hand(0, catalog::way_of_the_mind_sculptor());
+    cast(&mut g, way);
+    let jace = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name.contains("Jace")).expect("Jace token").id;
+    let act = |g: &mut GameState, i| {
+        g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: jace, ability_index: i, target: None, x_value: None }).expect("loyalty");
+        drain_stack(g);
+    };
+    act(&mut g, 0);
+    assert_eq!(g.players[0].hand.len(), 0, "the −1 surveils; no draw");
+    g.turn_number += 1;
+    for c in g.battlefield.iter_mut() {
+        c.loyalty_uses_this_turn = 0;
+    }
+    act(&mut g, 1);
+    assert_eq!(g.players[0].hand.len(), 2, "the −3 draws one, the Way one more");
+}
