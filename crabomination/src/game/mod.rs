@@ -16684,6 +16684,12 @@ impl GameState {
                         crate::effect::StaticEffect::MatchingLoseAllCreatureTypes { applies_to } => {
                             (applies_to, Modification::SetCreatureTypes(Vec::new()), Layer::L4Type, None)
                         }
+                        // "Creatures enchanted player controls lose all
+                        // abilities" (Overwhelming Splendor): the seat is live,
+                        // so the static path's `selector_to_affected` drops it.
+                        crate::effect::StaticEffect::MatchingLoseAllAbilities { applies_to: applies_to @ Sel::ControlledBy { .. } } => {
+                            (applies_to, Modification::RemoveAllAbilities, Layer::L6Ability, None)
+                        }
                         // "Commander creatures you own are Giants" (Raised by
                         // Giants): `IsCommander` is live, so the static path drops it.
                         crate::effect::StaticEffect::AddCreatureTypeToMatching {
@@ -34804,6 +34810,7 @@ fn static_effect_to_effects(
             // `apply_prevention_shields`; no layer effect.
             | StaticEffect::PreventDamageToAttachedPerPermanent { .. }
             | StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers
+            | StaticEffect::EnchantedPlayerCantActivateNonManaAbilities
             | StaticEffect::PreventAllDamageToControllerFromOthersSources
             | StaticEffect::PreventSpellDamageToYouAndYourOtherPermanents
             | StaticEffect::SpellDamageToOpponentsBonus { .. }

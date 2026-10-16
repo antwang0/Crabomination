@@ -4239,6 +4239,10 @@ pub enum StaticEffect {
     /// "If a source would deal damage to you or a planeswalker you control,
     /// prevent all but 1 of that damage." Ajani Steadfast's emblem.
     PreventAllButOneDamageToYouAndYourPlaneswalkers,
+    /// "Enchanted player can't activate abilities that aren't mana abilities
+    /// or loyalty abilities" (Overwhelming Splendor). Read at the activation
+    /// gate off an Aura attached to the activating player.
+    EnchantedPlayerCantActivateNonManaAbilities,
     /// "Your opponents play with their hands revealed" (Telepathy). Publishes
     /// each opponent's hand to the controller through
     /// `GameState.hands_revealed_to` while the source is on the battlefield.

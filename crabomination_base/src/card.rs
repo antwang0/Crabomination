@@ -9503,6 +9503,9 @@ pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
         SE::SetBasePtForFilter { .. }
         | SE::MatchingLoseAllCreatureTypes { .. }
         | SE::AddCreatureTypeToMatching { .. } => g::SET_BASE_PT_FOR_FILTER,
+        // The player-scoped form is live-resolved beside them; the
+        // `EachPermanent` form keeps its static path.
+        SE::MatchingLoseAllAbilities { applies_to: crate::effect::Selector::ControlledBy { .. } } => g::SET_BASE_PT_FOR_FILTER,
         SE::SelfHasKeywordIf { .. } => g::SELF_HAS_KEYWORD_IF,
         SE::SelfHasDraftNotedKeywords => g::SELF_HAS_DRAFT_NOTED_KEYWORDS,
         SE::SelfIsCreatureIf { .. } => g::SELF_IS_CREATURE_IF,

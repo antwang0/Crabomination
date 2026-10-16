@@ -22057,6 +22057,19 @@ impl GameState {
             }
         }
 
+        // Overwhelming Splendor — the enchanted player can't activate
+        // non-mana abilities (loyalty abilities take another action).
+        if !ability_is_mana
+            && self.battlefield.iter().any(|c| {
+                c.attached_to_player == Some(p)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::EnchantedPlayerCantActivateNonManaAbilities)
+                    })
+            })
+        {
+            return Err(GameError::AbilitySuppressedByNamedCard);
+        }
+
         // Karn, the Great Creator — activated abilities (mana abilities
         // included) of artifacts controlled by an opponent of Karn's
         // controller can't be activated.
