@@ -173,6 +173,9 @@ the handoff.
   nothing before).
 - **FIXED:** `SharesCreatureTypeWithTargetSlot` read only battlefield permanents, so two graveyard
   targets never shared a type (Raise the Draugr; `raise_the_draugr_returns_two_sharing_a_type`).
+- **CLAIMED (`014Q2Gfw`, 2026-10-16 night) — next batch, don't duplicate:** Mondo Gecko's trio (Mondo Gecko,
+  Puca's Eye, Scrapbasket), Renari's dragons (Blue Dragon, Juvenile Mist Dragon, Oceanus Dragon, Dragonlord's
+  Prerogative), Doctor Spectrum's four (Doctor Spectrum, Bucky Barnes Eager Ally, Hyperion, Wondrous Revival).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
