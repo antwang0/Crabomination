@@ -84187,3 +84187,113 @@ pub const RAPHAEL_5_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const AERID_KONSTRARI_COMMANDERS: &[CardFactory] = &[aerid_konstrari];
+
+/// **Aerid Konstrari**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Mountains = 99.
+/// Aerid Konstrari (EDHREC, fetched 2026-10-16).
+pub const AERID_KONSTRARI_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_selves, cursed_mirror, fellwar_stone, gruul_signet,
+    helm_of_the_host, herd_heirloom, idol_of_oblivion, improvised_arsenal, sol_ring,
+    swiftfoot_boots, talisman_of_impulse, the_reaver_cleaver, unwinding_clock, cinder_glade,
+    command_tower, commercial_district, darksteel_citadel, fire_lit_thicket, game_trail,
+    great_furnace, karplusan_forest, kessig_wolf_run, rockfall_vale, rootbound_crag,
+    slagwoods_bridge, spire_garden, stomping_ground, thornspire_verge, tree_of_tales,
+    wooded_foothills, agatha_of_the_vile_cauldron, birds_of_paradise, craterclaw_colossus,
+    depthshaker_titan, disciple_of_freyalise, displaced_dinosaurs, goblin_anarchomancer,
+    heartwood_crafter, hellkite_tyrant, hungering_puppetbeast, ingenious_artillerist,
+    jaxis_the_troublemaker, jiang_yanggu_never_alone, orthion_hero_of_lavabrink,
+    reckless_fireweaver, roxanne_starfall_savant, sarinth_greatwurm, sarinth_steelseeker,
+    stridehangar_automaton, svella_ice_shaper, tempestra_dame_of_games, tenured_tethermage,
+    tireless_provisioner, weftstalker_ardent, woodwork_prodigy, doubling_season,
+    garruks_uprising, greater_good, parallel_lives, rhythm_of_the_wild, beast_within, big_score,
+    chaos_warp, deflecting_swat, heroic_intervention, return_of_the_wildspeaker, second_harvest,
+    unexpected_windfall, untimely_malfunction, blasphemous_act, devastating_onslaught,
+    electroduplicate, for_the_common_good, molten_duplication, natures_lore, rishkars_expertise,
+    three_visits, twinflame, vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const LINVALA_3_COMMANDERS: &[CardFactory] = &[linvala_shield_of_sea_gate];
+
+/// **Linvala, Shield of Sea Gate**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 9 Islands + 13 Plains = 99.
+/// Linvala, Shield of Sea Gate (EDHREC, fetched 2026-10-16).
+pub const LINVALA_3_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, mind_stone, multiclass_baldric, sol_ring,
+    talisman_of_progress, thought_vessel, adarkar_wastes, azorius_chancery, command_tower,
+    deserted_beach, glacial_fortress, hallowed_fountain, irrigated_farmland, nimbus_maze,
+    port_town, prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse,
+    temple_of_enlightenment, angel_of_indemnity, archpriest_of_iona, aven_interrupter,
+    aven_mindcensor, bishop_of_rebirth, emeria_captain, empyrean_eagle, errant_and_giada,
+    faerie_mastermind, ghostly_pilferer, giada_font_of_hope, glasspool_mimic, harper_recruiter,
+    irregular_cohort, jubilant_skybonder, kangee_sky_warden, lyra_archangel_of_dawn,
+    mirror_entity, nimble_trapfinder, remorseful_cleric, righteous_valkyrie,
+    seasoned_dungeoneer, selfless_spirit, sephara_skys_blade, siren_stormtamer, squad_commander,
+    sun_titan, thieving_skydiver, thraben_watcher, unsettled_mariner, warden_of_evos_isle,
+    watcher_of_the_spheres, angelic_renewal, court_of_ardenvale, favorable_winds,
+    gift_of_immortality, journey_to_oblivion, reconnaissance_mission, an_offer_you_cant_refuse,
+    arcane_denial, concerted_defense, counterspell, dovins_veto, generous_gift, negate,
+    path_to_exile, spoils_of_adventure, swords_to_plowshares, austere_command, cleansing_nova,
+    sevinnes_reclamation, supreme_verdict, vanquish_the_horde, winged_words, wrath_of_god,
+    // Basics
+    island, island, island, island, island, island, island, island, island, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const YUAN_SHAO_COMMANDERS: &[CardFactory] = &[yuan_shao_the_indecisive];
+
+/// **Yuan Shao, the Indecisive**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Yuan Shao, the Indecisive (EDHREC, fetched 2026-10-16).
+pub const YUAN_SHAO_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, cursed_mirror, hazorets_monument, heraldic_banner,
+    inquisitorial_rosette, lightning_greaves, mask_of_memory, mind_stone, ruby_medallion,
+    sol_ring, swiftfoot_boots, sword_of_the_animist, the_fire_crystal, the_reaver_cleaver,
+    arena_of_glory, castle_embereth, myriad_landscape, nykthos_shrine_to_nyx,
+    valakut_the_molten_pinnacle, war_room, anger, avalanche_of_sector_7, combat_celebrant,
+    etali_primal_storm, frillscare_mentor, frontier_warmonger, generous_plunderer,
+    gnoll_war_band, goldhound, grenzo_havoc_raiser, gut_true_soul_zealot, horde_of_boggarts,
+    j_jonah_jameson, kari_zev_skyship_raider, komainu_battle_armor, lightning_security_sergeant,
+    pain_distributor, port_razer, professional_face_breaker, pyreheart_wolf,
+    ragavan_nimble_pilferer, rampaging_ferocidon, raphael_tag_team_tough, ruin_grinder,
+    star_athlete, torbran_thane_of_red_fell, vincent_vengeful_atoner, aggravated_assault,
+    berserkers_onslaught, city_on_fire, curse_of_opulence, fiery_emancipation, goblin_war_drums,
+    sticky_fingers, abrade, big_score, chaos_warp, deflecting_swat, lightning_bolt,
+    seething_song, untimely_malfunction, blasphemous_act, disrupt_decorum, faithless_looting,
+    jeskas_will, mana_geyser, relentless_assault, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const ELROND_3_COMMANDERS: &[CardFactory] = &[elrond_lord_of_rivendell];
+
+/// **Elrond, Lord of Rivendell**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Elrond, Lord of Rivendell (EDHREC, fetched 2026-10-16).
+pub const ELROND_3_MAIN: &[CardFactory] = &[
+    arcane_signet, kefnets_monument, mind_stone, panharmonicon, planetarium_of_wan_shi_tong,
+    sapphire_medallion, sky_diamond, sol_ring, the_temporal_anchor, thought_vessel,
+    castle_vantress, lonely_sandbar, mystic_sanctuary, reliquary_tower, rivendell,
+    the_grey_havens, aether_adept, aether_channeler, archaeomancer, cloud_of_faeries,
+    displacer_kitten, diviner_of_victory, eligeth_crossroads_augur, elvish_mariner,
+    faerie_mastermind, faerie_seer, gandalf_friend_of_the_shire, grey_havens_navigator,
+    matoya_archon_elder, meneldor_swift_savior, mischievous_mystic, mulldrifter,
+    murmuring_mystic, nimrodel_watcher, peregrine_drake, proft_consulting_detective,
+    rangers_of_ithilien, shrieking_drake, solemn_simulacrum, talrand_sky_summoner,
+    venser_shaper_savant, whirler_rogue, aqueous_form, gossips_talent, lost_isle_calling,
+    propaganda, wizard_class, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    councils_deliberation, counterspell, ghostly_flicker, glorious_gale, high_tide, negate, opt,
+    pongify, rapid_hybridization, reality_shift, resculpt, soothing_of_smeagol, arwens_gift,
+    birthday_escape, horses_of_the_bruinen, ponder, preordain, serum_visions,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];

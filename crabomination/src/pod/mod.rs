@@ -18468,6 +18468,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAPHAEL_5_COMMANDERS,
             main: decks::RAPHAEL_5_MAIN,
         },
+        // Seat 3003: Aerid Konstrari's EDHREC average deck. `--pod-decks 3003`.
+        PodDeck {
+            name: "Aerid Konstrari (RG)",
+            commanders: decks::AERID_KONSTRARI_COMMANDERS,
+            main: decks::AERID_KONSTRARI_MAIN,
+        },
+        // Seat 3004: Linvala, Shield of Sea Gate's EDHREC average deck. `--pod-decks 3004`.
+        PodDeck {
+            name: "Linvala, Shield of Sea Gate (WU)",
+            commanders: decks::LINVALA_3_COMMANDERS,
+            main: decks::LINVALA_3_MAIN,
+        },
+        // Seat 3005: Yuan Shao, the Indecisive's EDHREC average deck. `--pod-decks 3005`.
+        PodDeck {
+            name: "Yuan Shao, the Indecisive (R)",
+            commanders: decks::YUAN_SHAO_COMMANDERS,
+            main: decks::YUAN_SHAO_MAIN,
+        },
+        // Seat 3006: Elrond, Lord of Rivendell's EDHREC average deck. `--pod-decks 3006`.
+        PodDeck {
+            name: "Elrond, Lord of Rivendell (U)",
+            commanders: decks::ELROND_3_COMMANDERS,
+            main: decks::ELROND_3_MAIN,
+        },
     ]
 }
 
@@ -23354,6 +23378,10 @@ mod tests {
             ("Wonder Man, Hollywood Hero", &[0x15CE]),
             ("Raphael, Tough Turtle", &[0x15CF]),
             ("Raphael, the Nightwatcher", &[0x15D0]),
+            ("Aerid Konstrari", &[0x15D1]),
+            ("Linvala, Shield of Sea Gate", &[0x15D2]),
+            ("Yuan Shao, the Indecisive", &[0x15D3]),
+            ("Elrond, Lord of Rivendell", &[0x15D4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
