@@ -18978,6 +18978,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAKASHIMA_THE_IMPOSTOR_COMMANDERS,
             main: decks::SAKASHIMA_THE_IMPOSTOR_MAIN,
         },
+        // Seat 3088: Rory Williams's EDHREC average deck. `--pod-decks 3088`.
+        PodDeck {
+            name: "Rory Williams (WU)",
+            commanders: decks::RORY_WILLIAMS_COMMANDERS,
+            main: decks::RORY_WILLIAMS_MAIN,
+        },
     ]
 }
 
@@ -23949,6 +23955,7 @@ mod tests {
             ("The Third Doctor and Romana II", &[0x1623]),
             ("Volo, Itinerant Scholar and Shameless Charlatan", &[0x1624]),
             ("Sakashima the Impostor", &[0x1625]),
+            ("Rory Williams", &[0x1626]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

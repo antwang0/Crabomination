@@ -86579,3 +86579,33 @@ pub const SAKASHIMA_THE_IMPOSTOR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const RORY_WILLIAMS_COMMANDERS: &[CardFactory] = &[rory_williams];
+
+/// **Rory Williams**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 5 Islands + 10 Plains = 99.
+/// Rory Williams (EDHREC, fetched 2026-10-16).
+pub const RORY_WILLIAMS_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, leyline_axe, marina_vendrells_grimoire,
+    masterwork_of_ingenuity, nettlecyst, pearl_medallion, planar_atlas, sol_ring,
+    talisman_of_progress, thran_power_suit, wayfarers_bauble, adarkar_wastes, arcane_lighthouse,
+    command_tower, deserted_beach, floodfarm_verge, fortified_beachhead, glacial_fortress,
+    hall_of_heliods_generosity, hallowed_fountain, irrigated_farmland, myriad_landscape,
+    port_town, prairie_stream, sea_of_clouds, seat_of_the_synod, skycloud_expanse,
+    terramorphic_expanse, angel_of_indemnity, archivist_of_oghma, argivian_phalanx,
+    azorius_arrester, cat_collector, court_street_denizen, daru_warchief, daxos_of_meletis,
+    dennick_pious_apprentice, elite_inquisitor, esquire_of_the_king, essence_channeler,
+    field_marshal, haazda_marshal, hanweir_militia_captain, heliods_pilgrim,
+    keeper_of_the_accord, loyal_sentry, nykthos_paragon, precinct_captain, radiant_solar,
+    savior_of_ollenbock, souls_attendant, sunhome_stalwart, thalia_heretic_cathar,
+    valkyrie_harbinger, warden_of_the_inner_sky, will_scion_of_peace, yotian_tactician,
+    day_of_destiny, eldrazi_conscription, four_knocks, griffin_aerie, light_of_promise,
+    mantle_of_the_ancients, sigardas_splendor, with_great_power, an_offer_you_cant_refuse,
+    arcane_denial, brain_freeze, clockspinning, dovins_veto, everybody_lives, frantic_search,
+    get_lost, negate, razorgrass_ambush, swords_to_plowshares, thirst_for_discovery,
+    austere_command, open_the_armory, open_the_vaults, resurgent_belief, space_time_anomaly,
+    split_up,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
