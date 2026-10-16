@@ -2806,3 +2806,96 @@ pub fn wildest_dreams() -> CardDefinition {
         )
     }
 }
+
+// ── Thranduil, Sindarin Liege ───────────────────────────────────────────────
+
+fn elf() -> R {
+    R::HasCreatureType(CreatureType::Elf)
+}
+
+/// Elvenking's Halls — land, enters tapped. {T}: {G} or {U}. {2}{G}{U}, {T},
+/// sacrifice it: two +1/+1 counters on target Elf you control — sorcery speed.
+pub fn elvenkings_halls() -> CardDefinition {
+    let mut d = crate::sets::dual_land_untyped("Elvenking's Halls", Color::Green, Color::Blue, vec![]);
+    d.static_abilities.push(crate::sets::enters_tapped());
+    d.activated_abilities.push(ActivatedAbility {
+        tap_cost: true,
+        sac_cost: true,
+        sorcery_speed: true,
+        mana_cost: cost(&[generic(2), g(), u()]),
+        effect: Effect::AddCounter {
+            what: target_filtered(R::Creature.and(elf()).and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    });
+    d
+}
+
+/// Mirkwood Nurturer — {2}{G/U} 3/2 Elf Ranger. Enters: return up to one other
+/// target permanent you control to its owner's hand; if you do, a +1/+1
+/// counter on it.
+pub fn mirkwood_nurturer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource)),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::LastMoved),
+                    then: Box::new(counters(Selector::This, Value::ONE)),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
+        ..creature("Mirkwood Nurturer", cost(&[generic(2), hybrid(Color::Green, Color::Blue)]), vec![CreatureType::Elf, CreatureType::Ranger], 3, 2)
+    }
+}
+
+/// Silvan Reveler — {2}{G}{U} 3/2 Elf Citizen. Enters: draw, then discard; a
+/// discarded land goes onto the battlefield tapped. Landfall — if this card is
+/// in your graveyard, you may pay {1}{G}{U} to return it to your hand.
+pub fn silvan_reveler() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Move {
+                    what: Selector::DiscardedThisResolution { filter: R::Land },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::FromYourGraveyard)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ControlledByYou }),
+                effect: Effect::MayPay {
+                    description: "Pay {1}{G}{U} to return Silvan Reveler to your hand?".into(),
+                    mana_cost: cost(&[generic(1), g(), u()]),
+                    body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+                    else_: None,
+                },
+            },
+        ],
+        ..creature("Silvan Reveler", cost(&[generic(2), g(), u()]), vec![CreatureType::Elf, CreatureType::Citizen], 3, 2)
+    }
+}
+
+/// Thranduil's Decree — {4}{U}{U} instant. Counter target spell; a permanent
+/// spell countered this way is exiled instead, and you may cast it without
+/// paying its mana cost for as long as it remains exiled.
+pub fn thranduils_decree() -> CardDefinition {
+    spell(
+        "Thranduil's Decree",
+        cost(&[generic(4), u(), u()]),
+        true,
+        Effect::CounterSpellToZone {
+            what: target_filtered(R::IsSpellOnStack),
+            zone: crate::effect::CounteredSpellZone::ExileCountererMayCastFreeIfMatching(Box::new(R::PermanentCard)),
+        },
+    )
+}

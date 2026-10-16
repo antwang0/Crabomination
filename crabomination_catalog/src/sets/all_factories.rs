@@ -16460,6 +16460,10 @@ static DECKS: &[Factory] = &[
     super::decks::rosheen_roaring_prophet,
     super::decks::reap_the_past,
     super::decks::wildest_dreams,
+    super::decks::elvenkings_halls,
+    super::decks::mirkwood_nurturer,
+    super::decks::silvan_reveler,
+    super::decks::thranduils_decree,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,

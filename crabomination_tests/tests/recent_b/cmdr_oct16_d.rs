@@ -1336,3 +1336,84 @@ fn reap_the_past_returns_x_random() {
     assert_eq!(g.players[0].graveyard.len(), 2);
     assert!(g.exile.iter().any(|c| c.id == r));
 }
+
+/// Elvenking's Halls taps for {G} or {U} and, sacrificed at sorcery speed,
+/// puts two +1/+1 counters on an Elf.
+#[test]
+fn elvenkings_halls_feeds_an_elf() {
+    let mut g = pod(2);
+    let h = g.add_card_to_battlefield(0, catalog::elvenkings_halls());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let last = catalog::elvenkings_halls().activated_abilities.len() - 1;
+    g.perform_action(GameAction::ActivateAbility { card_id: h, ability_index: last, target: Some(Target::Permanent(elf)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("sac for counters");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(h).is_none());
+    assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Mirkwood Nurturer bounces another permanent of yours and takes a counter.
+#[test]
+fn mirkwood_nurturer_bounces_for_a_counter() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let m = g.add_card_to_hand(0, catalog::mirkwood_nurturer());
+    cast(&mut g, m, Some(Target::Permanent(ring)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring));
+    assert_eq!(g.battlefield_find(m).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Silvan Reveler: a discarded land enters tapped; from the graveyard, a land
+/// drop lets you buy it back.
+#[test]
+fn silvan_reveler_cheats_a_land_and_comes_back() {
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let r = g.add_card_to_hand(0, catalog::silvan_reveler());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![forest])]));
+    cast(&mut g, r, None);
+    let f = g.battlefield_find(forest).expect("the discarded Forest is on the battlefield");
+    assert!(f.tapped);
+    let destroy = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let evs = g.resolve_effect(&destroy, &crabomination::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(r)), 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == r));
+    let island = g.add_card_to_hand(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::PlayLand(island)).expect("land drop");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == r), "bought back");
+}
+
+/// Thranduil's Decree exiles a countered permanent spell, castable for free;
+/// an instant goes to the graveyard.
+#[test]
+fn thranduils_decree_steals_a_permanent_spell() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("Bears");
+    g.priority.player_with_priority = 0;
+    let d = g.add_card_to_hand(0, catalog::thranduils_decree());
+    cast(&mut g, d, Some(Target::Permanent(bears)));
+    let c = g.exile.iter().find(|c| c.id == bears).expect("exiled");
+    assert_eq!(c.may_play_until.as_ref().map(|p| p.player), Some(0));
+
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("Bolt");
+    g.priority.player_with_priority = 0;
+    let d2 = g.add_card_to_hand(0, catalog::thranduils_decree());
+    cast(&mut g, d2, Some(Target::Permanent(bolt)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "an instant is countered to the graveyard");
+    assert_eq!(g.players[0].life, 20);
+}
