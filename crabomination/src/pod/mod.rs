@@ -18456,6 +18456,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WONDER_MAN_COMMANDERS,
             main: decks::WONDER_MAN_MAIN,
         },
+        // Seat 3001: Raphael, Tough Turtle's EDHREC average deck. `--pod-decks 3001`.
+        PodDeck {
+            name: "Raphael, Tough Turtle (R)",
+            commanders: decks::RAPHAEL_4_COMMANDERS,
+            main: decks::RAPHAEL_4_MAIN,
+        },
+        // Seat 3002: Raphael, the Nightwatcher's EDHREC average deck. `--pod-decks 3002`.
+        PodDeck {
+            name: "Raphael, the Nightwatcher (R)",
+            commanders: decks::RAPHAEL_5_COMMANDERS,
+            main: decks::RAPHAEL_5_MAIN,
+        },
     ]
 }
 
@@ -23340,6 +23352,8 @@ mod tests {
             ("Anep, Vizier of Hazoret", &[0x15CC]),
             ("Grim Reaper, Lethal Legionnaire", &[0x15CD]),
             ("Wonder Man, Hollywood Hero", &[0x15CE]),
+            ("Raphael, Tough Turtle", &[0x15CF]),
+            ("Raphael, the Nightwatcher", &[0x15D0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

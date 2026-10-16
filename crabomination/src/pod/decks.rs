@@ -84130,3 +84130,60 @@ pub const WONDER_MAN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const RAPHAEL_4_COMMANDERS: &[CardFactory] = &[raphael_tough_turtle];
+
+/// **Raphael, Tough Turtle**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Raphael, Tough Turtle (EDHREC, fetched 2026-10-16).
+pub const RAPHAEL_4_MAIN: &[CardFactory] = &[
+    arcane_signet, hawkeyes_bow, mind_stone, mouser_foundry, panharmonicon, ruby_medallion,
+    skullclamp, sol_ring, the_fire_crystal, dwarven_mine, forgotten_cave, kher_keep,
+    myriad_landscape, valakut_the_molten_pinnacle, agate_instigator, beetleback_chief,
+    elder_auntie, firebrand_archer, general_kreat_the_boltbringer, goblin_instigator,
+    goblin_matron, howlsquad_heavy, impulsive_pilferer, krenko_mob_boss,
+    krenko_tin_street_kingpin, legion_warboss, loyal_apprentice, mogg_war_marshal,
+    molten_gatekeeper, mysidian_elder, purphoros_god_of_the_forge, raphael_most_attitude,
+    raphael_the_nightwatcher, sabotender, searslicer_goblin, shock_brigade,
+    siege_gang_lieutenant, slash_reptile_rampager, solemn_simulacrum, torbran_thane_of_red_fell,
+    weftstalker_ardent, wingnut_bat_on_the_belfry, witty_roastmaster, city_on_fire,
+    goblin_bombardment, impact_tremors, raid_bombardment, warstorm_surge, abrade, big_score,
+    chaos_warp, demand_answers, goblin_surprise, lightning_bolt, mouser_attack, shock,
+    thrill_of_possibility, unexpected_windfall, blasphemous_act, dragon_fodder,
+    empty_the_warrens, faithless_looting, glimpse_the_impossible, grab_the_prize,
+    hordeling_outburst, krenkos_command, mana_geyser, rals_reinforcements, song_of_totentanz,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const RAPHAEL_5_COMMANDERS: &[CardFactory] = &[raphael_the_nightwatcher];
+
+/// **Raphael, the Nightwatcher**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Raphael, the Nightwatcher (EDHREC, fetched 2026-10-16).
+pub const RAPHAEL_5_MAIN: &[CardFactory] = &[
+    arcane_signet, hard_won_jitte, heraldic_banner, improvised_arsenal, lightning_greaves,
+    mind_stone, rogues_gloves, ruby_medallion, skateboard, sol_ring, swiftfoot_boots,
+    sword_of_the_animist, the_fire_crystal, the_reaver_cleaver, arena_of_glory, castle_embereth,
+    nykthos_shrine_to_nyx, rogues_passage, turtle_lair, valakut_the_molten_pinnacle, war_room,
+    anger, balefire_dragon, casey_jones_back_alley_brute, casey_jones_jury_rig_justiciar,
+    combat_celebrant, desert_were_worm, falkenrath_marauders, goldlust_triad,
+    grenzo_havoc_raiser, inti_seneschal_of_the_sun, karlach_fury_of_avernus,
+    laelia_the_blade_reforged, lightning_security_sergeant, photon_mighty_marvel, port_razer,
+    professional_face_breaker, ragavan_nimble_pilferer, raphael_most_attitude,
+    raphael_ninja_destroyer, raphael_tag_team_tough, raphael_tough_turtle, raphael_the_muscle,
+    slash_reptile_rampager, stromkirk_noble, sunset_strikemaster, twinflame_tyrant,
+    urabrask_the_hidden, vincent_vengeful_atoner, wingnut_bat_on_the_belfry, bedlam,
+    cool_but_rude, fervor, raphs_bravado, sticky_fingers, abrade, big_score, chaos_warp,
+    great_train_heist, lightning_bolt, raphaels_technique, thrill_of_possibility,
+    unexpected_windfall, untimely_malfunction, blasphemous_act, faithless_looting, fast_forward,
+    jeskas_will, mana_geyser, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
