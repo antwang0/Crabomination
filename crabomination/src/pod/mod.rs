@@ -18180,6 +18180,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANT_MAN_3_COMMANDERS,
             main: decks::ANT_MAN_3_MAIN,
         },
+        // Seat 2955: Venom, Deadly Devourer's EDHREC average deck. `--pod-decks 2955`.
+        PodDeck {
+            name: "Venom, Deadly Devourer (BG)",
+            commanders: decks::VENOM_COMMANDERS,
+            main: decks::VENOM_MAIN,
+        },
+        // Seat 2956: Wraith, Vicious Vigilante's EDHREC average deck. `--pod-decks 2956`.
+        PodDeck {
+            name: "Wraith, Vicious Vigilante (WU)",
+            commanders: decks::WRAITH_COMMANDERS,
+            main: decks::WRAITH_MAIN,
+        },
+        // Seat 2957: SP//dr, Piloted by Peni's EDHREC average deck. `--pod-decks 2957`.
+        PodDeck {
+            name: "SP//dr, Piloted by Peni (WU)",
+            commanders: decks::SP_DR_COMMANDERS,
+            main: decks::SP_DR_MAIN,
+        },
+        // Seat 2958: Symbiote Spider-Man's EDHREC average deck. `--pod-decks 2958`.
+        PodDeck {
+            name: "Symbiote Spider-Man (UB)",
+            commanders: decks::SYMBIOTE_SPIDER_MAN_COMMANDERS,
+            main: decks::SYMBIOTE_SPIDER_MAN_MAIN,
+        },
+        // Seat 2959: Nadaar, Selfless Paladin's EDHREC average deck. `--pod-decks 2959`.
+        PodDeck {
+            name: "Nadaar, Selfless Paladin (W)",
+            commanders: decks::NADAAR_COMMANDERS,
+            main: decks::NADAAR_MAIN,
+        },
+        // Seat 2960: Sun-Spider, Nimble Webber's EDHREC average deck. `--pod-decks 2960`.
+        PodDeck {
+            name: "Sun-Spider, Nimble Webber (WU)",
+            commanders: decks::SUN_SPIDER_COMMANDERS,
+            main: decks::SUN_SPIDER_MAIN,
+        },
+        // Seat 2961: Spider-Woman, Stunning Savior's EDHREC average deck. `--pod-decks 2961`.
+        PodDeck {
+            name: "Spider-Woman, Stunning Savior (WU)",
+            commanders: decks::SPIDER_WOMAN_COMMANDERS,
+            main: decks::SPIDER_WOMAN_MAIN,
+        },
+        // Seat 2962: Invisible Woman, Sue Storm's EDHREC average deck. `--pod-decks 2962`.
+        PodDeck {
+            name: "Invisible Woman, Sue Storm (W)",
+            commanders: decks::INVISIBLE_WOMAN_2_COMMANDERS,
+            main: decks::INVISIBLE_WOMAN_2_MAIN,
+        },
+        // Seat 2963: War Machine, Legacy of Iron's EDHREC average deck. `--pod-decks 2963`.
+        PodDeck {
+            name: "War Machine, Legacy of Iron (WR)",
+            commanders: decks::WAR_MACHINE_2_COMMANDERS,
+            main: decks::WAR_MACHINE_2_MAIN,
+        },
+        // Seat 2964: Abomination, Irradiated Brute's EDHREC average deck. `--pod-decks 2964`.
+        PodDeck {
+            name: "Abomination, Irradiated Brute (G)",
+            commanders: decks::ABOMINATION_COMMANDERS,
+            main: decks::ABOMINATION_MAIN,
+        },
+        // Seat 2965: Matt Murdock, Justice Seeker's EDHREC average deck. `--pod-decks 2965`.
+        PodDeck {
+            name: "Matt Murdock, Justice Seeker (W)",
+            commanders: decks::MATT_MURDOCK_COMMANDERS,
+            main: decks::MATT_MURDOCK_MAIN,
+        },
+        // Seat 2966: Speed, Young Avenger's EDHREC average deck. `--pod-decks 2966`.
+        PodDeck {
+            name: "Speed, Young Avenger (R)",
+            commanders: decks::SPEED_COMMANDERS,
+            main: decks::SPEED_MAIN,
+        },
+        // Seat 2967: Rhino, Terrible Trampler's EDHREC average deck. `--pod-decks 2967`.
+        PodDeck {
+            name: "Rhino, Terrible Trampler (G)",
+            commanders: decks::RHINO_COMMANDERS,
+            main: decks::RHINO_MAIN,
+        },
+        // Seat 2968: The Wasp, Janet Van Dyne's EDHREC average deck. `--pod-decks 2968`.
+        PodDeck {
+            name: "The Wasp, Janet Van Dyne (W)",
+            commanders: decks::THE_WASP_COMMANDERS,
+            main: decks::THE_WASP_MAIN,
+        },
+        // Seat 2969: Patriot, Shield Wielder's EDHREC average deck. `--pod-decks 2969`.
+        PodDeck {
+            name: "Patriot, Shield Wielder (W)",
+            commanders: decks::PATRIOT_2_COMMANDERS,
+            main: decks::PATRIOT_2_MAIN,
+        },
     ]
 }
 
@@ -23018,6 +23108,21 @@ mod tests {
             ("Black Widow, Natasha Romanoff", &[0x159E]),
             ("Fin Fang Foom", &[0x159F]),
             ("Ant-Man, Elusive Avenger", &[0x15A0]),
+            ("Venom, Deadly Devourer", &[0x15A1]),
+            ("Wraith, Vicious Vigilante", &[0x15A2]),
+            ("SP//dr, Piloted by Peni", &[0x15A3]),
+            ("Symbiote Spider-Man", &[0x15A4]),
+            ("Nadaar, Selfless Paladin", &[0x15A5]),
+            ("Sun-Spider, Nimble Webber", &[0x15A6]),
+            ("Spider-Woman, Stunning Savior", &[0x15A7]),
+            ("Invisible Woman, Sue Storm", &[0x15A8]),
+            ("War Machine, Legacy of Iron", &[0x15A9]),
+            ("Abomination, Irradiated Brute", &[0x15AA]),
+            ("Matt Murdock, Justice Seeker", &[0x15AB]),
+            ("Speed, Young Avenger", &[0x15AC]),
+            ("Rhino, Terrible Trampler", &[0x15AD]),
+            ("The Wasp, Janet Van Dyne", &[0x15AE]),
+            ("Patriot, Shield Wielder", &[0x15AF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
