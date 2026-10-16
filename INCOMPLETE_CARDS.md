@@ -2215,4 +2215,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Unholy Indenture | the +1/+1 counter is put on just after the card returns, so its enters triggers don't see it | `Move` + `AddCounter { LastMoved }` |
 | 🟡 Raven Clan War-Axe | "you may search your library and/or graveyard" takes Eivor from the graveyard when one is there, else searches the library; the search can't be declined | `If(CardsInZone gy) Move else Search` |
 | 🟡 Master Skald | the exiled creature card is picked automatically (first in the graveyard), not chosen | `MayDo { Move(take 1) + Move(target) }` |
-| 🟡 Lens of Clarity | its only text — look at your top card and at face-down creatures you don't control any time — is hidden information the engine never hides from its own seats, so the card has no modelled ability | a plain artifact (cf. The Lunar Whale's omitted look-at-top) |
+| 🟡 Lens of Clarity | the look-at-top half is `MayLookAtOwnLibraryTop`; looking at face-down creatures you don't control isn't surfaced to the seat's view | — |

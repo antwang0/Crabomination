@@ -2505,12 +2505,17 @@ pub fn pennon_blade() -> CardDefinition {
 }
 
 /// Lens of Clarity — {1} artifact. You may look at your top card and at
-/// face-down creatures you don't control any time (hidden information only).
+/// face-down creatures you don't control any time (hidden information only;
+/// the face-down half isn't surfaced).
 pub fn lens_of_clarity() -> CardDefinition {
     CardDefinition {
         name: "Lens of Clarity",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You may look at the top card of your library and at face-down creatures you don't control any time.",
+            effect: StaticEffect::MayLookAtOwnLibraryTop,
+        }],
         ..Default::default()
     }
 }
