@@ -16286,6 +16286,8 @@ static DECKS: &[Factory] = &[
     super::decks::auditore_ambush,
     super::decks::bortuk_bonerattle,
     super::decks::sailors_bane,
+    super::decks::symbiote_spider_man,
+    super::decks::jasmine_boreal_of_the_seven,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

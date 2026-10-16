@@ -8,8 +8,9 @@ use crate::card::{
 };
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, LookPick, PlayerRef, Selector, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, u, w};
+use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::mana::SpendRestriction;
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, u, w};
 use std::sync::Arc;
 
 fn saga(name: &'static str, mana: ManaCost, chapters: Vec<(u32, Effect)>) -> CardDefinition {
@@ -203,6 +204,89 @@ pub fn sailors_bane() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This spell costs {1} less to cast for each card you own in exile and in your graveyard that's an instant card, a sorcery card, or a card that has an Adventure.",
             effect: StaticEffect::SelfCostReducedByValue { amount: Value::Sum(vec![count(Zone::Exile), count(Zone::Graveyard)]) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Superior Spider-Man ─────────────────────────────────────────────────────
+
+/// Symbiote Spider-Man — {2}{U/B} legendary 2/4. Combat damage to a player:
+/// look at that many cards, one into your hand, the rest into your graveyard.
+/// Find New Host — {2}{U/B}, exile it from your graveyard: a +1/+1 counter on
+/// target creature you control, which gains that combat-damage ability.
+pub fn symbiote_spider_man() -> CardDefinition {
+    let dig = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::LookPickToHand(Box::new(LookPick {
+            who: PlayerRef::You,
+            count: Value::TriggerEventAmount,
+            rest_to_graveyard: true,
+            ..Default::default()
+        })),
+    };
+    let ub = || hybrid(Color::Blue, Color::Black);
+    CardDefinition {
+        name: "Symbiote Spider-Man",
+        cost: cost(&[generic(2), ub()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Symbiote, CreatureType::Spider, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![dig.clone()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), ub()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: your_creature(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::GrantTriggeredAbility { what: Selector::Target(0), trigger: Box::new(dig), duration: Duration::Permanent },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Jasmine Boreal / Jasmine Boreal of the Seven ────────────────────────────
+
+/// Jasmine Boreal of the Seven — {1}{G}{W} legendary 2/4 Human Druid. {T}: add
+/// {G}{W}, spendable only on creature spells with no abilities. Creatures you
+/// control with no abilities can't be blocked by creatures with abilities.
+/// "Abilities" reads the printed card on both sides (`R::HasNoAbilities`).
+pub fn jasmine_boreal_of_the_seven() -> CardDefinition {
+    let plain = || R::HasNoAbilities;
+    let with_abilities = R::Creature.and(R::Not(Box::new(plain())));
+    CardDefinition {
+        name: "Jasmine Boreal of the Seven",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Druid], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![Color::Green, Color::White])),
+                    SpendRestriction::CreatureSpellWithNoAbilities,
+                ),
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with no abilities can't be blocked by creatures with abilities.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(plain())),
+                keyword: Keyword::CantBeBlockedBy(Box::new(with_abilities)),
+            },
         }],
         ..Default::default()
     }

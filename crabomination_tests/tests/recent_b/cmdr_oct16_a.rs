@@ -566,3 +566,70 @@ fn sailors_bane_costs_less_per_spell_in_exile_and_graveyard() {
     g.perform_action(GameAction::CastSpell { card_id: bane, target: None, additional_targets: vec![], mode: None, x_value: None })
         .expect("{2}{U}{U} after five spells");
 }
+
+/// Symbiote Spider-Man digs as deep as its combat damage; Find New Host
+/// (from the graveyard, exiling it) hands that ability to another creature.
+#[test]
+fn symbiote_spider_man_digs_then_finds_a_new_host() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let sym = ready(&mut g, 0, catalog::symbiote_spider_man());
+    attack_unblocked(&mut g, sym, 1);
+    assert_eq!((g.players[0].hand.len(), g.players[0].graveyard.len()), (1, 1), "2 damage: one kept, one binned");
+
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let host = ready(&mut g, 0, catalog::grizzly_bears());
+    let sym = g.add_card_to_graveyard(0, catalog::symbiote_spider_man());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sym,
+        ability_index: 0,
+        target: Some(Target::Permanent(host)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("find new host");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == sym));
+    assert_eq!(g.battlefield_find(host).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    attack_unblocked(&mut g, host, 1);
+    assert_eq!((g.players[0].hand.len(), g.players[0].graveyard.len()), (1, 2), "the 3/3 host dug three");
+}
+
+/// Jasmine Boreal of the Seven: its {G}{W} pays for a vanilla creature only,
+/// and a vanilla attacker can be blocked by a vanilla creature but not by
+/// one with abilities.
+#[test]
+fn jasmine_boreal_feeds_and_shields_vanilla_creatures() {
+    let mut g = pod(2);
+    let jas = ready(&mut g, 0, catalog::jasmine_boreal_of_the_seven());
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let tap = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility { card_id: jas, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("tap for GW")
+    };
+    tap(&mut g);
+    let cast = |g: &mut GameState, id| {
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(cast(&mut g, elves).is_err(), "Llanowar Elves has an ability");
+    cast(&mut g, bears).expect("Grizzly Bears has none");
+    drain_stack(&mut g);
+
+    for (blocker, legal) in [(catalog::llanowar_elves(), false), (catalog::grizzly_bears(), true)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::jasmine_boreal_of_the_seven());
+        let attacker = ready(&mut g, 0, catalog::grizzly_bears());
+        let blocker = ready(&mut g, 1, blocker);
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])).expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let r = g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]));
+        assert_eq!(r.is_ok(), legal);
+    }
+}
