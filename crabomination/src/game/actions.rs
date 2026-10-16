@@ -15861,7 +15861,9 @@ impl GameState {
             .take_for_alt_cast(p, zone, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         let from_hand = zone == AltCastZone::Hand;
-        card.cast_from_hand = from_hand;
+        // CR 601.2a — a card a hop moved into the hand to cast (graveyard,
+        // library top) was not cast from the hand, as the normal path reads it.
+        card.cast_from_hand = from_hand && self.casting_hop.is_none_or(|(id, _)| id != card_id);
         card.cast_from_exile = false;
         card.cast_from_library = from_hand && self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop));
         card.cast_from_graveyard = from_hand && self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard));
@@ -16081,8 +16083,10 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         // CR 601.2h — the colors paid, as the normal cast path stamps them:
-        // an evoked Vibrance's "if {R}{R} was spent to cast it" reads these.
+        // an evoked Vibrance's "if {R}{R} was spent to cast it" reads these,
+        // and converge (CR 702.144) counts them.
         card.cast_mana_spent_by_color = spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
+        let alt_converged = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
         let mut auto_events = receipt.auto_events;
 
         if alt.once_per_turn_grant {
@@ -16258,6 +16262,9 @@ impl GameState {
             &spell_kind,
             &mut card,
         );
+        // A command-zone (or hop) alternative cast is not a cast from the
+        // hand (`spells_cast_from_hand_this_turn`).
+        let cast_from_hand = card.cast_from_hand;
         self.finalize_cast(
             p,
             card,
@@ -16265,9 +16272,9 @@ impl GameState {
             additional_targets,
             mode,
             x_value.unwrap_or(0),
-            0,
+            alt_converged,
             alt_mana_spent,
-            true,
+            cast_from_hand,
         );
         self.push_commander_mana_scry(p, &spell_kind, provenance_scry);
         Ok(events)

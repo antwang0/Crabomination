@@ -3852,6 +3852,34 @@ fn arahbo_eminence_pumps_a_cat_from_the_command_zone() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "a 2/2 Cat gets +3/+3");
 }
 
+/// CR 601.2a / 702.144 — a commander dashed out of the command zone was not
+/// cast from the hand (the "from anywhere other than your hand" count sees it),
+/// and the alternative-cost path stamps the colours it spent like any cast.
+#[test]
+fn cr_601_2a_command_zone_alt_cast_is_not_a_hand_cast() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![catalog::zurgo_bellstriker()])[0];
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: true,
+        pitch_card: None,
+    })
+    .expect("dash from the command zone");
+    assert_eq!(g.players[0].spells_cast_from_hand_this_turn, 0);
+    drain_stack(&mut g);
+    let z = g.battlefield_find(cmd).expect("dashed in");
+    assert_eq!(z.cast_mana_spent_by_color.iter().find(|(c, _)| *c == Color::Red).map(|(_, n)| *n), Some(2));
+}
+
 /// CR 601.2f + CR 903.8 — a commander cast for an *alternative* cost still
 /// pays the commander tax: the tax is an additional cost, and additional
 /// costs ride on whichever cost the spell is being cast for. Zurgo
