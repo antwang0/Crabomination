@@ -1821,6 +1821,9 @@ pub enum StaticEffect {
     /// (Advancing the Spirit). Read at activation; `Player::power_up_turn`
     /// says whether one was already activated this turn.
     FirstPowerUpEachYourTurnFree,
+    /// CR 702.193 — "Each power-up ability of permanents you control can be
+    /// activated an additional time" (Wonder Man, Hollywood Hero).
+    PowerUpOnceMore,
     /// CR 614.1a — "If another creature would deal combat damage to equipped
     /// creature, it deals double that damage to equipped creature instead"
     /// (Inquisitor's Flail's second line): the receiving side of

@@ -35692,6 +35692,7 @@ fn static_effect_to_effects(
             | StaticEffect::AttachedDealsDoubleCombatDamage
             | StaticEffect::SelfDealsDoubleCombatDamageToPlayers
             | StaticEffect::FirstPowerUpEachYourTurnFree
+            | StaticEffect::PowerUpOnceMore
             | StaticEffect::AttachedDealsDoubleDamage
             | StaticEffect::NewDamageHealsOldDamage
             | StaticEffect::AttachedTakesDoubleCombatDamage

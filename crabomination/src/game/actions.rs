@@ -22263,7 +22263,17 @@ impl GameState {
                 && self.player_has_static(p, |e| {
                     matches!(e, crate::effect::StaticEffect::ExhaustReusableOnYourTurn)
                 });
-            if perm.exhausted_abilities.contains(&ability_index) && !refueled {
+            let used = perm.exhausted_abilities.iter().filter(|&&i| i == ability_index).count();
+            // Wonder Man: a power-up may be activated one more time.
+            let limit = if ability.power_up
+                && used == 1
+                && self.player_has_static(p, |e| matches!(e, crate::effect::StaticEffect::PowerUpOnceMore))
+            {
+                2
+            } else {
+                1
+            };
+            if used >= limit && !refueled {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
@@ -24463,7 +24473,7 @@ impl GameState {
         if (ability.exhaust || ability.activate_once || ability.power_up)
             && !source_in_gy
             && let Some(card) = self.battlefield.find_by_id_mut(card_id)
-            && !card.exhausted_abilities.contains(&ability_index)
+            && (ability.power_up || !card.exhausted_abilities.contains(&ability_index))
         {
             card.exhausted_abilities.push(ability_index);
         }
