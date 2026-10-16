@@ -257,6 +257,8 @@ the handoff.
 - **LANDED (`014Q2Gfw`, batch 19) — seats 3023-3024** The Archimandrite, Iizuka the Ruthless: The Archimandrite,
   Ojutai Exemplars, Student of Ojutai, Upriser Renegade, War-Spike Changeling, The Shattered States Era (a red
   saga whose III transforms into Nameless Conqueror).
+- **CLAIMED (`014Q2Gfw`, batch 20) — don't duplicate:** Shagrat Loot Bearer, Uglúk of the White Hand, Swarming of
+  Moria (Shagrat). Researched, open: Rory Williams's Planar Atlas (LookPick has no "put the pick on top" option).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
