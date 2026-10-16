@@ -3,15 +3,16 @@
 //! Tests in `tests/recent_b/cmdr_oct16_d.rs`.
 
 use crate::card::{
-    ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus,
+    ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StateTriggeredAbility,
-    Subtypes, Supertype, TriggeredAbility, Value,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
+use std::sync::Arc;
 use crate::card::{StaticAbility, StaticEffect};
-use crate::effect::shortcut::{on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, u};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -366,4 +367,327 @@ pub fn soul_spike() -> CardDefinition {
             ]),
         )
     }
+}
+
+// ── Three Dog, Galaxy News DJ / Cass, Hand of Vengeance ─────────────────────
+
+fn token(name: &str, types: Vec<CreatureType>, keyword: Keyword) -> Arc<TokenDefinition> {
+    Arc::new(TokenDefinition {
+        name: name.into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        keywords: vec![keyword],
+        ..Default::default()
+    })
+}
+
+fn make(t: Arc<TokenDefinition>) -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: t }
+}
+
+fn spirit() -> Arc<TokenDefinition> {
+    token("Spirit", vec![CreatureType::Spirit], Keyword::Flying)
+}
+
+/// A white Aura: enchant `host`, the bonus on the enchanted creature.
+fn aura(name: &'static str, mana: ManaCost, host: R, cartouche: bool, bonus: EquipBonus) -> CardDefinition {
+    let mut subtypes = vec![EnchantmentSubtype::Aura];
+    if cartouche {
+        subtypes.push(EnchantmentSubtype::Cartouche);
+    }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: subtypes, ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(host) },
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+/// Cartouche of Solidarity — {W} Aura Cartouche, enchant creature you
+/// control: +1/+1 and first strike. Enters: a 1/1 white vigilance Warrior.
+pub fn cartouche_of_solidarity() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(make(token("Warrior", vec![CreatureType::Warrior], Keyword::Vigilance)))],
+        ..aura(
+            "Cartouche of Solidarity",
+            cost(&[w()]),
+            R::Creature.and(R::ControlledByYou),
+            true,
+            EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::FirstStrike], ..Default::default() },
+        )
+    }
+}
+
+/// Nurturing Presence — {1}{W} Aura. Enchanted creature has "a creature you
+/// control entering gives this +1/+1 until end of turn". Enters: a 1/1 white
+/// flying Spirit.
+pub fn nurturing_presence() -> CardDefinition {
+    let grown = TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+        effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(make(spirit()))],
+        ..aura(
+            "Nurturing Presence",
+            cost(&[generic(1), w()]),
+            R::Creature,
+            false,
+            EquipBonus { triggered_abilities: vec![grown], ..Default::default() },
+        )
+    }
+}
+
+/// Squire's Devotion — {2}{W} Aura: +1/+1 and lifelink. Enters: a 1/1 white
+/// lifelink Vampire.
+pub fn squires_devotion() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(make(token("Vampire", vec![CreatureType::Vampire], Keyword::Lifelink)))],
+        ..aura(
+            "Squire's Devotion",
+            cost(&[generic(2), w()]),
+            R::Creature,
+            false,
+            EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Lifelink], ..Default::default() },
+        )
+    }
+}
+
+/// Valor of the Worthy — {W} Aura: +1/+1. The enchanted creature leaving the
+/// battlefield makes a 1/1 white flying Spirit.
+pub fn valor_of_the_worthy() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::EnchantedBySource),
+            effect: make(spirit()),
+        }],
+        ..aura("Valor of the Worthy", cost(&[w()]), R::Creature, false, EquipBonus { power: 1, toughness: 1, ..Default::default() })
+    }
+}
+
+// ── Ohabi Caleria ───────────────────────────────────────────────────────────
+
+/// Arbalest Elite — {2}{W}{W} 2/3 Human Archer. {2}{W}, {T}: 3 damage to target
+/// attacking or blocking creature; it doesn't untap during your next untap step.
+pub fn arbalest_elite() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))), amount: Value::Const(3) },
+                Effect::SkipNextUntap { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Arbalest Elite", cost(&[generic(2), w(), w()]), vec![CreatureType::Human, CreatureType::Archer], 2, 3)
+    }
+}
+
+/// Palazzo Archers — {2}{G} 2/3 reach Human Archer. A flier attacking you or
+/// your planeswalker takes damage equal to this creature's power.
+pub fn palazzo_archers() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasKeyword(Keyword::Flying),
+            }),
+            effect: Effect::DealDamage { to: Selector::TriggerSource, amount: Value::PowerOf(Box::new(Selector::This)) },
+        }],
+        ..creature("Palazzo Archers", cost(&[generic(2), g()]), vec![CreatureType::Human, CreatureType::Archer], 2, 3)
+    }
+}
+
+/// Skyway Sniper — {G} 1/2 reach Elf Archer. {2}{G}: 1 damage to target
+/// creature with flying.
+pub fn skyway_sniper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::DealDamage { to: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Skyway Sniper", cost(&[g()]), vec![CreatureType::Elf, CreatureType::Archer], 1, 2)
+    }
+}
+
+/// Poison the Blade — {1}{G} instant. Target creature gains deathtouch until
+/// end of turn. Draw a card.
+pub fn poison_the_blade() -> CardDefinition {
+    spell(
+        "Poison the Blade",
+        cost(&[generic(1), g()]),
+        true,
+        Effect::Seq(vec![
+            Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+// ── Quicksilver, Brash Blur ─────────────────────────────────────────────────
+
+/// Mirran Banesplitter — {R} flash Equipment: +2/+0. Enters: attach to target
+/// creature you control. Equip {3}.
+pub fn mirran_banesplitter() -> CardDefinition {
+    CardDefinition {
+        name: "Mirran Banesplitter",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![etb(Effect::Attach { what: Selector::This, to: your_creature() })],
+        equipped_bonus: Some(EquipBonus { power: 2, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Intimidator Initiate — {R} 1/1 Goblin Shaman. A player casting a red spell:
+/// you may pay {1}; if you do, target creature can't block this turn.
+pub fn intimidator_initiate() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasColor(Color::Red) }),
+            effect: Effect::MayPay {
+                description: "Pay {1}: target creature can't block this turn?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: None,
+            },
+        }],
+        ..creature("Intimidator Initiate", cost(&[r()]), vec![CreatureType::Goblin, CreatureType::Shaman], 1, 1)
+    }
+}
+
+/// Ground Rift — {R} sorcery, storm. Target creature without flying can't
+/// block this turn.
+pub fn ground_rift() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Storm],
+        ..spell(
+            "Ground Rift",
+            cost(&[r()]),
+            false,
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying))))),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+// ── Arni, Renowned Champion ─────────────────────────────────────────────────
+
+/// Arni, Renowned Champion — {3}{R} legendary 1/5 trample Human Berserker.
+/// Another creature you control entering: +X/+0 until end of turn, X its power.
+pub fn arni_renowned_champion() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::OtherThanSource),
+            }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Arni, Renowned Champion", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Berserker], 1, 5)
+    }
+}
+
+/// Nova Chaser — {3}{R} 10/2 trample Elemental Warrior; champion an Elemental.
+pub fn nova_chaser() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::Champion { filter: R::HasCreatureType(CreatureType::Elemental) })],
+        ..creature("Nova Chaser", cost(&[generic(3), r()]), vec![CreatureType::Elemental, CreatureType::Warrior], 10, 2)
+    }
+}
+
+/// Rakka Mar — {2}{R}{R} legendary 2/2 haste Human Shaman. {R}, {T}: a 3/1 red
+/// haste Elemental.
+pub fn rakka_mar() -> CardDefinition {
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 3,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r()]),
+            effect: make(Arc::new(elemental)),
+            ..Default::default()
+        }],
+        ..creature("Rakka Mar", cost(&[generic(2), r(), r()]), vec![CreatureType::Human, CreatureType::Shaman], 2, 2)
+    }
+}
+
+// ── Sima Yi, Wei Field Marshal ──────────────────────────────────────────────
+
+fn swamps() -> Value {
+    Value::CountOf(Box::new(Selector::EachPermanent(R::HasLandType(LandType::Swamp).and(R::ControlledByYou))))
+}
+
+/// A `*/4` whose power is the Swamps you control (CR 604.3).
+fn swamp_power(name: &'static str, types: Vec<CreatureType>) -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature's power is equal to the number of Swamps you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: swamps(), toughness: Value::Const(4) },
+        }],
+        ..creature(name, cost(&[generic(5), b()]), types, 0, 4)
+    }
+}
+
+/// Sima Yi, Wei Field Marshal — {5}{B} legendary */4 Human Soldier.
+pub fn sima_yi_wei_field_marshal() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        ..swamp_power("Sima Yi, Wei Field Marshal", vec![CreatureType::Human, CreatureType::Soldier])
+    }
+}
+
+/// Dakmor Sorceress — {5}{B} */4 Human Wizard Sorcerer.
+pub fn dakmor_sorceress() -> CardDefinition {
+    swamp_power("Dakmor Sorceress", vec![CreatureType::Human, CreatureType::Wizard, CreatureType::Sorcerer])
+}
+
+/// Nightmare Incursion — {5}{B} sorcery. Search target player's library for up
+/// to X cards, X the Swamps you control, and exile them.
+pub fn nightmare_incursion() -> CardDefinition {
+    spell(
+        "Nightmare Incursion",
+        cost(&[generic(5), b()]),
+        false,
+        Effect::SearchUpToN { who: PlayerRef::Target(0), filter: R::Any, to: ZoneDest::Exile, count: swamps() },
+    )
 }

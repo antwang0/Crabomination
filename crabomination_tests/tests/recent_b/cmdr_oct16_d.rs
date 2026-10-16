@@ -153,3 +153,106 @@ fn ebon_stronghold_sacrifices_for_two_black() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2);
     assert!(g.battlefield_find(land).is_none());
 }
+
+fn cast(g: &mut GameState, id: CardId, target: Option<Target>) {
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 10);
+    }
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(g);
+}
+
+/// Valor of the Worthy leaves a Spirit behind when the enchanted creature
+/// leaves; Squire's Devotion's bonus is on the host, its Vampire on the board.
+#[test]
+fn valor_of_the_worthy_leaves_a_spirit() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let valor = g.add_card_to_hand(0, catalog::valor_of_the_worthy());
+    cast(&mut g, valor, Some(Target::Permanent(bears)));
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
+    let kill = crabomination::effect::Effect::Destroy {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature),
+    };
+    let evs = g.resolve_effect(&kill, &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit"));
+}
+
+/// Nurturing Presence's granted trigger pumps the host when another creature
+/// of yours enters (its own Spirit token included).
+#[test]
+fn nurturing_presence_pumps_on_each_entry() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let np = g.add_card_to_hand(0, catalog::nurturing_presence());
+    cast(&mut g, np, Some(Target::Permanent(bears)));
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast(&mut g, elf, None);
+    assert!(g.computed_permanent(bears).unwrap().power >= 3, "the elf's entry pumped it");
+}
+
+/// Palazzo Archers shoot a flier attacking their controller.
+#[test]
+fn palazzo_archers_shoot_an_attacking_flier() {
+    let mut g = pod(2);
+    let archers = ready(&mut g, 1, catalog::palazzo_archers());
+    let bird = ready(&mut g, 0, catalog::birds_of_paradise());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bird, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bird).is_none());
+    assert!(g.battlefield_find(archers).is_some());
+}
+
+/// Arbalest Elite shoots a blocker for 3 and then skips its next untap.
+#[test]
+fn arbalest_elite_shoots_and_stays_tapped() {
+    let mut g = pod(2);
+    let elite = ready(&mut g, 1, catalog::arbalest_elite());
+    let wurm = ready(&mut g, 0, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: wurm, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    g.players[1].mana_pool.add(Color::White, 3);
+    g.priority.player_with_priority = 1;
+    activate(&mut g, elite, Some(Target::Permanent(wurm))).expect("shoot");
+    assert!(g.battlefield_find(wurm).is_none(), "3 to the 3/3");
+    assert!(g.battlefield_find(elite).unwrap().skip_next_untap);
+}
+
+/// Arni gets +X/+0 from an entering creature's power.
+#[test]
+fn arni_grows_with_each_entry() {
+    let mut g = pod(2);
+    let arni = ready(&mut g, 0, catalog::arni_renowned_champion());
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    cast(&mut g, wurm, None);
+    assert_eq!(g.computed_permanent(arni).unwrap().power, 7);
+}
+
+/// Sima Yi's power counts Swamps; its toughness stays 4.
+#[test]
+fn sima_yi_counts_swamps_for_power_only() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let s = ready(&mut g, 0, catalog::sima_yi_wei_field_marshal());
+    let cp = g.computed_permanent(s).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4));
+}
+
+/// Intimidator Initiate: a red spell lets you pay {1} so a creature can't block.
+#[test]
+fn intimidator_initiate_stops_a_blocker_on_a_red_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::intimidator_initiate());
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::CantBlock));
+}
