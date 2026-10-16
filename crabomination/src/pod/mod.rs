@@ -18438,6 +18438,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HISOKA_COMMANDERS,
             main: decks::HISOKA_MAIN,
         },
+        // Seat 2998: Anep, Vizier of Hazoret's EDHREC average deck. `--pod-decks 2998`.
+        PodDeck {
+            name: "Anep, Vizier of Hazoret (R)",
+            commanders: decks::ANEP_COMMANDERS,
+            main: decks::ANEP_MAIN,
+        },
+        // Seat 2999: Grim Reaper, Lethal Legionnaire's EDHREC average deck. `--pod-decks 2999`.
+        PodDeck {
+            name: "Grim Reaper, Lethal Legionnaire (B)",
+            commanders: decks::GRIM_REAPER_COMMANDERS,
+            main: decks::GRIM_REAPER_MAIN,
+        },
+        // Seat 3000: Wonder Man, Hollywood Hero's EDHREC average deck. `--pod-decks 3000`.
+        PodDeck {
+            name: "Wonder Man, Hollywood Hero (R)",
+            commanders: decks::WONDER_MAN_COMMANDERS,
+            main: decks::WONDER_MAN_MAIN,
+        },
     ]
 }
 
@@ -23319,6 +23337,9 @@ mod tests {
             ("Alexi, Zephyr Mage", &[0x15C9]),
             ("Orim, Samite Healer", &[0x15CA]),
             ("Hisoka, Minamo Sensei", &[0x15CB]),
+            ("Anep, Vizier of Hazoret", &[0x15CC]),
+            ("Grim Reaper, Lethal Legionnaire", &[0x15CD]),
+            ("Wonder Man, Hollywood Hero", &[0x15CE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

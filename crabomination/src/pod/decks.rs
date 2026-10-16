@@ -84046,3 +84046,87 @@ pub const HISOKA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island,
 ];
+
+pub const ANEP_COMMANDERS: &[CardFactory] = &[anep_vizier_of_hazoret];
+
+/// **Anep, Vizier of Hazoret**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Anep, Vizier of Hazoret (EDHREC, fetched 2026-10-16).
+pub const ANEP_MAIN: &[CardFactory] = &[
+    accorders_shield, arcane_signet, cathars_shield, fire_diamond, haunted_cloak,
+    hazorets_monument, lightning_greaves, mind_stone, patriars_seal, ruby_medallion, short_bow,
+    sol_ring, swiftfoot_boots, sword_of_vengeance, tarrians_soulcleaver, arena_of_glory,
+    forgotten_cave, myriad_landscape, rogues_passage, spinerock_knoll, war_room,
+    ahn_crop_crasher, battlefield_scavenger, combat_celebrant, etali_primal_storm, glorybringer,
+    gornog_the_red_reaper, hexing_squelcher, inti_seneschal_of_the_sun, iraxxa_empress_of_mars,
+    kami_of_celebration, khenra_scrapper, laelia_the_blade_reforged, memory_worm,
+    naktamun_lorespinner, nalfeshnee, neheb_the_eternal, party_thrasher,
+    professional_face_breaker, sandstorm_crasher, trueheart_twins, wild_magic_sorcerer,
+    advanced_reconstruction, charred_foyer_warped_space, count_on_luck, eternal_warrior,
+    passionate_archaeologist, sticky_fingers, abrade, big_score, bolt_bend, chaos_warp,
+    delayed_blast_fireball, lightning_bolt, seething_song, siege_smash, thrill_of_possibility,
+    untimely_malfunction, wild_magic_surge, koth_fire_of_resistance, blasphemous_act,
+    faithless_looting, jeskas_will, light_up_the_stage, mana_geyser, reckless_impulse,
+    seize_the_day, vandalblast, wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const GRIM_REAPER_COMMANDERS: &[CardFactory] = &[grim_reaper_lethal_legionnaire];
+
+/// **Grim Reaper, Lethal Legionnaire**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Grim Reaper, Lethal Legionnaire (EDHREC, fetched 2026-10-16).
+pub const GRIM_REAPER_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, charcoal_diamond, jet_medallion, key_to_the_city,
+    lightning_greaves, mind_stone, power_conduit, sol_ring, swiftfoot_boots, thought_vessel,
+    tome_of_legends, wayfarers_bauble, bojuka_bog, cabal_coffers, castle_locthwain,
+    myriad_landscape, nesting_grounds, nykthos_shrine_to_nyx, takenuma_abandoned_mire,
+    urborg_tomb_of_yawgmoth, urzas_cave, volraths_stronghold, accursed_marauder, arbiter_of_woe,
+    archon_of_cruelty, armaggon_future_shark, baleful_force, baron_helmut_zemo, bloodghast,
+    burning_rune_demon, crow_of_dark_tidings, crypt_ghast, dooms_servo_guards,
+    doombot_harbinger, fain_the_broker, gray_merchant_of_asphodel, hex_parasite, massacre_wurm,
+    millikin, mire_triton, noxious_gearhulk, rune_scarred_demon, sepulchral_primordial,
+    sheoldred_whispering_one, stitchers_supplier, summon_bahamut, thrull_parasite,
+    troll_of_khazad_dum, ultimo_civilizations_end, undead_butler, vile_entomber,
+    yellowjacket_heartless_marauder, animate_dead, black_market, black_market_connections,
+    ripples_of_undeath, bitter_triumph, dark_ritual, deadly_rollick, defile, entomb,
+    fake_your_own_death, vampiric_tutor, buried_alive, demonic_tutor, dread_return,
+    feed_the_swarm, nights_whisper, reanimate, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const WONDER_MAN_COMMANDERS: &[CardFactory] = &[wonder_man_hollywood_hero];
+
+/// **Wonder Man, Hollywood Hero**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Mountains = 99.
+/// Wonder Man, Hollywood Hero (EDHREC, fetched 2026-10-16).
+pub const WONDER_MAN_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, arcane_signet, battlemages_bracers, fire_diamond, heartstone,
+    hedron_archive, illusionists_bracers, lightning_greaves, mind_stone, rings_of_brighthearth,
+    ruby_medallion, sol_ring, swiftfoot_boots, sword_of_the_animist, the_reaver_cleaver,
+    throne_of_eldraine, myriad_landscape, rogues_passage, war_room, witchs_clinic,
+    alexios_deimos_of_kosmos, automated_artificer, blazing_firesinger, burnished_hart,
+    casey_jones_back_alley_brute, clive_ifrits_dominant, daredevil_fearless_fighter,
+    electro_assaulting_battery, extremis_elite, hawkeye_trick_shot, human_torch_johnny_storm,
+    iron_fist_hero_for_hire, iron_myr, jack_of_hearts_volatile_hero, loki_laufeyson,
+    luke_cage_hero_for_hire, marvin_murderous_mimic, molly_hayes_runaway,
+    professional_face_breaker, purple_dragon_punks, quicksilver_brash_blur, quinjet_technician,
+    she_hulk_wallbreaker, solemn_simulacrum, the_vision_and_scarlet_witch, ultron_drone,
+    viv_vision_teen_synthezoid, volcanic_villain, mass_hysteria, shiny_impetus, uncivil_unrest,
+    big_score, chaos_warp, desperate_ritual, lightning_bolt, return_the_favor, seething_song,
+    tibalts_trickery, unexpected_windfall, untimely_malfunction, chandra_flamecaller,
+    chandra_torch_of_defiance, blasphemous_act, faithless_looting, jeskas_will, mana_geyser,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
