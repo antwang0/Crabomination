@@ -18354,6 +18354,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JUSTICE_COMMANDERS,
             main: decks::JUSTICE_MAIN,
         },
+        // Seat 2984: Vadrik, Astral Archmage's EDHREC average deck. `--pod-decks 2984`.
+        PodDeck {
+            name: "Vadrik, Astral Archmage (UR)",
+            commanders: decks::VADRIK_COMMANDERS,
+            main: decks::VADRIK_MAIN,
+        },
+        // Seat 2985: Spider-Man Noir's EDHREC average deck. `--pod-decks 2985`.
+        PodDeck {
+            name: "Spider-Man Noir (B)",
+            commanders: decks::SPIDER_MAN_NOIR_COMMANDERS,
+            main: decks::SPIDER_MAN_NOIR_MAIN,
+        },
     ]
 }
 
@@ -23221,6 +23233,8 @@ mod tests {
             ("Atogatog", &[0x15BB]),
             ("Black Widow, Intel Expert", &[0x15BC]),
             ("Justice, Vance Astrovik", &[0x15BD]),
+            ("Vadrik, Astral Archmage", &[0x15BE]),
+            ("Spider-Man Noir", &[0x15BF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

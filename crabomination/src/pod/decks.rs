@@ -83655,3 +83655,59 @@ pub const JUSTICE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const VADRIK_COMMANDERS: &[CardFactory] = &[vadrik_astral_archmage];
+
+/// **Vadrik, Astral Archmage**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Mountains = 99.
+/// Vadrik, Astral Archmage (EDHREC, fetched 2026-10-16).
+pub const VADRIK_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, runechanters_pike, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, the_celestus, cascade_bluffs, command_tower, exotic_orchard,
+    frostboil_snarl, izzet_boilerworks, reliquary_tower, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, temple_of_epiphany, training_center, archmage_emeritus,
+    balmor_battlemage_captain, birgi_god_of_storytelling, electro_assaulting_battery,
+    goblin_electromancer, guttersnipe, runaway_steam_kin, simian_spirit_guide,
+    storm_kiln_artist, clout_of_the_dominus, thousand_year_storm, underworld_breach,
+    ancestors_aid, big_score, blazing_crescendo, comet_storm, drown_in_dreams, electrodominance,
+    fact_or_fiction, fireminds_foresight, fists_of_flame, frantic_search, invert_invent,
+    lunar_frenzy, negate, pull_from_tomorrow, reckless_ransacking, reiterate, rewind,
+    searing_touch, seething_song, silundi_vision, snap, stroke_of_genius, sudden_breakthrough,
+    unexpected_windfall, unwind, water_wings, apex_of_power, brasss_bounty, crackle_with_power,
+    finale_of_revelation, grapeshot, haze_of_rage, inspired_tinkering, jayas_immolating_inferno,
+    jeskas_will, mana_geyser, mizzixs_mastery, mystic_retrieval, past_in_flames,
+    pirates_pillage, pirates_prize, reckless_charge, seething_anger, seize_the_spoils,
+    solve_the_equation, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const SPIDER_MAN_NOIR_COMMANDERS: &[CardFactory] = &[spider_man_noir];
+
+/// **Spider-Man Noir**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Spider-Man Noir (EDHREC, fetched 2026-10-16).
+pub const SPIDER_MAN_NOIR_MAIN: &[CardFactory] = &[
+    altar_of_the_goyf, arcane_signet, bontus_monument, charcoal_diamond, jet_medallion,
+    lightning_greaves, mind_stone, planetarium_of_wan_shi_tong, sol_ring, swiftfoot_boots,
+    the_darkness_crystal, the_ozolith, the_soul_stone, bojuka_bog, cabal_coffers,
+    cathedral_of_war, crypt_of_agadeem, myriad_landscape, rogues_passage, spymasters_vault,
+    war_room, crypt_ghast, dogged_detective, emperor_of_bones, eye_of_duskmantle,
+    grave_researcher, gray_merchant_of_asphodel, krrik_son_of_yawgmoth,
+    madame_null_power_broker, morbid_opportunist, morlun_devourer_of_spiders, necropolis_regent,
+    nefarox_overlord_of_grixis, nine_lives_familiar, qarsi_revenant, scavenged_brawler,
+    siegfried_famed_swordsman, silent_arbiter, solemn_simulacrum, stonecoil_serpent,
+    syr_konrad_the_grim, unshakable_tail, vashta_nerada, venom_evil_unleashed,
+    vincent_valentine, westgate_regent, whispering_snitch, yathan_tombguard, animate_dead,
+    black_market_connections, canonized_in_blood, grasping_shadows, phyrexian_arena,
+    archenemys_charm, astarions_thirst, dark_ritual, defile, go_for_the_throat, infernal_grasp,
+    lethal_scheme, songs_of_the_damned, withering_torment, dread_return, feed_the_swarm,
+    living_death, nights_whisper, reanimate, rise_of_the_dark_realms, risky_research,
+    sign_in_blood, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
