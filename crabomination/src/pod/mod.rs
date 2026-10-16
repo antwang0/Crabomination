@@ -18138,6 +18138,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MARVEL_BOY_COMMANDERS,
             main: decks::MARVEL_BOY_MAIN,
         },
+        // Seat 2948: Ghen, Arcanum Weaver's EDHREC average deck. `--pod-decks 2948`.
+        PodDeck {
+            name: "Ghen, Arcanum Weaver (WBR)",
+            commanders: decks::GHEN_COMMANDERS,
+            main: decks::GHEN_MAIN,
+        },
     ]
 }
 
@@ -22969,6 +22975,7 @@ mod tests {
             ("Lord Dregg, Insect Invader", &[0x1597]),
             ("Roshan, Hidden Magister", &[0x1598]),
             ("Marvel Boy, Noh-Varr", &[0x1599]),
+            ("Ghen, Arcanum Weaver", &[0x159A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

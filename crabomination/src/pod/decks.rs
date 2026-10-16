@@ -82652,3 +82652,32 @@ pub const MARVEL_BOY_MAIN: &[CardFactory] = &[
     mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const GHEN_COMMANDERS: &[CardFactory] = &[ghen_arcanum_weaver];
+
+/// **Ghen, Arcanum Weaver**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 4 Mountains + 6 Plains + 5 Swamps = 99.
+/// Ghen, Arcanum Weaver (EDHREC, fetched 2026-10-16).
+pub const GHEN_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, orzhov_signet, rakdos_signet, sol_ring, talisman_of_conviction,
+    talisman_of_hierarchy, arid_mesa, battlefield_forge, blood_crypt, bloodstained_mire,
+    caves_of_koilos, clifftop_retreat, command_tower, dragonskull_summit, exotic_orchard,
+    godless_shrine, hall_of_heliods_generosity, isolated_chapel, luxury_suite, marsh_flats,
+    nomad_outpost, sacred_foundry, savai_triome, spectator_seating, valgavoths_lair,
+    vault_of_champions, alseid_of_lifes_bounty, archon_of_suns_grace, ashioks_reaper,
+    demon_of_fates_design, doomwake_giant, gravebreaker_lamia, grim_guardian, mesa_enchantress,
+    ondu_spiritdancer, overlord_of_the_balemurk, spirited_companion, starfield_mystic,
+    summon_bahamut, summon_knights_of_round, summon_primal_odin, summon_yojimbo,
+    victor_valgavoths_seneschal, bitter_reunion, blind_obedience, captive_audience,
+    curse_of_opulence, darksteel_mutation, debtors_knell, demonic_lore, demonic_pact,
+    disturbing_mirth, doom_foretold, elspeth_conquers_death, ghostly_prison, hopeless_nightmare,
+    kayas_ghostform, kickoff_celebrations, land_tax, oblivion_ring, overwhelming_splendor,
+    phyrexian_arena, ripples_of_undeath, seal_of_cleansing, sigil_of_the_empty_throne,
+    smothering_tithe, sphere_of_safety, starfield_of_nyx, the_eldest_reborn,
+    treacherous_blessing, anguished_unmaking, enlightened_tutor, entomb, path_to_exile,
+    swords_to_plowshares, thrill_of_possibility, blasphemous_act, cathartic_reunion,
+    faithless_looting, idyllic_tutor, resurgent_belief, ruinous_ultimatum, witchs_mark,
+    // Basics
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp,
+];
