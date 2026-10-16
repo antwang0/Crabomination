@@ -24791,6 +24791,29 @@ impl GameState {
                                 };
                                 self.place_card_in_dest(*card, ctx.controller, &dest, events);
                             }
+                            CounteredSpellZone::ExileCountererMayCastFreeIfMatching(filter) => {
+                                if self.evaluate_requirement_on_card(filter, &card, ctx.controller) {
+                                    let mut c = *card;
+                                    c.may_play_until = Some(crate::card::MayPlayPermission {
+                                        cast_only: false,
+                                        locks_further_casts: false,
+                                        one_cast_group: None,
+                                        player: ctx.controller,
+                                        granted_turn: self.turn_number,
+                                        duration: crate::card::MayPlayDuration::WhileExiled,
+                                        exile_after: false,
+                                        miracle: false,
+                                        pay_life: false,
+                                        bottom_after: false,
+                                        undaunted: false,
+                                    });
+                                    // No granted cost: the cast is free.
+                                    c.granted_alt_cast_cost_eot = None;
+                                    self.exile.push(c);
+                                } else {
+                                    self.place_card_in_dest(*card, ctx.controller, &ZoneDest::Graveyard, events);
+                                }
+                            }
                         }
                     }
                 }

@@ -3358,6 +3358,12 @@ pub enum CounteredSpellZone {
     /// "…put that card onto the battlefield under your control instead"
     /// (Desertion). Cards that fail the filter fall back to the graveyard.
     CountererBattlefieldIfMatching(Box<SelectionRequirement>),
+    /// "If a permanent spell is countered this way, exile it instead … You may
+    /// cast that card without paying its mana cost for as long as it remains
+    /// exiled" (Thranduil's Decree): a matching card goes to exile with a free
+    /// may-cast for the countering player (CR 601.2 / 118.9); the rest to the
+    /// graveyard.
+    ExileCountererMayCastFreeIfMatching(Box<SelectionRequirement>),
 }
 
 /// What mana to add to a pool.
