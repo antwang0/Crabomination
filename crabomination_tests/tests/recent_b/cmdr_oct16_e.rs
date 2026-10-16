@@ -612,3 +612,57 @@ fn raphs_bravado_pumps_your_attackers() {
     attack(&mut g, &[(bears, 1)]);
     assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
 }
+
+/// CR 603.4 — Rhino, Barreling Brute draws on attack only after a mana value
+/// 4+ spell this turn.
+#[test]
+fn rhino_barreling_brute_draws_after_a_big_spell() {
+    for (big, draws) in [(false, 0), (true, 1)] {
+        let mut g = pod(2);
+        let rhino = ready(&mut g, 0, catalog::rhino_barreling_brute());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let spell = g.add_card_to_hand(0, if big { catalog::craw_wurm() } else { catalog::grizzly_bears() });
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.players[0].mana_pool.add_colorless(4);
+        cast(&mut g, spell, None).expect("cast");
+        let hand = g.players[0].hand.len();
+        attack(&mut g, &[(rhino, 1)]);
+        assert_eq!(g.players[0].hand.len(), hand + draws, "MV 4+ spell: {big}");
+    }
+}
+
+/// Kraven's power tracks the priciest permanent you control.
+#[test]
+fn kraven_power_is_the_greatest_mana_value() {
+    let mut g = pod(2);
+    let kraven = ready(&mut g, 0, catalog::kraven_proud_predator());
+    assert_eq!(g.computed_permanent(kraven).unwrap().power, 3, "itself");
+    ready(&mut g, 0, catalog::craw_wurm());
+    assert_eq!(g.computed_permanent(kraven).unwrap().power, 6);
+}
+
+/// Terrific Team-Up: two of yours get +1/+0 and both bite the target — and it
+/// is {2} cheaper beside a mana value 4+ permanent.
+#[test]
+fn terrific_team_up_two_creatures_bite() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::craw_wurm());
+    let victim = ready(&mut g, 1, catalog::serra_angel());
+    let t = g.add_card_to_hand(0, catalog::terrific_team_up());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: t,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![Target::Permanent(a), Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast for {1}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "3 + 7 damage");
+    assert_eq!(g.computed_permanent(a).unwrap().power, 3);
+}

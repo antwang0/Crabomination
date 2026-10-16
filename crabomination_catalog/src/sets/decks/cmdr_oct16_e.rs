@@ -2165,3 +2165,101 @@ pub fn raphs_bravado() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Rhino, Barreling Brute ──────────────────────────────────────────────────
+
+/// Rhino, Barreling Brute — {3}{R}{R}{G}{G} legendary 6/7 vigilance trample
+/// haste Human Villain. Attacks: if you've cast a spell with mana value 4 or
+/// greater this turn, draw a card (CR 603.4).
+pub fn rhino_barreling_brute() -> CardDefinition {
+    let big = Predicate::CastSpellWithManaValueAtLeastThisTurn { who: PlayerRef::You, at_least: 4 };
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(big.clone()),
+            effect: Effect::If {
+                cond: big,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..legend(creature(
+            "Rhino, Barreling Brute",
+            cost(&[generic(3), r(), r(), g(), g()]),
+            vec![CreatureType::Human, CreatureType::Villain],
+            6,
+            7,
+        ))
+    }
+}
+
+/// Damage Control Crew — {3}{G} 3/3 Human Citizen. ETB, choose one: return
+/// target card with mana value 4+ from your graveyard to your hand; or exile
+/// target artifact or enchantment.
+pub fn damage_control_crew() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(R::InYourGraveyard.and(R::ManaValueAtLeast(4))),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Exile { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+        ]))],
+        ..creature("Damage Control Crew", cost(&[generic(3), g()]), vec![CreatureType::Human, CreatureType::Citizen], 3, 3)
+    }
+}
+
+/// Kraven, Proud Predator — {1}{R}{G} legendary */4 vigilance Human Warrior
+/// Villain; power is the greatest mana value among your permanents.
+pub fn kraven_proud_predator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Top of the Food Chain — power equals the greatest mana value among permanents you control.",
+            effect: StaticEffect::SelfBasePtFromValue {
+                power: Value::GreatestManaValueAmongPermanents(PlayerRef::You),
+                toughness: Value::Const(4),
+            },
+        }],
+        ..legend(creature(
+            "Kraven, Proud Predator",
+            cost(&[generic(1), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Villain],
+            0,
+            4,
+        ))
+    }
+}
+
+/// Terrific Team-Up — {3}{G} instant, {2} less with a permanent of mana value
+/// 4+. One or two target creatures you control each get +1/+0, then each deals
+/// damage equal to its power to target creature an opponent controls.
+pub fn terrific_team_up() -> CardDefinition {
+    let mine = yours(R::Creature);
+    let pump = |what| Effect::PumpPT { what, power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Terrific Team-Up",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if you control a permanent with mana value 4 or greater.",
+            effect: StaticEffect::SelfCostReducedIfPredicate {
+                amount: 2,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(yours(R::Permanent.and(R::ManaValueAtLeast(4))))),
+            },
+        }],
+        effect: Effect::OptionalTargets {
+            min: 2,
+            body: Box::new(Effect::Seq(vec![
+                pump(Selector::TargetFiltered { slot: 1, filter: mine.clone() }),
+                pump(Selector::TargetFiltered { slot: 2, filter: mine.and(R::OtherThanTargetSlot(1)) }),
+                Effect::DealDamageEqualToPower {
+                    source: Selector::Target(1),
+                    target: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+                },
+                Effect::DealDamageEqualToPower { source: Selector::Target(2), target: Selector::Target(0) },
+            ])),
+        },
+        ..Default::default()
+    }
+}
