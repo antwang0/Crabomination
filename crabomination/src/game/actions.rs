@@ -13372,7 +13372,9 @@ impl GameState {
                 .entry(card.definition.name)
                 .or_insert(0) += 1;
         }
-        if from_hand {
+        // CR 601.2a — a hop cast (graveyard / library top through the hand)
+        // reaches here with `from_hand` set but is stamped not-from-hand.
+        if from_hand && card.cast_from_hand {
             self.players[p].spells_cast_from_hand_this_turn += 1;
         }
         if card.cast_from_exile {
