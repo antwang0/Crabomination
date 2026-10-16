@@ -168,6 +168,10 @@ the handoff.
 - **CLAIMED (batch 1) — don't duplicate:** Blur of Heroism (Winter Soldier Reborn Avenger), Death to Our Enemies
   (Luke Cage Hero for Hire), Origin of Captain America (Captain America Liberator), Fishing Gear (Doorman),
   Sensation Gorger (The Prismatic Piper). Cards in `decks::cmdr_oct16_f`, tests `recent_b/cmdr_oct16_f.rs`.
+- **CLAIMED (batch 2) — don't duplicate:** Ghirapur Gearcrafter, Yotia Declares War, Welding Sparks (Pia Nalaar);
+  Savage Mansion, Decimator of the Provinces, Kraven's Last Hunt (Kraven Proud Predator); Ghost Spectral Saboteur,
+  Ronin Shadow Stalker, Swordsman Sharp Scoundrel (Ghost); Boomerang Blade Flinger, Loot the Anomaly, Silence the
+  Echo (Boomerang).
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
