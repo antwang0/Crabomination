@@ -24621,7 +24621,7 @@ impl GameState {
             adapt: false,
             tap_cost: false,
             sacrificed: false,
-            life_paid: 0,
+            paid: 0,
             ninjutsu: true,
             mana: false,
             loyalty: false,
@@ -28900,7 +28900,7 @@ impl GameState {
                 adapt: false,
                 tap_cost: false,
                 sacrificed: false,
-                life_paid: 0,
+                paid: (-loyalty_change).max(0) as u32,
                 ninjutsu: false,
                 mana: false,
                 loyalty: true,
@@ -33342,7 +33342,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         // result-gated triggers (`Predicate::DieResultAtLeast`).
         GameEvent::DiceRolled { high, .. } => *high as u32,
         GameEvent::DieResult { result, .. } => *result as u32,
-        GameEvent::AbilityActivated { life_paid, .. } => *life_paid,
+        GameEvent::AbilityActivated { paid, .. } => *paid,
         _ => 0,
     }
 }

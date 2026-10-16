@@ -24427,7 +24427,7 @@ impl GameState {
                     || ability.sac_other_second.is_some()
                     || ability.sac_all_matching_cost.is_some()
                     || ability.sac_any_number_filter.is_some(),
-                life_paid: life_spent,
+                paid: life_spent,
                 ninjutsu: false,
                 mana: ability_is_mana,
                 loyalty: false,

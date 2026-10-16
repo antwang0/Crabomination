@@ -2859,10 +2859,11 @@ pub enum GameEvent {
         adapt: bool,
         tap_cost: bool,
         sacrificed: bool,
-        /// Life paid as part of the cost (Verrak, Warped Sengir's "if life
-        /// was paid to activate it … pay that much life again"). The event's
-        /// amount.
-        life_paid: u32,
+        /// The event's amount: life paid as part of the cost (Verrak, Warped
+        /// Sengir's "if life was paid to activate it … pay that much life
+        /// again"), or for a loyalty ability the loyalty counters it removed
+        /// (Way of the Mind Sculptor).
+        paid: u32,
         /// CR 702.49a — a ninjutsu ability (Satoru Umezawa's "whenever you
         /// activate a ninjutsu ability"); `source` is the ninja.
         ninjutsu: bool,

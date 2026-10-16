@@ -237,7 +237,7 @@ fn event_payload_matches(
         }
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, loyalty, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, paid, adapt, ninjutsu, mana, loyalty, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -245,7 +245,7 @@ fn event_payload_matches(
                 T::ManaWithoutTap => *mana,
                 _ if *mana => false,
                 T::Sacrifice => *sacrificed,
-                T::LifePaid => *life_paid > 0,
+                T::LifePaid => *paid > 0 && !*loyalty,
                 T::Exhaust => *exhaust,
                 T::Adapt => *adapt,
                 T::Ninjutsu => *ninjutsu,
@@ -414,7 +414,7 @@ fn reference_event_kind_matches(
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { mana, .. }) => !mana,
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, loyalty, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, paid, adapt, ninjutsu, mana, loyalty, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -422,7 +422,7 @@ fn reference_event_kind_matches(
                 T::ManaWithoutTap => *mana,
                 _ if *mana => false,
                 T::Sacrifice => *sacrificed,
-                T::LifePaid => *life_paid > 0,
+                T::LifePaid => *paid > 0 && !*loyalty,
                 T::Exhaust => *exhaust,
                 T::Adapt => *adapt,
                 T::Ninjutsu => *ninjutsu,
@@ -1974,13 +1974,13 @@ mod tests {
             E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
-            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2, ninjutsu: false, mana: false, loyalty: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: true, loyalty: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: true },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 2, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, paid: 0, ninjutsu: false, mana: true, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: true },
             E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
             E::ColorlessManaAdded { player: 0, source: None },
             E::PermanentEntered { card_id: c },
