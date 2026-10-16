@@ -10,7 +10,7 @@ use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::ActivationTrait;
 use crate::effect::shortcut::{boast, etb, landfall, on_attack, on_dies, target_filtered};
 use crate::game::TurnStep;
-use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, RevealMissDest, Selector, ZoneDest};
 use crate::mana::SpendRestriction;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, phyrexian, r, u, w};
 use std::sync::Arc;
@@ -1031,5 +1031,45 @@ pub fn rhinos_rampage() -> CardDefinition {
             },
         ]),
         ..Default::default()
+    }
+}
+
+// ── Sméagol, Helpful Guide ──────────────────────────────────────────────────
+
+/// Sméagol, Helpful Guide — {1}{B}{G} legendary 4/2 Halfling Horror. Your end
+/// step, if a creature of yours died this turn: the Ring tempts you. Whenever
+/// the Ring tempts you, an opponent (the most hostile, not targeted) reveals
+/// until a land; you get the land tapped, the rest go to their graveyard.
+pub fn smeagol_helpful_guide() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer).with_filter(
+                    Predicate::CreaturesDiedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE },
+                ),
+                effect: Effect::RingTempts { who: PlayerRef::You },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::RingTempted, EventScope::YourControl),
+                effect: Effect::RevealUntilFind {
+                    who: PlayerRef::HostileOpponent,
+                    find: R::Land,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    cap: Value::Const(1000),
+                    life_per_revealed: 0,
+                    miss_dest: RevealMissDest::Graveyard,
+                },
+            },
+        ],
+        ..creature("Sméagol, Helpful Guide", cost(&[generic(1), b(), g()]), vec![CreatureType::Halfling, CreatureType::Horror], 4, 2)
+    }
+}
+
+/// Mirrormere Guardian — {2}{G} 4/2 Dwarf Soldier. Dies: the Ring tempts you.
+pub fn mirrormere_guardian() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(Effect::RingTempts { who: PlayerRef::You })],
+        ..creature("Mirrormere Guardian", cost(&[generic(2), g()]), vec![CreatureType::Dwarf, CreatureType::Soldier], 4, 2)
     }
 }

@@ -1020,3 +1020,25 @@ fn rhinos_rampage_excess_destroys_an_artifact() {
     assert!(g.battlefield_find(elf).is_none());
     assert!(g.battlefield_find(ring).is_none(), "excess damage → Sol Ring destroyed");
 }
+
+/// Sméagol: Mirrormere Guardian dying tempts you, so an opponent reveals until
+/// a land — the land is yours tapped, the cards above it go to their graveyard.
+#[test]
+fn smeagol_steals_a_land_when_the_ring_tempts() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    let land = g.add_card_to_library(1, catalog::forest());
+    g.players[1].library.retain(|c| c.id == bolt || c.id == land);
+    ready(&mut g, 0, catalog::smeagol_helpful_guide());
+    ready(&mut g, 0, catalog::mirrormere_guardian());
+    let kill = Effect::Destroy {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::HasName("Mirrormere Guardian".into())),
+    };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let l = g.battlefield_find(land).expect("stolen land");
+    assert!(l.controller == 0 && l.tapped);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
