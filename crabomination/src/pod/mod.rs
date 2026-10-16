@@ -17778,6 +17778,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::COLOSSUS_COMMANDERS,
             main: decks::COLOSSUS_MAIN,
         },
+        // Seat 2888: Aragorn, Company Leader's EDHREC average deck. `--pod-decks 2888`.
+        PodDeck {
+            name: "Aragorn, Company Leader (WG)",
+            commanders: decks::ARAGORN_3_COMMANDERS,
+            main: decks::ARAGORN_3_MAIN,
+        },
+        // Seat 2889: Nemata, Grove Guardian's EDHREC average deck. `--pod-decks 2889`.
+        PodDeck {
+            name: "Nemata, Grove Guardian (G)",
+            commanders: decks::NEMATA_2_COMMANDERS,
+            main: decks::NEMATA_2_MAIN,
+        },
+        // Seat 2890: Verdeloth the Ancient's EDHREC average deck. `--pod-decks 2890`.
+        PodDeck {
+            name: "Verdeloth the Ancient (G)",
+            commanders: decks::VERDELOTH_THE_ANCIENT_COMMANDERS,
+            main: decks::VERDELOTH_THE_ANCIENT_MAIN,
+        },
+        // Seat 2891: Slimefoot, the Stowaway's EDHREC average deck. `--pod-decks 2891`.
+        PodDeck {
+            name: "Slimefoot, the Stowaway (BG)",
+            commanders: decks::SLIMEFOOT_COMMANDERS,
+            main: decks::SLIMEFOOT_MAIN,
+        },
     ]
 }
 
@@ -22501,6 +22525,10 @@ mod tests {
             ("Arno Dorian", &[0x155B]),
             ("Hawkeye, Trick Shot", &[0x155C]),
             ("Colossus, Steel Stalwart", &[0x155D]),
+            ("Aragorn, Company Leader", &[0x155E]),
+            ("Nemata, Grove Guardian", &[0x155F]),
+            ("Verdeloth the Ancient", &[0x1560]),
+            ("Slimefoot, the Stowaway", &[0x1561]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

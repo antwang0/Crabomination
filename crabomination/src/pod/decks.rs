@@ -80996,3 +80996,110 @@ pub const COLOSSUS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest,
 ];
+
+pub const ARAGORN_3_COMMANDERS: &[CardFactory] = &[aragorn_company_leader];
+
+/// **Aragorn, Company Leader**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Forests + 10 Plains = 99.
+/// Aragorn, Company Leader (EDHREC, fetched 2026-10-16).
+pub const ARAGORN_3_MAIN: &[CardFactory] = &[
+    anduril_narsil_reforged, arcane_signet, inherited_envelope, ozolith_the_shattered_spire,
+    sol_ring, swiftfoot_boots, the_ozolith, brushland, canopy_vista, command_tower,
+    fortified_village, gavony_township, karns_bastion, minas_tirith, nesting_grounds,
+    overgrown_farmland, sungrass_prairie, sunpetal_grove, temple_garden, temple_of_plenty,
+    tyrite_sanctum, abzan_falconer, aragorn_and_arwen_wed, arwen_mortal_queen,
+    arwen_weaver_of_hope, avenging_huntbonder, boromir_warden_of_the_tower, conclave_mentor,
+    dusk_legion_duelist, duskshell_crawler, dunedain_rangers, eagle_of_deliverance,
+    evolution_sage, faramir_field_commander, forgotten_ancient, frodo_baggins,
+    hamza_guardian_of_arashin, kami_of_whispered_hopes, kutzil_malamet_exemplar,
+    laezel_vlaakiths_champion, leinore_autumn_sovereign, luminarch_aspirant, metastatic_evangel,
+    mikaeus_the_lunarch, reluctant_role_model, rishkar_peema_renegade, samwise_the_stouthearted,
+    slippery_bogbonder, stalwarts_of_osgiliath, titanoth_rex, took_reaper, familys_favor,
+    felidar_retreat, hardened_scales, innkeepers_talent, resourceful_defense,
+    shortcut_to_mushrooms, together_forever, war_of_the_last_alliance, beast_within,
+    bombadils_song, boon_of_safety, contractual_safeguard, gift_of_the_viper, inspiring_call,
+    path_to_exile, slip_on_the_ring, swords_to_plowshares, unbreakable_formation, wing_it,
+    elspeth_resplendent, cultivate, damning_verdict, natures_lore, now_for_wrath_now_for_ruin,
+    rampant_growth, the_ring_goes_south, unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const NEMATA_2_COMMANDERS: &[CardFactory] = &[nemata_grove_guardian];
+
+/// **Nemata, Grove Guardian**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Nemata, Grove Guardian (EDHREC, fetched 2026-10-16).
+pub const NEMATA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, eldrazi_monument, emerald_medallion, heartstone, skullclamp,
+    sol_ring, blighted_woodland, castle_garenbrig, myriad_landscape, nykthos_shrine_to_nyx,
+    oran_rief_the_vastwood, war_room, brightcap_badger, champion_of_lambholt,
+    circle_of_dreams_druid, elvish_mystic, jade_mage, jaheira_friend_of_the_forest,
+    llanowar_elves, mycoloth, psychotrope_thallid, seedborn_muse, shroofus_sproutsire,
+    sporecrown_thallid, sporemound, sporesower_thallid, sporoloth_ancient, tendershoot_dryad,
+    thallid, thallid_shell_dweller, thelonite_hermit, undercellar_myconid, utopia_mycon,
+    verdant_force, verdeloth_the_ancient, vitaspore_thallid, beastmaster_ascension,
+    cryptolith_rite, doubling_season, fecundity, fungal_plots, gardenize,
+    growing_rites_of_itlimoc, life_and_limb, night_soil, parallel_lives, sylvan_anthem,
+    verdant_embrace, beast_within, fungal_rebirth, heroic_intervention, krosan_grip,
+    scatter_the_seeds, second_harvest, spore_swarm, sprout_swarm, cultivate, explore,
+    fungal_sprouting, harmonize, kodamas_reach, natures_lore, overrun, rampant_growth,
+    saproling_symbiosis, shamanic_revelation, skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const VERDELOTH_THE_ANCIENT_COMMANDERS: &[CardFactory] = &[verdeloth_the_ancient];
+
+/// **Verdeloth the Ancient**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Verdeloth the Ancient (EDHREC, fetched 2026-10-16).
+pub const VERDELOTH_THE_ANCIENT_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, druidic_satchel, emerald_medallion, skullclamp, sol_ring,
+    mosswort_bridge, myriad_landscape, nykthos_shrine_to_nyx, oran_rief_the_vastwood,
+    reliquary_tower, bosk_banneret, brightcap_badger, circle_of_dreams_druid,
+    dauntless_dourbark, dungrove_elder, elvish_mystic, fangorn_tree_shepherd, jade_mage,
+    kalonian_twingrove, llanowar_elves, mycoloth, nemata_grove_guardian, nyxbloom_ancient,
+    orchard_warden, psychotrope_thallid, shroofus_sproutsire, sporecrown_thallid, sporemound,
+    sporesower_thallid, tendershoot_dryad, thallid, thallid_shell_dweller, thelonite_hermit,
+    timber_protector, treefolk_harbinger, utopia_mycon, verdant_force, beastmaster_ascension,
+    doubling_season, fungal_plots, growing_rites_of_itlimoc, life_and_limb, parallel_lives,
+    sapling_nursery, sylvan_anthem, verdant_embrace, wild_growth, beast_within, fungal_rebirth,
+    heroic_intervention, naturalize, scatter_the_seeds, second_harvest, spore_swarm,
+    sprout_swarm, nissa_who_shakes_the_world, cultivate, explore, fungal_sprouting,
+    kodamas_reach, natures_lore, overrun, rampant_growth, saproling_migration,
+    saproling_symbiosis, shamanic_revelation, skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const SLIMEFOOT_COMMANDERS: &[CardFactory] = &[slimefoot_the_stowaway];
+
+/// **Slimefoot, the Stowaway**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Swamps = 99.
+/// Slimefoot, the Stowaway (EDHREC, fetched 2026-10-16).
+pub const SLIMEFOOT_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cauldron_of_essence, golgari_signet, skullclamp, sol_ring,
+    bojuka_bog, command_tower, deathcap_glade, evolving_wilds, golgari_rot_farm, jungle_hollow,
+    llanowar_wastes, necroblossom_snarl, overgrown_tomb, path_of_ancestry, tainted_wood,
+    temple_of_malady, woodland_cemetery, blood_artist, brightcap_badger, cankerbloom,
+    deathspore_thallid, dina_soul_steeper, jade_mage, mirkwood_bats, mycoloth,
+    nemata_primeval_warden, poison_tip_archer, psychotrope_thallid, savage_thallid,
+    shroofus_sproutsire, sporecrown_thallid, sporemound, sporesower_thallid, sporoloth_ancient,
+    tendershoot_dryad, thallid, thallid_germinator, thallid_shell_dweller, thelonite_hermit,
+    undercellar_myconid, utopia_mycon, verdant_force, verdeloth_the_ancient, vitaspore_thallid,
+    zulaport_cutthroat, bastion_of_remembrance, doubling_season, fungal_plots,
+    golgari_germination, life_and_limb, moldervine_reclamation, necrogenesis, night_soil,
+    parallel_lives, verdant_embrace, assassins_trophy, beast_within, fungal_rebirth,
+    golgari_charm, putrefy, scatter_the_seeds, second_harvest, spore_swarm, sprout_swarm,
+    village_rites, culling_ritual, cultivate, farseek, fungal_sprouting, gruesome_fate,
+    kodamas_reach, natures_lore, rampant_growth, saproling_migration, saproling_symbiosis,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
