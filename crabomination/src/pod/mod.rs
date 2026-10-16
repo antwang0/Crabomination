@@ -17885,6 +17885,14 @@ pub fn play_one_pod_game(
 /// Pods only — the two-player drivers never reach it.
 const POD_SAME_ACTIVATION_PER_TURN: u32 = 64;
 
+/// Casts per turn of a legendary permanent whose name the seat already
+/// controls. The copy dies to the legend rule (CR 704.5j) as it resolves, so
+/// each cast is net zero unless a recursion engine pays it back — Scrap
+/// Trawler returning the binned copy while The Eternity Elevator and
+/// Liberator refund the mana ran 64 casts a name for every name, every turn
+/// (8-seat seed 931516: one game ran for hours). Pods only.
+const POD_DUPLICATE_LEGEND_CASTS_PER_TURN: u32 = 2;
+
 /// This turn's activation counts by (seat, source, ability index; a cast is
 /// index `usize::MAX`), and casts again by (seat, card name); see
 /// [`POD_SAME_ACTIVATION_PER_TURN`].
@@ -17897,9 +17905,34 @@ struct RepeatGuard {
     /// Athreos, God of Passage: 760 casts over sixteen copies in one turn,
     /// none past the per-card cap).
     names: Vec<(usize, &'static str, u32)>,
+    /// Duplicate-legend casts by (seat, name); see
+    /// [`POD_DUPLICATE_LEGEND_CASTS_PER_TURN`].
+    legends: Vec<(usize, &'static str, u32)>,
 }
 
 impl RepeatGuard {
+    /// Count a cast of a legend `seat` already controls a copy of; `false`
+    /// past [`POD_DUPLICATE_LEGEND_CASTS_PER_TURN`] this turn.
+    fn admit_duplicate_legend(&mut self, turn: u32, seat: usize, name: &'static str) -> bool {
+        if turn != self.turn {
+            self.turn = turn;
+            self.seen.clear();
+            self.names.clear();
+            self.legends.clear();
+        }
+        let n = match self.legends.iter_mut().find(|r| r.0 == seat && r.1 == name) {
+            Some(r) => {
+                r.2 += 1;
+                r.2
+            }
+            None => {
+                self.legends.push((seat, name, 1));
+                1
+            }
+        };
+        n <= POD_DUPLICATE_LEGEND_CASTS_PER_TURN
+    }
+
     /// Count `action` for `seat`; `false` once it is past the per-turn cap.
     #[cfg(test)]
     fn admit(&mut self, turn: u32, seat: usize, action: &crate::game::GameAction) -> bool {
@@ -17935,6 +17968,7 @@ impl RepeatGuard {
             self.turn = turn;
             self.seen.clear();
             self.names.clear();
+            self.legends.clear();
         }
         if let Some(name) = name.filter(|_| ability_index == usize::MAX) {
             let n = match self.names.iter_mut().find(|r| r.0 == seat && r.1 == name) {
@@ -18295,8 +18329,22 @@ fn play_pod_game(
             // never polled suppressed every other seat's actions.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { mut action, mut settled } = step;
-            let cast_name = action.cast_card_id().and_then(|id| g.find_card_anywhere(id)).map(|c| c.definition.name);
-            if !repeats.admit_named(g.turn_number, seat, &action, cast_name) || token_blowup(&g, seat, &action) {
+            let cast_card = action.cast_card_id().and_then(|id| g.find_card_anywhere(id));
+            let cast_name = cast_card.map(|c| c.definition.name);
+            let duplicate_legend = cast_card.is_some_and(|c| {
+                let d = &c.definition;
+                d.is_permanent()
+                    && d.supertypes.contains(&crate::card::Supertype::Legendary)
+                    && g.battlefield.iter().any(|b| {
+                        b.controller == seat
+                            && b.definition.name == d.name
+                            && !(b.is_token && b.definition.nonlegendary_as_token)
+                    })
+            });
+            if !repeats.admit_named(g.turn_number, seat, &action, cast_name)
+                || (duplicate_legend && !repeats.admit_duplicate_legend(g.turn_number, seat, cast_name.unwrap_or("")))
+                || token_blowup(&g, seat, &action)
+            {
                 action = crate::game::GameAction::PassPriority;
                 settled = None;
             }
@@ -22697,6 +22745,20 @@ mod tests {
         assert!(!guard.admit_named(3, 0, &cast(200), Some("Shadowborn Apostle")), "a fresh copy, same loop");
         assert!(guard.admit_named(3, 0, &cast(201), Some("Grizzly Bears")), "another name");
         assert!(guard.admit_named(3, 1, &cast(202), Some("Shadowborn Apostle")), "another seat");
+    }
+
+    /// CR 704.5j — a recast of a legend its seat already controls is capped
+    /// at two a turn (8-seat seed 931516: Scrap Trawler, The Eternity Elevator
+    /// and Liberator recast each legend 64 times a turn for hours). Bug fix.
+    #[test]
+    fn duplicate_legend_casts_are_capped_per_turn() {
+        let mut guard = RepeatGuard::default();
+        assert!(guard.admit_duplicate_legend(5, 1, "The Eternity Elevator"));
+        assert!(guard.admit_duplicate_legend(5, 1, "The Eternity Elevator"));
+        assert!(!guard.admit_duplicate_legend(5, 1, "The Eternity Elevator"), "third copy this turn");
+        assert!(guard.admit_duplicate_legend(5, 1, "Memnarch, the Warden"), "another name");
+        assert!(guard.admit_duplicate_legend(5, 2, "The Eternity Elevator"), "another seat");
+        assert!(guard.admit_duplicate_legend(6, 1, "The Eternity Elevator"), "a new turn resets it");
     }
 
     /// The pod loop is reproducible: same seed, same outcome. Cross-process
