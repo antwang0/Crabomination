@@ -81774,3 +81774,87 @@ pub const CELEBORN_THE_WISE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const SMEAGOL_COMMANDERS: &[CardFactory] = &[smeagol_helpful_guide];
+
+/// **Sméagol, Helpful Guide**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 8 Forests + 8 Swamps = 99.
+/// Sméagol, Helpful Guide (EDHREC, fetched 2026-10-16).
+pub const SMEAGOL_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, ashnods_altar, cauldron_of_essence, inherited_envelope,
+    skullclamp, sol_ring, the_one_ring, bojuka_bog, command_tower, deathcap_glade,
+    evolving_wilds, golgari_rot_farm, llanowar_wastes, necroblossom_snarl, overgrown_tomb,
+    phyrexian_tower, tainted_wood, undergrowth_stadium, urborg_tomb_of_yawgmoth,
+    verdant_catacombs, woodland_cemetery, yavimaya_cradle_of_growth, accursed_marauder,
+    avenger_of_zendikar, bloodghast, braids_arisen_nightmare, cankerbloom, carrion_feeder,
+    dunedain_rangers, eternal_witness, gollum_patient_plotter, haywire_mite,
+    jadar_ghoulcaller_of_nephalia, lotus_cobra, mirrormere_guardian, morbid_opportunist, nazgul,
+    nazgul, nazgul, nazgul, nazgul, nazgul, nazgul, ob_nixilis_the_fallen, rampaging_baloths,
+    reassembling_skeleton, sakura_tribe_elder, scute_swarm, springheart_nantuko,
+    syr_konrad_the_grim, tireless_provisioner, uruk_hai_berserker, viscera_seer,
+    wight_of_the_reliquary, witch_king_of_angmar, awakening_zone, call_of_the_ring,
+    moldervine_reclamation, one_ring_to_rule_them_all, shortcut_to_mushrooms, spelunking,
+    zendikars_roil, assassins_trophy, beast_within, bombadils_song, deadly_dispute,
+    gollums_bite, heroic_intervention, nasty_end, village_rites, nissa_of_shadowed_boughs,
+    breach_the_multiverse, claim_the_precious, cultivate, reanimate, rise_of_the_dark_realms,
+    rise_of_the_witch_king, sams_desperate_rescue, the_black_breath, the_ring_goes_south,
+    toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const WOLVERINE_3_COMMANDERS: &[CardFactory] = &[wolverine_fierce_fighter];
+
+/// **Wolverine, Fierce Fighter**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 10 Mountains = 99.
+/// Wolverine, Fierce Fighter (EDHREC, fetched 2026-10-16).
+pub const WOLVERINE_3_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, blazing_sunsteel, fiendlash, mithril_coat,
+    mjolnir_hammer_of_thor, shadowspear, sol_ring, swiftfoot_boots, talisman_of_impulse,
+    cinder_glade, command_tower, game_trail, karplusan_forest, kessig_wolf_run, rockfall_vale,
+    rogues_passage, rootbound_crag, spire_garden, stomping_ground, thornspire_verge,
+    training_compound, absorbing_man_and_titania, birds_of_paradise, brash_taunter, donna_noble,
+    elvish_mystic, forgotten_ancient, goblin_anarchomancer, guardian_augmenter,
+    halana_and_alena, kediss_emberclaw_familiar, llanowar_elves, neyith_of_the_dire_hunt,
+    ohran_frostfang, red_hulk, spider_manifestation, ulvenwald_tracker, vigor,
+    wolverine_best_there_is, wolverine_claws_out, x_23_deadly_weapon, xenagos_god_of_revels,
+    bear_umbra, garruks_uprising, hardened_scales, pain_for_all, rhythm_of_the_wild,
+    rite_of_passage, training_regimen, unnatural_growth, world_war_hulk, ancient_animus,
+    beast_within, chaos_warp, heroic_intervention, inscription_of_abundance, prizefight,
+    snakeskin_veil, strength_of_will, tail_swipe, tamiyos_safekeeping, the_last_agni_kai,
+    tyvars_stand, domri_anarch_of_bolas, blasphemous_act, bushwhack, cultivate, epic_fight,
+    farseek, go_nuts, natures_lore, rampant_growth, rhinos_rampage, three_visits, vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const THE_DESTINED_THIEF_COMMANDERS: &[CardFactory] = &[the_destined_thief];
+
+/// **The Destined Thief**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// The Destined Thief (EDHREC, fetched 2026-10-16).
+pub const THE_DESTINED_THIEF_MAIN: &[CardFactory] = &[
+    arcane_signet, astrologians_planisphere, bident_of_thassa, decanter_of_endless_water,
+    dowsing_dagger, lightning_greaves, maskwood_nexus, sages_nouliths, sapphire_medallion,
+    sol_ring, stalactite_dagger, swiftfoot_boots, the_key_to_the_vault, thought_vessel,
+    castle_vantress, muraganda_raceway, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, rogues_passage, alandra_sky_dreamer,
+    amoeboid_changeling, changeling_wayfinder, chasm_skulker, cleric_of_chill_depths,
+    deceiver_exarch, emrakuls_messenger, enduring_curiosity, eternal_of_harsh_truths,
+    faerie_mastermind, geist_of_saint_thalia, illvoi_galeblade, ioreth_of_the_healing_house,
+    jill_shivas_dominant, lakeshore_apothecary, lyla_holographic_assistant, mist_cloaked_herald,
+    mothdust_changeling, nimble_trapfinder, omni_changeling, phantom_warrior, psychosis_crawler,
+    river_sneak, shapesharer, stonework_packbeast, twenty_toed_toad, universal_automaton,
+    vanguard_suppressor, vizier_of_tumbling_sands, coastal_piracy, nerd_rage, propaganda,
+    rhystic_study, teferis_ageless_insight, wizard_class, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, counterspell, cryptic_command, high_tide, negate, pongify,
+    rapid_hybridization, swan_song, curse_of_the_swine, enter_the_enigma, fabricate,
+    sea_gate_restoration,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];

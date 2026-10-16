@@ -17946,6 +17946,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CELEBORN_THE_WISE_COMMANDERS,
             main: decks::CELEBORN_THE_WISE_MAIN,
         },
+        // Seat 2916: Sméagol, Helpful Guide's EDHREC average deck. `--pod-decks 2916`.
+        PodDeck {
+            name: "Sméagol, Helpful Guide (BG)",
+            commanders: decks::SMEAGOL_COMMANDERS,
+            main: decks::SMEAGOL_MAIN,
+        },
+        // Seat 2917: Wolverine, Fierce Fighter's EDHREC average deck. `--pod-decks 2917`.
+        PodDeck {
+            name: "Wolverine, Fierce Fighter (RG)",
+            commanders: decks::WOLVERINE_3_COMMANDERS,
+            main: decks::WOLVERINE_3_MAIN,
+        },
+        // Seat 2918: The Destined Thief's EDHREC average deck. `--pod-decks 2918`.
+        PodDeck {
+            name: "The Destined Thief (U)",
+            commanders: decks::THE_DESTINED_THIEF_COMMANDERS,
+            main: decks::THE_DESTINED_THIEF_MAIN,
+        },
     ]
 }
 
@@ -22745,6 +22763,9 @@ mod tests {
             ("Korlash, Heir to Blackblade", &[0x1577]),
             ("Gríma Wormtongue", &[0x1578]),
             ("Celeborn the Wise", &[0x1579]),
+            ("Sméagol, Helpful Guide", &[0x157A]),
+            ("Wolverine, Fierce Fighter", &[0x157B]),
+            ("The Destined Thief", &[0x157C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
