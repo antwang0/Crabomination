@@ -1181,3 +1181,54 @@ pub fn tresserhorns_lord_returned() -> CardDefinition {
         )
     }
 }
+
+// ── Aboshan, Cephalid Emperor ───────────────────────────────────────────────
+
+/// Psychic Pickpocket — {4}{U} 3/2 Octopus Rogue. Enters: it connives; when it
+/// does, return up to one target nonland permanent to its owner's hand.
+pub fn psychic_pickpocket() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Connive { what: Selector::This, amount: Value::ONE },
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Land)))),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+        ]))],
+        ..creature("Psychic Pickpocket", cost(&[generic(4), u()]), vec![CreatureType::Octopus, CreatureType::Rogue], 3, 2)
+    }
+}
+
+/// Dismiss into Dream — {6}{U} enchantment. Creatures your opponents control
+/// are Illusions in addition to their other types and have "When this
+/// creature becomes the target of a spell or ability, sacrifice it."
+pub fn dismiss_into_dream() -> CardDefinition {
+    let theirs = || R::Creature.and(R::ControlledByOpponent);
+    CardDefinition {
+        name: "Dismiss into Dream",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each creature your opponents control is an Illusion in addition to its other types.",
+                effect: StaticEffect::AddCreatureTypeToMatching {
+                    applies_to: Selector::EachPermanent(theirs()),
+                    creature_type: CreatureType::Illusion,
+                },
+            },
+            StaticAbility {
+                description: "Each creature your opponents control has \"When this creature becomes the target of a spell or ability, sacrifice it.\"",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: theirs(),
+                    ability: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                        effect: Effect::SacrificeSource,
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

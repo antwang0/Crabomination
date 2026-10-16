@@ -16321,6 +16321,8 @@ static DECKS: &[Factory] = &[
     super::decks::the_destined_thief,
     super::decks::nimble_trapfinder,
     super::decks::tresserhorns_lord_returned,
+    super::decks::psychic_pickpocket,
+    super::decks::dismiss_into_dream,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

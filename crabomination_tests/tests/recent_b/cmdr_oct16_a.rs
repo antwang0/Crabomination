@@ -1103,3 +1103,34 @@ fn tresserhorns_lord_demands_three_creatures() {
         }
     }
 }
+
+/// Dismiss into Dream: an opponent's creature targeted by anything (a Bolt
+/// here) is sacrificed; yours aren't Illusions and keep no such trigger.
+#[test]
+fn dismiss_into_dream_sacrifices_targeted_opposing_creatures() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::dismiss_into_dream());
+    assert!(g.computed_permanent(theirs).unwrap().subtypes().creature_types.contains(&CreatureType::Illusion));
+    assert!(!g.computed_permanent(mine).unwrap().subtypes().creature_types.contains(&CreatureType::Illusion));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == theirs));
+}
+
+/// Psychic Pickpocket connives, then bounces a nonland permanent.
+#[test]
+fn psychic_pickpocket_connives_and_bounces() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let pp = g.add_card_to_hand(0, catalog::psychic_pickpocket());
+    cast(&mut g, pp);
+    assert!(g.players[1].hand.iter().any(|c| c.id == angel));
+}
