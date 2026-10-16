@@ -154,6 +154,20 @@ fn undercellar_sweep_reads_the_initiative_of_the_player_attacked() {
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Soldier").count(), 2);
 }
 
+/// CR 508.4 — attacking two players, the Soldiers' defender is one of them
+/// (the fan-out "player you're attacking" resolved to a single seat, not a
+/// dropped set — this debug-asserted in a 15-seat pod).
+#[test]
+fn undercellar_sweep_with_two_players_attacked() {
+    let mut g = pod(4);
+    ready(&mut g, 0, catalog::undercellar_sweep());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.initiative = Some(2);
+    attack(&mut g, &[(a, 1), (b, 2)]);
+    assert_eq!(soldiers_attacking(&g, 1) + soldiers_attacking(&g, 2), 2);
+}
+
 /// Awaken the Ancient makes its Mountain a 7/7 red haste Giant that is still
 /// a land.
 #[test]
@@ -290,4 +304,82 @@ fn captain_america_liberator_counts_his_equipment() {
     attack(&mut g, &[(cap, 1)]);
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
     assert_eq!(g.computed_permanent(cap).unwrap().toughness, 7, "+1/+2 from the Shield");
+}
+
+/// CR 601.2c — Puca's Mischief's second target must cost no more than the
+/// first: against only a pricier permanent there is no swap.
+#[test]
+fn pucas_mischief_swaps_only_for_equal_or_lesser_mana_value() {
+    for (theirs_is_cheap, swapped) in [(true, true), (false, false)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::pucas_mischief());
+        ready(&mut g, 0, catalog::grizzly_bears());
+        let theirs = ready(&mut g, 1, if theirs_is_cheap { catalog::llanowar_elves() } else { catalog::craw_wurm() });
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.active_player_idx = 0;
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(theirs).unwrap().controller == 0, swapped, "theirs cheap: {theirs_is_cheap}");
+    }
+}
+
+/// Bogslither's Embrace: with a creature the blight half is paid (a -1/-1
+/// counter, two mana); with none it costs {3} more.
+#[test]
+fn bogslithers_embrace_blights_or_pays_three() {
+    let mut g = pod(2);
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::craw_wurm());
+    let e = g.add_card_to_hand(0, catalog::bogslithers_embrace());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast(&mut g, e, Some(Target::Permanent(victim))).expect("blight half");
+    assert!(g.battlefield_find(victim).is_none());
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+
+    let mut g = pod(2);
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    let e = g.add_card_to_hand(0, catalog::bogslithers_embrace());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    assert!(cast(&mut g, e, Some(Target::Permanent(victim))).is_err(), "no creature: {{3}} more");
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, e, Some(Target::Permanent(victim))).expect("pay half");
+    assert!(g.battlefield_find(victim).is_none());
+}
+
+/// Lady Sun bounces herself and another creature, only before attackers on
+/// your turn.
+#[test]
+fn lady_sun_bounces_herself_and_another() {
+    let mut g = pod(2);
+    let sun = ready(&mut g, 0, catalog::lady_sun());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let act = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility { card_id: sun, ability_index: 0, target: Some(Target::Permanent(bears)), additional_targets: vec![], x_value: None, mode: None })
+    };
+    g.step = TurnStep::DeclareBlockers;
+    assert!(act(&mut g).is_err(), "after attackers");
+    g.step = TurnStep::PreCombatMain;
+    act(&mut g).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    assert!(g.players[0].hand.iter().any(|c| c.id == sun));
+}
+
+/// Heirloom Auntie sheds a -1/-1 counter as another creature of yours dies.
+#[test]
+fn heirloom_auntie_grows_as_your_creatures_die() {
+    let mut g = pod(2);
+    let auntie = g.add_card_to_hand(0, catalog::heirloom_auntie());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, auntie, None).expect("cast");
+    assert_eq!(g.computed_permanent(auntie).unwrap().power, 2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(auntie).unwrap().power, 3);
 }

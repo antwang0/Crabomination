@@ -7,7 +7,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, ModesWiden, Predicate, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{deal, each_opponent, etb, gain_life, on_attack, on_dies, on_you_attack, target_filtered};
+use crate::effect::shortcut::{deal, each_opponent, etb, gain_life, on_attack, on_dies, on_you_attack, target_filtered, unearth};
 use crate::effect::{Duration, Effect, LookPick, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
@@ -1165,5 +1165,194 @@ pub fn the_falcon_sam_wilson() -> CardDefinition {
             amount: Value::ONE,
         })],
         ..legend(creature("The Falcon, Sam Wilson", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Hero], 3, 3))
+    }
+}
+
+// ── Lady Sun ────────────────────────────────────────────────────────────────
+
+/// "Activate only during your turn, before attackers are declared."
+fn your_turn_before_attackers() -> Predicate {
+    Predicate::All(vec![
+        Predicate::IsTurnOf(PlayerRef::You),
+        Predicate::Any(vec![
+            Predicate::CurrentStepIs(TurnStep::Untap),
+            Predicate::CurrentStepIs(TurnStep::Upkeep),
+            Predicate::CurrentStepIs(TurnStep::Draw),
+            Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+            Predicate::CurrentStepIs(TurnStep::BeginCombat),
+        ]),
+    ])
+}
+
+/// Lady Sun — {1}{U}{U} legendary 1/1 Human Advisor. {T}: return Lady Sun and
+/// another target creature to their owners' hands; only during your turn,
+/// before attackers are declared.
+pub fn lady_sun() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(your_turn_before_attackers()),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))) },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(creature("Lady Sun", cost(&[generic(1), u(), u()]), vec![CreatureType::Human, CreatureType::Advisor], 1, 1))
+    }
+}
+
+/// Imperial Cosmographer — {2}{U} 2/3 vigilance Kree Scientist. Another
+/// creature of yours leaving the battlefield without dying: two +1/+1
+/// counters on it.
+pub fn imperial_cosmographer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureLeavesBattlefieldNotDying, EventScope::AnotherOfYours),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+        }],
+        ..creature("Imperial Cosmographer", cost(&[generic(2), u()]), vec![CreatureType::Kree, CreatureType::Scientist], 2, 3)
+    }
+}
+
+/// Puca's Mischief — {3}{U} enchantment. Your upkeep: you may exchange
+/// control of target nonland permanent you control and target nonland
+/// permanent an opponent controls with equal or lesser mana value.
+pub fn pucas_mischief() -> CardDefinition {
+    CardDefinition {
+        name: "Puca's Mischief",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Exchange control of your nonland permanent and an opponent's cheaper one?".into(),
+                body: Box::new(Effect::ExchangeControl {
+                    a: Selector::TargetFiltered { slot: 0, filter: R::Permanent.and(R::Not(Box::new(R::Land))).and(R::ControlledByYou) },
+                    b: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Permanent
+                            .and(R::Not(Box::new(R::Land)))
+                            .and(R::ControlledByOpponent)
+                            .and(R::ManaValueAtMostTargetSlot(0)),
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Seymour Flux ────────────────────────────────────────────────────────────
+
+/// Gurgling Anointer — {2}{B} 1/3 flying Phyrexian Horror. Your second draw
+/// each turn: a +1/+1 counter on it. Dies: return another target creature
+/// card with mana value ≤ its power from your graveyard to the battlefield.
+pub fn gurgling_anointer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+            on_dies(Effect::Move {
+                what: target_filtered(
+                    R::Creature.and(R::InYourGraveyard).and(R::OtherThanSource).and(R::ManaValueAtMostSourcePower),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        ],
+        ..creature("Gurgling Anointer", cost(&[generic(2), b()]), vec![CreatureType::Phyrexian, CreatureType::Horror], 1, 3)
+    }
+}
+
+/// Heirloom Auntie — {2}{B} 4/4 Goblin Warlock entering with two -1/-1
+/// counters. Another creature of yours dying: surveil 1, then remove a -1/-1
+/// counter from it.
+pub fn heirloom_auntie() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(2))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                Effect::RemoveCounter { what: Selector::This, kind: CounterType::MinusOneMinusOne, amount: Value::ONE },
+            ]),
+        }],
+        ..creature("Heirloom Auntie", cost(&[generic(2), b()]), vec![CreatureType::Goblin, CreatureType::Warlock], 4, 4)
+    }
+}
+
+/// Bogslither's Embrace — {1}{B} sorcery; blight 1 or pay {3} as an
+/// additional cost. Exile target creature.
+pub fn bogslithers_embrace() -> CardDefinition {
+    CardDefinition {
+        name: "Bogslither's Embrace",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::BlightOrPay { n: 1, pay: 3 }],
+        effect: Effect::Exile { what: target_filtered(R::Creature) },
+        ..Default::default()
+    }
+}
+
+// ── Arcum Dagsson ───────────────────────────────────────────────────────────
+
+/// Arcum Dagsson — {3}{U} legendary 2/2 Human Artificer. {T}: target artifact
+/// creature's controller sacrifices it, then may search for a noncreature
+/// artifact card and put it onto the battlefield.
+pub fn arcum_dagsson() -> CardDefinition {
+    let them = || PlayerRef::ControllerOf(Box::new(Selector::Target(0)));
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::SacrificePermanent { what: target_filtered(R::Artifact.and(R::Creature)) },
+                Effect::Search {
+                    who: them(),
+                    filter: R::Artifact.and(R::Not(Box::new(R::Creature))),
+                    to: ZoneDest::Battlefield { controller: them(), tapped: false },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(creature("Arcum Dagsson", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 2))
+    }
+}
+
+/// Combat Courier — {1} 1/1 artifact creature Construct. {2}, sacrifice it:
+/// draw a card. Unearth {U}.
+pub fn combat_courier() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            unearth(cost(&[u()])),
+        ],
+        ..creature("Combat Courier", cost(&[generic(1)]), vec![CreatureType::Construct], 1, 1)
+    }
+}
+
+/// Filigree Sages — {3}{U} 2/3 artifact creature Vedalken Wizard. {2}{U}:
+/// untap target artifact.
+pub fn filigree_sages() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Untap { what: target_filtered(R::Artifact), up_to: None },
+            ..Default::default()
+        }],
+        ..creature("Filigree Sages", cost(&[generic(3), u()]), vec![CreatureType::Vedalken, CreatureType::Wizard], 2, 3)
     }
 }

@@ -16472,6 +16472,15 @@ static DECKS: &[Factory] = &[
     super::decks::captain_america_liberator,
     super::decks::iconic_shield,
     super::decks::the_falcon_sam_wilson,
+    super::decks::lady_sun,
+    super::decks::imperial_cosmographer,
+    super::decks::pucas_mischief,
+    super::decks::gurgling_anointer,
+    super::decks::heirloom_auntie,
+    super::decks::bogslithers_embrace,
+    super::decks::arcum_dagsson,
+    super::decks::combat_courier,
+    super::decks::filigree_sages,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
