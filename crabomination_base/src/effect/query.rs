@@ -509,6 +509,7 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::WhenTargetDiesThisTurn { body, .. }
+            | Effect::WhenSourceDiesThisTurn { body }
             | Effect::WhenTargetDies { body, .. }
             | Effect::WhenTargetAttacksOpponentThisTurn { body, .. }
             | Effect::DamageCantBePrevented { body }
@@ -2365,6 +2366,7 @@ impl Effect {
             Effect::WhenTargetDiesThisTurn { .. }
             | Effect::WhenTargetDies { .. }
             | Effect::WhenTargetAttacksOpponentThisTurn { .. } => true,
+            Effect::WhenSourceDiesThisTurn { .. } => false,
             // Needs a creature to watch for damage (Paladin's Forecast).
             Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { .. } => true,

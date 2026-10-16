@@ -12184,6 +12184,11 @@ pub enum Effect {
     /// creature has left the battlefield. Expires at cleanup. Used by
     /// Searing Blood ("deals 3 damage to its controller", slot 0) and
     /// Devouring Tendrils ("gain 2 life", the damaged permanent in slot 1).
+    /// "When this creature dies this turn, [body]" (Golden Guardian's fight):
+    /// [`Self::WhenTargetDiesThisTurn`] watching the effect's own source, with
+    /// the body run from the source's card (`ExileSelfReturnTransformed` lifts
+    /// it out of the graveyard).
+    WhenSourceDiesThisTurn { body: Box<Effect> },
     WhenTargetDiesThisTurn {
         body: Box<Effect>,
         /// Which target slot to watch (default 0 via `#[serde(default)]`).
