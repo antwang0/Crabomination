@@ -193,6 +193,10 @@ the handoff.
   Hekma (Orim Samite Healer, Reidane); All-Seeing Arbiter, Just the Wind, Nagging Thoughts, Disciple of the Ring
   (Alexi Zephyr Mage, Hisoka); Yasova Dragonclaw, Demonmail Hauberk, Feed the Pack; Precursor Golem (Golden
   Argosy).
+- **CLAIMED (`01VDk2LU`, batch 8) — don't duplicate:** Extremis Elite, Molly Hayes, Volcanic Villain (Wonder
+  Man); Grim Reaper, Ultimo, Yellowjacket (Grim Reaper); Battlefield Scavenger, Khenra Scrapper, Sandstorm Crasher,
+  Trueheart Twins (Anep). `01VDk2LU`'s batches 1-7 landed as seats 2949-2952, 2955-2969, 2973-2975, 2981-2985,
+  2989-2992 (`decks::cmdr_oct16_e`).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
