@@ -83572,3 +83572,86 @@ pub const HYPERION_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ATOGATOG_COMMANDERS: &[CardFactory] = &[atogatog];
+
+/// **Atogatog**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 3 Forests + 3 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Atogatog (EDHREC, fetched 2026-10-16).
+pub const ATOGATOG_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, chronatog_totem, commanders_sphere, fellwar_stone,
+    ichor_wellspring, lifeline, maskwood_nexus, patchwork_banner, sol_ring, swiftfoot_boots,
+    breeding_pool, command_tower, evolving_wilds, exotic_orchard, godless_shrine,
+    hallowed_fountain, indatha_triome, jetmirs_garden, ketria_triome, misty_rainforest,
+    overgrown_tomb, path_of_ancestry, rogues_passage, sacred_foundry, steam_vents,
+    stomping_ground, temple_garden, the_world_tree, verdant_catacombs, windswept_heath,
+    wooded_foothills, zagoth_triome, adaptive_automaton, amoeboid_changeling,
+    ashnod_the_uncaring, atog, auratog, birds_of_paradise, bloodline_pretender,
+    chameleon_colossus, chomping_changeling, chronatog, foratog, graveshifter, lithatog,
+    mayhem_devil, megatog, mirror_entity, morophon_the_boundless, necratog, phantatog,
+    psychatog, realmwalker, sarcatog, taurean_mauler, thaumatog, unsettled_mariner,
+    barren_glory, black_market_connections, enchanted_evening, leyline_of_the_guildpact,
+    martyrs_bond, mayaels_aria, prismatic_omen, rancor, reflections_of_littjara,
+    cosmic_intervention, counterspell, faiths_reward, fatal_frenzy, fling, path_to_exile,
+    return_of_the_wildspeaker, second_sunrise, souls_fire, swords_to_plowshares,
+    chandras_ignition, cultivate, eerie_ultimatum, essence_harvest, farseek, kodamas_reach,
+    natures_lore, rampant_growth, rite_of_consumption,
+    // Basics
+    forest, forest, forest, island, island, island, mountain, mountain, plains, plains, plains,
+    swamp, swamp,
+];
+
+pub const BLACK_WIDOW_5_COMMANDERS: &[CardFactory] = &[black_widow_intel_expert];
+
+/// **Black Widow, Intel Expert**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Black Widow, Intel Expert (EDHREC, fetched 2026-10-16).
+pub const BLACK_WIDOW_5_MAIN: &[CardFactory] = &[
+    arcane_signet, captain_americas_shield, lightning_greaves, mind_stone, patchwork_banner,
+    pearl_medallion, sol_ring, swiftfoot_boots, sword_of_fire_and_ice, sword_of_the_animist,
+    the_mind_stone, the_wind_crystal, thought_vessel, wedding_ring, monumental_henge,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, war_room,
+    agent_phil_coulson, alms_collector, anti_venom_horrifying_healer, bastion_protector,
+    black_panther_claws_of_bast, black_panther_most_dangerous, captain_america_steve_rogers,
+    captain_america_super_soldier, captain_marvel_earths_protector, esper_sentinel,
+    everett_k_ross_hapless_attache, invisible_woman_sue_storm, joined_researchers,
+    keeper_of_the_accord, loran_of_the_third_path, mangara_the_diplomat,
+    night_nurse_healer_of_heroes, orzhov_advokist, phyrexian_vindicator, sun_titan, tataru_taru,
+    thalia_heretic_cathar, the_sentry_golden_guardian, witch_enchanter, darksteel_mutation,
+    duelists_heritage, ghostly_prison, gleaming_splendor, light_of_promise, monologue_tax,
+    origin_of_the_avengers, smothering_tithe, trouble_in_pairs, dawns_truce, flawless_maneuver,
+    generous_gift, path_to_exile, rebuff_the_wicked, reprieve, stroke_of_midnight,
+    swords_to_plowshares, teferis_protection, elspeth_suns_champion, austere_command,
+    cut_a_deal, generous_revival, promise_of_loyalty, secret_rendezvous, steelshapers_gift,
+    vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const JUSTICE_COMMANDERS: &[CardFactory] = &[justice_vance_astrovik];
+
+/// **Justice, Vance Astrovik**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Justice, Vance Astrovik (EDHREC, fetched 2026-10-16).
+pub const JUSTICE_MAIN: &[CardFactory] = &[
+    arcane_signet, blood_clock, commanders_plate, crystal_shard, machine_gods_effigy,
+    mind_stone, sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, umbilicus,
+    wayfarers_bauble, castle_vantress, lonely_sandbar, minamo_school_at_waters_edge,
+    mystic_sanctuary, reliquary_tower, rogues_passage, war_room, aether_channeler,
+    archaeomancer, barrin_tolarian_archmage, cache_raiders, cloud_of_faeries, defiler_of_dreams,
+    disruptor_of_currents, dour_port_mage, grazilaxx_illithid_scholar, high_fae_trickster,
+    hullbreaker_horror, hydroelectric_specimen, imperial_cosmographer, mulldrifter, quickling,
+    rescue_pepper_potts, shrieking_drake, silver_myr, snapcaster_mage, solemn_simulacrum,
+    spider_byte_web_warden, venser_shaper_savant, voidmage_husher, watcher_for_tomorrow,
+    cunning_evasion, equilibrium, leyline_of_anticipation, propaganda, reality_acid,
+    aether_tradewinds, aetherize, boomerang, counterspell, cyclonic_rift, familiars_ruse,
+    frantic_search, high_tide, negate, peel_from_reality, rapid_hybridization,
+    run_away_together, sink_into_stupor, snap, spider_sense, unsubstantiate, unsummon,
+    barals_expertise, boomerang_basics, consuming_tide, sea_gate_restoration, stolen_by_the_fae,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];

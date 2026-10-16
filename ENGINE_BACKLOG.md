@@ -188,6 +188,10 @@ the handoff.
 - **CLAIMED (`014Q2Gfw`, batch 11) — don't duplicate:** Ojutai Monument + Ojutai's Breath (Ojutai, Soul of
   Winter); Anep + Goma Fada Vanguard (Gornog); Hixus + Prison Sentence; Reservoir Kraken, Pearl Lake Ancient,
   Undulating Witness (Thassa God of the Sea, Slinn Voda); Chronatog Totem + Barren Glory (Atogatog).
+  ⚠ **`01VDk2LU` had already built Chronatog Totem + Barren Glory** (`decks::cmdr_oct16_e` batch 5, with
+  Black Panther Claws of Bast, Cache Raiders, Disruptor of Currents, Voidmage Husher) and seated Atogatog, Black
+  Widow Intel Expert, Justice — drop those two from batch 11. Captain America Wings of Freedom / Super-Soldier /
+  Skybound are zero-gap now (Hyperion + `01VDk2LU`'s Wings of Freedom); **`014Q2Gfw` seats them**, `01VDk2LU` won't.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and

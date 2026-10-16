@@ -18336,6 +18336,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HYPERION_COMMANDERS,
             main: decks::HYPERION_MAIN,
         },
+        // Seat 2981: Atogatog's EDHREC average deck. `--pod-decks 2981`.
+        PodDeck {
+            name: "Atogatog (WUBRG)",
+            commanders: decks::ATOGATOG_COMMANDERS,
+            main: decks::ATOGATOG_MAIN,
+        },
+        // Seat 2982: Black Widow, Intel Expert's EDHREC average deck. `--pod-decks 2982`.
+        PodDeck {
+            name: "Black Widow, Intel Expert (W)",
+            commanders: decks::BLACK_WIDOW_5_COMMANDERS,
+            main: decks::BLACK_WIDOW_5_MAIN,
+        },
+        // Seat 2983: Justice, Vance Astrovik's EDHREC average deck. `--pod-decks 2983`.
+        PodDeck {
+            name: "Justice, Vance Astrovik (U)",
+            commanders: decks::JUSTICE_COMMANDERS,
+            main: decks::JUSTICE_MAIN,
+        },
     ]
 }
 
@@ -23200,6 +23218,9 @@ mod tests {
             ("Tyrox, Saurid Tyrant", &[0x15B8]),
             ("Agent Phil Coulson", &[0x15B9]),
             ("Hyperion, Supreme Hero", &[0x15BA]),
+            ("Atogatog", &[0x15BB]),
+            ("Black Widow, Intel Expert", &[0x15BC]),
+            ("Justice, Vance Astrovik", &[0x15BD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
