@@ -81549,3 +81549,93 @@ pub const GLORFINDEL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const SHAUN_REBECCA_COMMANDERS: &[CardFactory] = &[shaun_rebecca_agents];
+
+/// **Shaun & Rebecca, Agents**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 5 Forests + 5 Islands + 4 Plains = 99.
+/// Shaun & Rebecca, Agents (EDHREC, fetched 2026-10-16).
+pub const SHAUN_REBECCA_MAIN: &[CardFactory] = &[
+    arcane_signet, crystal_skull_isu_spyglass, heroes_podium, manifold_key, relic_of_legends,
+    sol_ring, talisman_of_curiosity, talisman_of_progress, the_animus, voltaic_key,
+    breeding_pool, canopy_vista, command_tower, dreamroot_cascade, exotic_orchard,
+    flooded_strand, glacial_fortress, hallowed_fountain, hedge_maze, hinterland_harbor,
+    lush_portico, meticulous_archive, prairie_stream, rejuvenating_springs, sea_of_clouds,
+    seaside_citadel, sparas_headquarters, sunpetal_grove, temple_garden, windswept_heath,
+    yavimaya_coast, absolute_virtue, adric_mathematical_genius, avacyn_angel_of_hope,
+    bonny_pall_clearcutter, chulane_teller_of_tales, delighted_halfling,
+    elesh_norn_grand_cenobite, evie_frye, ghalta_and_mavren, gold_forged_thopteryx,
+    ioreth_of_the_healing_house, jo_grant, k_9_mark_i, kiora_the_rising_tide,
+    kogla_the_titan_ape, koma_cosmos_serpent, koma_world_eater, loran_of_the_third_path,
+    malcolm_alluring_scoundrel, niambi_esteemed_speaker, pippin_guard_of_the_citadel,
+    reki_the_history_of_kamigawa, senu_keen_eyed_protector, serah_farron, six,
+    the_capitoline_triad, the_peregrine_dynamo, the_sixth_doctor, the_warring_triad, uro,
+    venat_heart_of_hydaelyn, yoshimaru_ever_faithful, zetalpa_primal_dawn,
+    ballad_of_the_black_flag, day_of_destiny, flowering_of_the_white_tree, kellan_joins_up,
+    arcane_denial, beast_within, counterspell, desynchronization, faithful_mending,
+    frantic_search, heroic_intervention, path_to_exile, pull_from_eternity,
+    swords_to_plowshares, cultivate, farseek, natures_lore, rampant_growth, three_visits,
+    urzas_ruinous_blast, windfall,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, plains,
+    plains, plains, plains,
+];
+
+pub const LADY_EVANGELA_COMMANDERS: &[CardFactory] = &[lady_evangela];
+
+/// **Lady Evangela**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 5 Islands + 7 Plains + 5 Swamps = 99.
+/// Lady Evangela (EDHREC, fetched 2026-10-16).
+pub const LADY_EVANGELA_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, crawlspace, dimir_signet, fellwar_stone, orzhov_signet,
+    sol_ring, talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress,
+    arcane_sanctum, caves_of_koilos, command_tower, exotic_orchard, flooded_strand,
+    glacial_fortress, godless_shrine, hallowed_fountain, isolated_chapel, marsh_flats,
+    maze_of_ith, morphic_pool, polluted_delta, prairie_stream, raffines_tower, reliquary_tower,
+    sea_of_clouds, vault_of_champions, watery_grave, archivist_of_oghma, baleful_strix,
+    battletide_alchemist, breena_the_demagogue, doubtless_one, edgewalker,
+    elas_il_kor_sadistic_pilgrim, esper_sentinel, faerie_mastermind, grand_abolisher,
+    mangara_the_diplomat, mother_of_runes, orah_skyclave_hierophant, rotlung_reanimator,
+    silent_arbiter, solemn_simulacrum, soul_warden, suture_priest, tomik_orzhov_lawmage,
+    vito_thorn_of_the_dusk_rose, weathered_wayfarer, windborn_muse, ghostly_prison,
+    mystic_remora, no_mercy, phyrexian_arena, propaganda, rhystic_study, smothering_tithe,
+    sphere_of_safety, way_of_the_mind_sculptor, anguished_unmaking, arcane_denial, brainstorm,
+    counterspell, dark_ritual, darkness, dovins_veto, holy_day, inkshield, mana_drain, negate,
+    path_to_exile, swords_to_plowshares, void_rend, jace_reality_sculptor, damn, demonic_tutor,
+    ponder, reanimate, supreme_verdict, windfall, wrath_of_god,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const IAN_CHESTERTON_COMMANDERS: &[CardFactory] = &[ian_chesterton];
+
+/// **Ian Chesterton**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 16 Plains = 99.
+/// Ian Chesterton (EDHREC, fetched 2026-10-16).
+pub const IAN_CHESTERTON_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, caged_sun, cloud_key, extraplanar_lens,
+    gauntlet_of_power, pearl_medallion, power_conduit, sol_ring, throne_of_eldraine,
+    adagia_windswept_bastion, emeria_the_sky_ruin, hall_of_heliods_generosity,
+    ishgard_the_holy_see, monumental_henge, myriad_landscape, nesting_grounds,
+    nykthos_shrine_to_nyx, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    archon_of_suns_grace, auramancer, barbara_wright, elena_turk_recruit, ghostly_dancers,
+    mesa_enchantress, monk_idealist, ondu_spiritdancer, peri_brown, sarah_jane_smith,
+    scholar_of_new_horizons, slumbering_keepguard, starfield_mystic, starnheim_courser,
+    summon_bahamut, summon_choco_mog, summon_good_king_mog_xii, summon_ixion,
+    summon_knights_of_round, summon_primal_garuda, summon_yojimbo, witch_enchanter,
+    ajani_fells_the_godsire, elspeth_conquers_death, era_of_enlightenment,
+    fall_of_the_first_civilization, historians_boon, history_of_benalia,
+    love_song_of_night_and_day, michikos_reign_of_truth, of_herbs_and_stewed_rabbit,
+    origin_of_spider_man, sphere_of_safety, tale_of_tinuviel, the_birth_of_meletis,
+    the_fall_of_lord_konda, the_night_of_the_doctor, the_princess_takes_flight,
+    the_restoration_of_eiganjo, the_war_games, three_blind_mice, trial_of_a_time_lord,
+    triumph_of_gerrard, vault_13_dwellers_journey, vault_75_middle_school, enlightened_tutor,
+    generous_gift, path_to_exile, stroke_of_midnight, swords_to_plowshares,
+    brilliant_restoration, idyllic_tutor, resurgent_belief, search_for_glory,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

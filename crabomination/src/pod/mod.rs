@@ -17898,6 +17898,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GLORFINDEL_COMMANDERS,
             main: decks::GLORFINDEL_MAIN,
         },
+        // Seat 2908: Shaun & Rebecca, Agents's EDHREC average deck. `--pod-decks 2908`.
+        PodDeck {
+            name: "Shaun & Rebecca, Agents (WUG)",
+            commanders: decks::SHAUN_REBECCA_COMMANDERS,
+            main: decks::SHAUN_REBECCA_MAIN,
+        },
+        // Seat 2909: Lady Evangela's EDHREC average deck. `--pod-decks 2909`.
+        PodDeck {
+            name: "Lady Evangela (WUB)",
+            commanders: decks::LADY_EVANGELA_COMMANDERS,
+            main: decks::LADY_EVANGELA_MAIN,
+        },
+        // Seat 2910: Ian Chesterton's EDHREC average deck. `--pod-decks 2910`.
+        PodDeck {
+            name: "Ian Chesterton (W)",
+            commanders: decks::IAN_CHESTERTON_COMMANDERS,
+            main: decks::IAN_CHESTERTON_MAIN,
+        },
     ]
 }
 
@@ -22689,6 +22707,9 @@ mod tests {
             ("Gollum the Abandoned", &[0x156F]),
             ("Human Torch, Johnny Storm", &[0x1570]),
             ("Glorfindel, Dauntless Rescuer", &[0x1571]),
+            ("Shaun & Rebecca, Agents", &[0x1572]),
+            ("Lady Evangela", &[0x1573]),
+            ("Ian Chesterton", &[0x1574]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
