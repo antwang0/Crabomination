@@ -816,3 +816,27 @@ fn way_of_the_mind_sculptor_draws_off_a_big_minus() {
     act(&mut g, 1);
     assert_eq!(g.players[0].hand.len(), 2, "the −3 draws one, the Way one more");
 }
+
+/// The Fall of Lord Konda: chapter II hands every stolen permanent back to its
+/// owner; chapter III returns the Saga as Fragment of Konda.
+#[test]
+fn fall_of_lord_konda_returns_stolen_permanents_then_transforms() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 20);
+    let stolen = ready(&mut g, 1, catalog::grizzly_bears());
+    let steal = Effect::GainControl {
+        what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature),
+        to: None,
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&steal, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    let saga = g.add_card_to_hand(0, catalog::the_fall_of_lord_konda());
+    cast(&mut g, saga);
+    assert_eq!(g.battlefield_find(stolen).unwrap().controller, 0);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert_eq!(g.battlefield_find(stolen).unwrap().controller, 1, "chapter II");
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Fragment of Konda"), "chapter III");
+}

@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::ActivationTrait;
-use crate::effect::shortcut::{boast, etb, landfall, target_filtered};
+use crate::effect::shortcut::{boast, etb, landfall, on_dies, target_filtered};
 use crate::game::TurnStep;
 use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::mana::SpendRestriction;
@@ -640,5 +640,64 @@ pub fn way_of_the_mind_sculptor() -> CardDefinition {
             },
         ],
         ..Default::default()
+    }
+}
+
+// ── Ian Chesterton ──────────────────────────────────────────────────────────
+
+fn saga_back(name: &'static str, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        color_indicator: vec![Color::White],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        ..creature(name, ManaCost::default(), types, p, t)
+    }
+}
+
+/// Era of Enlightenment — {1}{W} Saga. I: scry 2. II: gain 2 life. III: exile
+/// it and return it transformed (Hand of Enlightenment, a 2/2 first-strike
+/// Human Monk enchantment creature).
+pub fn era_of_enlightenment() -> CardDefinition {
+    CardDefinition {
+        back_face: Some(Box::new(CardDefinition {
+            keywords: vec![Keyword::FirstStrike],
+            ..saga_back("Hand of Enlightenment", vec![CreatureType::Human, CreatureType::Monk], 2, 2)
+        })),
+        ..saga(
+            "Era of Enlightenment",
+            cost(&[generic(1), w()]),
+            vec![
+                (1, Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                (2, Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                (3, Effect::ExileSelfReturnTransformed),
+            ],
+        )
+    }
+}
+
+/// The Fall of Lord Konda — {2}{W} Saga. I: exile target creature an opponent
+/// controls with mana value 4 or greater. II: each player gains control of all
+/// permanents they own. III: exile it and return it transformed (Fragment of
+/// Konda, a 1/3 defender Human Noble that draws a card when it dies).
+pub fn the_fall_of_lord_konda() -> CardDefinition {
+    CardDefinition {
+        back_face: Some(Box::new(CardDefinition {
+            keywords: vec![Keyword::Defender],
+            triggered_abilities: vec![on_dies(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+            ..saga_back("Fragment of Konda", vec![CreatureType::Human, CreatureType::Noble], 1, 3)
+        })),
+        ..saga(
+            "The Fall of Lord Konda",
+            cost(&[generic(2), w()]),
+            vec![
+                (
+                    1,
+                    Effect::Exile {
+                        what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::ManaValueAtLeast(4))),
+                    },
+                ),
+                (2, Effect::OwnersGainControlOf { filter: R::Permanent }),
+                (3, Effect::ExileSelfReturnTransformed),
+            ],
+        )
     }
 }
