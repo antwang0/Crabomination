@@ -773,7 +773,7 @@ fn shaun_and_rebecca_fetch_the_animus_and_mill_for_mana() {
     let mut g = pod(2);
     stock_libraries(&mut g, 10);
     let animus = g.add_card_to_graveyard(0, catalog::the_animus());
-    let sr = g.add_card_to_hand(0, catalog::shaun_and_rebecca_agents());
+    let sr = g.add_card_to_hand(0, catalog::shaun_rebecca_agents());
     cast(&mut g, sr);
     assert!(g.battlefield_find(animus).is_some());
     g.clear_sickness(sr);

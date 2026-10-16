@@ -16299,7 +16299,7 @@ static DECKS: &[Factory] = &[
     super::decks::fearless_liberator,
     super::decks::kun_lun_warrior,
     super::decks::wonder_man_hollywood_hero,
-    super::decks::shaun_and_rebecca_agents,
+    super::decks::shaun_rebecca_agents,
     super::decks::pull_from_eternity,
 ];
 static DGM: &[Factory] = &[

@@ -579,7 +579,7 @@ pub fn wonder_man_hollywood_hero() -> CardDefinition {
 /// Shaun & Rebecca, Agents — {1}{G}{W}{U} legendary 4/4 vigilance. Enters:
 /// search your graveyard, hand and library for The Animus and put it onto the
 /// battlefield. {T}: add {C}; when you do, mill two.
-pub fn shaun_and_rebecca_agents() -> CardDefinition {
+pub fn shaun_rebecca_agents() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Vigilance],
