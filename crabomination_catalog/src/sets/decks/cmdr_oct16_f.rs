@@ -1,10 +1,11 @@
-//! Commander: the 2026-10-16 (`0128tsCy`) rescan's one- and three-card gaps —
-//! Winter Soldier, Luke Cage, Captain America Liberator, Doorman, The Prismatic
-//! Piper; Pia Nalaar, Kraven, Ghost, Boomerang. Tests in `tests/recent_b/cmdr_oct16_f.rs`.
+//! Commander: the 2026-10-16 (`0128tsCy`) rescan's gaps — Winter Soldier, Luke
+//! Cage, Captain America Liberator, Doorman, The Prismatic Piper; Pia Nalaar,
+//! Kraven, Ghost, Boomerang; Rasaad yn Bashir's decks, Faceless One // Criminal
+//! Past. Tests in `tests/recent_b/cmdr_oct16_f.rs`.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, StateTriggeredAbility, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{cast_is_noncreature, etb, target_filtered};
@@ -536,5 +537,198 @@ pub fn faceless_one() -> CardDefinition {
             effect: StaticEffect::CommanderChoosesColorBeforeGame,
         }],
         ..legend(creature("Faceless One", cost(&[generic(5)]), vec![], 3, 3))
+    }
+}
+
+// ── batch 3: Rasaad yn Bashir's three decks, Faceless One // Criminal Past ──
+
+/// Dungeoneer's Pack — {3} artifact, enters tapped. {2}, {T}, sacrifice it: you
+/// take the initiative, gain 3 life, draw a card and make a Treasure; sorcery
+/// speed.
+pub fn dungeoneers_pack() -> CardDefinition {
+    CardDefinition {
+        name: "Dungeoneer's Pack",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                Effect::TakeInitiative { who: PlayerRef::You },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(treasure_token()) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Trailblazer's Torch — {4} Equipment, equip {1}. ETB: you take the
+/// initiative. Equipped creature becoming blocked deals 2 damage to each
+/// creature blocking it.
+pub fn trailblazers_torch() -> CardDefinition {
+    CardDefinition {
+        name: "Trailblazer's Torch",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        triggered_abilities: vec![etb(Effect::TakeInitiative { who: PlayerRef::You })],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: Selector::EachPermanent(R::Creature.and(R::BlockingOrBlockedBySource)),
+                    amount: Value::Const(2),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Harnessed Snubhorn — {3}{W} 2/5 vigilance Dinosaur. Combat damage to a
+/// player returns target artifact or enchantment card from your graveyard to
+/// the battlefield.
+pub fn harnessed_snubhorn() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(R::InYourGraveyard.and(R::Artifact.or(R::Enchantment))),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..creature("Harnessed Snubhorn", cost(&[generic(3), w()]), vec![CreatureType::Dinosaur], 2, 5)
+    }
+}
+
+/// Hamato Guardian Stance — {W} instant: target creature +1/+3 and flying until
+/// end of turn; scry 1.
+pub fn hamato_guardian_stance() -> CardDefinition {
+    CardDefinition {
+        name: "Hamato Guardian Stance",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::ONE, toughness: Value::Const(3), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Veteran Soldier — {1}{W} legendary Background. Your commander creatures
+/// attacking a player no opponent out-lives make a tapped-and-attacking 1/1
+/// Soldier at each opponent.
+pub fn veteran_soldier() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    let ability = TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
+            Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer },
+            Predicate::PlayerHasMostLifeAmongOpponents { who: PlayerRef::DefendingPlayer },
+        ])),
+        effect: Effect::ForEachOpponent {
+            body: Box::new(Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(soldier),
+                cleanup: Default::default(),
+                defender: Some(PlayerRef::Triggerer),
+            }),
+        },
+    };
+    CardDefinition {
+        name: "Veteran Soldier",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Background], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "Commander creatures you own have \"Whenever this creature attacks a player, if no opponent has more life than that player, for each opponent, create a 1/1 white Soldier creature token that's tapped and attacking that opponent.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
+                ability: Box::new(ability),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Veteran Armorsmith — {W}{W} 2/3 Human Soldier; other Soldiers you control
+/// get +0/+1.
+pub fn veteran_armorsmith() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other Soldier creatures you control get +0/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Soldier)).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 0,
+                toughness: 1,
+            },
+        }],
+        ..creature("Veteran Armorsmith", cost(&[w(), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 3)
+    }
+}
+
+/// Lurebound Scarecrow — {3} 4/4 artifact Scarecrow. As it enters, choose a
+/// color; when you control no permanents of that color, sacrifice it.
+pub fn lurebound_scarecrow() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        state_trigger: Some(StateTriggeredAbility {
+            condition: Predicate::Not(Box::new(Predicate::YouControlPermanentOfSourcesChosenColor)),
+            effect: Effect::SacrificeSource,
+        }),
+        ..creature("Lurebound Scarecrow", cost(&[generic(3)]), vec![CreatureType::Scarecrow], 4, 4)
+    }
+}
+
+/// Midnight Oil — {2}{B}{B} enchantment with seven hour counters. Your draw
+/// step draws one more and removes two; your maximum hand size is its hour
+/// count; each card you discard costs 1 life.
+pub fn midnight_oil() -> CardDefinition {
+    CardDefinition {
+        name: "Midnight Oil",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        enters_with_counters: Some((CounterType::Hour, Value::Const(7))),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::RemoveCounter { what: Selector::This, kind: CounterType::Hour, amount: Value::Const(2) },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+                effect: Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Your maximum hand size is equal to the number of hour counters on this enchantment.",
+            effect: StaticEffect::ControllerMaxHandSizeFromSourceCounters(CounterType::Hour),
+        }],
+        ..Default::default()
     }
 }

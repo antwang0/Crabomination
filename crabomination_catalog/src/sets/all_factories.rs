@@ -16621,6 +16621,14 @@ static DECKS: &[Factory] = &[
     super::decks::loot_the_anomaly,
     super::decks::silence_the_echo,
     super::decks::faceless_one,
+    super::decks::dungeoneers_pack,
+    super::decks::trailblazers_torch,
+    super::decks::harnessed_snubhorn,
+    super::decks::hamato_guardian_stance,
+    super::decks::veteran_soldier,
+    super::decks::veteran_armorsmith,
+    super::decks::lurebound_scarecrow,
+    super::decks::midnight_oil,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

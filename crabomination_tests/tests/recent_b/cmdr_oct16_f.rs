@@ -362,3 +362,116 @@ fn cr_903_4b_piper_and_faceless_one_take_the_color_their_deck_needs() {
         assert_eq!(c.definition.printed_colors(), vec![Color::Red], "{}", cmd().name);
     }
 }
+
+/// Dungeoneer's Pack: enters tapped; cracked, it takes the initiative (CR
+/// 725), gains 3, draws and makes a Treasure.
+#[test]
+fn dungeoneers_pack_takes_the_initiative_and_pays_out() {
+    let mut g = pod(3);
+    let pack = g.add_card_to_battlefield(0, catalog::dungeoneers_pack());
+    let id = g.battlefield.iter().rev().find(|c| c.definition.name == "Dungeoneer's Pack").unwrap().id;
+    assert_eq!(id, pack);
+    g.battlefield_find_mut(pack).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(2);
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    activate(&mut g, pack, 0, None).expect("crack the Pack");
+    assert_eq!(g.initiative, Some(0));
+    assert_eq!(g.players[0].life, life + 3);
+    assert!(g.players[0].hand.len() > hand);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure"));
+}
+
+/// Trailblazer's Torch: the initiative on entry; an equipped creature that
+/// becomes blocked deals 2 to each blocker.
+#[test]
+fn trailblazers_torch_burns_each_blocker() {
+    let mut g = pod(2);
+    let torch = g.add_card_to_hand(0, catalog::trailblazers_torch());
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, torch, None).expect("Torch");
+    assert_eq!(g.initiative, Some(0));
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    g.battlefield_find_mut(torch).unwrap().attached_to = Some(wurm);
+    let (a, b) = (ready(&mut g, 1, catalog::grizzly_bears()), ready(&mut g, 1, catalog::grizzly_bears()));
+    attack(&mut g, &[(wurm, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(a, wurm), (b, wurm)])).expect("double block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "2 damage each to the 2/2s");
+}
+
+/// Harnessed Snubhorn's combat damage returns an artifact card to play.
+#[test]
+fn harnessed_snubhorn_returns_an_artifact_on_combat_damage() {
+    let mut g = pod(2);
+    let horn = ready(&mut g, 0, catalog::harnessed_snubhorn());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    attack(&mut g, &[(horn, 1)]);
+    to_combat_damage(&mut g);
+    assert!(g.battlefield_find(ring).is_some_and(|c| c.controller == 0));
+}
+
+/// Veteran Soldier: your commander attacking the player no opponent out-lives
+/// makes a tapped-and-attacking Soldier at each opponent; attacking a player
+/// another opponent out-lives makes none.
+#[test]
+fn veteran_soldier_fans_soldiers_out_when_attacking_the_life_leader() {
+    for (defender_is_leader, want) in [(true, 3), (false, 0)] {
+        let mut g = pod(4);
+        g.players[0].life = 10; // your own total never counts
+        g.players[3].life = if defender_is_leader { 20 } else { 25 };
+        ready(&mut g, 0, catalog::veteran_soldier());
+        let cmdr = ready(&mut g, 0, catalog::grizzly_bears());
+        g.players[0].commanders = vec![cmdr];
+        attack(&mut g, &[(cmdr, 1)]);
+        let soldiers: Vec<_> = g.attacking.iter().filter(|a| g.battlefield_find(a.attacker).is_some_and(|c| c.is_token)).collect();
+        assert_eq!(soldiers.len(), want, "leader {defender_is_leader}");
+        for seat in 1..4 {
+            assert_eq!(soldiers.iter().filter(|a| a.target == AttackTarget::Player(seat)).count(), want / 3);
+        }
+    }
+}
+
+/// Lurebound Scarecrow names the color you have most of and is sacrificed
+/// the moment you control none of it (CR 603.8 state trigger).
+#[test]
+fn lurebound_scarecrow_dies_with_its_color() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let crow = g.add_card_to_hand(0, catalog::lurebound_scarecrow());
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, crow, None).expect("Scarecrow");
+    assert_eq!(g.battlefield_find(crow).unwrap().chosen_color, Some(Color::Green));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bears))).expect("Bolt the Bears");
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(crow).is_none(), "no green permanent left");
+}
+
+/// Midnight Oil: seven hour counters cap the hand; the draw step draws one
+/// more and burns two; every discard costs 1 life.
+#[test]
+fn midnight_oil_trades_hour_counters_for_cards() {
+    let mut g = pod(2);
+    let oil = g.add_card_to_hand(0, catalog::midnight_oil());
+    g.players[0].mana_pool.add(Color::Black, 4);
+    cast(&mut g, oil, None).expect("Midnight Oil");
+    assert_eq!(g.effective_max_hand_size(0), Some(7));
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::Draw;
+    g.fire_step_triggers(TurnStep::Draw);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the additional card");
+    assert_eq!(g.effective_max_hand_size(0), Some(5));
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_ability(oil, 0, None);
+    let evs = g
+        .resolve_effect(&crabomination::effect::Effect::Discard { who: crabomination::effect::Selector::You, amount: crabomination::effect::Value::ONE, random: false }, &ctx)
+        .expect("discard");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1);
+}
