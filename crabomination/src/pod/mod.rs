@@ -18684,6 +18684,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VOLO_3_COMMANDERS,
             main: decks::VOLO_3_MAIN,
         },
+        // Seat 3039: Rasaad yn Bashir's EDHREC average deck. `--pod-decks 3039`.
+        PodDeck {
+            name: "Rasaad yn Bashir (W)",
+            commanders: decks::RASAAD_YN_BASHIR_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_MAIN,
+        },
+        // Seat 3040: Rasaad yn Bashir and Veteran Soldier's EDHREC average deck. `--pod-decks 3040`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Veteran Soldier (W)",
+            commanders: decks::RASAAD_YN_BASHIR_2_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_2_MAIN,
+        },
+        // Seat 3041: Rasaad yn Bashir and Far Traveler's EDHREC average deck. `--pod-decks 3041`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Far Traveler (W)",
+            commanders: decks::RASAAD_YN_BASHIR_3_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_3_MAIN,
+        },
+        // Seat 3042: Rasaad yn Bashir and Inspiring Leader's EDHREC average deck. `--pod-decks 3042`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Inspiring Leader (W)",
+            commanders: decks::RASAAD_YN_BASHIR_4_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_4_MAIN,
+        },
+        // Seat 3043: Rasaad yn Bashir and Noble Heritage's EDHREC average deck. `--pod-decks 3043`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Noble Heritage (W)",
+            commanders: decks::RASAAD_YN_BASHIR_5_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_5_MAIN,
+        },
+        // Seat 3044: Faceless One and Criminal Past's EDHREC average deck. `--pod-decks 3044`.
+        PodDeck {
+            name: "Faceless One and Criminal Past (B)",
+            commanders: decks::FACELESS_ONE_COMMANDERS,
+            main: decks::FACELESS_ONE_MAIN,
+        },
     ]
 }
 
@@ -23606,6 +23642,12 @@ mod tests {
             ("Renari, Merchant of Marvels and Faceless One", &[0x15F2]),
             ("The Prismatic Piper and Yoshimaru, Ever Faithful", &[0x15F3]),
             ("Volo, Itinerant Scholar and Faceless One", &[0x15F4]),
+            ("Rasaad yn Bashir", &[0x15F5]),
+            ("Rasaad yn Bashir and Veteran Soldier", &[0x15F6]),
+            ("Rasaad yn Bashir and Far Traveler", &[0x15F7]),
+            ("Rasaad yn Bashir and Inspiring Leader", &[0x15F8]),
+            ("Rasaad yn Bashir and Noble Heritage", &[0x15F9]),
+            ("Faceless One and Criminal Past", &[0x15FA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

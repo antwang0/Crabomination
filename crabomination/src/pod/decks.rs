@@ -85198,3 +85198,164 @@ pub const VOLO_3_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
     island, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const RASAAD_YN_BASHIR_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir];
+
+/// **Rasaad yn Bashir**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Rasaad yn Bashir (EDHREC, fetched 2026-10-16).
+pub const RASAAD_YN_BASHIR_MAIN: &[CardFactory] = &[
+    accorders_shield, arcane_signet, cathars_shield, dungeoneers_pack, oketras_monument,
+    pearl_medallion, skeleton_key, slagwurm_armor, sol_ring, trailblazers_torch, access_tunnel,
+    avengers_tower, baxter_building, emeria_the_sky_ruin, kor_haven, rogues_passage,
+    armored_armadillo, baldin_century_herdmaster, blessed_orator, crashing_drawbridge,
+    crystal_barricade, daxos_blessed_by_the_sun, essence_of_antiquity,
+    everett_k_ross_hapless_attache, giant_ox, god_eternal_oketra, goliath_paladin,
+    harnessed_snubhorn, indomitable_ancients, kami_of_old_stone, knight_of_the_white_orchid,
+    looming_altisaur, mentor_of_the_meek, nyx_fleece_ram, oathsworn_giant, ornithopter,
+    queen_mother_ramonda, seasoned_dungeoneer, tasseled_dromedary, walls_of_ba_sing_se,
+    wall_of_omens, weathered_sentinels, welcoming_vampire, white_plume_adventurer,
+    white_widow_free_agent, yoked_ox, zetalpa_primal_dawn, assemble_the_players,
+    brave_the_sands, eland_umbra, flaming_fist, ghostly_prison, serras_blessing, stoneskin,
+    undercellar_sweep, aegis_of_the_heavens, bar_the_door, disenchant, generous_gift,
+    hamato_guardian_stance, path_to_exile, refuse_to_yield, solidarity, swords_to_plowshares,
+    unbreakable_formation, cut_a_deal, dusk_dawn, fell_the_mighty, secret_rendezvous,
+    slaughter_the_strong,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RASAAD_YN_BASHIR_2_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, veteran_soldier];
+
+/// **Rasaad yn Bashir and Veteran Soldier**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Plains = 98.
+/// Rasaad yn Bashir and Veteran Soldier (EDHREC, fetched 2026-10-16).
+pub const RASAAD_YN_BASHIR_2_MAIN: &[CardFactory] = &[
+    archaeomancers_map, dungeoneers_pack, marble_diamond, mind_stone, oketras_monument,
+    pearl_medallion, robe_of_stars, sarevoks_tome, sol_ring, swiftfoot_boots,
+    trailblazers_torch, access_tunnel, castle_ardenvale, emeria_the_sky_ruin, hidden_courtyard,
+    myriad_landscape, rogues_passage, baldin_century_herdmaster, battlefield_raptor,
+    claim_jumper, esper_sentinel, essence_of_antiquity, giant_ox, goldnight_commander,
+    goliath_paladin, keeper_of_the_accord, knight_of_the_white_orchid, lagonna_band_trailblazer,
+    loran_of_the_third_path, loyal_warhound, mangara_the_diplomat, mentor_of_the_meek,
+    prava_of_the_steel_legion, rumor_gatherer, seasoned_dungeoneer, spiritcall_enthusiast,
+    sun_titan, veteran_armorer, veteran_armorsmith, wall_of_omens, welcoming_vampire,
+    white_plume_adventurer, yoked_ox, brave_the_sands, darksteel_mutation, eland_umbra,
+    smothering_tithe, stoneskin, thorough_investigation, tocasias_welcome, undercellar_sweep,
+    akromas_will, bar_the_door, disenchant, lorans_escape, mana_tithe, path_to_exile,
+    rebuff_the_wicked, reprieve, solidarity, stroke_of_midnight, swords_to_plowshares,
+    cut_a_deal, dusk_dawn, farewell, lay_down_arms, secret_rendezvous, the_battle_of_bywater,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RASAAD_YN_BASHIR_3_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, far_traveler];
+
+/// **Rasaad yn Bashir and Far Traveler**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 31 Plains = 98.
+/// Rasaad yn Bashir and Far Traveler (EDHREC, fetched 2026-10-16).
+pub const RASAAD_YN_BASHIR_3_MAIN: &[CardFactory] = &[
+    arcane_signet, delvers_torch, dungeoneers_pack, oketras_monument, pearl_medallion,
+    sarevoks_tome, skeleton_key, slagwurm_armor, sol_ring, springleaf_drum, trailblazers_torch,
+    access_tunnel, hall_of_echoes, minas_tirith, myriad_landscape, rogues_passage,
+    baldin_century_herdmaster, crashing_drawbridge, daxos_blessed_by_the_sun, flickerwisp,
+    ghalta_the_immovable, giant_ox, goliath_paladin, indomitable_ancients, kami_of_old_stone,
+    knight_of_the_white_orchid, kor_cartographer, looming_altisaur, loran_of_the_third_path,
+    mangara_the_diplomat, mentor_of_the_meek, nadaar_selfless_paladin, nyx_fleece_ram,
+    oathsworn_giant, oketra_the_true, radiant_solar, rangers_hawk, rescue_girl_first_responder,
+    seasoned_dungeoneer, solemn_simulacrum, sun_titan, wall_of_omens, weathered_sentinels,
+    welcoming_vampire, white_plume_adventurer, zetalpa_primal_dawn, brave_the_sands,
+    court_of_ardenvale, eland_umbra, stoneskin, teleportation_circle, thorough_investigation,
+    undercellar_sweep, aegis_of_the_heavens, bar_the_door, cloudshift, ephemerate,
+    flicker_of_fate, generous_gift, refuse_to_yield, solidarity, swords_to_plowshares,
+    dusk_dawn, expel_the_interlopers, fell_the_mighty, generous_revival, slaughter_the_strong,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RASAAD_YN_BASHIR_4_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, inspiring_leader];
+
+/// **Rasaad yn Bashir and Inspiring Leader**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Plains = 98.
+/// Rasaad yn Bashir and Inspiring Leader (EDHREC, fetched 2026-10-16).
+pub const RASAAD_YN_BASHIR_4_MAIN: &[CardFactory] = &[
+    alacrian_armory, arcane_signet, dungeoneers_pack, oketras_monument, pearl_medallion,
+    sarevoks_tome, sol_ring, wayfarers_bauble, emeria_the_sky_ruin, forbidding_watchtower,
+    hall_of_heliods_generosity, myriad_landscape, rogues_passage, secret_tunnel, war_room,
+    archetype_of_courage, auramancer, auron_venerated_guardian, baldin_century_herdmaster,
+    charismatic_conqueror, conclave_phalanx, daxos_blessed_by_the_sun, dazzling_angel,
+    elesh_norn_grand_cenobite, evangel_of_heliod, flumph, ghostly_dancers, god_eternal_oketra,
+    grand_abolisher, knight_of_the_white_orchid, lionheart_glimmer, oathsworn_giant,
+    prava_of_the_steel_legion, prideful_parent, reverent_hoplite, seasoned_dungeoneer,
+    shrike_force, springjack_shepherd, white_plume_adventurer, anointed_procession,
+    blessed_sanctuary, brave_the_sands, caretakers_talent, case_of_the_uneaten_feast,
+    field_of_souls, intangible_virtue, legion_loyalty, stoneskin, undercellar_sweep,
+    wedding_announcement, bar_the_door, brave_the_elements, call_the_coppercoats, mabels_mettle,
+    raise_the_alarm, ray_of_dissolution, secure_the_wastes, triumphant_surge,
+    unbreakable_formation, elspeth_suns_champion, the_wanderer, austere_command, captains_call,
+    doomskar, gift_of_estates, martial_coup, sevinnes_reclamation, wave_of_reckoning,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RASAAD_YN_BASHIR_5_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, noble_heritage];
+
+/// **Rasaad yn Bashir and Noble Heritage**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 27 Plains = 98.
+/// Rasaad yn Bashir and Noble Heritage (EDHREC, fetched 2026-10-16).
+pub const RASAAD_YN_BASHIR_5_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, dungeoneers_pack, marble_diamond, oketras_monument,
+    pearl_medallion, sarevoks_tome, slagwurm_armor, sol_ring, swiftfoot_boots,
+    throne_of_eldraine, trailblazers_torch, access_tunnel, emeria_the_sky_ruin,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, war_room,
+    baldin_century_herdmaster, crashing_drawbridge, crenellated_wall, crystal_barricade,
+    daxos_blessed_by_the_sun, delney_streetwise_lookout, essence_of_antiquity, flumph,
+    ghalta_the_immovable, giant_ox, goliath_paladin, indomitable_ancients, mangara_the_diplomat,
+    mentor_of_the_meek, mother_of_runes, nyx_fleece_ram, ornithopter_of_paradise,
+    seasoned_dungeoneer, sun_titan, walls_of_ba_sing_se, wall_of_omens, weathered_sentinels,
+    welcoming_vampire, white_plume_adventurer, windborn_muse, zetalpa_primal_dawn,
+    authority_of_the_consuls, brave_the_sands, duelists_heritage, eland_umbra, flaming_fist,
+    ghostly_prison, land_tax, stoneskin, tocasias_welcome, undercellar_sweep,
+    aegis_of_the_heavens, bar_the_door, brave_the_elements, generous_gift, loyal_tutor,
+    path_to_exile, rebuff_the_wicked, refuse_to_yield, solidarity, swords_to_plowshares,
+    teyo_the_shieldmage, austere_command, cut_a_deal, dusk_dawn, fell_the_mighty,
+    slaughter_the_strong,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const FACELESS_ONE_COMMANDERS: &[CardFactory] = &[faceless_one, criminal_past];
+
+/// **Faceless One and Criminal Past**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 29 Swamps = 98.
+/// Faceless One and Criminal Past (EDHREC, fetched 2026-10-16).
+pub const FACELESS_ONE_MAIN: &[CardFactory] = &[
+    arcane_signet, champions_helm, hall_of_triumph, lightning_greaves, mask_of_avacyn,
+    pucas_eye, sol_ring, swiftfoot_boots, whispersilk_cloak, command_tower, leechridden_swamp,
+    myriad_landscape, phyrexian_tower, rogues_passage, temple_of_the_false_god, alloy_golem,
+    basal_thrull, blighted_shaman, blood_pet, brass_secretary, circling_vultures,
+    crow_of_dark_tidings, cryptic_trilobite, daggerfang_duo, dimir_house_guard, fume_spitter,
+    garzas_assassin, gravebreaker_lamia, grim_hireling, hangarback_walker, lurebound_scarecrow,
+    marketback_walker, nighthowler, oriq_loremage, phyrexian_marauder, phyrexian_walker,
+    sarevok_deathbringer, shifting_wall, spark_reaper, stitchers_supplier, syr_konrad_the_grim,
+    undead_butler, vile_entomber, animate_dead, black_market_connections, caustic_tar,
+    cemetery_tampering, curse_of_the_restless_dead, midnight_oil, phyrexian_arena,
+    ripples_of_undeath, scion_of_halaster, vow_of_torment, warlock_class, altars_reap,
+    dark_ritual, entomb, go_for_the_throat, songs_of_the_damned, village_rites, bubbling_muck,
+    buried_alive, deadly_precision, mutual_destruction, risky_research, severed_strands,
+    skulltap, spark_harvest, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
