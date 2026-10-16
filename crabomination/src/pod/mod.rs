@@ -18588,6 +18588,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARADESH_COMMANDERS,
             main: decks::ARADESH_MAIN,
         },
+        // Seat 3023: The Archimandrite's EDHREC average deck. `--pod-decks 3023`.
+        PodDeck {
+            name: "The Archimandrite (WUR)",
+            commanders: decks::THE_ARCHIMANDRITE_COMMANDERS,
+            main: decks::THE_ARCHIMANDRITE_MAIN,
+        },
+        // Seat 3024: Iizuka the Ruthless's EDHREC average deck. `--pod-decks 3024`.
+        PodDeck {
+            name: "Iizuka the Ruthless (R)",
+            commanders: decks::IIZUKA_THE_RUTHLESS_COMMANDERS,
+            main: decks::IIZUKA_THE_RUTHLESS_MAIN,
+        },
     ]
 }
 
@@ -23494,6 +23506,8 @@ mod tests {
             ("Hapatra, the Desert Fang", &[0x15E2]),
             ("Neheb, the Worthy", &[0x15E3]),
             ("Aradesh, the Founder", &[0x15E4]),
+            ("The Archimandrite", &[0x15E5]),
+            ("Iizuka the Ruthless", &[0x15E6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

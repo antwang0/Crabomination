@@ -84742,3 +84742,62 @@ pub const ARADESH_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const THE_ARCHIMANDRITE_COMMANDERS: &[CardFactory] = &[the_archimandrite];
+
+/// **The Archimandrite**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 5 Islands + 4 Mountains + 7 Plains = 99.
+/// The Archimandrite (EDHREC, fetched 2026-10-16).
+pub const THE_ARCHIMANDRITE_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, azorius_signet, decanter_of_endless_water, ivory_tower,
+    sol_ring, talisman_of_conviction, talisman_of_creativity, talisman_of_progress,
+    thought_vessel, vensers_journal, well_of_lost_dreams, adarkar_wastes, battlefield_forge,
+    clifftop_retreat, command_tower, exotic_orchard, glacial_fortress, hallowed_fountain,
+    mystic_monastery, path_of_ancestry, prairie_stream, raugrin_triome, reliquary_tower,
+    sacred_foundry, sea_of_clouds, shivan_reef, spectator_seating, steam_vents, sulfur_falls,
+    training_center, elsha_of_the_infinite, elsha_threefold_master, elusive_spellfist,
+    flamehold_grappler, githzerai_monk, gregor_shrewd_magistrate, imperial_recruiter,
+    loran_of_the_third_path, lyse_hext, mantis_rider, monastery_mentor, monastery_swiftspear,
+    narset_enlightened_exile, oji_the_exquisite_blade, ojutai_exemplars, pinnacle_monk,
+    rhox_faithmender, rune_tail_kitsune_ascendant, sage_of_the_skies, serra_ascendant,
+    shu_yun_the_silent_tempest, soulfire_grand_master, student_of_ojutai, taigam_ojutai_master,
+    third_path_iconoclast, aligned_heart, cleric_class, frostcliff_siege, jeskai_ascendancy,
+    path_of_bravery, true_conviction, whirlwind_of_thought, akromas_will, beacon_of_immortality,
+    boros_charm, congregate, counterspell, dovins_veto, heliods_intervention, lightning_helix,
+    path_to_exile, revitalize, riot_control, sphinxs_revelation, swords_to_plowshares,
+    union_of_the_third_path, jaya_fiery_negotiator, austere_command, blasphemous_act,
+    crash_through, inspired_ultimatum, supreme_verdict,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const IIZUKA_THE_RUTHLESS_COMMANDERS: &[CardFactory] = &[iizuka_the_ruthless];
+
+/// **Iizuka the Ruthless**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Iizuka the Ruthless (EDHREC, fetched 2026-10-16).
+pub const IIZUKA_THE_RUTHLESS_MAIN: &[CardFactory] = &[
+    arcane_signet, experimental_synthesizer, fire_diamond, hazorets_monument, heirloom_blade,
+    heralds_horn, heraldic_banner, kondas_banner, maskwood_nexus, mind_stone,
+    oathkeeper_takenos_daisho, obelisk_of_urd, ruby_medallion, sol_ring, tenza_godos_maul,
+    the_reaver_cleaver, throne_of_eldraine, vanquishers_banner, wayfarers_bauble,
+    castle_embereth, myriad_landscape, path_of_ancestry, teetering_peaks,
+    valakut_the_molten_pinnacle, war_room, adaptive_automaton, akki_battle_squad, akki_ronin,
+    archetype_of_aggression, battle_mad_ronin, bloodline_pretender, brothers_yamazaki,
+    feldon_of_the_third_path, fire_belly_changeling, fumiko_the_lowblood,
+    gilgamesh_master_at_arms, godo_bandit_warlord, goro_goro_disciple_of_ryusei,
+    heiko_yamazaki_the_general, metallic_mimic, peerless_samurai, reinforced_ronin,
+    ronin_cavekeeper, ronin_cliffrider, ronin_houndmaster, sokenzan_renegade,
+    sokenzan_spellblade, solemn_simulacrum, taurean_mauler, universal_automaton,
+    upriser_renegade, war_spike_changeling, aggravated_assault, molten_echoes,
+    rising_of_the_day, shared_animosity, the_shattered_states_era, abrade, chaos_warp,
+    demand_answers, lightning_bolt, thrill_of_possibility, unexpected_windfall,
+    untimely_malfunction, blasphemous_act, crash_through, faithless_looting, kindred_charge,
+    relentless_assault, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
