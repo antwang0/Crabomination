@@ -256,3 +256,72 @@ fn intimidator_initiate_stops_a_blocker_on_a_red_spell() {
     cast(&mut g, bolt, Some(Target::Player(1)));
     assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::CantBlock));
 }
+
+/// Wrath of Marit Lage taps red creatures and keeps them tapped.
+#[test]
+fn wrath_of_marit_lage_locks_red_creatures() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let goblin = ready(&mut g, 1, catalog::raging_goblin());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let w = g.add_card_to_hand(0, catalog::wrath_of_marit_lage());
+    cast(&mut g, w, None);
+    assert!(g.battlefield_find(goblin).unwrap().tapped);
+    assert!(!g.battlefield_find(bears).unwrap().tapped, "green, untouched");
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert!(g.battlefield_find(goblin).unwrap().tapped, "doesn't untap");
+}
+
+fn step_to(g: &mut GameState, seat: usize, step: TurnStep) {
+    for _ in 0..200 {
+        if g.active_player_idx == seat && g.step == step {
+            return;
+        }
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    }
+    panic!("never reached seat {seat} {step:?}");
+}
+
+/// Bullseye's activated "sacrifice an artifact or discard a nonland card" is
+/// two abilities; the discard one takes a nonland card and shoots for 2.
+#[test]
+fn bullseye_shoots_for_a_discarded_card() {
+    let mut g = pod(2);
+    let b = ready(&mut g, 0, catalog::bullseye_death_dealer());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility { card_id: b, ability_index: 1, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("discard to shoot");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+    assert!(g.players[0].hand.is_empty());
+}
+
+/// Gallia returns from the graveyard tapped with a counter, exiling another
+/// creature card.
+#[test]
+fn gallia_returns_tapped_with_a_counter() {
+    let mut g = pod(2);
+    let gallia = g.add_card_to_graveyard(0, catalog::gallia_tragic_host());
+    let fuel = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, gallia, None).expect("return");
+    let c = g.battlefield_find(gallia).expect("back");
+    assert!(c.tapped);
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.exile.iter().any(|c| c.id == fuel));
+}
+
+/// Ritual of the Machine sacrifices a creature to steal a nonblack one.
+#[test]
+fn ritual_of_the_machine_steals_a_nonblack_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::llanowar_elves());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let r = g.add_card_to_hand(0, catalog::ritual_of_the_machine());
+    cast(&mut g, r, Some(Target::Permanent(angel)));
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 0);
+}

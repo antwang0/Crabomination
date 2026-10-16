@@ -3,7 +3,7 @@
 //! Tests in `tests/recent_b/cmdr_oct16_d.rs`.
 
 use crate::card::{
-    ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
+    ActivatedAbility, AdditionalCastCost, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StateTriggeredAbility,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
@@ -12,7 +12,7 @@ use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -690,4 +690,184 @@ pub fn nightmare_incursion() -> CardDefinition {
         false,
         Effect::SearchUpToN { who: PlayerRef::Target(0), filter: R::Any, to: ZoneDest::Exile, count: swamps() },
     )
+}
+
+// ── Llawan, Cephalid Empress / Blind Seer ───────────────────────────────────
+
+/// Indigo Faerie — {1}{U} 1/1 flying Faerie Wizard. {U}: target permanent
+/// becomes blue in addition to its other colors until end of turn.
+pub fn indigo_faerie() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            effect: Effect::BecomeColor {
+                what: target_filtered(R::Permanent),
+                colors: vec![Color::Blue],
+                duration: Duration::EndOfTurn,
+                additive: true,
+            },
+            ..Default::default()
+        }],
+        ..creature("Indigo Faerie", cost(&[generic(1), u()]), vec![CreatureType::Faerie, CreatureType::Wizard], 1, 1)
+    }
+}
+
+fn color_word_swap() -> Effect {
+    Effect::ReplaceColorWord { what: target_filtered(R::Permanent), duration: Duration::Permanent }
+}
+
+/// Glamerdye — {1}{U} instant, retrace. Change the text of target permanent by
+/// replacing one color word with another (a spell can't be targeted here).
+pub fn glamerdye() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Retrace], ..spell("Glamerdye", cost(&[generic(1), u()]), true, color_word_swap()) }
+}
+
+/// Sleight of Mind — {U} instant. Glamerdye's text change, without retrace.
+pub fn sleight_of_mind() -> CardDefinition {
+    spell("Sleight of Mind", cost(&[u()]), true, color_word_swap())
+}
+
+/// Homarid Shaman — {2}{U}{U} 2/1 Homarid Shaman. {U}: tap target green
+/// creature.
+pub fn homarid_shaman() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            effect: Effect::Tap { what: target_filtered(R::Creature.and(R::HasColor(Color::Green))) },
+            ..Default::default()
+        }],
+        ..creature("Homarid Shaman", cost(&[generic(2), u(), u()]), vec![CreatureType::Homarid, CreatureType::Shaman], 2, 1)
+    }
+}
+
+/// Wrath of Marit Lage — {3}{U}{U} enchantment. Enters: tap all red creatures.
+/// Red creatures don't untap during their controllers' untap steps.
+pub fn wrath_of_marit_lage() -> CardDefinition {
+    let red = || R::Creature.and(R::HasColor(Color::Red));
+    CardDefinition {
+        name: "Wrath of Marit Lage",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Tap { what: Selector::EachPermanent(red()) })],
+        static_abilities: vec![StaticAbility {
+            description: "Red creatures don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::EachPermanent(red()) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Bullseye, Death Dealer ──────────────────────────────────────────────────
+
+/// Bullseye, Death Dealer — {2}{B/R} legendary 2/3 Human Assassin Villain.
+/// Enters: you may sacrifice an artifact or discard a nonland card; when you
+/// do, 2 damage to any target. {3}, {T}, sacrifice an artifact or discard a
+/// nonland card: 2 damage to any target (the "or" is two abilities).
+pub fn bullseye_death_dealer() -> CardDefinition {
+    let shot = || Effect::DealDamage { to: target_any(), amount: Value::Const(2) };
+    let reflex = || Box::new(Effect::ReflexiveTrigger { body: Box::new(shot()) });
+    let gun = |sac: bool| ActivatedAbility {
+        tap_cost: true,
+        mana_cost: cost(&[generic(3)]),
+        sac_other_filter: sac.then(|| (R::Artifact, 1)),
+        discard_cost: (!sac).then(|| (R::Nonland, 1)),
+        effect: shot(),
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::MaySacrifice {
+                description: "Sacrifice an artifact for 2 damage?".into(),
+                filter: R::Artifact.and(R::ControlledByYou),
+                count: Value::ONE,
+                then: reflex(),
+                else_: None,
+            },
+            Effect::MayDiscardMatching {
+                description: "Discard a nonland card for 2 damage?".into(),
+                count: Value::ONE,
+                filter: R::Nonland,
+                then: reflex(),
+                else_: None,
+            },
+        ]))],
+        activated_abilities: vec![gun(true), gun(false)],
+        ..creature(
+            "Bullseye, Death Dealer",
+            cost(&[generic(2), hybrid(Color::Black, Color::Red)]),
+            vec![CreatureType::Human, CreatureType::Assassin, CreatureType::Villain],
+            2,
+            3,
+        )
+    }
+}
+
+/// Hell's Kitchen — land, enters tapped; enters: gain 1 life. {T}: {B} or {R}.
+pub fn hells_kitchen() -> CardDefinition {
+    CardDefinition {
+        name: "Hell's Kitchen",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::ONE })],
+        activated_abilities: vec![crate::sets::tap_add(Color::Black), crate::sets::tap_add(Color::Red)],
+        ..Default::default()
+    }
+}
+
+/// Dark Deed — {1}{B} instant. Target creature gets -4/-4 until end of turn.
+pub fn dark_deed() -> CardDefinition {
+    spell(
+        "Dark Deed",
+        cost(&[generic(1), b()]),
+        true,
+        Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(-4), toughness: Value::Const(-4), duration: Duration::EndOfTurn },
+    )
+}
+
+// ── Gallia, Tragic Host ─────────────────────────────────────────────────────
+
+/// Gallia, Tragic Host — {1}{B} legendary 2/1 menace Zombie Satyr. {4}{B},
+/// exile another creature card from your graveyard: return her from your
+/// graveyard to the battlefield tapped with a +1/+1 counter.
+pub fn gallia_tragic_host() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            from_graveyard: true,
+            exile_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+                counters(Selector::LastMoved, Value::ONE),
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Gallia, Tragic Host", cost(&[generic(1), b()]), vec![CreatureType::Zombie, CreatureType::Satyr], 2, 1)
+    }
+}
+
+/// Ritual of the Machine — {2}{B}{B} sorcery; sacrifice a creature as an
+/// additional cost. Gain control of target nonartifact, nonblack creature.
+pub fn ritual_of_the_machine() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent { filter: R::Creature, count: 1 }],
+        ..spell(
+            "Ritual of the Machine",
+            cost(&[generic(2), b(), b()]),
+            false,
+            Effect::GainControl {
+                what: target_filtered(
+                    R::Creature.and(R::Not(Box::new(R::Artifact))).and(R::Not(Box::new(R::HasColor(Color::Black)))),
+                ),
+                to: None,
+                duration: Duration::Permanent,
+            },
+        )
+    }
 }

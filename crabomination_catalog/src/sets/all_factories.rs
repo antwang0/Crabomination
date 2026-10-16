@@ -16361,6 +16361,16 @@ static DECKS: &[Factory] = &[
     super::decks::sima_yi_wei_field_marshal,
     super::decks::dakmor_sorceress,
     super::decks::nightmare_incursion,
+    super::decks::indigo_faerie,
+    super::decks::glamerdye,
+    super::decks::sleight_of_mind,
+    super::decks::homarid_shaman,
+    super::decks::wrath_of_marit_lage,
+    super::decks::bullseye_death_dealer,
+    super::decks::hells_kitchen,
+    super::decks::dark_deed,
+    super::decks::gallia_tragic_host,
+    super::decks::ritual_of_the_machine,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

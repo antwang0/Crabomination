@@ -2222,3 +2222,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Wonder Man, Hollywood Hero | two Wonder Men still allow only one extra activation (it's legendary) | `StaticEffect::PowerUpOnceMore` |
 | 🟡 Rhino's Rampage | the excess-damage check reads the creature's excess damage this turn, so excess dealt to it earlier the same turn also counts | `ExcessDamageDealtThisTurnTo` + `ReflexiveTrigger` |
 | 🟡 Sméagol, Helpful Guide | "target opponent" is the most hostile opponent, not a target (no ward/hexproof check) | `RevealUntilFind { who: HostileOpponent }` |
+| 🟡 Glamerdye / Sleight of Mind | the color-word swap targets a permanent only; "target spell" isn't offered | `ReplaceColorWord` |
