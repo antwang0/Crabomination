@@ -173,12 +173,17 @@ the handoff.
   nothing before).
 - **FIXED:** `SharesCreatureTypeWithTargetSlot` read only battlefield permanents, so two graveyard
   targets never shared a type (Raise the Draugr; `raise_the_draugr_returns_two_sharing_a_type`).
-- **CLAIMED (`014Q2Gfw`, 2026-10-16 night) — next batch, don't duplicate:** Mondo Gecko's trio (Mondo Gecko,
-  Puca's Eye, Scrapbasket), Renari's dragons (Blue Dragon, Juvenile Mist Dragon, Oceanus Dragon, Dragonlord's
-  Prerogative), Doctor Spectrum's four (Doctor Spectrum, Bucky Barnes Eager Ally, Hyperion, Wondrous Revival).
-  ⚠ **Already landed by `01VDk2LU` before this claim reached it** (`decks::cmdr_oct16_e`): Doctor Spectrum,
-  Bucky Barnes Eager Ally, Wondrous Revival — only Hyperion is left of that four. `01VDk2LU` claims next:
-  Lady Sun's trio (Lady Sun, Imperial Cosmographer, Puca's Mischief), Seymour Flux's trio, Arcum Dagsson's trio.
+- **LANDED (`014Q2Gfw`, batch 9) — seats 2970-2972** Mondo Gecko, Renari Merchant of Marvels, Doctor Spectrum:
+  Mondo Gecko, Puca's Eye, Scrapbasket, Blue Dragon, Juvenile Mist Dragon, Oceanus Dragon, Dragonlord's
+  Prerogative, Hyperion (Doctor Spectrum, Bucky Barnes and Wondrous Revival came from `01VDk2LU`'s
+  `cmdr_oct16_e`). Primitives: `Effect::BecomeChosenColorWithHexproof`, `Keyword::CantBeCounteredIfCastCondition`
+  (reads the CR 601.2 as-cast stamp), `StaticEffect::PreventAllButOneDamageToYouAndYourHeroes` (CR 615, the
+  prevent-static lane). `ForEachOpponentTarget` wants `max_targets` ≥ the opponent count (it caps per seat).
+- **CLAIMED (`014Q2Gfw`, batch 10) — don't duplicate:** the Intimidator cluster (Obsidian Battle-Axe, Boldwyr
+  Intimidator, Kargan Intimidator, Falkenrath Marauders, Dragon Grip → Barktooth Warbeard, Lovisa Coldeyes,
+  Tyrox) and Nick Fury Spymaster, Zarda, Orbs of Warding (→ Agent Phil Coulson, Hyperion Supreme Hero).
+  Researched, open: Rielle the Everwise's Nahiri's Wrath (a spell's discard-X cost needs the discarded cards'
+  total mana value at resolution — only the activation path records a cost-discard MV, and only the max).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
