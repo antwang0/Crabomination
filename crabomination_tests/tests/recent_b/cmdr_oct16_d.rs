@@ -1724,3 +1724,66 @@ fn shagrat_grabs_equipment_and_amasses() {
     let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name.contains("Army")).expect("amassed");
     assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Loyal Sentry trades with whatever it blocks.
+#[test]
+fn loyal_sentry_destroys_what_it_blocks() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let sentry = ready(&mut g, 0, catalog::loyal_sentry());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: wurm, target: AttackTarget::Player(0) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(sentry, wurm)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none());
+    assert!(g.battlefield_find(sentry).is_none());
+}
+
+/// CR 702.16 — Elite Inquisitor can't be blocked by a Zombie.
+#[test]
+fn elite_inquisitor_has_protection_from_zombies() {
+    let mut g = pod(2);
+    let e = ready(&mut g, 0, catalog::elite_inquisitor());
+    let zombie = ready(&mut g, 1, catalog::walking_corpse());
+    attack(&mut g, e);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(zombie, e)])).is_err());
+}
+
+/// Savior of Ollenbock trains beside a bigger attacker and exiles a creature
+/// until it leaves; Planar Atlas enters tapped and taps for {C}.
+#[test]
+fn savior_of_ollenbock_jails_on_training() {
+    let mut g = pod(2);
+    let s = ready(&mut g, 0, catalog::savior_of_ollenbock());
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: s, target: AttackTarget::Player(1) },
+        Attack { attacker: wurm, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.battlefield_find(bears).is_none(), "exiled");
+    let destroy = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let evs = g.resolve_effect(&destroy, &crabomination::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(s)), 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "back when the Savior leaves");
+
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let atlas = g.add_card_to_hand(0, catalog::planar_atlas());
+    stock_libraries(&mut g, 5);
+    cast(&mut g, atlas, None);
+    assert!(g.battlefield_find(atlas).unwrap().tapped);
+}

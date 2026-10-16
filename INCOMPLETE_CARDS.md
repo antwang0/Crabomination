@@ -2229,3 +2229,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
 | 🟡 Nick Fury, Spymaster | the put-in creature attacks the attacker's defender or the most hostile opponent, not a chosen one (CR 508.4) | `DeployCreatureFromHandAttacking` |
 | 🟡 Feed the Pack | the sacrificed nontoken creature is auto-picked (weakest first), so X isn't the toughness you'd choose | `MaySacrifice` + `SacrificedToughness` |
+| 🟡 Planar Atlas | the look keeps any one of the four on top (not only a land) and isn't optional | `LookTopKeepOneRestToGraveyard { rest_bottom_random }` |

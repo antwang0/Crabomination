@@ -16495,6 +16495,10 @@ static DECKS: &[Factory] = &[
     super::decks::shagrat_loot_bearer,
     super::decks::ugluk_of_the_white_hand,
     super::decks::swarming_of_moria,
+    super::decks::planar_atlas,
+    super::decks::elite_inquisitor,
+    super::decks::loyal_sentry,
+    super::decks::savior_of_ollenbock,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,

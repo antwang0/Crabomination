@@ -3486,3 +3486,79 @@ pub fn swarming_of_moria() -> CardDefinition {
         ]),
     )
 }
+
+// ── Rory Williams ───────────────────────────────────────────────────────────
+
+/// Planar Atlas — {2} artifact, enters tapped. Enters: you may look at the top
+/// four and keep up to one land card on top, the rest on the bottom in a
+/// random order. {T}: {C}.
+pub fn planar_atlas() -> CardDefinition {
+    CardDefinition {
+        name: "Planar Atlas",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        triggered_abilities: vec![etb(Effect::LookTopKeepOneRestToGraveyard {
+            count: Value::Const(4),
+            who: None,
+            exile_rest: false,
+            rest_bottom_random: true,
+        })],
+        activated_abilities: vec![crate::sets::tap_add_colorless()],
+        ..Default::default()
+    }
+}
+
+/// Elite Inquisitor — {W}{W} 2/2 first strike, vigilance Human Soldier;
+/// protection from Vampires, from Werewolves and from Zombies.
+pub fn elite_inquisitor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::FirstStrike,
+            Keyword::Vigilance,
+            Keyword::ProtectionFromCreatureType(CreatureType::Vampire),
+            Keyword::ProtectionFromCreatureType(CreatureType::Werewolf),
+            Keyword::ProtectionFromCreatureType(CreatureType::Zombie),
+        ],
+        ..creature("Elite Inquisitor", cost(&[w(), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Loyal Sentry — {W} 1/1 Human Soldier. When it blocks a creature, destroy
+/// that creature and this creature.
+pub fn loyal_sentry() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::blocks(Effect::Seq(vec![
+            Effect::Destroy { what: Selector::BlockedAttacker },
+            Effect::Destroy { what: Selector::This },
+        ]))],
+        ..creature("Loyal Sentry", cost(&[w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Savior of Ollenbock — {1}{W}{W} 1/2 Human Soldier with training (CR
+/// 702.149). Whenever it trains, exile up to one other target creature from
+/// the battlefield or creature card from a graveyard until it leaves the
+/// battlefield.
+pub fn savior_of_ollenbock() -> CardDefinition {
+    let mut trains = crate::effect::shortcut::training();
+    if let Effect::If { then, .. } = &mut trains.effect {
+        let counter = (**then).clone();
+        **then = Effect::Seq(vec![
+            counter,
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::ExileUntilSourceLeaves {
+                    what: target_filtered(
+                        R::Creature.and(R::OtherThanSource).or(R::Creature.and(R::InGraveyard)),
+                    ),
+                    return_to: crate::card::ExileReturnZone::Battlefield,
+                }),
+            },
+        ]);
+    }
+    CardDefinition {
+        triggered_abilities: vec![trains],
+        ..creature("Savior of Ollenbock", cost(&[generic(1), w(), w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 2)
+    }
+}
