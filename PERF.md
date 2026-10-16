@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-16 (Commander run, `01VDk2LU`) — guardrail; the exert listener walk, the fan-out defender
+
+Hot-path touches: `declare_attackers` keeps an `exerted` list (empty unless an attacker paid
+exert) and walks the attacker's permanents for "whenever you exert" only when it is not;
+`exert_pays_off` scans the battlefield only for an Exert creature with no linked bonus. None
+are in the fixed pool. Release `bot_ladder` at `010157c4b`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 37.4 MiB; games_per_s 201.5 (host_calib 116 ms —
+                 a different box from 247.9's; wall clock is not comparable across boxes)
+golden traces    unchanged (suite 27,167 / 27,167)
+```
+
 ### 2026-10-15 (Commander run, `012vc8CU`, third leg) — guardrail; Blood Sun's strip, Rulebreaker, the bot sneak window
 
 Hot-path touches: `ComputedPermanent` gained Blood Sun's keeps-mana bit — first as a
