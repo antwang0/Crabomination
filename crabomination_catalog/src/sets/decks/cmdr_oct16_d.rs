@@ -3153,3 +3153,120 @@ pub fn mutiny() -> CardDefinition {
         },
     )
 }
+
+// ── Neheb, the Worthy: Minotaurs and discards ───────────────────────────────
+
+fn self_pump(p: i32) -> Effect {
+    Effect::PumpPT { what: Selector::This, power: Value::Const(p), toughness: Value::ZERO, duration: Duration::EndOfTurn }
+}
+
+/// Burning-Fist Minotaur — {1}{R} 2/1 first strike Minotaur Wizard. {1}{R},
+/// discard a card: +2/+0 until end of turn.
+pub fn burning_fist_minotaur() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            discard_cost: Some((R::Any, 1)),
+            effect: self_pump(2),
+            ..Default::default()
+        }],
+        ..creature("Burning-Fist Minotaur", cost(&[generic(1), r()]), vec![CreatureType::Minotaur, CreatureType::Wizard], 2, 1)
+    }
+}
+
+/// Grisly Survivor — {2}{B} 2/3 Minotaur Warrior. Whenever you cycle or
+/// discard a card, +2/+0 until end of turn (cycling discards, CR 702.29a, so
+/// one trigger covers both).
+pub fn grisly_survivor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: self_pump(2),
+        }],
+        ..creature("Grisly Survivor", cost(&[generic(2), b()]), vec![CreatureType::Minotaur, CreatureType::Warrior], 2, 3)
+    }
+}
+
+/// Merciless Javelineer — {2}{B}{R} 4/2 Minotaur Warrior. {2}, discard a card:
+/// a -1/-1 counter on target creature; it can't block this turn.
+pub fn merciless_javelineer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::MinusOneMinusOne, amount: Value::ONE },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Merciless Javelineer", cost(&[generic(2), b(), r()]), vec![CreatureType::Minotaur, CreatureType::Warrior], 4, 2)
+    }
+}
+
+/// Minotaur Sureshot — {2}{R} 2/3 reach Minotaur Archer. {1}{R}: +1/+0 until
+/// end of turn.
+pub fn minotaur_sureshot() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility { mana_cost: cost(&[generic(1), r()]), effect: self_pump(1), ..Default::default() }],
+        ..creature("Minotaur Sureshot", cost(&[generic(2), r()]), vec![CreatureType::Minotaur, CreatureType::Archer], 2, 3)
+    }
+}
+
+// ── Aradesh, the Founder: enlist ────────────────────────────────────────────
+
+/// Benalish Faithbonder — {1}{W} 1/3 vigilance Human Cleric with enlist (CR
+/// 702.154).
+pub fn benalish_faithbonder() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![crate::effect::shortcut::enlist()],
+        ..creature("Benalish Faithbonder", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Cleric], 1, 3)
+    }
+}
+
+/// Coalition Skyknight — {3}{W} 2/2 flying Human Knight with enlist.
+pub fn coalition_skyknight() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::enlist()],
+        ..creature("Coalition Skyknight", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Guardian of New Benalia — {1}{W} 2/2 Human Soldier. Enlist; whenever it
+/// enlists a creature, scry 2. Discard a card: indestructible until end of
+/// turn, then tap it.
+pub fn guardian_of_new_benalia() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::EnlistThen {
+            then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+                Effect::Tap { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Guardian of New Benalia", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Veteran of the Depths — {3}{W} 2/2 Merfolk Soldier. Whenever it becomes
+/// tapped, you may put a +1/+1 counter on it.
+pub fn veteran_of_the_depths() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Put a +1/+1 counter on Veteran of the Depths?".into(),
+                body: Box::new(counters(Selector::This, Value::ONE)),
+            },
+        }],
+        ..creature("Veteran of the Depths", cost(&[generic(3), w()]), vec![CreatureType::Merfolk, CreatureType::Soldier], 2, 2)
+    }
+}

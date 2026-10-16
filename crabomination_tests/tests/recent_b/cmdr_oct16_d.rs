@@ -1588,3 +1588,50 @@ fn vargus_pirates_and_mutiny() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(angel).is_none(), "the Wurm's 6 kills the Angel");
 }
+
+/// Grisly Survivor grows on each discard, including Burning-Fist Minotaur's
+/// discard cost.
+#[test]
+fn grisly_survivor_grows_on_discards() {
+    let mut g = pod(2);
+    let s = ready(&mut g, 0, catalog::grisly_survivor());
+    let m = ready(&mut g, 0, catalog::burning_fist_minotaur());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    activate(&mut g, m, None).expect("discard to pump");
+    assert_eq!(g.computed_permanent(m).unwrap().power, 4);
+    assert_eq!(g.computed_permanent(s).unwrap().power, 4, "the discard pumped the Survivor");
+}
+
+/// Merciless Javelineer shrinks a creature and stops it blocking.
+#[test]
+fn merciless_javelineer_pins_a_blocker() {
+    let mut g = pod(2);
+    let j = ready(&mut g, 0, catalog::merciless_javelineer());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, j, Some(Target::Permanent(bears))).expect("javelin");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!(cp.power, 1);
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
+}
+
+/// CR 702.154 — Guardian of New Benalia enlists (adding the tapped creature's
+/// power) and scries 2 when it does; Veteran of the Depths grows as it's tapped
+/// for the enlist.
+#[test]
+fn guardian_enlists_the_veteran() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let guard = ready(&mut g, 0, catalog::guardian_of_new_benalia());
+    let vet = ready(&mut g, 0, catalog::veteran_of_the_depths());
+    let (t0, t1) = (g.players[0].library[0].id, g.players[0].library[1].id);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![t0, t1], bottom: vec![] }, DecisionAnswer::Bool(true)]));
+    attack(&mut g, guard);
+    let v = g.battlefield_find(vet).unwrap();
+    assert!(v.tapped, "enlisted");
+    assert_eq!(v.counter_count(CounterType::PlusOnePlusOne), 1, "tapping fed the Veteran");
+    assert_eq!(g.computed_permanent(guard).unwrap().power, 2 + 2, "the Veteran's printed 2 (its counter came after)");
+    assert!(g.players[0].scry_batches_this_turn >= 1, "scried 2");
+}
