@@ -3012,3 +3012,144 @@ pub fn blood_for_bones() -> CardDefinition {
         )
     }
 }
+
+// ── Hapatra, the Desert Fang ────────────────────────────────────────────────
+
+/// Hapatra, the Desert Fang — {2}{B}{B}{G} legendary 3/3 Human Cleric. Enters:
+/// for each opponent, X -1/-1 counters on up to one target creature that
+/// player controls, X = the greatest mana value among cards in your graveyard.
+pub fn hapatra_the_desert_fang() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 7,
+                min_targets: 0,
+                filter: R::Creature.and(R::ControlledByOpponent),
+                effect: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::MinusOneMinusOne,
+                    amount: Value::GreatestManaValueInGraveyard(PlayerRef::You),
+                }),
+            }),
+        })],
+        ..creature("Hapatra, the Desert Fang", cost(&[generic(2), b(), b(), g()]), vec![CreatureType::Human, CreatureType::Cleric], 3, 3)
+    }
+}
+
+/// Altar of Bhaal — {1}{B} artifact. {2}{B}, {T}, exile a creature you
+/// control: return target creature card from your graveyard to the
+/// battlefield — sorcery speed. Adventure: Bone Offering {2}{B} sorcery, a
+/// tapped 4/1 black menace Skeleton.
+pub fn altar_of_bhaal() -> CardDefinition {
+    let skeleton_token = Arc::new(TokenDefinition {
+        name: "Skeleton".into(),
+        power: 4,
+        toughness: 1,
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        keywords: vec![Keyword::Menace],
+        tapped: true,
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "Altar of Bhaal",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            mana_cost: cost(&[generic(2), b()]),
+            exile_permanent_cost: Some((R::Creature.and(R::ControlledByYou), 1)),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Bone Offering",
+            cost: cost(&[generic(2), b()]),
+            card_types: vec![CardType::Sorcery],
+            effect: make(skeleton_token),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Something Worth Saving — {1}{G} instant. Mill four; you may put a permanent
+/// card from among them into your hand. Gain 1 life.
+pub fn something_worth_saving() -> CardDefinition {
+    spell(
+        "Something Worth Saving",
+        cost(&[generic(1), g()]),
+        true,
+        Effect::Seq(vec![
+            Effect::MillThenToHandN { amount: Value::Const(4), filter: R::PermanentCard, take: Value::ONE, otherwise: None },
+            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+// ── Captain Vargus Wrath: Pirates ───────────────────────────────────────────
+
+/// Captain Vargus Wrath — {U}{R} legendary 1/1 Orc Pirate. Attacks: Pirates
+/// you control get +1/+1 until end of turn for each time you've cast a
+/// commander from the command zone this game.
+pub fn captain_vargus_wrath() -> CardDefinition {
+    let n = Value::CommanderCastsFromCommandZone(PlayerRef::You);
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::HasCreatureType(CreatureType::Pirate)).and(R::ControlledByYou)),
+            power: n.clone(),
+            toughness: n,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Captain Vargus Wrath", cost(&[u(), r()]), vec![CreatureType::Orc, CreatureType::Pirate], 1, 1)
+    }
+}
+
+/// Prosperous Pirates — {4}{U} 3/4 Human Pirate. Enters: two Treasures.
+pub fn prosperous_pirates() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: Arc::new(crabomination_base::tokens::treasure_token()),
+        })],
+        ..creature("Prosperous Pirates", cost(&[generic(4), u()]), vec![CreatureType::Human, CreatureType::Pirate], 3, 4)
+    }
+}
+
+/// Protean Raider — {1}{U}{R} 2/2 Shapeshifter Pirate. Raid — if you attacked
+/// this turn, you may have it enter as a copy of any creature on the
+/// battlefield.
+pub fn protean_raider() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Creature,
+            condition: Some(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            ..Default::default()
+        }),
+        ..creature("Protean Raider", cost(&[generic(1), u(), r()]), vec![CreatureType::Shapeshifter, CreatureType::Pirate], 2, 2)
+    }
+}
+
+/// Mutiny — {R} sorcery. Target creature an opponent controls deals damage
+/// equal to its power to another target creature that player controls.
+pub fn mutiny() -> CardDefinition {
+    spell(
+        "Mutiny",
+        cost(&[r()]),
+        false,
+        Effect::DealDamageEqualToPower {
+            source: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            target: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature.and(R::SameControllerAsTargetSlot(0)).and(R::OtherThanTargetSlot(0)),
+            },
+        },
+    )
+}

@@ -1500,3 +1500,91 @@ fn blood_for_bones_returns_two() {
     assert!(g.battlefield_find(wurm).is_some(), "the Wurm returns");
     assert!(g.players[0].hand.iter().any(|c| c.id == bears || c.id == fodder), "another to hand");
 }
+
+/// Hapatra puts X -1/-1 counters, X the graveyard's greatest mana value, on one
+/// creature per opponent.
+#[test]
+fn hapatra_shrinks_one_creature_per_opponent() {
+    let mut g = pod(3);
+    g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let a = ready(&mut g, 1, catalog::serra_angel());
+    let b = ready(&mut g, 2, catalog::serra_angel());
+    let h = g.add_card_to_hand(0, catalog::hapatra_the_desert_fang());
+    cast(&mut g, h, None);
+    for id in [a, b] {
+        assert!(g.battlefield_find(id).is_none(), "six -1/-1 counters kill a 4/4");
+    }
+}
+
+/// Altar of Bhaal exiles a creature you control to reanimate one; its
+/// adventure makes a tapped 4/1 menace Skeleton.
+#[test]
+fn altar_of_bhaal_trades_a_creature_for_a_better_one() {
+    let mut g = pod(2);
+    let altar = ready(&mut g, 0, catalog::altar_of_bhaal());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    activate(&mut g, altar, Some(Target::Permanent(wurm))).expect("reanimate");
+    assert!(g.battlefield_find(wurm).is_some());
+    assert!(g.exile.iter().any(|c| c.id == elf), "the Elf paid");
+}
+
+/// Something Worth Saving keeps one permanent card of four and gains 1.
+#[test]
+fn something_worth_saving_keeps_a_permanent() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::something_worth_saving());
+    cast(&mut g, s, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears));
+    assert_eq!(g.players[0].life, 21);
+}
+
+/// CR 702.109 raid / 707.2 — Protean Raider copies only if you attacked.
+#[test]
+fn protean_raider_copies_only_after_an_attack() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::craw_wurm());
+    let p = g.add_card_to_hand(0, catalog::protean_raider());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, p, None);
+    assert_eq!(g.battlefield_find(p).unwrap().definition.name, "Protean Raider", "no attack yet");
+
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, bears);
+    g.step = TurnStep::PostCombatMain;
+    let p2 = g.add_card_to_hand(0, catalog::protean_raider());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, p2, None);
+    assert_eq!(g.battlefield_find(p2).unwrap().definition.name, "Craw Wurm", "raid: a copy");
+}
+
+/// Captain Vargus Wrath pumps Pirates by commander casts; Mutiny turns one of
+/// an opponent's creatures on another; Prosperous Pirates makes two Treasures.
+#[test]
+fn vargus_pirates_and_mutiny() {
+    let mut g = pod(2);
+    let v = ready(&mut g, 0, catalog::captain_vargus_wrath());
+    g.players[0].commanders.push(v);
+    g.commander_cast_count.insert(v, 2);
+    let pp = g.add_card_to_hand(0, catalog::prosperous_pirates());
+    cast(&mut g, pp, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count(), 2);
+    attack(&mut g, v);
+    let cp = g.computed_permanent(pp).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 6), "+2/+2 for two commander casts");
+
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    g.step = TurnStep::PostCombatMain;
+    let m = g.add_card_to_hand(0, catalog::mutiny());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: m, target: Some(Target::Permanent(wurm)), additional_targets: vec![Target::Permanent(angel)], mode: None, x_value: None }).expect("Mutiny");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "the Wurm's 6 kills the Angel");
+}

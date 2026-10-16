@@ -16471,6 +16471,13 @@ static DECKS: &[Factory] = &[
     super::decks::kathari_remnant,
     super::decks::manor_skeleton,
     super::decks::blood_for_bones,
+    super::decks::hapatra_the_desert_fang,
+    super::decks::altar_of_bhaal,
+    super::decks::something_worth_saving,
+    super::decks::captain_vargus_wrath,
+    super::decks::prosperous_pirates,
+    super::decks::protean_raider,
+    super::decks::mutiny,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,
