@@ -194,6 +194,12 @@ the handoff.
   Protection of the Hekma, All-Seeing Arbiter, Just the Wind, Nagging Thoughts, Disciple of the Ring, Yasova,
   Demonmail Hauberk, Feed the Pack. **Open:** Precursor Golem (Golden Argosy) — needs
   `CopySpellForEachOtherTarget` restricted to Golems and a "spell targets only a single [filter]" leaf.
+- **CLAIMED (`014Q2Gfw`, batch 13) — don't duplicate:** Yuan Shao the Indecisive, Horde of Boggarts, Pyreheart Wolf;
+  Emeria Captain, Journey to Oblivion, Concerted Defense (Linvala Shield of Sea Gate); Hungering Puppetbeast,
+  Tenured Tethermage, Woodwork Prodigy (Aerid Konstrari); Diviner of Victory, Proft (Elrond Lord of Rivendell).
+  Researched, open: Warbringer (Zurgo Bellstriker, Whirlwind — a dash-cost reduction static), Shimian Specter
+  (Urgoros — `NameCardExileMatchingAllZones` reads target slot 0 / the hostile opponent, not the damaged player,
+  and doesn't restrict the name to the revealed hand).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
