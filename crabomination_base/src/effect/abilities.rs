@@ -3805,6 +3805,10 @@ pub enum StaticEffect {
     /// scoped to the controller). Overrides the base seven; the smallest
     /// active override wins.
     ControllerMaxHandSize(u32),
+    /// "Your maximum hand size is equal to the number of [kind] counters on
+    /// this" (Midnight Oil) — [`Self::ControllerMaxHandSize`] read off the
+    /// source's live counter count.
+    ControllerMaxHandSizeFromSourceCounters(crate::card::CounterType),
     /// "Your maximum hand size is increased by N" (Minamo Scrollkeeper,
     /// Trusted Advisor). Copies stack; folded into `effective_max_hand_size`
     /// after any `ControllerMaxHandSize` override.

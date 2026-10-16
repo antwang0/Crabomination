@@ -4274,6 +4274,9 @@ impl crate::game::GameState {
                 StaticEffect::ControllerMaxHandSize(n) if c.controller == player => {
                     Some((c.battlefield_timestamp, n as usize))
                 }
+                StaticEffect::ControllerMaxHandSizeFromSourceCounters(kind) if c.controller == player => {
+                    Some((c.battlefield_timestamp, c.counter_count(kind) as usize))
+                }
                 StaticEffect::ChosenPlayerMaxHandSize(n) if c.chosen_player == Some(player) => {
                     Some((c.battlefield_timestamp, n as usize))
                 }

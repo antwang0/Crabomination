@@ -35376,6 +35376,7 @@ fn static_effect_to_effects(
             | StaticEffect::YourCreaturesCanAttackAsThoughNoDefender
             | StaticEffect::OpponentsMaxHandSizeReduced(_)
             | StaticEffect::ControllerMaxHandSize(_)
+            | StaticEffect::ControllerMaxHandSizeFromSourceCounters(_)
             | StaticEffect::ControllerMaxHandSizeIncreased(_)
             | StaticEffect::NamedSpellTax { .. }
             // MayPlayLandsFromGraveyard — consulted by the land-play paths

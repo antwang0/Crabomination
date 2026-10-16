@@ -2990,6 +2990,23 @@ impl GameState {
                     .into_iter()
                     .any(|p| self.effective_life(p) >= max_life)
             }
+            Predicate::YouControlPermanentOfSourcesChosenColor => {
+                let Some(color) = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.chosen_color) else {
+                    return false;
+                };
+                self.battlefield.iter().filter(|c| c.controller == ctx.controller).any(|c| {
+                    self.computed_permanent_on(c).is_some_and(|cp| cp.colors.contains(color))
+                })
+            }
+            Predicate::PlayerHasMostLifeAmongOpponents { who } => {
+                let max_life = self
+                    .opponents_of(ctx.controller)
+                    .into_iter()
+                    .map(|p| self.effective_life(p))
+                    .max()
+                    .unwrap_or(i32::MIN);
+                self.resolve_players(who, ctx).into_iter().any(|p| self.effective_life(p) >= max_life)
+            }
             Predicate::PlayerControlsMostOf { who, filter } => {
                 let count = |p: usize| {
                     self.battlefield

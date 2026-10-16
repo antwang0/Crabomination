@@ -2139,6 +2139,15 @@ pub enum Predicate {
     /// 702.105 — "attacks the player with the most life or tied for most
     /// life"); pair with `who: DefendingPlayer` on an `Attacks` trigger.
     PlayerHasMostLife { who: PlayerRef },
+    /// No opponent of the evaluating controller has more life than `who`
+    /// (Veteran Soldier's "if no opponent has more life than that player" —
+    /// the controller's own total does not count, unlike `PlayerHasMostLife`).
+    PlayerHasMostLifeAmongOpponents { who: PlayerRef },
+    /// The controller controls a permanent of the source's chosen color, read
+    /// off its current colors (Lurebound Scarecrow's "when you control no
+    /// permanents of the chosen color"). A friendly read, so the as-enters
+    /// pick names your densest color (`chosen_color_aimed_at_opponents`).
+    YouControlPermanentOfSourcesChosenColor,
     /// `who` controls strictly more `filter` permanents than each other player
     /// (Rivalry's land leader, Damping Engine's permanent leader).
     PlayerControlsMostOf { who: PlayerRef, filter: SelectionRequirement },

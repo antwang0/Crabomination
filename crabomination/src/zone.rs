@@ -851,6 +851,7 @@ fn card_has_hand_size_static(c: &CardInstance) -> bool {
                 | S::OpponentsMaxHandSizeReduced(_)
                 | S::ControllerMaxHandSizeReduced(_)
                 | S::ControllerMaxHandSize(_)
+                | S::ControllerMaxHandSizeFromSourceCounters(_)
                 | S::ChosenPlayerMaxHandSize(_)
                 | S::ControllerMaxHandSizeIncreased(_)
         )
