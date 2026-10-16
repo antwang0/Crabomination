@@ -18492,6 +18492,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELROND_3_COMMANDERS,
             main: decks::ELROND_3_MAIN,
         },
+        // Seat 3007: Captain America, Wings of Freedom's EDHREC average deck. `--pod-decks 3007`.
+        PodDeck {
+            name: "Captain America, Wings of Freedom (W)",
+            commanders: decks::CAPTAIN_AMERICA_3_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_3_MAIN,
+        },
+        // Seat 3008: Captain America, Super-Soldier's EDHREC average deck. `--pod-decks 3008`.
+        PodDeck {
+            name: "Captain America, Super-Soldier (W)",
+            commanders: decks::CAPTAIN_AMERICA_4_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_4_MAIN,
+        },
+        // Seat 3009: Captain America, Skybound's EDHREC average deck. `--pod-decks 3009`.
+        PodDeck {
+            name: "Captain America, Skybound (W)",
+            commanders: decks::CAPTAIN_AMERICA_5_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_5_MAIN,
+        },
     ]
 }
 
@@ -23382,6 +23400,9 @@ mod tests {
             ("Linvala, Shield of Sea Gate", &[0x15D2]),
             ("Yuan Shao, the Indecisive", &[0x15D3]),
             ("Elrond, Lord of Rivendell", &[0x15D4]),
+            ("Captain America, Wings of Freedom", &[0x15D5]),
+            ("Captain America, Super-Soldier", &[0x15D6]),
+            ("Captain America, Skybound", &[0x15D7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

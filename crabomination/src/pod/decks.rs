@@ -84297,3 +84297,90 @@ pub const ELROND_3_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const CAPTAIN_AMERICA_3_COMMANDERS: &[CardFactory] = &[captain_america_wings_of_freedom];
+
+/// **Captain America, Wings of Freedom**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Captain America, Wings of Freedom (EDHREC, fetched 2026-10-16).
+pub const CAPTAIN_AMERICA_3_MAIN: &[CardFactory] = &[
+    accorders_shield, arcane_signet, blackblade_reforged, captain_americas_shield,
+    cathars_shield, commanders_plate, dancers_chakrams, hulkbuster_armor, iconic_shield,
+    kite_shield, pearl_medallion, robe_of_stars, slagwurm_armor, sol_ring, swiftfoot_boots,
+    sword_of_the_animist, vanguards_shield, abandoned_air_temple, avengers_tower,
+    emeria_the_sky_ruin, minas_tirith, path_of_ancestry, rogues_passage, three_tree_city,
+    agent_phil_coulson, anti_venom_horrifying_healer, black_panther_most_dangerous,
+    bucky_barnes_eager_ally, captain_america_liberator, captain_america_skybound,
+    captain_america_steve_rogers, captain_america_super_soldier, captain_america_unbowed,
+    captain_mar_vell_space_born, captain_marvel_earths_protector, falcon_and_redwing,
+    hercules_olympian_hero, hyperion_supreme_hero, jocasta_automaton_avenger,
+    matt_murdock_justice_seeker, night_nurse_healer_of_heroes, patriot_shield_wielder,
+    puresteel_paladin, silver_sable_mercenary_leader, spectacular_spider_man,
+    the_sentry_golden_guardian, the_vision, white_widow_free_agent,
+    winter_soldier_reborn_avenger, avengers_assemble, champions_from_beyond, eland_umbra,
+    folk_hero, origin_of_the_avengers, sigardas_aid, stoneskin, super_soldier_serum,
+    with_great_power, aegis_of_the_heavens, akromas_will, flawless_maneuver, generous_gift,
+    path_to_exile, refuse_to_yield, swords_to_plowshares, take_up_the_shield, austere_command,
+    open_the_armory, steelshapers_gift, wondrous_revival,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const CAPTAIN_AMERICA_4_COMMANDERS: &[CardFactory] = &[captain_america_super_soldier];
+
+/// **Captain America, Super-Soldier**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Captain America, Super-Soldier (EDHREC, fetched 2026-10-16).
+pub const CAPTAIN_AMERICA_4_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, captain_americas_shield, commanders_plate, heralds_horn,
+    lightning_greaves, mind_stone, pearl_medallion, shadowspear, sol_ring, swiftfoot_boots,
+    sword_of_truth_and_justice, sword_of_war_and_peace, sword_of_the_animist, the_mind_stone,
+    abandoned_air_temple, avengers_tower, diamond_city, emeria_the_sky_ruin, karns_bastion,
+    minas_tirith, nykthos_shrine_to_nyx, war_room, agent_phil_coulson,
+    anti_venom_horrifying_healer, black_widow_intel_expert, bucky_barnes_eager_ally,
+    captain_america_skybound, captain_america_steve_rogers, captain_america_unbowed,
+    captain_america_wings_of_freedom, captain_mar_vell_space_born,
+    captain_marvel_earths_protector, esper_sentinel, falcon_and_redwing, grateful_apparition,
+    hyperion_supreme_hero, invisible_woman_sue_storm, matt_murdock_justice_seeker,
+    night_nurse_healer_of_heroes, patriot_shield_wielder, proud_pack_rhino,
+    quake_agent_of_shield, silver_sable_mercenary_leader, spectacular_spider_man, spider_uk,
+    the_sentry_golden_guardian, the_vision, white_widow_free_agent,
+    winter_soldier_reborn_avenger, avengers_assemble, folk_hero, ghostly_prison, land_tax,
+    origin_of_the_avengers, sigardas_aid, super_soldier_serum, akromas_will, boon_of_safety,
+    contractual_safeguard, flawless_maneuver, generous_gift, path_to_exile, protection_magic,
+    reprieve, swords_to_plowshares, take_up_the_shield, teferis_protection, austere_command,
+    cut_a_deal, damning_verdict, murdocks_crusade, steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const CAPTAIN_AMERICA_5_COMMANDERS: &[CardFactory] = &[captain_america_skybound];
+
+/// **Captain America, Skybound**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Captain America, Skybound (EDHREC, fetched 2026-10-16).
+pub const CAPTAIN_AMERICA_5_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, lightning_greaves, mana_vault, marble_diamond, mind_stone,
+    pearl_medallion, sol_ring, swiftfoot_boots, the_mind_stone, thran_dynamo, worldslayer,
+    abandoned_air_temple, arid_mesa, cavern_of_souls, fountainport, marsh_flats, mutavault,
+    rogues_passage, strip_mine, adeline_resplendent_cathar, aerial_responder, angelic_guardian,
+    captain_america_wings_of_freedom, eagle_of_deliverance, enduring_innocence, esper_sentinel,
+    exalted_sunborn, god_eternal_oketra, gold_myr, heliod_god_of_the_sun, heliod_sun_crowned,
+    hero_of_bladehold, hyperion_supreme_hero, mangara_the_diplomat, matt_murdock_justice_seeker,
+    mondrak_glory_dominus, ocelot_pride, odric_lunarch_marshal, ojer_taq_deepest_foundation,
+    oketra_the_true, ornithopter_of_paradise, platoon_dispenser, precinct_captain,
+    roaming_throne, silver_sable_mercenary_leader, witch_enchanter, cathars_crusade,
+    legions_landing, rest_in_peace, smothering_tithe, smugglers_share, vow_of_duty,
+    wedding_announcement, akromas_will, angels_grace, flawless_maneuver, generous_gift,
+    path_to_exile, swords_to_plowshares, teferis_protection, basri_ket, gideon_ally_of_zendikar,
+    austere_command, avenge, day_of_judgment, doomskar, fell_the_mighty, fumigate,
+    vanquish_the_horde, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
