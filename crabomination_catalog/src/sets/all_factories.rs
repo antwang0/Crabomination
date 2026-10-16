@@ -16664,6 +16664,10 @@ static DECKS: &[Factory] = &[
     super::decks::gales_redirection,
     super::decks::bilbo_thief_in_the_night,
     super::decks::lukka_coppercoat_outcast,
+    super::decks::golden_guardian,
+    super::decks::rootwire_amalgam,
+    super::decks::talas_explorer,
+    super::decks::talas_scout,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

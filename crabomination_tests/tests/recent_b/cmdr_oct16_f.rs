@@ -944,3 +944,33 @@ fn lukka_polymorphs_up_and_gates_exiles_on_a_lukka() {
     assert!(g.exile.iter().any(|c| c.id == bears));
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Craw Wurm" && c.controller == 0), "skipped the cheaper Elves");
 }
+
+/// Golden Guardian fights your own creature; dying that turn, it returns as
+/// Gold-Forge Garrison under your control.
+#[test]
+fn golden_guardian_dies_into_its_garrison() {
+    let mut g = pod(2);
+    let guardian = ready(&mut g, 0, catalog::golden_guardian());
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, guardian, 0, Some(Target::Permanent(wurm))).expect("fight the Wurm");
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let back = g.battlefield_find(guardian).expect("returned");
+    assert_eq!(back.definition.name, "Gold-Forge Garrison");
+    assert_eq!(back.controller, 0);
+}
+
+/// Rootwire Amalgam's sacrifice makes a hasty Golem three times its power.
+#[test]
+fn rootwire_amalgam_sacrifices_into_a_triple_golem() {
+    let mut g = pod(2);
+    let amalgam = ready(&mut g, 0, catalog::rootwire_amalgam());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, amalgam, 0, None).expect("sacrifice");
+    let golem = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Golem").expect("Golem").id;
+    let cp = g.computed_permanent(golem).unwrap();
+    assert_eq!((cp.power, cp.toughness), (15, 15));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+}

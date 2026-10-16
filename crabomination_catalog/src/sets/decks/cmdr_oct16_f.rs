@@ -1501,3 +1501,116 @@ pub fn lukka_coppercoat_outcast() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 8 ─────────────────────────────────────────────────────────────────
+
+fn golem_4_4() -> TokenDefinition {
+    TokenDefinition {
+        name: "Golem".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Golden Guardian // Gold-Forge Garrison — {4} 4/4 defender Golem. {2}: it
+/// fights another target creature you control; when it dies this turn, it
+/// returns transformed under your control. Back: a land tapping for two mana
+/// of one color; {4}, {T}: a 4/4 Golem.
+pub fn golden_guardian() -> CardDefinition {
+    let garrison = CardDefinition {
+        name: "Gold-Forge Garrison",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(2)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(golem_4_4()) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            // The watch goes first: the fight's damage can kill it before
+            // the next step of this resolution would register it.
+            effect: Effect::Seq(vec![
+                Effect::WhenSourceDiesThisTurn { body: Box::new(Effect::ExileSelfReturnTransformed) },
+                Effect::Fight {
+                    attacker: Selector::This,
+                    defender: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(garrison)),
+        ..creature("Golden Guardian", cost(&[generic(4)]), vec![CreatureType::Golem], 4, 4)
+    }
+}
+
+/// Rootwire Amalgam — {5} 5/5 Golem; prototype {1}{G} 2/3. {3}{G}{G},
+/// sacrifice it: an X/X Golem with haste this turn, X three times its power
+/// (sorcery speed).
+pub fn rootwire_amalgam() -> CardDefinition {
+    let x = || Value::Times(Box::new(Value::Const(3)), Box::new(Value::SacrificedPower));
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        prototype: Some(Box::new(crate::card::Prototype { cost: cost(&[generic(1), g()]), power: 2, toughness: 3 })),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g(), g()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(TokenDefinition { power: 0, toughness: 0, dynamic_pt: Some((x(), x())), ..golem_4_4() }),
+                },
+                Effect::GrantKeyword { what: Selector::LastCreatedTokens, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Rootwire Amalgam", cost(&[generic(5)]), vec![CreatureType::Golem], 5, 5)
+    }
+}
+
+/// Talas Explorer — {1}{U} 1/1 flying Human Pirate Scout; ETB: look at target
+/// opponent's hand.
+pub fn talas_explorer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::LookAtHand { who: target_filtered(R::OpponentPlayer) })],
+        ..creature(
+            "Talas Explorer",
+            cost(&[generic(1), crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Pirate, CreatureType::Scout],
+            1,
+            1,
+        )
+    }
+}
+
+/// Talas Scout — {1}{U} 1/2 flying Human Pirate Scout.
+pub fn talas_scout() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        ..creature(
+            "Talas Scout",
+            cost(&[generic(1), crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Pirate, CreatureType::Scout],
+            1,
+            2,
+        )
+    }
+}
