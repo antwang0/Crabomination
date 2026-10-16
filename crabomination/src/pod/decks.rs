@@ -81131,3 +81131,169 @@ pub const GIMLI_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const LOZHAN_COMMANDERS: &[CardFactory] = &[lozhan_dragons_legacy];
+
+/// **Lozhan, Dragons' Legacy**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Islands + 13 Mountains = 99.
+/// Lozhan, Dragons' Legacy (EDHREC, fetched 2026-10-16).
+pub const LOZHAN_MAIN: &[CardFactory] = &[
+    arcane_signet, carnelian_orb_of_dragonkind, dragons_hoard, dragonstorm_globe, izzet_signet,
+    lapis_orb_of_dragonkind, orb_of_dragonkind, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, two_handed_axe, command_tower, frostboil_snarl,
+    haven_of_the_spirit_dragon, izzet_boilerworks, path_of_ancestry, reliquary_tower,
+    shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, swiftwater_cliffs,
+    temple_of_epiphany, temple_of_the_dragon_queen, amethyst_dragon, dragonborn_looter,
+    dragonlords_servant, dragonspeaker_shaman, drakuseth_maw_of_flames, fang_dragon,
+    firespitter_whelp, firkraag_cunning_instigator, ganax_astral_hunter, goldspan_dragon,
+    iymrith_desert_doom, lathliss_dragon_queen, nimbleclaw_adept, niv_mizzet_parun,
+    niv_mizzet_visionary, patron_of_the_arts, rapacious_dragon, reckless_barbarian,
+    renari_merchant_of_marvels, sailors_bane, sapphire_dragon, sarkhan_soul_aflame,
+    scalding_viper, scourge_of_valkas, smaug_the_great_calamity, sprite_dragon,
+    sword_coast_serpent, thunderbreak_regent, wrathful_red_dragon, young_blue_dragon,
+    young_red_dragon, crucible_of_fire, curiosity, dragon_tempest, roiling_dragonstorm,
+    virtue_of_courage, virtue_of_knowledge, abrade, breath_weapon, chaos_warp, counterspell,
+    dispelling_exhale, draconic_lore, dragons_fire, negate, sarkhans_triumph, silumgars_scorn,
+    blasphemous_act, distant_melody, mana_geyser, vandalblast, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const SPIDER_MAN_INDIA_COMMANDERS: &[CardFactory] = &[spider_man_india];
+
+/// **Spider-Man India**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Forests + 11 Plains = 99.
+/// Spider-Man India (EDHREC, fetched 2026-10-16).
+pub const SPIDER_MAN_INDIA_MAIN: &[CardFactory] = &[
+    arcane_signet, costume_closet, ozolith_the_shattered_spire, pictures_of_spider_man,
+    sol_ring, web_shooters, blossoming_sands, brushland, canopy_vista, command_tower,
+    fortified_village, overgrown_farmland, path_of_ancestry, suburban_sanctuary,
+    sungrass_prairie, sunpetal_grove, temple_garden, abzan_falconer, armorcraft_judge, aunt_may,
+    avacyns_pilgrim, beast_whisperer, birds_of_paradise, champion_of_lambholt, conclave_mentor,
+    daily_bugle_reporters, dusk_legion_duelist, duskshell_crawler, elvish_mystic,
+    evolution_witness, fyndhorn_elves, gallant_citizen, good_fortune_unicorn, guy_in_the_chair,
+    gyre_sage, haliya_ascendant_cadet, hamza_guardian_of_arashin, incubation_druid,
+    kami_of_whispered_hopes, kutzil_malamet_exemplar, llanowar_elves, metastatic_evangel,
+    reclamation_sage, rishkar_peema_renegade, selfless_police_captain, silk_web_weaver,
+    silver_sable_mercenary_leader, spectacular_spider_man, spider_girl_legacy_hero,
+    spider_man_brooklyn_visionary, spider_man_web_slinger, spider_uk, web_warriors,
+    branching_evolution, cathars_crusade, garruks_uprising, hardened_scales, terrasymbiosis,
+    wall_crawl, web_up, beast_within, grow_extra_arms, heroic_intervention, inspiring_call,
+    path_to_exile, spectacular_tactics, strength_of_will, sudden_strike, swords_to_plowshares,
+    cultivate, damning_verdict, fangs_of_kalonia, kapow, kodamas_reach, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const LYDIA_FRYE_COMMANDERS: &[CardFactory] = &[lydia_frye];
+
+/// **Lydia Frye**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Islands + 12 Swamps = 99.
+/// Lydia Frye (EDHREC, fetched 2026-10-16).
+pub const LYDIA_FRYE_MAIN: &[CardFactory] = &[
+    adrestia, arcane_signet, assassin_gauntlet, bident_of_thassa, brotherhood_regalia,
+    dimir_signet, hidden_blade, mind_stone, smoke_bomb, sol_ring, talisman_of_dominance,
+    bojuka_bog, brotherhood_headquarters, choked_estuary, command_tower, darkwater_catacombs,
+    dimir_aqueduct, drowned_catacomb, path_of_ancestry, rogues_passage, shipwreck_marsh,
+    sunken_hollow, temple_of_deceit, watery_grave, achilles_davenport,
+    adewale_breaker_of_chains, assassin_initiate, aven_heartstabber, basim_ibn_ishaq,
+    blood_operative, brotherhood_spy, changeling_outcast, desmond_miles, etrata_deadly_fugitive,
+    etrata_the_silencer, evie_frye, ezio_blade_of_vengeance, hired_poisoner, hookblade_veteran,
+    jacob_frye, mari_the_killing_quill, massacre_girl_known_killer, merciless_harlequin,
+    mirko_obsessive_theorist, poison_blade_mentor, ramses_assassin_lord, roshan_hidden_magister,
+    royal_assassin, termination_facilitator, unstoppable_slasher, wonder, coastal_piracy,
+    cover_of_darkness, double_down, enhanced_surveillance, propaganda, rooftop_bypass,
+    the_revelations_of_ezio, chain_assassination, consider, counterspell, escape_detection,
+    go_for_the_throat, mission_briefing, murder, negate, otherworldly_gaze, price_of_fame,
+    sinister_sabotage, auditore_ambush, back_in_town, eagle_vision, feed_the_swarm, notion_rain,
+    reanimate, restart_sequence, victimize,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SPECTACULAR_SPIDER_MAN_COMMANDERS: &[CardFactory] = &[spectacular_spider_man];
+
+/// **Spectacular Spider-Man**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Spectacular Spider-Man (EDHREC, fetched 2026-10-16).
+pub const SPECTACULAR_SPIDER_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, costume_closet, mind_stone, oketras_monument,
+    pearl_medallion, peter_parkers_camera, skullclamp, sol_ring, spider_suit, swiftfoot_boots,
+    sword_of_the_animist, web_shooters, castle_ardenvale, daily_bugle_building,
+    emeria_the_sky_ruin, myriad_landscape, nykthos_shrine_to_nyx, rogues_passage, war_room,
+    adeline_resplendent_cathar, anti_venom_horrifying_healer, arachne_psionic_weaver, aunt_may,
+    boromir_warden_of_the_tower, cosmogrand_zenith, daily_bugle_reporters, enduring_innocence,
+    esper_sentinel, flash_thompson_spider_fan, grand_abolisher, knight_of_the_white_orchid,
+    loran_of_the_third_path, mj_rising_star, mangara_the_diplomat, mentor_of_the_meek,
+    mirror_entity, mother_of_runes, silver_sable_mercenary_leader, solemn_simulacrum,
+    spider_man_peter_parker, spider_man_web_slinger, spider_uk, sun_titan, weathered_wayfarer,
+    welcoming_vampire, amazing_alliance, cathars_crusade, flowering_of_the_white_tree,
+    friendly_neighborhood, land_tax, origin_of_spider_man, rent_is_due, web_up,
+    with_great_power, akromas_will, generous_gift, path_to_exile, reprieve, spectacular_tactics,
+    stroke_of_midnight, sudden_strike, swords_to_plowshares, thwip, austere_command, cut_a_deal,
+    day_of_judgment, open_the_armory, vanquish_the_horde, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const BORTUK_BONERATTLE_COMMANDERS: &[CardFactory] = &[bortuk_bonerattle];
+
+/// **Bortuk Bonerattle**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 14 Forests + 12 Swamps = 99.
+/// Bortuk Bonerattle (EDHREC, fetched 2026-10-16).
+pub const BORTUK_BONERATTLE_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, golgari_signet, navigators_compass, sol_ring, swiftfoot_boots,
+    command_tower, evolving_wilds, hall_of_echoes, haunted_mire, overgrown_tomb, thran_portal,
+    unstable_frontier, urborg_tomb_of_yawgmoth, woodland_cemetery, yavimaya_cradle_of_growth,
+    blood_artist, cankerbloom, carnivorous_cultivator, clackbridge_troll,
+    dryad_of_the_ilysian_grove, elvish_mystic, elvish_visionary, eternal_witness, farhaven_elf,
+    first_responder, fleshbag_marauder, haywire_mite, honest_rutstein, junji_the_midnight_sky,
+    llanowar_elves, lotleth_troll, meatsqueak_hoard_lord, overlord_of_the_hauntwoods,
+    poison_tip_archer, ravenous_chupacabra, sakura_tribe_elder, satyr_wayfinder, sheoldred,
+    skull_prophet, spore_frog, stitchers_supplier, syr_konrad_the_grim, temur_sabertooth,
+    verdant_kraken, viscera_seer, wood_elves, zulaport_cutthroat, lush_growth,
+    moldervine_reclamation, nyleas_presence, out_of_the_tombs, phyrexian_reclamation,
+    prismatic_omen, assassins_trophy, beast_within, go_for_the_throat, grisly_salvage,
+    heroic_intervention, murder, putrefy, return_to_nature, culling_ritual, cultivate,
+    demonic_tutor, farseek, kodamas_reach, natures_lore, rampant_growth, reanimate,
+    rise_of_the_witch_king, three_visits, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const MICHELANGELO_4_COMMANDERS: &[CardFactory] = &[michelangelo_mutant_bff];
+
+/// **Michelangelo, Mutant BFF**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Michelangelo, Mutant BFF (EDHREC, fetched 2026-10-16).
+pub const MICHELANGELO_4_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, ozolith_the_shattered_spire, sol_ring, swiftfoot_boots,
+    the_earth_crystal, the_ooze, the_ozolith, ba_sing_se, evolving_wilds, karns_bastion,
+    oran_rief_the_vastwood, reliquary_tower, rogues_passage, bristly_bill_spine_sower,
+    champion_of_lambholt, elvish_mystic, evolution_witness, forgotten_ancient, frog_butler,
+    groundchuck_dirtbag, gyre_sage, kalonian_hydra, kami_of_whispered_hopes,
+    leatherhead_iron_gator, leatherhead_swamp_stalker, llanowar_elves, managorger_hydra,
+    michelangelo_game_master, michelangelo_improviser, michelangelo_on_the_scene,
+    michelangelo_weirdness_to_11, michelangelo_the_heart, mona_lisa_ever_adaptable,
+    mona_lisa_science_geek, mossborn_hydra, mutagen_man_living_ooze, ouroboroid,
+    renata_called_to_the_hunt, rishkar_peema_renegade, steelbane_hydra, vigor,
+    branching_evolution, doubling_season, garruks_uprising, hardened_scales, high_score,
+    level_up, sphere_grid, terrasymbiosis, unnatural_growth, beast_within, heroic_intervention,
+    inspiring_call, ram_through, return_of_the_wildspeaker, saved_by_the_shell, snakeskin_veil,
+    tenderize, cowabunga, cultivate, fangs_of_kalonia, harmonize, kodamas_reach,
+    michelangelos_technique, mutant_chain_reaction, natures_lore, rampant_growth,
+    study_the_classics,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];

@@ -17808,6 +17808,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GIMLI_2_COMMANDERS,
             main: decks::GIMLI_2_MAIN,
         },
+        // Seat 2893: Lozhan, Dragons' Legacy's EDHREC average deck. `--pod-decks 2893`.
+        PodDeck {
+            name: "Lozhan, Dragons' Legacy (UR)",
+            commanders: decks::LOZHAN_COMMANDERS,
+            main: decks::LOZHAN_MAIN,
+        },
+        // Seat 2894: Spider-Man India's EDHREC average deck. `--pod-decks 2894`.
+        PodDeck {
+            name: "Spider-Man India (WG)",
+            commanders: decks::SPIDER_MAN_INDIA_COMMANDERS,
+            main: decks::SPIDER_MAN_INDIA_MAIN,
+        },
+        // Seat 2895: Lydia Frye's EDHREC average deck. `--pod-decks 2895`.
+        PodDeck {
+            name: "Lydia Frye (UB)",
+            commanders: decks::LYDIA_FRYE_COMMANDERS,
+            main: decks::LYDIA_FRYE_MAIN,
+        },
+        // Seat 2896: Spectacular Spider-Man's EDHREC average deck. `--pod-decks 2896`.
+        PodDeck {
+            name: "Spectacular Spider-Man (W)",
+            commanders: decks::SPECTACULAR_SPIDER_MAN_COMMANDERS,
+            main: decks::SPECTACULAR_SPIDER_MAN_MAIN,
+        },
+        // Seat 2897: Bortuk Bonerattle's EDHREC average deck. `--pod-decks 2897`.
+        PodDeck {
+            name: "Bortuk Bonerattle (BG)",
+            commanders: decks::BORTUK_BONERATTLE_COMMANDERS,
+            main: decks::BORTUK_BONERATTLE_MAIN,
+        },
+        // Seat 2898: Michelangelo, Mutant BFF's EDHREC average deck. `--pod-decks 2898`.
+        PodDeck {
+            name: "Michelangelo, Mutant BFF (G)",
+            commanders: decks::MICHELANGELO_4_COMMANDERS,
+            main: decks::MICHELANGELO_4_MAIN,
+        },
     ]
 }
 
@@ -22584,6 +22620,12 @@ mod tests {
             ("Verdeloth the Ancient", &[0x1560]),
             ("Slimefoot, the Stowaway", &[0x1561]),
             ("Gimli, Counter of Kills", &[0x1562]),
+            ("Lozhan, Dragons' Legacy", &[0x1563]),
+            ("Spider-Man India", &[0x1564]),
+            ("Lydia Frye", &[0x1565]),
+            ("Spectacular Spider-Man", &[0x1566]),
+            ("Bortuk Bonerattle", &[0x1567]),
+            ("Michelangelo, Mutant BFF", &[0x1568]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
