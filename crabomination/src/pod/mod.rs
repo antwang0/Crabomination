@@ -18108,6 +18108,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TELIMTOR_COMMANDERS,
             main: decks::TELIMTOR_MAIN,
         },
+        // Seat 2943: Depala, Pilot Exemplar's EDHREC average deck. `--pod-decks 2943`.
+        PodDeck {
+            name: "Depala, Pilot Exemplar (WR)",
+            commanders: decks::DEPALA_COMMANDERS,
+            main: decks::DEPALA_MAIN,
+        },
+        // Seat 2944: Doc Ock, Evil Inventor's EDHREC average deck. `--pod-decks 2944`.
+        PodDeck {
+            name: "Doc Ock, Evil Inventor (UB)",
+            commanders: decks::DOC_OCK_COMMANDERS,
+            main: decks::DOC_OCK_MAIN,
+        },
+        // Seat 2945: Lord Dregg, Insect Invader's EDHREC average deck. `--pod-decks 2945`.
+        PodDeck {
+            name: "Lord Dregg, Insect Invader (BG)",
+            commanders: decks::LORD_DREGG_COMMANDERS,
+            main: decks::LORD_DREGG_MAIN,
+        },
     ]
 }
 
@@ -22934,6 +22952,9 @@ mod tests {
             ("Nefarox, Overlord of Grixis", &[0x1592]),
             ("Hythonia the Cruel", &[0x1593]),
             ("Telim'Tor", &[0x1594]),
+            ("Depala, Pilot Exemplar", &[0x1595]),
+            ("Doc Ock, Evil Inventor", &[0x1596]),
+            ("Lord Dregg, Insect Invader", &[0x1597]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -82510,3 +82510,89 @@ pub const TELIMTOR_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const DEPALA_COMMANDERS: &[CardFactory] = &[depala_pilot_exemplar];
+
+/// **Depala, Pilot Exemplar**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Plains = 99.
+/// Depala, Pilot Exemplar (EDHREC, fetched 2026-10-16).
+pub const DEPALA_MAIN: &[CardFactory] = &[
+    aerial_surveyor, arcane_signet, bearded_axe, boros_signet, colossal_plow,
+    consulate_dreadnought, cultivators_caravan, fleetwheel_cruiser, hoard_hauler,
+    lifecraft_engine, mighty_servant_of_leuk_o, nautiloid_ship, parhelion_ii,
+    peacewalker_colossus, reaver_titan, reckoner_bankbuster, salvation_engine,
+    skysovereign_consul_flagship, smugglers_copter, sol_ring, surgehacker_mech,
+    talisman_of_conviction, untethered_express, weatherlight, battlefield_forge, boros_garrison,
+    buried_ruin, clifftop_retreat, command_tower, dwarven_mine, furycalm_snarl, great_furnace,
+    inventors_fair, mech_hangar, path_of_ancestry, rugged_prairie, sacred_foundry, sundown_pass,
+    temple_of_triumph, aeronaut_admiral, aethershield_artificer, astor_bearer_of_blades,
+    bofur_reliable_guardian, digsite_engineer, duergar_hedge_mage, dwarven_recruiter,
+    dain_lord_of_the_iron_hills, fairgrounds_warden, foundry_inspector, fili_the_pathfinder,
+    gearshift_ace, gloin_dwarf_emissary, hangar_scrounger, kolodin_triumph_caster,
+    magda_brazen_outlaw, plundering_barbarian, renegade_wheelsmith, restoration_specialist,
+    sram_senior_edificer, stoic_farmer, thorin_oakenshield, toolcraft_exemplar,
+    veteran_motorist, pias_revolution, siege_modification, tempered_steel, armed_and_armored,
+    boros_charm, dispatch, generous_gift, path_to_exile, swords_to_plowshares,
+    chandra_spark_hunter, blasphemous_act, from_father_to_son, reckless_crew,
+    start_your_engines, wake_the_past,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const DOC_OCK_COMMANDERS: &[CardFactory] = &[doc_ock_evil_inventor];
+
+/// **Doc Ock, Evil Inventor**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 10 Islands + 8 Swamps = 99.
+/// Doc Ock, Evil Inventor (EDHREC, fetched 2026-10-16).
+pub const DOC_OCK_MAIN: &[CardFactory] = &[
+    akromas_memorial, arcane_signet, bident_of_thassa, cloud_key, commanders_sphere,
+    crystal_skull_isu_spyglass, darksteel_forge, darksteel_ingot, darksteel_relic, dimir_signet,
+    doc_ocks_tentacles, everflowing_chalice, fellwar_stone, forsaken_monument, gilded_lotus,
+    hedron_archive, lightning_greaves, mind_stone, mystic_forge, sculpting_steel,
+    skyclave_relic, sol_ring, strionic_resonator, swiftfoot_boots, talisman_of_dominance,
+    thought_vessel, thran_dynamo, unwinding_clock, worn_powerstone, academy_ruins, buried_ruin,
+    command_tower, darksteel_citadel, drowned_catacomb, inventors_fair, mistvault_bridge,
+    morphic_pool, reliquary_tower, seat_of_the_synod, shipwreck_marsh, sunken_hollow,
+    tainted_isle, underground_river, vault_of_whispers, watery_grave, baleful_strix,
+    chameleon_master_of_disguise, cryptothrall, cyberdrive_awakener, cyberman_patrol,
+    cybermen_squadron, doc_ock_sinister_scientist, doctor_octopus_master_planner,
+    emry_lurker_of_the_loch, etherium_sculptor, foundry_inspector, jhoiras_familiar,
+    lady_octopus_inspired_inventor, padeem_consul_of_innovation, sai_master_thopterist,
+    steel_overseer, thought_monitor, vedalken_archmage, artificer_class, mechanized_production,
+    thopter_spy_network, an_offer_you_cant_refuse, arcane_denial, counterspell, dark_ritual,
+    desynchronization, mana_drain, negate, withering_torment, tezzeret_master_of_the_bridge,
+    fabricate, feed_the_swarm, grasping_tentacles, their_name_is_death, thoughtcast,
+    villainous_wrath,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LORD_DREGG_COMMANDERS: &[CardFactory] = &[lord_dregg_insect_invader];
+
+/// **Lord Dregg, Insect Invader**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Forests + 13 Swamps = 99.
+/// Lord Dregg, Insect Invader (EDHREC, fetched 2026-10-16).
+pub const LORD_DREGG_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, idol_of_oblivion, skullclamp, sol_ring, swiftfoot_boots,
+    talisman_of_resilience, command_tower, evolving_wilds, exotic_orchard, fabled_passage,
+    golgari_rot_farm, llanowar_wastes, necroblossom_snarl, overgrown_tomb, path_of_ancestry,
+    swarmyard, temple_of_malady, twilight_mire, vernal_fen, woodland_cemetery,
+    aatchik_emerald_radian, academy_manufactor, arasta_of_the_endless_web, bitterbloom_bearer,
+    blood_artist, brood_of_cockroaches, chatterfang_squirrel_general, devouring_swarm,
+    endless_cockroaches, ice_cream_kitty, jaheira_friend_of_the_forest, mabel_bitter_recluse,
+    marionette_apprentice, mazirek_kraul_death_priest, mirkwood_bats, morbid_opportunist,
+    nadiers_nightblade, necrosquito, ophiomancer, peregrin_took, pitiless_plunderer,
+    priest_of_forgotten_gods, quina_qu_gourmet, rat_king_verminister, ravenous_squirrel,
+    sakura_tribe_elder, scute_swarm, south_wind_avatar, tireless_provisioner, tireless_tracker,
+    umbral_collar_zealot, bastion_of_remembrance, bitterblossom, doubling_season,
+    night_of_the_sweets_revenge, ninja_pizza, vampiric_rites, assassins_trophy, blessed_respite,
+    corrupted_conviction, deadly_dispute, diabolic_edict, fog, plumb_the_forbidden, putrefy,
+    tear_asunder, cultivate, farseek, kodamas_reach, lash_of_the_balrog, mutant_chain_reaction,
+    new_generations_technique, rampant_growth, rise_of_the_dark_realms, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
