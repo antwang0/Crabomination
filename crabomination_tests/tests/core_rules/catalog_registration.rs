@@ -2093,7 +2093,10 @@ fn every_graveyard_leave_trigger_fires_once_a_batch() {
 /// **Basri Ket**'s −2 ("create that many 1/1 Soldiers tapped and attacking")
 /// is the same arithmetic: one token per nontoken attacker is the printed
 /// count, and each token attacks what its attacker's player is defending.
-const ATTACK_BATCH_SIGNED_OFF: &[&str] = &["Sabotage Strategist", "Orim's Prayer", "Basri Ket"];
+/// **Garruk, Curse Breaker**'s −4 ("those creatures get +2/+2 and gain
+/// trample") is Sabotage Strategist's shape: a per-attacker pump of
+/// `TriggerSource` reaches every member of the set exactly once.
+const ATTACK_BATCH_SIGNED_OFF: &[&str] = &["Sabotage Strategist", "Orim's Prayer", "Basri Ket", "Garruk, Curse Breaker"];
 
 /// **A card that prints "whenever one or more … attack" fires once per
 /// declaration, not once per attacker.**

@@ -5159,8 +5159,10 @@ impl GameState {
             crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { subtype } => {
                 self.battlefield.iter().any(|c| {
                     c.controller == perm.player
-                        && c.definition.is_planeswalker()
-                        && c.definition.subtypes.planeswalker_subtypes.contains(&subtype)
+                        && self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
+                        && self
+                            .computed_permanent_on(c)
+                            .is_some_and(|cp| cp.subtypes().planeswalker_subtypes.contains(&subtype))
                 })
             }
             // A land is never cast, so it is never played this way.
