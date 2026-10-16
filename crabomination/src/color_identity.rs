@@ -108,6 +108,12 @@ fn walk(v: &Value, out: &mut ColorSet) {
             if m.get("description").and_then(Value::as_str).is_some_and(is_reminder_only_cost) {
                 return;
             }
+            // CR 111.10 / 903.4 — a predefined token's abilities are reminder
+            // text on the card that makes it: "create a Heartwood token (… with
+            // '{T}: Add {R} or {G}.')" leaves Hungering Puppetbeast mono-green.
+            if m.get("name").and_then(Value::as_str).is_some_and(is_reminder_text_token) && m.contains_key("card_types") {
+                return;
+            }
             // CR 305.6 — a land with a basic land type has that type's mana
             // ability intrinsically; the engine prints it as an activated
             // ability. On a card it's `basic_land_identity`'s; on a token the
@@ -244,6 +250,13 @@ fn is_intrinsic_land_mana(ab: &Value, colors: &[&str]) -> bool {
 /// exactly the shortcuts that mint them; extend it if another keyword joins.
 fn is_reminder_only_cost(description: &str) -> bool {
     description.starts_with("Extort")
+}
+
+/// CR 111.10 — the predefined tokens whose abilities print a colored mana
+/// symbol (only in reminder text). Treasure, Gold and the rest add mana of any
+/// color or colorless, which no walk tag reads.
+fn is_reminder_text_token(name: &str) -> bool {
+    name == "Heartwood"
 }
 
 fn color_of(v: &Value, out: &mut ColorSet) {
