@@ -172,6 +172,9 @@ the handoff.
   Savage Mansion, Decimator of the Provinces, Kraven's Last Hunt (Kraven Proud Predator); Ghost Spectral Saboteur,
   Ronin Shadow Stalker, Swordsman Sharp Scoundrel (Ghost); Boomerang Blade Flinger, Loot the Anomaly, Silence the
   Echo (Boomerang).
+- **CLAIMED (batch 3) — don't duplicate:** Dungeoneer's Pack, Trailblazer's Torch, Harnessed Snubhorn, Hamato
+  Guardian Stance, Veteran Soldier, Veteran Armorsmith (Rasaad yn Bashir's three decks); Lurebound Scarecrow,
+  Midnight Oil (Faceless One // Criminal Past).
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
