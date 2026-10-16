@@ -18720,6 +18720,264 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FACELESS_ONE_COMMANDERS,
             main: decks::FACELESS_ONE_MAIN,
         },
+        // Seat 3045: Akiri, Line-Slinger and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 3045`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Glacian, Powerstone Engineer (WUR)",
+            commanders: decks::AKIRI_3_COMMANDERS,
+            main: decks::AKIRI_3_MAIN,
+        },
+        // Seat 3046: Akroma, Vision of Ixidor and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3046`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Sakashima of a Thousand Faces (WU)",
+            commanders: decks::AKROMA_4_COMMANDERS,
+            main: decks::AKROMA_4_MAIN,
+        },
+        // Seat 3047: Alena, Kessig Trapper and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3047`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Sidar Kondo of Jamuraa (WRG)",
+            commanders: decks::ALENA_2_COMMANDERS,
+            main: decks::ALENA_2_MAIN,
+        },
+        // Seat 3048: Alora, Merry Thief and Shameless Charlatan's EDHREC average deck. `--pod-decks 3048`.
+        PodDeck {
+            name: "Alora, Merry Thief and Shameless Charlatan (U)",
+            commanders: decks::ALORA_2_COMMANDERS,
+            main: decks::ALORA_2_MAIN,
+        },
+        // Seat 3049: Armix, Filigree Thrasher and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 3049`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Glacian, Powerstone Engineer (UB)",
+            commanders: decks::ARMIX_2_COMMANDERS,
+            main: decks::ARMIX_2_MAIN,
+        },
+        // Seat 3050: Breeches, Brazen Plunderer and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3050`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Sakashima of a Thousand Faces (UR)",
+            commanders: decks::BREECHES_4_COMMANDERS,
+            main: decks::BREECHES_4_MAIN,
+        },
+        // Seat 3051: Breeches, Brazen Plunderer and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 3051`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Thrasios, Triton Hero (URG)",
+            commanders: decks::BREECHES_5_COMMANDERS,
+            main: decks::BREECHES_5_MAIN,
+        },
+        // Seat 3052: Brinelin, the Moon Kraken and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 3052`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Glacian, Powerstone Engineer (U)",
+            commanders: decks::BRINELIN_2_COMMANDERS,
+            main: decks::BRINELIN_2_MAIN,
+        },
+        // Seat 3053: Dargo, the Shipwrecker and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 3053`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Ishai, Ojutai Dragonspeaker (WUR)",
+            commanders: decks::DARGO_2_COMMANDERS,
+            main: decks::DARGO_2_MAIN,
+        },
+        // Seat 3054: Durnan of the Yawning Portal and Street Urchin's EDHREC average deck. `--pod-decks 3054`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Street Urchin (RG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_2_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_2_MAIN,
+        },
+        // Seat 3055: Esior, Wardwing Familiar and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 3055`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Glacian, Powerstone Engineer (U)",
+            commanders: decks::ESIOR_2_COMMANDERS,
+            main: decks::ESIOR_2_MAIN,
+        },
+        // Seat 3056: Esior, Wardwing Familiar and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3056`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Sakashima of a Thousand Faces (U)",
+            commanders: decks::ESIOR_3_COMMANDERS,
+            main: decks::ESIOR_3_MAIN,
+        },
+        // Seat 3057: Faceless One and Shameless Charlatan's EDHREC average deck. `--pod-decks 3057`.
+        PodDeck {
+            name: "Faceless One and Shameless Charlatan (U)",
+            commanders: decks::FACELESS_ONE_2_COMMANDERS,
+            main: decks::FACELESS_ONE_2_MAIN,
+        },
+        // Seat 3058: Francisco, Fowl Marauder and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 3058`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Glacian, Powerstone Engineer (UB)",
+            commanders: decks::FRANCISCO_COMMANDERS,
+            main: decks::FRANCISCO_MAIN,
+        },
+        // Seat 3059: Ghost of Ramirez DePietro and Ravos, Soultender's EDHREC average deck. `--pod-decks 3059`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Ravos, Soultender (WUB)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_2_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_2_MAIN,
+        },
+        // Seat 3060: Glacian, Powerstone Engineer and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 3060`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Jeska, Thrice Reborn (UR)",
+            commanders: decks::GLACIAN_COMMANDERS,
+            main: decks::GLACIAN_MAIN,
+        },
+        // Seat 3061: Glacian, Powerstone Engineer and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 3061`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Keskit, the Flesh Sculptor (UB)",
+            commanders: decks::GLACIAN_2_COMMANDERS,
+            main: decks::GLACIAN_2_MAIN,
+        },
+        // Seat 3062: Glacian, Powerstone Engineer and Kodama of the East Tree's EDHREC average deck. `--pod-decks 3062`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Kodama of the East Tree (UG)",
+            commanders: decks::GLACIAN_3_COMMANDERS,
+            main: decks::GLACIAN_3_MAIN,
+        },
+        // Seat 3063: Glacian, Powerstone Engineer and Ravos, Soultender's EDHREC average deck. `--pod-decks 3063`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Ravos, Soultender (WUB)",
+            commanders: decks::GLACIAN_4_COMMANDERS,
+            main: decks::GLACIAN_4_MAIN,
+        },
+        // Seat 3064: Glacian, Powerstone Engineer and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 3064`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Reyhan, Last of the Abzan (UBG)",
+            commanders: decks::GLACIAN_5_COMMANDERS,
+            main: decks::GLACIAN_5_MAIN,
+        },
+        // Seat 3065: Glacian, Powerstone Engineer and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3065`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Rograkh, Son of Rohgahh (UR)",
+            commanders: decks::GLACIAN_6_COMMANDERS,
+            main: decks::GLACIAN_6_MAIN,
+        },
+        // Seat 3066: Glacian, Powerstone Engineer and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3066`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Sakashima of a Thousand Faces (U)",
+            commanders: decks::GLACIAN_7_COMMANDERS,
+            main: decks::GLACIAN_7_MAIN,
+        },
+        // Seat 3067: Glacian, Powerstone Engineer and The Prismatic Piper's EDHREC average deck. `--pod-decks 3067`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and The Prismatic Piper (U)",
+            commanders: decks::GLACIAN_8_COMMANDERS,
+            main: decks::GLACIAN_8_MAIN,
+        },
+        // Seat 3068: Glacian, Powerstone Engineer and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3068`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Toggo, Goblin Weaponsmith (UR)",
+            commanders: decks::GLACIAN_9_COMMANDERS,
+            main: decks::GLACIAN_9_MAIN,
+        },
+        // Seat 3069: Glacian, Powerstone Engineer and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3069`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Vial Smasher the Fierce (UBR)",
+            commanders: decks::GLACIAN_10_COMMANDERS,
+            main: decks::GLACIAN_10_MAIN,
+        },
+        // Seat 3070: Jaheira, Friend of the Forest and Clan Crafter's EDHREC average deck. `--pod-decks 3070`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Clan Crafter (UG)",
+            commanders: decks::JAHEIRA_2_COMMANDERS,
+            main: decks::JAHEIRA_2_MAIN,
+        },
+        // Seat 3071: Kamahl, Heart of Krosa and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3071`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Sakashima of a Thousand Faces (UG)",
+            commanders: decks::KAMAHL_3_COMMANDERS,
+            main: decks::KAMAHL_3_MAIN,
+        },
+        // Seat 3072: Malcolm, Keen-Eyed Navigator and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3072`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::MALCOLM_3_COMMANDERS,
+            main: decks::MALCOLM_3_MAIN,
+        },
+        // Seat 3073: Rograkh, Son of Rohgahh and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 3073`.
+        PodDeck {
+            name: "Rograkh, Son of Rohgahh and Thrasios, Triton Hero (URG)",
+            commanders: decks::ROGRAKH_COMMANDERS,
+            main: decks::ROGRAKH_MAIN,
+        },
+        // Seat 3074: Sakashima of a Thousand Faces and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3074`.
+        PodDeck {
+            name: "Sakashima of a Thousand Faces and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::SAKASHIMA_OF_A_THOUSAND_FACES_COMMANDERS,
+            main: decks::SAKASHIMA_OF_A_THOUSAND_FACES_MAIN,
+        },
+        // Seat 3075: Sakashima of a Thousand Faces and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3075`.
+        PodDeck {
+            name: "Sakashima of a Thousand Faces and Tevesh Szat, Doom of Fools (UB)",
+            commanders: decks::SAKASHIMA_OF_A_THOUSAND_FACES_2_COMMANDERS,
+            main: decks::SAKASHIMA_OF_A_THOUSAND_FACES_2_MAIN,
+        },
+        // Seat 3076: Siani, Eye of the Storm and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3076`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Toggo, Goblin Weaponsmith (UR)",
+            commanders: decks::SIANI_2_COMMANDERS,
+            main: decks::SIANI_2_MAIN,
+        },
+        // Seat 3077: The Eighth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3077`.
+        PodDeck {
+            name: "The Eighth Doctor and Jo Grant (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_2_MAIN,
+        },
+        // Seat 3078: The Eighth Doctor and Rose Noble's EDHREC average deck. `--pod-decks 3078`.
+        PodDeck {
+            name: "The Eighth Doctor and Rose Noble (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3079: The Fifteenth Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 3079`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Barbara Wright (WUR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3080: The Fifteenth Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 3080`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Graham O'Brien (URG)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_4_MAIN,
+        },
+        // Seat 3081: The First Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 3081`.
+        PodDeck {
+            name: "The First Doctor and Adric, Mathematical Genius (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_3_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_3_MAIN,
+        },
+        // Seat 3082: The Fourteenth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 3082`.
+        PodDeck {
+            name: "The Fourteenth Doctor and K-9, Mark I (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_2_MAIN,
+        },
+        // Seat 3083: The Sixth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3083`.
+        PodDeck {
+            name: "The Sixth Doctor and Jo Grant (WUG)",
+            commanders: decks::THE_SIXTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_2_MAIN,
+        },
+        // Seat 3084: The Third Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3084`.
+        PodDeck {
+            name: "The Third Doctor and Jo Grant (WUG)",
+            commanders: decks::THE_THIRD_DOCTOR_2_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_2_MAIN,
+        },
+        // Seat 3085: The Third Doctor and Romana II's EDHREC average deck. `--pod-decks 3085`.
+        PodDeck {
+            name: "The Third Doctor and Romana II (WUG)",
+            commanders: decks::THE_THIRD_DOCTOR_3_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_3_MAIN,
+        },
+        // Seat 3086: Volo, Itinerant Scholar and Shameless Charlatan's EDHREC average deck. `--pod-decks 3086`.
+        PodDeck {
+            name: "Volo, Itinerant Scholar and Shameless Charlatan (U)",
+            commanders: decks::VOLO_4_COMMANDERS,
+            main: decks::VOLO_4_MAIN,
+        },
+        // Seat 3087: Sakashima the Impostor's EDHREC average deck. `--pod-decks 3087`.
+        PodDeck {
+            name: "Sakashima the Impostor (U)",
+            commanders: decks::SAKASHIMA_THE_IMPOSTOR_COMMANDERS,
+            main: decks::SAKASHIMA_THE_IMPOSTOR_MAIN,
+        },
     ]
 }
 
@@ -23648,6 +23906,49 @@ mod tests {
             ("Rasaad yn Bashir and Inspiring Leader", &[0x15F8]),
             ("Rasaad yn Bashir and Noble Heritage", &[0x15F9]),
             ("Faceless One and Criminal Past", &[0x15FA]),
+            ("Akiri, Line-Slinger and Glacian, Powerstone Engineer", &[0x15FB]),
+            ("Akroma, Vision of Ixidor and Sakashima of a Thousand Faces", &[0x15FC]),
+            ("Alena, Kessig Trapper and Sidar Kondo of Jamuraa", &[0x15FD]),
+            ("Alora, Merry Thief and Shameless Charlatan", &[0x15FE]),
+            ("Armix, Filigree Thrasher and Glacian, Powerstone Engineer", &[0x15FF]),
+            ("Breeches, Brazen Plunderer and Sakashima of a Thousand Faces", &[0x1600]),
+            ("Breeches, Brazen Plunderer and Thrasios, Triton Hero", &[0x1601]),
+            ("Brinelin, the Moon Kraken and Glacian, Powerstone Engineer", &[0x1602]),
+            ("Dargo, the Shipwrecker and Ishai, Ojutai Dragonspeaker", &[0x1603]),
+            ("Durnan of the Yawning Portal and Street Urchin", &[0x1604]),
+            ("Esior, Wardwing Familiar and Glacian, Powerstone Engineer", &[0x1605]),
+            ("Esior, Wardwing Familiar and Sakashima of a Thousand Faces", &[0x1606]),
+            ("Faceless One and Shameless Charlatan", &[0x1607]),
+            ("Francisco, Fowl Marauder and Glacian, Powerstone Engineer", &[0x1608]),
+            ("Ghost of Ramirez DePietro and Ravos, Soultender", &[0x1609]),
+            ("Glacian, Powerstone Engineer and Jeska, Thrice Reborn", &[0x160A]),
+            ("Glacian, Powerstone Engineer and Keskit, the Flesh Sculptor", &[0x160B]),
+            ("Glacian, Powerstone Engineer and Kodama of the East Tree", &[0x160C]),
+            ("Glacian, Powerstone Engineer and Ravos, Soultender", &[0x160D]),
+            ("Glacian, Powerstone Engineer and Reyhan, Last of the Abzan", &[0x160E]),
+            ("Glacian, Powerstone Engineer and Rograkh, Son of Rohgahh", &[0x160F]),
+            ("Glacian, Powerstone Engineer and Sakashima of a Thousand Faces", &[0x1610]),
+            ("Glacian, Powerstone Engineer and The Prismatic Piper", &[0x1611]),
+            ("Glacian, Powerstone Engineer and Toggo, Goblin Weaponsmith", &[0x1612]),
+            ("Glacian, Powerstone Engineer and Vial Smasher the Fierce", &[0x1613]),
+            ("Jaheira, Friend of the Forest and Clan Crafter", &[0x1614]),
+            ("Kamahl, Heart of Krosa and Sakashima of a Thousand Faces", &[0x1615]),
+            ("Malcolm, Keen-Eyed Navigator and Sidar Kondo of Jamuraa", &[0x1616]),
+            ("Rograkh, Son of Rohgahh and Thrasios, Triton Hero", &[0x1617]),
+            ("Sakashima of a Thousand Faces and Sidar Kondo of Jamuraa", &[0x1618]),
+            ("Sakashima of a Thousand Faces and Tevesh Szat, Doom of Fools", &[0x1619]),
+            ("Siani, Eye of the Storm and Toggo, Goblin Weaponsmith", &[0x161A]),
+            ("The Eighth Doctor and Jo Grant", &[0x161B]),
+            ("The Eighth Doctor and Rose Noble", &[0x161C]),
+            ("The Fifteenth Doctor and Barbara Wright", &[0x161D]),
+            ("The Fifteenth Doctor and Graham O'Brien", &[0x161E]),
+            ("The First Doctor and Adric, Mathematical Genius", &[0x161F]),
+            ("The Fourteenth Doctor and K-9, Mark I", &[0x1620]),
+            ("The Sixth Doctor and Jo Grant", &[0x1621]),
+            ("The Third Doctor and Jo Grant", &[0x1622]),
+            ("The Third Doctor and Romana II", &[0x1623]),
+            ("Volo, Itinerant Scholar and Shameless Charlatan", &[0x1624]),
+            ("Sakashima the Impostor", &[0x1625]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
