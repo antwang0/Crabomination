@@ -82324,3 +82324,109 @@ pub const ARNI_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const BLIND_SEER_COMMANDERS: &[CardFactory] = &[blind_seer];
+
+/// **Blind Seer**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Blind Seer (EDHREC, fetched 2026-10-16).
+pub const BLIND_SEER_MAIN: &[CardFactory] = &[
+    arcane_signet, distorting_lens, grindstone, heartstone, isochron_scepter, mind_stone,
+    sapphire_medallion, sol_ring, sword_of_feast_and_famine, sword_of_fire_and_ice,
+    sword_of_forge_and_frontier, sword_of_hearth_and_home, sword_of_light_and_shadow,
+    thought_vessel, academy_ruins, arcane_lighthouse, buried_ruin, detection_tower,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, riptide_laboratory,
+    arcanis_the_omnipotent, archmage_emeritus, cerulean_drake, chameleon_spirit, homarid_shaman,
+    king_crab, llawan_cephalid_empress, master_of_waves, omen_hawker, painters_servant,
+    scuttlemutt, tidal_visionary, tidebinder_mage, trophy_mage, vodalian_mystic, willbreaker,
+    chill, cowardice, dismiss_into_dream, douse, insight, mind_harness, shifting_sky,
+    training_grounds, well_laid_plans, wrath_of_marit_lage, aether_gust, alter_reality,
+    blue_elemental_blast, brainstorm, counterspell, flash_flood, flashfreeze, glamerdye,
+    hibernation, high_tide, hydroblast, jaded_response, mind_bend, muddle_the_mixture,
+    sea_kings_blessing, sleight_of_mind, sway_of_illusion, whim_of_volrath, fabricate,
+    govern_the_guildless, inundate, ponder, wash_out,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const LLAWAN_COMMANDERS: &[CardFactory] = &[llawan_cephalid_empress];
+
+/// **Llawan, Cephalid Empress**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Llawan, Cephalid Empress (EDHREC, fetched 2026-10-16).
+pub const LLAWAN_MAIN: &[CardFactory] = &[
+    arcane_signet, distorting_lens, fellwar_stone, grindstone, isochron_scepter, mind_stone,
+    sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel, academy_ruins,
+    myriad_landscape, mystic_sanctuary, otawara_soaring_city, reliquary_tower, urzas_saga,
+    archaeomancer, archmage_emeritus, blind_seer, deadeye_navigator, defiler_of_dreams,
+    displacer_kitten, harbinger_of_the_seas, hullbreaker_horror, indigo_faerie,
+    kira_great_glass_spinner, painters_servant, scuttlemutt, spellskite, stormtide_leviathan,
+    thassas_oracle, thassa_deep_dwelling, tidal_visionary, tribute_mage, trinket_mage,
+    back_to_basics, chill, douse, insight, mystic_remora, propaganda, rhystic_study,
+    shifting_sky, swirl_the_mists, alter_reality, an_offer_you_cant_refuse, arcane_denial,
+    brainstorm, counterspell, cyclonic_rift, glamerdye, hibernation, high_tide, mana_drain,
+    mind_bend, muddle_the_mixture, mystical_tutor, sea_kings_blessing, sleight_of_mind,
+    spectral_shift, swan_song, sway_of_illusion, whim_of_volrath, narset_parter_of_veils,
+    fabricate, merchant_scroll, ponder, preordain, wash_out, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const BULLSEYE_COMMANDERS: &[CardFactory] = &[bullseye_death_dealer];
+
+/// **Bullseye, Death Dealer**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Swamps = 99.
+/// Bullseye, Death Dealer (EDHREC, fetched 2026-10-16).
+pub const BULLSEYE_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, chainsaw, gorgons_head, hawkeyes_bow, ichor_wellspring,
+    illusionists_bracers, lightning_greaves, magewrights_stone, mephitic_draught,
+    mycosynth_wellspring, oni_cult_anvil, patriars_seal, prized_statue, rakdos_signet, sol_ring,
+    swiftfoot_boots, talisman_of_indulgence, vat_of_rebirth, blood_crypt, command_tower,
+    dragonskull_summit, foreboding_ruins, haunted_ridge, hells_kitchen, luxury_suite,
+    shadowblood_ridge, smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice,
+    academy_manufactor, circuit_mender, enterprising_scallywag, hydra_assault_robot,
+    hawkeye_young_avenger, junk_diver, kingpin_wilson_fisk, loyal_apprentice,
+    magda_the_hoardmaster, marionette_apprentice, marionette_master, mayhem_devil,
+    mirkwood_bats, morbid_opportunist, myr_retriever, ravenous_robots, reckless_fireweaver,
+    scrap_trawler, solemn_simulacrum, solphim_mayhem_dominus, torbran_thane_of_red_fell,
+    treasure_nabber, ultron_artificial_malevolence, black_market_connections, city_on_fire,
+    fiery_emancipation, phyrexian_arena, pias_revolution, weapons_manufacturing, bedevil,
+    big_score, chaos_warp, dark_deed, dark_ritual, deadly_dispute, return_the_favor, terminate,
+    daretti_scrap_savant, blasphemous_act, faithless_looting, feed_the_swarm, hell_to_pay,
+    reanimate, terminal_agony, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const GALLIA_2_COMMANDERS: &[CardFactory] = &[gallia_tragic_host];
+
+/// **Gallia, Tragic Host**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Gallia, Tragic Host (EDHREC, fetched 2026-10-16).
+pub const GALLIA_2_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, ashnods_altar, blackblade_reforged, charcoal_diamond,
+    desecrated_tomb, grim_reapers_scythe, hammer_of_nazahn, jet_medallion, loxodon_warhammer,
+    nim_deathmantle, phyrexian_altar, sol_ring, swiftfoot_boots, sword_of_the_animist,
+    vorpal_sword, bojuka_bog, cabal_coffers, cabal_stronghold, castle_locthwain, high_market,
+    myriad_landscape, phyrexian_tower, takenuma_abandoned_mire, war_room, accursed_marauder,
+    ayara_first_of_locthwain, blood_artist, bloodghast, carrion_feeder, cemetery_reaper,
+    cryptbreaker, death_baron, fang_fearless_lcie, grave_researcher, gravecrawler,
+    gray_merchant_of_asphodel, headless_rider, liliana_the_repentant, lost_monarch_of_ifnir,
+    loyal_subordinate, necron_deathmark, shriekmaw, sidisi_undead_vizier, skeleton_crew,
+    stitchers_supplier, syr_konrad_the_grim, tormod_the_desecrator, undead_hand_ninja,
+    zulaport_cutthroat, along_the_crooked_way, bastion_of_remembrance,
+    defiled_crypt_cadaver_lab, grave_pact, soul_enervation, tevals_judgment, thran_vigil,
+    dark_ritual, deadly_dispute, entomb, infernal_grasp, sacrifice, village_rites,
+    withering_torment, buried_alive, diabolic_tutor, exsanguinate, feed_the_swarm,
+    nights_whisper, reanimate, ritual_of_the_machine, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
