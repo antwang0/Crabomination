@@ -80828,3 +80828,171 @@ pub const KOYA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LEGOLAS_COMMANDERS: &[CardFactory] = &[legolas_counter_of_kills];
+
+/// **Legolas, Counter of Kills**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 14 Forests + 11 Islands = 99.
+/// Legolas, Counter of Kills (EDHREC, fetched 2026-10-16).
+pub const LEGOLAS_MAIN: &[CardFactory] = &[
+    arcane_signet, lifecrafters_bestiary, lightning_greaves, lothlorien_blade,
+    mirror_of_galadriel, simic_signet, sol_ring, swiftfoot_boots, command_tower, flooded_grove,
+    hinterland_harbor, path_of_ancestry, rejuvenating_springs, rivendell, simic_growth_chamber,
+    temple_of_mystery, the_grey_havens, thornwood_falls, vineglimmer_snarl, arbor_elf,
+    arwen_undomiel, arwen_weaver_of_hope, celeborn_the_wise, chance_met_elves,
+    elrond_lord_of_rivendell, elrond_master_of_healing, elvish_archdruid, elvish_mariner,
+    elvish_mystic, elvish_visionary, elvish_warmaster, farhaven_elf, galadhrim_guide,
+    galadriel_of_lothlorien, glorfindel_dauntless_rescuer, grey_havens_navigator,
+    haldir_lorien_lieutenant, imperious_perfect, legolas_greenleaf, legolas_master_archer,
+    llanowar_elves, lothlorien_lookout, matoya_archon_elder, nimrodel_watcher, reclamation_sage,
+    aqueous_form, fall_of_gil_galad, gift_of_strands, hardened_scales, lost_isle_calling,
+    season_of_growth, song_of_earendil, beast_within, councils_deliberation, counterspell,
+    dissolve, galadhrim_ambush, growth_spiral, heroic_intervention, hithlain_knots,
+    legolass_quick_reflexes, negate, opt, shower_of_arrows, windswift_slice, arwens_gift,
+    cultivate, elven_farsight, natures_lore, overwhelming_stampede, preordain,
+    raise_the_palisade, rampant_growth, serum_visions,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
+
+pub const WOLVERINE_2_COMMANDERS: &[CardFactory] = &[wolverine_claws_out];
+
+/// **Wolverine, Claws Out**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Wolverine, Claws Out (EDHREC, fetched 2026-10-16).
+pub const WOLVERINE_2_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, belt_of_giant_strength, blackblade_reforged, bone_sabres,
+    emerald_medallion, lightning_greaves, power_fist, shadowspear, sol_ring, swiftfoot_boots,
+    the_earth_crystal, the_great_henge, mosswort_bridge, nykthos_shrine_to_nyx,
+    oran_rief_the_vastwood, reliquary_tower, rogues_passage, aberrant, big_bertha,
+    black_tom_cassidy, colossus_steel_stalwart, darwin_adaptive_mutant, evolution_witness,
+    forgotten_ancient, groundchuck_dirtbag, leatherhead_iron_gator, leatherhead_swamp_stalker,
+    lily_bowen_raging_grandma, llanowar_elves, michelangelo_improviser, michelangelo_mutant_bff,
+    michelangelo_weirdness_to_11, mona_lisa_ever_adaptable, mona_lisa_science_geek,
+    mutagen_man_living_ooze, rampaging_yao_guai, rocksteady_mutant_marauder, watchful_radstag,
+    x_23_deadly_weapon, bear_umbra, blanchwood_armor, branching_evolution, garruks_uprising,
+    hardened_scales, level_up, lion_umbra, sphere_grid, terrasymbiosis, unnatural_growth,
+    beast_within, feral_ferocity, fog, heroic_intervention, hunters_insight, inspiring_call,
+    overprotect, return_of_the_wildspeaker, snakeskin_veil, strength_of_will, tyvars_stand,
+    cultivate, epic_fight, kodamas_reach, natures_lore, overwhelming_stampede, rampant_growth,
+    rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const LEONARDO_3_COMMANDERS: &[CardFactory] = &[leonardo_big_brother];
+
+/// **Leonardo, Big Brother**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Leonardo, Big Brother (EDHREC, fetched 2026-10-16).
+pub const LEONARDO_3_MAIN: &[CardFactory] = &[
+    arcane_signet, idol_of_oblivion, marble_diamond, mind_stone, oketras_monument,
+    pearl_medallion, skullclamp, sol_ring, castle_ardenvale, hidden_courtyard, idyllic_grange,
+    rogues_passage, windbrisk_heights, adeline_resplendent_cathar, april_oneil_kunoichi_trainee,
+    cathar_commando, hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent,
+    hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent,
+    hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent,
+    hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent, hare_apparent,
+    hare_apparent, helpful_hunter, inspiring_overseer, lunarch_veteran, salt_road_packbeast,
+    soul_warden, spirited_companion, welcoming_vampire, anointed_procession,
+    champions_from_beyond, endless_foot_assault, flaming_fist, skrelvs_hive, tocasias_welcome,
+    airbending_lesson, generous_gift, grand_crescendo, path_to_exile, raise_the_alarm,
+    rootborn_defenses, swords_to_plowshares, the_last_ronins_technique, thraben_charm,
+    will_of_the_mardu, your_temple_is_under_attack, aerith_rescue_mission, battle_screech,
+    captains_call, martial_coup, tempt_with_bunnies,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ARNO_DORIAN_COMMANDERS: &[CardFactory] = &[arno_dorian];
+
+/// **Arno Dorian**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 9 Mountains + 14 Swamps = 99.
+/// Arno Dorian (EDHREC, fetched 2026-10-16).
+pub const ARNO_DORIAN_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, commanders_sphere, heralds_horn, hidden_blade,
+    hidden_footblade, mind_stone, phantom_blade, rakdos_signet, smoke_bomb, sol_ring,
+    swiftfoot_boots, talisman_of_indulgence, bloodfell_caves, brotherhood_headquarters,
+    command_tower, dragonskull_summit, foreboding_ruins, path_of_ancestry, rakdos_carnarium,
+    reliquary_tower, rogues_passage, shadowblood_ridge, smoldering_marsh, tainted_peak,
+    temple_of_malice, agate_blade_assassin, assassin_initiate, brotherhood_ambushers,
+    brotherhood_patriarch, cindering_cutthroat, combustion_man, deadeye_duelist, desmond_miles,
+    final_sting_faerie, guildsworn_prowler, hired_poisoner, hooded_assassin, jacob_frye,
+    mari_the_killing_quill, merciless_harlequin, midnight_assassin, murderous_redcap, nekrataal,
+    poison_blade_mentor, rooftop_assassin, roshan_hidden_magister, royal_assassin,
+    ruthless_ripper, silumgar_assassin, thrill_kill_assassin, towering_viewpoint,
+    unstoppable_slasher, at_knifepoint, black_market_connections, cover_of_darkness,
+    origin_of_the_hidden_ones, rage_reflection, shared_animosity, the_revelations_of_ezio,
+    abrade, bedevil, chain_assassination, doom_blade, expedite, go_for_the_throat, murder,
+    rakdos_charm, terminate, blasphemous_act, cathartic_reunion, disrupt_decorum,
+    feed_the_swarm, overpowering_attack, petty_larceny, restart_sequence,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const HAWKEYE_6_COMMANDERS: &[CardFactory] = &[hawkeye_trick_shot];
+
+/// **Hawkeye, Trick Shot**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Hawkeye, Trick Shot (EDHREC, fetched 2026-10-16).
+pub const HAWKEYE_6_MAIN: &[CardFactory] = &[
+    arcane_signet, avengers_quinjet, door_of_destinies, heralds_horn, lightning_greaves,
+    mjolnir_hammer_of_thor, panharmonicon, patchwork_banner, relic_of_legends, ruby_medallion,
+    sol_ring, team_transmitter, the_fire_crystal, urzas_incubator, vanquishers_banner,
+    arena_of_glory, avengers_tower, nykthos_shrine_to_nyx, path_of_ancestry, three_tree_city,
+    valakut_the_molten_pinnacle, war_room, daredevil_fearless_fighter, firebird_blazing_ranger,
+    franklin_richards_ascendant, ghost_spider_gwen_stacy, hawkeye_master_marksman,
+    hawkeye_young_avenger, hulk_bruce_banner, hulkling_young_avenger, human_torch_johnny_storm,
+    iron_fist_hero_for_hire, iron_man_tony_stark, jack_of_hearts_volatile_hero,
+    jessica_jones_private_eye, jocasta_automaton_avenger, luke_cage_hero_for_hire,
+    misty_knight_hero_for_hire, photon_mighty_marvel, quicksilver_brash_blur, roaming_throne,
+    she_hulk_wallbreaker, speed_young_avenger, spider_gwen_free_spirit, spider_man_new_champion,
+    spider_man_web_spinner, spider_punk, taurean_mauler, the_vision_and_scarlet_witch,
+    thor_asgards_avenger, thor_god_of_thunder, thor_guardian_of_midgard, collective_inferno,
+    fiery_emancipation, impact_tremors, warstorm_surge, abrade, big_score, chaos_warp,
+    deflecting_swat, double_trouble, lightning_bolt, seething_song, thrill_of_possibility,
+    blasphemous_act, flame_on, jeskas_will, mana_geyser, repulsor_blast, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const COLOSSUS_COMMANDERS: &[CardFactory] = &[colossus_steel_stalwart];
+
+/// **Colossus, Steel Stalwart**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Forests = 99.
+/// Colossus, Steel Stalwart (EDHREC, fetched 2026-10-16).
+pub const COLOSSUS_MAIN: &[CardFactory] = &[
+    arcane_signet, ozolith_the_shattered_spire, sol_ring, the_aetherspark, the_earth_crystal,
+    the_great_henge, the_ozolith, ancient_tomb, boseiju_who_endures, karns_bastion,
+    llanowar_reborn, nykthos_shrine_to_nyx, oran_rief_the_vastwood, tyrite_sanctum, wasteland,
+    yavimaya_cradle_of_growth, aberrant, aquastrand_spider, basking_broodscale, big_bertha,
+    black_tom_cassidy, darwin_adaptive_mutant, evolution_witness, flatman, glowing_one,
+    groundchuck_dirtbag, gyre_sage, harold_and_bob_first_numens, incubation_druid,
+    leatherhead_iron_gator, leatherhead_swamp_stalker, lily_bowen_raging_grandma,
+    lumbering_megasloth, metallic_mimic, michelangelo_game_master, michelangelo_improviser,
+    michelangelo_mutant_bff, michelangelo_weirdness_to_11, michelangelo_the_heart,
+    mikey_mona_mutant_sitters, mona_lisa_ever_adaptable, mona_lisa_science_geek, mossborn_hydra,
+    mutagen_man_living_ooze, ouroboroid, prehistoric_turtlesaurus, rampaging_yao_guai,
+    renegade_krasis, rocksteady_crash_courser, rocksteady_mutant_marauder,
+    strong_the_brutish_thespian, surrak_and_goreclaw, watchful_radstag, wolverine_claws_out,
+    x_23_deadly_weapon, branching_evolution, garruks_uprising, hardened_scales,
+    innkeepers_talent, leyline_of_abundance, tribute_to_the_world_tree, unnatural_growth,
+    archdruids_charm, crop_rotation, fog, heroic_intervention, khalni_ambush,
+    solidarity_of_heroes, biogenic_upgrade, bridgeworks_battle, epic_fight, fangs_of_kalonia,
+    overrun, turntimber_symbiosis,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];

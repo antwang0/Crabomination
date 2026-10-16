@@ -17742,6 +17742,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KOYA_COMMANDERS,
             main: decks::KOYA_MAIN,
         },
+        // Seat 2882: Legolas, Counter of Kills's EDHREC average deck. `--pod-decks 2882`.
+        PodDeck {
+            name: "Legolas, Counter of Kills (UG)",
+            commanders: decks::LEGOLAS_COMMANDERS,
+            main: decks::LEGOLAS_MAIN,
+        },
+        // Seat 2883: Wolverine, Claws Out's EDHREC average deck. `--pod-decks 2883`.
+        PodDeck {
+            name: "Wolverine, Claws Out (G)",
+            commanders: decks::WOLVERINE_2_COMMANDERS,
+            main: decks::WOLVERINE_2_MAIN,
+        },
+        // Seat 2884: Leonardo, Big Brother's EDHREC average deck. `--pod-decks 2884`.
+        PodDeck {
+            name: "Leonardo, Big Brother (W)",
+            commanders: decks::LEONARDO_3_COMMANDERS,
+            main: decks::LEONARDO_3_MAIN,
+        },
+        // Seat 2885: Arno Dorian's EDHREC average deck. `--pod-decks 2885`.
+        PodDeck {
+            name: "Arno Dorian (BR)",
+            commanders: decks::ARNO_DORIAN_COMMANDERS,
+            main: decks::ARNO_DORIAN_MAIN,
+        },
+        // Seat 2886: Hawkeye, Trick Shot's EDHREC average deck. `--pod-decks 2886`.
+        PodDeck {
+            name: "Hawkeye, Trick Shot (R)",
+            commanders: decks::HAWKEYE_6_COMMANDERS,
+            main: decks::HAWKEYE_6_MAIN,
+        },
+        // Seat 2887: Colossus, Steel Stalwart's EDHREC average deck. `--pod-decks 2887`.
+        PodDeck {
+            name: "Colossus, Steel Stalwart (G)",
+            commanders: decks::COLOSSUS_COMMANDERS,
+            main: decks::COLOSSUS_MAIN,
+        },
     ]
 }
 
@@ -22459,6 +22495,12 @@ mod tests {
             ("Ramirez DePietro", &[0x1555]),
             ("Elektra, Daughter of the Hand", &[0x1556]),
             ("Koya, Death from Above", &[0x1557]),
+            ("Legolas, Counter of Kills", &[0x1558]),
+            ("Wolverine, Claws Out", &[0x1559]),
+            ("Leonardo, Big Brother", &[0x155A]),
+            ("Arno Dorian", &[0x155B]),
+            ("Hawkeye, Trick Shot", &[0x155C]),
+            ("Colossus, Steel Stalwart", &[0x155D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
