@@ -4239,6 +4239,10 @@ pub enum StaticEffect {
     /// "If a source would deal damage to you or a planeswalker you control,
     /// prevent all but 1 of that damage." Ajani Steadfast's emblem.
     PreventAllButOneDamageToYouAndYourPlaneswalkers,
+    /// "If a source would deal damage to you or a Hero you control, prevent
+    /// all but 1 of that damage" (Hyperion, Supreme Hero) — the battlefield
+    /// sibling of the emblem above, folded into the prevention lane.
+    PreventAllButOneDamageToYouAndYourHeroes,
     /// "Enchanted player can't activate abilities that aren't mana abilities
     /// or loyalty abilities" (Overwhelming Splendor). Read at the activation
     /// gate off an Aura attached to the activating player.

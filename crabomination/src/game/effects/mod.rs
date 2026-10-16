@@ -20157,6 +20157,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeChosenColorWithHexproof { what, duration } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let color = match self.stack_threat_color(ctx.controller, &ids) {
+                    Some(threat) => self.chosen_color_or(Some(source), &Color::ALL, threat),
+                    None => self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true),
+                };
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
+                for cid in ids {
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::just(cid),
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetColors(vec![color]),
+                    });
+                    self.grant_keyword_for(cid, Keyword::HexproofFromColor(color), *duration, ctx);
+                }
+                Ok(())
+            }
             Effect::GrantHexproofAndEvasionFromChosenColor { what, duration } => {
                 // Skrelv — the same pick as Mother of Runes' protection.
                 let source = ctx.source.unwrap_or(CardId(0));

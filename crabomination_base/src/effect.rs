@@ -8989,6 +8989,11 @@ pub enum Effect {
     /// `GrantProtectionFromChosenColor` — the threat's, else the densest
     /// among opponents.
     GrantHexproofAndEvasionFromChosenColor { what: Selector, duration: Duration },
+    /// "[what] becomes the color of your choice and gains hexproof from that
+    /// color" for `duration` (Mondo Gecko): one pick, made as for
+    /// `GrantHexproofAndEvasionFromChosenColor`, sets the color (layer 5)
+    /// and grants `HexproofFromColor` of it.
+    BecomeChosenColorWithHexproof { what: Selector, duration: Duration },
     /// CR 702.16 — each permanent and player `what` picks gains protection
     /// from the player `from` resolves to, for `duration` (`EndOfTurn` or
     /// `UntilNextTurn`): a permanent gets `ProtectionFromMatching(

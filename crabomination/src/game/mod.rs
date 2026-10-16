@@ -34810,6 +34810,7 @@ fn static_effect_to_effects(
             // `apply_prevention_shields`; no layer effect.
             | StaticEffect::PreventDamageToAttachedPerPermanent { .. }
             | StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers
+            | StaticEffect::PreventAllButOneDamageToYouAndYourHeroes
             | StaticEffect::EnchantedPlayerCantActivateNonManaAbilities
             | StaticEffect::PreventAllDamageToControllerFromOthersSources
             | StaticEffect::PreventSpellDamageToYouAndYourOtherPermanents

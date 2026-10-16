@@ -910,6 +910,7 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
                 | S::PreventAllDamageToControllerFromOthersSources
                 | S::AllDamageDealtAsThoughWither
                 | S::PreventSpellDamageToYouAndYourOtherPermanents
+                | S::PreventAllButOneDamageToYouAndYourHeroes
         )
     })
 }

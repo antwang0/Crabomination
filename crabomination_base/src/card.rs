@@ -1928,6 +1928,10 @@ pub enum Keyword {
     /// `StackItem::Spell.uncounterable` flag when the X paid is at
     /// least the threshold.
     CantBeCounteredIfXAtLeast(u32),
+    /// "If [the card's as-cast condition held], this spell can't be
+    /// countered" (Dragonlord's Prerogative: a Dragon revealed or controlled
+    /// as it was cast). Read off `CardInstance.cast_condition_held`.
+    CantBeCounteredIfCastCondition,
     /// CR 702.16 — "has protection from its colors" (Earnest Fellowship).
     /// Resolved against the bearer's own computed colours at check time, so a
     /// colour change tracks.

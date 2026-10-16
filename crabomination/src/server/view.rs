@@ -3176,6 +3176,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         | Effect::GrantProtectionFromChosenColorOrColorless { .. }
         | Effect::GrantProtectionFromChosenCardType { .. }
         | Effect::GrantHexproofAndEvasionFromChosenColor { .. }
+        | Effect::BecomeChosenColorWithHexproof { .. }
         | Effect::GrantProtectionFromColorsOf { .. } => "Grant protection",
         Effect::BecomeChosenCreatureType { .. } => "Change creature type",
         Effect::BecomeChosenColor { .. } | Effect::BecomeColor { .. } => "Change colour",

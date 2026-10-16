@@ -2120,6 +2120,7 @@ impl Effect {
             | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
             | Effect::GrantProtectionFromChosenCardType { what, .. }
             | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
+            | Effect::BecomeChosenColorWithHexproof { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
@@ -3047,6 +3048,7 @@ impl Effect {
             | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
             | Effect::GrantProtectionFromChosenCardType { what, .. }
             | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
+            | Effect::BecomeChosenColorWithHexproof { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. } => sel_filter(what),
             Effect::Move { what, .. } | Effect::BottomInRandomOrder { what } => sel_filter(what),
@@ -5682,6 +5684,7 @@ impl Effect {
                 | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
                 | Effect::GrantProtectionFromChosenCardType { what, .. }
                 | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
+                | Effect::BecomeChosenColorWithHexproof { what, .. }
                 | Effect::GainProtectionFromPlayer { what, .. }
                 | Effect::CantBeBlockedByPlayer { what, .. }
                 // `primary_target_filter` read these three and this walker did

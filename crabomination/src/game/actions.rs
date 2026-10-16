@@ -3740,6 +3740,9 @@ impl crate::game::GameState {
         {
             return true;
         }
+        if card.cast_condition_held && card.definition.keywords.has_kw(&Keyword::CantBeCounteredIfCastCondition) {
+            return true;
+        }
         // The three remaining routes are all battlefield statics, and each one
         // used to take its own whole-board `static_abilities` walk — three per
         // cast, for mechanics almost no board has, and the third built a

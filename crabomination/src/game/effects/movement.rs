@@ -68,6 +68,8 @@ pub(crate) mod prevent_static {
     pub const ALL_WITHER: u32 = 1 << 12;
     /// `PreventSpellDamageToYouAndYourOtherPermanents` (Rem Karolus).
     pub const SPELL_SHIELD: u32 = 1 << 13;
+    /// `PreventAllButOneDamageToYouAndYourHeroes` (Hyperion, Supreme Hero).
+    pub const ALL_BUT_ONE: u32 = 1 << 14;
 }
 
 /// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -106,6 +108,7 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 SE::PreventAllDamageToControllerFromOthersSources => prevent_static::FROM_OTHERS,
                 SE::AllDamageDealtAsThoughWither => prevent_static::ALL_WITHER,
                 SE::PreventSpellDamageToYouAndYourOtherPermanents => prevent_static::SPELL_SHIELD,
+                SE::PreventAllButOneDamageToYouAndYourHeroes => prevent_static::ALL_BUT_ONE,
                 _ => 0,
             };
         }
@@ -930,8 +933,33 @@ impl GameState {
                     .map(|c| c.controller),
                 EntityRef::Card(_) => None,
             };
-            if let Some(seat) = protected_seat
-                && self.players[seat].emblems.iter().any(|e| {
+            // Hyperion — the damaged player, or the controller of a damaged
+            // Hero creature, controls the static.
+            let hero_seat = (statics & prevent_static::ALL_BUT_ONE != 0)
+                .then(|| match ent {
+                    EntityRef::Player(p) => Some(p),
+                    EntityRef::Permanent(cid) => self
+                        .battlefield_find(cid)
+                        .filter(|_| {
+                            self.computed_permanent(cid).is_some_and(|cp| {
+                                cp.card_types().contains(&crate::card::CardType::Creature)
+                                    && cp.subtypes().creature_types.contains(&crate::card::CreatureType::Hero)
+                            })
+                        })
+                        .map(|c| c.controller),
+                    EntityRef::Card(_) => None,
+                })
+                .flatten()
+                .filter(|&seat| {
+                    self.battlefield.iter().any(|c| {
+                        c.controller == seat
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(sa.effect, crate::effect::StaticEffect::PreventAllButOneDamageToYouAndYourHeroes)
+                            })
+                    })
+                });
+            let emblem_seat = protected_seat.filter(|&seat| {
+                self.players[seat].emblems.iter().any(|e| {
                     e.statics.iter().any(|sa| {
                         matches!(
                             sa.effect,
@@ -939,7 +967,8 @@ impl GameState {
                         )
                     })
                 })
-            {
+            });
+            if let Some(seat) = emblem_seat.or(hero_seat) {
                 events.push(GameEvent::DamagePrevented {
                     amount: amount - 1,
                     to_player: matches!(ent, EntityRef::Player(_)).then_some(seat),
