@@ -248,6 +248,9 @@ the handoff.
   Something Worth Saving, Captain Vargus Wrath, Prosperous Pirates, Protean Raider (`EntersAsCopy::condition`,
   raid), Mutiny. Researched, open: Codie, Ravenous Codex (no "you cast a prepared spell" marker at trigger
   time), Zara's Discontinuity ("costs {2}{U}{U} less" — `SelfCostReducedIfPredicate` shaves generic only).
+- **CLAIMED (`014Q2Gfw`, batch 18) — don't duplicate:** Burning-Fist Minotaur, Grisly Survivor, Merciless
+  Javelineer, Minotaur Sureshot (Neheb, the Worthy's deck); Benalish Faithbonder, Coalition Skyknight, Guardian of
+  New Benalia, Veteran of the Depths (Aradesh, the Founder).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
