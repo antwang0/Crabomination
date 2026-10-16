@@ -18606,6 +18606,84 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHAGRAT_COMMANDERS,
             main: decks::SHAGRAT_MAIN,
         },
+        // Seat 3026: Winter Soldier, Reborn Avenger's EDHREC average deck. `--pod-decks 3026`.
+        PodDeck {
+            name: "Winter Soldier, Reborn Avenger (W)",
+            commanders: decks::WINTER_SOLDIER_2_COMMANDERS,
+            main: decks::WINTER_SOLDIER_2_MAIN,
+        },
+        // Seat 3027: Luke Cage, Hero for Hire's EDHREC average deck. `--pod-decks 3027`.
+        PodDeck {
+            name: "Luke Cage, Hero for Hire (R)",
+            commanders: decks::LUKE_CAGE_COMMANDERS,
+            main: decks::LUKE_CAGE_MAIN,
+        },
+        // Seat 3028: Captain America, Liberator's EDHREC average deck. `--pod-decks 3028`.
+        PodDeck {
+            name: "Captain America, Liberator (W)",
+            commanders: decks::CAPTAIN_AMERICA_6_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_6_MAIN,
+        },
+        // Seat 3029: Doorman's EDHREC average deck. `--pod-decks 3029`.
+        PodDeck {
+            name: "Doorman (G)",
+            commanders: decks::DOORMAN_COMMANDERS,
+            main: decks::DOORMAN_MAIN,
+        },
+        // Seat 3030: Pia Nalaar's EDHREC average deck. `--pod-decks 3030`.
+        PodDeck {
+            name: "Pia Nalaar (R)",
+            commanders: decks::PIA_NALAAR_3_COMMANDERS,
+            main: decks::PIA_NALAAR_3_MAIN,
+        },
+        // Seat 3031: Kraven, Proud Predator's EDHREC average deck. `--pod-decks 3031`.
+        PodDeck {
+            name: "Kraven, Proud Predator (RG)",
+            commanders: decks::KRAVEN_COMMANDERS,
+            main: decks::KRAVEN_MAIN,
+        },
+        // Seat 3032: Ghost, Spectral Saboteur's EDHREC average deck. `--pod-decks 3032`.
+        PodDeck {
+            name: "Ghost, Spectral Saboteur (UB)",
+            commanders: decks::GHOST_COMMANDERS,
+            main: decks::GHOST_MAIN,
+        },
+        // Seat 3033: Boomerang, Blade Flinger's EDHREC average deck. `--pod-decks 3033`.
+        PodDeck {
+            name: "Boomerang, Blade Flinger (B)",
+            commanders: decks::BOOMERANG_COMMANDERS,
+            main: decks::BOOMERANG_MAIN,
+        },
+        // Seat 3034: The Prismatic Piper's EDHREC average deck. `--pod-decks 3034`.
+        PodDeck {
+            name: "The Prismatic Piper (C)",
+            commanders: decks::THE_PRISMATIC_PIPER_COMMANDERS,
+            main: decks::THE_PRISMATIC_PIPER_MAIN,
+        },
+        // Seat 3035: Kydele, Chosen of Kruphix and The Prismatic Piper's EDHREC average deck. `--pod-decks 3035`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and The Prismatic Piper (UG)",
+            commanders: decks::KYDELE_2_COMMANDERS,
+            main: decks::KYDELE_2_MAIN,
+        },
+        // Seat 3036: Renari, Merchant of Marvels and Faceless One's EDHREC average deck. `--pod-decks 3036`.
+        PodDeck {
+            name: "Renari, Merchant of Marvels and Faceless One (U)",
+            commanders: decks::RENARI_2_COMMANDERS,
+            main: decks::RENARI_2_MAIN,
+        },
+        // Seat 3037: The Prismatic Piper and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 3037`.
+        PodDeck {
+            name: "The Prismatic Piper and Yoshimaru, Ever Faithful (W)",
+            commanders: decks::THE_PRISMATIC_PIPER_2_COMMANDERS,
+            main: decks::THE_PRISMATIC_PIPER_2_MAIN,
+        },
+        // Seat 3038: Volo, Itinerant Scholar and Faceless One's EDHREC average deck. `--pod-decks 3038`.
+        PodDeck {
+            name: "Volo, Itinerant Scholar and Faceless One (U)",
+            commanders: decks::VOLO_3_COMMANDERS,
+            main: decks::VOLO_3_MAIN,
+        },
     ]
 }
 
@@ -23515,6 +23593,19 @@ mod tests {
             ("The Archimandrite", &[0x15E5]),
             ("Iizuka the Ruthless", &[0x15E6]),
             ("Shagrat, Loot Bearer", &[0x15E7]),
+            ("Winter Soldier, Reborn Avenger", &[0x15E8]),
+            ("Luke Cage, Hero for Hire", &[0x15E9]),
+            ("Captain America, Liberator", &[0x15EA]),
+            ("Doorman", &[0x15EB]),
+            ("Pia Nalaar", &[0x15EC]),
+            ("Kraven, Proud Predator", &[0x15ED]),
+            ("Ghost, Spectral Saboteur", &[0x15EE]),
+            ("Boomerang, Blade Flinger", &[0x15EF]),
+            ("The Prismatic Piper", &[0x15F0]),
+            ("Kydele, Chosen of Kruphix and The Prismatic Piper", &[0x15F1]),
+            ("Renari, Merchant of Marvels and Faceless One", &[0x15F2]),
+            ("The Prismatic Piper and Yoshimaru, Ever Faithful", &[0x15F3]),
+            ("Volo, Itinerant Scholar and Faceless One", &[0x15F4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
