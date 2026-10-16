@@ -18510,6 +18510,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_AMERICA_5_COMMANDERS,
             main: decks::CAPTAIN_AMERICA_5_MAIN,
         },
+        // Seat 3010: Denzilore Fatehold's EDHREC average deck. `--pod-decks 3010`.
+        PodDeck {
+            name: "Denzilore Fatehold (WU)",
+            commanders: decks::DENZILORE_FATEHOLD_COMMANDERS,
+            main: decks::DENZILORE_FATEHOLD_MAIN,
+        },
+        // Seat 3011: Rosheen, Roaring Prophet's EDHREC average deck. `--pod-decks 3011`.
+        PodDeck {
+            name: "Rosheen, Roaring Prophet (RG)",
+            commanders: decks::ROSHEEN_COMMANDERS,
+            main: decks::ROSHEEN_MAIN,
+        },
+        // Seat 3012: Rosheen Meanderer's EDHREC average deck. `--pod-decks 3012`.
+        PodDeck {
+            name: "Rosheen Meanderer (RG)",
+            commanders: decks::ROSHEEN_MEANDERER_COMMANDERS,
+            main: decks::ROSHEEN_MEANDERER_MAIN,
+        },
+        // Seat 3013: Shessra, Death's Whisper's EDHREC average deck. `--pod-decks 3013`.
+        PodDeck {
+            name: "Shessra, Death's Whisper (BG)",
+            commanders: decks::SHESSRA_COMMANDERS,
+            main: decks::SHESSRA_MAIN,
+        },
     ]
 }
 
@@ -23403,6 +23427,10 @@ mod tests {
             ("Captain America, Wings of Freedom", &[0x15D5]),
             ("Captain America, Super-Soldier", &[0x15D6]),
             ("Captain America, Skybound", &[0x15D7]),
+            ("Denzilore Fatehold", &[0x15D8]),
+            ("Rosheen, Roaring Prophet", &[0x15D9]),
+            ("Rosheen Meanderer", &[0x15DA]),
+            ("Shessra, Death's Whisper", &[0x15DB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

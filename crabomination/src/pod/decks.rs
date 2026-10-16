@@ -84384,3 +84384,113 @@ pub const CAPTAIN_AMERICA_5_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const DENZILORE_FATEHOLD_COMMANDERS: &[CardFactory] = &[denzilore_fatehold];
+
+/// **Denzilore Fatehold**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Plains = 99.
+/// Denzilore Fatehold (EDHREC, fetched 2026-10-16).
+pub const DENZILORE_FATEHOLD_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, eye_of_jace, fellwar_stone, planetarium_of_wan_shi_tong,
+    sol_ring, talisman_of_progress, thought_vessel, adarkar_wastes, castle_vantress,
+    command_tower, deserted_beach, flooded_strand, floodfarm_verge, glacial_fortress,
+    hallowed_fountain, meticulous_archive, mystic_gate, port_town, prairie_stream,
+    reliquary_tower, rivendell, sea_of_clouds, temple_of_enlightenment, abzan_falconer,
+    artificers_assistant, cryptic_annelid, diviner_of_victory, dusk_legion_duelist,
+    elrond_lord_of_rivendell, elvish_mariner, envoy_of_the_ancestors, faerie_seer,
+    fear_of_surveillance, gandalf_white_rider, herbie_lovable_robot, herald_of_secret_streams,
+    hermes_overseer_of_elpis, il_mheg_pixie, matoya_archon_elder, mindwhisker, nightveil_sprite,
+    pensive_professor, proctor_of_potential, rumor_gatherer, saheeli_consul_of_oversight,
+    sigiled_starfish, spellbook_vendor, sphinx_of_foresight, thassa_god_of_the_sea,
+    thrummingbird, yoshimaru_beloved_companion, aqueous_form, case_of_the_shifting_visage,
+    champions_from_beyond, gossips_talent, political_triumph, retreat_to_coralhelm,
+    an_offer_you_cant_refuse, banishing_betrayal, consider, counterspell, deliberate, dissolve,
+    dovins_veto, fatehold_charm, gods_willing, lorans_escape, opt, otherworldly_gaze,
+    path_to_exile, ripples_of_potential, swords_to_plowshares, elminster, damning_verdict,
+    mystic_speculation, preordain, serum_visions, wave_goodbye,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ROSHEEN_COMMANDERS: &[CardFactory] = &[rosheen_roaring_prophet];
+
+/// **Rosheen, Roaring Prophet**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 10 Mountains = 99.
+/// Rosheen, Roaring Prophet (EDHREC, fetched 2026-10-16).
+pub const ROSHEEN_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, brass_infiniscope, elementalists_palette,
+    lightning_greaves, patriars_seal, sol_ring, cinder_glade, command_tower, game_trail,
+    gruul_turf, karplusan_forest, kessig_wolf_run, lair_of_the_hydra, reliquary_tower,
+    rockfall_vale, rootbound_crag, spire_garden, stomping_ground, wooded_foothills, aberrant,
+    apocalypse_hydra, exocrine, fanatic_of_rhonas, genesis_hydra, goblin_anarchomancer,
+    goldvein_hydra, hooded_hydra, hugs_grisly_guardian, hungering_hydra, kinetic_ooze,
+    lifeblood_hydra, mawloc, nexos, nyxborn_hydra, primordial_hydra, rampaging_yao_guai,
+    rosheen_meanderer, savageborn_hydra, shivan_devastator, sporocyst, steelbane_hydra,
+    stonecoil_serpent, tervigon, voracious_hydra, ajanis_anguish, garruks_uprising,
+    lattice_library, rhythm_of_the_wild, unbound_flourishing, up_the_beanstalk, comet_storm,
+    electrodominance, inspiring_call, klauths_will, return_of_the_wildspeaker, silkguard,
+    starstorm, tyvars_stand, animists_awakening, awaken_the_woods, banefire, clan_defiance,
+    crackle_with_power, cultivate, gelatinous_genesis, hell_to_pay, jayas_immolating_inferno,
+    natures_lore, open_the_way, pest_infestation, rampant_growth, reap_the_past, three_visits,
+    wildest_dreams, worldsouls_rage,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const ROSHEEN_MEANDERER_COMMANDERS: &[CardFactory] = &[rosheen_meanderer];
+
+/// **Rosheen Meanderer**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Forests + 9 Mountains = 99.
+/// Rosheen Meanderer (EDHREC, fetched 2026-10-16).
+pub const ROSHEEN_MEANDERER_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, brass_infiniscope, elementalists_palette,
+    lightning_greaves, sol_ring, swiftfoot_boots, the_ozolith, cinder_glade, command_tower,
+    game_trail, gruul_turf, kessig_wolf_run, lair_of_the_hydra, rockfall_vale, rogues_passage,
+    rootbound_crag, spire_garden, stomping_ground, temple_of_abandon, temple_of_the_false_god,
+    apocalypse_hydra, fanatic_of_rhonas, gargos_vicious_watcher, genesis_hydra,
+    goblin_anarchomancer, goldvein_hydra, hooded_hydra, hungering_hydra, hydra_broodmaster,
+    kalonian_hydra, lifeblood_hydra, llanowar_elves, mistcutter_hydra, neverwinter_hydra, nexos,
+    nyxborn_hydra, primordial_hydra, protean_hydra, rosheen_roaring_prophet, savageborn_hydra,
+    shivan_devastator, sporocyst, steelbane_hydra, stonecoil_serpent, vastwood_hydra,
+    voracious_hydra, branching_evolution, colossal_majesty, garruks_uprising, mana_reflection,
+    rhythm_of_the_wild, terrasymbiosis, unbound_flourishing, up_the_beanstalk, beast_within,
+    comet_storm, electrodominance, heroic_intervention, inspiring_call, klauths_will,
+    return_of_the_wildspeaker, starstorm, domri_anarch_of_bolas, animists_awakening,
+    awaken_the_woods, banefire, clan_defiance, crackle_with_power, cultivate, farseek,
+    gelatinous_genesis, harmonize, jayas_immolating_inferno, kodamas_reach, natures_lore,
+    rampant_growth, reap_the_past,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const SHESSRA_COMMANDERS: &[CardFactory] = &[shessra_deaths_whisper];
+
+/// **Shessra, Death's Whisper**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Forests + 13 Swamps = 99.
+/// Shessra, Death's Whisper (EDHREC, fetched 2026-10-16).
+pub const SHESSRA_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, desecrated_tomb, golgari_signet, skullclamp, sol_ring,
+    talisman_of_resilience, bojuka_bog, command_tower, deathcap_glade, evolving_wilds,
+    golgari_rot_farm, jungle_hollow, llanowar_wastes, necroblossom_snarl, overgrown_tomb,
+    tainted_wood, temple_of_malady, undergrowth_stadium, woodland_cemetery, blood_artist,
+    bone_dragon, champion_of_stray_souls, clattering_augur, death_baron, death_tyrant,
+    death_priest_of_myrkul, dimir_house_guard, eternal_witness, forsaken_miner,
+    fynn_the_fangbearer, ghastly_death_tyrant, glissa_sunslayer, gutterbones, leyline_prowler,
+    morbid_opportunist, moss_pit_skeleton, ozox_the_clattering_king, paragon_of_open_graves,
+    persistent_specimen, poison_tip_archer, reassembling_skeleton, reclamation_sage,
+    sakura_tribe_elder, sanitarium_skeleton, saryth_the_vipers_fang, skeleton_crew,
+    tenacious_dead, underworld_sentinel, virulent_emissary, zulaport_cutthroat,
+    bastion_of_remembrance, binding_the_old_gods, corpses_of_the_lost, deathreap_ritual,
+    moldervine_reclamation, skeletal_swarming, vampiric_rites, assassins_trophy, beast_within,
+    deadly_dispute, deathsprout, golgari_charm, putrefy, tragic_slip, village_rites,
+    vraska_golgari_queen, bone_shards, culling_ritual, cultivate, deadly_brew, kodamas_reach,
+    rampant_growth, read_the_bones, rise_of_the_witch_king, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
