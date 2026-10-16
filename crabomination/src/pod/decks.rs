@@ -82790,3 +82790,58 @@ pub const BLACK_WIDOW_4_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const FIN_FANG_FOOM_COMMANDERS: &[CardFactory] = &[fin_fang_foom];
+
+/// **Fin Fang Foom**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Fin Fang Foom (EDHREC, fetched 2026-10-16).
+pub const FIN_FANG_FOOM_MAIN: &[CardFactory] = &[
+    arcane_signet, dingus_egg, fire_diamond, lightning_greaves, liquimetal_coating,
+    liquimetal_torque, mind_stone, pyromancers_goggles, ruby_medallion, sol_ring,
+    swiftfoot_boots, tablet_of_discovery, twinning_staff, cascading_cataracts,
+    darksteel_citadel, strip_mine, valakut_the_molten_pinnacle, war_room, wasteland,
+    ashling_flame_dancer, electro_assaulting_battery, galvanoth, hexing_squelcher, iron_myr,
+    maelstrom_artisan, magda_the_hoardmaster, pinnacle_monk, runaway_steam_kin,
+    solemn_simulacrum, spinerock_tyrant, storm_kiln_artist, zhao_the_moon_slayer,
+    zo_zu_the_punisher, blood_moon, double_vision, price_of_glory, abrade, big_score,
+    chaos_warp, deflecting_swat, sos_flashback_instant, mogg_salvage, return_the_favor,
+    seething_song, smash, smashing_success, unexpected_windfall, untimely_malfunction,
+    volcanic_offering, chandra_hopes_beacon, avengers_disassembled, blasphemous_act,
+    cleansing_wildfire, demolish, geomancers_gambit, icefall, implode, jeskas_will,
+    lava_blister, molten_rain, pillage, price_of_freedom, rain_of_salt, raze, roiling_terrain,
+    seismic_spike, star_of_extinction, stone_rain, sundering_eruption, vandalblast,
+    wake_of_destruction,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const ANT_MAN_3_COMMANDERS: &[CardFactory] = &[ant_man_elusive_avenger];
+
+/// **Ant-Man, Elusive Avenger**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Islands + 12 Mountains = 99.
+/// Ant-Man, Elusive Avenger (EDHREC, fetched 2026-10-16).
+pub const ANT_MAN_3_MAIN: &[CardFactory] = &[
+    arcane_signet, hard_won_jitte, izzet_signet, junk_jet, mjolnir_hammer_of_thor, sol_ring,
+    swiftfoot_boots, talisman_of_creativity, access_tunnel, cascade_bluffs, command_tower,
+    exotic_orchard, ferrous_lake, frostboil_snarl, rogues_passage, scorched_geyser, shivan_reef,
+    steam_vents, stormcarved_coast, sulfur_falls, training_center, academy_manufactor,
+    archmage_emeritus, archmage_of_runes, backdraft_hellkite, balmor_battlemage_captain,
+    gleaming_geardrake, goldspan_dragon, ingenious_artillerist, lier_disciple_of_the_drowned,
+    loki_laufeyson, mica_reader_of_ruins, ms_marvel_kamala_khan, professional_face_breaker,
+    quicksmith_genius, reckless_fireweaver, spinerock_tyrant, starwinder, storm_kiln_artist,
+    weftstalker_ardent, curiosity, dragon_mantle, fateful_discovery, festival_of_embers,
+    leyline_of_resonance, mechanized_production, an_offer_you_cant_refuse, antagonize,
+    blazing_crescendo, borrowed_hostility, brute_force, built_to_smash, bulk_up, counterspell,
+    dreadmaws_ire, fists_of_flame, full_bore, haste_magic, infuriate, lunar_frenzy, negate,
+    psychotic_fury, reckless_ransacking, secret_identity, siege_smash, temur_battle_rage,
+    titans_strength, turn_inside_out, twinferno, unleash_fury, water_wings, blasphemous_act,
+    chandras_ignition, finale_of_revelation, pym_particles, seize_the_day, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

@@ -18168,6 +18168,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLACK_WIDOW_4_COMMANDERS,
             main: decks::BLACK_WIDOW_4_MAIN,
         },
+        // Seat 2953: Fin Fang Foom's EDHREC average deck. `--pod-decks 2953`.
+        PodDeck {
+            name: "Fin Fang Foom (R)",
+            commanders: decks::FIN_FANG_FOOM_COMMANDERS,
+            main: decks::FIN_FANG_FOOM_MAIN,
+        },
+        // Seat 2954: Ant-Man, Elusive Avenger's EDHREC average deck. `--pod-decks 2954`.
+        PodDeck {
+            name: "Ant-Man, Elusive Avenger (UR)",
+            commanders: decks::ANT_MAN_3_COMMANDERS,
+            main: decks::ANT_MAN_3_MAIN,
+        },
     ]
 }
 
@@ -23004,6 +23016,8 @@ mod tests {
             ("X-23, Deadly Weapon", &[0x159C]),
             ("Radioactive Man", &[0x159D]),
             ("Black Widow, Natasha Romanoff", &[0x159E]),
+            ("Fin Fang Foom", &[0x159F]),
+            ("Ant-Man, Elusive Avenger", &[0x15A0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
