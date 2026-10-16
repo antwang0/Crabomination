@@ -230,10 +230,11 @@ the handoff.
   target filter inside an `Effect::If` condition is not surfaced at cast time
   (`cr_601_2c_every_catalog_target_filter_is_surfaced`) — put it on an effect. Researched, open: Henry Wu
   (exploit is only `GameEvent::Exploited` — no granted-exploit or "exploits a non-Human" reader).
-- **CLAIMED (`014Q2Gfw`, batch 16) — don't duplicate:** Geist of the Archives, Surveillance Phantasm, Select for
-  Inspection, Unexplained Disappearance (Proft, Consulting Detective); Kathari Remnant, Manor Skeleton, Blood for
-  Bones (Uchbenbak). Researched, open: The Destined Warrior's Base Camp (a four-type "Cleric, Rogue, Warrior or
-  Wizard spell or ability" spend restriction; `CreatureOfAnyTypes` holds three).
+- **LANDED (`014Q2Gfw`, batch 16) — seats 3016-3017** Uchbenbak, Proft Consulting Detective: Geist of the
+  Archives, Surveillance Phantasm (`CanAttackIgnoringDefenderWhile` + `ScriedOrSurveiledThisTurn`), Select for
+  Inspection, Unexplained Disappearance, Kathari Remnant, Manor Skeleton, Blood for Bones. Researched, open: The
+  Destined Warrior's Base Camp (a four-type "Cleric, Rogue, Warrior or Wizard spell or ability" spend
+  restriction; `CreatureOfAnyTypes` holds three).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
