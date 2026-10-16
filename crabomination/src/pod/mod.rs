@@ -18306,6 +18306,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LADY_SUN_COMMANDERS,
             main: decks::LADY_SUN_MAIN,
         },
+        // Seat 2976: Lovisa Coldeyes's EDHREC average deck. `--pod-decks 2976`.
+        PodDeck {
+            name: "Lovisa Coldeyes (R)",
+            commanders: decks::LOVISA_COLDEYES_COMMANDERS,
+            main: decks::LOVISA_COLDEYES_MAIN,
+        },
+        // Seat 2977: Barktooth Warbeard's EDHREC average deck. `--pod-decks 2977`.
+        PodDeck {
+            name: "Barktooth Warbeard (BR)",
+            commanders: decks::BARKTOOTH_WARBEARD_COMMANDERS,
+            main: decks::BARKTOOTH_WARBEARD_MAIN,
+        },
+        // Seat 2978: Tyrox, Saurid Tyrant's EDHREC average deck. `--pod-decks 2978`.
+        PodDeck {
+            name: "Tyrox, Saurid Tyrant (R)",
+            commanders: decks::TYROX_COMMANDERS,
+            main: decks::TYROX_MAIN,
+        },
+        // Seat 2979: Agent Phil Coulson's EDHREC average deck. `--pod-decks 2979`.
+        PodDeck {
+            name: "Agent Phil Coulson (W)",
+            commanders: decks::AGENT_PHIL_COULSON_COMMANDERS,
+            main: decks::AGENT_PHIL_COULSON_MAIN,
+        },
+        // Seat 2980: Hyperion, Supreme Hero's EDHREC average deck. `--pod-decks 2980`.
+        PodDeck {
+            name: "Hyperion, Supreme Hero (W)",
+            commanders: decks::HYPERION_COMMANDERS,
+            main: decks::HYPERION_MAIN,
+        },
     ]
 }
 
@@ -23165,6 +23195,11 @@ mod tests {
             ("Arcum Dagsson", &[0x15B3]),
             ("Seymour Flux", &[0x15B4]),
             ("Lady Sun", &[0x15B5]),
+            ("Lovisa Coldeyes", &[0x15B6]),
+            ("Barktooth Warbeard", &[0x15B7]),
+            ("Tyrox, Saurid Tyrant", &[0x15B8]),
+            ("Agent Phil Coulson", &[0x15B9]),
+            ("Hyperion, Supreme Hero", &[0x15BA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

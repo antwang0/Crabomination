@@ -83428,3 +83428,147 @@ pub const LADY_SUN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island,
 ];
+
+pub const LOVISA_COLDEYES_COMMANDERS: &[CardFactory] = &[lovisa_coldeyes];
+
+/// **Lovisa Coldeyes**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Lovisa Coldeyes (EDHREC, fetched 2026-10-16).
+pub const LOVISA_COLDEYES_MAIN: &[CardFactory] = &[
+    arcane_signet, dolmen_gate, fire_diamond, hall_of_triumph, hazorets_monument,
+    heraldic_banner, lightning_greaves, mind_stone, ruby_medallion, sol_ring, swiftfoot_boots,
+    sword_of_the_animist, castle_embereth, forgotten_cave, ghitu_encampment, myriad_landscape,
+    rogues_passage, war_room, alexios_deimos_of_kosmos, archetype_of_aggression, arni_metalbrow,
+    ash_zealot, bloodmark_mentor, boldwyr_intimidator, brighthearth_banneret, combat_celebrant,
+    falkenrath_marauders, flamerush_rider, frontier_warmonger, gimli_of_the_glittering_caves,
+    goblin_wardriver, gornog_the_red_reaper, jaxis_the_troublemaker, kargan_intimidator,
+    karlach_fury_of_avernus, kazuul_tyrant_of_the_cliffs, laelia_the_blade_reforged,
+    markov_blademaster, moraug_fury_of_akoum, neheb_dreadhorde_champion, neheb_the_eternal,
+    ogre_battledriver, paragon_of_fierce_defiance, plundering_barbarian,
+    professional_face_breaker, sardian_cliffstomper, scab_clan_berserker, taurean_mauler,
+    warchief_giant, berserkers_onslaught, goblin_war_drums, gratuitous_violence,
+    rage_reflection, shared_animosity, abrade, battle_hymn, big_score, chaos_warp,
+    demand_answers, lightning_bolt, thrill_of_possibility, koth_fire_of_resistance,
+    blasphemous_act, crash_through, faithless_looting, jeskas_will, mana_geyser,
+    relentless_assault, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const BARKTOOTH_WARBEARD_COMMANDERS: &[CardFactory] = &[barktooth_warbeard];
+
+/// **Barktooth Warbeard**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Mountains + 11 Swamps = 99.
+/// Barktooth Warbeard (EDHREC, fetched 2026-10-16).
+pub const BARKTOOTH_WARBEARD_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, commanders_sphere, fellwar_stone, lightning_greaves,
+    mind_stone, obsidian_battle_axe, rakdos_signet, ruby_medallion, sol_ring, swiftfoot_boots,
+    talisman_of_indulgence, thought_vessel, wayfarers_bauble, blood_crypt, bojuka_bog,
+    command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge, luxury_suite,
+    rakdos_carnarium, rogues_passage, smoldering_marsh, sulfurous_springs, tainted_peak,
+    temple_of_malice, alesha_who_laughs_at_fate, anger, archetype_of_aggression, azra_oddsmaker,
+    blood_chin_rager, bloodmark_mentor, boldwyr_intimidator, brighthearth_banneret,
+    combat_celebrant, deadpool_trading_card, frontier_warmonger, garna_the_bloodflame,
+    gornog_the_red_reaper, kardur_doomscourge, kargan_intimidator, kazuul_tyrant_of_the_cliffs,
+    lovisa_coldeyes, mardu_strike_leader, mindblade_render, neheb_the_eternal,
+    ogre_battledriver, professional_face_breaker, rushblade_commander, solemn_simulacrum,
+    animate_dead, black_market_connections, curse_of_opulence, goblin_war_drums,
+    phyrexian_arena, raiders_spoils, abrade, bedevil, big_score, chaos_warp, dark_ritual,
+    infernal_grasp, lightning_bolt, rakdos_charm, terminate, blasphemous_act, demonic_tutor,
+    faithless_looting, feed_the_swarm, nights_whisper, read_the_bones, reanimate, sign_in_blood,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const TYROX_COMMANDERS: &[CardFactory] = &[tyrox_saurid_tyrant];
+
+/// **Tyrox, Saurid Tyrant**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Tyrox, Saurid Tyrant (EDHREC, fetched 2026-10-16).
+pub const TYROX_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, commanders_plate, cursed_mirror, embercleave,
+    fire_diamond, heraldic_banner, leyline_axe, mind_stone, ruby_medallion, sol_ring,
+    swiftfoot_boots, sword_of_the_animist, tenza_godos_maul, the_reaver_cleaver, two_handed_axe,
+    arena_of_glory, bonders_enclave, myriad_landscape, rogues_passage, war_room,
+    anax_hardened_in_the_forge, archetype_of_aggression, boundary_lands_ranger,
+    combat_celebrant, dragonhawk_fates_tempest, etali_primal_storm, flamewake_phoenix,
+    gornog_the_red_reaper, kargan_intimidator, kediss_emberclaw_familiar,
+    laelia_the_blade_reforged, lizard_blades, neheb_the_eternal, otepec_huntmaster,
+    professional_face_breaker, samut_hazorets_champion, sawhorn_nemesis, scalestorm_summoner,
+    scytheclaw_raptor, solemn_simulacrum, wrathful_raptors, ajanis_anguish, count_on_luck,
+    curse_of_opulence, dragon_grip, furious_rise, poetic_ingenuity, abrade, big_score,
+    bolt_bend, bulk_up, chaos_warp, deflecting_swat, lightning_bolt, temur_battle_rage,
+    thrill_of_possibility, unleash_fury, untimely_malfunction, barrage_of_boulders,
+    blasphemous_act, chain_reaction, chandras_ignition, crash_through, faithless_looting,
+    jeskas_will, mana_geyser, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const AGENT_PHIL_COULSON_COMMANDERS: &[CardFactory] = &[agent_phil_coulson];
+
+/// **Agent Phil Coulson**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Agent Phil Coulson (EDHREC, fetched 2026-10-16).
+pub const AGENT_PHIL_COULSON_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, avengers_quinjet, heralds_horn, hulkbuster_armor,
+    mind_stone, patchwork_banner, pearl_medallion, sol_ring, team_transmitter, the_ozolith,
+    the_wind_crystal, vanquishers_banner, abandoned_air_temple, avengers_tower,
+    emeria_the_sky_ruin, minas_tirith, nykthos_shrine_to_nyx, reliquary_tower, war_room,
+    anti_venom_horrifying_healer, black_panther_most_dangerous, bucky_barnes_eager_ally,
+    captain_america_skybound, captain_america_steve_rogers, captain_america_super_soldier,
+    captain_america_unbowed, captain_america_wings_of_freedom, captain_mar_vell_space_born,
+    captain_marvel_earths_protector, doctor_spectrum, falcon_and_redwing, falcon_joaquin_torres,
+    hercules_olympian_hero, hero_in_training, hyperion_supreme_hero, invisible_woman_sue_storm,
+    matt_murdock_justice_seeker, nick_fury_spymaster, night_nurse_healer_of_heroes,
+    quake_agent_of_shield, silver_sable_mercenary_leader, spectacular_spider_man, spider_uk,
+    the_falcon_sam_wilson, the_sentry_golden_guardian, viv_vision_teen_synthezoid,
+    white_widow_free_agent, winter_soldier_reborn_avenger, zarda_the_power_princess,
+    avengers_assemble, cathars_crusade, champions_from_beyond, flowering_of_the_white_tree,
+    folk_hero, origin_of_the_avengers, political_triumph, akromas_will, flawless_maneuver,
+    generous_gift, methods_of_the_mighty, path_to_exile, swords_to_plowshares,
+    take_up_the_shield, teferis_protection, aerith_rescue_mission, borough_backup,
+    the_crystals_chosen, wondrous_revival,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const HYPERION_COMMANDERS: &[CardFactory] = &[hyperion_supreme_hero];
+
+/// **Hyperion, Supreme Hero**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Hyperion, Supreme Hero (EDHREC, fetched 2026-10-16).
+pub const HYPERION_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, commanders_plate, darksteel_plate, heart_shaped_herb,
+    lightning_greaves, marble_diamond, mithril_coat, orbs_of_warding, pariahs_shield,
+    pearl_medallion, sol_ring, swiftfoot_boots, sword_of_the_animist, the_wind_crystal,
+    throne_of_eldraine, urzas_armor, abandoned_air_temple, emeria_the_sky_ruin,
+    myriad_landscape, nykthos_shrine_to_nyx, rogues_passage, scavenger_grounds, war_room,
+    agent_phil_coulson, anti_venom_horrifying_healer, avacyn_angel_of_hope,
+    baird_steward_of_argive, bastion_protector, black_widow_intel_expert,
+    captain_america_super_soldier, captain_marvel_earths_protector,
+    captain_marvel_shooting_star, doctor_spectrum, doctor_strange_surgeon, esper_sentinel,
+    grand_abolisher, hercules_olympian_hero, mangara_the_diplomat, matt_murdock_justice_seeker,
+    mother_of_runes, nick_fury_spymaster, phyrexian_vindicator, solemn_simulacrum,
+    the_sentry_golden_guardian, windborn_muse, zarda_the_power_princess, avengers_assemble,
+    ghostly_prison, land_tax, lightmine_field, monologue_tax, pariah, smothering_tithe,
+    timely_ward, trouble_in_pairs, akromas_will, flare_of_fortitude, flawless_maneuver,
+    generous_gift, heroic_sacrifice, path_to_exile, rebuff_the_wicked, stroke_of_midnight,
+    swords_to_plowshares, teferis_protection, ajani_steadfast, austere_command, mass_calcify,
+    vanquish_the_horde, wondrous_revival,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
