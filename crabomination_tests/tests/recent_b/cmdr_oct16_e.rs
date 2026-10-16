@@ -383,3 +383,55 @@ fn heirloom_auntie_grows_as_your_creatures_die() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(auntie).unwrap().power, 3);
 }
+
+/// Black Panther counters a lone attacker, not one of two.
+#[test]
+fn black_panther_counters_a_lone_attacker() {
+    for (two, expect) in [(false, 1), (true, 0)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::black_panther_claws_of_bast());
+        let a = ready(&mut g, 0, catalog::grizzly_bears());
+        let b = ready(&mut g, 0, catalog::grizzly_bears());
+        let attackers: Vec<(CardId, usize)> = if two { vec![(a, 1), (b, 1)] } else { vec![(a, 1)] };
+        attack(&mut g, &attackers);
+        assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), expect, "two attackers: {two}");
+    }
+}
+
+/// Barren Glory wins only with an empty hand and no other permanent.
+#[test]
+fn barren_glory_wins_with_nothing_else() {
+    for (extra, wins) in [(false, true), (true, false)] {
+        let mut g = pod(3);
+        ready(&mut g, 0, catalog::barren_glory());
+        if extra {
+            ready(&mut g, 0, catalog::grizzly_bears());
+        }
+        g.players[0].hand.clear();
+        g.active_player_idx = 0;
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        // The win ends the game, so priority passes stop answering.
+        while !g.stack.is_empty() && g.perform_action(GameAction::PassPriority).is_ok() {}
+        assert_eq!(!g.players[1].is_alive() && !g.players[2].is_alive(), wins, "extra permanent: {extra}");
+    }
+}
+
+/// Chronatog Totem's {0} needs it animated, and then costs you a turn.
+#[test]
+fn chronatog_totem_pumps_only_as_a_creature() {
+    let mut g = pod(2);
+    let totem = ready(&mut g, 0, catalog::chronatog_totem());
+    let act = |g: &mut GameState, idx| {
+        let r = g.perform_action(GameAction::ActivateAbility { card_id: totem, ability_index: idx, target: None, additional_targets: vec![], x_value: None, mode: None });
+        drain_stack(g);
+        r
+    };
+    assert!(act(&mut g, 2).is_err(), "not a creature yet");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    act(&mut g, 1).expect("animate");
+    act(&mut g, 2).expect("pump");
+    let cp = g.computed_permanent(totem).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5));
+}

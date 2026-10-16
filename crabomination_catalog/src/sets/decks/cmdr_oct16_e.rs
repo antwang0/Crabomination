@@ -1356,3 +1356,135 @@ pub fn filigree_sages() -> CardDefinition {
         ..creature("Filigree Sages", cost(&[generic(3), u()]), vec![CreatureType::Vedalken, CreatureType::Wizard], 2, 3)
     }
 }
+
+// ── Black Widow, Intel Expert / Justice, Vance Astrovik / Atogatog ──────────
+
+/// Black Panther, Claws of Bast — {2}{W} legendary 3/3 lifelink Human Warrior
+/// Hero. A creature of yours attacking alone gets a +1/+1 counter.
+pub fn black_panther_claws_of_bast() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
+            effect: Effect::AddCounter { what: Selector::TriggerSource, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..legend(creature(
+            "Black Panther, Claws of Bast",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero],
+            3,
+            3,
+        ))
+    }
+}
+
+/// Cache Raiders — {3}{U}{U} 4/4 Merfolk Rogue. Your upkeep: return a
+/// permanent you control to its owner's hand (chosen, not targeted).
+pub fn cache_raiders() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::ReturnOneYouControl { filter: R::Permanent, keep_best: false },
+        }],
+        ..creature("Cache Raiders", cost(&[generic(3), u(), u()]), vec![CreatureType::Merfolk, CreatureType::Rogue], 4, 4)
+    }
+}
+
+/// Disruptor of Currents — {3}{U}{U} 3/3 flash, convoke Merfolk Wizard. ETB:
+/// return up to one other target nonland permanent to its owner's hand.
+pub fn disruptor_of_currents() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Convoke],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Land))).and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
+        })],
+        ..creature("Disruptor of Currents", cost(&[generic(3), u(), u()]), vec![CreatureType::Merfolk, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Voidmage Husher — {3}{U} 2/2 flash Human Wizard. ETB: counter target
+/// activated ability. Whenever you cast a spell, you may return it to its
+/// owner's hand.
+pub fn voidmage_husher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![
+            etb(Effect::CounterAbility {
+                what: target_filtered(R::HasAbilityOnStack.and(R::Not(Box::new(R::HasTriggeredAbilityOnStack)))),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Return Voidmage Husher to its owner's hand?".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                    }),
+                },
+            },
+        ],
+        ..creature("Voidmage Husher", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Chronatog Totem — {3} artifact. {T}: add {U}. {1}{U}: a 1/2 blue Atog
+/// artifact creature until end of turn. {0}, once each turn while a creature:
+/// +3/+3 until end of turn and you skip your next turn.
+pub fn chronatog_totem() -> CardDefinition {
+    let animate = Effect::BecomeCreature {
+        what: Selector::This,
+        power: Value::Const(1),
+        toughness: Value::Const(2),
+        creature_types: vec![CreatureType::Atog],
+        keywords: vec![],
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Chronatog Totem",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Blue),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                effect: crate::effect::shortcut::colored_animation(animate, &[Color::Blue]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                once_per_turn: true,
+                condition: Some(Predicate::EntityMatches { what: Selector::This, filter: R::Creature }),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT { what: Selector::This, power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn },
+                    Effect::SkipTurns { who: PlayerRef::You, count: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Barren Glory — {4}{W}{W} enchantment. Your upkeep, if you control no other
+/// permanents and have no cards in hand: you win the game (CR 603.4).
+pub fn barren_glory() -> CardDefinition {
+    let bare = Predicate::All(vec![
+        Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource),
+        )))),
+        Predicate::ValueEquals(Value::HandSizeOf(PlayerRef::You), Value::Const(0)),
+    ]);
+    CardDefinition {
+        name: "Barren Glory",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(bare.clone()),
+            effect: Effect::If { cond: bare, then: Box::new(Effect::WinGame { who: PlayerRef::You }), else_: Box::new(Effect::Noop) },
+        }],
+        ..Default::default()
+    }
+}

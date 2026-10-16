@@ -16489,6 +16489,12 @@ static DECKS: &[Factory] = &[
     super::decks::arcum_dagsson,
     super::decks::combat_courier,
     super::decks::filigree_sages,
+    super::decks::black_panther_claws_of_bast,
+    super::decks::cache_raiders,
+    super::decks::disruptor_of_currents,
+    super::decks::voidmage_husher,
+    super::decks::chronatog_totem,
+    super::decks::barren_glory,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
