@@ -403,3 +403,20 @@ fn life_and_limb_makes_forests_saprolings_and_saprolings_forests() {
     let t = g.computed_permanent(token).unwrap();
     assert!(t.card_types().contains(&CardType::Land) && t.subtypes().land_types.contains(&LandType::Forest));
 }
+
+/// Savage Thallid: sacrificing a Saproling (an activation cost) regenerates
+/// target Fungus.
+#[test]
+fn savage_thallid_sacrifices_a_saproling_to_regenerate() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let thallid = ready(&mut g, 0, catalog::savage_thallid());
+    let swarm = g.add_card_to_hand(0, catalog::spore_swarm());
+    cast_with(&mut g, swarm, None, vec![]).expect("swarm");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: thallid, ability_index: 1, target: Some(Target::Permanent(thallid)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("regenerate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(), 2);
+    assert_eq!(g.battlefield_find(thallid).unwrap().regeneration_shields, 1);
+}

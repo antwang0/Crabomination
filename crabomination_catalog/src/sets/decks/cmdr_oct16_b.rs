@@ -399,6 +399,41 @@ pub fn life_and_limb() -> CardDefinition {
     }
 }
 
+/// Savage Thallid — {3}{G}{G} 5/2 Fungus. A spore counter at your upkeep;
+/// remove three: a 1/1 Saproling; sacrifice a Saproling: regenerate target
+/// Fungus.
+pub fn savage_thallid() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let saproling = TokenDefinition {
+        name: "Saproling".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Spore, amount: Value::ONE },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                remove_counter_cost: Some((CounterType::Spore, 3)),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(saproling) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                sac_other_filter: Some((R::HasCreatureType(CreatureType::Saproling).and(R::ControlledByYou), 1)),
+                effect: Effect::Regenerate { what: target_filtered(R::HasCreatureType(CreatureType::Fungus)) },
+                ..Default::default()
+            },
+        ],
+        ..creature("Savage Thallid", cost(&[generic(3), g(), g()]), vec![CreatureType::Fungus], 5, 2)
+    }
+}
+
 // ── Aragorn, Company Leader ─────────────────────────────────────────────────
 
 /// Dúnedain Rangers — {3}{G} 4/4 Human Ranger. Landfall: if you don't control
