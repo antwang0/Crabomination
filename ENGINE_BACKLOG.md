@@ -205,12 +205,19 @@ the handoff.
   Protection of the Hekma, All-Seeing Arbiter, Just the Wind, Nagging Thoughts, Disciple of the Ring, Yasova,
   Demonmail Hauberk, Feed the Pack. **Open:** Precursor Golem (Golden Argosy) — needs
   `CopySpellForEachOtherTarget` restricted to Golems and a "spell targets only a single [filter]" leaf.
-- **CLAIMED (`014Q2Gfw`, batch 13) — don't duplicate:** Yuan Shao the Indecisive, Horde of Boggarts, Pyreheart Wolf;
-  Emeria Captain, Journey to Oblivion, Concerted Defense (Linvala Shield of Sea Gate); Hungering Puppetbeast,
-  Tenured Tethermage, Woodwork Prodigy (Aerid Konstrari); Diviner of Victory, Proft (Elrond Lord of Rivendell).
-  Researched, open: Warbringer (Zurgo Bellstriker, Whirlwind — a dash-cost reduction static), Shimian Specter
-  (Urgoros — `NameCardExileMatchingAllZones` reads target slot 0 / the hostile opponent, not the damaged player,
-  and doesn't restrict the name to the revealed hand).
+- **LANDED (`014Q2Gfw`, batch 13) — seats 3003-3006** Aerid Konstrari, Linvala Shield of Sea Gate, Yuan Shao,
+  Elrond Lord of Rivendell: Yuan Shao, Horde of Boggarts, Pyreheart Wolf, Emeria Captain, Journey to Oblivion,
+  Concerted Defense, Hungering Puppetbeast, Tenured Tethermage, Woodwork Prodigy, Diviner of Victory, Proft.
+  FIXED: color identity read a Heartwood token's reminder-text "{T}: Add {R} or {G}" as identity (CR 111.10 /
+  903.4; `color_identity::is_reminder_text_token`). Researched, open: Warbringer (Zurgo Bellstriker, Whirlwind —
+  a dash-cost reduction static), Shimian Specter (Urgoros — `NameCardExileMatchingAllZones` reads target slot 0
+  / the hostile opponent, not the damaged player, and doesn't restrict the name to the revealed hand).
+- **CLAIMED (`014Q2Gfw`, batch 14) — don't duplicate:** Proctor of Potential (Denzilore Fatehold; needs a
+  scried-or-surveilled-this-turn predicate); Bone Dragon, Ghastly Death Tyrant, Moss-Pit Skeleton, Skeletal
+  Swarming (Shessra, Death's Whisper). Researched, open: Hazoret the Fervent's The Flame of Keld (chapter III is a
+  this-turn damage static — no this-turn static emblem yet) and Magmatic Channeler.
+- **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
+  2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
