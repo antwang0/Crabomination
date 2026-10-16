@@ -18534,6 +18534,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHESSRA_COMMANDERS,
             main: decks::SHESSRA_MAIN,
         },
+        // Seat 3014: Rhino, Barreling Brute's EDHREC average deck. `--pod-decks 3014`.
+        PodDeck {
+            name: "Rhino, Barreling Brute (RG)",
+            commanders: decks::RHINO_2_COMMANDERS,
+            main: decks::RHINO_2_MAIN,
+        },
     ]
 }
 
@@ -23431,6 +23437,7 @@ mod tests {
             ("Rosheen, Roaring Prophet", &[0x15D9]),
             ("Rosheen Meanderer", &[0x15DA]),
             ("Shessra, Death's Whisper", &[0x15DB]),
+            ("Rhino, Barreling Brute", &[0x15DC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

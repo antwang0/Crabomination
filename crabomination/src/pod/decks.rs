@@ -84494,3 +84494,31 @@ pub const SHESSRA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const RHINO_2_COMMANDERS: &[CardFactory] = &[rhino_barreling_brute];
+
+/// **Rhino, Barreling Brute**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 10 Mountains = 99.
+/// Rhino, Barreling Brute (EDHREC, fetched 2026-10-16).
+pub const RHINO_2_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, herd_heirloom, sol_ring, swiftfoot_boots, talisman_of_impulse,
+    cinder_glade, command_tower, game_trail, gruul_turf, karplusan_forest, kessig_wolf_run,
+    mosswort_bridge, rockfall_vale, rogues_passage, rootbound_crag, sheltered_thicket,
+    stomping_ground, temple_of_abandon, angry_rabble, anzrag_the_quake_mole, beast_whisperer,
+    birds_of_paradise, damage_control_crew, elvish_mystic, etali_primal_storm,
+    fanatic_of_rhonas, frenzied_baloth, ghalta_primal_hunger, goblin_anarchomancer,
+    goreclaw_terror_of_qal_sisma, ilysian_caryatid, kogla_and_yidaro, kraven_proud_predator,
+    lizard_connorss_curse, llanowar_elves, lurking_lizards, mightform_harmonizer, red_hulk,
+    rhino_terrible_trampler, ruby_daring_tracker, sakura_tribe_elder, savage_ventmaw,
+    selvala_heart_of_the_wilds, spider_manifestation, superior_foes_of_spider_man,
+    toski_bearer_of_secrets, wandertale_mentor, xenagos_god_of_revels, bear_umbra,
+    elemental_bond, garruks_uprising, rhythm_of_the_wild, unnatural_growth, up_the_beanstalk,
+    abrade, beast_within, big_score, chaos_warp, heroic_intervention, return_of_the_wildspeaker,
+    strength_of_will, terrific_team_up, domri_anarch_of_bolas, blasphemous_act, cultivate,
+    decimate, farseek, kodamas_reach, migration_path, natures_lore, rampant_growth,
+    rhinos_rampage, rishkars_expertise, skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
