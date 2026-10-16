@@ -1143,3 +1143,41 @@ pub fn nimble_trapfinder() -> CardDefinition {
         ..creature("Nimble Trapfinder", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 1)
     }
 }
+
+// ── Tresserhorn's Lord, Returned ────────────────────────────────────────────
+
+/// Tresserhorn's Lord, Returned — {2}{U}{B}{R} legendary 10/4 trample,
+/// indestructible Zombie Noble. Enters: sacrifice it unless you sacrifice
+/// three other creatures, pay 3 life and have target opponent draw three.
+/// Whenever you sacrifice a creature, draw a card.
+pub fn tresserhorns_lord_returned() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample, Keyword::Indestructible],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::SacrificeSourceUnlessSacrifice { filter: R::Creature.and(R::OtherThanSource), count: 3 },
+                Effect::If {
+                    cond: Predicate::SourceOnBattlefield,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                        Effect::Draw { who: target_filtered(R::OpponentPlayer), amount: Value::Const(3) },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..creature(
+            "Tresserhorn's Lord, Returned",
+            cost(&[generic(2), u(), b(), r()]),
+            vec![CreatureType::Zombie, CreatureType::Noble],
+            10,
+            4,
+        )
+    }
+}

@@ -16320,6 +16320,7 @@ static DECKS: &[Factory] = &[
     super::decks::mirrormere_guardian,
     super::decks::the_destined_thief,
     super::decks::nimble_trapfinder,
+    super::decks::tresserhorns_lord_returned,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

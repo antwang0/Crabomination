@@ -1080,3 +1080,26 @@ fn nimble_trapfinder_unblockable_after_a_rogue_enters() {
     cast(&mut g, thief);
     assert!(has(&g));
 }
+
+/// Tresserhorn's Lord stays only by sacrificing three other creatures (which
+/// its own sacrifice trigger turns into three cards), paying 3 life and
+/// feeding an opponent three cards; with two others it is sacrificed.
+#[test]
+fn tresserhorns_lord_demands_three_creatures() {
+    for (others, stays) in [(3, true), (2, false)] {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 10);
+        for _ in 0..others {
+            ready(&mut g, 0, catalog::grizzly_bears());
+        }
+        let lord = g.add_card_to_hand(0, catalog::tresserhorns_lord_returned());
+        let life = g.players[0].life;
+        cast(&mut g, lord);
+        assert_eq!(g.battlefield_find(lord).is_some(), stays);
+        if stays {
+            assert_eq!(g.players[0].life, life - 3);
+            assert_eq!(g.players[1].hand.len(), 3);
+            assert_eq!(g.players[0].hand.len(), 3, "three sacrifices, three draws");
+        }
+    }
+}
