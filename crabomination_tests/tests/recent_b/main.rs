@@ -331,3 +331,4 @@ mod cmdr_edhrec62;
 mod cmdr_oct16_a;
 mod cmdr_oct16_d;
 mod cmdr_oct16_e;
+mod cmdr_oct16_f;
