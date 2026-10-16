@@ -1417,3 +1417,86 @@ fn thranduils_decree_steals_a_permanent_spell() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "an instant is countered to the graveyard");
     assert_eq!(g.players[0].life, 20);
 }
+
+/// Surveillance Phantasm can attack only once you've scried or surveilled this
+/// turn (CR 702.3b's defender, lifted by a condition).
+#[test]
+fn surveillance_phantasm_attacks_after_a_surveil() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let p = ready(&mut g, 0, catalog::surveillance_phantasm());
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: p, target: AttackTarget::Player(1) }])).is_err(),
+        "defender"
+    );
+    g.step = TurnStep::PreCombatMain;
+    let top = g.players[0].library[0].id;
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![top], bottom: vec![] }]));
+    activate(&mut g, p, None).expect("surveil");
+    g.clear_sickness(p);
+    attack(&mut g, p);
+    assert!(g.attacking.iter().any(|a| a.attacker == p));
+}
+
+/// Select for Inspection only hits a tapped creature; Unexplained
+/// Disappearance any.
+#[test]
+fn select_for_inspection_needs_a_tapped_creature() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::select_for_inspection());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: s, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None }).is_err(),
+        "untapped"
+    );
+    g.battlefield.iter_mut().find(|c| c.id == bears).unwrap().tapped = true;
+    cast(&mut g, s, Some(Target::Permanent(bears)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let u = g.add_card_to_hand(0, catalog::unexplained_disappearance());
+    cast(&mut g, u, Some(Target::Permanent(wurm)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == wurm));
+}
+
+/// Geist of the Archives scries at upkeep, which turns the Phantasm loose.
+#[test]
+fn geist_of_the_archives_scries_each_upkeep() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::geist_of_the_archives());
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(g.players[0].scry_batches_this_turn >= 1, "scried at upkeep");
+}
+
+/// CR 701.15 — Manor Skeleton regenerates out of a destroy.
+#[test]
+fn manor_skeleton_regenerates() {
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::manor_skeleton());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    activate(&mut g, m, None).expect("regen shield");
+    let destroy = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    g.resolve_effect(&destroy, &crabomination::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(m)), 0, 0)).unwrap();
+    let c = g.battlefield_find(m).expect("regenerated");
+    assert!(c.tapped);
+}
+
+/// Blood for Bones: the sacrifice is paid, the best creature card comes back,
+/// the next goes to hand.
+#[test]
+fn blood_for_bones_returns_two() {
+    let mut g = pod(2);
+    let fodder = ready(&mut g, 0, catalog::llanowar_elves());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_hand(0, catalog::blood_for_bones());
+    cast(&mut g, b, None);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
+    assert!(g.battlefield_find(wurm).is_some(), "the Wurm returns");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears || c.id == fodder), "another to hand");
+}

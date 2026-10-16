@@ -16464,6 +16464,13 @@ static DECKS: &[Factory] = &[
     super::decks::mirkwood_nurturer,
     super::decks::silvan_reveler,
     super::decks::thranduils_decree,
+    super::decks::geist_of_the_archives,
+    super::decks::surveillance_phantasm,
+    super::decks::select_for_inspection,
+    super::decks::unexplained_disappearance,
+    super::decks::kathari_remnant,
+    super::decks::manor_skeleton,
+    super::decks::blood_for_bones,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,

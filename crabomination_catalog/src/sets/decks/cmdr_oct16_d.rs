@@ -2899,3 +2899,116 @@ pub fn thranduils_decree() -> CardDefinition {
         },
     )
 }
+
+// ── Proft, Consulting Detective: scry and surveil ───────────────────────────
+
+fn bounce(filter: R) -> Effect {
+    Effect::Move { what: target_filtered(filter), to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))) }
+}
+
+/// Geist of the Archives — {2}{U} 0/4 defender Spirit. At the beginning of
+/// your upkeep, scry 1.
+pub fn geist_of_the_archives() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..creature("Geist of the Archives", cost(&[generic(2), u()]), vec![CreatureType::Spirit], 0, 4)
+    }
+}
+
+/// Surveillance Phantasm — {1}{U} 2/3 defender, flying, vigilance Bird
+/// Illusion. Attacks as though it lacked defender once you've scried or
+/// surveilled this turn. {3}{U}: surveil 1.
+pub fn surveillance_phantasm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender, Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you've scried or surveilled this turn, this creature can attack as though it didn't have defender.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile { condition: Predicate::ScriedOrSurveiledThisTurn { who: PlayerRef::You } },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Surveillance Phantasm", cost(&[generic(1), u()]), vec![CreatureType::Bird, CreatureType::Illusion], 2, 3)
+    }
+}
+
+/// Select for Inspection — {U} instant. Return target tapped creature to its
+/// owner's hand. Scry 1.
+pub fn select_for_inspection() -> CardDefinition {
+    spell(
+        "Select for Inspection",
+        cost(&[u()]),
+        true,
+        Effect::Seq(vec![bounce(R::Creature.and(R::Tapped)), Effect::Scry { who: PlayerRef::You, amount: Value::ONE }]),
+    )
+}
+
+/// Unexplained Disappearance — {1}{U} instant. Return target creature to its
+/// owner's hand. Surveil 1.
+pub fn unexplained_disappearance() -> CardDefinition {
+    spell(
+        "Unexplained Disappearance",
+        cost(&[generic(1), u()]),
+        true,
+        Effect::Seq(vec![bounce(R::Creature), Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }]),
+    )
+}
+
+// ── Uchbenbak, the Great Mistake ────────────────────────────────────────────
+
+fn regenerate(mana: ManaCost) -> ActivatedAbility {
+    ActivatedAbility { mana_cost: mana, effect: Effect::Regenerate { what: Selector::This }, ..Default::default() }
+}
+
+/// Kathari Remnant — {2}{U}{B} 0/1 flying Bird Skeleton. {B}: regenerate.
+/// Cascade.
+pub fn kathari_remnant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Cascade],
+        activated_abilities: vec![regenerate(cost(&[b()]))],
+        ..creature("Kathari Remnant", cost(&[generic(2), u(), b()]), vec![CreatureType::Bird, CreatureType::Skeleton], 0, 1)
+    }
+}
+
+/// Manor Skeleton — {1}{B} 1/1 haste Skeleton. {1}{B}: regenerate.
+pub fn manor_skeleton() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![regenerate(cost(&[generic(1), b()]))],
+        ..creature("Manor Skeleton", cost(&[generic(1), b()]), vec![CreatureType::Skeleton], 1, 1)
+    }
+}
+
+/// Blood for Bones — {3}{B} sorcery; as an additional cost, sacrifice a
+/// creature. Return a creature card from your graveyard to the battlefield,
+/// then another to your hand (the greatest power first, a headless pick).
+pub fn blood_for_bones() -> CardDefinition {
+    let from_yard = |to: ZoneDest| Effect::MoveChosen {
+        from: Selector::TakeGreatestPower {
+            inner: Box::new(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature }),
+            count: Box::new(Value::Const(i32::MAX)),
+        },
+        filter: None,
+        count: Value::ONE,
+        up_to: false,
+        to,
+    };
+    CardDefinition {
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent { filter: R::Creature.and(R::ControlledByYou), count: 1 }],
+        ..spell(
+            "Blood for Bones",
+            cost(&[generic(3), b()]),
+            false,
+            Effect::Seq(vec![
+                from_yard(ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }),
+                from_yard(ZoneDest::Hand(PlayerRef::You)),
+            ]),
+        )
+    }
+}
