@@ -2009,6 +2009,10 @@ pub enum Predicate {
     /// listener arrived still counts. Backed by the per-turn batch tallies
     /// `GameState::tally_first_each_turn_batches` keeps.
     FirstBatchThisTurn { who: PlayerRef, kind: FirstBatchKind },
+    /// "Activate only if you've scried or surveilled this turn" (Proctor of
+    /// Potential, CR 701.22 / 701.25). Backed by the per-turn scry and
+    /// surveil batch tallies.
+    ScriedOrSurveiledThisTurn { who: PlayerRef },
     /// CR 700.14 — true exactly on the spell-cast whose payment first
     /// pushes the active player's running mana-spent-on-spells total to
     /// `n` (i.e. prior total `< n` and new total `>= n`). Used as the

@@ -673,6 +673,11 @@ pub struct PlayerData {
     pub token_batches_this_turn: u8,
     #[serde(default)]
     pub surveil_batches_this_turn: u8,
+    /// Event batches this turn in which this player scried (CR 701.22);
+    /// with `surveil_batches_this_turn`, "if you've scried or surveilled
+    /// this turn" (`Predicate::ScriedOrSurveiledThisTurn`).
+    #[serde(default)]
+    pub scry_batches_this_turn: u8,
     /// Number of cards this player has drawn on the current turn. Reset
     /// to 0 in `do_untap`. Powers Strixhaven's Quandrix scaling — e.g.
     /// Fractal Anomaly creates a 0/0 with X +1/+1 counters where X is
@@ -1806,6 +1811,7 @@ impl Player {
             gained_life_earlier_this_turn: false,
             token_batches_this_turn: 0,
             surveil_batches_this_turn: 0,
+            scry_batches_this_turn: 0,
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,

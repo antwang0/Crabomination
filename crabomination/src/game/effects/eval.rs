@@ -2823,6 +2823,9 @@ impl GameState {
                     }
                 })
                 .unwrap_or(false),
+            Predicate::ScriedOrSurveiledThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].scry_batches_this_turn | self.players[p].surveil_batches_this_turn != 0),
             Predicate::FirstLifeGainThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .map(|p| !self.players[p].gained_life_earlier_this_turn)
