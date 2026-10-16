@@ -524,3 +524,37 @@ fn qarsi_high_priest_manifests_off_a_sacrifice() {
     activate(&mut g, q, None).expect("manifest");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.face_down));
 }
+
+/// Overwhelming Splendor: the cursed player's creatures are vanilla 1/1s and
+/// the player can't activate a non-mana ability, but can still tap for mana.
+#[test]
+fn overwhelming_splendor_shrinks_and_locks_the_cursed_player() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let ship = ready(&mut g, 1, catalog::skeleton_ship());
+    let island = g.add_card_to_battlefield(1, catalog::island());
+    let s = g.add_card_to_hand(0, catalog::overwhelming_splendor());
+    cast(&mut g, s, Some(Target::Player(1)));
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(!cp.keywords().contains(&Keyword::Flying));
+    g.priority.player_with_priority = 1;
+    assert!(activate(&mut g, ship, Some(Target::Permanent(angel))).is_err(), "a non-mana ability is locked");
+    activate(&mut g, island, None).expect("mana abilities stay open");
+}
+
+/// Demonic Pact never repeats a mode: four upkeeps, four different modes.
+#[test]
+fn demonic_pact_picks_each_mode_once() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 20);
+    ready(&mut g, 0, catalog::demonic_pact());
+    for _ in 0..3 {
+        step_to(&mut g, 1, TurnStep::PreCombatMain);
+        step_to(&mut g, 0, TurnStep::PreCombatMain);
+    }
+    assert!(!g.players[0].eliminated, "three upkeeps, the loss not yet forced");
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(g.players[0].eliminated, "the fourth upkeep has only the loss left");
+}

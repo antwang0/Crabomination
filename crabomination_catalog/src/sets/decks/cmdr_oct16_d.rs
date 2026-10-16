@@ -1423,3 +1423,104 @@ pub fn raise_the_draugr() -> CardDefinition {
         ]),
     )
 }
+
+// ── Ghen, Arcanum Weaver ────────────────────────────────────────────────────
+
+/// Ghen, Arcanum Weaver — {R}{W}{B} legendary 2/3 Human Wizard. {R}{W}{B},
+/// {T}, sacrifice an enchantment: return target enchantment card from your
+/// graveyard to the battlefield.
+pub fn ghen_arcanum_weaver() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r(), w(), b()]),
+            sac_other_filter: Some((R::Enchantment, 1)),
+            effect: Effect::Move {
+                what: target_filtered(R::Enchantment.from_your_graveyard()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature("Ghen, Arcanum Weaver", cost(&[r(), w(), b()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Demonic Lore — {2}{B} enchantment. Enters: draw three. Your end step: lose
+/// 2 life for each card in your hand.
+pub fn demonic_lore() -> CardDefinition {
+    CardDefinition {
+        name: "Demonic Lore",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+                effect: Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Times(Box::new(Value::HandSizeOf(PlayerRef::You)), Box::new(Value::Const(2))),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Demonic Pact — {2}{B}{B} enchantment. Your upkeep: choose one that hasn't
+/// been chosen — 4 damage to any target and gain 4; target opponent discards
+/// two; draw two; you lose the game.
+pub fn demonic_pact() -> CardDefinition {
+    CardDefinition {
+        name: "Demonic Pact",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::ChooseUnchosenMode {
+                modes: vec![
+                    Effect::Seq(vec![
+                        Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+                    ]),
+                    Effect::Discard { who: target_filtered(R::OpponentPlayer), amount: Value::Const(2), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::LoseGame { who: PlayerRef::You },
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Overwhelming Splendor — {6}{W}{W} Aura Curse, enchant player. Creatures the
+/// enchanted player controls lose all abilities and have base 1/1; that player
+/// can't activate abilities that aren't mana or loyalty abilities.
+pub fn overwhelming_splendor() -> CardDefinition {
+    let theirs = || Selector::ControlledBy { who: PlayerRef::EnchantedPlayer, filter: R::Creature };
+    CardDefinition {
+        name: "Overwhelming Splendor",
+        cost: cost(&[generic(6), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Curse],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Player) },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures enchanted player controls lose all abilities.",
+                effect: StaticEffect::MatchingLoseAllAbilities { applies_to: theirs() },
+            },
+            StaticAbility {
+                description: "Creatures enchanted player controls have base power and toughness 1/1.",
+                effect: StaticEffect::SetBasePtForFilter { applies_to: theirs(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Enchanted player can't activate abilities that aren't mana abilities or loyalty abilities.",
+                effect: StaticEffect::EnchantedPlayerCantActivateNonManaAbilities,
+            },
+        ],
+        ..Default::default()
+    }
+}

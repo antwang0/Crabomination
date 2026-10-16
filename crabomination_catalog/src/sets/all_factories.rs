@@ -16399,6 +16399,10 @@ static DECKS: &[Factory] = &[
     super::decks::qarsi_high_priest,
     super::decks::sultai_emissary,
     super::decks::raise_the_draugr,
+    super::decks::ghen_arcanum_weaver,
+    super::decks::demonic_lore,
+    super::decks::demonic_pact,
+    super::decks::overwhelming_splendor,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
