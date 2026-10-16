@@ -17964,6 +17964,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_DESTINED_THIEF_COMMANDERS,
             main: decks::THE_DESTINED_THIEF_MAIN,
         },
+        // Seat 2919: King of the Oathbreakers's EDHREC average deck. `--pod-decks 2919`.
+        PodDeck {
+            name: "King of the Oathbreakers (WB)",
+            commanders: decks::KING_OF_THE_OATHBREAKERS_COMMANDERS,
+            main: decks::KING_OF_THE_OATHBREAKERS_MAIN,
+        },
+        // Seat 2920: Tresserhorn's Lord, Returned's EDHREC average deck. `--pod-decks 2920`.
+        PodDeck {
+            name: "Tresserhorn's Lord, Returned (UBR)",
+            commanders: decks::TRESSERHORNS_LORD_COMMANDERS,
+            main: decks::TRESSERHORNS_LORD_MAIN,
+        },
+        // Seat 2921: Aboshan, Cephalid Emperor's EDHREC average deck. `--pod-decks 2921`.
+        PodDeck {
+            name: "Aboshan, Cephalid Emperor (U)",
+            commanders: decks::ABOSHAN_COMMANDERS,
+            main: decks::ABOSHAN_MAIN,
+        },
     ]
 }
 
@@ -22766,6 +22784,9 @@ mod tests {
             ("Sméagol, Helpful Guide", &[0x157A]),
             ("Wolverine, Fierce Fighter", &[0x157B]),
             ("The Destined Thief", &[0x157C]),
+            ("King of the Oathbreakers", &[0x157D]),
+            ("Tresserhorn's Lord, Returned", &[0x157E]),
+            ("Aboshan, Cephalid Emperor", &[0x157F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -81858,3 +81858,87 @@ pub const THE_DESTINED_THIEF_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const KING_OF_THE_OATHBREAKERS_COMMANDERS: &[CardFactory] = &[king_of_the_oathbreakers];
+
+/// **King of the Oathbreakers**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Plains + 9 Swamps = 99.
+/// King of the Oathbreakers (EDHREC, fetched 2026-10-16).
+pub const KING_OF_THE_OATHBREAKERS_MAIN: &[CardFactory] = &[
+    anduril_flame_of_the_west, arcane_signet, heralds_horn, orzhov_signet, patchwork_banner,
+    skullclamp, sol_ring, staff_of_the_storyteller, seance_board, talisman_of_hierarchy,
+    bojuka_bog, caves_of_koilos, command_tower, fetid_heath, godless_shrine, isolated_chapel,
+    orzhov_basilica, path_of_ancestry, shattered_sanctum, shineshadow_snarl, tainted_field,
+    temple_of_silence, vault_of_champions, vault_of_the_archangel, clarion_spirit, crypt_ghast,
+    divinity_of_pride, drogskol_cavalry, drogskol_reinforcements, drumbellower,
+    grey_host_reinforcements, guardian_of_faith, hanged_executioner, horobi_deaths_wail,
+    kami_of_false_hope, katilda_dawnhart_martyr, mirkwood_bats, mirror_entity,
+    moonshaker_cavalry, myojin_of_blooming_dawn, oyobi_who_split_the_heavens, phantom_general,
+    selfless_spirit, skyclave_apparition, thalisse_reverent_medium, twilight_drover,
+    urborg_scavengers, windborn_muse, anointed_procession, flowering_of_the_white_tree,
+    ghostly_prison, haunted_library, inspiring_leader, intangible_virtue, phyrexian_arena,
+    rally_the_ranks, anguished_unmaking, cauldron_haze, clever_concealment, despark,
+    eerie_interlude, galadriels_dismissal, heavens_gate, path_to_exile, release_to_memory,
+    scapegoat, semesters_end, swords_to_plowshares, teferis_protection, touch_of_darkness,
+    kaya_geist_hunter, damn, devouring_greed, hour_of_reckoning, lingering_souls,
+    shadow_summoning, spectral_procession,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const TRESSERHORNS_LORD_COMMANDERS: &[CardFactory] = &[tresserhorns_lord_returned];
+
+/// **Tresserhorn's Lord, Returned**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 3 Islands + 4 Mountains + 6 Swamps = 99.
+/// Tresserhorn's Lord, Returned (EDHREC, fetched 2026-10-16).
+pub const TRESSERHORNS_LORD_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, fellwar_stone, infantry_shield, lightning_greaves,
+    phyrexian_altar, skullclamp, sol_ring, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, blood_crypt, bloodstained_mire,
+    command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    luxury_suite, morphic_pool, phyrexian_tower, polluted_delta, scalding_tarn, shipwreck_marsh,
+    steam_vents, stormcarved_coast, sulfur_falls, sulfurous_springs, training_center,
+    underground_river, urborg_tomb_of_yawgmoth, watery_grave, xanders_lounge, accursed_marauder,
+    anger, baleful_strix, bitterbloom_bearer, blood_artist, bloodghast, braids_arisen_nightmare,
+    carrion_feeder, chasm_skulker, chittering_witch, endrek_sahr_master_breeder, gravecrawler,
+    jadar_ghoulcaller_of_nephalia, lagomos_hand_of_hatred, mahadi_emporium_master,
+    marionette_apprentice, mayhem_devil, nightscape_familiar, ophiomancer, pawn_of_ulamog,
+    pitiless_plunderer, reassembling_skeleton, sephiroth_fabled_soldier, solemn_simulacrum,
+    the_locust_god, viscera_seer, warren_soultrader, zulaport_cutthroat, bastion_of_remembrance,
+    bitterblossom, black_market_connections, dreadhorde_invasion, goblin_bombardment,
+    grave_pact, an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell,
+    culling_the_weak, dark_ritual, deadly_dispute, swan_song, tainted_strike, village_rites,
+    liliana_dreadhorde_general, blasphemous_act, chandras_ignition, feed_the_swarm,
+    living_death, reanimate, tempt_with_vengeance, victimize,
+    // Basics
+    island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const ABOSHAN_COMMANDERS: &[CardFactory] = &[aboshan_cephalid_emperor];
+
+/// **Aboshan, Cephalid Emperor**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Aboshan, Cephalid Emperor (EDHREC, fetched 2026-10-16).
+pub const ABOSHAN_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, hyldas_crown_of_winter, kefnets_monument, lightning_greaves,
+    maskwood_nexus, mind_stone, sapphire_medallion, sky_diamond, sol_ring, thought_vessel,
+    castle_vantress, cephalid_coliseum, lonely_sandbar, myriad_landscape, mystic_sanctuary,
+    nykthos_shrine_to_nyx, reliquary_tower, archetype_of_imagination, caelorna_coral_tyrant,
+    callous_oppressor, cephalid_aristocrat, cephalid_broker, cephalid_constable,
+    cephalid_facetaker, cephalid_illusionist, cephalid_inkmage, cephalid_inkshrouder,
+    cephalid_looter, cephalid_pathmage, cephalid_retainer, cephalid_sage, cephalid_scout,
+    cephalid_snitch, cephalid_vandal, llawan_cephalid_empress, mothdust_changeling, omen_hawker,
+    psychic_pickpocket, sea_dasher_octopus, shield_broker, ultros_obnoxious_octopus,
+    willbreaker, wonder, aboshans_desire, betrayal, dismiss_into_dream, levitation,
+    lost_in_the_maze, opposition, propaganda, reflections_of_littjara, verity_circle, aetherize,
+    arcane_denial, brainstorm, counterspell, cyclonic_rift, dramatic_reversal, high_tide,
+    negate, pongify, rapid_hybridization, reality_shift, tamiyo_the_moon_sage,
+    borrowing_100_000_arrows, curse_of_the_swine, deep_analysis, ponder, theft_of_dreams,
+    whelming_wave,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
