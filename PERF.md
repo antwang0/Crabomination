@@ -3156,6 +3156,29 @@ pod smoke        release, seed 9406, every seat x 4 / 6 / 8: 3,094 games, 0 pani
                  2 undecided (0.06 %): a Preston board cap, a Repay in Kind true draw
 ```
 
+### 2026-10-16 (Commander run, `01Xb59Dm`) — guardrail; 63 seats, 160 cards
+
+Hot-path touches: `scale_combat_damage` reads `SelfDealsDoubleCombatDamageToPlayers`
+behind the existing damage-scaler gate; the damage path reads a resolving
+spell's snapshot keywords only when the source has no permanent; a
+`TapTotalPower` payment emits `TappedForTeamwork`; `begin_turn_resets` drops
+until-your-next-turn emblems behind an `any` check. None are in the fixed
+pool. Release `bot_ladder` at `bc4648461`, toolchain 1.99.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; thread_determinism ok (3 vs 1); peak_rss
+                 37.0 MiB; games_per_s 253.74 (host_calib_ms 48)
+golden traces    unchanged (in the suite run)
+suite            26,999 / 27,000 less the precon long pole; the red was the
+                 blank-stub audit on Lens of Clarity, fixed and re-run green
+clippy           workspace (minus client) --all-targets: 0 warnings (after a
+                 core_rules exhaustive-match fix); release-fast typecheck clean
+pod smoke        debug, seeds 31001-31007, the new seats in 4-seat pods: 340
+                 games, 339 decided, 1 board cap (Ferrafor counters/tokens), 0
+                 panics after the graveyard-sneak bot fix
+```
+
 ### 2026-10-15 (Commander run, `01XShaqR`) — guardrail; 65 seats, 201 cards, a `{Q}` payment fix
 
 Hot-path touches: a `{Q}` cost now untaps its source after the mana payment
