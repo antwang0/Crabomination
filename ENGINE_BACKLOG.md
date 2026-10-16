@@ -235,6 +235,11 @@ the handoff.
   Inspection, Unexplained Disappearance, Kathari Remnant, Manor Skeleton, Blood for Bones. Researched, open: The
   Destined Warrior's Base Camp (a four-type "Cleric, Rogue, Warrior or Wizard spell or ability" spend
   restriction; `CreatureOfAnyTypes` holds three).
+- **CLAIMED (`014Q2Gfw`, batch 17) — don't duplicate:** Hapatra the Desert Fang, Altar of Bhaal, Something Worth
+  Saving (Hapatra); Captain Vargus Wrath, Prosperous Pirates, Protean Raider (raid `EntersAsCopy` condition),
+  Mutiny (Captain Vargus Wrath). Researched, open: Codie, Ravenous Codex (no "you cast a prepared spell" marker
+  at trigger time), Zara's Discontinuity ("costs {2}{U}{U} less" — `SelfCostReducedIfPredicate` shaves generic
+  only).
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
