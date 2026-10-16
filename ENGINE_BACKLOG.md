@@ -163,6 +163,24 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-16 (Commander run, `014Q2Gfw`) — 29 seats off the rescan's one- and two-card gaps
+
+- **Seats** 2893-2921 (52 cards, `decks::cmdr_oct16_c`, tests at the end of `recent_b/cmdr_oct16_a.rs`).
+- **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
+  `HasNoAbilities` as a block-filter leaf (Jasmine Boreal of the Seven); `StaticEffect::PowerUpOnceMore`
+  (Wonder Man, CR 702.193 — `exhausted_abilities` now records a power-up per activation);
+  `GameEvent::AbilityActivated.paid` (was `life_paid`) also carries the loyalty a loyalty ability
+  removed, so a Loyalty-trait trigger can gate on it (Way of the Mind Sculptor).
+- **Bot notes:** the `MayDo` self-cost screen declines Gorbag's sacrifice and Balin's hand wheel —
+  both cards are played, the optional riders seldom fire. Korlash's grandeur can't fire in a
+  singleton deck (no second copy).
+- **Still blocked (researched this run):** Thorin Mountain-king (any-number Equipment targets + a
+  reflexive damage from "that creature"), Bilbo Luckwearer (Burglar's Plot's shared-type second
+  target), Rotisserie Elemental (skewer count read after the self-sacrifice), Public Enemy (a static
+  "all creatures attack that player"), Temur Charger (morph with a reveal cost), Hei Bai's Sanctum of
+  All (a Shrine trigger-doubler), Isareth (MayPayX: a Commander seat pays its whole pool, so an
+  exact-MV reanimation never matches), Hurkyl (per-card-type picks among spells cast this turn).
+
 ## FIXED/OPEN 2026-10-16 (Commander run, `01P5K4L5`) — The Temporal Anchor, the duplicate-legend loop
 
 - **Seats** 2868-2892 (41 cards, `decks::cmdr_oct16_a`/`_b`, tests `recent_b/cmdr_oct16_a.rs`).
