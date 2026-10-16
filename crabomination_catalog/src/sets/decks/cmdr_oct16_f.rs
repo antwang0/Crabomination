@@ -2261,3 +2261,199 @@ pub fn dreamcaller_siren() -> CardDefinition {
         )
     }
 }
+
+// ── batch 11 ────────────────────────────────────────────────────────────────
+
+/// Dire Fleet Hoarder — {1}{B} 2/1 Human Pirate; dies: a Treasure.
+pub fn dire_fleet_hoarder() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Arc::new(treasure_token()),
+        })],
+        ..creature("Dire Fleet Hoarder", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 1)
+    }
+}
+
+/// Lake-town Mariners // Gone Fishing — {4}{U}{U} 6/5 vigilance, ward {2}
+/// Human Citizen. Adventure {3}{U} instant: exile two target creatures and/or
+/// lands you control, then return them under their owner's control.
+pub fn lake_town_mariners() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Gone Fishing",
+            cost: cost(&[generic(3), u()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::ApplyToTargets {
+                min_targets: 2,
+                max_targets: 2,
+                filter: R::Creature.or(R::Land).and(R::ControlledByYou),
+                effect: Box::new(Effect::ExileAndReturnToOwner { what: Selector::Target(0) }),
+            },
+        })),
+        ..creature("Lake-town Mariners", cost(&[generic(4), u(), u()]), vec![CreatureType::Human, CreatureType::Citizen], 6, 5)
+    }
+}
+
+/// Razaketh's Rite — {3}{B}{B} sorcery: tutor any card to hand. Cycling {B}.
+pub fn razakeths_rite() -> CardDefinition {
+    CardDefinition {
+        name: "Razaketh's Rite",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[b()]))],
+        effect: Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Hand(PlayerRef::You) },
+        ..Default::default()
+    }
+}
+
+/// Defiant Salvager — {2}{B} 2/2 Aetherborn Artificer. Sacrifice an artifact or
+/// creature: a +1/+1 counter on it (sorcery speed).
+pub fn defiant_salvager() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            sac_other_filter: Some((R::Artifact.or(R::Creature), 1)),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Defiant Salvager", cost(&[generic(2), b()]), vec![CreatureType::Aetherborn, CreatureType::Artificer], 2, 2)
+    }
+}
+
+/// Topaz Dragon // Entropic Cloud — {4}{B}{B} 4/4 flying, deathtouch Dragon.
+/// Adventure {1}{B} instant: creatures you control gain deathtouch this turn.
+pub fn topaz_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Entropic Cloud",
+            cost: cost(&[generic(1), b()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+        })),
+        ..creature("Topaz Dragon", cost(&[generic(4), b(), b()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Destructor Dragon — {4}{G}{G} 4/4 flying Dragon; dies: destroy target
+/// noncreature permanent.
+pub fn destructor_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Destroy {
+            what: target_filtered(R::Permanent.and(R::Creature.negate())),
+        })],
+        ..creature("Destructor Dragon", cost(&[generic(4), g(), g()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Liliana's Elite — {2}{B} 1/1 Zombie, +1/+1 per creature card in your graveyard.
+pub fn lilianas_elite() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each creature card in your graveyard.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..creature("Liliana's Elite", cost(&[generic(2), b()]), vec![CreatureType::Zombie], 1, 1)
+    }
+}
+
+/// Bonecaller Cleric — {1}{B} 2/1 Human Cleric. {3}{B}, sacrifice it: return
+/// target creature card from your graveyard to the battlefield (sorcery speed).
+pub fn bonecaller_cleric() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature("Bonecaller Cleric", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Cleric], 2, 1)
+    }
+}
+
+/// Winds of Rebuke — {1}{U} instant: bounce target nonland permanent; each
+/// player mills two.
+pub fn winds_of_rebuke() -> CardDefinition {
+    CardDefinition {
+        name: "Winds of Rebuke",
+        cost: cost(&[generic(1), crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Permanent.and(R::Land.negate())), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Primal Witchstalker — {1}{B}{G} 2/1 menace Wolf. ETB: mill four; when you
+/// do, return target land card from your graveyard to the battlefield tapped.
+pub fn primal_witchstalker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Land.and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+            },
+        ]))],
+        ..creature("Primal Witchstalker", cost(&[generic(1), b(), g()]), vec![CreatureType::Wolf], 2, 1)
+    }
+}
+
+/// Library — U/R tapland; {4}, {T}: investigate.
+pub fn library() -> CardDefinition {
+    let mut d = crate::sets::dual_land_untyped("Library", Color::Blue, Color::Red, vec![]);
+    d.static_abilities.push(crate::sets::enters_tapped());
+    d.activated_abilities.push(ActivatedAbility {
+        tap_cost: true,
+        mana_cost: cost(&[generic(4)]),
+        effect: crate::effect::shortcut::investigate(1),
+        ..Default::default()
+    });
+    d
+}
+
+/// Veteran Adventurer — {5}{G} 5/5 vigilance Human Cleric Rogue Warrior Wizard;
+/// {1} less per creature in your party.
+pub fn veteran_adventurer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast for each creature in your party.",
+            effect: StaticEffect::SelfCostReducedByValue { amount: Value::PartyCount },
+        }],
+        ..creature(
+            "Veteran Adventurer",
+            cost(&[generic(5), g()]),
+            vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard],
+            5,
+            5,
+        )
+    }
+}
+
+/// Calciform Pools — W/U storage land.
+pub fn calciform_pools() -> CardDefinition {
+    crate::sets::storage_land("Calciform Pools", Color::White, Color::Blue)
+}

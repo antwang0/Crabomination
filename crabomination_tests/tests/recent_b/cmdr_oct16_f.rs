@@ -1217,3 +1217,62 @@ fn pummeler_for_hire_gains_the_biggest_giants_power() {
     cast(&mut g, p, None).expect("Pummeler");
     assert_eq!(g.players[0].life, life + 4, "the Pummeler itself is the biggest Giant (4)");
 }
+
+/// Gone Fishing (Lake-town Mariners' adventure) blinks two of your permanents.
+#[test]
+fn lake_town_mariners_gone_fishing_blinks_two() {
+    let mut g = pod(2);
+    let mariners = g.add_card_to_hand(0, catalog::lake_town_mariners());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let land = ready(&mut g, 0, catalog::island());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.perform_action(GameAction::CastAdventure { card_id: mariners, target: Some(Target::Permanent(bears)), additional_targets: vec![Target::Permanent(land)], mode: None, x_value: None })
+        .expect("Gone Fishing");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == land && c.tapped), "the land came back untapped");
+    assert!(g.exile.iter().any(|c| c.id == mariners), "on an adventure");
+}
+
+/// Primal Witchstalker mills four and brings back a milled land.
+#[test]
+fn primal_witchstalker_returns_a_milled_land() {
+    let mut g = pod(2);
+    let forest = on_top(&mut g, 0, catalog::forest());
+    let ws = g.add_card_to_hand(0, catalog::primal_witchstalker());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, ws, None).expect("Witchstalker");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().filter(|c| c.definition.name == "Forest" && c.controller == 0).count();
+    assert_eq!(back, 1, "one land back");
+    assert!(g.battlefield_find(forest).is_some() || g.players[0].graveyard.iter().any(|c| c.id == forest));
+}
+
+/// CR 700.8 — Veteran Adventurer costs {1} less per party member you control;
+/// a creature fills one slot, so Imoen (Rogue Wizard) is a discount of one.
+#[test]
+fn veteran_adventurer_discounts_by_party() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::imoen_mystic_trickster());
+    let va = g.add_card_to_hand(0, catalog::veteran_adventurer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(cast(&mut g, va, None).is_err(), "Imoen is one party member, not two");
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, va, None).expect("{5}{G} less one");
+    assert!(g.battlefield_find(va).is_some());
+}
+
+/// Liliana's Elite grows with your graveyard's creature cards.
+#[test]
+fn lilianas_elite_counts_graveyard_creatures() {
+    let mut g = pod(2);
+    let e = ready(&mut g, 0, catalog::lilianas_elite());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_graveyard(0, catalog::forest());
+    let cp = g.computed_permanent(e).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
