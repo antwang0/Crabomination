@@ -194,6 +194,9 @@ the handoff.
   Skybound are zero-gap now (Hyperion + `01VDk2LU`'s Wings of Freedom); **`014Q2Gfw` seats them**, `01VDk2LU` won't.
 - **CLAIMED (`01VDk2LU`, batch 6) — don't duplicate:** Vadrik Astral Archmage + Invert // Invent (Vadrik);
   Westgate Regent + Grasping Shadows (Spider-Man Noir; adds `CounterType::Dread`).
+- **CLAIMED (`01VDk2LU`, batch 7) — don't duplicate:** Sky Cycle, Intrepid Ace, Reckless Racer (Happy Hogan);
+  Contract Hero, Kree Sentinel, Repulsor Rays (Abomination World Ravager); Daredevil Man Without Fear (Director
+  Nick Fury); Mordor Trebuchet + The Torment of Gollum (Gothmog).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
