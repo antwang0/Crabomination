@@ -1801,7 +1801,9 @@ fn spells_requiring_two_targets_print_no_optional_target() {
     /// "divided among any number of targets" plus a target opponent is two.
     /// Friendly Rivalry requires its two creatures and makes only the third
     /// slot (the "up to one other" legend) optional (`OptionalTargets { min: 2 }`).
-    const REVIEWED: &[&str] = &["Fiery Justice", "Friendly Rivalry"];
+    /// Rhino's Rampage's "up to one" is its reflexive trigger's target (CR
+    /// 603.7d), chosen when that triggers, not a slot of the cast.
+    const REVIEWED: &[&str] = &["Fiery Justice", "Friendly Rivalry", "Rhino's Rampage"];
     let raw = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../scripts/.scryfall_cache.json"))
         .expect(".scryfall_cache.json");
     let cache: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(&raw).expect("JSON object");

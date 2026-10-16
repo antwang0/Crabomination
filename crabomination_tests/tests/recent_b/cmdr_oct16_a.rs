@@ -742,7 +742,7 @@ fn kun_lun_warrior_sacrifices_an_artifact_to_draw() {
     stock_libraries(&mut g, 5);
     let ring = ready(&mut g, 0, catalog::sol_ring());
     let w = g.add_card_to_hand(0, catalog::kun_lun_warrior());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0), DecisionAnswer::Bool(true)]));
     cast(&mut g, w);
     assert!(g.battlefield_find(ring).is_none());
     assert_eq!(g.players[0].hand.len(), 1);

@@ -528,22 +528,21 @@ pub fn fearless_liberator() -> CardDefinition {
 // ── Human Torch, Johnny Storm ───────────────────────────────────────────────
 
 /// K'un-Lun Warrior — {1}{R} 2/2 Human Warrior Hero. Enters: you may sacrifice
-/// an artifact or discard a card; if you do, draw a card.
+/// an artifact or discard a card; if you do, draw a card. The "or" is a mode
+/// pick ahead of the optional cost, so the two asks never share an answer.
 pub fn kun_lun_warrior() -> CardDefinition {
     let draw = || Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE });
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::MaySacrifice {
-            description: "Sacrifice an artifact to draw a card?".into(),
-            filter: R::Artifact.and(R::ControlledByYou),
-            count: Value::ONE,
-            then: draw(),
-            else_: Some(Box::new(Effect::MayDiscard {
-                description: "Discard a card to draw a card?".into(),
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::MaySacrifice {
+                description: "Sacrifice an artifact to draw a card?".into(),
+                filter: R::Artifact.and(R::ControlledByYou),
                 count: Value::ONE,
                 then: draw(),
                 else_: None,
-            })),
-        })],
+            },
+            Effect::MayDiscard { description: "Discard a card to draw a card?".into(), count: Value::ONE, then: draw(), else_: None },
+        ]))],
         ..creature("K'un-Lun Warrior", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero], 2, 2)
     }
 }

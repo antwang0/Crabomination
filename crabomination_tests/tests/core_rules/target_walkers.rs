@@ -2088,7 +2088,7 @@ fn every_block_filter_leaf_is_read_by_the_block_walker() {
     const READ: &[&str] = &[
         "And", "Any", "Artifact", "Colorless", "ControlledByMonarch", "ControlledBySeat", "Creature",
         "Enchantment", "HasArtifactSubtype", "HasCardType", "HasColor", "HasCreatureType", "HasKeyword",
-        "HasModular", "HasMutate", "HasSupertype", "HasToxic", "IsEnchanted", "IsToken", "Land", "Monocolored", "Not",
+        "HasModular", "HasMutate", "HasNoAbilities", "HasSupertype", "HasToxic", "IsEnchanted", "IsToken", "Land", "Monocolored", "Not",
         "NotToken", "Or", "Permanent", "PowerAtLeast", "PowerAtMost", "ToughnessAtLeast",
         "ToughnessAtMost", "ToughnessGreaterThanPower",
     ];
