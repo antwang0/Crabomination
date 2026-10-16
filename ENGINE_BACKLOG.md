@@ -188,7 +188,11 @@ the handoff.
 - **LANDED (batch 7):** seats 3168-3188. **LANDED (batch 8):** Golden Guardian, Rootwire Amalgam, Talas Explorer,
   Talas Scout, Unpredictable Cyclone, Shimmerwilds Growth — seats 3189-3213. **CLAIMED (batch 9):** Demon of Dark
   Schemes, Loot the Nexus, Plunder the Trollshaws, Yuriko Hope from the Shadows, Garruk Curse Breaker, Founding the
-  Third Path, Raph & Leo Sibling Rivals.
+  Third Path, Raph & Leo Sibling Rivals (LANDED, seats 3214-3235). **CLAIMED (batch 10):** Splicer's Skill,
+  Lifecrafter's Gift, Stone by Sunlight, Pore Over the Pages, Goblin Bangchuckers, Darksteel Sentinel, Implement of
+  Ferocity, Koma's Faithful, Primal Druid, Riddlemaster Sphinx, Alchemist's Vial, Gluttonous Slime, Soul Summons,
+  Nature's Way, Pummeler for Hire, Center Soul, Price of Loyalty, Noggle the Mind, Dreamcaller Siren, Thornmantle
+  Striker.
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `01VDk2LU`) — concurrent with `014Q2Gfw`; its own section so claims survive compaction
 
