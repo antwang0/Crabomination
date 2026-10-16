@@ -10,7 +10,7 @@ use crate::card::{
 use std::sync::Arc;
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{etb, exalted, on_attack, target_any, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{ActivationTrait, Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
 
@@ -1312,4 +1312,114 @@ pub fn mabel_bitter_recluse() -> CardDefinition {
         })],
         ..creature("Mabel, Bitter Recluse", cost(&[b()]), vec![CreatureType::Mouse, CreatureType::Warlock], 1, 1)
     }
+}
+
+// ── Marvel Boy, Noh-Varr ────────────────────────────────────────────────────
+
+/// "Whenever another creature you control enters, put a +1/+1 counter on
+/// this" (Alliance).
+fn alliance_counter() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: R::Creature.and(R::OtherThanSource),
+        }),
+        effect: counters(Selector::This, Value::ONE),
+    }
+}
+
+/// Marvel Boy, Noh-Varr — {1}{R/W} legendary 1/1 Kree Soldier Hero. Another
+/// creature of yours entering, and each power-up ability you activate: a
+/// +1/+1 counter on it.
+pub fn marvel_boy_noh_varr() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            alliance_counter(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivatedWith(ActivationTrait::PowerUp), EventScope::YourControl),
+                effect: counters(Selector::This, Value::ONE),
+            },
+        ],
+        ..creature(
+            "Marvel Boy, Noh-Varr",
+            cost(&[generic(1), hybrid(Color::Red, Color::White)]),
+            vec![CreatureType::Kree, CreatureType::Soldier, CreatureType::Hero],
+            1,
+            1,
+        )
+    }
+}
+
+/// Brave Brawler — {1}{W} 2/1 lifelink Human Warrior Hero. Power-up — {4}{W}:
+/// two +1/+1 counters on it.
+pub fn brave_brawler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w()]),
+            power_up: true,
+            effect: counters(Selector::This, Value::Const(2)),
+            ..Default::default()
+        }],
+        ..creature("Brave Brawler", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero], 2, 1)
+    }
+}
+
+/// EPF Point Squad — {1}{R/W}{R/W} 2/1 Human Soldier. Alliance: a +1/+1
+/// counter on it when another creature of yours enters.
+pub fn epf_point_squad() -> CardDefinition {
+    let rw = || hybrid(Color::Red, Color::White);
+    CardDefinition {
+        triggered_abilities: vec![alliance_counter()],
+        ..creature("EPF Point Squad", cost(&[generic(1), rw(), rw()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 1)
+    }
+}
+
+// ── Roshan, Hidden Magister ─────────────────────────────────────────────────
+
+/// Qarsi High Priest — {B} 0/2 Human Cleric. {1}{B}, {T}, sacrifice another
+/// creature: manifest the top card of your library.
+pub fn qarsi_high_priest() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), b()]),
+            sac_other_filter: Some((R::Creature.and(R::OtherThanSource), 1)),
+            effect: Effect::Manifest { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Qarsi High Priest", cost(&[b()]), vec![CreatureType::Human, CreatureType::Cleric], 0, 2)
+    }
+}
+
+/// Sultai Emissary — {1}{B} 1/1 Zombie Warrior. Dies: manifest the top card.
+pub fn sultai_emissary() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Manifest { who: PlayerRef::You, amount: Value::ONE })],
+        ..creature("Sultai Emissary", cost(&[generic(1), b()]), vec![CreatureType::Zombie, CreatureType::Warrior], 1, 1)
+    }
+}
+
+/// Raise the Draugr — {1}{B} instant. Choose one: return target creature card
+/// from your graveyard to your hand; or two target creature cards from your
+/// graveyard that share a creature type.
+pub fn raise_the_draugr() -> CardDefinition {
+    let back = |what: Selector| Effect::Move { what, to: ZoneDest::Hand(PlayerRef::You) };
+    let card = || R::Creature.from_your_graveyard();
+    spell(
+        "Raise the Draugr",
+        cost(&[generic(1), b()]),
+        true,
+        Effect::ChooseMode(vec![
+            back(target_filtered(card())),
+            Effect::Seq(vec![
+                back(target_filtered(card())),
+                back(Selector::TargetFiltered {
+                    slot: 1,
+                    filter: card().and(R::SharesCreatureTypeWithTargetSlot(0)).and(R::OtherThanTargetSlot(0)),
+                }),
+            ]),
+        ]),
+    )
 }

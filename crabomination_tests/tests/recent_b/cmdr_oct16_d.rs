@@ -476,3 +476,51 @@ fn mabel_removes_three_counters() {
     cast(&mut g, m, None);
     assert_eq!(g.battlefield_find(big).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 702.193 — Marvel Boy counts a power-up activation (and the creature
+/// that entered before it) as a +1/+1 counter each; another seat's power-up
+/// doesn't count.
+#[test]
+fn cr_702_193_marvel_boy_grows_on_your_power_up() {
+    let mut g = pod(2);
+    let mb = ready(&mut g, 0, catalog::marvel_boy_noh_varr());
+    let brawler = g.add_card_to_hand(0, catalog::brave_brawler());
+    cast(&mut g, brawler, None);
+    assert_eq!(g.battlefield_find(mb).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "the Brawler entered");
+    g.players[0].mana_pool.add(Color::White, 5);
+    activate(&mut g, brawler, None).expect("power-up");
+    assert_eq!(g.battlefield_find(mb).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "and powered up");
+    assert_eq!(g.battlefield_find(brawler).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Raise the Draugr's second mode needs two cards sharing a creature type —
+/// read off the graveyard cards' printed types (bug fix: the cross-slot
+/// check only knew battlefield permanents and rejected two Bears).
+#[test]
+fn raise_the_draugr_returns_two_sharing_a_type() {
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let r = g.add_card_to_hand(0, catalog::raise_the_draugr());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    assert!(g
+        .perform_action(GameAction::CastSpell { card_id: r, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(elf)], mode: Some(1), x_value: None })
+        .is_err(), "a Bear and an Elf share no type");
+    g.perform_action(GameAction::CastSpell { card_id: r, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: Some(1), x_value: None })
+        .expect("two Bears");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b));
+}
+
+/// Qarsi High Priest sacrifices another creature to manifest.
+#[test]
+fn qarsi_high_priest_manifests_off_a_sacrifice() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let q = ready(&mut g, 0, catalog::qarsi_high_priest());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    activate(&mut g, q, None).expect("manifest");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.face_down));
+}

@@ -16393,6 +16393,12 @@ static DECKS: &[Factory] = &[
     super::decks::lord_dregg_insect_invader,
     super::decks::ice_cream_kitty,
     super::decks::mabel_bitter_recluse,
+    super::decks::marvel_boy_noh_varr,
+    super::decks::brave_brawler,
+    super::decks::epf_point_squad,
+    super::decks::qarsi_high_priest,
+    super::decks::sultai_emissary,
+    super::decks::raise_the_draugr,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
