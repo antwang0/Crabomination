@@ -16629,6 +16629,11 @@ static DECKS: &[Factory] = &[
     super::decks::veteran_armorsmith,
     super::decks::lurebound_scarecrow,
     super::decks::midnight_oil,
+    super::decks::glacian_powerstone_engineer,
+    super::decks::countervailing_winds,
+    super::decks::flash_photography,
+    super::decks::vibrance,
+    super::decks::sakashimas_will,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

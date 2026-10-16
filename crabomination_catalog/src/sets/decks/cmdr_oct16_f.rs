@@ -9,7 +9,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{cast_is_noncreature, etb, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, SpendRestriction, b, cost, g, generic, hybrid, r, w};
 use crabomination_base::tokens::treasure_token;
@@ -729,6 +729,144 @@ pub fn midnight_oil() -> CardDefinition {
             description: "Your maximum hand size is equal to the number of hour counters on this enchantment.",
             effect: StaticEffect::ControllerMaxHandSizeFromSourceCounters(CounterType::Hour),
         }],
+        ..Default::default()
+    }
+}
+
+// ── batch 4: the most-shared last cards (Glacian, Sakashima's Will, …) ──────
+
+/// Glacian, Powerstone Engineer — {5}{U} legendary 3/6 Human Artificer,
+/// partner. {T}, tap X untapped artifacts you control: look at the top X, one
+/// into your hand and the rest into your graveyard.
+pub fn glacian_powerstone_engineer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_n_filter: Some((R::Artifact, 0)),
+            tap_n_x: true,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                rest_to_graveyard: true,
+                ..Default::default()
+            })),
+            ..Default::default()
+        }],
+        ..legend(creature(
+            "Glacian, Powerstone Engineer",
+            cost(&[generic(5), crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            3,
+            6,
+        ))
+    }
+}
+
+/// Countervailing Winds — {2}{U} instant: counter target spell unless its
+/// controller pays {1} per card in your graveyard. Cycling {2}.
+pub fn countervailing_winds() -> CardDefinition {
+    CardDefinition {
+        name: "Countervailing Winds",
+        cost: cost(&[generic(2), crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(R::IsSpellOnStack),
+            mana_cost: ManaCost::default(),
+            exile: false,
+            extra_generic: Some(Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Any }),
+            if_paid: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Flash Photography — {2}{U}{U} sorcery: a token copy of target permanent;
+/// flash when it targets a permanent you control. Flashback {4}{U}{U}.
+pub fn flash_photography() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        name: "Flash Photography",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), u(), u()]))],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast this spell as though it had flash if it targets a permanent you control.",
+            effect: StaticEffect::SelfFlashIfTargets { filter: R::ControlledByYou },
+        }],
+        effect: crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, target_filtered(R::Permanent)),
+        ..Default::default()
+    }
+}
+
+/// Vibrance — {3}{R/G}{R/G} 4/4 Elemental Incarnation, evoke {R/G}{R/G}. ETB
+/// if {R}{R} was spent: 3 damage to any target; if {G}{G} was spent: search
+/// for a land to hand and gain 2 life.
+pub fn vibrance() -> CardDefinition {
+    let rg = || hybrid(Color::Red, Color::Green);
+    let spent = |color, effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+            .with_filter(Predicate::SourceCastWithColorSpent { color, at_least: 2 }),
+        effect,
+    };
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[rg(), rg()]),
+            evoke_sacrifice: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![
+            spent(Color::Red, Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) }),
+            spent(
+                Color::Green,
+                Effect::Seq(vec![
+                    Effect::Search { who: PlayerRef::You, filter: R::Land, to: ZoneDest::Hand(PlayerRef::You) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
+            ),
+        ],
+        ..creature("Vibrance", cost(&[generic(3), rg(), rg()]), vec![CreatureType::Elemental, CreatureType::Incarnation], 4, 4)
+    }
+}
+
+/// Sakashima's Will — {3}{U} sorcery. Choose one (both if you control a
+/// commander as you cast it): target opponent picks a creature they control and
+/// you gain control of it; or each other creature you control becomes a copy of
+/// a creature you choose until end of turn.
+pub fn sakashimas_will() -> CardDefinition {
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
+    let yours = || R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        name: "Sakashima's Will",
+        cost: cost(&[generic(3), crate::mana::u()]),
+        card_types: vec![CardType::Sorcery],
+        modes_widen: Some(crate::card::ModesWiden::If(Predicate::YouControlACommander)),
+        effect: Effect::ChooseModesCast {
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+            modes: vec![
+                // The opponent's pick is not targeted (hexproof doesn't stop
+                // it); the target is the opponent.
+                Effect::OpponentChoosesPermanentThen {
+                    filter: R::Creature,
+                    body: Box::new(Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent }),
+                    chooser: Some(PlayerRef::Target(0)),
+                    theirs: true,
+                },
+                choose_one_then(
+                    Selector::EachPermanent(yours()),
+                    PlayerRef::You,
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::SeparatedPile { chosen: false },
+                        source: chosen_one(),
+                        duration: Duration::EndOfTurn,
+                        non_legendary: false,
+                    },
+                ),
+            ],
+        },
         ..Default::default()
     }
 }

@@ -475,3 +475,112 @@ fn midnight_oil_trades_hour_counters_for_cards() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 1);
 }
+
+/// Glacian taps X artifacts: one of the top X to hand, the rest binned.
+#[test]
+fn glacian_taps_x_artifacts_to_dig_x() {
+    let mut g = pod(2);
+    let glacian = ready(&mut g, 0, catalog::glacian_powerstone_engineer());
+    let rocks: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::sol_ring())).collect();
+    let (hand, yard) = (g.players[0].hand.len(), g.players[0].graveyard.len());
+    g.perform_action(GameAction::ActivateAbility { card_id: glacian, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(3), mode: None })
+        .expect("X = 3");
+    drain_stack(&mut g);
+    assert!(rocks.iter().all(|&r| g.battlefield_find(r).unwrap().tapped));
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].graveyard.len(), yard + 2);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility { card_id: glacian, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(1), mode: None })
+            .is_err(),
+        "tapped"
+    );
+}
+
+/// Countervailing Winds taxes {1} per card in the counterspeller's graveyard.
+#[test]
+fn countervailing_winds_taxes_per_graveyard_card() {
+    for (yard, pool, countered) in [(3, 2, true), (1, 2, false)] {
+        let mut g = pod(2);
+        for _ in 0..yard {
+            g.add_card_to_graveyard(1, catalog::forest());
+        }
+        let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("Bears");
+        g.players[0].mana_pool.add_colorless(pool);
+        let winds = g.add_card_to_hand(1, catalog::countervailing_winds());
+        g.players[1].mana_pool.add(Color::Blue, 3);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: winds, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("Winds");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bears).is_none(), countered, "yard {yard}");
+    }
+}
+
+/// Flash Photography copies a permanent; at instant speed only when the
+/// target is yours.
+#[test]
+fn flash_photography_flashes_only_onto_your_own_permanent() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::craw_wurm());
+    g.step = TurnStep::BeginCombat;
+    let photo = g.add_card_to_hand(0, catalog::flash_photography());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    assert!(cast(&mut g, photo, Some(Target::Permanent(theirs))).is_err(), "not at instant speed on theirs");
+    cast(&mut g, photo, Some(Target::Permanent(mine))).expect("flash onto your own");
+    let copies = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Grizzly Bears" && c.controller == 0).count();
+    assert_eq!(copies, 1);
+}
+
+/// CR 702.74 — Vibrance's ETBs read the hybrid mana spent: {R}{R} burns, {G}{G}
+/// tutors a land and gains 2; evoked for {R}{R} it burns, then is sacrificed.
+#[test]
+fn vibrance_reads_the_colors_spent_on_it() {
+    for (red, evoke) in [(true, false), (false, false), (true, true)] {
+        let mut g = pod(2);
+        on_top(&mut g, 0, catalog::mountain());
+        let v = g.add_card_to_hand(0, catalog::vibrance());
+        let c = if red { Color::Red } else { Color::Green };
+        g.players[0].mana_pool.add(c, 2);
+        if !evoke {
+            g.players[0].mana_pool.add_colorless(3);
+        }
+        g.decider = Box::new(ScriptedDecider::new([]));
+        let (life, opp, hand) = (g.players[0].life, g.players[1].life, g.players[0].hand.len());
+        if evoke {
+            g.perform_action(GameAction::CastSpellAlternative { card_id: v, pitch_card: None, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+                .expect("evoke");
+        } else {
+            g.perform_action(GameAction::CastSpell { card_id: v, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+                .expect("hardcast");
+        }
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, if red { opp - 3 } else { opp }, "red {red} evoke {evoke}");
+        assert_eq!(g.players[0].life, if red { life } else { life + 2 });
+        if !red {
+            assert_eq!(g.players[0].hand.len(), hand, "cast one, fetched a land");
+        }
+        assert_eq!(g.battlefield_find(v).is_some(), !evoke);
+    }
+}
+
+/// CR 700.2 — Sakashima's Will: one mode without a commander; with one, both — the
+/// opponent hands over a creature and the rest of your team copies one.
+#[test]
+fn sakashimas_will_takes_both_modes_with_a_commander() {
+    let mut g = pod(2);
+    let cmdr = ready(&mut g, 0, catalog::craw_wurm());
+    g.players[0].commanders = vec![cmdr];
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::llanowar_elves());
+    let will = g.add_card_to_hand(0, catalog::sakashimas_will());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.perform_action(GameAction::CastSpellSpree { card_id: will, spree_modes: vec![0, 1], target: Some(Target::Player(1)), additional_targets: vec![], x_value: None })
+        .expect("both modes with a commander");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "their only creature is yours");
+    let names: Vec<&str> = [bears, theirs].iter().map(|&id| g.computed_permanent(id).unwrap().def.name).collect();
+    assert!(names.iter().all(|n| *n == "Craw Wurm"), "{names:?}");
+}
