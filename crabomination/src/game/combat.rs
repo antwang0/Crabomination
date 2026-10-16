@@ -1225,10 +1225,16 @@ impl GameState {
             .iter()
             .filter(|t| t.event.kind == EventKind::Exerted)
             .peekable();
-        // No linked bonus at all: the keyword is then a pure downside and
-        // there is no reason to pay it.
+        // No linked bonus: the exert still pays when a permanent you control
+        // triggers on "whenever you exert a creature" (Trueheart Twins,
+        // Battlefield Scavenger); with neither it is a pure downside.
         if linked.peek().is_none() {
-            return false;
+            return self.battlefield.iter().any(|c| {
+                c.controller == controller
+                    && c.definition.triggered_abilities.iter().any(|t| {
+                        t.event.kind == EventKind::Exerted && t.event.scope == crate::effect::EventScope::YourControl
+                    })
+            });
         }
         linked.any(|t| {
             !t.effect.requires_target()
@@ -1612,6 +1618,8 @@ impl GameState {
         // post-batch, so we carry the optional filter alongside each
         // queued trigger.
         let mut triggers: Vec<AttackTrigger> = vec![];
+        // Attackers that paid exert this declaration (CR 701.43a).
+        let mut exerted: Vec<CardId> = Vec::new();
         let computed_kw = |id: CardId| -> &[Keyword] {
             #[cfg(debug_assertions)]
             debug_assert!(
@@ -2274,6 +2282,7 @@ impl GameState {
             // The creature then skips its next untap step.
             if exerted_now {
                 card.skip_next_untap = true;
+                exerted.push(id);
             }
             // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
             if melee_opponents > 0 && dfacts.melee {
@@ -2719,6 +2728,20 @@ impl GameState {
                     }
                 }
                 self.drain_trigger_queue(queue);
+            }
+        }
+
+        // CR 701.43 — "whenever you exert a creature" (Trueheart Twins,
+        // Battlefield Scavenger): once per exerted attacker, off each
+        // permanent of the attacking player's that listens.
+        for _ in &exerted {
+            let p = self.active_player_idx;
+            for c in self.battlefield.iter().filter(|c| c.controller == p) {
+                for (i, t) in c.definition.triggered_abilities.iter().enumerate() {
+                    if t.event.kind == EventKind::Exerted && t.event.scope == crate::effect::EventScope::YourControl {
+                        triggers.push((c.id, t.effect.clone(), p, t.event.filter.clone(), once_key(Some(i), t)));
+                    }
+                }
             }
         }
 
