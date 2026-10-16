@@ -870,3 +870,225 @@ pub fn sakashimas_will() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 5: the next most-shared last cards ─────────────────────────────────
+
+/// Serra's Guardian — {4}{W}{W} 5/5 Angel, flying, vigilance; other creatures
+/// you control have vigilance.
+pub fn serras_guardian() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        ..creature("Serra's Guardian", cost(&[generic(4), w(), w()]), vec![CreatureType::Angel], 5, 5)
+    }
+}
+
+/// Alpine Meadow — Snow Land — Mountain Plains, enters tapped.
+pub fn alpine_meadow() -> CardDefinition {
+    let mut d = crate::sets::dual_land_with(
+        "Alpine Meadow",
+        crate::card::LandType::Mountain,
+        crate::card::LandType::Plains,
+        Color::Red,
+        Color::White,
+        vec![],
+    );
+    d.supertypes.push(Supertype::Snow);
+    d.static_abilities.push(crate::sets::enters_tapped());
+    d
+}
+
+/// Dark Fortress — Land. {T}: {C}. {T}: {B} or {R}, only if it entered this
+/// turn or you control a basic land.
+pub fn dark_fortress() -> CardDefinition {
+    let gated = |c: Color| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
+        condition: Some(Predicate::Any(vec![
+            Predicate::EntityMatches { what: Selector::This, filter: R::EnteredThisTurn },
+            Predicate::SelectorExists(Selector::EachPermanent(R::IsBasicLand.and(R::ControlledByYou))),
+        ])),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dark Fortress",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![crate::sets::tap_add_colorless(), gated(Color::Black), gated(Color::Red)],
+        ..Default::default()
+    }
+}
+
+/// Timetwister — {2}{U} sorcery: each player shuffles hand and graveyard into
+/// their library, then draws seven.
+pub fn timetwister() -> CardDefinition {
+    CardDefinition {
+        name: "Timetwister",
+        cost: cost(&[generic(2), crate::mana::u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+            Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stoic Rebuttal — {1}{U}{U} instant: counter target spell; metalcraft, {1}
+/// less.
+pub fn stoic_rebuttal() -> CardDefinition {
+    CardDefinition {
+        name: "Stoic Rebuttal",
+        cost: cost(&[generic(1), crate::mana::u(), crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "Metalcraft — This spell costs {1} less to cast if you control three or more artifacts.",
+            effect: StaticEffect::SelfCostReducedIfPredicate {
+                amount: 1,
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                    n: Value::Const(3),
+                },
+            },
+        }],
+        effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        ..Default::default()
+    }
+}
+
+/// Avenging Hunter — {4}{G} 5/4 Dragon Ranger, trample; ETB: take the initiative.
+pub fn avenging_hunter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::TakeInitiative { who: PlayerRef::You })],
+        ..creature("Avenging Hunter", cost(&[generic(4), g()]), vec![CreatureType::Dragon, CreatureType::Ranger], 5, 4)
+    }
+}
+
+/// Elvish Doomsayer — {1}{B} 1/1 Elf Shaman; dies: each opponent discards a card.
+pub fn elvish_doomsayer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+            random: false,
+        })],
+        ..creature("Elvish Doomsayer", cost(&[generic(1), b()]), vec![CreatureType::Elf, CreatureType::Shaman], 1, 1)
+    }
+}
+
+/// Shadows of the Past — {1}{B} enchantment. A creature dying scries 1; {4}{B}:
+/// drain each opponent for 2, only with four or more creature cards in your
+/// graveyard.
+pub fn shadows_of_the_past() -> CardDefinition {
+    CardDefinition {
+        name: "Shadows of the Past",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+                Value::Const(4),
+            )),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Darklight Phoenix — {3}{B} 3/2 flying, haste Phoenix. At the beginning of
+/// combat on your turn, if two or more creatures died this turn, it returns
+/// from your graveyard to the battlefield.
+pub fn darklight_phoenix() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::FromYourGraveyard).with_filter(
+                Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(2) },
+                ]),
+            ),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false } },
+        }],
+        ..creature("Darklight Phoenix", cost(&[generic(3), b()]), vec![CreatureType::Phoenix], 3, 2)
+    }
+}
+
+/// Reason // Believe — {U} sorcery: scry 3. Aftermath {4}{G} sorcery: look at
+/// the top card; a creature may go onto the battlefield, else into your hand.
+pub fn reason_believe() -> CardDefinition {
+    CardDefinition {
+        name: "Reason // Believe",
+        cost: cost(&[crate::mana::u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(4), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::LookPickToHand(Box::new(LookPick {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    picked_matching_to_battlefield: Some(R::Creature),
+                    ..Default::default()
+                })),
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Elvish Dreadlord — {3}{B}{B} 3/3 deathtouch Zombie Elf. Dies: non-Elf
+/// creatures get -3/-3 until end of turn. Encore {5}{B}{B}.
+pub fn elvish_dreadlord() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::HasCreatureType(CreatureType::Elf).negate())),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        })],
+        activated_abilities: vec![crate::effect::shortcut::encore(cost(&[generic(5), b(), b()]))],
+        ..creature("Elvish Dreadlord", cost(&[generic(3), b(), b()]), vec![CreatureType::Zombie, CreatureType::Elf], 3, 3)
+    }
+}
+
+/// Tomb of Horrors Adventurer — {5}{U} 4/4 Elf Monk. ETB: take the initiative.
+/// Your second spell each turn is copied (twice once you've completed a
+/// dungeon); new targets may be chosen.
+pub fn tomb_of_horrors_adventurer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::TakeInitiative { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) }),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE),
+                    then: Box::new(Effect::CopySpell { what: Selector::TriggerSource, count: Value::Const(2) }),
+                    else_: Box::new(Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE }),
+                },
+            },
+        ],
+        ..creature("Tomb of Horrors Adventurer", cost(&[generic(5), crate::mana::u()]), vec![CreatureType::Elf, CreatureType::Monk], 4, 4)
+    }
+}

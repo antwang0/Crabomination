@@ -584,3 +584,171 @@ fn sakashimas_will_takes_both_modes_with_a_commander() {
     let names: Vec<&str> = [bears, theirs].iter().map(|&id| g.computed_permanent(id).unwrap().def.name).collect();
     assert!(names.iter().all(|n| *n == "Craw Wurm"), "{names:?}");
 }
+
+/// Serra's Guardian lends vigilance: another creature attacks untapped.
+#[test]
+fn serras_guardian_gives_the_team_vigilance() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::serras_guardian());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, &[(bears, 1)]);
+    assert!(!g.battlefield_find(bears).unwrap().tapped);
+}
+
+/// Dark Fortress's colors need the turn it entered or a basic land.
+#[test]
+fn dark_fortress_colors_need_entry_turn_or_a_basic() {
+    for basic in [false, true] {
+        let mut g = pod(2);
+        let fort = ready(&mut g, 0, catalog::dark_fortress());
+        g.battlefield_find_mut(fort).unwrap().entered_turn = None;
+        if basic {
+            ready(&mut g, 0, catalog::swamp());
+        }
+        assert_eq!(activate(&mut g, fort, 1, None).is_ok(), basic, "basic {basic}");
+        assert!(g.battlefield_find(fort).unwrap().tapped == basic);
+    }
+}
+
+/// Timetwister: each player shuffles hand and graveyard away and draws seven.
+#[test]
+fn timetwister_resets_every_hand_to_seven() {
+    let mut g = pod(3);
+    for seat in 0..3 {
+        g.add_card_to_graveyard(seat, catalog::grizzly_bears());
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+    }
+    let tw = g.add_card_to_hand(0, catalog::timetwister());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    cast(&mut g, tw, None).expect("Timetwister");
+    for seat in 0..3 {
+        assert_eq!(g.players[seat].hand.len(), 7, "seat {seat}");
+        assert!(g.players[seat].graveyard.iter().all(|c| c.definition.name == "Timetwister"), "seat {seat}");
+    }
+}
+
+/// Stoic Rebuttal's metalcraft: {U}{U} with three artifacts.
+#[test]
+fn stoic_rebuttal_is_cheaper_with_metalcraft() {
+    for rocks in [2, 3] {
+        let mut g = pod(2);
+        for _ in 0..rocks {
+            ready(&mut g, 0, catalog::ornithopter());
+        }
+        let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.players[1].mana_pool.add(Color::Green, 2);
+        g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("Bears");
+        let sr = g.add_card_to_hand(0, catalog::stoic_rebuttal());
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        let ok = g
+            .perform_action(GameAction::CastSpell { card_id: sr, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None })
+            .is_ok();
+        assert_eq!(ok, rocks == 3, "{rocks} artifacts");
+    }
+}
+
+/// Elvish Doomsayer's death makes each opponent of a pod discard.
+#[test]
+fn elvish_doomsayer_taxes_each_opponents_hand() {
+    let mut g = pod(4);
+    let elf = ready(&mut g, 0, catalog::elvish_doomsayer());
+    for seat in 0..4 {
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(elf))).expect("Bolt");
+    assert_eq!(g.players[0].hand.len(), 1);
+    for seat in 1..4 {
+        assert_eq!(g.players[seat].hand.len(), 0, "seat {seat}");
+    }
+}
+
+/// Shadows of the Past drains only with four creature cards in your graveyard.
+#[test]
+fn shadows_of_the_past_drains_at_four_creature_cards() {
+    let mut g = pod(3);
+    let shadows = ready(&mut g, 0, catalog::shadows_of_the_past());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add(Color::Black, 5);
+    assert!(activate(&mut g, shadows, 0, None).is_err(), "three creature cards");
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    activate(&mut g, shadows, 0, None).expect("four");
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (22, 18, 18), "you gain 2 in all");
+}
+
+/// Darklight Phoenix returns at your beginning of combat after two deaths.
+#[test]
+fn darklight_phoenix_rises_after_two_deaths() {
+    for deaths in [1, 2] {
+        let mut g = pod(2);
+        let phoenix = g.add_card_to_graveyard(0, catalog::darklight_phoenix());
+        for _ in 0..deaths {
+            let b = ready(&mut g, 1, catalog::grizzly_bears());
+            let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+            g.players[0].mana_pool.add(Color::Red, 1);
+            cast(&mut g, bolt, Some(Target::Permanent(b))).expect("Bolt");
+        }
+        g.step = TurnStep::BeginCombat;
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(phoenix).is_some(), deaths == 2, "{deaths} deaths");
+    }
+}
+
+/// CR 702.127 — Believe (aftermath) is cast from the graveyard and puts a
+/// creature on top onto the battlefield.
+#[test]
+fn reason_then_believe_from_the_graveyard() {
+    let mut g = pod(2);
+    let rb = g.add_card_to_hand(0, catalog::reason_believe());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, rb, None).expect("Reason");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == rb));
+    let wurm = on_top(&mut g, 0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastAftermath { card_id: rb, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("Believe");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_some());
+    assert!(g.exile.iter().any(|c| c.id == rb), "aftermath exiles it");
+}
+
+/// Elvish Dreadlord's death shrinks every non-Elf by -3/-3.
+#[test]
+fn elvish_dreadlord_dies_into_a_non_elf_sweep() {
+    let mut g = pod(2);
+    let lord = ready(&mut g, 0, catalog::elvish_dreadlord());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let doom = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let _ = cast(&mut g, doom, Some(Target::Permanent(lord)));
+    if g.battlefield_find(lord).is_some() {
+        // Doom Blade can't hit a black creature: kill it another way.
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Permanent(lord))).expect("Bolt");
+    }
+    assert!(g.battlefield_find(bears).is_none(), "non-Elf -3/-3");
+    assert!(g.battlefield_find(elf).is_some(), "Elves are spared");
+}
+
+/// Tomb of Horrors Adventurer copies your second spell each turn.
+#[test]
+fn tomb_of_horrors_adventurer_copies_the_second_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::tomb_of_horrors_adventurer());
+    let opp = g.players[1].life;
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Player(1))).expect("Bolt");
+    }
+    assert_eq!(g.players[1].life, opp - 9, "3 + 3 + the copy's 3");
+}

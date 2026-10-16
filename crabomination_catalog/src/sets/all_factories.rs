@@ -16638,6 +16638,18 @@ static DECKS: &[Factory] = &[
     super::decks::flash_photography,
     super::decks::vibrance,
     super::decks::sakashimas_will,
+    super::decks::serras_guardian,
+    super::decks::alpine_meadow,
+    super::decks::dark_fortress,
+    super::decks::timetwister,
+    super::decks::stoic_rebuttal,
+    super::decks::avenging_hunter,
+    super::decks::elvish_doomsayer,
+    super::decks::shadows_of_the_past,
+    super::decks::darklight_phoenix,
+    super::decks::reason_believe,
+    super::decks::elvish_dreadlord,
+    super::decks::tomb_of_horrors_adventurer,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
