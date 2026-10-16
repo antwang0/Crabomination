@@ -83346,3 +83346,85 @@ pub const DOCTOR_SPECTRUM_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ARCUM_DAGSSON_COMMANDERS: &[CardFactory] = &[arcum_dagsson];
+
+/// **Arcum Dagsson**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 19 Islands = 99.
+/// Arcum Dagsson (EDHREC, fetched 2026-10-16).
+pub const ARCUM_DAGSSON_MAIN: &[CardFactory] = &[
+    arcane_signet, basalt_monolith, chromatic_orrery, chrome_mox, clock_of_omens,
+    darksteel_forge, encroaching_mycosynth, god_pharaohs_statue, grim_monolith,
+    lightning_greaves, lotus_petal, mana_vault, manifold_key, mox_diamond, mox_opal,
+    portal_to_phyrexia, rings_of_brighthearth, sculpting_steel, sewer_veillance_cam,
+    simulacrum_synthesizer, sol_ring, staff_of_domination, the_one_ring, thousand_year_elixir,
+    unwinding_clock, voltaic_key, academy_ruins, ancient_tomb, blinkmoth_nexus, crystal_vein,
+    gemstone_caverns, inkmoth_nexus, inventors_fair, minamo_school_at_waters_edge,
+    mishras_factory, otawara_soaring_city, seat_of_the_synod, urzas_saga, combat_courier,
+    corridor_monitor, crashing_drawbridge, emry_lurker_of_the_loch, etherium_sculptor,
+    filigree_sages, hangarback_walker, liberator_urzas_battlethopter, manakin,
+    marvin_murderous_mimic, memnite, metalworker, myr_convert, myr_retriever, myr_sire,
+    ornithopter, ornithopter_of_paradise, phyrexian_metamorph, phyrexian_walker, shield_sphere,
+    silver_myr, spellskite, tomb_trawler, walking_ballista, mind_over_matter, mystic_remora,
+    rhystic_study, an_offer_you_cant_refuse, counterspell, dramatic_reversal,
+    fierce_guardianship, flusterstorm, force_of_negation, force_of_will, mental_misstep,
+    pact_of_negation, pongify, sink_into_stupor, swan_song, tezzeret_the_seeker, fabricate,
+    transmute_artifact,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const SEYMOUR_FLUX_COMMANDERS: &[CardFactory] = &[seymour_flux];
+
+/// **Seymour Flux**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Seymour Flux (EDHREC, fetched 2026-10-16).
+pub const SEYMOUR_FLUX_MAIN: &[CardFactory] = &[
+    animation_module, arcane_signet, jet_medallion, lightning_greaves, mind_stone, mithril_coat,
+    ring_of_xathrid, sol_ring, swiftfoot_boots, the_darkness_crystal, thought_vessel,
+    vensers_journal, whip_of_erebos, bojuka_bog, cabal_coffers, cabal_stronghold,
+    nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, urborg_tomb_of_yawgmoth, war_room,
+    aclazotz_deepest_betrayal, blighted_blackthorn, crypt_ghast, drana_liberator_of_malakir,
+    dread_presence, gix_yawgmoth_praetor, gray_merchant_of_asphodel, gurgling_anointer,
+    heirloom_auntie, krrik_son_of_yawgmoth, kagemaro_first_to_suffer, massacre_wurm, moonshadow,
+    morbid_opportunist, ophiomancer, phyrexian_obliterator, psychosis_crawler, qarsi_revenant,
+    sephiroth_fabled_soldier, sheoldred_the_apocalypse, solemn_simulacrum, summon_anima,
+    summon_primal_odin, vilis_broker_of_blood, bastion_of_remembrance, bitterblossom,
+    black_market_connections, phyrexian_arena, polluted_bonds, the_meathook_massacre,
+    astarions_thirst, blight_rot, dark_ritual, darkness, defile, infernal_grasp, overkill,
+    sephiroths_intervention, soul_shatter, withering_torment, liliana_dreadhorde_general,
+    bogslithers_embrace, bubbling_muck, damnation, exsanguinate, feed_the_swarm, nights_whisper,
+    reanimate, sign_in_blood, torment_of_hailfire,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const LADY_SUN_COMMANDERS: &[CardFactory] = &[lady_sun];
+
+/// **Lady Sun**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Lady Sun (EDHREC, fetched 2026-10-16).
+pub const LADY_SUN_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, kefnets_monument, lightning_greaves, mind_stone,
+    panharmonicon, sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel,
+    thousand_year_elixir, throne_of_eldraine, wayfarers_bauble, academy_ruins,
+    arcane_lighthouse, minamo_school_at_waters_edge, myriad_landscape, mystic_sanctuary,
+    nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower, urzas_saga, aether_channeler,
+    agent_of_treachery, aphetto_alchemist, archaeomancer, barrin_tolarian_archmage,
+    circuit_mender, cloud_of_faeries, displacer_kitten, dour_port_mage, faerie_mastermind,
+    gilded_drake, glasspool_mimic, hullbreaker_horror, imperial_cosmographer,
+    justice_vance_astrovik, mulldrifter, peregrine_drake, perplexing_chimera,
+    phyrexian_metamorph, rishadan_footpad, solemn_simulacrum, spellseeker, thieving_skydiver,
+    trophy_mage, venser_shaper_savant, mystic_remora, propaganda, pucas_mischief, rhystic_study,
+    steal_enchantment, an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell,
+    cryptic_command, cyclonic_rift, dramatic_reversal, fierce_guardianship, ghostly_flicker,
+    high_tide, mana_drain, pongify, rapid_hybridization, snap, swan_song, fabricate,
+    legerdemain, ponder, preordain, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];

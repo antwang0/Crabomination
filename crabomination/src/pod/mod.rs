@@ -18288,6 +18288,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DOCTOR_SPECTRUM_COMMANDERS,
             main: decks::DOCTOR_SPECTRUM_MAIN,
         },
+        // Seat 2973: Arcum Dagsson's EDHREC average deck. `--pod-decks 2973`.
+        PodDeck {
+            name: "Arcum Dagsson (U)",
+            commanders: decks::ARCUM_DAGSSON_COMMANDERS,
+            main: decks::ARCUM_DAGSSON_MAIN,
+        },
+        // Seat 2974: Seymour Flux's EDHREC average deck. `--pod-decks 2974`.
+        PodDeck {
+            name: "Seymour Flux (B)",
+            commanders: decks::SEYMOUR_FLUX_COMMANDERS,
+            main: decks::SEYMOUR_FLUX_MAIN,
+        },
+        // Seat 2975: Lady Sun's EDHREC average deck. `--pod-decks 2975`.
+        PodDeck {
+            name: "Lady Sun (U)",
+            commanders: decks::LADY_SUN_COMMANDERS,
+            main: decks::LADY_SUN_MAIN,
+        },
     ]
 }
 
@@ -23144,6 +23162,9 @@ mod tests {
             ("Mondo Gecko", &[0x15B0]),
             ("Renari, Merchant of Marvels", &[0x15B1]),
             ("Doctor Spectrum", &[0x15B2]),
+            ("Arcum Dagsson", &[0x15B3]),
+            ("Seymour Flux", &[0x15B4]),
+            ("Lady Sun", &[0x15B5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
