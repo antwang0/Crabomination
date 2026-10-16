@@ -1631,3 +1631,32 @@ pub fn unpredictable_cyclone() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Shimmerwilds Growth — {1}{G} Aura, enchant land. As it enters, choose a
+/// color: the land is that color, and tapping it for mana adds one more of it.
+pub fn shimmerwilds_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Shimmerwilds Growth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter: R::Land } },
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted land is the chosen color.",
+                effect: StaticEffect::SetColorOfMatchingToChosen { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
+            },
+            StaticAbility {
+                description: "Whenever enchanted land is tapped for mana, its controller adds an additional one mana of the chosen color.",
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: true,
+                    filter: R::Any,
+                    extra: crate::effect::ExtraManaKind::ChosenColor,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

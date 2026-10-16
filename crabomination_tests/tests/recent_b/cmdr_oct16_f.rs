@@ -992,3 +992,19 @@ fn unpredictable_cyclone_turns_cycling_into_a_free_cast() {
     assert!(g.battlefield_find(wurm).is_some(), "the Wurm cast free");
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(land), "the Mountain went to the bottom");
 }
+
+/// Shimmerwilds Growth: the enchanted land becomes the chosen color and taps
+/// for one extra mana of it.
+#[test]
+fn shimmerwilds_growth_colors_and_doubles_its_land() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let wastes = ready(&mut g, 0, catalog::mountain());
+    let sg = g.add_card_to_hand(0, catalog::shimmerwilds_growth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, sg, Some(Target::Permanent(wastes))).expect("Shimmerwilds Growth");
+    assert_eq!(g.battlefield_find(sg).unwrap().chosen_color, Some(Color::Green), "your densest color");
+    assert!(g.computed_permanent(wastes).unwrap().colors.contains(Color::Green));
+    activate(&mut g, wastes, 0, None).expect("tap for R");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "R plus the chosen G");
+}

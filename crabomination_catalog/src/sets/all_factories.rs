@@ -16669,6 +16669,7 @@ static DECKS: &[Factory] = &[
     super::decks::talas_explorer,
     super::decks::talas_scout,
     super::decks::unpredictable_cyclone,
+    super::decks::shimmerwilds_growth,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
