@@ -23928,12 +23928,18 @@ impl GameState {
 
             Effect::CreateTokenAttacking { who, count, definition, cleanup, defender } => {
                 use crate::game::types::AttackTarget;
-                // Only meaningful while a combat is in progress.
-                if self.attacking.is_empty() {
+                // Only meaningful while a combat is in progress — which it still
+                // is after declared attackers left it (CR 506.4): sneak returned
+                // the only attacker (The Last Ronin's Technique).
+                let mid_combat = matches!(
+                    self.step,
+                    TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage
+                ) && self.players.get(self.active_player_idx).is_some_and(|pl| pl.attacked_this_turn);
+                if self.attacking.is_empty() && !mid_combat {
                     return Ok(());
                 }
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                // "attacking that player" names its own defender; otherwise
+                // "attacking that player"" names its own defender; otherwise
                 // the same defender the source is attacking, else the
                 // controller's first opponent.
                 let target = match defender {
