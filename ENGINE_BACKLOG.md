@@ -215,7 +215,8 @@ the handoff.
   / the hostile opponent, not the damaged player, and doesn't restrict the name to the revealed hand).
 - **CLAIMED (`014Q2Gfw`, batch 14) — don't duplicate:** Proctor of Potential (Denzilore Fatehold; needs a
   scried-or-surveilled-this-turn predicate); Bone Dragon, Ghastly Death Tyrant, Moss-Pit Skeleton, Skeletal
-  Swarming (Shessra, Death's Whisper). Researched, open: Hazoret the Fervent's The Flame of Keld (chapter III is a
+  Swarming (Shessra, Death's Whisper); Rosheen Meanderer, Rosheen Roaring Prophet, Reap the Past, Wildest Dreams
+  (the two Rosheen decks). Researched, open: Hazoret the Fervent's The Flame of Keld (chapter III is a
   this-turn damage static — no this-turn static emblem yet) and Magmatic Channeler.
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
