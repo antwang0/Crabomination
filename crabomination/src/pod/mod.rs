@@ -18270,6 +18270,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PATRIOT_2_COMMANDERS,
             main: decks::PATRIOT_2_MAIN,
         },
+        // Seat 2970: Mondo Gecko's EDHREC average deck. `--pod-decks 2970`.
+        PodDeck {
+            name: "Mondo Gecko (U)",
+            commanders: decks::MONDO_GECKO_COMMANDERS,
+            main: decks::MONDO_GECKO_MAIN,
+        },
+        // Seat 2971: Renari, Merchant of Marvels's EDHREC average deck. `--pod-decks 2971`.
+        PodDeck {
+            name: "Renari, Merchant of Marvels (U)",
+            commanders: decks::RENARI_COMMANDERS,
+            main: decks::RENARI_MAIN,
+        },
+        // Seat 2972: Doctor Spectrum's EDHREC average deck. `--pod-decks 2972`.
+        PodDeck {
+            name: "Doctor Spectrum (W)",
+            commanders: decks::DOCTOR_SPECTRUM_COMMANDERS,
+            main: decks::DOCTOR_SPECTRUM_MAIN,
+        },
     ]
 }
 
@@ -23123,6 +23141,9 @@ mod tests {
             ("Rhino, Terrible Trampler", &[0x15AD]),
             ("The Wasp, Janet Van Dyne", &[0x15AE]),
             ("Patriot, Shield Wielder", &[0x15AF]),
+            ("Mondo Gecko", &[0x15B0]),
+            ("Renari, Merchant of Marvels", &[0x15B1]),
+            ("Doctor Spectrum", &[0x15B2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

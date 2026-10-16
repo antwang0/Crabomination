@@ -83264,3 +83264,85 @@ pub const PATRIOT_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const MONDO_GECKO_COMMANDERS: &[CardFactory] = &[mondo_gecko];
+
+/// **Mondo Gecko**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Mondo Gecko (EDHREC, fetched 2026-10-16).
+pub const MONDO_GECKO_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, conquerors_flail, distorting_lens, fellwar_stone,
+    glamdring, goldvein_pick, machine_gods_effigy, mind_stone, prismatic_lens, pucas_eye,
+    sapphire_medallion, sol_ring, the_key_to_the_vault, thought_vessel, access_tunnel,
+    big_apple_3_a_m, cradle_of_the_accursed, drownyard_temple, exotic_orchard, mystic_sanctuary,
+    reliquary_tower, rogues_passage, springjack_pasture, clever_impersonator, clone_card,
+    copycrook, kitsune_dragons_daughter, mirrorhall_mimic, mocking_doppelganger, mockingbird,
+    painters_servant, phantasmal_image, phyrexian_metamorph, scrapbasket, scuttlemutt,
+    shadow_kin, sower_of_temptation, tidal_visionary, vizier_of_many_faces, wonder,
+    aether_tunnel, aqueous_form, case_of_the_shattered_pact, cloak_of_mists, control_magic,
+    dream_coat, invisibility, kitnap, mirrormade, security_bypass, sword_coast_sailor,
+    an_offer_you_cant_refuse, blue_elemental_blast, counterspell, elminsters_simulacrum,
+    flash_flood, high_tide, pongify, prismatic_lace, quickchange, rapid_hybridization, resculpt,
+    see_double, artful_dodge, govern_the_guildless, hidden_strings, relms_sketching,
+    rite_of_replication, stolen_identity, tempted_by_the_oriq,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const RENARI_COMMANDERS: &[CardFactory] = &[renari_merchant_of_marvels];
+
+/// **Renari, Merchant of Marvels**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Renari, Merchant of Marvels (EDHREC, fetched 2026-10-16).
+pub const RENARI_MAIN: &[CardFactory] = &[
+    bident_of_thassa, caged_sun, cloud_key, dragons_hoard, dragonstorm_globe, heralds_horn,
+    kefnets_monument, lapis_orb_of_dragonkind, sapphire_medallion, sky_diamond, sol_ring,
+    thought_vessel, cavern_of_souls, halimar_depths, haven_of_the_spirit_dragon,
+    maelstrom_of_the_spirit_dragon, myriad_landscape, mystic_sanctuary, path_of_ancestry,
+    temple_of_the_dragon_queen, ancient_silver_dragon, archive_dragon, astral_dragon,
+    blue_dragon, deceptive_frostkite, dirgur_island_dragon, diviner_of_mist, dragon_turtle,
+    dragonologist, hammerhead_tyrant, hraesvelgr_of_the_first_brood, icefall_regent,
+    iymrith_desert_doom, juvenile_mist_dragon, kairi_the_swirling_sky, keiga_the_tide_star,
+    marang_river_regent, murktide_regent, nimbleclaw_adept, oceanus_dragon, sapphire_dragon,
+    shimmer_dragon, steel_hellkite, sword_coast_serpent, transcendent_dragon,
+    voracious_bibliophile, young_blue_dragon, feywild_visitor, kindred_discovery,
+    monastery_siege, propaganda, reflections_of_littjara, roiling_dragonstorm, aetherize,
+    banishing_betrayal, counterspell, dispelling_exhale, draconic_lore, dragonlords_prerogative,
+    high_tide, mana_drain, negate, opt, reality_shift, silumgars_scorn, unsummon,
+    karn_living_legacy, distant_melody, ponder, raise_the_palisade, will_of_the_temur,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const DOCTOR_SPECTRUM_COMMANDERS: &[CardFactory] = &[doctor_spectrum];
+
+/// **Doctor Spectrum**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Doctor Spectrum (EDHREC, fetched 2026-10-16).
+pub const DOCTOR_SPECTRUM_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, panharmonicon, pearl_medallion, sol_ring,
+    sword_of_hearth_and_home, team_transmitter, the_mind_stone, thought_vessel, thran_dynamo,
+    tome_of_legends, abandoned_air_temple, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    minas_tirith, myriad_landscape, temple_of_the_false_god, war_room, agent_maria_hill,
+    agent_phil_coulson, anti_venom_horrifying_healer, black_panther_most_dangerous,
+    black_widow_intel_expert, bucky_barnes_eager_ally, captain_america_super_soldier,
+    captain_america_unbowed, captain_marvel_earths_protector, captain_marvel_shooting_star,
+    colleen_wing_street_samurai, ennis_debate_moderator, falcon_and_redwing, flickering_hound,
+    flickerwisp, hercules_olympian_hero, hyperion_supreme_hero, invisible_woman_sue_storm,
+    metallic_mimic, moonshaker_cavalry, night_nurse_healer_of_heroes, phelia_exuberant_shepherd,
+    photon_lady_of_light, the_vision, white_widow_free_agent, witch_enchanter,
+    airbender_ascension, avengers_assemble, champions_from_beyond, felidar_retreat,
+    quantum_entanglement, teleportation_circle, acrobatic_maneuver, cloudshift, eerie_interlude,
+    ephemerate, kabira_takedown, laezels_acrobatics, lapse_of_certainty, parting_gust,
+    path_to_exile, reprieve, sejiri_shelter, semesters_end, stroke_of_midnight,
+    swords_to_plowshares, austere_command, damning_verdict, makindi_stampede, ondu_inversion,
+    requisition_raid, the_crystals_chosen, wondrous_revival,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
