@@ -1790,3 +1790,186 @@ pub fn hyperion_supreme_hero() -> CardDefinition {
         ..creature("Hyperion, Supreme Hero", cost(&[generic(4), w(), w(), w()]), vec![CreatureType::Eternal, CreatureType::Hero], 7, 7)
     }
 }
+
+// ── Barktooth Warbeard, Lovisa Coldeyes, Tyrox: the Intimidators ────────────
+
+fn warrior() -> R {
+    R::HasCreatureType(CreatureType::Warrior)
+}
+
+/// "Cowards can't block Warriors." — every Warrior, whoever controls it,
+/// can't be blocked by a Coward (CR 509.1b reads the blocker's computed types).
+fn cowards_cant_block_warriors() -> StaticAbility {
+    StaticAbility {
+        description: "Cowards can't block Warriors.",
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(R::Creature.and(warrior())),
+            keyword: Keyword::CantBeBlockedByCreatureType(CreatureType::Coward),
+        },
+    }
+}
+
+/// CR 205.1b — "target creature becomes a [type]" replaces its creature types.
+fn becomes(t: CreatureType) -> Effect {
+    Effect::BecomeCreatureType { what: target_filtered(R::Creature), creature_types: vec![t], duration: Duration::EndOfTurn }
+}
+
+/// Obsidian Battle-Axe — {3} Kindred Artifact — Warrior Equipment. +2/+1 and
+/// haste. Whenever a Warrior creature enters, you may attach it to it. Equip
+/// {3}. (Only your own Warriors are offered: attaching to an opponent's is
+/// legal but never what the "may" is for.)
+pub fn obsidian_battle_axe() -> CardDefinition {
+    CardDefinition {
+        name: "Obsidian Battle-Axe",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Kindred, CardType::Artifact],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Warrior],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(warrior()) }),
+            effect: Effect::MayDo {
+                description: "Attach Obsidian Battle-Axe to it?".into(),
+                body: Box::new(Effect::Attach { what: Selector::This, to: Selector::TriggerSource }),
+            },
+        }],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 1, keywords: vec![Keyword::Haste], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Boldwyr Intimidator — {5}{R}{R} 5/5 Giant Warrior. Cowards can't block
+/// Warriors. {R}: target creature becomes a Coward until end of turn. {2}{R}:
+/// target creature becomes a Warrior until end of turn.
+pub fn boldwyr_intimidator() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![cowards_cant_block_warriors()],
+        activated_abilities: vec![
+            ActivatedAbility { mana_cost: cost(&[r()]), effect: becomes(CreatureType::Coward), ..Default::default() },
+            ActivatedAbility { mana_cost: cost(&[generic(2), r()]), effect: becomes(CreatureType::Warrior), ..Default::default() },
+        ],
+        ..creature("Boldwyr Intimidator", cost(&[generic(5), r(), r()]), vec![CreatureType::Giant, CreatureType::Warrior], 5, 5)
+    }
+}
+
+/// Kargan Intimidator — {1}{R} 3/1 Human Warrior. Cowards can't block
+/// Warriors. {1}: choose one that hasn't been chosen this turn — +1/+1 until
+/// end of turn; target creature becomes a Coward; target Warrior gains
+/// trample.
+pub fn kargan_intimidator() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![cowards_cant_block_warriors()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::ChooseUnchosenModeThisTurn {
+                modes: vec![
+                    Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+                    becomes(CreatureType::Coward),
+                    Effect::GrantKeyword { what: target_filtered(R::Creature.and(warrior())), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                ],
+            },
+            ..Default::default()
+        }],
+        ..creature("Kargan Intimidator", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 1)
+    }
+}
+
+/// Falkenrath Marauders — {3}{R}{R} 2/2 flying, haste Vampire Warrior. Combat
+/// damage to a player: two +1/+1 counters on it.
+pub fn falkenrath_marauders() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: counters(Selector::This, Value::Const(2)),
+        }],
+        ..creature("Falkenrath Marauders", cost(&[generic(3), r(), r()]), vec![CreatureType::Vampire, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Dragon Grip — {2}{R} Aura. Ferocious: flash while you control a creature
+/// with power 4 or greater. Enchanted creature gets +2/+0 and first strike.
+pub fn dragon_grip() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Ferocious — you may cast this spell as though it had flash if you control a creature with power 4 or greater.",
+            effect: StaticEffect::SelfFlashIf { condition: ferocious() },
+        }],
+        ..aura(
+            "Dragon Grip",
+            cost(&[generic(2), r()]),
+            R::Creature,
+            false,
+            EquipBonus { power: 2, keywords: vec![Keyword::FirstStrike], ..Default::default() },
+        )
+    }
+}
+
+// ── Agent Phil Coulson, Hyperion: S.H.I.E.L.D. ──────────────────────────────
+
+/// Nick Fury, Spymaster — {4}{W} legendary 4/4 first strike Human Spy Hero.
+/// Whenever a creature you control attacks alone, draw a card; then you may
+/// put a creature card with mana value 3 or less from your hand onto the
+/// battlefield tapped and attacking, and it gains indestructible until end of
+/// turn.
+pub fn nick_fury_spymaster() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::DeployCreatureFromHandAttacking { filter: R::Creature.and(R::ManaValueAtMost(3)), return_to_hand_eot: false },
+                Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..creature("Nick Fury, Spymaster", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Spy, CreatureType::Hero], 4, 4)
+    }
+}
+
+/// Zarda, the Power Princess — {3}{W} legendary 2/4 flying Human Warrior
+/// Hero. Other Heroes you control have exalted (CR 702.83: each instance
+/// triggers on its own).
+pub fn zarda_the_power_princess() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other Heroes you control have exalted.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::HasCreatureType(CreatureType::Hero).and(R::ControlledByYou).and(R::OtherThanSource),
+                ability: Box::new(exalted()),
+            },
+        }],
+        ..creature(
+            "Zarda, the Power Princess",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero],
+            2,
+            4,
+        )
+    }
+}
+
+/// Orbs of Warding — {5} artifact. You have hexproof. If a creature would deal
+/// damage to you, prevent 1 of that damage.
+pub fn orbs_of_warding() -> CardDefinition {
+    CardDefinition {
+        name: "Orbs of Warding",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility { description: "You have hexproof.", effect: StaticEffect::ControllerHasHexproof },
+            StaticAbility {
+                description: "If a creature would deal damage to you, prevent 1 of that damage.",
+                effect: StaticEffect::ReduceDamageToControllerFromSource { filter: R::Creature, amount: 1 },
+            },
+        ],
+        ..Default::default()
+    }
+}

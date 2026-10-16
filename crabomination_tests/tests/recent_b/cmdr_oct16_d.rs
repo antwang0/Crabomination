@@ -701,3 +701,125 @@ fn wondrous_revival_returns_heroes() {
     assert!(g.battlefield_find(bucky).is_some());
     assert!(g.battlefield_find(bears).is_none());
 }
+
+fn attack(g: &mut GameState, attacker: CardId) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(g);
+}
+
+/// CR 509.1b / 205.1b — Kargan Intimidator's Coward mode makes the blocker a
+/// Coward (its old types gone), and Cowards can't block Warriors.
+#[test]
+fn kargan_intimidator_makes_a_coward_that_cant_block() {
+    let mut g = pod(2);
+    let k = ready(&mut g, 0, catalog::kargan_intimidator());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    activate(&mut g, k, None).expect("activate");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Coward]);
+    attack(&mut g, k);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bears, k)])).is_err(), "a Coward can't block a Warrior");
+}
+
+/// Kargan Intimidator's modes can't repeat within a turn: the second {1}
+/// can't pick the pump again.
+#[test]
+fn kargan_intimidator_modes_dont_repeat() {
+    let mut g = pod(2);
+    let k = ready(&mut g, 0, catalog::kargan_intimidator());
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0), DecisionAnswer::Mode(0)]));
+    activate(&mut g, k, None).expect("pump");
+    activate(&mut g, k, None).expect("again");
+    assert_eq!(g.computed_permanent(k).unwrap().power, 4, "only one +1/+1");
+}
+
+/// Boldwyr Intimidator makes a creature a Warrior; Obsidian Battle-Axe jumps
+/// onto a Warrior that enters under your control.
+#[test]
+fn battle_axe_follows_warriors() {
+    let mut g = pod(2);
+    let axe = ready(&mut g, 0, catalog::obsidian_battle_axe());
+    let kargan = g.add_card_to_hand(0, catalog::kargan_intimidator());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, kargan, None);
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(kargan));
+    let cp = g.computed_permanent(kargan).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 2));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+}
+
+/// CR 702.83 — Zarda grants exalted to each other Hero: two Heroes besides the
+/// attacker make a lone attacker +2/+2 (Zarda herself has none).
+#[test]
+fn zarda_gives_other_heroes_exalted() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::zarda_the_power_princess());
+    let coulson = ready(&mut g, 0, catalog::agent_phil_coulson());
+    ready(&mut g, 0, catalog::hyperion_supreme_hero());
+    attack(&mut g, coulson);
+    let cp = g.computed_permanent(coulson).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "Coulson's own exalted and Hyperion's");
+}
+
+/// Nick Fury: a lone attacker draws, then a small creature joins tapped,
+/// attacking and indestructible.
+#[test]
+fn nick_fury_drops_in_a_small_attacker() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::nick_fury_spymaster());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.add_card_to_hand(0, catalog::craw_wurm());
+    attack(&mut g, bears);
+    let e = g.battlefield_find(elf).expect("the Elf came in");
+    assert!(e.tapped);
+    assert!(g.attacking.iter().any(|a| a.attacker == elf));
+    assert!(g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::Indestructible));
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Craw Wurm"), "mana value 6 stays home");
+}
+
+/// Orbs of Warding: hexproof for its controller and one point off each
+/// creature's damage.
+#[test]
+fn orbs_of_warding_shields_you() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::orbs_of_warding());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).is_err(),
+        "hexproof"
+    );
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let hit = crabomination::effect::Effect::DealDamage { to: crabomination::effect::Selector::Target(0), amount: crabomination::card::Value::Const(6) };
+    let ctx = crabomination::game::effects::EffectContext::for_ability(wurm, 1, Some(Target::Player(0)));
+    g.resolve_effect(&hit, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 15);
+}
+
+/// Ferocious — Dragon Grip has flash only with a power-4 creature.
+#[test]
+fn dragon_grip_flashes_in_with_ferocious() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    let grip = g.add_card_to_hand(0, catalog::dragon_grip());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let try_cast = |g: &mut GameState| g.perform_action(GameAction::CastSpell { card_id: grip, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None });
+    assert!(try_cast(&mut g).is_err(), "no power-4 creature: sorcery speed");
+    ready(&mut g, 0, catalog::craw_wurm());
+    try_cast(&mut g).expect("ferocious: flash");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
+}
