@@ -185,18 +185,14 @@ the handoff.
   Nick Fury Spymaster (`DeployCreatureFromHandAttacking` now records `LastMoved`), Zarda (granted `exalted()`),
   Orbs of Warding. Researched, open: Rielle the Everwise's Nahiri's Wrath (a spell's discard-X cost needs the
   discarded cards' total mana value at resolution — only the activation path records a cost-discard MV, the max).
-- **CLAIMED (`014Q2Gfw`, batch 11) — don't duplicate:** Ojutai Monument + Ojutai's Breath (Ojutai, Soul of
-  Winter); Anep + Goma Fada Vanguard (Gornog); Hixus + Prison Sentence; Reservoir Kraken, Pearl Lake Ancient,
-  Undulating Witness (Thassa God of the Sea, Slinn Voda); Chronatog Totem + Barren Glory (Atogatog).
-  ⚠ **`01VDk2LU` had already built Chronatog Totem + Barren Glory** (`decks::cmdr_oct16_e` batch 5, with
-  Black Panther Claws of Bast, Cache Raiders, Disruptor of Currents, Voidmage Husher) and seated Atogatog, Black
-  Widow Intel Expert, Justice — drop those two from batch 11. Captain America Wings of Freedom / Super-Soldier /
-  Skybound are zero-gap now (Hyperion + `01VDk2LU`'s Wings of Freedom); **`014Q2Gfw` seats them**, `01VDk2LU` won't.
-- **CLAIMED (`01VDk2LU`, batch 6) — don't duplicate:** Vadrik Astral Archmage + Invert // Invent (Vadrik);
-  Westgate Regent + Grasping Shadows (Spider-Man Noir; adds `CounterType::Dread`).
-- **CLAIMED (`01VDk2LU`, batch 7) — don't duplicate:** Sky Cycle, Intrepid Ace, Reckless Racer (Happy Hogan);
-  Contract Hero, Kree Sentinel, Repulsor Rays (Abomination World Ravager); Daredevil Man Without Fear (Director
-  Nick Fury); Mordor Trebuchet + The Torment of Gollum (Gothmog).
+- **LANDED (`014Q2Gfw`, batch 11) — seats 2986-2988** Gornog, Ojutai Soul of Winter, Hixus: Ojutai Monument,
+  Ojutai's Breath, Anep, Goma Fada Vanguard, Hixus, Prison Sentence (Atogatog's two landed first via
+  `01VDk2LU`). Open: Reservoir Kraken (Thassa God of the Sea, Slinn Voda) — "any opponent may tap an untapped
+  creature they control" needs a selector the accepting seat picks from.
+- **CLAIMED (`014Q2Gfw`, batch 12) — don't duplicate:** Hedron-Field Purists, Guardian Seraph, Protection of the
+  Hekma (Orim Samite Healer, Reidane); All-Seeing Arbiter, Just the Wind, Nagging Thoughts, Disciple of the Ring
+  (Alexi Zephyr Mage, Hisoka); Yasova Dragonclaw, Demonmail Hauberk, Feed the Pack; Precursor Golem (Golden
+  Argosy).
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
   6 seats) — an exponential token engine against a chump-blocking defender.
 - **Primitives:** `SpendRestriction::CreatureSpellWithNoAbilities` (+ `SpellKind::no_abilities`) and
