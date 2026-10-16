@@ -1095,6 +1095,8 @@ pub enum CounterType {
     Phyresis,
     /// Xathrid Gorgon's marker; it carries no rule of its own.
     Petrification,
+    /// Grasping Shadows // Shadows' Lair's dread counters.
+    Dread,
 }
 
 /// Every zone a card can occupy.
