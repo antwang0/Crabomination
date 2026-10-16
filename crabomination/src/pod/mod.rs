@@ -18030,6 +18030,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALION_COMMANDERS,
             main: decks::GALION_MAIN,
         },
+        // Seat 2930: Three Dog, Galaxy News DJ's EDHREC average deck. `--pod-decks 2930`.
+        PodDeck {
+            name: "Three Dog, Galaxy News DJ (WR)",
+            commanders: decks::THREE_DOG_COMMANDERS,
+            main: decks::THREE_DOG_MAIN,
+        },
+        // Seat 2931: Ohabi Caleria's EDHREC average deck. `--pod-decks 2931`.
+        PodDeck {
+            name: "Ohabi Caleria (WG)",
+            commanders: decks::OHABI_CALERIA_COMMANDERS,
+            main: decks::OHABI_CALERIA_MAIN,
+        },
+        // Seat 2932: Cass, Hand of Vengeance's EDHREC average deck. `--pod-decks 2932`.
+        PodDeck {
+            name: "Cass, Hand of Vengeance (WR)",
+            commanders: decks::CASS_COMMANDERS,
+            main: decks::CASS_MAIN,
+        },
+        // Seat 2933: Sima Yi, Wei Field Marshal's EDHREC average deck. `--pod-decks 2933`.
+        PodDeck {
+            name: "Sima Yi, Wei Field Marshal (B)",
+            commanders: decks::SIMA_YI_COMMANDERS,
+            main: decks::SIMA_YI_MAIN,
+        },
+        // Seat 2934: Quicksilver, Brash Blur's EDHREC average deck. `--pod-decks 2934`.
+        PodDeck {
+            name: "Quicksilver, Brash Blur (R)",
+            commanders: decks::QUICKSILVER_2_COMMANDERS,
+            main: decks::QUICKSILVER_2_MAIN,
+        },
+        // Seat 2935: Arni, Renowned Champion's EDHREC average deck. `--pod-decks 2935`.
+        PodDeck {
+            name: "Arni, Renowned Champion (R)",
+            commanders: decks::ARNI_2_COMMANDERS,
+            main: decks::ARNI_2_MAIN,
+        },
     ]
 }
 
@@ -22843,6 +22879,12 @@ mod tests {
             ("Altanak, the Thrice-Called", &[0x1585]),
             ("Beorn, Reluctant Host", &[0x1586]),
             ("Galion, Elvenking's Butler", &[0x1587]),
+            ("Three Dog, Galaxy News DJ", &[0x1588]),
+            ("Ohabi Caleria", &[0x1589]),
+            ("Cass, Hand of Vengeance", &[0x158A]),
+            ("Sima Yi, Wei Field Marshal", &[0x158B]),
+            ("Quicksilver, Brash Blur", &[0x158C]),
+            ("Arni, Renowned Champion", &[0x158D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
