@@ -1635,3 +1635,54 @@ fn guardian_enlists_the_veteran() {
     assert_eq!(g.computed_permanent(guard).unwrap().power, 2 + 2, "the Veteran's printed 2 (its counter came after)");
     assert!(g.players[0].scry_batches_this_turn >= 1, "scried 2");
 }
+
+/// The Archimandrite: a life gain pumps its Advisors, Artificers and Monks by
+/// the amount; three of them tap to draw.
+#[test]
+fn archimandrite_turns_life_into_power() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let a = ready(&mut g, 0, catalog::the_archimandrite());
+    let monk = ready(&mut g, 0, catalog::student_of_ojutai());
+    let ex = ready(&mut g, 0, catalog::ojutai_exemplars());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    let cp = g.computed_permanent(monk).unwrap();
+    assert_eq!(cp.power, 2 + 2, "Student gained 2, so +2/+0");
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
+    assert!(g.computed_permanent(ex).unwrap().keywords().contains(&Keyword::Lifelink), "Exemplars picked mode 1");
+    let h = g.players[0].hand.len();
+    activate(&mut g, a, None).expect("tap three");
+    assert_eq!(g.players[0].hand.len(), h + 1);
+}
+
+/// CR 700.9 — Upriser Renegade gets +2/+0 per other modified creature.
+#[test]
+fn upriser_renegade_counts_modified_creatures() {
+    let mut g = pod(2);
+    let u = ready(&mut g, 0, catalog::upriser_renegade());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(u).unwrap().power, 1);
+    g.battlefield.iter_mut().find(|c| c.id == bears).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!(g.computed_permanent(u).unwrap().power, 3);
+}
+
+/// The Shattered States Era: chapter I borrows a creature; III flips it into
+/// Nameless Conqueror.
+#[test]
+fn shattered_states_era_borrows_then_transforms() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let s = g.add_card_to_hand(0, catalog::the_shattered_states_era());
+    cast(&mut g, s, Some(Target::Permanent(wurm)));
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 0);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 1, "only until end of turn");
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    let c = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Nameless Conqueror").expect("transformed");
+    assert!(c.definition.keywords.contains(&Keyword::Trample));
+}

@@ -16486,6 +16486,12 @@ static DECKS: &[Factory] = &[
     super::decks::coalition_skyknight,
     super::decks::guardian_of_new_benalia,
     super::decks::veteran_of_the_depths,
+    super::decks::the_archimandrite,
+    super::decks::ojutai_exemplars,
+    super::decks::student_of_ojutai,
+    super::decks::upriser_renegade,
+    super::decks::war_spike_changeling,
+    super::decks::the_shattered_states_era,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,

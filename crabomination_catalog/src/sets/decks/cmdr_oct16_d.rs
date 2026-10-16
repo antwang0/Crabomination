@@ -3270,3 +3270,159 @@ pub fn veteran_of_the_depths() -> CardDefinition {
         ..creature("Veteran of the Depths", cost(&[generic(3), w()]), vec![CreatureType::Merfolk, CreatureType::Soldier], 2, 2)
     }
 }
+
+// ── The Archimandrite: Advisors, Artificers and Monks ───────────────────────
+
+fn archimandrite_crew() -> R {
+    R::Creature.and(
+        R::HasCreatureType(CreatureType::Advisor)
+            .or(R::HasCreatureType(CreatureType::Artificer))
+            .or(R::HasCreatureType(CreatureType::Monk)),
+    )
+}
+
+fn on_your_noncreature_spell(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Noncreature }),
+        effect,
+    }
+}
+
+/// The Archimandrite — {2}{U}{R}{W} legendary 0/5 Human Advisor. Upkeep: gain
+/// life equal to cards in hand minus 4. Whenever you gain life, each Advisor,
+/// Artificer and Monk you control gains vigilance and +X/+0 until end of turn
+/// (X = the life gained). Tap three untapped Advisors, Artificers and/or Monks
+/// you control: draw a card.
+pub fn the_archimandrite() -> CardDefinition {
+    let crew = Selector::EachPermanent(archimandrite_crew().and(R::ControlledByYou));
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Max(
+                        Box::new(Value::Diff(Box::new(Value::HandSizeOf(PlayerRef::You)), Box::new(Value::Const(4)))),
+                        Box::new(Value::ZERO),
+                    ),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword { what: crew.clone(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                    Effect::PumpPT { what: crew, power: Value::TriggerEventAmount, toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                ]),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_others_cost: Some((archimandrite_crew(), 3)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("The Archimandrite", cost(&[generic(2), u(), r(), w()]), vec![CreatureType::Human, CreatureType::Advisor], 0, 5)
+    }
+}
+
+/// Ojutai Exemplars — {2}{W}{W} 4/4 Human Monk. Whenever you cast a noncreature
+/// spell, choose one: tap target creature; first strike and lifelink until end
+/// of turn; exile it, then return it tapped.
+pub fn ojutai_exemplars() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_your_noncreature_spell(Effect::ChooseMode(vec![
+            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::Seq(vec![
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+            ]),
+            Effect::Seq(vec![Effect::ExileAndReturnToOwner { what: Selector::This }, Effect::Tap { what: Selector::This }]),
+        ]))],
+        ..creature("Ojutai Exemplars", cost(&[generic(2), w(), w()]), vec![CreatureType::Human, CreatureType::Monk], 4, 4)
+    }
+}
+
+/// Student of Ojutai — {3}{W} 2/4 Human Monk. Whenever you cast a noncreature
+/// spell, gain 2 life.
+pub fn student_of_ojutai() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_your_noncreature_spell(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        ..creature("Student of Ojutai", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Monk], 2, 4)
+    }
+}
+
+// ── Iizuka the Ruthless ─────────────────────────────────────────────────────
+
+/// Upriser Renegade — {1}{R} 1/3 Human Samurai; +2/+0 for each other modified
+/// creature you control (CR 700.9).
+pub fn upriser_renegade() -> CardDefinition {
+    let others = Value::CountOf(Box::new(Selector::EachPermanent(
+        R::Creature.and(R::ControlledByYou).and(R::IsModified).and(R::OtherThanSource),
+    )));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +2/+0 for each other modified creature you control.",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: Selector::This,
+                power: Value::Times(Box::new(Value::Const(2)), Box::new(others)),
+                toughness: Value::ZERO,
+            },
+        }],
+        ..creature("Upriser Renegade", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Samurai], 1, 3)
+    }
+}
+
+/// War-Spike Changeling — {3}{R} 3/3 changeling Shapeshifter. {R}: first
+/// strike until end of turn.
+pub fn war_spike_changeling() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Changeling],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("War-Spike Changeling", cost(&[generic(3), r()]), vec![CreatureType::Shapeshifter], 3, 3)
+    }
+}
+
+/// The Shattered States Era — {4}{R} Saga. I: gain control of target creature
+/// until end of turn, untap it, haste. II: your creatures get +1/+0 until end
+/// of turn. III: exile it and return it transformed (Nameless Conqueror, a red
+/// 3/3 trample, haste Human Samurai enchantment creature).
+pub fn the_shattered_states_era() -> CardDefinition {
+    CardDefinition {
+        name: "The Shattered States Era",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ]),
+            ),
+            (
+                2,
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: Value::ONE,
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            color_indicator: vec![Color::Red],
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            keywords: vec![Keyword::Trample, Keyword::Haste],
+            ..creature("Nameless Conqueror", ManaCost::default(), vec![CreatureType::Human, CreatureType::Samurai], 3, 3)
+        })),
+        ..Default::default()
+    }
+}
