@@ -812,3 +812,62 @@ pub fn activated_sleeper() -> CardDefinition {
         ..creature("Activated Sleeper", cost(&[generic(2), b()]), vec![CreatureType::Phyrexian, CreatureType::Shapeshifter], 0, 0)
     }
 }
+
+// ── Doran, the Siege Tower ──────────────────────────────────────────────────
+
+/// Unstoppable Ash — {3}{G} 5/5 trample Treefolk Warrior; champion a Treefolk
+/// or Warrior. A creature you control becoming blocked gets +0/+5 until end
+/// of turn.
+pub fn unstoppable_ash() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            etb(Effect::Champion {
+                filter: R::HasCreatureType(CreatureType::Treefolk).or(R::HasCreatureType(CreatureType::Warrior)),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::YourControl),
+                effect: Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::ZERO,
+                    toughness: Value::Const(5),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..creature("Unstoppable Ash", cost(&[generic(3), g()]), vec![CreatureType::Treefolk, CreatureType::Warrior], 5, 5)
+    }
+}
+
+/// Reach of Branches — {4}{G} Kindred instant — Treefolk. Create a 2/5 green
+/// Treefolk Shaman. A Forest entering under your control may return it from
+/// your graveyard to your hand.
+pub fn reach_of_branches() -> CardDefinition {
+    let treefolk = TokenDefinition {
+        name: "Treefolk Shaman".into(),
+        power: 2,
+        toughness: 5,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk, CreatureType::Shaman], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Reach of Branches",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Kindred, CardType::Instant],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(treefolk) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::FromYourGraveyard).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasLandType(LandType::Forest),
+            }),
+            effect: Effect::MayDo {
+                description: "Return Reach of Branches from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+            },
+        }],
+        ..Default::default()
+    }
+}

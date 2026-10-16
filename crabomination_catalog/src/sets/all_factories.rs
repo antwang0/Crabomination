@@ -16308,6 +16308,8 @@ static DECKS: &[Factory] = &[
     super::decks::patch_up,
     super::decks::korlash_heir_to_blackblade,
     super::decks::activated_sleeper,
+    super::decks::unstoppable_ash,
+    super::decks::reach_of_branches,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

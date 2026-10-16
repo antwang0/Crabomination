@@ -908,3 +908,34 @@ fn activated_sleeper_copies_a_creature_that_died_this_turn() {
     let cp = g.computed_permanent(s).expect("on the battlefield");
     assert_eq!((cp.power, cp.toughness), (4, 4), "a Serra Angel, not the Wurm");
 }
+
+/// Reach of Branches comes back from the graveyard when a Forest enters
+/// under its owner's control (a graveyard-scoped landfall trigger).
+#[test]
+fn reach_of_branches_returns_on_a_forest() {
+    let mut g = pod(2);
+    let reach = g.add_card_to_graveyard(0, catalog::reach_of_branches());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::PlayLand(forest)).expect("land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == reach));
+}
+
+/// Unstoppable Ash: a blocked creature of yours gets +0/+5.
+#[test]
+fn unstoppable_ash_toughens_a_blocked_creature() {
+    let mut g = pod(2);
+    let ash = ready(&mut g, 0, catalog::unstoppable_ash());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wurm, bears)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().toughness, 7);
+    assert!(g.battlefield_find(ash).is_some());
+}
