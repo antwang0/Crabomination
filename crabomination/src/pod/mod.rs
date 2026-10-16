@@ -19458,6 +19458,132 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VOLO_5_COMMANDERS,
             main: decks::VOLO_5_MAIN,
         },
+        // Seat 3168: Abby, Merciless Soldier and Ellie, Brick Master's EDHREC average deck. `--pod-decks 3168`.
+        PodDeck {
+            name: "Abby, Merciless Soldier and Ellie, Brick Master (RG)",
+            commanders: decks::ABBY_COMMANDERS,
+            main: decks::ABBY_MAIN,
+        },
+        // Seat 3169: Abby, Merciless Soldier and Ellie, Vengeful Hunter's EDHREC average deck. `--pod-decks 3169`.
+        PodDeck {
+            name: "Abby, Merciless Soldier and Ellie, Vengeful Hunter (BRG)",
+            commanders: decks::ABBY_2_COMMANDERS,
+            main: decks::ABBY_2_MAIN,
+        },
+        // Seat 3170: Abby, Merciless Soldier and Joel, Resolute Survivor's EDHREC average deck. `--pod-decks 3170`.
+        PodDeck {
+            name: "Abby, Merciless Soldier and Joel, Resolute Survivor (BRG)",
+            commanders: decks::ABBY_3_COMMANDERS,
+            main: decks::ABBY_3_MAIN,
+        },
+        // Seat 3171: Brinelin, the Moon Kraken and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3171`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Rograkh, Son of Rohgahh (UR)",
+            commanders: decks::BRINELIN_3_COMMANDERS,
+            main: decks::BRINELIN_3_MAIN,
+        },
+        // Seat 3172: Durnan of the Yawning Portal and Shameless Charlatan's EDHREC average deck. `--pod-decks 3172`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Shameless Charlatan (UG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_4_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_4_MAIN,
+        },
+        // Seat 3173: Ellie, Brick Master and Joel, Resolute Survivor's EDHREC average deck. `--pod-decks 3173`.
+        PodDeck {
+            name: "Ellie, Brick Master and Joel, Resolute Survivor (BRG)",
+            commanders: decks::ELLIE_2_COMMANDERS,
+            main: decks::ELLIE_2_MAIN,
+        },
+        // Seat 3174: Ellie, Vengeful Hunter and Joel, Resolute Survivor's EDHREC average deck. `--pod-decks 3174`.
+        PodDeck {
+            name: "Ellie, Vengeful Hunter and Joel, Resolute Survivor (BRG)",
+            commanders: decks::ELLIE_3_COMMANDERS,
+            main: decks::ELLIE_3_MAIN,
+        },
+        // Seat 3175: Esior, Wardwing Familiar and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3175`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Rograkh, Son of Rohgahh (UR)",
+            commanders: decks::ESIOR_4_COMMANDERS,
+            main: decks::ESIOR_4_MAIN,
+        },
+        // Seat 3176: Gale, Waterdeep Prodigy and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 3176`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Agent of the Iron Throne (UB)",
+            commanders: decks::GALE_2_COMMANDERS,
+            main: decks::GALE_2_MAIN,
+        },
+        // Seat 3177: Gale, Waterdeep Prodigy and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 3177`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Agent of the Shadow Thieves (UB)",
+            commanders: decks::GALE_3_COMMANDERS,
+            main: decks::GALE_3_MAIN,
+        },
+        // Seat 3178: Gale, Waterdeep Prodigy and Clan Crafter's EDHREC average deck. `--pod-decks 3178`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Clan Crafter (U)",
+            commanders: decks::GALE_4_COMMANDERS,
+            main: decks::GALE_4_MAIN,
+        },
+        // Seat 3179: Gale, Waterdeep Prodigy and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3179`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Passionate Archaeologist (UR)",
+            commanders: decks::GALE_5_COMMANDERS,
+            main: decks::GALE_5_MAIN,
+        },
+        // Seat 3180: Gilanra, Caller of Wirewood and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3180`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Rograkh, Son of Rohgahh (RG)",
+            commanders: decks::GILANRA_4_COMMANDERS,
+            main: decks::GILANRA_4_MAIN,
+        },
+        // Seat 3181: Glacian, Powerstone Engineer and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 3181`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Tormod, the Desecrator (UB)",
+            commanders: decks::GLACIAN_14_COMMANDERS,
+            main: decks::GLACIAN_14_MAIN,
+        },
+        // Seat 3182: Kediss, Emberclaw Familiar and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 3182`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Thrasios, Triton Hero (URG)",
+            commanders: decks::KEDISS_3_COMMANDERS,
+            main: decks::KEDISS_3_MAIN,
+        },
+        // Seat 3183: Kydele, Chosen of Kruphix and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3183`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Rograkh, Son of Rohgahh (URG)",
+            commanders: decks::KYDELE_3_COMMANDERS,
+            main: decks::KYDELE_3_MAIN,
+        },
+        // Seat 3184: Ludevic, Necro-Alchemist and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3184`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Rograkh, Son of Rohgahh (UR)",
+            commanders: decks::LUDEVIC_4_COMMANDERS,
+            main: decks::LUDEVIC_4_MAIN,
+        },
+        // Seat 3185: Malcolm, Keen-Eyed Navigator and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3185`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Rograkh, Son of Rohgahh (UR)",
+            commanders: decks::MALCOLM_7_COMMANDERS,
+            main: decks::MALCOLM_7_MAIN,
+        },
+        // Seat 3186: Rograkh, Son of Rohgahh and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3186`.
+        PodDeck {
+            name: "Rograkh, Son of Rohgahh and Tevesh Szat, Doom of Fools (BR)",
+            commanders: decks::ROGRAKH_2_COMMANDERS,
+            main: decks::ROGRAKH_2_MAIN,
+        },
+        // Seat 3187: The Eighth Doctor and Clara Oswald's EDHREC average deck. `--pod-decks 3187`.
+        PodDeck {
+            name: "The Eighth Doctor and Clara Oswald (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_4_MAIN,
+        },
+        // Seat 3188: The Fourth Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 3188`.
+        PodDeck {
+            name: "The Fourth Doctor and Graham O'Brien (UG)",
+            commanders: decks::THE_FOURTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_FOURTH_DOCTOR_2_MAIN,
+        },
     ]
 }
 
@@ -24509,6 +24635,27 @@ mod tests {
             ("Tormod, the Desecrator and Vial Smasher the Fierce", &[0x1673]),
             ("Viconia, Drow Apostate and Sword Coast Sailor", &[0x1674]),
             ("Volo, Itinerant Scholar and Street Urchin", &[0x1675]),
+            ("Abby, Merciless Soldier and Ellie, Brick Master", &[0x1676]),
+            ("Abby, Merciless Soldier and Ellie, Vengeful Hunter", &[0x1677]),
+            ("Abby, Merciless Soldier and Joel, Resolute Survivor", &[0x1678]),
+            ("Brinelin, the Moon Kraken and Rograkh, Son of Rohgahh", &[0x1679]),
+            ("Durnan of the Yawning Portal and Shameless Charlatan", &[0x167A]),
+            ("Ellie, Brick Master and Joel, Resolute Survivor", &[0x167B]),
+            ("Ellie, Vengeful Hunter and Joel, Resolute Survivor", &[0x167C]),
+            ("Esior, Wardwing Familiar and Rograkh, Son of Rohgahh", &[0x167D]),
+            ("Gale, Waterdeep Prodigy and Agent of the Iron Throne", &[0x167E]),
+            ("Gale, Waterdeep Prodigy and Agent of the Shadow Thieves", &[0x167F]),
+            ("Gale, Waterdeep Prodigy and Clan Crafter", &[0x1680]),
+            ("Gale, Waterdeep Prodigy and Passionate Archaeologist", &[0x1681]),
+            ("Gilanra, Caller of Wirewood and Rograkh, Son of Rohgahh", &[0x1682]),
+            ("Glacian, Powerstone Engineer and Tormod, the Desecrator", &[0x1683]),
+            ("Kediss, Emberclaw Familiar and Thrasios, Triton Hero", &[0x1684]),
+            ("Kydele, Chosen of Kruphix and Rograkh, Son of Rohgahh", &[0x1685]),
+            ("Ludevic, Necro-Alchemist and Rograkh, Son of Rohgahh", &[0x1686]),
+            ("Malcolm, Keen-Eyed Navigator and Rograkh, Son of Rohgahh", &[0x1687]),
+            ("Rograkh, Son of Rohgahh and Tevesh Szat, Doom of Fools", &[0x1688]),
+            ("The Eighth Doctor and Clara Oswald", &[0x1689]),
+            ("The Fourth Doctor and Graham O'Brien", &[0x168A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
