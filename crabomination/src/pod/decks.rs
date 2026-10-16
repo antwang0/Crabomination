@@ -82681,3 +82681,112 @@ pub const GHEN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_HOWLING_ABOMINATION_COMMANDERS: &[CardFactory] = &[the_howling_abomination];
+
+/// **The Howling Abomination**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Forests + 10 Mountains = 99.
+/// The Howling Abomination (EDHREC, fetched 2026-10-16).
+pub const THE_HOWLING_ABOMINATION_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, sol_ring, swiftfoot_boots, talisman_of_impulse, cinder_glade,
+    command_tower, cragcrown_pathway, game_trail, gruul_turf, karplusan_forest, kessig_wolf_run,
+    mossfire_valley, rockfall_vale, rogues_passage, rootbound_crag, spire_garden,
+    stomping_ground, birds_of_paradise, birgi_god_of_storytelling, electrostatic_field,
+    elvish_mystic, firebrand_archer, goblin_anarchomancer, guttersnipe,
+    kediss_emberclaw_familiar, kessig_flamebreather, llanowar_elves, storm_kiln_artist,
+    torbran_thane_of_red_fell, zada_hedron_grinder, zhur_taa_druid, bear_umbra,
+    fiery_inscription, keen_sense, leyline_of_resonance, rancor, season_of_growth, snake_umbra,
+    wild_defiance, aggressive_urge, beast_within, blossoming_defense, charge_through,
+    crimson_wisps, expedite, fists_of_flame, gaeas_gift, hunters_insight, invigorate,
+    might_of_the_meek, poison_the_blade, psychotic_fury, ram_through, royal_treatment,
+    snakeskin_veil, tamiyos_safekeeping, temur_battle_rage, twinferno, tyvars_stand,
+    unleash_fury, verdant_rebirth, vines_of_vastwood, viridescent_wisps, ancestral_anger,
+    chandras_ignition, cultivate, grapeshot, ground_rift, impolite_entrance, irresistible_prey,
+    kodamas_reach, natures_lore, rampant_growth, renegade_tactics, rile, stump_stomp,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const X_23_COMMANDERS: &[CardFactory] = &[x_23_deadly_weapon];
+
+/// **X-23, Deadly Weapon**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// X-23, Deadly Weapon (EDHREC, fetched 2026-10-16).
+pub const X_23_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, ozolith_the_shattered_spire, sol_ring, swiftfoot_boots,
+    the_earth_crystal, the_great_henge, the_ooze, the_ozolith, mosswort_bridge,
+    nykthos_shrine_to_nyx, oran_rief_the_vastwood, path_of_ancestry, reliquary_tower,
+    rogues_passage, aberrant, big_bertha, black_tom_cassidy, chomping_changeling,
+    colossus_steel_stalwart, darwin_adaptive_mutant, doorman, evolution_witness, flatman,
+    groundchuck_dirtbag, leatherhead_iron_gator, leatherhead_swamp_stalker,
+    lily_bowen_raging_grandma, michelangelo_improviser, michelangelo_mutant_bff,
+    michelangelo_on_the_scene, michelangelo_weirdness_to_11, michelangelo_the_heart,
+    mister_immortal, mona_lisa_ever_adaptable, mona_lisa_science_geek, mutagen_man_living_ooze,
+    rampaging_yao_guai, realmwalker, renegade_krasis, rocksteady_mutant_marauder,
+    storm_shaker_of_skies, watchful_radstag, wolfsbane_highland_hero, wolverine_claws_out,
+    branching_evolution, garruks_uprising, hardened_scales, high_score, innkeepers_talent,
+    level_up, sphere_grid, terrasymbiosis, training_regimen, tribute_to_the_world_tree,
+    beast_within, fog, heroic_intervention, inspiring_call, return_of_the_wildspeaker,
+    snakeskin_veil, strength_of_will, tyvars_stand, cowabunga, cultivate, epic_fight, explore,
+    natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const RADIOACTIVE_MAN_COMMANDERS: &[CardFactory] = &[radioactive_man];
+
+/// **Radioactive Man**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Swamps = 99.
+/// Radioactive Man (EDHREC, fetched 2026-10-16).
+pub const RADIOACTIVE_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, charcoal_diamond, fireshrieker, jet_medallion,
+    key_to_the_city, lightning_greaves, medics_kitesail, quietus_spike, sol_ring,
+    strionic_resonator, swiftfoot_boots, thieves_tools, trailblazers_boots, wayfarers_bauble,
+    whispersilk_cloak, access_tunnel, bojuka_bog, cabal_coffers, hall_of_echoes,
+    hexhaven_dueling_arena, nykthos_shrine_to_nyx, rogues_passage, urborg_tomb_of_yawgmoth,
+    witchs_cottage, archfiend_of_despair, bloodletter_of_aclazotz, bloodthirsty_conqueror,
+    crypt_ghast, dauthi_voidwalker, erebos_god_of_the_dead, filth, gifted_aetherborn,
+    gray_merchant_of_asphodel, hooded_blightfang, morbid_opportunist, nighthawk_scavenger,
+    ophiomancer, plaguecrafter, rampart_hunter, rank_rat, screeching_soulbreaker,
+    syr_konrad_the_grim, unstoppable_slasher, animate_dead, black_market, dauthi_embrace,
+    kayas_ghostform, phyrexian_arena, warlock_class, wound_reflection, cabal_ritual,
+    dark_ritual, deadly_dispute, deadly_rollick, defile, extended_absence, multiply_by_zero,
+    not_dead_after_all, supernatural_stamina, undying_malice, village_rites, withering_torment,
+    liliana_dreadhorde_general, damnation, dark_petition, diabolic_tutor, extinction_event,
+    feed_the_swarm, nights_whisper, reanimate, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const BLACK_WIDOW_4_COMMANDERS: &[CardFactory] = &[black_widow_natasha_romanoff];
+
+/// **Black Widow, Natasha Romanoff**'s EDHREC average deck, card for card:
+/// 64 nonbasic cards + 35 Mountains = 99.
+/// Black Widow, Natasha Romanoff (EDHREC, fetched 2026-10-16).
+pub const BLACK_WIDOW_4_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, blackblade_reforged, brotherhood_regalia, champions_helm,
+    commanders_plate, fellwar_stone, fire_diamond, hammer_of_nazahn, lotus_petal, mind_stone,
+    mjolnir_hammer_of_thor, mox_amber, ruby_medallion, shadowspear, sol_ring,
+    sword_of_feast_and_famine, sword_of_the_animist, the_aetherspark, the_reaver_cleaver,
+    arena_of_glory, buried_ruin, inventors_fair, myriad_landscape,
+    sokenzan_crucible_of_defiance, strip_mine, urzas_saga, war_room, bloodthirster,
+    borderland_minotaur, capital_guard, combat_celebrant, crimson_kobolds, defiant_khenra,
+    desert_were_worm, falkenrath_reaver, feral_maaka, frenzied_raptor, fili_and_kili_joyous,
+    gleeful_arsonist, goblin_assailant, happy_hogan_dauntless_driver, hellkite_tyrant,
+    hurloon_minotaur, kediss_emberclaw_familiar, nyxborn_brute, trained_orgg, wandering_archaic,
+    warship_scout, blacksmiths_talent, manabarbs, pyrostatic_pillar, roiling_vortex, chaos_warp,
+    deflecting_swat, lightning_bolt, tibalts_trickery, unexpected_windfall,
+    chandra_torch_of_defiance, artifist_acumen, blasphemous_act, chandras_ignition,
+    wheel_of_fortune, wheel_of_misfortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

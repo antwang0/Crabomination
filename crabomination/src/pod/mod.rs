@@ -18144,6 +18144,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GHEN_COMMANDERS,
             main: decks::GHEN_MAIN,
         },
+        // Seat 2949: The Howling Abomination's EDHREC average deck. `--pod-decks 2949`.
+        PodDeck {
+            name: "The Howling Abomination (RG)",
+            commanders: decks::THE_HOWLING_ABOMINATION_COMMANDERS,
+            main: decks::THE_HOWLING_ABOMINATION_MAIN,
+        },
+        // Seat 2950: X-23, Deadly Weapon's EDHREC average deck. `--pod-decks 2950`.
+        PodDeck {
+            name: "X-23, Deadly Weapon (G)",
+            commanders: decks::X_23_COMMANDERS,
+            main: decks::X_23_MAIN,
+        },
+        // Seat 2951: Radioactive Man's EDHREC average deck. `--pod-decks 2951`.
+        PodDeck {
+            name: "Radioactive Man (B)",
+            commanders: decks::RADIOACTIVE_MAN_COMMANDERS,
+            main: decks::RADIOACTIVE_MAN_MAIN,
+        },
+        // Seat 2952: Black Widow, Natasha Romanoff's EDHREC average deck. `--pod-decks 2952`.
+        PodDeck {
+            name: "Black Widow, Natasha Romanoff (R)",
+            commanders: decks::BLACK_WIDOW_4_COMMANDERS,
+            main: decks::BLACK_WIDOW_4_MAIN,
+        },
     ]
 }
 
@@ -22976,6 +23000,10 @@ mod tests {
             ("Roshan, Hidden Magister", &[0x1598]),
             ("Marvel Boy, Noh-Varr", &[0x1599]),
             ("Ghen, Arcanum Weaver", &[0x159A]),
+            ("The Howling Abomination", &[0x159B]),
+            ("X-23, Deadly Weapon", &[0x159C]),
+            ("Radioactive Man", &[0x159D]),
+            ("Black Widow, Natasha Romanoff", &[0x159E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
