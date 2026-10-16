@@ -2615,6 +2615,11 @@ impl GameState {
         let Some(spec) = spec else {
             return self.apply_static_enters_as_copy(card_id, controller, events);
         };
+        if let Some(cond) = &spec.condition
+            && !self.evaluate_predicate(cond, &EffectContext::for_trigger(card_id, controller, None, 0))
+        {
+            return false;
+        }
         // Capture the copier's own printed name before the copy rewrite, for
         // the CR 707.2 name-retention exception (Mockingbird).
         let original_name: &'static str = self
