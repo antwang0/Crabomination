@@ -765,3 +765,31 @@ fn cr_702_193_wonder_man_allows_a_second_power_up() {
     assert!(up(&mut g).is_err(), "no third");
     assert_eq!(g.battlefield_find(wm).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
 }
+
+/// Shaun & Rebecca fetch The Animus from the graveyard on entering, and
+/// their {C} mills two through a reflexive trigger.
+#[test]
+fn shaun_and_rebecca_fetch_the_animus_and_mill_for_mana() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let animus = g.add_card_to_graveyard(0, catalog::the_animus());
+    let sr = g.add_card_to_hand(0, catalog::shaun_and_rebecca_agents());
+    cast(&mut g, sr);
+    assert!(g.battlefield_find(animus).is_some());
+    g.clear_sickness(sr);
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility { card_id: sr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("tap for C");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy + 2);
+}
+
+/// Pull from Eternity moves a face-up exiled card to its owner's graveyard.
+#[test]
+fn pull_from_eternity_returns_an_exiled_card_to_the_graveyard() {
+    let mut g = pod(2);
+    let exiled = g.add_card_to_exile(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::pull_from_eternity());
+    cast_with(&mut g, spell, Some(Target::Permanent(exiled)), vec![]).expect("cast");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == exiled));
+}

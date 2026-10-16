@@ -573,3 +573,48 @@ pub fn wonder_man_hollywood_hero() -> CardDefinition {
         )
     }
 }
+
+// ── Shaun & Rebecca, Agents ─────────────────────────────────────────────────
+
+/// Shaun & Rebecca, Agents — {1}{G}{W}{U} legendary 4/4 vigilance. Enters:
+/// search your graveyard, hand and library for The Animus and put it onto the
+/// battlefield. {T}: add {C}; when you do, mill two.
+pub fn shaun_and_rebecca_agents() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::SearchZones {
+            who: PlayerRef::You,
+            zones: vec![Zone::Graveyard, Zone::Hand, Zone::Library],
+            filter: R::HasName("The Animus".into()),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                Effect::ReflexiveTrigger { body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(2) }) },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Shaun & Rebecca, Agents",
+            cost(&[generic(1), g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Assassin, CreatureType::Scientist],
+            4,
+            4,
+        )
+    }
+}
+
+/// Pull from Eternity — {W} instant. Put target face-up exiled card into its
+/// owner's graveyard.
+pub fn pull_from_eternity() -> CardDefinition {
+    CardDefinition {
+        name: "Pull from Eternity",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move { what: target_filtered(R::InExile.and(R::Not(Box::new(R::FaceDown)))), to: ZoneDest::Graveyard },
+        ..Default::default()
+    }
+}
