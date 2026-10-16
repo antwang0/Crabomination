@@ -2107,3 +2107,248 @@ pub fn prison_sentence() -> CardDefinition {
         )
     }
 }
+
+// ── Orim, Samite Healer and Reidane: damage shields ─────────────────────────
+
+/// "Prevent 1 of that damage" to you and to creatures you control — the two
+/// halves of the Hedron-Field Purists shield, gated on `n` level counters.
+fn purist_shield(n: u32) -> Vec<StaticAbility> {
+    let gated = |inner: StaticEffect| StaticEffect::WhileCountersAtLeast { kind: CounterType::Level, n, inner: Box::new(inner) };
+    vec![
+        StaticAbility {
+            description: "If a source would deal damage to you, prevent 1 of that damage.",
+            effect: gated(StaticEffect::ReduceDamageToYouBy(1)),
+        },
+        StaticAbility {
+            description: "If a source would deal damage to a creature you control, prevent 1 of that damage.",
+            effect: gated(StaticEffect::ReduceDamageToYourCreaturesBy(1)),
+        },
+    ]
+}
+
+/// Hedron-Field Purists — {2}{W} 0/3 Human Cleric, level up {2}{W} (CR
+/// 702.87). LEVEL 1-4: 1/4, prevent 1 of each damage to you or a creature you
+/// control. LEVEL 5+: 2/5, prevent 2 (the level-1 and level-5 shields stack).
+pub fn hedron_field_purists() -> CardDefinition {
+    let mut statics = purist_shield(1);
+    statics.extend(purist_shield(5));
+    CardDefinition {
+        level_bands: vec![
+            crate::card::LevelBand { min: 1, max: Some(4), power: 1, toughness: 4, keywords: vec![] },
+            crate::card::LevelBand { min: 5, max: None, power: 2, toughness: 5, keywords: vec![] },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            sorcery_speed: true,
+            effect: counters_of(CounterType::Level),
+            ..Default::default()
+        }],
+        static_abilities: statics,
+        ..creature("Hedron-Field Purists", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Cleric], 0, 3)
+    }
+}
+
+fn counters_of(kind: CounterType) -> Effect {
+    Effect::AddCounter { what: Selector::This, kind, amount: Value::ONE }
+}
+
+fn opponents_sources_shave_one() -> StaticAbility {
+    StaticAbility {
+        description: "If a source an opponent controls would deal damage to you, prevent 1 of that damage.",
+        effect: StaticEffect::ReduceDamageToControllerFromSource { filter: R::ControlledByOpponent, amount: 1 },
+    }
+}
+
+/// Guardian Seraph — {2}{W}{W} 3/4 flying Angel. A source an opponent controls
+/// deals 1 less damage to you.
+pub fn guardian_seraph() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![opponents_sources_shave_one()],
+        ..creature("Guardian Seraph", cost(&[generic(2), w(), w()]), vec![CreatureType::Angel], 3, 4)
+    }
+}
+
+/// Protection of the Hekma — {4}{W} enchantment. A source an opponent controls
+/// deals 1 less damage to you.
+pub fn protection_of_the_hekma() -> CardDefinition {
+    CardDefinition {
+        name: "Protection of the Hekma",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![opponents_sources_shave_one()],
+        ..Default::default()
+    }
+}
+
+// ── Alexi, Zephyr Mage and Hisoka, Minamo Sensei ────────────────────────────
+
+fn loot_two() -> Effect {
+    Effect::Seq(vec![
+        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+    ])
+}
+
+/// All-Seeing Arbiter — {4}{U}{U} 5/4 flying Avatar. Enters or attacks: draw
+/// two, discard one. Whenever you discard a card, target creature an opponent
+/// controls gets -X/-0 until your next turn, X = the number of different mana
+/// values among cards in your graveyard.
+pub fn all_seeing_arbiter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(loot_two()),
+            on_attack(loot_two()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+                effect: Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    power: Value::Negate(Box::new(Value::DistinctManaValuesInGraveyard(PlayerRef::You))),
+                    toughness: Value::ZERO,
+                    duration: Duration::UntilNextTurn,
+                },
+            },
+        ],
+        ..creature("All-Seeing Arbiter", cost(&[generic(4), u(), u()]), vec![CreatureType::Avatar], 5, 4)
+    }
+}
+
+/// Just the Wind — {1}{U} instant. Return target creature to its owner's
+/// hand. Madness {U}.
+pub fn just_the_wind() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[u()]))],
+        ..spell(
+            "Just the Wind",
+            cost(&[generic(1), u()]),
+            true,
+            Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        )
+    }
+}
+
+/// Nagging Thoughts — {1}{U} sorcery. Look at the top two: one to hand, the
+/// other to the graveyard. Madness {1}{U}.
+pub fn nagging_thoughts() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[generic(1), u()]))],
+        ..spell(
+            "Nagging Thoughts",
+            cost(&[generic(1), u()]),
+            false,
+            Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: true,
+                ..Default::default()
+            })),
+        )
+    }
+}
+
+/// Disciple of the Ring — {3}{U}{U} 3/4 Human Wizard. {1}, exile an instant or
+/// sorcery card from your graveyard: choose one — counter target noncreature
+/// spell unless its controller pays {2}; +1/+1 until end of turn; tap target
+/// creature; untap target creature.
+pub fn disciple_of_the_ring() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            exile_other_filter: Some((instant_or_sorcery(), 1)),
+            effect: Effect::ChooseMode(vec![
+                Effect::CounterUnlessPaid {
+                    what: target_filtered(R::IsSpellOnStack.and(R::Noncreature)),
+                    mana_cost: cost(&[generic(2)]),
+                    exile: false,
+                    extra_generic: None,
+                    if_paid: None,
+                },
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Disciple of the Ring", cost(&[generic(3), u(), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 4)
+    }
+}
+
+// ── Yasova Dragonclaw ───────────────────────────────────────────────────────
+
+/// Yasova Dragonclaw — {2}{G} legendary 4/2 trample Human Warrior. At the
+/// beginning of combat on your turn, you may pay {1}{U/R}{U/R}; if you do,
+/// gain control of target creature an opponent controls with power less than
+/// Yasova's until end of turn, untap it, and it gains haste.
+pub fn yasova_dragonclaw() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1}{U/R}{U/R} to borrow a smaller creature?".into(),
+                mana_cost: cost(&[generic(1), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::GainControl {
+                        what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::PowerLessThanSource)),
+                        to: None,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ])),
+                else_: None,
+            },
+        }],
+        ..creature("Yasova Dragonclaw", cost(&[generic(2), g()]), vec![CreatureType::Human, CreatureType::Warrior], 4, 2)
+    }
+}
+
+/// Demonmail Hauberk — {4} Equipment. +4/+2. Equip—Sacrifice a creature.
+pub fn demonmail_hauberk() -> CardDefinition {
+    CardDefinition {
+        name: "Demonmail Hauberk",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[]))],
+        equip_sacrifice_filter: Some(R::Creature),
+        equipped_bonus: Some(EquipBonus { power: 4, toughness: 2, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Feed the Pack — {5}{G} enchantment. At the beginning of your end step, you
+/// may sacrifice a nontoken creature; if you do, create X 2/2 green Wolves,
+/// X = its toughness.
+pub fn feed_the_pack() -> CardDefinition {
+    let wolf = Arc::new(TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "Feed the Pack",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a nontoken creature for Wolves?".into(),
+                filter: R::Creature.and(R::NotToken),
+                count: Value::ONE,
+                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::SacrificedToughness, definition: wolf }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}

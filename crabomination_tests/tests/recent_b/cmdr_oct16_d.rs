@@ -913,3 +913,155 @@ fn prison_sentence_locks_its_host() {
     g.priority.player_with_priority = 1;
     assert!(activate(&mut g, ship, Some(Target::Player(0))).is_err());
 }
+
+/// CR 702.87 / 615 — Hedron-Field Purists: level 1 shaves 1 off damage to you
+/// and your creatures, level 5 shaves 2.
+#[test]
+fn hedron_field_purists_shield_grows_with_level() {
+    let mut g = pod(2);
+    let p = ready(&mut g, 0, catalog::hedron_field_purists());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let hit = |g: &mut GameState, t: Target, n: i32| {
+        let e = crabomination::effect::Effect::DealDamage { to: crabomination::effect::Selector::Target(0), amount: crabomination::card::Value::Const(n) };
+        g.resolve_effect(&e, &crabomination::game::effects::EffectContext::for_spell(1, Some(t), 0, 0)).unwrap();
+    };
+    hit(&mut g, Target::Player(0), 3);
+    assert_eq!(g.players[0].life, 17, "level 0: no shield");
+    g.battlefield.iter_mut().find(|c| c.id == p).unwrap().add_counters(CounterType::Level, 1);
+    hit(&mut g, Target::Player(0), 3);
+    hit(&mut g, Target::Permanent(bears), 2);
+    assert_eq!(g.players[0].life, 15);
+    assert_eq!(g.battlefield_find(bears).unwrap().damage, 1);
+    assert_eq!(g.computed_permanent(p).unwrap().power, 1);
+    g.battlefield.iter_mut().find(|c| c.id == p).unwrap().add_counters(CounterType::Level, 4);
+    hit(&mut g, Target::Player(0), 3);
+    assert_eq!(g.players[0].life, 14, "level 5: prevent 2");
+    let cp = g.computed_permanent(p).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 5));
+}
+
+/// Guardian Seraph only shaves damage from an opponent's sources.
+#[test]
+fn guardian_seraph_shaves_opposing_damage() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::guardian_seraph());
+    let e = crabomination::effect::Effect::DealDamage { to: crabomination::effect::Selector::Target(0), amount: crabomination::card::Value::Const(3) };
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    g.resolve_effect(&e, &crabomination::game::effects::EffectContext::for_ability(theirs, 1, Some(Target::Player(0)))).unwrap();
+    assert_eq!(g.players[0].life, 18);
+    g.resolve_effect(&e, &crabomination::game::effects::EffectContext::for_ability(mine, 0, Some(Target::Player(0)))).unwrap();
+    assert_eq!(g.players[0].life, 15);
+}
+
+/// All-Seeing Arbiter: entering loots, and the discard shrinks an opposing
+/// creature by the graveyard's distinct mana values.
+#[test]
+fn all_seeing_arbiter_shrinks_on_discard() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    g.players[0].hand.clear();
+    let a = g.add_card_to_hand(0, catalog::all_seeing_arbiter());
+    cast(&mut g, a, None);
+    assert_eq!(g.players[0].hand.len(), 1, "drew two, discarded one");
+    let x = {
+        let mut mvs: Vec<u32> = g.players[0].graveyard.iter().map(|c| c.definition.cost.cmc()).collect();
+        mvs.sort();
+        mvs.dedup();
+        mvs.len() as i32
+    };
+    assert!(x >= 1);
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 6 - x);
+}
+
+/// Just the Wind bounces; Nagging Thoughts keeps one of two and bins the other.
+#[test]
+fn just_the_wind_and_nagging_thoughts() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let w = g.add_card_to_hand(0, catalog::just_the_wind());
+    cast(&mut g, w, Some(Target::Permanent(bears)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    let n = g.add_card_to_hand(0, catalog::nagging_thoughts());
+    let (h, gy) = (g.players[0].hand.len(), g.players[0].graveyard.len());
+    cast(&mut g, n, None);
+    assert_eq!(g.players[0].hand.len(), h, "one in, Nagging Thoughts out");
+    assert_eq!(g.players[0].graveyard.len(), gy + 2, "the other card and the sorcery");
+}
+
+/// CR 702.35 — madness: discarding Just the Wind lets you cast it for {U}.
+#[test]
+fn just_the_wind_has_madness() {
+    let mut g = pod(2);
+    let w = g.add_card_to_hand(0, catalog::just_the_wind());
+    assert!(g.players[0].hand.iter().find(|c| c.id == w).unwrap().definition.madness_cost().is_some());
+}
+
+/// Disciple of the Ring: exile an instant from the graveyard to tap a creature.
+#[test]
+fn disciple_of_the_ring_taps_for_a_graveyard_spell() {
+    let mut g = pod(2);
+    let d = ready(&mut g, 0, catalog::disciple_of_the_ring());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: d, ability_index: 0, target: Some(Target::Permanent(bears)), additional_targets: vec![], x_value: None, mode: Some(2) })
+        .expect("tap mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).unwrap().tapped);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the Bolt paid the cost");
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility { card_id: d, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: Some(1) }).is_err(),
+        "no instant or sorcery left to exile"
+    );
+}
+
+/// Yasova borrows a smaller creature at the beginning of combat, untapped and
+/// hasty.
+#[test]
+fn yasova_borrows_a_smaller_creature() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::yasova_dragonclaw());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    g.battlefield.iter_mut().find(|c| c.id == bears).unwrap().tapped = true;
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    step_to(&mut g, 0, TurnStep::BeginCombat);
+    let b = g.battlefield_find(bears).unwrap();
+    assert_eq!(b.controller, 0);
+    assert!(!b.tapped);
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 1, "the Wurm is too big");
+}
+
+/// Demonmail Hauberk's equip is a sacrificed creature, not mana.
+#[test]
+fn demonmail_hauberk_equips_for_a_creature() {
+    let mut g = pod(2);
+    let h = ready(&mut g, 0, catalog::demonmail_hauberk());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    g.perform_action(GameAction::Equip { equipment: h, target: bears }).expect("equip");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none(), "the Elf paid");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 4));
+}
+
+/// Feed the Pack turns a nontoken creature into Wolves equal to its toughness.
+#[test]
+fn feed_the_pack_makes_wolves_per_toughness() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::feed_the_pack());
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    step_to(&mut g, 0, TurnStep::End);
+    assert!(g.battlefield_find(wurm).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Wolf").count(), 4);
+}
