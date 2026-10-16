@@ -3,8 +3,8 @@
 //! Lozhan). Tests in `tests/recent_b/cmdr_oct16_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EnchantmentSubtype, EntersAsCopy, EventKind,
+    EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::ActivationTrait;
@@ -764,5 +764,51 @@ pub fn patch_up() -> CardDefinition {
             by_power: false,
         },
         ..Default::default()
+    }
+}
+
+// ── Korlash, Heir to Blackblade ─────────────────────────────────────────────
+
+/// Korlash, Heir to Blackblade — {2}{B}{B} legendary */* Zombie Warrior, P/T
+/// the Swamps you control. {1}{B}: regenerate. Grandeur — discard another
+/// Korlash: search for up to two Swamp cards, onto the battlefield tapped.
+pub fn korlash_heir_to_blackblade() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        dynamic_pt: Some(DynamicPt::BasePlusLandsOfTypeControlled { land_type: LandType::Swamp, base_p: 0, base_t: 0 }),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                effect: Effect::Regenerate { what: Selector::This },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                discard_cost: Some((R::HasName("Korlash, Heir to Blackblade".to_string()), 1)),
+                effect: Effect::SearchUpToN {
+                    who: PlayerRef::You,
+                    filter: R::HasLandType(LandType::Swamp),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    count: Value::Const(2),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Korlash, Heir to Blackblade", cost(&[generic(2), b(), b()]), vec![CreatureType::Zombie, CreatureType::Warrior], 0, 0)
+    }
+}
+
+/// Activated Sleeper — {2}{B} 0/0 flash Phyrexian Shapeshifter. It may enter
+/// as a copy of a creature card in a graveyard that was put there from the
+/// battlefield this turn, a Phyrexian in addition to its other types.
+pub fn activated_sleeper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature.and(R::PutIntoGraveyardFromBattlefieldThisTurn),
+            from_graveyards: true,
+            extra_creature_types: vec![CreatureType::Phyrexian],
+            ..Default::default()
+        }),
+        ..creature("Activated Sleeper", cost(&[generic(2), b()]), vec![CreatureType::Phyrexian, CreatureType::Shapeshifter], 0, 0)
     }
 }

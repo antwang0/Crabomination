@@ -871,3 +871,40 @@ fn patch_up_respects_the_total_mana_value() {
     cast(&mut g, spell);
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 2, "elves + one bears");
 }
+
+/// Korlash's grandeur: discard another Korlash to put two Swamps onto the
+/// battlefield tapped, and Korlash grows with them.
+#[test]
+fn korlash_grandeur_fetches_two_swamps() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::swamp());
+    }
+    stock_libraries(&mut g, 5);
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let k = ready(&mut g, 0, catalog::korlash_heir_to_blackblade());
+    g.add_card_to_hand(0, catalog::korlash_heir_to_blackblade());
+    g.perform_action(GameAction::ActivateAbility { card_id: k, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("grandeur");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Swamp" && c.tapped).count(), 2);
+    assert_eq!(g.computed_permanent(k).unwrap().power, 3);
+}
+
+/// Activated Sleeper copies a creature that died this turn, not one that was
+/// milled.
+#[test]
+fn activated_sleeper_copies_a_creature_that_died_this_turn() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    g.add_card_to_graveyard(1, catalog::craw_wurm());
+    let bears = ready(&mut g, 1, catalog::serra_angel());
+    let kill = Effect::Destroy { what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature) };
+    g.resolve_effect(&kill, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears));
+    let s = g.add_card_to_hand(0, catalog::activated_sleeper());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, s);
+    let cp = g.computed_permanent(s).expect("on the battlefield");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "a Serra Angel, not the Wurm");
+}

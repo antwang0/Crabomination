@@ -16306,6 +16306,8 @@ static DECKS: &[Factory] = &[
     super::decks::the_fall_of_lord_konda,
     super::decks::polukranos_reborn,
     super::decks::patch_up,
+    super::decks::korlash_heir_to_blackblade,
+    super::decks::activated_sleeper,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
