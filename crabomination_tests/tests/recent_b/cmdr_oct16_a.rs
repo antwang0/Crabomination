@@ -383,3 +383,23 @@ fn legolas_pings_off_a_spell_targeting_theirs() {
     // Bolt's 3 alone leaves the 6/4 Wurm alive; one creature took Legolas's 1.
     assert!(g.battlefield_find(elves).is_none() || g.battlefield_find(wurm).is_none(), "Legolas dealt his 1");
 }
+
+/// Life and Limb: a Forest is a 1/1 green Saproling creature, and a Saproling
+/// token is a Forest land, both in addition to their types (CR 613.1d).
+#[test]
+fn life_and_limb_makes_forests_saprolings_and_saprolings_forests() {
+    use crabomination::card::{CardType, CreatureType, LandType};
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::life_and_limb());
+    let forest = ready(&mut g, 0, catalog::forest());
+    let swarm = g.add_card_to_hand(0, catalog::spore_swarm());
+    cast_with(&mut g, swarm, None, vec![]).expect("swarm");
+    let f = g.computed_permanent(forest).unwrap();
+    assert!(f.card_types().contains(&CardType::Creature) && f.subtypes().creature_types.contains(&CreatureType::Saproling));
+    assert_eq!((f.power, f.toughness), (1, 1));
+    assert!(f.colors.contains(&Color::Green));
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Saproling").map(|c| c.id).unwrap();
+    let t = g.computed_permanent(token).unwrap();
+    assert!(t.card_types().contains(&CardType::Land) && t.subtypes().land_types.contains(&LandType::Forest));
+}

@@ -4,11 +4,11 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
+    EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::card::{StaticAbility, StaticEffect};
-use crate::effect::shortcut::{etb, heroic, sneak, target_filtered};
+use crate::effect::shortcut::{etb, heroic, landfall, sneak, target_filtered};
 use crate::effect::{Duration, Effect, OpeningHandEffect, PlayerRef, Selector};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 use std::sync::Arc;
@@ -351,5 +351,72 @@ pub fn repulsor_blast() -> CardDefinition {
                 },
             ]),
         )
+    }
+}
+
+// ── Nemata / Verdeloth / Slimefoot ──────────────────────────────────────────
+
+/// Life and Limb — {3}{G} enchantment. All Forests and all Saprolings are 1/1
+/// green Saproling creatures and Forest lands in addition to their other
+/// types.
+pub fn life_and_limb() -> CardDefinition {
+    let both = || R::HasLandType(LandType::Forest).or(R::HasCreatureType(CreatureType::Saproling));
+    let description = "All Forests and all Saprolings are 1/1 green Saproling creatures and Forest lands in addition to their other types.";
+    CardDefinition {
+        name: "Life and Limb",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description,
+                effect: StaticEffect::MatchingLandsAreCreatures {
+                    filter: both(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    creature_types: vec![CreatureType::Saproling],
+                    colors: vec![Color::Green],
+                },
+            },
+            StaticAbility {
+                description,
+                effect: StaticEffect::AddCardTypeToMatching {
+                    applies_to: Selector::EachPermanent(both()),
+                    card_type: CardType::Land,
+                    artifact_subtype: None,
+                },
+            },
+            StaticAbility {
+                description,
+                effect: StaticEffect::LandTypeChanger {
+                    applies_to: Selector::EachPermanent(both()),
+                    land_type: LandType::Forest,
+                    replace: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Aragorn, Company Leader ─────────────────────────────────────────────────
+
+/// Dúnedain Rangers — {3}{G} 4/4 Human Ranger. Landfall: if you don't control
+/// a Ring-bearer, the Ring tempts you.
+pub fn dunedain_rangers() -> CardDefinition {
+    let no_bearer = || {
+        Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::IsRingBearer.and(R::ControlledByYou),
+        ))))
+    };
+    let mut trigger = landfall(Effect::If {
+        cond: no_bearer(),
+        then: Box::new(Effect::RingTempts { who: PlayerRef::You }),
+        else_: Box::new(Effect::Noop),
+    });
+    trigger.event = trigger.event.with_filter(no_bearer());
+    CardDefinition {
+        triggered_abilities: vec![trigger],
+        ..creature("Dúnedain Rangers", cost(&[generic(3), g()]), vec![CreatureType::Human, CreatureType::Ranger], 4, 4)
     }
 }

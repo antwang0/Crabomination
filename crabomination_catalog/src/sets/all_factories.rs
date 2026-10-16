@@ -16276,6 +16276,8 @@ static DECKS: &[Factory] = &[
     super::decks::donatello_turtle_techie,
     super::decks::quicksilver_brash_blur,
     super::decks::repulsor_blast,
+    super::decks::life_and_limb,
+    super::decks::dunedain_rangers,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
