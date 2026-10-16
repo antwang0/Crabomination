@@ -1190,3 +1190,149 @@ fn diviner_of_victory_unwinds_and_proft_draws() {
     assert_eq!(g.battlefield_find(proft).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.players[0].hand.len(), h + 1);
 }
+
+/// Proctor of Potential surveils as a creature enters, and comes back from the
+/// graveyard with a finality counter only once you've scried or surveilled.
+#[test]
+fn proctor_of_potential_returns_after_a_surveil() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let p = g.add_card_to_graveyard(0, catalog::proctor_of_potential());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let back = |g: &mut GameState| {
+        let r = g.perform_action(GameAction::ActivateAbility { card_id: p, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None });
+        drain_stack(g);
+        r
+    };
+    assert!(back(&mut g).is_err(), "no scry or surveil yet");
+    let top = g.players[0].library[0].id;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![top], bottom: vec![] }]));
+    let e = crabomination::effect::Effect::Surveil { who: crabomination::effect::PlayerRef::You, amount: crabomination::card::Value::ONE };
+    let evs = g.resolve_effect(&e, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    back(&mut g).expect("surveilled this turn");
+    assert_eq!(g.battlefield_find(p).expect("back").counter_count(CounterType::Finality), 1);
+}
+
+/// Bone Dragon climbs out by exiling seven other graveyard cards.
+#[test]
+fn bone_dragon_returns_for_seven_cards() {
+    let mut g = pod(2);
+    let d = g.add_card_to_graveyard(0, catalog::bone_dragon());
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add(Color::Black, 5);
+    g.perform_action(GameAction::ActivateAbility { card_id: d, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None }).expect("return");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(d).unwrap().tapped);
+    assert!(g.players[0].graveyard.is_empty());
+}
+
+/// Ghastly Death Tyrant's Disintegration Ray destroys an opposing enchantment
+/// and costs life equal to its mana value.
+#[test]
+fn ghastly_death_tyrant_rays() {
+    let mut g = pod(2);
+    let e = ready(&mut g, 1, catalog::demonic_pact());
+    let t = g.add_card_to_hand(0, catalog::ghastly_death_tyrant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    cast(&mut g, t, None);
+    assert!(g.battlefield_find(e).is_none());
+    assert_eq!(g.players[0].life, 16, "Demonic Pact is mana value 4");
+}
+
+/// CR 702.33 — a kicked Moss-Pit Skeleton enters with three counters; from the
+/// graveyard it climbs onto the library when a creature of yours gets one.
+#[test]
+fn moss_pit_skeleton_kicks_and_climbs_back() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 3);
+    let m = g.add_card_to_hand(0, catalog::moss_pit_skeleton());
+    for c in [Color::Black, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellKicked { card_id: m, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(m).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    let s = g.add_card_to_graveyard(0, catalog::moss_pit_skeleton());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let add = crabomination::effect::Effect::AddCounter {
+        what: crabomination::effect::Selector::Target(0),
+        kind: CounterType::PlusOnePlusOne,
+        amount: crabomination::card::Value::ONE,
+    };
+    let evs = g.resolve_effect(&add, &crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(m)), 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library[0].id, s, "on top of the library");
+}
+
+/// Skeletal Swarming: each Skeleton gets +1/+0 per other Skeleton and has
+/// trample; the end step makes one tapped Skeleton, two after a death.
+#[test]
+fn skeletal_swarming_grows_the_swarm() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    ready(&mut g, 0, catalog::skeletal_swarming());
+    let a = ready(&mut g, 0, catalog::moss_pit_skeleton());
+    let b = ready(&mut g, 0, catalog::moss_pit_skeleton());
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords().contains(&Keyword::Trample));
+    let _ = b;
+    step_to(&mut g, 0, TurnStep::End);
+    let n = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Skeleton").count();
+    assert_eq!(n, 1);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4, "two others now");
+}
+
+/// Rosheen Meanderer's mana pays an {X} spell; Wildest Dreams returns exactly X
+/// cards and exiles itself.
+#[test]
+fn rosheen_pays_for_wildest_dreams() {
+    let mut g = pod(2);
+    let r = ready(&mut g, 0, catalog::rosheen_meanderer());
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    activate(&mut g, r, None).expect("four X-only mana");
+    let w = g.add_card_to_hand(0, catalog::wildest_dreams());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell { card_id: w, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: Some(2) })
+        .expect("XX paid by Rosheen");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b));
+    assert!(g.exile.iter().any(|c| c.id == w), "exiled");
+}
+
+/// Rosheen Meanderer's mana can't pay a spell without {X}.
+#[test]
+fn rosheen_mana_is_x_only() {
+    let mut g = pod(2);
+    let r = ready(&mut g, 0, catalog::rosheen_meanderer());
+    activate(&mut g, r, None).expect("mana");
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err());
+}
+
+/// Reap the Past returns X random cards and exiles itself.
+#[test]
+fn reap_the_past_returns_x_random() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let r = g.add_card_to_hand(0, catalog::reap_the_past());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: r, target: None, additional_targets: vec![], mode: None, x_value: Some(2) }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h - 1 + 2);
+    assert_eq!(g.players[0].graveyard.len(), 2);
+    assert!(g.exile.iter().any(|c| c.id == r));
+}

@@ -2585,3 +2585,224 @@ pub fn proft_consulting_detective() -> CardDefinition {
         ..creature("Proft, Consulting Detective", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Detective], 2, 2)
     }
 }
+
+// ── Denzilore Fatehold ──────────────────────────────────────────────────────
+
+/// Proctor of Potential — {W}{U} 3/1 Human Cleric. Whenever it or another
+/// creature you control enters, surveil 1. {W}{U}: return it from your
+/// graveyard to the battlefield with a finality counter — only if you've
+/// scried or surveilled this turn.
+pub fn proctor_of_potential() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), u()]),
+            from_graveyard: true,
+            condition: Some(Predicate::ScriedOrSurveiledThisTurn { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false } },
+                Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Proctor of Potential", cost(&[w(), u()]), vec![CreatureType::Human, CreatureType::Cleric], 3, 1)
+    }
+}
+
+// ── Shessra, Death's Whisper: Skeletons ─────────────────────────────────────
+
+fn skeleton() -> R {
+    R::HasCreatureType(CreatureType::Skeleton)
+}
+
+/// Bone Dragon — {3}{B}{B} 5/4 flying Dragon Skeleton. {3}{B}{B}, exile seven
+/// other cards from your graveyard: return this card from your graveyard to
+/// the battlefield tapped.
+pub fn bone_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b(), b()]),
+            from_graveyard: true,
+            exile_other_filter: Some((R::Any, 7)),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+            ..Default::default()
+        }],
+        ..creature("Bone Dragon", cost(&[generic(3), b(), b()]), vec![CreatureType::Dragon, CreatureType::Skeleton], 5, 4)
+    }
+}
+
+/// Ghastly Death Tyrant — {4}{B}{B} 6/5 Beholder Skeleton. Enters, choose one:
+/// destroy target enchantment an opponent controls and lose life equal to its
+/// mana value; or creatures you control gain deathtouch until end of turn.
+pub fn ghastly_death_tyrant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Enchantment.and(R::ControlledByOpponent)) },
+                Effect::LoseLife { who: Selector::You, amount: Value::ManaValueOf(Box::new(Selector::Target(0))) },
+            ]),
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..creature("Ghastly Death Tyrant", cost(&[generic(4), b(), b()]), vec![CreatureType::Beholder, CreatureType::Skeleton], 6, 5)
+    }
+}
+
+/// Moss-Pit Skeleton — {B}{G} 2/2 Plant Skeleton, kicker {3}: kicked, it
+/// enters with three +1/+1 counters. Whenever one or more +1/+1 counters are
+/// put on a creature you control, if this card is in your graveyard, you may
+/// put it on top of your library.
+pub fn moss_pit_skeleton() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred { pred: Box::new(Predicate::SpellWasKicked), then: Box::new(Value::Const(3)), else_: Box::new(Value::ZERO) },
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::FromYourGraveyard)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::ControlledByYou) })
+                .once_per_batch(),
+            effect: Effect::MayDo {
+                description: "Put Moss-Pit Skeleton on top of your library?".into(),
+                body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top } }),
+            },
+        }],
+        ..creature("Moss-Pit Skeleton", cost(&[b(), g()]), vec![CreatureType::Plant, CreatureType::Skeleton], 2, 2)
+    }
+}
+
+/// Skeletal Swarming — {3}{B}{G} enchantment. Each Skeleton you control has
+/// trample, attacks each combat if able, and gets +X/+0 (X = other Skeletons
+/// you control). At the beginning of your end step, a tapped 1/1 black
+/// Skeleton — two if a creature died this turn.
+pub fn skeletal_swarming() -> CardDefinition {
+    let yours = Selector::EachPermanent(R::Creature.and(skeleton()).and(R::ControlledByYou));
+    let token = Arc::new(TokenDefinition {
+        name: "Skeleton".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        tapped: true,
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "Skeletal Swarming",
+        cost: cost(&[generic(3), b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each Skeleton you control has trample.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours.clone(), keyword: Keyword::Trample },
+            },
+            StaticAbility {
+                description: "Each Skeleton you control attacks each combat if able.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours.clone(), keyword: Keyword::MustAttack },
+            },
+            StaticAbility {
+                description: "Each Skeleton you control gets +X/+0, where X is the number of other Skeletons you control.",
+                effect: StaticEffect::PumpPTByValue {
+                    applies_to: yours.clone(),
+                    power: Value::Diff(Box::new(Value::CountOf(Box::new(yours))), Box::new(Value::ONE)),
+                    toughness: Value::ZERO,
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::IfPred {
+                    pred: Box::new(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
+                    then: Box::new(Value::Const(2)),
+                    else_: Box::new(Value::ONE),
+                },
+                definition: token,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Rosheen Meanderer and Rosheen, Roaring Prophet: X spells ────────────────
+
+fn x_only(n: Value) -> Effect {
+    Effect::AddMana {
+        who: PlayerRef::You,
+        pool: ManaPayload::Restricted(Box::new(ManaPayload::Colorless(n)), crate::mana::SpendRestriction::XCostsOnly),
+    }
+}
+
+/// Rosheen Meanderer — {3}{R/G} legendary 4/4 Giant Shaman. {T}: add
+/// {C}{C}{C}{C}, spendable only on costs that contain {X}.
+pub fn rosheen_meanderer() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility { tap_cost: true, effect: x_only(Value::Const(4)), ..Default::default() }],
+        ..creature("Rosheen Meanderer", cost(&[generic(3), hybrid(Color::Red, Color::Green)]), vec![CreatureType::Giant, CreatureType::Shaman], 4, 4)
+    }
+}
+
+/// Rosheen, Roaring Prophet — {2}{R}{G} legendary 4/4 Giant Shaman. Enters:
+/// mill six, you may put a card with {X} in its mana cost from among them into
+/// your hand. {T}: reveal any number of {X} cards in your hand; add {C}{C} per
+/// card revealed, spendable only on costs that contain {X} (every one is
+/// revealed — more mana is never worse).
+pub fn rosheen_roaring_prophet() -> CardDefinition {
+    let x_cards_in_hand = Value::CountOf(Box::new(Selector::EachMatching { zone: crate::effect::ZoneRef::Hand(PlayerRef::You), filter: R::HasXInCost }));
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::MillThenToHandN { amount: Value::Const(6), filter: R::HasXInCost, take: Value::ONE, otherwise: None })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: x_only(Value::Times(Box::new(Value::Const(2)), Box::new(x_cards_in_hand))),
+            ..Default::default()
+        }],
+        ..creature("Rosheen, Roaring Prophet", cost(&[generic(2), r(), g()]), vec![CreatureType::Giant, CreatureType::Shaman], 4, 4)
+    }
+}
+
+/// Reap the Past — {X}{R}{G} sorcery. Return X cards at random from your
+/// graveyard to your hand. Exile Reap the Past.
+pub fn reap_the_past() -> CardDefinition {
+    CardDefinition {
+        exile_on_resolve: true,
+        ..spell(
+            "Reap the Past",
+            cost(&[crate::mana::x(), r(), g()]),
+            false,
+            Effect::ReturnRandomFromGraveyard { who: PlayerRef::You, filter: R::Any, count: Value::XFromCost },
+        )
+    }
+}
+
+/// Wildest Dreams — {X}{X}{G} sorcery. Return X target cards from your
+/// graveyard to your hand. Exile Wildest Dreams.
+pub fn wildest_dreams() -> CardDefinition {
+    CardDefinition {
+        exile_on_resolve: true,
+        ..spell(
+            "Wildest Dreams",
+            cost(&[crate::mana::x(), crate::mana::x(), g()]),
+            false,
+            Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 20,
+                    min_targets: 0,
+                    filter: R::InYourGraveyard,
+                    effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
+                }),
+            },
+        )
+    }
+}
