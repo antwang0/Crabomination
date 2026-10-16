@@ -2217,6 +2217,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Master Skald | the exiled creature card is picked automatically (first in the graveyard), not chosen | `MayDo { Move(take 1) + Move(target) }` |
 | 🟡 Lens of Clarity | the look-at-top half is `MayLookAtOwnLibraryTop`; looking at face-down creatures you don't control isn't surfaced to the seat's view | — |
 | 🟡 Jasmine Boreal of the Seven | an *attacker's* "no abilities" reads its printed card (an anthem's keyword doesn't disqualify it); the blocker side reads granted keywords and lose-all-abilities | `GrantKeyword { CantBeBlockedBy }` filtered `HasNoAbilities` |
+| 🟡 Rhino, Terrible Trampler | the ETB is two triggers (destroy; distribute + trample) rather than one, so a response can land between them and the distribution still resolves if the destroy's target goes | two `etb` triggers |
+| 🟡 Undercover Skrull | "is all creature types" is a granted changeling (CR 702.73a) — same types, but it reads as a keyword the creature has | `PumpSelfIf { keywords: [Changeling] }` |
 | 🟡 Patch Up | the three cards are picked cheapest-first at resolution, not targeted | `MoveWithinTotalManaValue` |
 | 🟡 Cantankerous Keepers | "put all Elf cards" is an up-to-four pick that the bot fills | `MillThenToHandN { take: 4 }` |
 | 🟡 Wonder Man, Hollywood Hero | two Wonder Men still allow only one extra activation (it's legendary) | `StaticEffect::PowerUpOnceMore` |
