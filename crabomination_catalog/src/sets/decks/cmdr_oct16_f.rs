@@ -1910,3 +1910,354 @@ pub fn raph_and_leo_sibling_rivals() -> CardDefinition {
         ))
     }
 }
+
+// ── batch 10: the short-text two- and three-deck last cards ─────────────────
+
+/// Splicer's Skill — {2}{W} sorcery: a 3/3 Phyrexian Golem artifact creature.
+/// Splice onto instant or sorcery {3}{W}.
+pub fn splicers_skill() -> CardDefinition {
+    CardDefinition {
+        name: "Splicer's Skill",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::SpliceOntoInstantOrSorcery(cost(&[generic(3), w()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Arc::new(TokenDefinition {
+                name: "Phyrexian Golem".into(),
+                power: 3,
+                toughness: 3,
+                subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem], ..Default::default() },
+                ..golem_4_4()
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lifecrafter's Gift — {3}{G} instant: a +1/+1 counter on target creature,
+/// then one on each creature you control that has a +1/+1 counter.
+pub fn lifecrafters_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Lifecrafter's Gift",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stone by Sunlight — {1}{W} instant. Choose one: destroy target creature
+/// with power 4 or greater; or target creature becomes an artifact in addition
+/// and gains indestructible until end of turn.
+pub fn stone_by_sunlight() -> CardDefinition {
+    CardDefinition {
+        name: "Stone by Sunlight",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+            Effect::Seq(vec![
+                Effect::AddCardTypeIndefinitely {
+                    what: target_filtered(R::Creature),
+                    card_type: CardType::Artifact,
+                    until_eot: true,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pore Over the Pages — {3}{U}{U} sorcery: draw three, untap up to two lands,
+/// then discard a card.
+pub fn pore_over_the_pages() -> CardDefinition {
+    CardDefinition {
+        name: "Pore Over the Pages",
+        cost: cost(&[generic(3), crate::mana::u(), crate::mana::u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Untap { what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)), up_to: Some(Value::Const(2)) },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goblin Bangchuckers — {2}{R}{R} 2/2 Goblin Warrior. {T}: flip a coin; win,
+/// 2 damage to any target; lose, 2 damage to itself.
+pub fn goblin_bangchuckers() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::FlipCoin {
+                count: Value::ONE,
+                on_heads: Box::new(Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) }),
+                on_tails: Box::new(Effect::DealDamage { to: Selector::This, amount: Value::Const(2) }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Goblin Bangchuckers", cost(&[generic(2), r(), r()]), vec![CreatureType::Goblin, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Darksteel Sentinel — {6} 3/3 artifact Golem: flash, vigilance, indestructible.
+pub fn darksteel_sentinel() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flash, Keyword::Vigilance, Keyword::Indestructible],
+        ..creature("Darksteel Sentinel", cost(&[generic(6)]), vec![CreatureType::Golem], 3, 3)
+    }
+}
+
+/// Implement of Ferocity — {1} artifact. {G}, sacrifice it: a +1/+1 counter on
+/// target creature (sorcery speed). Put into a graveyard from the battlefield:
+/// draw a card.
+pub fn implement_of_ferocity() -> CardDefinition {
+    CardDefinition {
+        name: "Implement of Ferocity",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Koma's Faithful — {2}{B} 3/1 lifelink Elf Cleric; dies: each player mills three.
+pub fn komas_faithful() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(3),
+        })],
+        ..creature("Koma's Faithful", cost(&[generic(2), b()]), vec![CreatureType::Elf, CreatureType::Cleric], 3, 1)
+    }
+}
+
+/// Primal Druid — {1}{G} 0/3 Human Druid; dies: you may search for a basic
+/// land and put it onto the battlefield tapped.
+pub fn primal_druid() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::MayDo {
+            description: "Search for a basic land and put it onto the battlefield tapped?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+        })],
+        ..creature("Primal Druid", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Druid], 0, 3)
+    }
+}
+
+/// Riddlemaster Sphinx — {4}{U}{U} 5/5 flying Sphinx; ETB: you may return
+/// target creature an opponent controls to its owner's hand.
+pub fn riddlemaster_sphinx() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        ..creature("Riddlemaster Sphinx", cost(&[generic(4), crate::mana::u(), crate::mana::u()]), vec![CreatureType::Sphinx], 5, 5)
+    }
+}
+
+/// Alchemist's Vial — {2} artifact. ETB: draw a card. {1}, {T}, sacrifice it:
+/// target creature can't attack or block this turn.
+pub fn alchemists_vial() -> CardDefinition {
+    CardDefinition {
+        name: "Alchemist's Vial",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::CantAttack, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gluttonous Slime — {2}{G} 2/2 Ooze, flash, devour 1.
+pub fn gluttonous_slime() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Devour(1)],
+        ..creature("Gluttonous Slime", cost(&[generic(2), g()]), vec![CreatureType::Ooze], 2, 2)
+    }
+}
+
+/// Soul Summons — {1}{W} sorcery: manifest the top card of your library.
+pub fn soul_summons() -> CardDefinition {
+    CardDefinition {
+        name: "Soul Summons",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Manifest { who: PlayerRef::You, amount: Value::ONE },
+        ..Default::default()
+    }
+}
+
+/// Nature's Way — {1}{G} sorcery: target creature you control gains vigilance
+/// and trample this turn and deals damage equal to its power to target
+/// creature you don't control.
+pub fn natures_way() -> CardDefinition {
+    CardDefinition {
+        name: "Nature's Way",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou.negate()) },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pummeler for Hire — {4}{G} 4/4 Giant Mercenary: vigilance, reach, ward {2}.
+/// ETB: gain life equal to the greatest power among Giants you control.
+pub fn pummeler_for_hire() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Reach,
+            Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)]))),
+        ],
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(R::HasCreatureType(CreatureType::Giant)))),
+        })],
+        ..creature("Pummeler for Hire", cost(&[generic(4), g()]), vec![CreatureType::Giant, CreatureType::Mercenary], 4, 4)
+    }
+}
+
+/// Center Soul — {1}{W} instant, rebound: target creature you control gains
+/// protection from the color of your choice until end of turn.
+pub fn center_soul() -> CardDefinition {
+    CardDefinition {
+        name: "Center Soul",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Price of Loyalty — {2}{R} sorcery: gain control of target creature until end
+/// of turn, untap it, haste; +2/+0 too if Treasure mana was spent on it.
+pub fn price_of_loyalty() -> CardDefinition {
+    CardDefinition {
+        name: "Price of Loyalty",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::TreasureManaSpentToCastSource, Value::ONE),
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Noggle the Mind — {1}{U} flash Aura: enchanted creature loses all abilities
+/// and is a colorless 1/1 Noggle (no other colors or creature types).
+pub fn noggle_the_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Noggle the Mind",
+        cost: cost(&[generic(1), crate::mana::u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((1, 1)),
+            set_creature_types: Some(vec![CreatureType::Noggle]),
+            set_colors: Some(vec![]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dreamcaller Siren — {2}{U}{U} 3/3 flash, flying Siren Pirate that can block
+/// only fliers. ETB with another Pirate: tap up to two target nonland permanents.
+pub fn dreamcaller_siren() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::SelectorExists(
+                Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Pirate).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+            )),
+            effect: Effect::ApplyToTargets {
+                min_targets: 0,
+                max_targets: 2,
+                filter: R::Permanent.and(R::Land.negate()),
+                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            },
+        }],
+        ..creature(
+            "Dreamcaller Siren",
+            cost(&[generic(2), crate::mana::u(), crate::mana::u()]),
+            vec![CreatureType::Siren, CreatureType::Pirate],
+            3,
+            3,
+        )
+    }
+}

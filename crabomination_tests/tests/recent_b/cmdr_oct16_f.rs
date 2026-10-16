@@ -1082,3 +1082,138 @@ fn raph_and_leo_add_a_combat_from_the_first_one() {
     assert!(!g.battlefield_find(bears).unwrap().tapped || !g.battlefield_find(rl).unwrap().tapped, "an attacker untapped");
     assert_eq!(g.additional_combat_phases, 1);
 }
+
+/// CR 702.47a — Splicer's Skill splices onto any instant or sorcery (not only
+/// Arcane): a Bolt carries the Golem along; a creature spell can't take it.
+#[test]
+fn cr_702_47a_splicers_skill_splices_onto_instants_and_sorceries() {
+    let mut g = pod(2);
+    let skill = g.add_card_to_hand(0, catalog::splicers_skill());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(
+        g.perform_action(GameAction::CastSpellSpliced { card_id: bears, splice_cards: vec![skill], target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "not onto a creature spell"
+    );
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpliced { card_id: bolt, splice_cards: vec![skill], target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("Bolt + Splicer's Skill");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Phyrexian Golem"));
+    assert!(g.players[0].hand.iter().any(|c| c.id == skill), "a splice card stays in hand");
+}
+
+/// Lifecrafter's Gift spreads a counter to each creature you control already
+/// carrying one.
+#[test]
+fn lifecrafters_gift_spreads_to_countered_creatures() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    let c = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(b).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let gift = g.add_card_to_hand(0, catalog::lifecrafters_gift());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    cast(&mut g, gift, Some(Target::Permanent(a))).expect("Gift");
+    let n = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((n(&g, a), n(&g, b), n(&g, c)), (2, 2, 0));
+}
+
+/// Pore Over the Pages: draw three, untap two lands, discard one.
+#[test]
+fn pore_over_the_pages_untaps_two_lands() {
+    let mut g = pod(2);
+    let lands: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::island())).collect();
+    for &l in &lands {
+        g.battlefield_find_mut(l).unwrap().tapped = true;
+    }
+    let pore = g.add_card_to_hand(0, catalog::pore_over_the_pages());
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, pore, None).expect("Pore Over the Pages");
+    assert_eq!(lands.iter().filter(|&&l| !g.battlefield_find(l).unwrap().tapped).count(), 2);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3 - 1);
+}
+
+/// Nature's Way is one-sided: your creature deals its power and takes nothing.
+#[test]
+fn natures_way_bites_one_way() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    let theirs = ready(&mut g, 1, catalog::hill_giant());
+    let nw = g.add_card_to_hand(0, catalog::natures_way());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell { card_id: nw, target: Some(Target::Permanent(wurm)), additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None })
+        .expect("Nature's Way");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    let w = g.battlefield_find(wurm).unwrap();
+    assert_eq!(w.damage, 0);
+    assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Trample));
+}
+
+/// Noggle the Mind: a colorless 1/1 Noggle with no abilities.
+#[test]
+fn noggle_the_mind_makes_a_blank_noggle() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let nm = g.add_card_to_hand(0, catalog::noggle_the_mind());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, nm, Some(Target::Permanent(angel))).expect("Noggle the Mind");
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords().is_empty(), "{:?}", cp.keywords());
+    assert!(cp.colors.is_empty());
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Noggle]);
+}
+
+/// Dreamcaller Siren taps two nonland permanents only beside another Pirate.
+#[test]
+fn dreamcaller_siren_needs_another_pirate() {
+    for pirate in [false, true] {
+        let mut g = pod(2);
+        if pirate {
+            ready(&mut g, 0, catalog::talas_scout());
+        }
+        let a = ready(&mut g, 1, catalog::grizzly_bears());
+        let b = ready(&mut g, 1, catalog::craw_wurm());
+        let siren = g.add_card_to_hand(0, catalog::dreamcaller_siren());
+        g.players[0].mana_pool.add(Color::Blue, 4);
+        cast(&mut g, siren, None).expect("Siren");
+        let tapped = [a, b].iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count();
+        assert_eq!(tapped, if pirate { 2 } else { 0 }, "pirate {pirate}");
+    }
+}
+
+/// Price of Loyalty steals, untaps and hastes a creature for the turn.
+#[test]
+fn price_of_loyalty_borrows_a_creature() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    g.battlefield_find_mut(wurm).unwrap().tapped = true;
+    let pol = g.add_card_to_hand(0, catalog::price_of_loyalty());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    cast(&mut g, pol, Some(Target::Permanent(wurm))).expect("Price of Loyalty");
+    let w = g.battlefield_find(wurm).unwrap();
+    assert_eq!(w.controller, 0);
+    assert!(!w.tapped);
+    assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// Pummeler for Hire gains life equal to your biggest Giant's power.
+#[test]
+fn pummeler_for_hire_gains_the_biggest_giants_power() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hill_giant());
+    let p = g.add_card_to_hand(0, catalog::pummeler_for_hire());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    let life = g.players[0].life;
+    cast(&mut g, p, None).expect("Pummeler");
+    assert_eq!(g.players[0].life, life + 4, "the Pummeler itself is the biggest Giant (4)");
+}
