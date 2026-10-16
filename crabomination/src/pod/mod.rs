@@ -17802,6 +17802,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SLIMEFOOT_COMMANDERS,
             main: decks::SLIMEFOOT_MAIN,
         },
+        // Seat 2892: Gimli, Counter of Kills's EDHREC average deck. `--pod-decks 2892`.
+        PodDeck {
+            name: "Gimli, Counter of Kills (R)",
+            commanders: decks::GIMLI_2_COMMANDERS,
+            main: decks::GIMLI_2_MAIN,
+        },
     ]
 }
 
@@ -22577,6 +22583,7 @@ mod tests {
             ("Nemata, Grove Guardian", &[0x155F]),
             ("Verdeloth the Ancient", &[0x1560]),
             ("Slimefoot, the Stowaway", &[0x1561]),
+            ("Gimli, Counter of Kills", &[0x1562]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

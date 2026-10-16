@@ -163,6 +163,24 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-16 (Commander run, `01P5K4L5`) — The Temporal Anchor, the duplicate-legend loop
+
+- **Seats** 2868-2892 (41 cards, `decks::cmdr_oct16_a`/`_b`, tests `recent_b/cmdr_oct16_a.rs`).
+- **Primitives:** `KeywordAct::ScryBottomed` (ScryPerformed with bottomed > 0, the count as the event
+  amount), `Effect::ExileBottomOfLibraryLinked`, `MayPlayDuration::HolderTurnsWhileSource { flash }`,
+  `LookPick::total_mana_value_cap` (Michelangelo's Technique).
+- **FIXED:** `Keyword::Sneak` without the alt cost (three cards, audit test); Lens of Clarity blank
+  (tip's `no_shipped_card_is_a_blank_stub` was red); `CreateTokenAttacking` no-op once the only attacker
+  left combat (CR 506.4, The Last Ronin's Technique); the seed-931516 duplicate-legend recast loop
+  (`pod::RepeatGuard::admit_duplicate_legend`, CR 704.5j).
+- **OPEN board cap:** sweep 9504 seed 952392 (8 seats, Pest Infestation / Second Harvest / Shamanic
+  Revelation tokens).
+- **Blocked:** Hulk's Thunderclap (a target slot only when the behold cost was paid), Kargan
+  Intimidator (activated "choose one that hasn't been chosen this turn" picks at resolution; CR 700.2
+  wants it at activation, and two modes target), Rusko (Alchemy conjure, not paper).
+- **Bot census (seed 9503):** Ooze Spill and Gorilla War Cry are never cast — counterspell timing and
+  "cast only during combat before blockers" windows.
+
 ## FIXED/OPEN 2026-10-15 (Commander run, `012vc8CU`) — audit sweep 9301, the stall a barred attacker made
 
 - **Seats** 2687-2705, 2708-2715 (46 cards, `decks::cmdr_oct15_a`, tests at the end of

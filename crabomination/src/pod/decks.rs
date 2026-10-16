@@ -81103,3 +81103,31 @@ pub const SLIMEFOOT_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const GIMLI_2_COMMANDERS: &[CardFactory] = &[gimli_counter_of_kills];
+
+/// **Gimli, Counter of Kills**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Gimli, Counter of Kills (EDHREC, fetched 2026-10-16).
+pub const GIMLI_2_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, diamond_pick_axe, dwarven_mattock, fire_diamond,
+    genesis_chamber, gimlis_axe, mind_stone, mithril_coat, ruby_medallion, sol_ring,
+    swiftfoot_boots, castle_embereth, dwarven_mine, forbidden_orchard, mines_of_moria,
+    myriad_landscape, rogues_passage, akroan_horse, axgard_cavalry, brash_taunter,
+    dori_bearer_of_friends, dain_ironfoot, embermaw_hellion, erebor_flamesmith,
+    gimli_of_the_glittering_caves, gloin_the_mighty, gloin_dwarf_emissary, goblin_spymaster,
+    guttersnipe, iron_hills_stalwart, magda_brazen_outlaw, plundering_barbarian, relic_robber,
+    solphim_mayhem_dominus, storm_kiln_artist, torbran_thane_of_red_fell, varchilds_war_riders,
+    varchild_betrayer_of_kjeldor, oin_the_brave, city_on_fire, dictate_of_the_twin_gods,
+    fiery_inscription, gratuitous_violence, mechanized_warfare, rite_of_the_raging_storm,
+    spiteful_banditry, abrade, big_score, cast_into_the_fire, chaos_warp, electrickery,
+    gimlis_fury, lightning_bolt, lightning_strike, smite_the_deathless, thrill_of_possibility,
+    unexpected_windfall, koth_fire_of_resistance, blasphemous_act, blazing_volley,
+    chain_reaction, disrupt_decorum, end_the_festivities, faithless_looting, fear_fire_foes,
+    isengard_unleashed, mizzium_mortars, mogg_infestation, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

@@ -36,6 +36,8 @@ they call a deck 🟡, the table wins.
 
 Full-list scan `01ANcpHx` (2026-10-15, all 6,799 EDHREC commanders): 107 seats — 2544-2558, 2568, 2572-2580, 2583-2602, 2609-2636, 2649-2675, 2680-2686 (`decks::cmdr_scan7k_a`..`k`, 181 cards; the zero-, one- and two-card-gap decks, later batches pairing the two cards a single deck lacks); residual: The Kingpin of Crime (INCOMPLETE_CARDS).
 
+Commander run `01P5K4L5` (2026-10-16): 25 seats — 2868-2892 (`decks::cmdr_oct16_a`/`_b`, 41 cards; tests `recent_b/cmdr_oct16_a.rs`); The Temporal Anchor closed four decks (Galadriel, Elrond, Arwen with Glorfindel/Track Down), the TMNT technique cards six; residual: Lens of Clarity's face-down half (INCOMPLETE_CARDS).
+
 Commander run `01Xb59Dm` (2026-10-15/16): 63 seats — 2805-2867 (`decks::cmdr_oct15_c`, 160 cards in nine batches; tests `recent_b/cmdr_oct15_c.rs`); 2805-2806 (Orcus, Baron Sengir) and 2855 (Bartolomé del Presidio) were zero-gap decks nobody had seated; residuals: Raven Clan War-Axe, Master Skald, Lens of Clarity (INCOMPLETE_CARDS).
 
 Commander run `01XShaqR` (2026-10-15 afternoon): 65 seats — 2729-2762, 2766-2791, 2793-2797 less the concurrent session's (`decks::cmdr_oct15_b`, 201 cards; tests at the end of `recent_b/cmdr_scan7k_a.rs`); residuals: Touch of Moonglove, Ib Halfheart, Xathrid Gorgon, Tocasia, Nishoba Brawler, Unholy Indenture, Crush Underfoot, Nimble Hobbit (INCOMPLETE_CARDS).
