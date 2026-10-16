@@ -215,11 +215,13 @@ the handoff.
   903.4; `color_identity::is_reminder_text_token`). Researched, open: Warbringer (Zurgo Bellstriker, Whirlwind —
   a dash-cost reduction static), Shimian Specter (Urgoros — `NameCardExileMatchingAllZones` reads target slot 0
   / the hostile opponent, not the damaged player, and doesn't restrict the name to the revealed hand).
-- **CLAIMED (`014Q2Gfw`, batch 14) — don't duplicate:** Proctor of Potential (Denzilore Fatehold; needs a
-  scried-or-surveilled-this-turn predicate); Bone Dragon, Ghastly Death Tyrant, Moss-Pit Skeleton, Skeletal
-  Swarming (Shessra, Death's Whisper); Rosheen Meanderer, Rosheen Roaring Prophet, Reap the Past, Wildest Dreams
-  (the two Rosheen decks). Researched, open: Hazoret the Fervent's The Flame of Keld (chapter III is a
-  this-turn damage static — no this-turn static emblem yet) and Magmatic Channeler.
+- **LANDED (`014Q2Gfw`, batch 14) — seats 3010-3013** Denzilore Fatehold, Rosheen Roaring Prophet, Rosheen
+  Meanderer, Shessra: Proctor of Potential (`Predicate::ScriedOrSurveiledThisTurn`, a per-turn scry batch tally
+  beside the surveil one), Bone Dragon, Ghastly Death Tyrant, Moss-Pit Skeleton, Skeletal Swarming, Rosheen
+  Meanderer, Rosheen Roaring Prophet, Reap the Past, Wildest Dreams. Researched, open: Hazoret the Fervent's The
+  Flame of Keld (chapter III is a this-turn damage static — no this-turn static emblem yet) and Magmatic
+  Channeler; Meneldor / Doc Aurlock's Shifting Loyalties (a "shares a card type with target slot 0" leaf) and
+  Extraordinary Journey.
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
