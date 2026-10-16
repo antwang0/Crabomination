@@ -4147,6 +4147,10 @@ pub enum KeywordAct {
     /// A creature became tapped to pay a teamwork cost; it is the subject
     /// (Agent Maria Hill).
     TappedForTeamwork,
+    /// CR 701.22a — a player chose to put one or more cards on the bottom
+    /// while scrying; the scryer is the actor, the count bottomed the event
+    /// amount (The Temporal Anchor).
+    ScryBottomed,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.
@@ -5949,6 +5953,9 @@ pub enum Effect {
         #[serde(default)]
         face_down: bool,
     },
+    /// "Exile that many cards from the bottom of your library" — the
+    /// controller's, each stamped `exiled_with = source` (The Temporal Anchor).
+    ExileBottomOfLibraryLinked { amount: Value },
     /// "As many times as you choose, you may exile the top card of your
     /// library. If the total mana value of the cards exiled this way is
     /// `limit` or less, [`then`]" (Dance with Calamity). The controller is
@@ -14310,6 +14317,10 @@ pub struct LookPick {
     /// rest go to hand (not a draw, CR 121.5) instead of their usual route.
     #[serde(default)]
     pub rest_to_hand_if: Option<Predicate>,
+    /// "With total mana value N or less" (Michelangelo's Technique): a pick
+    /// is kept only while the picks' mana values still sum to at most this.
+    #[serde(default)]
+    pub total_mana_value_cap: Option<Value>,
 }
 
 impl Default for LookPick {
@@ -14334,6 +14345,7 @@ impl Default for LookPick {
             battlefield_haste: false,
             one_each: Vec::new(),
             rest_to_hand_if: None,
+            total_mana_value_cap: None,
         }
     }
 }

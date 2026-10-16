@@ -2353,6 +2353,9 @@ pub enum PendingEffectState {
         /// `LookPick::rest_to_hand_if` — read after the picks land.
         #[serde(default)]
         rest_to_hand_if: Option<crate::effect::Predicate>,
+        /// `LookPick::total_mana_value_cap`, evaluated as the look resolved.
+        #[serde(default)]
+        mv_cap: Option<u32>,
         /// Source of the originating `LookPickToHand`, for `then_if_picked`.
         #[serde(default)]
         source: Option<CardId>,

@@ -4788,7 +4788,7 @@ pub fn azula_cunning_usurper() -> CardDefinition {
             exile_pick(Selector::CardsInZone { who: opp(), zone: Zone::Graveyard, filter: R::Nonland }),
             Effect::GrantMayPlay {
                 what: Selector::CardExiledWithSource,
-                duration: MayPlayDuration::HolderTurnsWithFlashWhileSource { holder: 0, source: CardId(0) },
+                duration: MayPlayDuration::HolderTurnsWhileSource { holder: 0, source: CardId(0), flash: true },
                 to_owner: false,
                 exile_after: false,
                 pay_own_cost: true,

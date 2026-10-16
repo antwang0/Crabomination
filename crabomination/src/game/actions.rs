@@ -15210,7 +15210,7 @@ impl GameState {
                     permission.pay_life.then(|| card_ref.definition.cost.cmc());
                 // Azula's grant casts "as though they had flash".
                 miracle_window = permission.miracle
-                    || matches!(permission.duration, crate::card::MayPlayDuration::HolderTurnsWithFlashWhileSource { .. });
+                    || matches!(permission.duration, crate::card::MayPlayDuration::HolderTurnsWhileSource { flash: true, .. });
                 permission.exile_after
             }
             None => {

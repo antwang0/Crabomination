@@ -1802,6 +1802,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(amount)
             }
             Effect::MillTwoRepeatSharing { who, .. } => sel_has_target(who),
+            Effect::ExileBottomOfLibraryLinked { amount } => value_has_target(amount),
             Effect::MillThenToHand { amount, .. } => value_has_target(amount),
             Effect::MillThenToHandN { amount, take, .. } => {
                 value_has_target(amount) || value_has_target(take)

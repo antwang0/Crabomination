@@ -6016,7 +6016,7 @@ impl GameState {
                         false
                     }
                     // Azula's: woken for the holder's turn, parked otherwise.
-                    crate::card::MayPlayDuration::HolderTurnsWithFlashWhileSource { holder, .. } => {
+                    crate::card::MayPlayDuration::HolderTurnsWhileSource { holder, .. } => {
                         let seat = if holder == next_active { holder } else { crate::card::MAY_PLAY_DORMANT };
                         if perm.player != seat {
                             c.may_play_until = Some(crate::card::MayPlayPermission { player: seat, ..perm });

@@ -30317,7 +30317,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, one_each, rest_to_hand_if, source } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, one_each, rest_to_hand_if, mv_cap, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -30338,16 +30338,24 @@ impl GameState {
                     })
                 };
                 let mut masks: Vec<u32> = Vec::new();
+                let mut mv_total = 0u32;
                 let mut fits = |id: CardId| -> bool {
-                    if one_each.is_empty() {
-                        return true;
+                    let mv = match mv_cap {
+                        Some(_) => self.players[player].library.iter().find(|c| c.id == id).map_or(0, |c| c.definition.cost.cmc()),
+                        None => 0,
+                    };
+                    if mv_cap.is_some_and(|cap| mv_total + mv > cap) {
+                        return false;
                     }
-                    masks.push(category_mask(id));
-                    let ok = crate::game::effects::distinct_categories(&masks, 0);
-                    if !ok {
-                        masks.pop();
+                    if !one_each.is_empty() {
+                        masks.push(category_mask(id));
+                        if !crate::game::effects::distinct_categories(&masks, 0) {
+                            masks.pop();
+                            return false;
+                        }
                     }
-                    ok
+                    mv_total += mv;
+                    true
                 };
                 match answer {
                     DecisionAnswer::Search(chosen_id) => {
@@ -33324,6 +33332,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::DamagePrevented { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::DiscardedBatch { count, .. } => *count,
+        GameEvent::ScryPerformed { bottomed, .. } => *bottomed as u32,
         GameEvent::CardsExiledFromHandOrBy { count, .. } => *count,
         GameEvent::CounterAdded { count, .. } | GameEvent::KeywordCounterAdded { count, .. } => *count,
         GameEvent::CounterRemoved { count, .. } => *count,

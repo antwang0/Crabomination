@@ -11614,6 +11614,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileBottomOfLibraryLinked { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                let p = ctx.controller;
+                for _ in 0..n {
+                    // The library's end is its bottom.
+                    let Some(card) = self.players[p].library.pop() else { break };
+                    let cid = card.id;
+                    self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                    self.scratch.last_moved_cards.push(cid);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = ctx.source;
+                    }
+                }
+                Ok(())
+            }
+
             // Kotis, the Fangkeeper — exile the top N of a library, then take
             // free-cast permission on the ones cheap enough. The MV gate is
             // applied here rather than in the selector because both bounds
@@ -28109,6 +28125,7 @@ impl GameState {
                     battlefield_haste,
                     one_each,
                     rest_to_hand_if,
+                    total_mana_value_cap,
                 } = &**lp;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -28200,6 +28217,7 @@ impl GameState {
                     battlefield_haste: *battlefield_haste,
                     one_each: one_each.clone(),
                     rest_to_hand_if: rest_to_hand_if.clone(),
+                    mv_cap: total_mana_value_cap.as_ref().map(|v| self.evaluate_value(v, ctx).max(0) as u32),
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -28273,6 +28291,7 @@ impl GameState {
                     battlefield_haste: false,
                     one_each: Vec::new(),
                     rest_to_hand_if: None,
+                    mv_cap: None,
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -28329,6 +28348,7 @@ impl GameState {
                     battlefield_haste: false,
                     one_each: Vec::new(),
                     rest_to_hand_if: None,
+                    mv_cap: None,
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -42791,7 +42811,7 @@ impl GameState {
                             (self.fetch_grant_seat(recipient), duration.bound_to(recipient))
                         }
                         // Azula's: live only on the holder's own turns.
-                        crate::card::MayPlayDuration::HolderTurnsWithFlashWhileSource { .. } => {
+                        crate::card::MayPlayDuration::HolderTurnsWhileSource { .. } => {
                             let seat = if self.active_player_idx == recipient {
                                 recipient
                             } else {

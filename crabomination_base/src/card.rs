@@ -1356,12 +1356,12 @@ pub enum MayPlayDuration {
     /// for `holder` by their nontoken sacrifice on their turn, and ended as
     /// `source` leaves (CR 611.3a). Printed with holder 0 and `CardId(0)`.
     HolderTurnsAfterNontokenSacrifice { holder: usize, source: CardId },
-    /// "During your turn, you may cast cards exiled with this and you may
-    /// cast them as though they had flash" (Azula, Cunning Usurper): live on
+    /// "During your turn, you may play cards exiled with this" (The Temporal
+    /// Anchor; Azula, Cunning Usurper adds "as though they had flash"): live on
     /// `holder`'s turns, parked at [`MAY_PLAY_DORMANT`] on everyone else's by
-    /// the turn sweep, ended as `source` leaves (CR 611.3a). The cast skips
-    /// the sorcery-speed gate. Printed with holder 0 and `CardId(0)`.
-    HolderTurnsWithFlashWhileSource { holder: usize, source: CardId },
+    /// the turn sweep, ended as `source` leaves (CR 611.3a). With `flash` the
+    /// cast skips the sorcery-speed gate. Printed with holder 0 and `CardId(0)`.
+    HolderTurnsWhileSource { holder: usize, source: CardId, flash: bool },
     /// "For as long as they remain exiled, you may play them if you control a
     /// [type]" (Gandalf, Goblins' Bane's Flameshape): `WhileExiled`, usable
     /// only while the holder controls a creature of `creature_type` —
@@ -1400,8 +1400,8 @@ impl MayPlayDuration {
             Self::HolderTurnsAfterNontokenSacrifice { source, .. } => {
                 Self::HolderTurnsAfterNontokenSacrifice { holder: seat, source }
             }
-            Self::HolderTurnsWithFlashWhileSource { source, .. } => {
-                Self::HolderTurnsWithFlashWhileSource { holder: seat, source }
+            Self::HolderTurnsWhileSource { source, flash, .. } => {
+                Self::HolderTurnsWhileSource { holder: seat, source, flash }
             }
             Self::TurnsLoreCounterPutOnSource { source, .. } => {
                 Self::TurnsLoreCounterPutOnSource { holder: seat, source }
@@ -1423,8 +1423,8 @@ impl MayPlayDuration {
             (Self::HolderTurnsAfterOpponentLostLife { holder, .. }, Some(source)) => {
                 Self::HolderTurnsAfterOpponentLostLife { holder, source }
             }
-            (Self::HolderTurnsWithFlashWhileSource { holder, .. }, Some(source)) => {
-                Self::HolderTurnsWithFlashWhileSource { holder, source }
+            (Self::HolderTurnsWhileSource { holder, flash, .. }, Some(source)) => {
+                Self::HolderTurnsWhileSource { holder, source, flash }
             }
             (Self::TurnsLoreCounterPutOnSource { holder, .. }, Some(source)) => {
                 Self::TurnsLoreCounterPutOnSource { holder, source }

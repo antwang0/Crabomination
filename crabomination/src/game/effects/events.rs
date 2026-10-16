@@ -110,6 +110,9 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         | E::TappedForTeamwork { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
+        E::ScryPerformed { bottomed, .. } if *bottomed > 0 => {
+            bits!(K::Performed(crate::effect::KeywordAct::Exploited))
+        }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
         E::GiftGiven { .. } => bits!(K::GiftGiven),
         E::ClassLevelReached { .. } => bits!(K::ClassLevelReached),
@@ -297,6 +300,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::SpellCausedLifeGain, GameEvent::SpellCausedLifeGain { .. }) => true,
         (A::EchoPaid, GameEvent::EchoPaid { .. }) => true,
         (A::TappedForTeamwork, GameEvent::TappedForTeamwork { .. }) => true,
+        (A::ScryBottomed, GameEvent::ScryPerformed { bottomed, .. }) => *bottomed > 0,
         _ => false,
     }
 }
@@ -1478,6 +1482,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCausedLifeGain { player, .. }
         | GameEvent::EchoPaid { controller: player, .. }
         | GameEvent::TappedForTeamwork { controller: player, .. }
+        | GameEvent::ScryPerformed { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::CardExiledFrom { player, .. }
         | GameEvent::CreatureFought { controller: player, .. }
@@ -2116,6 +2121,7 @@ mod tests {
             },
             E::ManifestedDread { player: 0, milled: c },
             E::ScryPerformed { player: 0, looked_at: 1, bottomed: 0 },
+            E::ScryPerformed { player: 0, looked_at: 2, bottomed: 1 },
             E::AttackerDeclared(c),
             E::BlockerDeclared { blocker: c, attacker: mine },
             E::AttackerWentUnblocked { attacker: c },
@@ -2217,6 +2223,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::SpellCausedLifeGain),
             K::Performed(crate::effect::KeywordAct::EchoPaid),
             K::Performed(crate::effect::KeywordAct::TappedForTeamwork),
+            K::Performed(crate::effect::KeywordAct::ScryBottomed),
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,
