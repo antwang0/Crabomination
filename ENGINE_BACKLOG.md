@@ -266,10 +266,10 @@ the handoff.
   saga whose III transforms into Nameless Conqueror).
 - **LANDED (`014Q2Gfw`, batch 20) — seat 3025** Shagrat, Loot Bearer: Shagrat, Uglúk of the White Hand,
   Swarming of Moria. ⚠ A trigger reading `Selector::TriggerSource`'s types at RESOLUTION misses a dying token
-  (gone after the SBA) — Uglúk's Goblin/Orc check is the event filter instead. Researched, open: Rory Williams's
-  Planar Atlas (LookPick has no "put the pick on top" option).
-- **CLAIMED (`014Q2Gfw`, batch 21) — don't duplicate:** Planar Atlas, Elite Inquisitor, Loyal Sentry, Savior of
-  Ollenbock (Rory Williams).
+  (gone after the SBA) — Uglúk's Goblin/Orc check is the event filter instead. 
+- **LANDED (`014Q2Gfw`, batch 21) — seat 3088** Rory Williams: Planar Atlas (🟡 keeps any card on top),
+  Elite Inquisitor, Loyal Sentry, Savior of Ollenbock (training + exile until it leaves). Gate at `59c955cc`:
+  suite 27,203 green, clippy 0, bench byte-identical, sweep 9609 (seats 2970-3025) 465 games 0 bad.
 - **Board cap seen (sweep 9606):** Cathars' Crusade + Invisible Woman, Sue Storm (seed 960644 game 9, decks
   2979/2981/2980/2973) — two token-and-counter triggers feeding each other.
 - **Board cap seen:** Krenko, Tin Street Kingpin in Arni Renowned Champion's deck (seed 266013 game 29,
