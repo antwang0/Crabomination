@@ -18558,6 +18558,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PROFT_COMMANDERS,
             main: decks::PROFT_MAIN,
         },
+        // Seat 3018: Sethron, Hurloon General's EDHREC average deck. `--pod-decks 3018`.
+        PodDeck {
+            name: "Sethron, Hurloon General (BR)",
+            commanders: decks::SETHRON_COMMANDERS,
+            main: decks::SETHRON_MAIN,
+        },
     ]
 }
 
@@ -23459,6 +23465,7 @@ mod tests {
             ("Thranduil, Sindarin Liege", &[0x15DD]),
             ("Uchbenbak, the Great Mistake", &[0x15DE]),
             ("Proft, Consulting Detective", &[0x15DF]),
+            ("Sethron, Hurloon General", &[0x15E0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

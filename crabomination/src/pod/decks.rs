@@ -84605,3 +84605,31 @@ pub const PROFT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const SETHRON_COMMANDERS: &[CardFactory] = &[sethron_hurloon_general];
+
+/// **Sethron, Hurloon General**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Mountains + 9 Swamps = 99.
+/// Sethron, Hurloon General (EDHREC, fetched 2026-10-16).
+pub const SETHRON_MAIN: &[CardFactory] = &[
+    arcane_signet, didgeridoo, hazorets_monument, heralds_horn, mind_stone, patchwork_banner,
+    rakdos_signet, sol_ring, talisman_of_indulgence, urzas_incubator, vanquishers_banner,
+    blood_crypt, bojuka_bog, castle_embereth, command_tower, dragonskull_summit,
+    foreboding_ruins, haunted_ridge, luxury_suite, path_of_ancestry, rakdos_carnarium,
+    smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice, unclaimed_territory,
+    adaptive_automaton, ahn_crop_crasher, akoum_warrior, anaba_spirit_crafter,
+    deathbellow_raider, dreamshaper_shaman, fanatic_of_mogis, felhide_petrifier,
+    felhide_spiritbinder, glint_horn_buccaneer, gnarled_scarhide, gornog_the_red_reaper,
+    kragma_warcaller, labyrinth_raptor, lord_of_shatterskull_pass, mogis_god_of_slaughter,
+    moraug_fury_of_akoum, neheb_dreadhorde_champion, neheb_the_eternal, neheb_the_worthy,
+    oracle_of_bones, rageblood_shaman, ragemonger, sandstorm_crasher, sardian_cliffstomper,
+    skophos_reaver, slaughter_priest_of_mogis, soulreaper_of_mogis, taurean_mauler,
+    descendants_fury, molten_echoes, phyrexian_arena, rage_reflection, shared_animosity, abrade,
+    bedevil, chaos_warp, dark_ritual, raise_the_draugr, rakdos_charm, terminate,
+    thrill_of_possibility, angrath_captain_of_chaos, blasphemous_act, crippling_fear,
+    deathbellow_war_cry, faithless_looting, feed_the_swarm, flurry_of_horns, kindred_dominance,
+    patriarchs_bidding, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
