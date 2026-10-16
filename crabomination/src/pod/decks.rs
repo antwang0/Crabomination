@@ -82430,3 +82430,83 @@ pub const GALLIA_2_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const NEFAROX_COMMANDERS: &[CardFactory] = &[nefarox_overlord_of_grixis];
+
+/// **Nefarox, Overlord of Grixis**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Nefarox, Overlord of Grixis (EDHREC, fetched 2026-10-16).
+pub const NEFAROX_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, charcoal_diamond, commanders_sphere, fireshrieker,
+    haunted_cloak, jet_medallion, lashwrithe, loxodon_warhammer, mind_stone, nightmare_lash,
+    reapers_talisman, ring_of_xathrid, sigil_of_valor, sol_ring, swiftfoot_boots,
+    sword_of_vengeance, barren_moor, bojuka_bog, cabal_coffers, cabal_stronghold,
+    cathedral_of_war, myriad_landscape, rogues_passage, archfiend_of_depravity, burnished_hart,
+    crypt_ghast, dread_presence, duskmantle_prowler, duty_bound_dead, gray_merchant_of_asphodel,
+    harvester_of_souls, indulgent_tormentor, knight_of_infamy, morbid_opportunist, nighthowler,
+    plaguecrafter, servant_of_nefarox, silent_arbiter, solemn_simulacrum, spider_man_noir,
+    vampire_nighthawk, black_market, black_market_connections, dragon_shadow, eternal_thirst,
+    minions_return, necrosynthesis, phyrexian_arena, sadistic_glee, shades_form, vampiric_link,
+    dark_ritual, defile, doom_blade, go_for_the_throat, infernal_grasp, murder,
+    supernatural_stamina, tragic_slip, withering_torment, diabolic_tutor, feed_the_swarm,
+    mutilate, nights_whisper, read_the_bones, sign_in_blood, syphon_mind, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const HYTHONIA_THE_CRUEL_COMMANDERS: &[CardFactory] = &[hythonia_the_cruel];
+
+/// **Hythonia the Cruel**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Hythonia the Cruel (EDHREC, fetched 2026-10-16).
+pub const HYTHONIA_THE_CRUEL_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, caged_sun, charcoal_diamond, gorgons_head, jet_medallion,
+    maskwood_nexus, mind_stone, sol_ring, thought_vessel, thran_dynamo, wayfarers_bauble,
+    whip_of_erebos, worn_powerstone, bojuka_bog, cabal_coffers, cabal_stronghold,
+    myriad_landscape, nykthos_shrine_to_nyx, rogues_passage, archetype_of_finality,
+    arisen_gorgon, cairn_wanderer, crypt_ghast, gorgon_recluse, graveshifter,
+    gray_merchant_of_asphodel, hooded_blightfang, infernal_medusa, keepsake_gorgon,
+    loathsome_curator, persuasive_interrogators, pharikas_spawn, rattleback_apothecary,
+    scourge_of_the_undercity, solemn_simulacrum, undercity_eliminator, venomous_changeling,
+    venomous_hierophant, visara_the_dreadful, vraskas_finisher, xathrid_gorgon,
+    aspect_of_gorgon, black_market, case_of_the_gorgons_kiss, conspiracy, greed,
+    phyrexian_arena, underworld_connections, consuming_corruption, dark_ritual, defile,
+    doom_blade, go_for_the_throat, heros_downfall, infernal_grasp, vraskas_contempt,
+    vraskas_fall, vraska_scheming_gorgon, exsanguinate, feed_the_swarm, mutilate,
+    nights_whisper, read_the_bones, rise_of_the_dark_realms, sign_in_blood, toxic_deluge,
+    vraskas_scorn,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const TELIMTOR_COMMANDERS: &[CardFactory] = &[telimtor];
+
+/// **Telim'Tor**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Telim'Tor (EDHREC, fetched 2026-10-16).
+pub const TELIMTOR_MAIN: &[CardFactory] = &[
+    akromas_memorial, arcane_signet, bloodforged_battle_axe, caged_sun, crawlspace,
+    cursed_mirror, dolmen_gate, embercleave, fire_diamond, gauntlet_of_power, hazorets_monument,
+    helm_of_the_host, jabaris_banner, ruby_medallion, sigiled_sword_of_valeron, sol_ring,
+    the_fire_crystal, arena_of_glory, castle_embereth, myriad_landscape, nykthos_shrine_to_nyx,
+    valakut_the_molten_pinnacle, war_room, adaptive_automaton, anger, blazing_blade_askari,
+    blood_knight, bloodcrusher_of_khorne, bloodsworn_steward, bogardan_lancer,
+    burning_shield_askari, cavalier_of_flame, embereth_paladin, embereth_shieldbreaker,
+    fervent_champion, flamerush_rider, hanweir_lancer, hero_of_oxid_ridge,
+    inti_seneschal_of_the_sun, khorvath_brightflame, marton_stromgald, searing_spear_askari,
+    solemn_simulacrum, suqata_lancer, tilonallis_skinshifter, torbran_thane_of_red_fell,
+    varchild_betrayer_of_kjeldor, eomer_marshal_of_rohan, agility, battle_strain,
+    circle_of_flame, flameshadow_conjuring, heat_of_battle, molten_echoes, shared_animosity,
+    abrade, big_score, chaos_warp, demand_answers, lightning_bolt, telimtors_edict,
+    unexpected_windfall, koth_of_the_hammer, blasphemous_act, disrupt_decorum,
+    faithless_looting, jeskas_will, joust, mana_geyser, twinflame, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

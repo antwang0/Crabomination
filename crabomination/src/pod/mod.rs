@@ -18090,6 +18090,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALLIA_2_COMMANDERS,
             main: decks::GALLIA_2_MAIN,
         },
+        // Seat 2940: Nefarox, Overlord of Grixis's EDHREC average deck. `--pod-decks 2940`.
+        PodDeck {
+            name: "Nefarox, Overlord of Grixis (B)",
+            commanders: decks::NEFAROX_COMMANDERS,
+            main: decks::NEFAROX_MAIN,
+        },
+        // Seat 2941: Hythonia the Cruel's EDHREC average deck. `--pod-decks 2941`.
+        PodDeck {
+            name: "Hythonia the Cruel (B)",
+            commanders: decks::HYTHONIA_THE_CRUEL_COMMANDERS,
+            main: decks::HYTHONIA_THE_CRUEL_MAIN,
+        },
+        // Seat 2942: Telim'Tor's EDHREC average deck. `--pod-decks 2942`.
+        PodDeck {
+            name: "Telim'Tor (R)",
+            commanders: decks::TELIMTOR_COMMANDERS,
+            main: decks::TELIMTOR_MAIN,
+        },
     ]
 }
 
@@ -22913,6 +22931,9 @@ mod tests {
             ("Llawan, Cephalid Empress", &[0x158F]),
             ("Bullseye, Death Dealer", &[0x1590]),
             ("Gallia, Tragic Host", &[0x1591]),
+            ("Nefarox, Overlord of Grixis", &[0x1592]),
+            ("Hythonia the Cruel", &[0x1593]),
+            ("Telim'Tor", &[0x1594]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
