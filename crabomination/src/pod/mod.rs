@@ -18576,6 +18576,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAPATRA_3_COMMANDERS,
             main: decks::HAPATRA_3_MAIN,
         },
+        // Seat 3021: Neheb, the Worthy's EDHREC average deck. `--pod-decks 3021`.
+        PodDeck {
+            name: "Neheb, the Worthy (BR)",
+            commanders: decks::NEHEB_3_COMMANDERS,
+            main: decks::NEHEB_3_MAIN,
+        },
+        // Seat 3022: Aradesh, the Founder's EDHREC average deck. `--pod-decks 3022`.
+        PodDeck {
+            name: "Aradesh, the Founder (W)",
+            commanders: decks::ARADESH_COMMANDERS,
+            main: decks::ARADESH_MAIN,
+        },
     ]
 }
 
@@ -23480,6 +23492,8 @@ mod tests {
             ("Sethron, Hurloon General", &[0x15E0]),
             ("Captain Vargus Wrath", &[0x15E1]),
             ("Hapatra, the Desert Fang", &[0x15E2]),
+            ("Neheb, the Worthy", &[0x15E3]),
+            ("Aradesh, the Founder", &[0x15E4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

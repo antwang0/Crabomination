@@ -84688,3 +84688,57 @@ pub const HAPATRA_3_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const NEHEB_3_COMMANDERS: &[CardFactory] = &[neheb_the_worthy];
+
+/// **Neheb, the Worthy**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Mountains + 9 Swamps = 99.
+/// Neheb, the Worthy (EDHREC, fetched 2026-10-16).
+pub const NEHEB_3_MAIN: &[CardFactory] = &[
+    arcane_signet, didgeridoo, geths_grimoire, hazorets_monument, heralds_horn,
+    patchwork_banner, rakdos_signet, sol_ring, talisman_of_indulgence, vanquishers_banner,
+    blood_crypt, bojuka_bog, canyon_slough, command_tower, dragonskull_summit, foreboding_ruins,
+    haunted_ridge, path_of_ancestry, rakdos_carnarium, rix_maadi_dungeon_palace, rogues_passage,
+    smoldering_marsh, sulfurous_springs, temple_of_malice, ahn_crop_crasher, akoum_warrior,
+    anaba_spirit_crafter, anger, bloodrage_brawler, burning_fist_minotaur, deathbellow_raider,
+    dreamshaper_shaman, fanatic_of_mogis, felhide_petrifier, felhide_spiritbinder,
+    glint_horn_buccaneer, gornog_the_red_reaper, grisly_survivor, kragma_warcaller,
+    lord_of_shatterskull_pass, merciless_javelineer, minotaur_sureshot, mogis_god_of_slaughter,
+    moraug_fury_of_akoum, neheb_dreadhorde_champion, neheb_the_eternal, oracle_of_bones,
+    rageblood_shaman, ragemonger, sandstorm_crasher, sardian_cliffstomper,
+    sethron_hurloon_general, skophos_reaver, taurean_mauler, collective_inferno, megrim,
+    pain_magnification, raiders_wake, shared_animosity, waste_not, abrade, bedevil, chaos_warp,
+    dark_withering, kolaghans_command, rakdos_charm, terminate, thrill_of_possibility,
+    angrath_the_flame_chained, blasphemous_act, crippling_fear, deathbellow_war_cry, dreadbore,
+    faithless_looting, feed_the_swarm, flurry_of_horns, terminal_agony, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ARADESH_COMMANDERS: &[CardFactory] = &[aradesh_the_founder];
+
+/// **Aradesh, the Founder**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Aradesh, the Founder (EDHREC, fetched 2026-10-16).
+pub const ARADESH_MAIN: &[CardFactory] = &[
+    arcane_signet, haunted_cloak, heraldic_banner, lightning_greaves, loxodon_warhammer,
+    mind_stone, oketras_monument, pearl_medallion, pre_war_formalwear, shadowspear,
+    sigil_of_valor, silver_shroud_costume, sol_ring, swiftfoot_boots, sword_of_vengeance,
+    abandoned_air_temple, access_tunnel, cathedral_of_war, emeria_the_sky_ruin,
+    myriad_landscape, rogues_passage, war_room, adeline_resplendent_cathar, adept_watershaper,
+    akrasan_squire, argivian_cavalier, bastion_protector, battlegrace_angel,
+    benalish_faithbonder, benalish_marshal, cathar_commando, claim_jumper, coalition_skyknight,
+    coppercoat_vanguard, guardian_of_new_benalia, intrepid_adversary, keeper_of_the_accord,
+    knight_of_glory, loyal_warhound, lupine_prototype, paladin_danse_steel_maverick,
+    peggy_carter_secret_agent, relic_golem, serra_ascendant, sigiled_paladin, stoic_ephemera,
+    sublime_archangel, sunweb, veteran_of_the_depths, vexilus_praetor, woolly_razorback,
+    angelic_benediction, angelic_exaltation, darksteel_mutation, flowering_of_the_white_tree,
+    idolized, land_tax, spirit_mantle, blacksmiths_skill, flawless_maneuver, generous_gift,
+    lorans_escape, path_to_exile, reprieve, stroke_of_midnight, swords_to_plowshares,
+    gideon_blackblade, austere_command, cut_a_deal, farewell, sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
