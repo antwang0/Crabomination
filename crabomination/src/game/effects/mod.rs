@@ -23970,6 +23970,10 @@ impl GameState {
                 // the same defender the source is attacking, else the
                 // controller's first opponent.
                 let target = match defender {
+                    // CR 508.4 — the controller picks the defender; a fan-out
+                    // ref ("a player you're attacking") offers its seats and
+                    // the first in APNAP order is taken.
+                    Some(d) if d.is_fan_out() => self.resolve_players(d, ctx).first().copied().map(AttackTarget::Player),
                     Some(d) => self.resolve_player(d, ctx).map(AttackTarget::Player),
                     None => ctx
                         .source
