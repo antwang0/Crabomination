@@ -19734,6 +19734,138 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HALANA_COMMANDERS,
             main: decks::HALANA_MAIN,
         },
+        // Seat 3214: April O'Neil, Live on the Scene and Leonardo, the Balance's EDHREC average deck. `--pod-decks 3214`.
+        PodDeck {
+            name: "April O'Neil, Live on the Scene and Leonardo, the Balance (WUBRG)",
+            commanders: decks::APRIL_ONEIL_2_COMMANDERS,
+            main: decks::APRIL_ONEIL_2_MAIN,
+        },
+        // Seat 3215: Armix, Filigree Thrasher and Krark, the Thumbless's EDHREC average deck. `--pod-decks 3215`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Krark, the Thumbless (BR)",
+            commanders: decks::ARMIX_6_COMMANDERS,
+            main: decks::ARMIX_6_MAIN,
+        },
+        // Seat 3216: Bruse Tarl, Boorish Herder and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3216`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Radiant, Serra Archangel (WR)",
+            commanders: decks::BRUSE_TARL_5_COMMANDERS,
+            main: decks::BRUSE_TARL_5_MAIN,
+        },
+        // Seat 3217: Durnan of the Yawning Portal and Master Chef's EDHREC average deck. `--pod-decks 3217`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Master Chef (G)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_6_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_6_MAIN,
+        },
+        // Seat 3218: Erinis, Gloom Stalker and Candlekeep Sage's EDHREC average deck. `--pod-decks 3218`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Candlekeep Sage (UG)",
+            commanders: decks::ERINIS_3_COMMANDERS,
+            main: decks::ERINIS_3_MAIN,
+        },
+        // Seat 3219: Ghost of Ramirez DePietro and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 3219`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Kraum, Ludevic's Opus (UR)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_4_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_4_MAIN,
+        },
+        // Seat 3220: Gilanra, Caller of Wirewood and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 3220`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Jeska, Thrice Reborn (RG)",
+            commanders: decks::GILANRA_7_COMMANDERS,
+            main: decks::GILANRA_7_MAIN,
+        },
+        // Seat 3221: Keskit, the Flesh Sculptor and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3221`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Siani, Eye of the Storm (UB)",
+            commanders: decks::KESKIT_3_COMMANDERS,
+            main: decks::KESKIT_3_MAIN,
+        },
+        // Seat 3222: Kodama of the East Tree and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3222`.
+        PodDeck {
+            name: "Kodama of the East Tree and Vial Smasher the Fierce (BRG)",
+            commanders: decks::KODAMA_OF_THE_EAST_TREE_6_COMMANDERS,
+            main: decks::KODAMA_OF_THE_EAST_TREE_6_MAIN,
+        },
+        // Seat 3223: Kraum, Ludevic's Opus and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3223`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Sidar Kondo of Jamuraa (WURG)",
+            commanders: decks::KRAUM_3_COMMANDERS,
+            main: decks::KRAUM_3_MAIN,
+        },
+        // Seat 3224: Leonardo, the Balance and Raphael, the Muscle's EDHREC average deck. `--pod-decks 3224`.
+        PodDeck {
+            name: "Leonardo, the Balance and Raphael, the Muscle (WUBRG)",
+            commanders: decks::LEONARDO_4_COMMANDERS,
+            main: decks::LEONARDO_4_MAIN,
+        },
+        // Seat 3225: Malcolm, Keen-Eyed Navigator and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 3225`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Tormod, the Desecrator (UB)",
+            commanders: decks::MALCOLM_9_COMMANDERS,
+            main: decks::MALCOLM_9_MAIN,
+        },
+        // Seat 3226: Sarevok, Deathbringer and Candlekeep Sage's EDHREC average deck. `--pod-decks 3226`.
+        PodDeck {
+            name: "Sarevok, Deathbringer and Candlekeep Sage (UB)",
+            commanders: decks::SAREVOK_5_COMMANDERS,
+            main: decks::SAREVOK_5_MAIN,
+        },
+        // Seat 3227: Siani, Eye of the Storm and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3227`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Vial Smasher the Fierce (UBR)",
+            commanders: decks::SIANI_3_COMMANDERS,
+            main: decks::SIANI_3_MAIN,
+        },
+        // Seat 3228: Skanos Dragonheart and Shameless Charlatan's EDHREC average deck. `--pod-decks 3228`.
+        PodDeck {
+            name: "Skanos Dragonheart and Shameless Charlatan (UG)",
+            commanders: decks::SKANOS_DRAGONHEART_4_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_4_MAIN,
+        },
+        // Seat 3229: The Eighth Doctor and Nyssa of Traken's EDHREC average deck. `--pod-decks 3229`.
+        PodDeck {
+            name: "The Eighth Doctor and Nyssa of Traken (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3230: The Fugitive Doctor and Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 3230`.
+        PodDeck {
+            name: "The Fugitive Doctor and Nardole, Resourceful Cyborg (URG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_3_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_3_MAIN,
+        },
+        // Seat 3231: The Sixth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 3231`.
+        PodDeck {
+            name: "The Sixth Doctor and Donna Noble (URG)",
+            commanders: decks::THE_SIXTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3232: The Third Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 3232`.
+        PodDeck {
+            name: "The Third Doctor and Jamie McCrimmon (UG)",
+            commanders: decks::THE_THIRD_DOCTOR_5_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_5_MAIN,
+        },
+        // Seat 3233: Vhal, Candlekeep Researcher and Folk Hero's EDHREC average deck. `--pod-decks 3233`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Folk Hero (WU)",
+            commanders: decks::VHAL_3_COMMANDERS,
+            main: decks::VHAL_3_MAIN,
+        },
+        // Seat 3234: Zellix, Sanity Flayer and Criminal Past's EDHREC average deck. `--pod-decks 3234`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Criminal Past (UB)",
+            commanders: decks::ZELLIX_3_COMMANDERS,
+            main: decks::ZELLIX_3_MAIN,
+        },
+        // Seat 3235: Loot, the Nexus's EDHREC average deck. `--pod-decks 3235`.
+        PodDeck {
+            name: "Loot, the Nexus (G)",
+            commanders: decks::LOOT_3_COMMANDERS,
+            main: decks::LOOT_3_MAIN,
+        },
     ]
 }
 
@@ -24831,6 +24963,28 @@ mod tests {
             ("Durnan of the Yawning Portal and Flaming Fist", &[0x16A1]),
             ("Gale, Waterdeep Prodigy and Hardy Outlander", &[0x16A2]),
             ("Halana, Kessig Ranger and Tana, the Bloodsower", &[0x16A3]),
+            ("April O'Neil, Live on the Scene and Leonardo, the Balance", &[0x16A4]),
+            ("Armix, Filigree Thrasher and Krark, the Thumbless", &[0x16A5]),
+            ("Bruse Tarl, Boorish Herder and Radiant, Serra Archangel", &[0x16A6]),
+            ("Durnan of the Yawning Portal and Master Chef", &[0x16A7]),
+            ("Erinis, Gloom Stalker and Candlekeep Sage", &[0x16A8]),
+            ("Ghost of Ramirez DePietro and Kraum, Ludevic's Opus", &[0x16A9]),
+            ("Gilanra, Caller of Wirewood and Jeska, Thrice Reborn", &[0x16AA]),
+            ("Keskit, the Flesh Sculptor and Siani, Eye of the Storm", &[0x16AB]),
+            ("Kodama of the East Tree and Vial Smasher the Fierce", &[0x16AC]),
+            ("Kraum, Ludevic's Opus and Sidar Kondo of Jamuraa", &[0x16AD]),
+            ("Leonardo, the Balance and Raphael, the Muscle", &[0x16AE]),
+            ("Malcolm, Keen-Eyed Navigator and Tormod, the Desecrator", &[0x16AF]),
+            ("Sarevok, Deathbringer and Candlekeep Sage", &[0x16B0]),
+            ("Siani, Eye of the Storm and Vial Smasher the Fierce", &[0x16B1]),
+            ("Skanos Dragonheart and Shameless Charlatan", &[0x16B2]),
+            ("The Eighth Doctor and Nyssa of Traken", &[0x16B3]),
+            ("The Fugitive Doctor and Nardole, Resourceful Cyborg", &[0x16B4]),
+            ("The Sixth Doctor and Donna Noble", &[0x16B5]),
+            ("The Third Doctor and Jamie McCrimmon", &[0x16B6]),
+            ("Vhal, Candlekeep Researcher and Folk Hero", &[0x16B7]),
+            ("Zellix, Sanity Flayer and Criminal Past", &[0x16B8]),
+            ("Loot, the Nexus", &[0x16B9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
