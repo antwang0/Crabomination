@@ -2220,3 +2220,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Patch Up | the three cards are picked cheapest-first at resolution, not targeted | `MoveWithinTotalManaValue` |
 | 🟡 Cantankerous Keepers | "put all Elf cards" is an up-to-four pick that the bot fills | `MillThenToHandN { take: 4 }` |
 | 🟡 Wonder Man, Hollywood Hero | two Wonder Men still allow only one extra activation (it's legendary) | `StaticEffect::PowerUpOnceMore` |
+| 🟡 Rhino's Rampage | the excess-damage check reads the creature's excess damage this turn, so excess dealt to it earlier the same turn also counts | `ExcessDamageDealtThisTurnTo` + `ReflexiveTrigger` |

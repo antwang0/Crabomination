@@ -973,3 +973,63 @@ pub fn gorbag_of_minas_morgul() -> CardDefinition {
         ..creature("Gorbag of Minas Morgul", cost(&[generic(1), b()]), vec![CreatureType::Orc, CreatureType::Soldier], 2, 2)
     }
 }
+
+// ── Wolverine, Fierce Fighter ───────────────────────────────────────────────
+
+/// Training Compound — land. {T}: add {C}. {T}: add {R} or {G}, only if it
+/// entered this turn or you control a basic land.
+pub fn training_compound() -> CardDefinition {
+    let gate = || {
+        Some(Predicate::Any(vec![
+            Predicate::EntityMatches { what: Selector::This, filter: R::EnteredThisTurn },
+            Predicate::SelectorExists(Selector::EachPermanent(R::IsBasicLand.and(R::ControlledByYou))),
+        ]))
+    };
+    let tap = |c: Color| ActivatedAbility {
+        tap_cost: true,
+        condition: gate(),
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Training Compound",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            tap(Color::Red),
+            tap(Color::Green),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rhino's Rampage — {R/G} sorcery. Target creature you control gets +1/+0
+/// and fights target creature an opponent controls; when excess damage is
+/// dealt to the latter this way, destroy up to one target noncreature
+/// artifact with mana value 3 or less.
+pub fn rhinos_rampage() -> CardDefinition {
+    let theirs = || Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) };
+    CardDefinition {
+        name: "Rhino's Rampage",
+        cost: cost(&[hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: your_creature(), power: Value::ONE, toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            Effect::Fight { attacker: Selector::Target(0), defender: theirs() },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::ExcessDamageDealtThisTurnTo(Box::new(Selector::Target(1))), Value::ONE),
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Destroy {
+                        what: target_filtered(R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ManaValueAtMost(3))),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

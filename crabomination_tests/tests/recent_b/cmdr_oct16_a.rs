@@ -990,3 +990,33 @@ fn galion_copies_its_size_onto_a_creature() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(elf).unwrap().power, 4);
 }
+
+/// Training Compound's colored mana needs a basic land (or the turn it
+/// entered); colorless is always there.
+#[test]
+fn training_compound_colors_need_a_basic_or_a_fresh_entry() {
+    let mut g = pod(2);
+    let tc = ready(&mut g, 0, catalog::training_compound());
+    g.battlefield.iter_mut().for_each(|c| c.entered_turn = None);
+    let tap = |g: &mut GameState, i| {
+        g.perform_action(GameAction::ActivateAbility { card_id: tc, ability_index: i, target: None, additional_targets: vec![], x_value: None, mode: None })
+    };
+    assert!(tap(&mut g, 1).is_err(), "no basic, entered earlier");
+    g.add_card_to_battlefield(0, catalog::forest());
+    tap(&mut g, 1).expect("with a basic");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+}
+
+/// Rhino's Rampage: a 3/3 (+1/+0) fighting a 1/1 deals excess damage, so the
+/// reflexive trigger destroys a cheap noncreature artifact.
+#[test]
+fn rhinos_rampage_excess_destroys_an_artifact() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let spell = g.add_card_to_hand(0, catalog::rhinos_rampage());
+    cast_with(&mut g, spell, Some(Target::Permanent(bears)), vec![Target::Permanent(elf)]).expect("cast");
+    assert!(g.battlefield_find(elf).is_none());
+    assert!(g.battlefield_find(ring).is_none(), "excess damage → Sol Ring destroyed");
+}

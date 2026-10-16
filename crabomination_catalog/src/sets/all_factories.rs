@@ -16314,6 +16314,8 @@ static DECKS: &[Factory] = &[
     super::decks::llanowar_empath,
     super::decks::grond_the_gatebreaker,
     super::decks::gorbag_of_minas_morgul,
+    super::decks::training_compound,
+    super::decks::rhinos_rampage,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
