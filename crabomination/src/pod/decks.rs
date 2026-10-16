@@ -89833,3 +89833,180 @@ pub const SKYSOVEREIGN_MAIN: &[CardFactory] = &[
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
     wastes, wastes,
 ];
+
+pub const BRUSE_TARL_4_COMMANDERS: &[CardFactory] = &[bruse_tarl_boorish_herder, ghost_of_ramirez_depietro];
+
+/// **Bruse Tarl, Boorish Herder and Ghost of Ramirez DePietro**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 5 Islands + 4 Mountains + 6 Plains = 98.
+/// Bruse Tarl, Boorish Herder and Ghost of Ramirez DePietro (EDHREC, fetched 2026-10-16).
+pub const BRUSE_TARL_4_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, fellwar_stone, fluctuator, izzet_signet,
+    monument_to_endurance, sol_ring, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_progress, ash_barrens, azorius_chancery, battlefield_forge, clifftop_retreat,
+    command_tower, exotic_orchard, forgotten_cave, glacial_fortress, hallowed_fountain,
+    irrigated_farmland, izzet_boilerworks, lonely_sandbar, mystic_monastery,
+    otawara_soaring_city, raugrin_triome, sacred_foundry, secluded_steppe, shivan_reef,
+    steam_vents, sulfur_falls, training_center, angel_of_the_ruins, avian_oddity,
+    captain_howler_sea_scourge, cloud_of_faeries, curator_of_mysteries, drannith_stinger,
+    drift_of_phantasms, gavi_nest_warden, glint_horn_buccaneer, hardened_academic,
+    inti_seneschal_of_the_sun, irencrag_pyromancer, magmakin_artillerist, marauding_mako,
+    nimble_obstructionist, oliphaunt, rielle_the_everwise, scrounging_skyray, surly_badgersaur,
+    valiant_rescuer, windcaller_aven, zirda_the_dawnwaker, astral_drift, astral_slide,
+    escape_protocol, footfall_crater, reconnaissance_mission, shark_typhoon,
+    tectonic_reformation, unpredictable_cyclone, angelsong, chaos_warp, counterspell,
+    forsake_the_worldly, frantic_search, gallant_strike, generous_gift,
+    hieroglyphic_illumination, muddle_the_mixture, negate, neutralize, path_to_exile,
+    swords_to_plowshares, kaito_cunning_infiltrator, blasphemous_act, boon_of_the_wish_giver,
+    faithless_looting, gamble, lorien_revealed, sevinnes_reclamation, spectacular_pileup,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const THE_FIFTEENTH_DOCTOR_5_COMMANDERS: &[CardFactory] = &[the_fifteenth_doctor, jo_grant];
+
+/// **The Fifteenth Doctor and Jo Grant**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 3 Islands + 3 Mountains + 6 Plains = 98.
+/// The Fifteenth Doctor and Jo Grant (EDHREC, fetched 2026-10-16).
+pub const THE_FIFTEENTH_DOCTOR_5_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, brasss_tunnel_grinder, crucible_of_worlds,
+    encroaching_mycosynth, fellwar_stone, fluctuator, izzet_signet, mind_stone,
+    monument_to_endurance, portal_to_phyrexia, raugrin_crystal, senseis_divining_top,
+    shorikai_genesis_engine, sol_ring, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, academy_ruins, ancient_den, ash_barrens, battlefield_forge,
+    coastal_peak, command_tower, drifting_meadow, exotic_orchard, glittering_massif,
+    great_furnace, hallowed_fountain, irrigated_farmland, raugrin_triome, razortide_bridge,
+    remote_isle, rustvale_bridge, sacred_foundry, seat_of_the_synod, secluded_steppe,
+    shivan_reef, silverbluff_bridge, steam_vents, trenzalore_clocktower, angel_of_the_ruins,
+    arcade_gannon, brallin_skyshark_rider, captain_howler_sea_scourge, containment_construct,
+    curator_of_mysteries, daretti_rocketeer_engineer, drannith_stinger, emry_lurker_of_the_loch,
+    enthusiastic_mechanaut, esper_sentinel, etherium_sculptor, foundry_inspector,
+    gavi_nest_warden, jhoira_weatherlight_captain, loran_of_the_third_path,
+    magmakin_artillerist, pinnacle_emissary, psychosis_crawler, rielle_the_everwise,
+    riptide_gearhulk, thought_monitor, tribute_mage, urza_powerstone_prodigy,
+    zirda_the_dawnwaker, astral_drift, astral_slide, cool_but_rude, escape_protocol,
+    new_perspectives, unpredictable_cyclone, countervailing_winds, dispatch, enlightened_tutor,
+    forsake_the_worldly, neutralize, path_to_exile, swords_to_plowshares, daretti_scrap_savant,
+    fabricate, idyllic_tutor, lorien_revealed, sevinnes_reclamation, wake_the_past,
+    // Basics
+    island, island, island, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const THE_FOURTEENTH_DOCTOR_3_COMMANDERS: &[CardFactory] = &[the_fourteenth_doctor, jo_grant];
+
+/// **The Fourteenth Doctor and Jo Grant**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 2 Forests + 3 Islands + 2 Mountains + 4 Plains = 98.
+/// The Fourteenth Doctor and Jo Grant (EDHREC, fetched 2026-10-16).
+pub const THE_FOURTEENTH_DOCTOR_3_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, currency_converter, fellwar_stone, fluctuator,
+    monument_to_endurance, sol_ring, sonic_screwdriver, tardis, talisman_of_progress,
+    talisman_of_unity, arid_mesa, ash_barrens, boseiju_who_endures, breeding_pool,
+    command_tower, exotic_orchard, flooded_strand, gallifrey_council_chamber, hallowed_fountain,
+    irrigated_farmland, jetmirs_garden, ketria_triome, misty_rainforest, otawara_soaring_city,
+    path_of_ancestry, raugrin_triome, sacred_foundry, scattered_groves, sheltered_thicket,
+    sparas_headquarters, stomping_ground, temple_garden, trenzalore_clocktower, windswept_heath,
+    wooded_foothills, birds_of_paradise, containment_construct, drannith_healer,
+    drannith_stinger, elena_turk_recruit, esper_sentinel, flourishing_fox, gavi_nest_warden,
+    mikey_leo_chaos_order, the_eighth_doctor, the_eleventh_doctor, the_fifteenth_doctor,
+    the_fifth_doctor, the_first_doctor, the_fourth_doctor, the_fugitive_doctor,
+    the_ninth_doctor, the_second_doctor, the_seventh_doctor, the_sixth_doctor, the_tenth_doctor,
+    the_third_doctor, the_thirteenth_doctor, the_twelfth_doctor, the_war_doctor,
+    valiant_rescuer, zirda_the_dawnwaker, an_unearthly_child, astral_drift, astral_slide,
+    gallifrey_stands, new_perspectives, tectonic_reformation, teferis_ageless_insight,
+    the_eleventh_hour, unpredictable_cyclone, beast_within, enlightened_tutor,
+    heroic_intervention, neutralize, path_to_exile, swords_to_plowshares,
+    time_lord_regeneration, ajani_unrelenting, blasphemous_act, farseek, lorien_revealed,
+    natures_lore, quantum_misalignment, the_five_doctors, twice_upon_a_time,
+    // Basics
+    forest, forest, island, island, island, mountain, mountain, plains, plains, plains, plains,
+];
+
+pub const THE_FUGITIVE_DOCTOR_2_COMMANDERS: &[CardFactory] = &[the_fugitive_doctor, jo_grant];
+
+/// **The Fugitive Doctor and Jo Grant**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 3 Forests + 3 Mountains + 5 Plains = 98.
+/// The Fugitive Doctor and Jo Grant (EDHREC, fetched 2026-10-16).
+pub const THE_FUGITIVE_DOCTOR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, currency_converter, fluctuator, lightning_greaves, mind_stone,
+    monument_to_endurance, sol_ring, swiftfoot_boots, talisman_of_conviction, talisman_of_unity,
+    ash_barrens, capital_city, command_tower, drifting_meadow, eiganjo_seat_of_the_empire,
+    exotic_orchard, forgotten_cave, geier_reach_sanitarium, glittering_massif, jetmirs_garden,
+    minas_tirith, mines_of_moria, rustvale_bridge, scattered_groves, secluded_steppe,
+    sheltered_thicket, sheltering_landscape, slagwoods_bridge, slippery_karst,
+    smoldering_crater, sokenzan_crucible_of_defiance, the_grey_havens, thornglint_bridge,
+    tranquil_thicket, agonasaur_rex, angel_of_the_ruins, biotech_specialist, drannith_healer,
+    drannith_stinger, eagles_of_the_north, elena_turk_recruit, elmar_ulvenwald_informant,
+    etali_primal_conqueror, flourishing_fox, generous_ent, ivora_insatiable_heir, krosan_tusker,
+    magmakin_artillerist, marauding_mako, migrating_ketradon, novice_inspector, oliphaunt,
+    pit_automaton, rampaging_war_mammoth, rooting_moloch, ruby_daring_tracker,
+    sophina_spearsage_deserter, squee_goblin_nabob, teshar_ancestors_apostle, tireless_tracker,
+    zirda_the_dawnwaker, astral_drift, astral_slide, invigorating_boon, lightning_rift,
+    tectonic_reformation, ulvenwald_mysteries, unpredictable_cyclone, decree_of_savagery,
+    enlightened_tutor, fuel_the_flames, gallant_strike, lull, sylvan_reclamation, zenith_flare,
+    change_of_fortune, decree_of_justice, impolite_entrance, late_to_dinner, migration_path,
+    natures_lore, sevinnes_reclamation, spectacular_pileup, three_visits, treacherous_terrain,
+    urzas_ruinous_blast,
+    // Basics
+    forest, forest, forest, mountain, mountain, mountain, plains, plains, plains, plains, plains,
+];
+
+pub const THE_NINTH_DOCTOR_2_COMMANDERS: &[CardFactory] = &[the_ninth_doctor, jo_grant];
+
+/// **The Ninth Doctor and Jo Grant**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 4 Islands + 4 Mountains + 6 Plains = 98.
+/// The Ninth Doctor and Jo Grant (EDHREC, fetched 2026-10-16).
+pub const THE_NINTH_DOCTOR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, chromatic_lantern, fellwar_stone, fluctuator,
+    izzet_signet, moonsnare_prototype, raugrin_crystal, relic_of_legends, sol_ring,
+    talisman_of_conviction, talisman_of_creativity, talisman_of_progress, ancient_den,
+    ash_barrens, blasted_landscape, command_tower, desert_of_the_fervent, desert_of_the_mindful,
+    desert_of_the_true, drifting_meadow, eiganjo_seat_of_the_empire, exotic_orchard,
+    forgotten_cave, great_furnace, irrigated_farmland, lonely_sandbar, minas_tirith,
+    mines_of_moria, razortide_bridge, remote_isle, rivendell, seat_of_the_synod,
+    secluded_steppe, smoldering_crater, trenzalore_clocktower, aang_swift_savior,
+    banon_the_returners_leader, brallin_skyshark_rider, captain_howler_sea_scourge,
+    containment_construct, curator_of_mysteries, donnie_and_april_adorkable_duo,
+    drannith_healer, drannith_stinger, eagles_of_the_north, elena_turk_recruit, flourishing_fox,
+    gavi_nest_warden, general_leo_cristophe, joshua_phoenixs_dominant, marauding_mako,
+    nimble_obstructionist, rielle_the_everwise, scrounging_skyray, solemn_simulacrum,
+    splinter_aging_champion, the_locust_god, zirda_the_dawnwaker, astral_drift, astral_slide,
+    cool_but_rude, footfall_crater, new_perspectives, ominous_seas, tectonic_reformation,
+    teferis_ageless_insight, the_night_of_the_doctor, unpredictable_cyclone, complicate,
+    countervailing_winds, enlightened_tutor, forsake_the_worldly, gallant_strike,
+    miscalculation, muddle_the_mixture, neutralize, akromas_vengeance, boon_of_the_wish_giver,
+    fabricate, go_for_blood, idyllic_tutor, lorien_revealed,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const THE_TWELFTH_DOCTOR_2_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, jo_grant];
+
+/// **The Twelfth Doctor and Jo Grant**'s EDHREC average deck, card for card:
+/// 90 nonbasic cards + 3 Islands + 3 Mountains + 2 Plains = 98.
+/// The Twelfth Doctor and Jo Grant (EDHREC, fetched 2026-10-16).
+pub const THE_TWELFTH_DOCTOR_2_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, azorius_signet, boros_signet, brasss_tunnel_grinder,
+    chromatic_lantern, currency_converter, fluctuator, izzet_signet, monument_to_endurance,
+    sol_ring, talisman_of_conviction, talisman_of_creativity, talisman_of_progress, ancient_den,
+    capital_city, coastal_peak, command_tower, desert_of_the_fervent, desert_of_the_mindful,
+    desert_of_the_true, drifting_meadow, eiganjo_seat_of_the_empire, forgotten_cave,
+    great_furnace, hall_of_heliods_generosity, irrigated_farmland, kher_keep, lonely_sandbar,
+    minas_tirith, mines_of_moria, raugrin_triome, razortide_bridge, remote_isle, rivendell,
+    rustvale_bridge, seat_of_the_synod, secluded_steppe, silverbluff_bridge, smoldering_crater,
+    trenzalore_clocktower, angel_of_the_ruins, astonishing_spider_man, brallin_skyshark_rider,
+    captain_howler_sea_scourge, containment_construct, curator_of_mysteries, drannith_stinger,
+    flourishing_fox, gavi_nest_warden, iron_man_armored_avenger, living_laser,
+    loran_of_the_third_path, magmakin_artillerist, marauding_mako, misty_knight_hero_for_hire,
+    nimble_obstructionist, rielle_the_everwise, scrounging_skyray, shabraz_the_skyshark,
+    surly_badgersaur, ulamog_the_infinite_gyre, valiant_rescuer, zirda_the_dawnwaker,
+    astral_drift, cast_out, decree_of_silence, new_perspectives, ominous_seas,
+    reconnaissance_mission, tectonic_reformation, teferis_ageless_insight,
+    unpredictable_cyclone, akromas_blessing, countervailing_winds, enlightened_tutor,
+    forsake_the_worldly, gallant_strike, neutralize, radiants_judgment, shredded_sails,
+    starstorm, zenith_flare, teferi_temporal_pilgrim, akromas_vengeance, boon_of_the_wish_giver,
+    dismantling_wave, karns_temporal_sundering, spectacular_pileup, trade_the_helm,
+    // Basics
+    island, island, island, mountain, mountain, mountain, plains, plains,
+];

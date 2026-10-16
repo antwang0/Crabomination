@@ -19674,6 +19674,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SKYSOVEREIGN_COMMANDERS,
             main: decks::SKYSOVEREIGN_MAIN,
         },
+        // Seat 3204: Bruse Tarl, Boorish Herder and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 3204`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Ghost of Ramirez DePietro (WUR)",
+            commanders: decks::BRUSE_TARL_4_COMMANDERS,
+            main: decks::BRUSE_TARL_4_MAIN,
+        },
+        // Seat 3205: The Fifteenth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3205`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Jo Grant (WUR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3206: The Fourteenth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3206`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Jo Grant (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3207: The Fugitive Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3207`.
+        PodDeck {
+            name: "The Fugitive Doctor and Jo Grant (WRG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_2_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_2_MAIN,
+        },
+        // Seat 3208: The Ninth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3208`.
+        PodDeck {
+            name: "The Ninth Doctor and Jo Grant (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_2_MAIN,
+        },
+        // Seat 3209: The Twelfth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3209`.
+        PodDeck {
+            name: "The Twelfth Doctor and Jo Grant (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_2_MAIN,
+        },
     ]
 }
 
@@ -24761,6 +24797,12 @@ mod tests {
             ("Kodama of the East Tree and Rebbec, Architect of Ascension", &[0x1697]),
             ("Malcolm, Keen-Eyed Navigator and Radiant, Serra Archangel", &[0x1698]),
             ("Skysovereign, Consul Flagship", &[0x1699]),
+            ("Bruse Tarl, Boorish Herder and Ghost of Ramirez DePietro", &[0x169A]),
+            ("The Fifteenth Doctor and Jo Grant", &[0x169B]),
+            ("The Fourteenth Doctor and Jo Grant", &[0x169C]),
+            ("The Fugitive Doctor and Jo Grant", &[0x169D]),
+            ("The Ninth Doctor and Jo Grant", &[0x169E]),
+            ("The Twelfth Doctor and Jo Grant", &[0x169F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
