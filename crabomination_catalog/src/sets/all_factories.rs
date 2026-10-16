@@ -16534,6 +16534,11 @@ static DECKS: &[Factory] = &[
     super::decks::khenra_scrapper,
     super::decks::sandstorm_crasher,
     super::decks::trueheart_twins,
+    super::decks::elder_auntie,
+    super::decks::raphael_most_attitude,
+    super::decks::mouser_attack,
+    super::decks::skateboard,
+    super::decks::raphs_bravado,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

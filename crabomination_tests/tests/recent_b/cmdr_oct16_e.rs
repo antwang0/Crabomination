@@ -578,3 +578,37 @@ fn trueheart_twins_pump_the_team_on_exert() {
     assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
     assert_eq!(g.computed_permanent(twins).unwrap().power, 5);
 }
+
+/// Raphael, Most Attitude: alliance exiles a card under him; attacking makes
+/// it playable this turn.
+#[test]
+fn raphael_plays_what_alliance_exiled() {
+    let mut g = pod(2);
+    let raph = ready(&mut g, 0, catalog::raphael_most_attitude());
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let auntie = g.add_card_to_hand(0, catalog::elder_auntie());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, auntie, None).expect("Elder Auntie");
+    assert!(g.exile.iter().any(|c| c.id == top && c.exiled_with == Some(raph)), "alliance exiled the top card");
+    attack(&mut g, &[(raph, 1)]);
+    g.step = TurnStep::PostCombatMain;
+    g.attacking.clear();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the exiled Bears off the grant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some());
+}
+
+/// Raph's Bravado pumps attackers only on its controller's turn.
+#[test]
+fn raphs_bravado_pumps_your_attackers() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::raphs_bravado());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 2);
+    attack(&mut g, &[(bears, 1)]);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
+}

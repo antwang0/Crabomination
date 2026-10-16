@@ -2039,3 +2039,129 @@ pub fn trueheart_twins() -> CardDefinition {
         ..creature("Trueheart Twins", cost(&[generic(4), r()]), vec![CreatureType::Jackal, CreatureType::Warrior], 4, 4)
     }
 }
+
+// ── Raphael, Tough Turtle / Raphael, the Nightwatcher ───────────────────────
+
+/// Elder Auntie — {2}{R} 2/2 Goblin Warlock. ETB: a 1/1 black and red Goblin.
+pub fn elder_auntie() -> CardDefinition {
+    let goblin = TokenDefinition {
+        name: "Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black, Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(goblin) })],
+        ..creature("Elder Auntie", cost(&[generic(2), r()]), vec![CreatureType::Goblin, CreatureType::Warlock], 2, 2)
+    }
+}
+
+/// Raphael, Most Attitude — {3}{R} legendary 4/3 menace Mutant Ninja Turtle.
+/// Alliance: you may exile your top card (linked). Attacks: until end of turn
+/// you may play the cards exiled with it.
+pub fn raphael_most_attitude() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+                effect: Effect::MayDo {
+                    description: "Exile the top card of your library with Raphael?".into(),
+                    body: Box::new(Effect::ExileTopOfLibrary {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        link_to_source: true,
+                        face_down: false,
+                    }),
+                },
+            },
+            on_attack(Effect::GrantMayPlay {
+                what: Selector::CardExiledWithSource,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            }),
+        ],
+        ..legend(creature(
+            "Raphael, Most Attitude",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle],
+            4,
+            3,
+        ))
+    }
+}
+
+/// Mouser Attack! — {1}{R} instant. Choose one: a 1/1 colorless Robot artifact
+/// creature token; or target creature gets +3/+0 and first strike until end of
+/// turn.
+pub fn mouser_attack() -> CardDefinition {
+    let robot = TokenDefinition {
+        name: "Robot".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mouser Attack!",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(robot) },
+            Effect::Seq(vec![
+                Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(3), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                eot_keyword(Selector::Target(0), Keyword::FirstStrike),
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Skateboard — {1} Equipment, equip {1}. ETB: tap target permanent. Equipped
+/// creature gets +1/+0 and has haste.
+pub fn skateboard() -> CardDefinition {
+    CardDefinition {
+        name: "Skateboard",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        triggered_abilities: vec![etb(Effect::Tap { what: target_filtered(R::Permanent) })],
+        equipped_bonus: Some(EquipBonus { power: 1, keywords: vec![Keyword::Haste], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Raph's Bravado — {1}{R} enchantment. During your turn, attacking creatures
+/// get +1/+0.
+pub fn raphs_bravado() -> CardDefinition {
+    CardDefinition {
+        name: "Raph's Bravado",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, attacking creatures get +1/+0.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature.and(R::IsAttacking),
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+                opponents: false,
+                all_players: true,
+                only_your_turn: true,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
