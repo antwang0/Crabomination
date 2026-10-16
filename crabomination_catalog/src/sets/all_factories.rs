@@ -16383,6 +16383,16 @@ static DECKS: &[Factory] = &[
     super::decks::embereth_paladin,
     super::decks::tilonallis_skinshifter,
     super::decks::joust,
+    super::decks::fleetwheel_cruiser,
+    super::decks::untethered_express,
+    super::decks::aethershield_artificer,
+    super::decks::renegade_wheelsmith,
+    super::decks::doc_ock_evil_inventor,
+    super::decks::doc_ock_sinister_scientist,
+    super::decks::grasping_tentacles,
+    super::decks::lord_dregg_insect_invader,
+    super::decks::ice_cream_kitty,
+    super::decks::mabel_bitter_recluse,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

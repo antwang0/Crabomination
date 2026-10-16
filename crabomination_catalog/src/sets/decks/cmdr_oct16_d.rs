@@ -1083,3 +1083,233 @@ pub fn joust() -> CardDefinition {
         ]),
     )
 }
+
+// ── Depala, Pilot Exemplar ──────────────────────────────────────────────────
+
+fn vehicle(name: &'static str, p: i32, t: i32, crew: u32, mut keywords: Vec<Keyword>) -> CardDefinition {
+    keywords.push(Keyword::Crew(crew));
+    CardDefinition {
+        name,
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: p,
+        toughness: t,
+        keywords,
+        ..Default::default()
+    }
+}
+
+/// Fleetwheel Cruiser — {4} 5/3 trample, haste Vehicle, crew 2. Enters: it
+/// becomes an artifact creature until end of turn.
+pub fn fleetwheel_cruiser() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AnimateAsCreature { what: Selector::This, duration: Duration::EndOfTurn })],
+        ..vehicle("Fleetwheel Cruiser", 5, 3, 2, vec![Keyword::Trample, Keyword::Haste])
+    }
+}
+
+/// Untethered Express — {4} 4/4 trample Vehicle, crew 1. Attacking: a +1/+1
+/// counter on it.
+pub fn untethered_express() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(counters(Selector::This, Value::ONE))],
+        ..vehicle("Untethered Express", 4, 4, 1, vec![Keyword::Trample])
+    }
+}
+
+/// Aethershield Artificer — {3}{W} 3/3 Dwarf Artificer. At the beginning of
+/// combat on your turn, target artifact creature you control gets +2/+2 and
+/// indestructible until end of turn.
+pub fn aethershield_artificer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Artifact.and(R::Creature).and(R::ControlledByYou)),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..creature("Aethershield Artificer", cost(&[generic(3), w()]), vec![CreatureType::Dwarf, CreatureType::Artificer], 3, 3)
+    }
+}
+
+/// Renegade Wheelsmith — {1}{R}{W} 3/2 Dwarf Pilot. Becoming tapped: target
+/// creature can't block this turn.
+pub fn renegade_wheelsmith() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+        }],
+        ..creature("Renegade Wheelsmith", cost(&[generic(1), r(), w()]), vec![CreatureType::Dwarf, CreatureType::Pilot], 3, 2)
+    }
+}
+
+// ── Doc Ock, Evil Inventor ──────────────────────────────────────────────────
+
+/// Doc Ock, Evil Inventor — {5}{U}{B} legendary 8/8 Human Scientist Villain. At
+/// the beginning of combat on your turn, target noncreature artifact you
+/// control becomes an 8/8 Robot Villain artifact creature (no duration).
+pub fn doc_ock_evil_inventor() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::BecomeCreature {
+                what: target_filtered(R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ControlledByYou)),
+                power: Value::Const(8),
+                toughness: Value::Const(8),
+                creature_types: vec![CreatureType::Robot, CreatureType::Villain],
+                keywords: vec![],
+                duration: Duration::Permanent,
+            },
+        }],
+        ..creature(
+            "Doc Ock, Evil Inventor",
+            cost(&[generic(5), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Scientist, CreatureType::Villain],
+            8,
+            8,
+        )
+    }
+}
+
+/// Doc Ock, Sinister Scientist — {4}{U} legendary 4/5 Human Scientist Villain.
+/// Base 8/8 with eight or more cards in your graveyard; hexproof while you
+/// control another Villain.
+pub fn doc_ock_sinister_scientist() -> CardDefinition {
+    let big = || Box::new(Predicate::ValueAtLeast(Value::GraveyardSizeOf(PlayerRef::You), Value::Const(8)));
+    let base = |n: i32, normal: i32| Value::IfPred { pred: big(), then: Box::new(Value::Const(n)), else_: Box::new(Value::Const(normal)) };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as there are eight or more cards in your graveyard, Doc Ock has base power and toughness 8/8.",
+                effect: StaticEffect::SelfBasePtFromValue { power: base(8, 4), toughness: base(8, 5) },
+            },
+            StaticAbility {
+                description: "As long as you control another Villain, Doc Ock has hexproof.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::Hexproof,
+                    condition: Predicate::SelectorExists(Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Villain).and(R::ControlledByYou).and(R::OtherThanSource),
+                    )),
+                },
+            },
+        ],
+        ..creature(
+            "Doc Ock, Sinister Scientist",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Human, CreatureType::Scientist, CreatureType::Villain],
+            4,
+            5,
+        )
+    }
+}
+
+/// Grasping Tentacles — {1}{U}{B} sorcery. Target opponent mills eight; you may
+/// put an artifact card from their graveyard onto the battlefield under your
+/// control.
+pub fn grasping_tentacles() -> CardDefinition {
+    spell(
+        "Grasping Tentacles",
+        cost(&[generic(1), u(), b()]),
+        false,
+        Effect::Seq(vec![
+            Effect::Mill { who: target_filtered(R::OpponentPlayer), amount: Value::Const(8) },
+            Effect::MoveChosen {
+                from: Selector::CardsInZone { who: PlayerRef::Target(0), zone: Zone::Graveyard, filter: R::Artifact },
+                filter: Some(R::Artifact),
+                count: Value::ONE,
+                up_to: true,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        ]),
+    )
+}
+
+// ── Lord Dregg, Insect Invader ──────────────────────────────────────────────
+
+/// Lord Dregg, Insect Invader — {3}{B} legendary 3/2 flying Insect Warrior.
+/// Disappear — your end step, if a permanent left the battlefield under your
+/// control this turn: a 1/1 black flying Insect Warrior. {3}{G}, sacrifice a
+/// token: draw a card.
+pub fn lord_dregg_insect_invader() -> CardDefinition {
+    let insect = Arc::new(TokenDefinition {
+        name: "Insect Warrior".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect, CreatureType::Warrior], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    });
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::RevoltActive { who: PlayerRef::You }),
+            effect: make(insect),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            sac_other_filter: Some((R::IsToken, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Lord Dregg, Insect Invader", cost(&[generic(3), b()]), vec![CreatureType::Insect, CreatureType::Warrior], 3, 2)
+    }
+}
+
+/// Ice Cream Kitty — {1}{B/G} 1/3 Food Cat Mutant artifact creature. {2},
+/// sacrifice another creature or token, sorcery speed: draw. {2}, {T},
+/// sacrifice it: gain 3 life.
+pub fn ice_cream_kitty() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Food],
+            creature_types: vec![CreatureType::Cat, CreatureType::Mutant],
+            ..Default::default()
+        },
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                sorcery_speed: true,
+                sac_other_filter: Some((R::Creature.or(R::IsToken).and(R::OtherThanSource), 1)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
+        ..creature("Ice Cream Kitty", cost(&[generic(1), hybrid(Color::Black, Color::Green)]), vec![], 1, 3)
+    }
+}
+
+/// Mabel, Bitter Recluse — {B} legendary 1/1 deathtouch Mouse Warlock. Enters:
+/// remove up to three counters from another target creature or planeswalker.
+pub fn mabel_bitter_recluse() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::RemoveCountersUpTo {
+            what: target_filtered(R::Creature.or(R::Planeswalker).and(R::OtherThanSource)),
+            amount: Value::Const(3),
+        })],
+        ..creature("Mabel, Bitter Recluse", cost(&[b()]), vec![CreatureType::Mouse, CreatureType::Warlock], 1, 1)
+    }
+}

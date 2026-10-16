@@ -398,3 +398,81 @@ fn joust_pumps_a_knight_then_fights() {
     assert!(g.battlefield_find(giant).is_none());
     assert!(g.battlefield_find(askari).is_some(), "a 4/3 takes 2");
 }
+
+/// Fleetwheel Cruiser is a creature the turn it enters, without crewing.
+#[test]
+fn fleetwheel_cruiser_animates_on_entry() {
+    use crabomination::card::CardType;
+    let mut g = pod(2);
+    let c = g.add_card_to_hand(0, catalog::fleetwheel_cruiser());
+    cast(&mut g, c, None);
+    assert!(g.computed_permanent(c).unwrap().card_types().contains(&CardType::Creature));
+}
+
+/// Renegade Wheelsmith becoming tapped (crewing here) stops a blocker.
+#[test]
+fn renegade_wheelsmith_tapping_stops_a_blocker() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let ws = ready(&mut g, 0, catalog::renegade_wheelsmith());
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    let tap = crabomination::effect::Effect::Tap { what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::HasName("Renegade Wheelsmith".into())) };
+    let evs = g.resolve_effect(&tap, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ws).unwrap().tapped);
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::CantBlock));
+}
+
+/// Doc Ock, Evil Inventor turns a noncreature artifact into an 8/8 Robot
+/// Villain at the beginning of combat, and it stays one.
+#[test]
+fn doc_ock_makes_an_eight_eight_robot() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::doc_ock_evil_inventor());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    g.step = TurnStep::PreCombatMain;
+    let evs = g.advance_step(Vec::new()).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ring).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8));
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert_eq!(g.computed_permanent(ring).unwrap().power, 8, "no duration");
+}
+
+/// Doc Ock, Sinister Scientist is 8/8 with eight cards in the graveyard.
+#[test]
+fn doc_ock_sinister_scientist_grows_with_the_graveyard() {
+    let mut g = pod(2);
+    let d = ready(&mut g, 0, catalog::doc_ock_sinister_scientist());
+    assert_eq!(g.computed_permanent(d).unwrap().power, 4);
+    for _ in 0..8 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    let cp = g.computed_permanent(d).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8));
+}
+
+/// Grasping Tentacles mills the opponent and takes an artifact from the pile.
+#[test]
+fn grasping_tentacles_takes_a_milled_artifact() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_library(1, catalog::sol_ring());
+    stock_libraries(&mut g, 10);
+    let t = g.add_card_to_hand(0, catalog::grasping_tentacles());
+    cast(&mut g, t, Some(Target::Player(1)));
+    assert_eq!(g.battlefield_find(ring).map(|c| c.controller), Some(0));
+}
+
+/// Mabel strips three counters off another creature.
+#[test]
+fn mabel_removes_three_counters() {
+    let mut g = pod(2);
+    let big = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == big).unwrap().counters.insert(CounterType::PlusOnePlusOne, 4);
+    let m = g.add_card_to_hand(0, catalog::mabel_bitter_recluse());
+    cast(&mut g, m, None);
+    assert_eq!(g.battlefield_find(big).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
