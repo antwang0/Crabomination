@@ -1686,3 +1686,41 @@ fn shattered_states_era_borrows_then_transforms() {
     let c = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Nameless Conqueror").expect("transformed");
     assert!(c.definition.keywords.contains(&Keyword::Trample));
 }
+
+/// CR 701.47 — Swarming of Moria amasses Orcs 2 beside a Treasure; Uglúk takes
+/// two counters when an Orc of yours dies, one for anything else.
+#[test]
+fn swarming_of_moria_and_ugluk() {
+    let mut g = pod(2);
+    let u = ready(&mut g, 0, catalog::ugluk_of_the_white_hand());
+    let s = g.add_card_to_hand(0, catalog::swarming_of_moria());
+    cast(&mut g, s, None);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name.contains("Army")).expect("an Orc Army").id;
+    assert_eq!(g.battlefield_find(army).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let orc = ready(&mut g, 0, catalog::shagrat_loot_bearer());
+    let destroy = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    for (id, want) in [(bears, 1), (orc, 3), (army, 5)] {
+        let evs = g.resolve_effect(&destroy, &crabomination::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(id)), 0, 0)).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(u).unwrap().counter_count(CounterType::PlusOnePlusOne), want);
+    }
+}
+
+/// Shagrat picks up an Equipment as it attacks, then amasses one per
+/// Equipment attached.
+#[test]
+fn shagrat_grabs_equipment_and_amasses() {
+    let mut g = pod(2);
+    let s = ready(&mut g, 0, catalog::shagrat_loot_bearer());
+    let axe = ready(&mut g, 0, catalog::obsidian_battle_axe());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: s, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(s));
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name.contains("Army")).expect("amassed");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 1);
+}

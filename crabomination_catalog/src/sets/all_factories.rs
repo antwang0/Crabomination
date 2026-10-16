@@ -16492,6 +16492,9 @@ static DECKS: &[Factory] = &[
     super::decks::upriser_renegade,
     super::decks::war_spike_changeling,
     super::decks::the_shattered_states_era,
+    super::decks::shagrat_loot_bearer,
+    super::decks::ugluk_of_the_white_hand,
+    super::decks::swarming_of_moria,
     // cmdr_oct16_e
     super::decks::black_widow_natasha_romanoff,
     super::decks::happy_hogan_dauntless_driver,

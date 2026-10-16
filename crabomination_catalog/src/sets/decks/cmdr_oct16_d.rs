@@ -3426,3 +3426,63 @@ pub fn the_shattered_states_era() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Shagrat, Loot Bearer: Orcs and Armies ───────────────────────────────────
+
+fn amass_orcs(n: Value) -> Effect {
+    Effect::Amass { who: PlayerRef::You, count: n, extra_type: Some(CreatureType::Orc) }
+}
+
+/// Shagrat, Loot Bearer — {2}{B}{R} legendary 4/4 Orc Soldier. Attacks: attach
+/// up to one target Equipment to it, then amass Orcs X (X = Equipment attached
+/// to it).
+pub fn shagrat_loot_bearer() -> CardDefinition {
+    let attached = Value::CountOf(Box::new(Selector::EachPermanent(
+        R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::AttachedToSource),
+    )));
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![on_attack(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Attach { what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)), to: Selector::This },
+                amass_orcs(attached),
+            ])),
+        })],
+        ..creature("Shagrat, Loot Bearer", cost(&[generic(2), b(), r()]), vec![CreatureType::Orc, CreatureType::Soldier], 4, 4)
+    }
+}
+
+/// Uglúk of the White Hand — {2}{B}{R} legendary 3/3 Orc Soldier. Whenever
+/// another creature you control dies, a +1/+1 counter on it — two if that
+/// creature was a Goblin or Orc.
+pub fn ugluk_of_the_white_hand() -> CardDefinition {
+    // The Goblin/Orc check is the event filter, read as the creature dies: a
+    // dying Orc Army token is gone by the time the trigger resolves.
+    let goblin_or_orc = Predicate::EntityMatches {
+        what: Selector::TriggerSource,
+        filter: R::HasCreatureType(CreatureType::Goblin).or(R::HasCreatureType(CreatureType::Orc)),
+    };
+    let died = |filter: Predicate, n: i32| TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(filter),
+        effect: counters(Selector::This, Value::Const(n)),
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![died(goblin_or_orc.clone(), 2), died(Predicate::Not(Box::new(goblin_or_orc)), 1)],
+        ..creature("Uglúk of the White Hand", cost(&[generic(2), b(), r()]), vec![CreatureType::Orc, CreatureType::Soldier], 3, 3)
+    }
+}
+
+/// Swarming of Moria — {2}{R} sorcery. Create a Treasure, then amass Orcs 2.
+pub fn swarming_of_moria() -> CardDefinition {
+    spell(
+        "Swarming of Moria",
+        cost(&[generic(2), r()]),
+        false,
+        Effect::Seq(vec![
+            make(Arc::new(crabomination_base::tokens::treasure_token())),
+            amass_orcs(Value::Const(2)),
+        ]),
+    )
+}
