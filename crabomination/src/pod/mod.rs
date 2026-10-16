@@ -19584,6 +19584,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FOURTH_DOCTOR_2_COMMANDERS,
             main: decks::THE_FOURTH_DOCTOR_2_MAIN,
         },
+        // Seat 3189: Akiri, Line-Slinger and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 3189`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Ich-Tekik, Salvage Splicer (WRG)",
+            commanders: decks::AKIRI_5_COMMANDERS,
+            main: decks::AKIRI_5_MAIN,
+        },
+        // Seat 3190: Armix, Filigree Thrasher and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 3190`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Ich-Tekik, Salvage Splicer (BG)",
+            commanders: decks::ARMIX_4_COMMANDERS,
+            main: decks::ARMIX_4_MAIN,
+        },
+        // Seat 3191: Armix, Filigree Thrasher and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 3191`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Ikra Shidiqi, the Usurper (BG)",
+            commanders: decks::ARMIX_5_COMMANDERS,
+            main: decks::ARMIX_5_MAIN,
+        },
+        // Seat 3192: Gilanra, Caller of Wirewood and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 3192`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Ich-Tekik, Salvage Splicer (G)",
+            commanders: decks::GILANRA_5_COMMANDERS,
+            main: decks::GILANRA_5_MAIN,
+        },
+        // Seat 3193: Gilanra, Caller of Wirewood and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 3193`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Malcolm, Keen-Eyed Navigator (UG)",
+            commanders: decks::GILANRA_6_COMMANDERS,
+            main: decks::GILANRA_6_MAIN,
+        },
+        // Seat 3194: Ich-Tekik, Salvage Splicer and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 3194`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Keskit, the Flesh Sculptor (BG)",
+            commanders: decks::ICH_TEKIK_COMMANDERS,
+            main: decks::ICH_TEKIK_MAIN,
+        },
+        // Seat 3195: Ich-Tekik, Salvage Splicer and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 3195`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Reyhan, Last of the Abzan (BG)",
+            commanders: decks::ICH_TEKIK_2_COMMANDERS,
+            main: decks::ICH_TEKIK_2_MAIN,
+        },
+        // Seat 3196: Ich-Tekik, Salvage Splicer and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3196`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Sakashima of a Thousand Faces (UG)",
+            commanders: decks::ICH_TEKIK_3_COMMANDERS,
+            main: decks::ICH_TEKIK_3_MAIN,
+        },
+        // Seat 3197: Ich-Tekik, Salvage Splicer and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 3197`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Silas Renn, Seeker Adept (UBG)",
+            commanders: decks::ICH_TEKIK_4_COMMANDERS,
+            main: decks::ICH_TEKIK_4_MAIN,
+        },
+        // Seat 3198: Ich-Tekik, Salvage Splicer and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3198`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Toggo, Goblin Weaponsmith (RG)",
+            commanders: decks::ICH_TEKIK_5_COMMANDERS,
+            main: decks::ICH_TEKIK_5_MAIN,
+        },
+        // Seat 3199: Ishai, Ojutai Dragonspeaker and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 3199`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Malcolm, Keen-Eyed Navigator (WU)",
+            commanders: decks::ISHAI_5_COMMANDERS,
+            main: decks::ISHAI_5_MAIN,
+        },
+        // Seat 3200: Kamahl, Heart of Krosa and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 3200`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Malcolm, Keen-Eyed Navigator (UG)",
+            commanders: decks::KAMAHL_8_COMMANDERS,
+            main: decks::KAMAHL_8_MAIN,
+        },
+        // Seat 3201: Kodama of the East Tree and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 3201`.
+        PodDeck {
+            name: "Kodama of the East Tree and Rebbec, Architect of Ascension (WG)",
+            commanders: decks::KODAMA_OF_THE_EAST_TREE_5_COMMANDERS,
+            main: decks::KODAMA_OF_THE_EAST_TREE_5_MAIN,
+        },
+        // Seat 3202: Malcolm, Keen-Eyed Navigator and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3202`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Radiant, Serra Archangel (WU)",
+            commanders: decks::MALCOLM_8_COMMANDERS,
+            main: decks::MALCOLM_8_MAIN,
+        },
+        // Seat 3203: Skysovereign, Consul Flagship's EDHREC average deck. `--pod-decks 3203`.
+        PodDeck {
+            name: "Skysovereign, Consul Flagship (C)",
+            commanders: decks::SKYSOVEREIGN_COMMANDERS,
+            main: decks::SKYSOVEREIGN_MAIN,
+        },
     ]
 }
 
@@ -24656,6 +24746,21 @@ mod tests {
             ("Rograkh, Son of Rohgahh and Tevesh Szat, Doom of Fools", &[0x1688]),
             ("The Eighth Doctor and Clara Oswald", &[0x1689]),
             ("The Fourth Doctor and Graham O'Brien", &[0x168A]),
+            ("Akiri, Line-Slinger and Ich-Tekik, Salvage Splicer", &[0x168B]),
+            ("Armix, Filigree Thrasher and Ich-Tekik, Salvage Splicer", &[0x168C]),
+            ("Armix, Filigree Thrasher and Ikra Shidiqi, the Usurper", &[0x168D]),
+            ("Gilanra, Caller of Wirewood and Ich-Tekik, Salvage Splicer", &[0x168E]),
+            ("Gilanra, Caller of Wirewood and Malcolm, Keen-Eyed Navigator", &[0x168F]),
+            ("Ich-Tekik, Salvage Splicer and Keskit, the Flesh Sculptor", &[0x1690]),
+            ("Ich-Tekik, Salvage Splicer and Reyhan, Last of the Abzan", &[0x1691]),
+            ("Ich-Tekik, Salvage Splicer and Sakashima of a Thousand Faces", &[0x1692]),
+            ("Ich-Tekik, Salvage Splicer and Silas Renn, Seeker Adept", &[0x1693]),
+            ("Ich-Tekik, Salvage Splicer and Toggo, Goblin Weaponsmith", &[0x1694]),
+            ("Ishai, Ojutai Dragonspeaker and Malcolm, Keen-Eyed Navigator", &[0x1695]),
+            ("Kamahl, Heart of Krosa and Malcolm, Keen-Eyed Navigator", &[0x1696]),
+            ("Kodama of the East Tree and Rebbec, Architect of Ascension", &[0x1697]),
+            ("Malcolm, Keen-Eyed Navigator and Radiant, Serra Archangel", &[0x1698]),
+            ("Skysovereign, Consul Flagship", &[0x1699]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
