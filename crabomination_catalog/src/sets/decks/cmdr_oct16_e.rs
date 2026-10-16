@@ -1604,3 +1604,225 @@ pub fn grasping_shadows() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Happy Hogan, Dauntless Driver ───────────────────────────────────────────
+
+/// Sky Cycle — {4}{R} 4/3 flying Vehicle, crew 2. ETB: X damage to up to one
+/// target creature, X twice the Vehicles you control.
+pub fn sky_cycle() -> CardDefinition {
+    let vehicles = Value::count(Selector::EachPermanent(yours(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))));
+    CardDefinition {
+        name: "Sky Cycle",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Sum(vec![vehicles.clone(), vehicles]),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Intrepid Ace — {R} 2/1 Human Pilot; +2/+0 while it isn't attacking or
+/// blocking.
+pub fn intrepid_ace() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Gets +2/+0 as long as it isn't attacking or blocking.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsAttacking.or(R::IsBlocking),
+                })),
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..creature("Intrepid Ace", cost(&[r()]), vec![CreatureType::Human, CreatureType::Pilot], 2, 1)
+    }
+}
+
+/// Reckless Racer — {2}{R} 2/3 first strike Human Pilot. Becoming tapped: you
+/// may discard a card; if you do, draw a card.
+pub fn reckless_racer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Discard a card to draw a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ])),
+            },
+        }],
+        ..creature("Reckless Racer", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Pilot], 2, 3)
+    }
+}
+
+// ── Abomination, World Ravager ──────────────────────────────────────────────
+
+/// Contract Hero — {2}{R} 2/3 Human Mercenary Hero. ETB: a Treasure. Attacks:
+/// you may sacrifice an artifact or discard a card; if you do, +2/+0.
+pub fn contract_hero() -> CardDefinition {
+    let pump = || Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn };
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(crabomination_base::tokens::treasure_token()) }),
+            on_attack(Effect::MayDo {
+                description: "Sacrifice an artifact or discard a card for +2/+0?".into(),
+                body: Box::new(Effect::ChooseMode(vec![
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::EachPermanent(yours(R::Artifact))),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Artifact },
+                        pump(),
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::ONE),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        pump(),
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+            }),
+        ],
+        ..creature("Contract Hero", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Mercenary, CreatureType::Hero], 2, 3)
+    }
+}
+
+/// Kree Sentinel — {4}{R} 5/5 reach artifact creature Kree Robot Villain.
+/// Basic landcycling {2}.
+pub fn kree_sentinel() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Reach, Keyword::Typecycling(Box::new((cost(&[generic(2)]), R::IsBasicLand)))],
+        ..creature("Kree Sentinel", cost(&[generic(4), r()]), vec![CreatureType::Kree, CreatureType::Robot, CreatureType::Villain], 5, 5)
+    }
+}
+
+/// Repulsor Rays — {R} sorcery: 3 damage to target creature.
+pub fn repulsor_rays() -> CardDefinition {
+    CardDefinition {
+        name: "Repulsor Rays",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+// ── Director Nick Fury ──────────────────────────────────────────────────────
+
+/// Daredevil, Man Without Fear — {2}{R}{W} legendary 3/4 vigilance haste Human
+/// Hero. You may look at your library's top card any time. Whenever you
+/// attack, you may exile your top card: if it's a Hero card, +2/+1 until end
+/// of turn; you may play it this turn.
+pub fn daredevil_man_without_fear() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Radar Sense — You may look at the top card of your library any time.",
+            effect: StaticEffect::MayLookAtOwnLibraryTop,
+        }],
+        triggered_abilities: vec![on_you_attack(Effect::MayDo {
+            description: "Exile the top card of your library?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::ExiledThisResolution { filter: hero() }),
+                    then: Box::new(Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
+        ..legend(creature(
+            "Daredevil, Man Without Fear",
+            cost(&[generic(2), r(), w()]),
+            vec![CreatureType::Human, CreatureType::Hero],
+            3,
+            4,
+        ))
+    }
+}
+
+// ── Gothmog, Morgul Lieutenant ──────────────────────────────────────────────
+
+/// Mordor Trebuchet — {2}{B} 1/4 defender artifact creature Wall. Whenever
+/// you attack with one or more Goblins and/or Orcs: a 2/1 colorless flying
+/// Construct artifact token named Ballistic Boulder, tapped and attacking,
+/// sacrificed at end of combat.
+pub fn mordor_trebuchet() -> CardDefinition {
+    let boulder = TokenDefinition {
+        name: "Ballistic Boulder".into(),
+        power: 2,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(Predicate::AttackedWithCreatureMatching {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Goblin).or(R::HasCreatureType(CreatureType::Orc)),
+            }),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(boulder),
+                cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                defender: None,
+            },
+        }],
+        ..creature("Mordor Trebuchet", cost(&[generic(2), b()]), vec![CreatureType::Wall], 1, 4)
+    }
+}
+
+/// The Torment of Gollum — {3}{B} sorcery: target opponent reveals their hand,
+/// you choose a nonland card they discard; amass Orcs 2.
+pub fn the_torment_of_gollum() -> CardDefinition {
+    CardDefinition {
+        name: "The Torment of Gollum",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: target_filtered(R::Player.and(R::ControlledByOpponent)),
+                count: Value::ONE,
+                filter: R::Nonland,
+            },
+            Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Orc) },
+        ]),
+        ..Default::default()
+    }
+}

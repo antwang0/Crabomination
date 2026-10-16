@@ -468,3 +468,60 @@ fn grasping_shadows_transforms_on_the_third_dread_counter() {
         assert_eq!(name, if n < 3 { "Grasping Shadows" } else { "Shadows' Lair" }, "after attack {n}");
     }
 }
+
+/// Intrepid Ace is a 4/1 at rest and a 2/1 once it attacks.
+#[test]
+fn intrepid_ace_shrinks_in_combat() {
+    let mut g = pod(2);
+    let ace = ready(&mut g, 0, catalog::intrepid_ace());
+    assert_eq!(g.computed_permanent(ace).unwrap().power, 4);
+    attack(&mut g, &[(ace, 1)]);
+    assert_eq!(g.computed_permanent(ace).unwrap().power, 2);
+}
+
+/// Sky Cycle's ETB deals twice your Vehicle count: alone it's 2 to a 6/4,
+/// beside a second Vehicle it's 4 — lethal.
+#[test]
+fn sky_cycle_scales_with_vehicles() {
+    for (second, survives) in [(false, true), (true, false)] {
+        let mut g = pod(2);
+        if second {
+            ready(&mut g, 0, catalog::sky_cycle());
+        }
+        let wurm = ready(&mut g, 1, catalog::craw_wurm());
+        let cycle = g.add_card_to_hand(0, catalog::sky_cycle());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        cast(&mut g, cycle, None).expect("cast");
+        assert_eq!(g.battlefield_find(wurm).is_some(), survives, "second Vehicle: {second}");
+    }
+}
+
+/// Mordor Trebuchet throws a Boulder only when an Orc or Goblin attacks, and
+/// the Boulder is gone after combat.
+#[test]
+fn mordor_trebuchet_needs_an_orc_attacker() {
+    for (orc, boulders) in [(false, 0), (true, 1)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::mordor_trebuchet());
+        let a = ready(&mut g, 0, if orc { catalog::goblin_guide() } else { catalog::grizzly_bears() });
+        attack(&mut g, &[(a, 1)]);
+        let n = g.battlefield.iter().filter(|c| c.definition.name == "Ballistic Boulder").count();
+        assert_eq!(n, boulders, "orc/goblin attacker: {orc}");
+    }
+}
+
+/// Daredevil: a Hero off the top pumps him and is playable this turn.
+#[test]
+fn daredevil_pumps_on_an_exiled_hero() {
+    for (hero, power) in [(true, 5), (false, 3)] {
+        let mut g = pod(2);
+        let dd = ready(&mut g, 0, catalog::daredevil_man_without_fear());
+        let top = if hero { catalog::the_wasp_janet_van_dyne() } else { catalog::grizzly_bears() };
+        assert!(g.players[0].library.is_empty());
+        g.add_card_to_library(0, top);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        attack(&mut g, &[(dd, 1)]);
+        assert_eq!(g.computed_permanent(dd).unwrap().power, power, "Hero on top: {hero}");
+    }
+}

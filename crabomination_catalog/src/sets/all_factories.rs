@@ -16505,6 +16505,15 @@ static DECKS: &[Factory] = &[
     super::decks::invert_invent,
     super::decks::westgate_regent,
     super::decks::grasping_shadows,
+    super::decks::sky_cycle,
+    super::decks::intrepid_ace,
+    super::decks::reckless_racer,
+    super::decks::contract_hero,
+    super::decks::kree_sentinel,
+    super::decks::repulsor_rays,
+    super::decks::daredevil_man_without_fear,
+    super::decks::mordor_trebuchet,
+    super::decks::the_torment_of_gollum,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
