@@ -313,6 +313,7 @@ fn new_serde_fields_survive_snapshot_roundtrip() {
     g.players[0].spell_casts_this_turn.push(CastProfile {
         colors: crabomination::mana::ColorSet::single(crabomination::mana::Color::Blue),
         card_types: crabomination::card::CardTypeSet::from_slice(&[CardType::Instant]),
+        mana_value: 3,
     });
     g.players[1].lands_entered_this_turn = 2;
     g.turn.prevention_shields.push(PreventionShield {

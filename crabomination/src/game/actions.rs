@@ -13421,6 +13421,7 @@ impl GameState {
             me.spell_casts_this_turn.push(crate::game::types::CastProfile {
                 colors,
                 card_types: crate::card::CardTypeSet::from_slice(cast_types),
+                mana_value: fdef.cost.cmc().min(255) as u8,
             });
         }
         consume_first_spell_tax(self, p);

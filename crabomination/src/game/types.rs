@@ -2631,7 +2631,13 @@ pub enum PreventionTarget {
 pub struct CastProfile {
     pub colors: crate::mana::ColorSet,
     pub card_types: crate::card::CardTypeSet,
+    /// The cast half's printed mana value, saturated at 255 (Rhino, Barreling
+    /// Brute's "a spell with mana value 4 or greater this turn"). Fits the
+    /// struct's padding byte — still four bytes.
+    #[serde(default)]
+    pub mana_value: u8,
 }
+const _: () = assert!(std::mem::size_of::<CastProfile>() == 4);
 
 impl Default for PreventionTarget {
     fn default() -> Self { PreventionTarget::Player(0) }

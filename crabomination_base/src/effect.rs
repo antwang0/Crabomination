@@ -2348,6 +2348,9 @@ pub enum Predicate {
         colors: Vec<Color>,
         types: Vec<crate::card::CardType>,
     },
+    /// "[who] cast a spell with mana value `at_least` or greater this turn"
+    /// (Rhino, Barreling Brute). Reads `Player.spell_casts_this_turn`.
+    CastSpellWithManaValueAtLeastThisTurn { who: PlayerRef, at_least: u32 },
     /// `who` has cast at most `n` spells of `card_type` this turn, the spell
     /// being cast included — "whenever you cast your first enchantment spell
     /// each turn" is `n: 1` as a cast-trigger filter (Tuvasa the Sunlit).

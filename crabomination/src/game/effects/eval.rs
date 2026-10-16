@@ -3290,6 +3290,10 @@ impl GameState {
                     })
                 })
             }
+            Predicate::CastSpellWithManaValueAtLeastThisTurn { who, at_least } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].spell_casts_this_turn.iter().any(|c| u32::from(c.mana_value) >= *at_least)),
             Predicate::DamagedByCreaturesThisTurnAtLeast { who, at_least } => self
                 .resolve_players(who, ctx)
                 .into_iter()
