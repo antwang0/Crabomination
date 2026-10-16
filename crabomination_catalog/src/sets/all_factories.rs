@@ -16371,6 +16371,18 @@ static DECKS: &[Factory] = &[
     super::decks::dark_deed,
     super::decks::gallia_tragic_host,
     super::decks::ritual_of_the_machine,
+    super::decks::nefarox_overlord_of_grixis,
+    super::decks::duskmantle_prowler,
+    super::decks::knight_of_infamy,
+    super::decks::servant_of_nefarox,
+    super::decks::arisen_gorgon,
+    super::decks::scourge_of_the_undercity,
+    super::decks::vraska_scheming_gorgon,
+    super::decks::vraskas_scorn,
+    super::decks::blazing_blade_askari,
+    super::decks::embereth_paladin,
+    super::decks::tilonallis_skinshifter,
+    super::decks::joust,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

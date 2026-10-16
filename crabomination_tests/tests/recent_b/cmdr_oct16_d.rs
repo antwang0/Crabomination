@@ -325,3 +325,76 @@ fn ritual_of_the_machine_steals_a_nonblack_creature() {
     cast(&mut g, r, Some(Target::Permanent(angel)));
     assert_eq!(g.battlefield_find(angel).unwrap().controller, 0);
 }
+
+/// Nefarox attacking alone: exalted from the Servant pumps it, and the
+/// defending player — not a bystander — sacrifices a creature.
+#[test]
+fn nefarox_alone_makes_the_defender_sacrifice() {
+    let mut g = pod(3);
+    let nef = ready(&mut g, 0, catalog::nefarox_overlord_of_grixis());
+    ready(&mut g, 0, catalog::servant_of_nefarox());
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    let bystander = ready(&mut g, 2, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: nef, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.battlefield_find(bystander).is_some());
+    assert_eq!(g.computed_permanent(nef).unwrap().power, 7, "two exalted instances");
+}
+
+/// Vraska, Scheming Gorgon's −10: a creature that damages an opponent makes
+/// that player lose.
+#[test]
+fn vraska_ultimate_makes_damage_lethal() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 5);
+    let v = ready(&mut g, 0, catalog::vraska_scheming_gorgon());
+    g.battlefield.iter_mut().find(|c| c.id == v).unwrap().counters.insert(CounterType::Loyalty, 10);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: v, ability_index: 2, target: None, x_value: None }).expect("ult");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[1].eliminated, "dealt damage → lost");
+    assert!(!g.players[2].eliminated);
+}
+
+/// Embereth Paladin's adamant: three red mana spent → a +1/+1 counter.
+#[test]
+fn embereth_paladin_adamant_counter() {
+    for (red, counter) in [(4, 1), (1, 0)] {
+        let mut g = pod(2);
+        let p = g.add_card_to_hand(0, catalog::embereth_paladin());
+        g.players[0].mana_pool.add(Color::Red, red);
+        g.players[0].mana_pool.add_colorless(4 - red);
+        g.perform_action(GameAction::CastSpell { card_id: p, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(p).unwrap().counter_count(CounterType::PlusOnePlusOne), counter);
+    }
+}
+
+/// Joust pumps a Knight before the fight: the 2/2 Askari fights as a 4/3 and
+/// survives the 2/2 it kills.
+#[test]
+fn joust_pumps_a_knight_then_fights() {
+    let mut g = pod(2);
+    let askari = ready(&mut g, 0, catalog::blazing_blade_askari());
+    let giant = ready(&mut g, 1, catalog::grizzly_bears());
+    let j = g.add_card_to_hand(0, catalog::joust());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell { card_id: j, target: Some(Target::Permanent(askari)), additional_targets: vec![Target::Permanent(giant)], mode: None, x_value: None })
+        .expect("joust");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none());
+    assert!(g.battlefield_find(askari).is_some(), "a 4/3 takes 2");
+}

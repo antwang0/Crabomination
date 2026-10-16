@@ -4,12 +4,12 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StateTriggeredAbility,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    EventKind, EventScope, EventSpec, Keyword, LandType, LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, StateTriggeredAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use std::sync::Arc;
 use crate::card::{StaticAbility, StaticEffect};
-use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{etb, exalted, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
@@ -870,4 +870,216 @@ pub fn ritual_of_the_machine() -> CardDefinition {
             },
         )
     }
+}
+
+// ── Nefarox, Overlord of Grixis ─────────────────────────────────────────────
+
+/// Nefarox, Overlord of Grixis — {4}{B}{B} legendary 5/5 flying Demon,
+/// exalted. Attacking alone: the defending player sacrifices a creature.
+pub fn nefarox_overlord_of_grixis() -> CardDefinition {
+    let mut alone = on_attack(Effect::Sacrifice {
+        who: Selector::Player(PlayerRef::DefendingPlayer),
+        count: Value::ONE,
+        filter: R::Creature,
+    });
+    alone.event = alone.event.with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingAlone });
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![exalted(), alone],
+        ..creature("Nefarox, Overlord of Grixis", cost(&[generic(4), b(), b()]), vec![CreatureType::Demon], 5, 5)
+    }
+}
+
+fn exalted_body(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32, more: Vec<Keyword>) -> CardDefinition {
+    let keywords = more;
+    CardDefinition { keywords, triggered_abilities: vec![exalted()], ..creature(name, mana, types, p, t) }
+}
+
+/// Duskmantle Prowler — {3}{B} 2/2 haste, exalted Vampire Rogue.
+pub fn duskmantle_prowler() -> CardDefinition {
+    exalted_body("Duskmantle Prowler", cost(&[generic(3), b()]), vec![CreatureType::Vampire, CreatureType::Rogue], 2, 2, vec![Keyword::Haste])
+}
+
+/// Knight of Infamy — {1}{B} 2/1 Human Knight, protection from white, exalted.
+pub fn knight_of_infamy() -> CardDefinition {
+    exalted_body(
+        "Knight of Infamy",
+        cost(&[generic(1), b()]),
+        vec![CreatureType::Human, CreatureType::Knight],
+        2,
+        1,
+        vec![Keyword::Protection(Color::White)],
+    )
+}
+
+/// Servant of Nefarox — {2}{B} 3/1 exalted Human Cleric.
+pub fn servant_of_nefarox() -> CardDefinition {
+    exalted_body("Servant of Nefarox", cost(&[generic(2), b()]), vec![CreatureType::Human, CreatureType::Cleric], 3, 1, vec![])
+}
+
+// ── Hythonia the Cruel ──────────────────────────────────────────────────────
+
+/// Arisen Gorgon — {1}{B}{B} 3/3 Zombie Gorgon; deathtouch while you control a
+/// Liliana planeswalker.
+pub fn arisen_gorgon() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has deathtouch as long as you control a Liliana planeswalker.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Deathtouch,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasPlaneswalkerType(PlaneswalkerSubtype::Liliana).and(R::ControlledByYou),
+                )),
+            },
+        }],
+        ..creature("Arisen Gorgon", cost(&[generic(1), b(), b()]), vec![CreatureType::Zombie, CreatureType::Gorgon], 3, 3)
+    }
+}
+
+/// Scourge of the Undercity — {1}{B} 2/1 lifelink Gorgon Vampire. Enters:
+/// another target creature you control gains lifelink until end of turn.
+pub fn scourge_of_the_undercity() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            keyword: Keyword::Lifelink,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Scourge of the Undercity", cost(&[generic(1), b()]), vec![CreatureType::Gorgon, CreatureType::Vampire], 2, 1)
+    }
+}
+
+/// Vraska, Scheming Gorgon — {4}{B}{B} planeswalker, loyalty 5. +2: your
+/// creatures get +1/+0. −3: destroy target creature. −10: your creatures gain
+/// deathtouch and "damage to an opponent makes that player lose the game"
+/// until end of turn.
+pub fn vraska_scheming_gorgon() -> CardDefinition {
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    let lethal = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource)
+            .with_filter(Predicate::PlayerIsOpponent { who: PlayerRef::Target(0) }),
+        effect: Effect::LoseGame { who: PlayerRef::Target(0) },
+    };
+    CardDefinition {
+        name: "Vraska, Scheming Gorgon",
+        cost: cost(&[generic(4), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Vraska], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::PumpPT { what: yours(), power: Value::ONE, toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            LoyaltyAbility { loyalty_cost: -3, effect: Effect::Destroy { what: target_filtered(R::Creature) }, ..Default::default() },
+            LoyaltyAbility {
+                loyalty_cost: -10,
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword { what: yours(), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+                    Effect::GrantTriggeredAbility { what: yours(), trigger: Box::new(lethal), duration: Duration::EndOfTurn },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Vraska's Scorn — {2}{B}{B} sorcery. Target opponent loses 4 life. You may
+/// search your library and/or graveyard for Vraska, Scheming Gorgon and put it
+/// into your hand.
+pub fn vraskas_scorn() -> CardDefinition {
+    spell(
+        "Vraska's Scorn",
+        cost(&[generic(2), b(), b()]),
+        false,
+        Effect::Seq(vec![
+            Effect::LoseLife { who: target_filtered(R::OpponentPlayer), amount: Value::Const(4) },
+            Effect::SearchZones {
+                who: PlayerRef::You,
+                zones: vec![Zone::Library, Zone::Graveyard],
+                filter: R::HasName("Vraska, Scheming Gorgon".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+    )
+}
+
+// ── Telim'Tor ───────────────────────────────────────────────────────────────
+
+/// Blazing Blade Askari — {2}{R} 2/2 flanking Human Knight. {2}: it becomes
+/// colorless until end of turn.
+pub fn blazing_blade_askari() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flanking],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::BecomeColor { what: Selector::This, colors: vec![], duration: Duration::EndOfTurn, additive: false },
+            ..Default::default()
+        }],
+        ..creature("Blazing Blade Askari", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Embereth Paladin — {3}{R} 4/1 haste Human Knight. Adamant — three red mana
+/// spent: it enters with a +1/+1 counter.
+pub fn embereth_paladin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastWithColorSpent { color: Color::Red, at_least: 3 }),
+                then: Box::new(Value::ONE),
+                else_: Box::new(Value::Const(0)),
+            },
+        )),
+        ..creature("Embereth Paladin", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Knight], 4, 1)
+    }
+}
+
+/// Tilonalli's Skinshifter — {2}{R} 0/1 haste Human Shaman. Attacking: it
+/// becomes a copy of another target nonlegendary attacking creature until end
+/// of turn.
+pub fn tilonallis_skinshifter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_attack(Effect::BecomeCopyOfFor {
+            what: Selector::This,
+            source: target_filtered(
+                R::Creature.and(R::IsAttacking).and(R::OtherThanSource).and(R::Not(Box::new(R::HasSupertype(Supertype::Legendary)))),
+            ),
+            duration: Duration::EndOfTurn,
+            non_legendary: false,
+        })],
+        ..creature("Tilonalli's Skinshifter", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Shaman], 0, 1)
+    }
+}
+
+/// Joust — {1}{R} sorcery. Target creature you control (+2/+1 first if it's a
+/// Knight) fights target creature you don't control.
+pub fn joust() -> CardDefinition {
+    let theirs = Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::Not(Box::new(R::ControlledByYou))) };
+    spell(
+        "Joust",
+        cost(&[generic(1), r()]),
+        false,
+        Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::EntityMatches { what: your_creature(), filter: R::HasCreatureType(CreatureType::Knight) },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Fight { attacker: Selector::Target(0), defender: theirs },
+        ]),
+    )
 }
