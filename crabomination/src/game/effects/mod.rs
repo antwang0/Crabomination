@@ -26647,6 +26647,9 @@ impl GameState {
                     });
                 let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true };
                 self.move_card_to(cid, &dest, ctx, events);
+                // `Selector::LastMoved` names it for a rider ("… and it gains
+                // indestructible until end of turn" — Nick Fury, Spymaster).
+                self.scratch.last_moved_cards.push(cid);
                 if let Some(target) = target
                     && !self.attacking.iter().any(|a| a.attacker == cid)
                 {
