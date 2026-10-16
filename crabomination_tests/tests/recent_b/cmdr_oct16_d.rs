@@ -594,3 +594,110 @@ fn fin_fang_foom_copies_artifact_removal() {
     assert_eq!(g.battlefield_find(foom).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
 }
+
+/// CR 702.11d — Mondo Gecko becomes one color and gains hexproof from it.
+#[test]
+fn mondo_gecko_becomes_a_color_with_hexproof_from_it() {
+    let mut g = pod(2);
+    let gecko = ready(&mut g, 0, catalog::mondo_gecko());
+    g.add_card_to_hand(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, gecko, None).expect("activate");
+    let cp = g.computed_permanent(gecko).unwrap();
+    let cs: Vec<Color> = cp.colors.iter().collect();
+    assert_eq!(cs.len(), 1);
+    let c = cs[0];
+    assert!(cp.keywords().contains(&Keyword::HexproofFromColor(c)));
+    assert!(g.players[0].hand.is_empty(), "the discard was paid");
+}
+
+/// CR 101.2 — Dragonlord's Prerogative can't be countered when a Dragon card
+/// was revealed as it was cast, and can be otherwise.
+#[test]
+fn dragonlords_prerogative_is_uncounterable_with_a_dragon() {
+    use crabomination::game::types::StackItem;
+    let uncounterable = |g: &GameState| {
+        g.stack.iter().any(|s| matches!(s, StackItem::Spell { card, uncounterable: true, .. } if card.definition.name == "Dragonlord's Prerogative"))
+    };
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let p = g.add_card_to_hand(0, catalog::dragonlords_prerogative());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    g.perform_action(GameAction::CastSpell { card_id: p, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    assert!(!uncounterable(&g), "no Dragon: counterable");
+    drain_stack(&mut g);
+
+    g.add_card_to_hand(0, catalog::broodmate_dragon());
+    let p2 = g.add_card_to_hand(0, catalog::dragonlords_prerogative());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: p2, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    assert!(uncounterable(&g), "a revealed Dragon card makes it uncounterable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h - 1 + 4);
+}
+
+/// CR 615 — Hyperion prevents all but 1 of the damage to its controller and
+/// to Heroes they control, not to other creatures.
+#[test]
+fn hyperion_prevents_all_but_one() {
+    let mut g = pod(2);
+    let hyp = ready(&mut g, 0, catalog::hyperion_supreme_hero());
+    let bucky = ready(&mut g, 0, catalog::bucky_barnes_eager_ally());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let hit = crabomination::effect::Effect::DealDamage { to: crabomination::effect::Selector::Target(0), amount: crabomination::card::Value::Const(5) };
+    for t in [Target::Player(0), Target::Permanent(bucky), Target::Permanent(bears)] {
+        let ctx = crabomination::game::effects::EffectContext::for_spell(1, Some(t), 0, 0);
+        g.resolve_effect(&hit, &ctx).unwrap();
+    }
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].life, 19);
+    assert_eq!(g.battlefield_find(bucky).unwrap().damage, 1, "a Hero takes 1");
+    assert!(g.battlefield_find(bears).is_none(), "a non-Hero takes all 5");
+    assert!(g.battlefield_find(hyp).is_some());
+}
+
+/// Juvenile Mist Dragon taps one creature per opponent; they skip the next
+/// untap.
+#[test]
+fn juvenile_mist_dragon_taps_one_per_opponent() {
+    let mut g = pod(3);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 2, catalog::grizzly_bears());
+    let d = g.add_card_to_hand(0, catalog::juvenile_mist_dragon());
+    cast(&mut g, d, None);
+    for id in [a, b] {
+        let c = g.battlefield_find(id).unwrap();
+        assert!(c.tapped && c.skip_next_untap, "{id:?} tapped={} skip={}", c.tapped, c.skip_next_untap);
+    }
+}
+
+/// Oceanus Dragon taps and goads; Doctor Spectrum's counter mode skips itself.
+#[test]
+fn oceanus_goads_and_spectrum_counters_other_heroes() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let o = g.add_card_to_hand(0, catalog::oceanus_dragon());
+    cast(&mut g, o, Some(Target::Permanent(bears)));
+    let c = g.battlefield_find(bears).unwrap();
+    assert!(c.tapped && c.goaded_by.contains(&0));
+
+    let bucky = ready(&mut g, 0, catalog::bucky_barnes_eager_ally());
+    let s = g.add_card_to_hand(0, catalog::doctor_spectrum());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, s, None);
+    assert_eq!(g.battlefield_find(bucky).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Wondrous Revival returns Hero creature cards only.
+#[test]
+fn wondrous_revival_returns_heroes() {
+    let mut g = pod(2);
+    let bucky = g.add_card_to_graveyard(0, catalog::bucky_barnes_eager_ally());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let r = g.add_card_to_hand(0, catalog::wondrous_revival());
+    cast(&mut g, r, Some(Target::Permanent(bucky)));
+    assert!(g.battlefield_find(bucky).is_some());
+    assert!(g.battlefield_find(bears).is_none());
+}

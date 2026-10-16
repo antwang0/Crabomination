@@ -1633,3 +1633,160 @@ pub fn borrowed_hostility() -> CardDefinition {
         )
     }
 }
+
+// ── Mondo Gecko ─────────────────────────────────────────────────────────────
+
+fn colors_among_yours() -> Value {
+    Value::DistinctColorsAmong(Box::new(Selector::EachPermanent(R::Permanent.and(R::ControlledByYou))))
+}
+
+/// Mondo Gecko — {1}{U}{U} legendary 2/3 Lizard Mutant. {1}, discard a card:
+/// until end of turn it becomes the color of your choice and gains hexproof
+/// from that color. Combat damage to a player: draw a card per color among
+/// permanents you control.
+pub fn mondo_gecko() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::BecomeChosenColorWithHexproof { what: Selector::This, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: colors_among_yours() },
+        }],
+        ..creature("Mondo Gecko", cost(&[generic(1), u(), u()]), vec![CreatureType::Lizard, CreatureType::Mutant], 2, 3)
+    }
+}
+
+/// Puca's Eye — {2} artifact. Enters: draw a card, then it becomes the color
+/// of your choice. {3}, {T}: draw a card, only with five colors among
+/// permanents you control.
+pub fn pucas_eye() -> CardDefinition {
+    CardDefinition {
+        name: "Puca's Eye",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::BecomeChosenColor { what: Selector::This, duration: Duration::Permanent },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            condition: Some(Predicate::ValueAtLeast(colors_among_yours(), Value::Const(5))),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Scrapbasket — {4} 3/2 Scarecrow artifact creature. {1}: it becomes all
+/// colors until end of turn.
+pub fn scrapbasket() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::BecomeColor { what: Selector::This, colors: Color::ALL.to_vec(), duration: Duration::EndOfTurn, additive: false },
+            ..Default::default()
+        }],
+        ..creature("Scrapbasket", cost(&[generic(4)]), vec![CreatureType::Scarecrow], 3, 2)
+    }
+}
+
+// ── Renari, Merchant of Marvels ─────────────────────────────────────────────
+
+fn opposing(slot: u8, other_than: &[u8]) -> Selector {
+    let mut filter = R::Creature;
+    for &s in other_than {
+        filter = filter.and(R::OtherThanTargetSlot(s));
+    }
+    if slot == 0 {
+        filter = filter.and(R::ControlledByOpponent);
+    }
+    Selector::TargetFiltered { slot, filter }
+}
+
+/// Blue Dragon — {5}{U}{U} 5/5 flying Dragon. Lightning Breath — enters: until
+/// your next turn, target creature an opponent controls gets -3/-0, up to one
+/// other target creature -2/-0, up to one other -1/-0.
+pub fn blue_dragon() -> CardDefinition {
+    let weaken = |what: Selector, n: i32| Effect::PumpPT { what, power: Value::Const(-n), toughness: Value::ZERO, duration: Duration::UntilNextTurn };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                weaken(opposing(0, &[]), 3),
+                weaken(opposing(1, &[0]), 2),
+                weaken(opposing(2, &[0, 1]), 1),
+            ])),
+        })],
+        ..creature("Blue Dragon", cost(&[generic(5), u(), u()]), vec![CreatureType::Dragon], 5, 5)
+    }
+}
+
+/// Juvenile Mist Dragon — {3}{U}{U} 4/3 flying Dragon. Confounding Clouds —
+/// enters: for each opponent, tap up to one target creature they control; it
+/// doesn't untap during its controller's next untap step.
+pub fn juvenile_mist_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 7,
+                min_targets: 0,
+                filter: R::Creature.and(R::ControlledByOpponent),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Tap { what: Selector::Target(0) },
+                    Effect::SkipNextUntap { what: Selector::Target(0) },
+                ])),
+            }),
+        })],
+        ..creature("Juvenile Mist Dragon", cost(&[generic(3), u(), u()]), vec![CreatureType::Dragon], 4, 3)
+    }
+}
+
+/// Oceanus Dragon — {4}{U}{U} 3/5 flying Dragon. Enters: tap target creature
+/// an opponent controls and goad it.
+pub fn oceanus_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::Goad { what: Selector::Target(0) },
+        ]))],
+        ..creature("Oceanus Dragon", cost(&[generic(4), u(), u()]), vec![CreatureType::Dragon], 3, 5)
+    }
+}
+
+/// Dragonlord's Prerogative — {4}{U}{U} instant. You may reveal a Dragon card
+/// as you cast it; if you did or controlled a Dragon, it can't be countered.
+/// Draw four cards.
+pub fn dragonlords_prerogative() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeCounteredIfCastCondition],
+        as_cast_condition: Some(crate::effect::shortcut::dragon_as_cast()),
+        ..spell("Dragonlord's Prerogative", cost(&[generic(4), u(), u()]), true, Effect::Draw { who: Selector::You, amount: Value::Const(4) })
+    }
+}
+
+// ── Doctor Spectrum ─────────────────────────────────────────────────────────
+
+/// Hyperion, Supreme Hero — {4}{W}{W}{W} legendary 7/7 flash, flying Eternal
+/// Hero. Damage to you or a Hero you control is prevented down to 1.
+pub fn hyperion_supreme_hero() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If a source would deal damage to you or a Hero you control, prevent all but 1 of that damage.",
+            effect: StaticEffect::PreventAllButOneDamageToYouAndYourHeroes,
+        }],
+        ..creature("Hyperion, Supreme Hero", cost(&[generic(4), w(), w(), w()]), vec![CreatureType::Eternal, CreatureType::Hero], 7, 7)
+    }
+}
