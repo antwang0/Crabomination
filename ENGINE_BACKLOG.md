@@ -184,6 +184,8 @@ the handoff.
 - **Pods:** 15-seat (100 games), 8-seat (150), 6-seat (200), 4-seat (200+200) blocks plus `pod_sweep.py` seeds
   9611-9615 over 2920-3000 at 3/4/6/8 seats (1,555 games): 0 panics after the CR 508.4 fix; three CR 104.4a draws
   at seed 9619 (6 seats) are Descent into Avernus killing every remaining player at once.
+  Later: seed 9621 (6 seats, the Captain Americas / Rhino / Sethron) 200/200; sweep 9616 over 2949-3018 at
+  4/6/8, 585 games, one more Avernus draw (seed 961702 game 12).
 - **Primitives:** `PlayerRef::EachPlayerYouAreAttacking`, `R::ManaValueAtMostTargetSlot`,
   `AdditionalCastCost::BlightOrPay`, `CounterType::Dread`, `CreatureType::Vorta`; "whenever you exert a creature"
   (`Exerted` + `YourControl`) now fires and the exert policy pays for it (CR 701.43).
