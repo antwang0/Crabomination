@@ -81381,3 +81381,171 @@ pub const JASMINE_BOREAL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const BALIN_COMMANDERS: &[CardFactory] = &[balin_loremaster];
+
+/// **Balin, Loremaster**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Balin, Loremaster (EDHREC, fetched 2026-10-16).
+pub const BALIN_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, bag_of_holding, cursed_mirror, elixir_of_immortality,
+    fellwar_stone, lightning_greaves, monument_to_endurance, panharmonicon, phial_of_galadriel,
+    ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal, thought_vessel, dwarven_mine,
+    great_furnace, mines_of_moria, nykthos_shrine_to_nyx, reliquary_tower, the_lonely_mountain,
+    war_room, blazing_firesinger, bloodfire_dwarf, containment_construct,
+    dori_bearer_of_friends, dwarven_grunt, dwarven_mauler, dwarven_recruiter, dwarven_scorcher,
+    dwarven_trader, fearless_liberator, fili_and_kili_joyous, gimli_of_the_glittering_caves,
+    glint_horn_buccaneer, gloin_the_mighty, gloin_dwarf_emissary, liberated_dwarf,
+    magda_brazen_outlaw, magda_the_hoardmaster, magmakin_artillerist,
+    misty_knight_hero_for_hire, plundering_barbarian, roaming_throne, rubble_rouser, spark_mage,
+    torbran_thane_of_red_fell, universal_automaton, vault_robber, oin_the_brave, city_on_fire,
+    collective_inferno, cool_but_rude, underworld_breach, abrade, big_score, chaos_warp,
+    return_the_favor, seething_song, unexpected_windfall, untimely_malfunction, blasphemous_act,
+    change_of_fortune, devastating_onslaught, dwarven_reinforcements, electroduplicate,
+    faithless_looting, jeskas_will, mana_geyser, twinflame,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const MARY_JANE_WATSON_COMMANDERS: &[CardFactory] = &[mary_jane_watson];
+
+/// **Mary Jane Watson**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Forests + 9 Plains = 99.
+/// Mary Jane Watson (EDHREC, fetched 2026-10-16).
+pub const MARY_JANE_WATSON_MAIN: &[CardFactory] = &[
+    arcane_signet, costume_closet, heralds_horn, patchwork_banner, pictures_of_spider_man,
+    sol_ring, spider_mobile, spider_suit, vanquishers_banner, blossoming_sands, brushland,
+    canopy_vista, command_tower, fortified_village, gavony_township, hushwood_verge,
+    overgrown_farmland, reliquary_tower, suburban_sanctuary, sunpetal_grove, swarmyard,
+    temple_garden, temple_of_plenty, amazing_spider_girl, arachne_psionic_weaver,
+    arasta_of_the_endless_web, aunt_may, chainweb_aracnir, deadly_recluse,
+    ezekiel_sims_spider_totem, guy_in_the_chair, metallic_mimic, mirkwood_spider,
+    penumbra_spider, radioactive_spider, realmwalker, silk_web_weaver, spectacular_spider_man,
+    spider_bot, spider_girl_legacy_hero, spider_ham_peter_porker, spider_man_india,
+    spider_man_brooklyn_visionary, spider_man_miles_morales, spider_man_to_the_rescue,
+    spider_man_web_slinger, spider_rex_daring_dino, spider_uk, spiders_man_heroic_horde,
+    spinner_of_souls, sporeweb_weaver, twin_silk_spider, twitching_doll, web_warriors,
+    amazing_alliance, arachnus_web, curse_of_clinging_webs, friendly_neighborhood,
+    origin_of_spider_man, wall_crawl, web_up, web_of_life_and_destiny, arachnogenesis,
+    beast_within, generous_gift, grow_extra_arms, heroic_intervention, path_to_exile,
+    spectacular_tactics, sudden_strike, swords_to_plowshares, thwip, cultivate, farseek,
+    kodamas_reach, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GALADRIEL_2_COMMANDERS: &[CardFactory] = &[galadriel_gift_giver];
+
+/// **Galadriel, Gift-Giver**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Forests = 99.
+/// Galadriel, Gift-Giver (EDHREC, fetched 2026-10-16).
+pub const GALADRIEL_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_end_banquet, conjurers_closet, emerald_medallion, necklace_of_girion,
+    ozolith_the_shattered_spire, sol_ring, swiftfoot_boots, gingerbread_cabin, myriad_landscape,
+    oran_rief_the_vastwood, reliquary_tower, rogues_passage, the_shire,
+    yavimaya_cradle_of_growth, academy_manufactor, arbor_elf, beast_whisperer,
+    bilbo_fellow_conspirator, boughside_wanderers, cantankerous_keepers, dwynen_gilt_leaf_daen,
+    elanor_gardner, elvish_archdruid, elvish_mystic, essence_warden, feasting_hobbit,
+    feasting_troll_king, fyndhorn_elves, gala_greeters, gilded_goose, imperious_perfect,
+    ivy_lane_denizen, jaheira_friend_of_the_forest, kami_of_whispered_hopes,
+    legolas_master_archer, llanowar_elves, marwyn_the_nurturer, mirkwood_pathmaker,
+    peregrin_took, priest_of_titania, reclamation_sage, rishkar_peema_renegade,
+    tireless_provisioner, tough_cookie, wood_elves, doubling_season, garruks_uprising,
+    hardened_scales, killer_service, night_of_the_sweets_revenge, trail_of_crumbs,
+    tribute_to_the_world_tree, unnatural_growth, archdruids_charm, beast_within,
+    galadhrim_ambush, heroic_intervention, inspiring_call, return_to_nature, second_harvest,
+    worldly_tutor, freyalise_llanowars_fury, cultivate, giant_opportunity, harmonize,
+    kodamas_reach, many_partings, natures_lore, rampant_growth, revive_the_shire, three_visits,
+    through_the_forest_gate,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
+];
+
+pub const GOLLUM_THE_ABANDONED_COMMANDERS: &[CardFactory] = &[gollum_the_abandoned];
+
+/// **Gollum the Abandoned**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Gollum the Abandoned (EDHREC, fetched 2026-10-16).
+pub const GOLLUM_THE_ABANDONED_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bontus_monument, desecrated_tomb, grim_reapers_scythe,
+    jet_medallion, my_precious, panharmonicon, prized_statue, skullclamp, sol_ring, bojuka_bog,
+    cabal_coffers, crypt_of_agadeem, phyrexian_tower, reliquary_tower, accursed_marauder,
+    ayara_first_of_locthwain, blood_artist, bloodghast, braids_arisen_nightmare, carrion_feeder,
+    fleshbag_marauder, gollum_patient_plotter, gollum_riddle_master, grave_researcher,
+    gravecrawler, gray_merchant_of_asphodel, grim_haruspex, kingpin_wilson_fisk,
+    marionette_apprentice, midnight_reaper, morbid_opportunist, ophiomancer, pawn_of_ulamog,
+    pitiless_plunderer, reassembling_skeleton, solemn_simulacrum, syr_konrad_the_grim,
+    tormod_the_desecrator, undead_hand_ninja, viscera_seer, warren_soultrader,
+    zulaport_cutthroat, along_the_crooked_way, bastion_of_remembrance, black_market,
+    ghoulish_procession, open_the_graves, phyrexian_arena, tevals_judgment,
+    corrupted_conviction, culling_the_weak, dark_ritual, deadly_dispute, nasty_end,
+    not_dead_after_all, supernatural_stamina, tragic_slip, undying_malice, village_rites,
+    bone_splinters, diabolic_intent, feed_the_swarm, nights_whisper, reanimate, stir_up_trouble,
+    toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const HUMAN_TORCH_2_COMMANDERS: &[CardFactory] = &[human_torch_johnny_storm];
+
+/// **Human Torch, Johnny Storm**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Mountains = 99.
+/// Human Torch, Johnny Storm (EDHREC, fetched 2026-10-16).
+pub const HUMAN_TORCH_2_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, firdoch_core, fire_diamond, lightning_greaves, mind_stone,
+    minds_eye, monument_to_endurance, ruby_medallion, sol_ring, tablet_of_discovery,
+    the_ten_rings, thought_vessel, wayfarers_bauble, avengers_tower, forgotten_cave,
+    geier_reach_sanitarium, hidden_volcano, myriad_landscape, spinerock_knoll,
+    valakut_the_molten_pinnacle, war_room, cavalier_of_flame, clive_ifrits_dominant,
+    firebrand_archer, hawkeye_master_marksman, hawkeye_young_avenger, iron_man_tony_stark,
+    kun_lun_warrior, lady_spider_maybelle_reilly, magmakin_artillerist, magus_of_the_wheel,
+    masked_meower, misty_knight_hero_for_hire, photon_mighty_marvel, psychosis_crawler,
+    quicksilver_brash_blur, razorkin_needlehead, spider_gwen_free_spirit,
+    spider_man_new_champion, spider_punk, the_vision, thor_asgards_avenger, thor_god_of_thunder,
+    torbran_thane_of_red_fell, wonder_man_hollywood_hero, artists_talent, cool_but_rude,
+    fiery_emancipation, mindmoil, big_score, chaos_warp, demand_answers, fateful_showdown,
+    lightning_bolt, raphaels_technique, thrill_of_possibility, unexpected_windfall,
+    valakut_awakening, vision_of_love, chandra_flamecaller, blasphemous_act, cathartic_reunion,
+    change_of_fortune, faithless_looting, grab_the_prize, hex_magic, romantic_rendezvous,
+    seize_the_spoils, snort, steal_the_show, tormenting_voice, winds_of_change,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const GLORFINDEL_COMMANDERS: &[CardFactory] = &[glorfindel_dauntless_rescuer];
+
+/// **Glorfindel, Dauntless Rescuer**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Forests = 99.
+/// Glorfindel, Dauntless Rescuer (EDHREC, fetched 2026-10-16).
+pub const GLORFINDEL_MAIN: &[CardFactory] = &[
+    crystal_ball, darksteel_pendant, emerald_medallion, infiltration_lens,
+    lifecrafters_bestiary, lothlorien_blade, mazemind_tome, planetarium_of_wan_shi_tong,
+    seers_lantern, sentinel_totem, sol_ring, treasure_map, crystal_grotto, isolated_watchtower,
+    nykthos_shrine_to_nyx, path_of_ancestry, reliquary_tower, the_grey_havens, wirewood_lodge,
+    zhalfirin_void, arbor_elf, beast_whisperer, canopy_tactician, celeborn_the_wise,
+    chance_met_elves, dwynen_gilt_leaf_daen, elvish_archdruid, elvish_clancaller, elvish_mystic,
+    fyndhorn_elves, galadhrim_guide, haldir_lorien_lieutenant, immaculate_magistrate,
+    imperious_perfect, leaf_crowned_visionary, llanowar_elves, lothlorien_lookout,
+    lys_alana_huntmaster, ohran_frostfang, priest_of_titania, reclamation_sage,
+    rishkar_peema_renegade, timberwatch_elf, wood_elves, elvish_guidance, fall_of_gil_galad,
+    garruks_uprising, gift_of_strands, guardian_project, in_search_of_greatness,
+    retreat_to_kazandu, season_of_growth, sylvan_anthem, tribute_to_the_world_tree,
+    beast_within, ferocious_charge, gaeas_gift, galadhrim_ambush, return_to_nature,
+    shower_of_arrows, tamiyos_safekeeping, tel_jilad_justice, tyvars_stand, windswift_slice,
+    cultivate, elven_farsight, kodamas_reach, natures_lore, nissas_revelation, peregrination,
+    rampant_growth, track_down,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest,
+];

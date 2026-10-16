@@ -17862,6 +17862,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JASMINE_BOREAL_COMMANDERS,
             main: decks::JASMINE_BOREAL_MAIN,
         },
+        // Seat 2902: Balin, Loremaster's EDHREC average deck. `--pod-decks 2902`.
+        PodDeck {
+            name: "Balin, Loremaster (R)",
+            commanders: decks::BALIN_COMMANDERS,
+            main: decks::BALIN_MAIN,
+        },
+        // Seat 2903: Mary Jane Watson's EDHREC average deck. `--pod-decks 2903`.
+        PodDeck {
+            name: "Mary Jane Watson (WG)",
+            commanders: decks::MARY_JANE_WATSON_COMMANDERS,
+            main: decks::MARY_JANE_WATSON_MAIN,
+        },
+        // Seat 2904: Galadriel, Gift-Giver's EDHREC average deck. `--pod-decks 2904`.
+        PodDeck {
+            name: "Galadriel, Gift-Giver (G)",
+            commanders: decks::GALADRIEL_2_COMMANDERS,
+            main: decks::GALADRIEL_2_MAIN,
+        },
+        // Seat 2905: Gollum the Abandoned's EDHREC average deck. `--pod-decks 2905`.
+        PodDeck {
+            name: "Gollum the Abandoned (B)",
+            commanders: decks::GOLLUM_THE_ABANDONED_COMMANDERS,
+            main: decks::GOLLUM_THE_ABANDONED_MAIN,
+        },
+        // Seat 2906: Human Torch, Johnny Storm's EDHREC average deck. `--pod-decks 2906`.
+        PodDeck {
+            name: "Human Torch, Johnny Storm (R)",
+            commanders: decks::HUMAN_TORCH_2_COMMANDERS,
+            main: decks::HUMAN_TORCH_2_MAIN,
+        },
+        // Seat 2907: Glorfindel, Dauntless Rescuer's EDHREC average deck. `--pod-decks 2907`.
+        PodDeck {
+            name: "Glorfindel, Dauntless Rescuer (G)",
+            commanders: decks::GLORFINDEL_COMMANDERS,
+            main: decks::GLORFINDEL_MAIN,
+        },
     ]
 }
 
@@ -22647,6 +22683,12 @@ mod tests {
             ("Jasmine Boreal of the Seven", &[0x1569]),
             ("Superior Spider-Man", &[0x156A]),
             ("Jasmine Boreal", &[0x156B]),
+            ("Balin, Loremaster", &[0x156C]),
+            ("Mary Jane Watson", &[0x156D]),
+            ("Galadriel, Gift-Giver", &[0x156E]),
+            ("Gollum the Abandoned", &[0x156F]),
+            ("Human Torch, Johnny Storm", &[0x1570]),
+            ("Glorfindel, Dauntless Rescuer", &[0x1571]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
