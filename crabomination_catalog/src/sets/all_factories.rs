@@ -16280,6 +16280,12 @@ static DECKS: &[Factory] = &[
     super::decks::dunedain_rangers,
     super::decks::savage_thallid,
     super::decks::fear_fire_foes,
+    super::decks::cowabunga,
+    super::decks::pictures_of_spider_man,
+    super::decks::origin_of_spider_man,
+    super::decks::auditore_ambush,
+    super::decks::bortuk_bonerattle,
+    super::decks::sailors_bane,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

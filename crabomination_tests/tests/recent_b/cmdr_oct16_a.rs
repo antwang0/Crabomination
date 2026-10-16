@@ -440,3 +440,129 @@ fn fear_fire_foes_splashes_the_targets_controller_only() {
     assert!(g.battlefield_find(elves).is_none(), "1 to its controller's other creature");
     assert!(g.battlefield_find(bystander).is_some() && g.battlefield_find(mine).is_some());
 }
+
+// ── cmdr_oct16_c ────────────────────────────────────────────────────────────
+
+fn cast(g: &mut GameState, id: CardId) {
+    cast_with(g, id, None, vec![]).expect("cast");
+}
+
+/// Cowabunga! takes a Turtle over a bigger non-TMNT card; with neither a
+/// Mutant/Ninja/Turtle nor a land among the four, nothing comes.
+#[test]
+fn cowabunga_takes_only_tmnt_or_land() {
+    for (def, taken) in [(catalog::craw_wurm(), false), (catalog::forest(), true)] {
+        let mut g = pod(2);
+        let card = g.add_card_to_library(0, def);
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::lightning_bolt());
+        }
+        stock_libraries(&mut g, 5);
+        let spell = g.add_card_to_hand(0, catalog::cowabunga());
+        cast(&mut g, spell);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == card), taken);
+        assert_eq!(g.players[0].hand.len(), taken as usize);
+    }
+}
+
+/// Pictures of Spider-Man takes up to two creatures from five on entering,
+/// then cashes itself in for a Treasure.
+#[test]
+fn pictures_of_spider_man_takes_two_creatures_then_a_treasure() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    stock_libraries(&mut g, 5);
+    let pics = g.add_card_to_hand(0, catalog::pictures_of_spider_man());
+    cast(&mut g, pics);
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name == "Grizzly Bears"));
+    g.clear_sickness(pics);
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility { card_id: pics, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pics).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
+}
+
+/// Origin of Spider-Man: chapter I's Spider is chapter II's only target and
+/// stays a legendary Spider Hero with a counter afterwards (no duration).
+#[test]
+fn origin_of_spider_man_makes_a_legendary_hero() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let saga = g.add_card_to_hand(0, catalog::origin_of_spider_man());
+    cast(&mut g, saga);
+    let spider = g.battlefield.iter().find(|c| c.definition.name == "Spider").expect("chapter I").id;
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    let cp = g.computed_permanent(spider).unwrap();
+    assert!(cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Hero));
+    assert_eq!(g.battlefield_find(spider).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Auditore Ambush, both modes: bounce a creature and fetch Ezio — from the
+/// graveyard here, the "and/or graveyard" half.
+#[test]
+fn auditore_ambush_bounces_and_fetches_ezio_from_the_graveyard() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let ezio = g.add_card_to_graveyard(0, catalog::ezio_blade_of_vengeance());
+    let spell = g.add_card_to_hand(0, catalog::auditore_ambush());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: spell,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![Target::Player(0)],
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    assert!(g.players[0].hand.iter().any(|c| c.id == ezio));
+}
+
+/// Bortuk Bonerattle: domain 2 returns a two-drop to the battlefield, sends a
+/// six-drop to hand, and does nothing when Bortuk wasn't cast.
+#[test]
+fn bortuk_returns_by_domain_when_cast() {
+    for (def, onto) in [(catalog::grizzly_bears(), true), (catalog::craw_wurm(), false)] {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 5);
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_battlefield(0, catalog::swamp());
+        let dead = g.add_card_to_graveyard(0, def);
+        let bortuk = g.add_card_to_hand(0, catalog::bortuk_bonerattle());
+        cast(&mut g, bortuk);
+        assert_eq!(g.battlefield_find(dead).is_some(), onto);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == dead), !onto);
+    }
+    let mut g = pod(2);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::bortuk_bonerattle());
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dead), "not cast: no trigger");
+}
+
+/// Sailors' Bane counts instants/sorceries in exile and the graveyard, both.
+#[test]
+fn sailors_bane_costs_less_per_spell_in_exile_and_graveyard() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_exile(0, catalog::lightning_bolt());
+    let bane = g.add_card_to_hand(0, catalog::sailors_bane());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: bane, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{2}{U}{U} after five spells");
+}
