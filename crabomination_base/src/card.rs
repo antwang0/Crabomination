@@ -401,6 +401,8 @@ pub enum CreatureType {
     // Star Trek (General Chang; Bio-Asset Allocator).
     Klingon,
     Borg,
+    // Star Trek (Dominion Supervisor).
+    Vorta,
 }
 
 /// Land subtypes (basic land types + others).

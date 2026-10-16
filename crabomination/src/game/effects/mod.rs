@@ -45974,6 +45974,24 @@ impl GameState {
                         .collect(),
                 )
             }
+            PlayerRef::EachPlayerYouAreAttacking => {
+                let mut seats: Vec<usize> = self
+                    .attacking
+                    .iter()
+                    .filter_map(|a| match a.target {
+                        crate::game::types::AttackTarget::Player(p)
+                            if self.battlefield_find(a.attacker).is_some_and(|c| c.controller == ctx.controller)
+                                && self.players.get(p).is_some_and(|pl| pl.is_alive()) =>
+                        {
+                            Some(p)
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                seats.sort_unstable();
+                seats.dedup();
+                self.apnap_sort(seats)
+            }
             PlayerRef::EachWithFewestControlled(filter) => {
                 let count = |p: usize| {
                     self.battlefield
@@ -46282,6 +46300,7 @@ impl GameState {
             }
             PlayerRef::EachPlayerExceptControllerOf(_)
             | PlayerRef::EachPlayerSourceAttackedThisTurn
+            | PlayerRef::EachPlayerYouAreAttacking
             | PlayerRef::EachWithFewestControlled(_) => self.resolve_players(pref, ctx).into_iter().next(),
             PlayerRef::EnchantedPlayer => ctx
                 .source

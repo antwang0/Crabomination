@@ -143,6 +143,10 @@ pub enum PlayerRef {
     /// the source's `attacked_players`, alive seats in APNAP order; nobody
     /// once the source has left the battlefield.
     EachPlayerSourceAttackedThisTurn,
+    /// "A player you're attacking" (CR 506.2): each live seat a creature the
+    /// controller controls is attacking directly, APNAP order; nobody outside
+    /// combat. Undercellar Sweep's "if you or a player you're attacking…".
+    EachPlayerYouAreAttacking,
     /// "Choose an opponent **at random**" (Raving Dead) — a live opponent
     /// drawn from the game's RNG. A fresh draw each time it is resolved, so
     /// it belongs in a one-shot slot such as `Effect::RememberPlayerOnSource`.
@@ -202,6 +206,7 @@ impl PlayerRef {
                 | PlayerRef::EachTeammate
                 | PlayerRef::EachPlayerExceptControllerOf(_)
                 | PlayerRef::EachPlayerSourceAttackedThisTurn
+                | PlayerRef::EachPlayerYouAreAttacking
                 | PlayerRef::EachWithFewestControlled(_)
         )
     }
