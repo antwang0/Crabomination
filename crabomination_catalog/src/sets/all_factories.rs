@@ -16620,6 +16620,7 @@ static DECKS: &[Factory] = &[
     super::decks::boomerang_blade_flinger,
     super::decks::loot_the_anomaly,
     super::decks::silence_the_echo,
+    super::decks::faceless_one,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

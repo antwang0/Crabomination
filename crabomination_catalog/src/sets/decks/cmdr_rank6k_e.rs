@@ -10,12 +10,14 @@ use crate::effect::{Effect, PlayerRef, Selector};
 use crate::mana::{cost, g, generic, w, x};
 use std::sync::Arc;
 
-/// The Prismatic Piper — {5} 3/3 colorless legendary Shapeshifter, partner.
-/// Residual: "if it is your commander, choose a color before the game begins;
-/// it is the chosen color" is not modelled — the Piper stays colorless (and so
-/// adds nothing to its pair's color identity). See INCOMPLETE_CARDS.md.
+/// The Prismatic Piper — {5} 3/3 colorless legendary Shapeshifter, partner. As
+/// your commander it is the color chosen before the game begins (CR 903.4b).
 pub fn the_prismatic_piper() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If The Prismatic Piper is your commander, choose a color before the game begins. The Prismatic Piper is the chosen color.",
+            effect: StaticEffect::CommanderChoosesColorBeforeGame,
+        }],
         name: "The Prismatic Piper",
         cost: cost(&[generic(5)]),
         supertypes: vec![Supertype::Legendary],

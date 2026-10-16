@@ -518,3 +518,23 @@ pub fn silence_the_echo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Faceless One — {5} legendary 3/3 Enchantment Creature — Background with
+/// Choose a Background; as your commander it is the color chosen before the
+/// game begins (CR 903.4b).
+pub fn faceless_one() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Background],
+            creature_types: vec![],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::ChooseABackground],
+        static_abilities: vec![StaticAbility {
+            description: "If Faceless One is your commander, choose a color before the game begins. Faceless One is the chosen color.",
+            effect: StaticEffect::CommanderChoosesColorBeforeGame,
+        }],
+        ..legend(creature("Faceless One", cost(&[generic(5)]), vec![], 3, 3))
+    }
+}

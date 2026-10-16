@@ -340,3 +340,25 @@ fn silence_the_echo_sacrifices_or_pays_three() {
         }
     }
 }
+
+/// CR 903.4b — The Prismatic Piper and Faceless One choose their color before
+/// the game: a mono-red 99 validates under either alone, a red-and-black one
+/// does not, and the seated commander is red.
+#[test]
+fn cr_903_4b_piper_and_faceless_one_take_the_color_their_deck_needs() {
+    use crabomination::format::{CommanderDeckError, Deck, Format, validate_commander_deck};
+    for cmd in [catalog::the_prismatic_piper, catalog::faceless_one] {
+        let off = |main: Vec<_>| {
+            validate_commander_deck(&Deck { commanders: vec![cmd()], main, sideboard: vec![] })
+                .err()
+                .map_or(0, |e| e.1.iter().filter(|e| matches!(e, CommanderDeckError::OffColorIdentity { .. })).count())
+        };
+        assert_eq!(off(vec![catalog::lightning_bolt()]), 0, "{}", cmd().name);
+        assert_eq!(off(vec![catalog::lightning_bolt(), catalog::doom_blade()]), 2, "{}", cmd().name);
+        let mut g = game_with_format(Format::Commander, 4);
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        let ids = g.seat_commanders(0, vec![cmd()]);
+        let c = g.players[0].command.iter().find(|c| c.id == ids[0]).unwrap();
+        assert_eq!(c.definition.printed_colors(), vec![Color::Red], "{}", cmd().name);
+    }
+}
