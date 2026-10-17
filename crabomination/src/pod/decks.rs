@@ -105905,3 +105905,116 @@ pub const ELLYN_HARBREEZE_8_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const SHADOWHEART_9_COMMANDERS: &[CardFactory] = &[shadowheart_dark_justiciar, dragon_cultist];
+
+/// **Shadowheart, Dark Justiciar and Dragon Cultist**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 10 Swamps = 98.
+/// Shadowheart, Dark Justiciar and Dragon Cultist (EDHREC, fetched 2026-10-17).
+pub const SHADOWHEART_9_MAIN: &[CardFactory] = &[
+    arcane_signet, decanter_of_endless_water, fellwar_stone, mind_stone, rakdos_signet,
+    sol_ring, swiftfoot_boots, talisman_of_indulgence, thought_vessel, urabrasks_forge,
+    wayfarers_bauble, blood_crypt, bojuka_bog, command_tower, dragonskull_summit,
+    exotic_orchard, foreboding_ruins, haunted_ridge, luxury_suite, rakdos_carnarium,
+    reliquary_tower, shadowblood_ridge, smoldering_marsh, sulfurous_springs, tainted_peak,
+    alena_kessig_trapper, apprentice_necromancer, arc_runner, ball_lightning,
+    blistering_firecat, chainer_nightmare_adept, clackbridge_troll, daring_fiendbonder,
+    disciple_of_bolas, ebondeath_dracolich, feldon_of_the_third_path, hunted_bonebrute,
+    impetuous_devils, inferno_hellion, junji_the_midnight_sky, kalakscion_hunger_tyrant,
+    lightning_skelemental, mahadi_emporium_master, psychosis_crawler, shakedown_heavy,
+    solemn_simulacrum, spitebellows, stalking_vengeance, territorial_hellkite,
+    terror_of_the_peaks, thunderblust, xu_ifit_osteoharmonist, black_market,
+    phyrexian_reclamation, rite_of_the_raging_storm, sneak_attack, warstorm_surge, abrade,
+    bedevil, chaos_warp, dark_ritual, kazuuls_fury, rakdos_charm, supernatural_stamina,
+    terminate, unleash_fury, blasphemous_act, corpse_explosion, faithless_looting,
+    feed_the_swarm, mana_geyser, reanimate, song_mad_treachery, unearth, vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const FRANCISCO_5_COMMANDERS: &[CardFactory] = &[francisco_fowl_marauder, ludevic_necro_alchemist];
+
+/// **Francisco, Fowl Marauder and Ludevic, Necro-Alchemist**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 6 Islands + 5 Mountains + 5 Swamps = 98.
+/// Francisco, Fowl Marauder and Ludevic, Necro-Alchemist (EDHREC, fetched 2026-10-17).
+pub const FRANCISCO_5_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, heralds_horn, sol_ring, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, the_indomitable, bloodstained_mire,
+    command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    path_of_ancestry, polluted_delta, secluded_courtyard, shivan_reef, smoldering_marsh,
+    steam_vents, sulfur_falls, sulfurous_springs, sunken_hollow, unclaimed_territory,
+    underground_river, watery_grave, admiral_beckett_brass, admiral_brass_unsinkable,
+    breeches_eager_pillager, captain_lannery_storm, captain_vargus_wrath, changeling_outcast,
+    coastline_marauders, coercive_recruiter, corsair_captain, cutthroat_negotiator,
+    deadeye_tracker, dire_fleet_daredevil, forerunner_of_the_coalition, gemcutter_buccaneer,
+    greedy_freebooter, hostage_taker, impulsive_pilferer, kitesail_larcenist,
+    lightning_rig_crew, malcolm_alluring_scoundrel, malcolm_keen_eyed_navigator, port_razer,
+    ragavan_nimble_pilferer, ramirez_depietro_pillager, siren_stormtamer, spectral_sailor,
+    spyglass_siren, storm_fleet_negotiator, storm_fleet_sprinter, warkite_marauder,
+    coastal_piracy, combat_research, double_down, kindred_discovery, shared_animosity, abrade,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, dark_ritual,
+    deadly_rollick, deflecting_swat, fiery_cannonade, lookouts_dispersal, negate, rakdos_charm,
+    back_in_town, blasphemous_act, command_the_stage, faithless_looting, feed_the_swarm,
+    march_of_the_drowned, reanimate, windfall,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KEDISS_8_COMMANDERS: &[CardFactory] = &[kediss_emberclaw_familiar, kraum_ludevics_opus];
+
+/// **Kediss, Emberclaw Familiar and Kraum, Ludevic's Opus**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Islands + 9 Mountains = 98.
+/// Kediss, Emberclaw Familiar and Kraum, Ludevic's Opus (EDHREC, fetched 2026-10-17).
+pub const KEDISS_8_MAIN: &[CardFactory] = &[
+    arcane_signet, everflowing_chalice, fellwar_stone, glittering_stockpile, izzet_signet,
+    mox_amber, primal_amulet, resonating_lute, sol_ring, swiftfoot_boots, tablet_of_discovery,
+    talisman_of_creativity, thought_vessel, veilstone_amulet, abstergo_entertainment,
+    bonders_enclave, cascade_bluffs, command_tower, fiery_islet, mana_confluence,
+    otawara_soaring_city, riverglide_pathway, riverpyre_verge, scalding_tarn, scavenger_grounds,
+    shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, thundering_falls,
+    training_center, war_room, archmage_of_runes, geist_of_saint_thalia, jori_en_ruin_diver,
+    lizard_blades, loyal_drake, pinnacle_monk, samut_hazorets_champion,
+    samut_tyrant_of_naktamun, the_locust_god, curiosity, leyline_of_resonance, mystic_remora,
+    rhystic_study, the_sound_of_drums, an_offer_you_cant_refuse, arcane_denial, bolt_bend,
+    brute_force, bulk_up, chaos_warp, deflecting_swat, fatal_frenzy, fierce_guardianship,
+    fury_storm, galvanic_iteration, monstrous_rage, pact_of_negation, pongify,
+    rapid_hybridization, reality_shift, resculpt, reverberate, rush_of_blood, sink_into_stupor,
+    stubborn_denial, temur_battle_rage, titans_strength, twinferno, unleash_fury,
+    jeska_thrice_reborn, blasphemous_act, chandras_ignition, chart_a_course,
+    expressive_iteration, insult_injury, jeskas_will, mana_geyser, reckless_charge,
+    seize_the_day, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const ELLYN_HARBREEZE_9_COMMANDERS: &[CardFactory] = &[ellyn_harbreeze_busybody, far_traveler];
+
+/// **Ellyn Harbreeze, Busybody and Far Traveler**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Plains = 98.
+/// Ellyn Harbreeze, Busybody and Far Traveler (EDHREC, fetched 2026-10-17).
+pub const ELLYN_HARBREEZE_9_MAIN: &[CardFactory] = &[
+    archaeomancers_map, conjurers_closet, marble_diamond, nyx_lotus, pearl_medallion,
+    skullclamp, sol_ring, thousand_year_elixir, wand_of_the_worldsoul, wayfarers_bauble,
+    abandoned_air_temple, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    nykthos_shrine_to_nyx, scavenger_grounds, springjack_pasture, abdel_adrian_gorions_ward,
+    angelic_aberration, belladonna_took, bennie_bracks_zoologist, canoptek_scarab_swarm,
+    conclave_phalanx, crashing_drawbridge, enduring_innocence, evangel_of_heliod,
+    geist_honored_monk, guardian_of_faith, harmonious_archon, knight_of_the_white_orchid,
+    linden_the_steadfast_queen, loran_of_the_third_path, loyal_warhound, mentor_of_the_meek,
+    ojer_taq_deepest_foundation, orphans_of_the_wheat, phyrexian_vindicator,
+    preston_the_vanisher, recruiter_of_the_guard, reverent_hoplite, selfless_spirit,
+    skyclave_apparition, solemn_simulacrum, spirited_companion, springjack_shepherd,
+    stoic_farmer, the_wandering_rescuer, wall_of_omens, weathered_wayfarer, welcoming_vampire,
+    anointed_procession, caretakers_talent, inspiring_leader, light_from_within,
+    march_of_the_canonized, tocasias_welcome, clever_concealment, cloudshift, eerie_interlude,
+    ephemerate, generous_gift, path_to_exile, stroke_of_midnight, swords_to_plowshares,
+    austere_command, by_invitation_only, collective_effort, devout_invocation, raise_the_past,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];

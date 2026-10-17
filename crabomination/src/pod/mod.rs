@@ -23118,6 +23118,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELLYN_HARBREEZE_8_COMMANDERS,
             main: decks::ELLYN_HARBREEZE_8_MAIN,
         },
+        // Seat 3778: Shadowheart, Dark Justiciar and Dragon Cultist's EDHREC average deck. `--pod-decks 3778`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Dragon Cultist (BR)",
+            commanders: decks::SHADOWHEART_9_COMMANDERS,
+            main: decks::SHADOWHEART_9_MAIN,
+        },
+        // Seat 3779: Francisco, Fowl Marauder and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 3779`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Ludevic, Necro-Alchemist (UBR)",
+            commanders: decks::FRANCISCO_5_COMMANDERS,
+            main: decks::FRANCISCO_5_MAIN,
+        },
+        // Seat 3780: Kediss, Emberclaw Familiar and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 3780`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Kraum, Ludevic's Opus (UR)",
+            commanders: decks::KEDISS_8_COMMANDERS,
+            main: decks::KEDISS_8_MAIN,
+        },
+        // Seat 3781: Ellyn Harbreeze, Busybody and Far Traveler's EDHREC average deck. `--pod-decks 3781`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Far Traveler (W)",
+            commanders: decks::ELLYN_HARBREEZE_9_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_9_MAIN,
+        },
     ]
 }
 
@@ -28779,6 +28803,10 @@ mod tests {
             ("Katerina of Myra's Marvels and Siani, Eye of the Storm", &[0x18D5]),
             ("Imoen, Mystic Trickster and Dragon Cultist", &[0x18D6]),
             ("Ellyn Harbreeze, Busybody and Passionate Archaeologist", &[0x18D7]),
+            ("Shadowheart, Dark Justiciar and Dragon Cultist", &[0x18D8]),
+            ("Francisco, Fowl Marauder and Ludevic, Necro-Alchemist", &[0x18D9]),
+            ("Kediss, Emberclaw Familiar and Kraum, Ludevic's Opus", &[0x18DA]),
+            ("Ellyn Harbreeze, Busybody and Far Traveler", &[0x18DB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
