@@ -6265,6 +6265,10 @@ pub struct EntersAsCopy {
     /// (Lazotep Convert): colors added to the copied ones.
     #[serde(default)]
     pub add_colors: Vec<Color>,
+    /// CR 707.9b — "except it doesn't copy that creature's color" (Vesuvan
+    /// Doppelganger): the copy keeps the copier's own colors.
+    #[serde(default)]
+    pub keep_own_colors: bool,
     /// A condition the "may have it enter as a copy" depends on, read as it
     /// enters — raid's "if you attacked this turn" (Protean Raider). `None`
     /// is unconditional.

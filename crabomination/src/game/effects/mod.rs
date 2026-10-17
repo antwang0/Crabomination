@@ -2632,6 +2632,7 @@ impl GameState {
             .find_by_id(card_id)
             .map(|c| c.definition.name)
             .unwrap_or("");
+        let original_colors = self.battlefield.find_by_id(card_id).map(|c| c.definition.printed_colors()).unwrap_or_default();
         // …and its own (possibly prototyped) size, for `keep_own_pt`.
         let original_pt = self
             .battlefield
@@ -2766,6 +2767,7 @@ impl GameState {
             || spec.override_pt.is_some()
             || spec.keep_own_pt
             || !spec.add_colors.is_empty()
+            || spec.keep_own_colors
             || spec.as_vehicle_crew.is_some())
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
@@ -2814,6 +2816,9 @@ impl GameState {
                 def.dynamic_pt = None;
             }
             // "…black in addition to its other colors" (Lazotep Convert).
+            if spec.keep_own_colors {
+                def.color_override = Some(original_colors.clone());
+            }
             for col in &spec.add_colors {
                 if !def.color_indicator.contains(col) {
                     def.color_indicator.push(*col);
@@ -37334,6 +37339,48 @@ impl GameState {
                     }
                 }
                 self.clear_answer_log();
+                Ok(())
+            }
+
+            Effect::BecomeCopyKeepingColorAndThisAbility { what, source } => {
+                // The copier's colors and the trigger running this, read
+                // before the copy rewrites its definition.
+                let runs_this = |t: &crate::effect::TriggeredAbility| {
+                    t.effect == *effect || matches!(&t.effect, Effect::MayDo { body, .. } if **body == *effect)
+                };
+                let kept: Vec<(CardId, Vec<crate::mana::Color>, Option<crate::effect::TriggeredAbility>)> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|cid| {
+                        let c = self.battlefield_find(cid)?;
+                        let trig = c.definition.triggered_abilities.iter().find(|t| runs_this(t)).cloned();
+                        Some((cid, c.definition.printed_colors(), trig))
+                    })
+                    .collect();
+                self.run_effect(
+                    &Effect::BecomeCopyOf {
+                        what: what.clone(),
+                        source: source.clone(),
+                        extra_creature_types: vec![],
+                        keep_own_triggered: false,
+                        keep_own_activated: false,
+                        keep_name: false,
+                    },
+                    ctx,
+                    events,
+                )?;
+                for (cid, colors, trig) in kept {
+                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
+                        let def = c.definition_make_mut();
+                        def.color_override = Some(colors);
+                        if let Some(t) = trig
+                            && !def.triggered_abilities.contains(&t)
+                        {
+                            def.triggered_abilities.push(t);
+                        }
+                    }
+                }
                 Ok(())
             }
 

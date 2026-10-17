@@ -2258,6 +2258,7 @@ impl Effect {
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
             Effect::BecomeCopyOf { what, source, .. }
             | Effect::BecomeCopyKeepingIdentity { what, source }
+            | Effect::BecomeCopyKeepingColorAndThisAbility { what, source }
             | Effect::BecomeCopyKeepingName { what, source, .. }
             | Effect::BecomeCopyOfFor { what, source, .. } => {
                 sel_has_target(what) || sel_has_target(source)
@@ -3265,6 +3266,7 @@ impl Effect {
             // target land").
             Effect::BecomeCopyOf { source, .. }
             | Effect::BecomeCopyKeepingIdentity { source, .. }
+            | Effect::BecomeCopyKeepingColorAndThisAbility { source, .. }
             | Effect::BecomeCopyKeepingName { source, .. }
             | Effect::BecomeCopyOfFor { source, .. }
             | Effect::NextEntriesEnterAsCopy { of: source } => sel_filter(source),
@@ -5860,6 +5862,7 @@ impl Effect {
                 }
                 Effect::BecomeCopyOf { what, source, .. }
                 | Effect::BecomeCopyKeepingIdentity { what, source }
+                | Effect::BecomeCopyKeepingColorAndThisAbility { what, source }
                 | Effect::BecomeCopyKeepingName { what, source, .. }
                 | Effect::BecomeCopyOfFor { what, source, .. } => {
                     sel_find(what, slot).or_else(|| sel_find(source, slot))

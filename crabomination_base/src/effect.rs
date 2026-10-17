@@ -10260,6 +10260,10 @@ pub enum Effect {
     /// ability" (Lazav, the Multifarious): `BecomeCopyOf` keeping its own
     /// activated abilities, then its printed name and the Legendary supertype.
     BecomeCopyKeepingIdentity { what: Selector, source: Selector },
+    /// CR 707.9b — "becomes a copy of [source], except it doesn't copy that
+    /// creature's color and it has this ability" (Vesuvan Doppelganger): the
+    /// copier keeps its current colors and the triggered ability running this.
+    BecomeCopyKeepingColorAndThisAbility { what: Selector, source: Selector },
     /// CR 707.9b — "becomes a copy of [source], except its name is [its own]
     /// and it has `keywords` and this ability" (Kimahri, Valiant Guardian):
     /// `BecomeCopyOf` keeping its own triggered abilities, then its name and
