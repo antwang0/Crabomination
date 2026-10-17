@@ -98375,3 +98375,255 @@ pub const MAVINDA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ESIOR_7_COMMANDERS: &[CardFactory] = &[esior_wardwing_familiar, sidar_kondo_of_jamuraa];
+
+/// **Esior, Wardwing Familiar and Sidar Kondo of Jamuraa**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 8 Forests + 6 Islands + 6 Plains = 98.
+/// Esior, Wardwing Familiar and Sidar Kondo of Jamuraa (EDHREC, fetched 2026-10-17).
+pub const ESIOR_7_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, lightning_greaves, selesnya_signet, sol_ring,
+    swiftfoot_boots, wayfarers_bauble, adarkar_wastes, breeding_pool, brushland, canopy_vista,
+    command_tower, dreamroot_cascade, evolving_wilds, exotic_orchard, glacial_fortress,
+    hinterland_harbor, path_of_ancestry, prairie_stream, seaside_citadel, sunpetal_grove,
+    temple_garden, yavimaya_coast, annex_sentry, avacyns_pilgrim, bilbo_baggins_burglar,
+    bilbo_unexpected_adventurer, blight_mamba, blighted_agent, crawling_chorus,
+    delney_streetwise_lookout, enduring_innocence, ezuri_stalker_of_spheres,
+    fynn_the_fangbearer, glistener_elf, grateful_apparition, jawbone_duelist, llanowar_elves,
+    lost_leonin, mentor_of_the_meek, mirror_entity, ohran_frostfang, plague_myr,
+    skrelv_defector_mite, studious_first_year, tainted_observer, thrummingbird,
+    toski_bearer_of_secrets, venerated_rotpriest, welcoming_vampire, bower_passage, curiosity,
+    feywild_visitor, keen_sense, kenriths_transformation, norns_decree, rhystic_study,
+    sixth_sense, skrelvs_hive, arcane_denial, beast_within, counterspell, experimental_augury,
+    generous_gift, heroic_intervention, negate, path_to_exile, prologue_to_phyresis,
+    stroke_of_midnight, swords_to_plowshares, elspeth_suns_champion, contentious_plan,
+    cultivate, dusk_dawn, farseek, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, plains, plains, plains, plains, plains, plains,
+];
+
+pub const DARGO_9_COMMANDERS: &[CardFactory] = &[dargo_the_shipwrecker, yoshimaru_ever_faithful];
+
+/// **Dargo, the Shipwrecker and Yoshimaru, Ever Faithful**'s EDHREC average deck, card for card:
+/// 92 nonbasic cards + 3 Mountains + 3 Plains = 98.
+/// Dargo, the Shipwrecker and Yoshimaru, Ever Faithful (EDHREC, fetched 2026-10-17).
+pub const DARGO_9_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, embercleave, lotus_petal, mana_vault, mox_amber, mox_opal,
+    phyrexian_altar, relic_of_legends, shadowspear, skullclamp, sol_ring, arid_mesa,
+    battlefield_forge, bloodstained_mire, clifftop_retreat, command_tower, eiganjo_castle,
+    eiganjo_seat_of_the_empire, flooded_strand, inspiring_vantage, marsh_flats, minas_tirith,
+    mines_of_moria, needleverge_pathway, plateau, rugged_prairie, sacred_foundry, scalding_tarn,
+    shinka_the_bloodsoaked_keep, snow_covered_mountain, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, sokenzan_crucible_of_defiance, sunbaked_canyon,
+    windswept_heath, wooded_foothills, adeline_resplendent_cathar, anim_pakal_thousandth_moon,
+    arbaaz_mir, ash_party_crasher, baird_argivian_recruiter, birgi_god_of_storytelling,
+    esper_sentinel, feldon_ronom_excavator, fury, headliner_scarlett, imperial_recruiter,
+    kari_zev_skyship_raider, laelia_the_blade_reforged, loyal_apprentice,
+    merry_esquire_of_rohan, mother_of_runes, phelia_exuberant_shepherd,
+    phlage_titan_of_fires_fury, ragavan_nimble_pilferer, ranger_captain_of_eos,
+    senu_keen_eyed_protector, simian_spirit_guide, skrelv_defector_mite, skyclave_apparition,
+    tersa_lightshatter, thalia_guardian_of_thraben, thalia_heretic_cathar, the_queen_of_dale,
+    thermopod, urdnan_dromoka_warrior, voice_of_victory, zurgo_bellstriker, blood_moon,
+    flowering_of_the_white_tree, goblin_bombardment, parallax_wave, static_prison,
+    underworld_breach, deflecting_swat, enlightened_tutor, galvanic_discharge, ghostfire_slice,
+    lightning_bolt, path_to_exile, pyroblast, pyrokinesis, silence, swords_to_plowshares,
+    chain_lightning, flame_slash, gamble, jeskas_will, sundering_eruption, wheel_of_fortune,
+    // Basics
+    mountain, mountain, mountain, plains, plains, plains,
+];
+
+pub const ALORA_8_COMMANDERS: &[CardFactory] = &[alora_merry_thief, feywild_visitor];
+
+/// **Alora, Merry Thief and Feywild Visitor**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 29 Islands = 98.
+/// Alora, Merry Thief and Feywild Visitor (EDHREC, fetched 2026-10-17).
+pub const ALORA_8_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, caged_sun, decanter_of_endless_water, heraldic_banner,
+    kefnets_monument, mind_stone, quietus_spike, sapphire_medallion, sky_diamond, sol_ring,
+    swiftfoot_boots, thought_vessel, halimar_depths, muraganda_raceway, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, aether_channeler,
+    archaeomancer, barrin_tolarian_archmage, bilbo_luckwearer, circuit_mender,
+    curiosity_crafter, dour_port_mage, enduring_curiosity, faerie_seer,
+    grazilaxx_illithid_scholar, high_fae_trickster, hullbreaker_horror, mist_syndicate_naga,
+    mistblade_shinobi, moon_circuit_hacker, moonblade_shinobi, moonsnare_specialist,
+    ninja_of_the_deep_hours, prosperous_thief, psychosis_crawler, ravenhill_flock,
+    silent_hallcreeper, slither_blade, solemn_simulacrum, soulknife_spy, spellstutter_sprite,
+    tetsuko_umezawa_fugitive, thousand_faced_shadow, triton_shorestalker, watcher_for_tomorrow,
+    coastal_piracy, cunning_evasion, reconnaissance_mission, starks_ingenuity,
+    waterbender_ascension, wizard_class, aetherize, arcane_denial, brainstorm, counterspell,
+    negate, opt, pongify, rapid_hybridization, reality_shift, resculpt, ponder, preordain,
+    ravenform,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const ALORA_9_COMMANDERS: &[CardFactory] = &[alora_merry_thief, folk_hero];
+
+/// **Alora, Merry Thief and Folk Hero**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 9 Plains = 98.
+/// Alora, Merry Thief and Folk Hero (EDHREC, fetched 2026-10-17).
+pub const ALORA_9_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, cloak_and_dagger, cloudstone_curio,
+    decanter_of_endless_water, kefnets_monument, sol_ring, talisman_of_progress, thought_vessel,
+    adarkar_wastes, command_tower, deserted_beach, flooded_strand, glacial_fortress,
+    hallowed_fountain, meticulous_archive, mystic_gate, nimbus_maze, path_of_ancestry,
+    port_town, prairie_stream, reliquary_tower, sea_of_clouds, seachrome_coast,
+    temple_of_enlightenment, aarakocra_sneak, archivist_of_oghma, aven_interrupter,
+    azure_beastbinder, bilbo_luckwearer, brazen_borrower, dour_port_mage, enduring_curiosity,
+    enduring_innocence, enigma_thief, extraction_specialist, faerie_mastermind, faerie_vandal,
+    fear_of_impostors, glasspool_mimic, harper_recruiter, king_tchalla, mages_attendant,
+    mirror_entity, mocking_sprite, pippin_guard_of_the_citadel, prosperous_thief, quickling,
+    samwise_the_stouthearted, saradoc_master_of_buckland, slickshot_lockpicker,
+    smirking_spelljacker, thieving_skydiver, tishanas_tidebinder, unsettled_mariner,
+    white_plume_adventurer, witch_enchanter, assemble_the_players, chivalric_alliance,
+    dazzling_theater_prop_room, reconnaissance_mission, tocasias_welcome, arcane_denial,
+    counterspell, crib_swap, dovins_veto, flare_of_denial, negate, path_to_exile,
+    run_away_together, swords_to_plowshares, thieves_fortune, three_steps_ahead, dusk_dawn,
+    farewell, flow_state, knowledge_exploitation, notorious_throng,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GUT_11_COMMANDERS: &[CardFactory] = &[gut_true_soul_zealot, hardy_outlander];
+
+/// **Gut, True Soul Zealot and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 9 Forests + 7 Mountains = 98.
+/// Gut, True Soul Zealot and Hardy Outlander (EDHREC, fetched 2026-10-17).
+pub const GUT_11_MAIN: &[CardFactory] = &[
+    arcane_signet, chainsaw, esikas_chariot, the_fire_crystal, arid_mesa, boseiju_who_endures,
+    command_tower, copperline_gorge, cragcrown_pathway, den_of_the_bugbear, karplusan_forest,
+    mishras_factory, misty_rainforest, mutavault, prismatic_vista, rockfall_vale,
+    rootbound_crag, scalding_tarn, sokenzan_crucible_of_defiance, stomping_ground, taiga,
+    tree_of_tales, verdant_catacombs, windswept_heath, wooded_foothills, arbor_elf,
+    ardoz_cobbler_of_war, birds_of_paradise, bloodbraid_elf, bonecrusher_giant, boreal_druid,
+    broadside_bombardiers, captain_lannery_storm, charming_scoundrel, deathleaper_terror_weapon,
+    delighted_halfling, elvish_mystic, elvish_spirit_guide, endurance, eternal_witness,
+    feldon_ronom_excavator, fire_imp, flametongue_kavu, flametongue_yearling, fury,
+    fyndhorn_elves, gilded_goose, goblin_rabblemaster, itzquinth_firstborn_of_gishath,
+    kari_zev_skyship_raider, keen_eyed_curator, laelia_the_blade_reforged, llanowar_elves,
+    loyal_apprentice, mawloc, orcish_lumberjack, questing_beast, robber_of_the_rich,
+    ruby_daring_tracker, samut_vizier_of_naktamun, simian_spirit_guide, strangleroot_geist,
+    tinder_wall, berserkers_onslaught, earthbender_ascension, fable_of_the_mirror_breaker,
+    the_cave_of_two_lovers, utopia_sprawl, warstorm_surge, wild_growth, galvanic_discharge,
+    lightning_bolt, mine_collapse, pyrokinesis, unholy_heat, wild_slash, chandra_flamecaller,
+    minsc_boo_timeless_heroes, chain_lightning, flame_slash, germination_practicum,
+    green_suns_zenith,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BILBO_4_COMMANDERS: &[CardFactory] = &[bilbo_thief_in_the_night];
+
+/// **Bilbo, Thief in the Night**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Bilbo, Thief in the Night (EDHREC, fetched 2026-10-17).
+pub const BILBO_4_MAIN: &[CardFactory] = &[
+    aether_spellbomb, arcane_signet, bilbos_ring, brotherhood_regalia,
+    crystal_skull_isu_spyglass, glamdring_foe_hammer, lightning_greaves, mind_stone,
+    mishras_bauble, mithril_coat, mystic_forge, sapphire_medallion, senseis_divining_top,
+    sol_ring, sting_bilbos_sword, swiftfoot_boots, the_one_ring, thought_vessel,
+    wayfarers_bauble, whispersilk_cloak, academy_ruins, mystic_sanctuary, otawara_soaring_city,
+    reliquary_tower, rivendell, rogues_passage, seat_of_the_synod, urzas_saga, bilbo_luckwearer,
+    emry_lurker_of_the_loch, etherium_sculptor, foundry_inspector, kappa_cannoneer,
+    laboratory_maniac, lier_disciple_of_the_drowned, millikin, mmmenon_the_right_hand,
+    most_decrepit_old_bird, neerdiv_devious_diver, phyrexian_metamorph, sai_master_thopterist,
+    spellskite, the_reality_chip, thought_monitor, urza_lord_high_artificer, fateful_discovery,
+    fortune_tellers_talent, secrets_of_the_dead, uncover_the_moon_letters,
+    an_offer_you_cant_refuse, arcane_denial, consider, counterspell, cyclonic_rift,
+    fact_or_fiction, frantic_search, high_tide, otherworldly_gaze, plunder_the_trollshaws,
+    pongify, rapid_hybridization, riddles_in_the_dark, sink_into_stupor, snap, swan_song,
+    tezzeret_cruel_captain, bilbos_burglaring, birthday_escape, deep_analysis, fabricate,
+    ponder, stock_up, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
+
+pub const BILBO_5_COMMANDERS: &[CardFactory] = &[bilbo_retired_burglar];
+
+/// **Bilbo, Retired Burglar**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Islands + 12 Mountains = 99.
+/// Bilbo, Retired Burglar (EDHREC, fetched 2026-10-17).
+pub const BILBO_5_MAIN: &[CardFactory] = &[
+    arcane_signet, bilbos_ring, diamond_pick_axe, fireshrieker, inherited_envelope,
+    izzet_signet, mithril_coat, sol_ring, sting_bilbos_sword, swiftfoot_boots,
+    talisman_of_creativity, cascade_bluffs, command_tower, frostboil_snarl, izzet_boilerworks,
+    mines_of_moria, rivendell, rogues_passage, shivan_reef, steam_vents, stormcarved_coast,
+    sulfur_falls, temple_of_epiphany, training_center, academy_manufactor, bilbo_luckwearer,
+    crime_novelist, gandalf_the_grey, gandalf_friend_of_the_shire,
+    gimli_of_the_glittering_caves, gloin_dwarf_emissary, goldspan_dragon, hellkite_tyrant,
+    ingenious_artillerist, lizard_blades, magda_brazen_outlaw, meneldor_swift_savior,
+    professional_face_breaker, rangers_of_ithilien, reckless_fireweaver, shimmer_dragon,
+    smaug_the_magnificent, storm_kiln_artist, swashbuckler_extraordinaire, xorn, curiosity,
+    fateful_discovery, fiery_inscription, guild_artisan, sticky_fingers,
+    the_misty_mountains_cold, there_and_back_again, abrade, an_offer_you_cant_refuse,
+    arcane_denial, big_score, blur, chaos_warp, confusticate_and_bebother, counterspell,
+    dreadful_as_the_storm, essence_flux, ghostly_flicker, glorious_gale, negate,
+    soothing_of_smeagol, unexpected_windfall, birthday_escape, blasphemous_act,
+    breaking_of_the_fellowship, eagle_vision, faithless_looting, ponder, preordain,
+    rangers_firebrand, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const ZURGO_BELLSTRIKER_COMMANDERS: &[CardFactory] = &[zurgo_bellstriker];
+
+/// **Zurgo Bellstriker**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Zurgo Bellstriker (EDHREC, fetched 2026-10-17).
+pub const ZURGO_BELLSTRIKER_MAIN: &[CardFactory] = &[
+    arcane_signet, grafted_wargear, hazorets_monument, heros_blade, obsidian_battle_axe,
+    ronin_warclub, ruby_medallion, sai_of_the_shinobi, sol_ring, stormrider_rig,
+    symmetry_matrix, tenza_godos_maul, tome_of_legends, arena_of_glory, barbarian_ring,
+    castle_embereth, mishras_factory, ramunap_ruins, rogues_passage,
+    sokenzan_crucible_of_defiance, war_room, bonecrusher_giant, broadside_bombardiers,
+    detectives_phoenix, dragons_rage_channeler, feldon_ronom_excavator, fury, goblin_guide,
+    goblin_tunneler, hexing_squelcher, kediss_emberclaw_familiar, laelia_the_blade_reforged,
+    loyal_apprentice, monastery_swiftspear, pathmaker_initiate, reinforced_ronin,
+    runaway_steam_kin, screaming_nemesis, skyfire_phoenix, spider_punk, tersa_lightshatter,
+    warbringer, blood_mist, break_through_the_line, impact_tremors, seal_of_fire,
+    sulfuric_vortex, abrade, burst_lightning, chaos_warp, demand_answers, fireblast,
+    ghostfire_slice, incinerate, lightning_bolt, lightning_strike, searing_spear, skullcrack,
+    temur_battle_rage, thrill_of_possibility, unleash_fury, blasphemous_act, chain_lightning,
+    faithless_looting, flame_slash, lava_spike, light_up_the_stage, rift_bolt,
+    skewer_the_critics, sundering_eruption, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const BILBO_BAGGINS_COMMANDERS: &[CardFactory] = &[bilbo_baggins_burglar];
+
+/// **Bilbo Baggins, Burglar**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Bilbo Baggins, Burglar (EDHREC, fetched 2026-10-17).
+pub const BILBO_BAGGINS_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, mind_stone, sapphire_medallion, sky_diamond, sol_ring,
+    thought_vessel, wayfarers_bauble, castle_vantress, lonely_sandbar, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, reliquary_tower, aether_channeler, archaeomancer,
+    atlantean_cavalry, bilbo_luckwearer, blighted_agent, cloud_of_faeries, deadeye_navigator,
+    displacer_kitten, dour_port_mage, drift_of_phantasms, gandalf_wandering_wizard,
+    guildpact_informant, hullbreaker_horror, knights_of_dol_amroth, lakeshore_apothecary,
+    mocking_sprite, murmuring_mystic, peregrine_drake, psychosis_crawler, shipwreck_dowser,
+    solemn_simulacrum, thassa_deep_dwelling, thrummingbird, amphibian_downpour, candlekeep_sage,
+    enchanted_rivers_grasp, mesmerizing_dose, ophidian_eye, propaganda,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, confusticate_and_bebother, consider,
+    counterspell, displace, essence_flux, frantic_search, ghostly_flicker, negate, opt,
+    plunder_the_trollshaws, rapid_hybridization, resculpt, run_away_together, snap, spaceshift,
+    unsummon, birthday_escape, contentious_plan, gitaxian_probe, lorien_revealed, ponder,
+    preordain,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];

@@ -21504,6 +21504,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MAVINDA_COMMANDERS,
             main: decks::MAVINDA_MAIN,
         },
+        // Seat 3509: Esior, Wardwing Familiar and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3509`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::ESIOR_7_COMMANDERS,
+            main: decks::ESIOR_7_MAIN,
+        },
+        // Seat 3510: Dargo, the Shipwrecker and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 3510`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Yoshimaru, Ever Faithful (WR)",
+            commanders: decks::DARGO_9_COMMANDERS,
+            main: decks::DARGO_9_MAIN,
+        },
+        // Seat 3511: Alora, Merry Thief and Feywild Visitor's EDHREC average deck. `--pod-decks 3511`.
+        PodDeck {
+            name: "Alora, Merry Thief and Feywild Visitor (U)",
+            commanders: decks::ALORA_8_COMMANDERS,
+            main: decks::ALORA_8_MAIN,
+        },
+        // Seat 3512: Alora, Merry Thief and Folk Hero's EDHREC average deck. `--pod-decks 3512`.
+        PodDeck {
+            name: "Alora, Merry Thief and Folk Hero (WU)",
+            commanders: decks::ALORA_9_COMMANDERS,
+            main: decks::ALORA_9_MAIN,
+        },
+        // Seat 3513: Gut, True Soul Zealot and Hardy Outlander's EDHREC average deck. `--pod-decks 3513`.
+        PodDeck {
+            name: "Gut, True Soul Zealot and Hardy Outlander (RG)",
+            commanders: decks::GUT_11_COMMANDERS,
+            main: decks::GUT_11_MAIN,
+        },
+        // Seat 3514: Bilbo, Thief in the Night's EDHREC average deck. `--pod-decks 3514`.
+        PodDeck {
+            name: "Bilbo, Thief in the Night (U)",
+            commanders: decks::BILBO_4_COMMANDERS,
+            main: decks::BILBO_4_MAIN,
+        },
+        // Seat 3515: Bilbo, Retired Burglar's EDHREC average deck. `--pod-decks 3515`.
+        PodDeck {
+            name: "Bilbo, Retired Burglar (UR)",
+            commanders: decks::BILBO_5_COMMANDERS,
+            main: decks::BILBO_5_MAIN,
+        },
+        // Seat 3516: Zurgo Bellstriker's EDHREC average deck. `--pod-decks 3516`.
+        PodDeck {
+            name: "Zurgo Bellstriker (R)",
+            commanders: decks::ZURGO_BELLSTRIKER_COMMANDERS,
+            main: decks::ZURGO_BELLSTRIKER_MAIN,
+        },
+        // Seat 3517: Bilbo Baggins, Burglar's EDHREC average deck. `--pod-decks 3517`.
+        PodDeck {
+            name: "Bilbo Baggins, Burglar (U)",
+            commanders: decks::BILBO_BAGGINS_COMMANDERS,
+            main: decks::BILBO_BAGGINS_MAIN,
+        },
     ]
 }
 
@@ -26896,6 +26950,15 @@ mod tests {
             ("Keiga, the Tide Star", &[0x17C8]),
             ("Golden Argosy", &[0x17C9]),
             ("Mavinda, Students' Advocate", &[0x17CA]),
+            ("Esior, Wardwing Familiar and Sidar Kondo of Jamuraa", &[0x17CB]),
+            ("Dargo, the Shipwrecker and Yoshimaru, Ever Faithful", &[0x17CC]),
+            ("Alora, Merry Thief and Feywild Visitor", &[0x17CD]),
+            ("Alora, Merry Thief and Folk Hero", &[0x17CE]),
+            ("Gut, True Soul Zealot and Hardy Outlander", &[0x17CF]),
+            ("Bilbo, Thief in the Night", &[0x17D0]),
+            ("Bilbo, Retired Burglar", &[0x17D1]),
+            ("Zurgo Bellstriker", &[0x17D2]),
+            ("Bilbo Baggins, Burglar", &[0x17D3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
