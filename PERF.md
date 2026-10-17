@@ -3155,7 +3155,8 @@ pods (new seats) 3729-3781 in 4-seat (14 x 60, seeds 37401-37414) and 6-seat (9 
                  38101-38109): 2,100 / 2,101 decided (one CR 104.4a draw), 0 panics
 random 8-seat    20 pods drawn from all 3,836 seats x 10 games (seeds 37901-37920): 200 / 200
 clippy           workspace (client excluded) 0 warnings
-suite            27,570 / 27,571 (the one: a cr_115_1 bare slot on Moonring Island, fixed);
+suite            27,620 / 27,620 at the close (two census rows fixed on the way: Moonring
+                 Island's bare cr_115_1 slot, Bounty of Might in the multi-slot exclusion list);
                  the per-seat precon pod test excluded — hours in debug on 4 cores
 ```
 
