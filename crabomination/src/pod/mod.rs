@@ -23538,6 +23538,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MOON_BOY_COMMANDERS,
             main: decks::MOON_BOY_MAIN,
         },
+        // Seat 3848: Francisco, Fowl Marauder and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 3848`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Ghost of Ramirez DePietro (UB)",
+            commanders: decks::FRANCISCO_7_COMMANDERS,
+            main: decks::FRANCISCO_7_MAIN,
+        },
+        // Seat 3849: Halana, Kessig Ranger and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 3849`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Silas Renn, Seeker Adept (UBG)",
+            commanders: decks::HALANA_11_COMMANDERS,
+            main: decks::HALANA_11_MAIN,
+        },
+        // Seat 3850: Rograkh, Son of Rohgahh and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 3850`.
+        PodDeck {
+            name: "Rograkh, Son of Rohgahh and Tormod, the Desecrator (BR)",
+            commanders: decks::ROGRAKH_5_COMMANDERS,
+            main: decks::ROGRAKH_5_MAIN,
+        },
+        // Seat 3851: Falthis, Shadowcat Familiar and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3851`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Sidar Kondo of Jamuraa (WBG)",
+            commanders: decks::FALTHIS_12_COMMANDERS,
+            main: decks::FALTHIS_12_MAIN,
+        },
+        // Seat 3852: Alora, Merry Thief and Street Urchin's EDHREC average deck. `--pod-decks 3852`.
+        PodDeck {
+            name: "Alora, Merry Thief and Street Urchin (UR)",
+            commanders: decks::ALORA_13_COMMANDERS,
+            main: decks::ALORA_13_MAIN,
+        },
+        // Seat 3853: Sarevok, Deathbringer and Scion of Halaster's EDHREC average deck. `--pod-decks 3853`.
+        PodDeck {
+            name: "Sarevok, Deathbringer and Scion of Halaster (B)",
+            commanders: decks::SAREVOK_11_COMMANDERS,
+            main: decks::SAREVOK_11_MAIN,
+        },
+        // Seat 3854: Akroma, Vision of Ixidor and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 3854`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Ludevic, Necro-Alchemist (WUR)",
+            commanders: decks::AKROMA_12_COMMANDERS,
+            main: decks::AKROMA_12_MAIN,
+        },
+        // Seat 3855: Vhal, Candlekeep Researcher and Shameless Charlatan's EDHREC average deck. `--pod-decks 3855`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Shameless Charlatan (U)",
+            commanders: decks::VHAL_11_COMMANDERS,
+            main: decks::VHAL_11_MAIN,
+        },
+        // Seat 3856: Katerina of Myra's Marvels and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3856`.
+        PodDeck {
+            name: "Katerina of Myra's Marvels and Tevesh Szat, Doom of Fools (WB)",
+            commanders: decks::KATERINA_OF_MYRAS_MARVELS_4_COMMANDERS,
+            main: decks::KATERINA_OF_MYRAS_MARVELS_4_MAIN,
+        },
+        // Seat 3857: Kediss, Emberclaw Familiar and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 3857`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Miara, Thorn of the Glade (BR)",
+            commanders: decks::KEDISS_11_COMMANDERS,
+            main: decks::KEDISS_11_MAIN,
+        },
     ]
 }
 
@@ -29269,6 +29329,16 @@ mod tests {
             ("Ghost of Ramirez DePietro and Livio, Oathsworn Sentinel", &[0x191B]),
             ("Hama Pashar, Ruin Seeker", &[0x191C]),
             ("Moon-Boy, Dino Rider", &[0x191D]),
+            ("Francisco, Fowl Marauder and Ghost of Ramirez DePietro", &[0x191E]),
+            ("Halana, Kessig Ranger and Silas Renn, Seeker Adept", &[0x191F]),
+            ("Rograkh, Son of Rohgahh and Tormod, the Desecrator", &[0x1920]),
+            ("Falthis, Shadowcat Familiar and Sidar Kondo of Jamuraa", &[0x1921]),
+            ("Alora, Merry Thief and Street Urchin", &[0x1922]),
+            ("Sarevok, Deathbringer and Scion of Halaster", &[0x1923]),
+            ("Akroma, Vision of Ixidor and Ludevic, Necro-Alchemist", &[0x1924]),
+            ("Vhal, Candlekeep Researcher and Shameless Charlatan", &[0x1925]),
+            ("Katerina of Myra's Marvels and Tevesh Szat, Doom of Fools", &[0x1926]),
+            ("Kediss, Emberclaw Familiar and Miara, Thorn of the Glade", &[0x1927]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
