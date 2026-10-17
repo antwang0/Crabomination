@@ -651,3 +651,21 @@ fn bilbos_burglaring_takes_one_artifact_per_opponent() {
     assert_eq!(g.battlefield_find(a).unwrap().controller, 0);
     assert_eq!(g.battlefield_find(b).unwrap().controller, 0);
 }
+
+/// CR 603.10 — Rotisserie Elemental sacrificed with two skewer counters
+/// exiles two cards: X reads its last-known counters, not the sacrificed 0.
+#[test]
+fn rotisserie_elemental_reads_skewers_after_the_sacrifice() {
+    let mut g = pod(2);
+    let rot = ready(&mut g, 0, catalog::rotisserie_elemental());
+    g.battlefield_find_mut(rot).unwrap().add_counters(crabomination::card::CounterType::Skewer, 1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let body = g.battlefield_find(rot).unwrap().definition.triggered_abilities[0].effect.clone();
+    let before = g.exile.len();
+    let mut ctx = EffectContext::for_ability(rot, 0, None);
+    ctx.trigger_source = Some(crabomination::game::effects::EntityRef::Permanent(rot));
+    g.resolve_effect(&body, &ctx).expect("trigger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rot).is_none(), "sacrificed");
+    assert_eq!(g.exile.len(), before + 2, "two skewer counters → exile two");
+}

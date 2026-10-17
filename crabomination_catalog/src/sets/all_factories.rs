@@ -16770,6 +16770,7 @@ static DECKS: &[Factory] = &[
     super::decks::bilbo_baggins_burglar,
     super::decks::riddles_in_the_dark,
     super::decks::bilbos_burglaring,
+    super::decks::rotisserie_elemental,
     // cmdr_oct17_b / _c
     super::decks::forest_bear,
     super::decks::loxodon_wayfarer,

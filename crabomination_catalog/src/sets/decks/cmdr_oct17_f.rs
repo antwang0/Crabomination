@@ -148,3 +148,34 @@ pub fn bilbos_burglaring() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rotisserie Elemental — {R} 1/1 menace Elemental. Combat damage to a player:
+/// a skewer counter on it, then you may sacrifice it; if you do, exile the top
+/// X cards (X = its skewer counters), playable this turn.
+pub fn rotisserie_elemental() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: crate::card::CounterType::Skewer, amount: Value::ONE },
+                Effect::MaySacrificeSource {
+                    description: "Sacrifice Rotisserie Elemental to exile cards you may play this turn?".into(),
+                    // CR 603.10 — X reads the sacrificed creature's last-known
+                    // skewer counters.
+                    then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::CountersOn { what: Box::new(Selector::This), kind: crate::card::CounterType::Skewer },
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    }),
+                    else_: None,
+                },
+            ]),
+        }],
+        ..creature("Rotisserie Elemental", cost(&[r()]), vec![CreatureType::Elemental], 1, 1)
+    }
+}
