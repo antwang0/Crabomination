@@ -101816,3 +101816,59 @@ pub const FALCON_AND_REDWING_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const SCARLET_SPIDER_COMMANDERS: &[CardFactory] = &[scarlet_spider_ben_reilly];
+
+/// **Scarlet Spider, Ben Reilly**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Forests + 9 Mountains = 99.
+/// Scarlet Spider, Ben Reilly (EDHREC, fetched 2026-10-17).
+pub const SCARLET_SPIDER_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, lightning_greaves, sol_ring, springleaf_drum, swiftfoot_boots,
+    the_earth_crystal, the_fire_crystal, cinder_glade, command_tower, game_trail, gruul_turf,
+    karplusan_forest, kessig_wolf_run, mosswort_bridge, rockfall_vale, rogues_passage,
+    rootbound_crag, spire_garden, stomping_ground, temple_of_abandon, thornspire_verge,
+    anticausal_vestige, beast_whisperer, birds_of_paradise, bygone_colossus,
+    combustible_gearhulk, elvish_mystic, elvish_piper, enduring_courage, enduring_vitality,
+    etali_primal_storm, eternal_witness, fanatic_of_rhonas, ghalta_primal_hunger,
+    goblin_anarchomancer, goreclaw_terror_of_qal_sisma, hierophant_bio_titan,
+    ilharg_the_raze_boar, kogla_the_titan_ape, kona_rescue_beastie, kraven_proud_predator,
+    lizard_connorss_curse, llanowar_elves, lumbering_megasloth, primeval_protector,
+    rhino_barreling_brute, ruby_daring_tracker, spider_manifestation,
+    spider_man_brooklyn_visionary, spider_punk, spider_rex_daring_dino, xenagos_god_of_revels,
+    branching_evolution, cryptolith_rite, elemental_bond, garruks_uprising, rhythm_of_the_wild,
+    sneak_attack, terrasymbiosis, web_of_life_and_destiny, arachnogenesis, beast_within,
+    chaos_warp, fling, grow_extra_arms, heroic_intervention, hunters_insight, ram_through,
+    strength_of_will, blasphemous_act, cultivate, farseek, kodamas_reach, natures_lore,
+    rampant_growth, rhinos_rampage, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const DARIGAAZ_REINCARNATED_COMMANDERS: &[CardFactory] = &[darigaaz_reincarnated];
+
+/// **Darigaaz Reincarnated**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 7 Forests + 7 Mountains + 5 Swamps = 99.
+/// Darigaaz Reincarnated (EDHREC, fetched 2026-10-17).
+pub const DARIGAAZ_REINCARNATED_MAIN: &[CardFactory] = &[
+    arcane_signet, carnelian_orb_of_dragonkind, dragons_hoard, dragonstorm_globe, gruul_signet,
+    jade_orb_of_dragonkind, rakdos_signet, sol_ring, blood_crypt, bojuka_bog, cinder_glade,
+    command_tower, dragonskull_summit, evolving_wilds, exotic_orchard,
+    haven_of_the_spirit_dragon, overgrown_tomb, path_of_ancestry, rootbound_crag, savage_lands,
+    smoldering_marsh, stomping_ground, terramorphic_expanse, woodland_cemetery,
+    ziatoras_proving_ground, atarka_world_render, birds_of_paradise, bladewing_the_risen,
+    bloomvine_regent, decadent_dragon, dragonlords_servant, dragonmaster_outcast,
+    dragonspeaker_shaman, drakuseth_maw_of_flames, earthquake_dragon, ganax_astral_hunter,
+    goldspan_dragon, ignoble_hierarch, karrthus_tyrant_of_jund, kolaghan_the_storms_fury,
+    lathliss_dragon_queen, llanowar_elves, rivaz_of_the_claw, sakura_tribe_elder,
+    savage_ventmaw, scaled_nurturer, thrakkus_the_butcher, thunderbreak_regent, utvara_hellkite,
+    ziatora_the_incinerator, colossal_majesty, crucible_of_fire, dragon_tempest,
+    encroaching_dragonstorm, frontier_siege, garruks_uprising, phyrexian_arena,
+    rhythm_of_the_wild, assassins_trophy, beast_within, bedevil, chaos_warp, dark_ritual,
+    deathsprout, heroic_intervention, putrefy, terminate, sarkhan_the_masterless,
+    blasphemous_act, crux_of_fate, cultivate, decimate, farseek, kodamas_reach, natures_lore,
+    rampant_growth, rishkars_expertise, three_visits, toxic_deluge, vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp,
+];

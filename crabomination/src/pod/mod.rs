@@ -22248,6 +22248,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FALCON_AND_REDWING_COMMANDERS,
             main: decks::FALCON_AND_REDWING_MAIN,
         },
+        // Seat 3633: Scarlet Spider, Ben Reilly's EDHREC average deck. `--pod-decks 3633`.
+        PodDeck {
+            name: "Scarlet Spider, Ben Reilly (RG)",
+            commanders: decks::SCARLET_SPIDER_COMMANDERS,
+            main: decks::SCARLET_SPIDER_MAIN,
+        },
+        // Seat 3634: Darigaaz Reincarnated's EDHREC average deck. `--pod-decks 3634`.
+        PodDeck {
+            name: "Darigaaz Reincarnated (BRG)",
+            commanders: decks::DARIGAAZ_REINCARNATED_COMMANDERS,
+            main: decks::DARIGAAZ_REINCARNATED_MAIN,
+        },
     ]
 }
 
@@ -27764,6 +27776,8 @@ mod tests {
             ("Thassa, God of the Sea", &[0x1844]),
             ("The Neutrinos", &[0x1845]),
             ("Falcon and Redwing", &[0x1846]),
+            ("Scarlet Spider, Ben Reilly", &[0x1847]),
+            ("Darigaaz Reincarnated", &[0x1848]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
