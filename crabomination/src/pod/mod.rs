@@ -24264,6 +24264,90 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SKANOS_DRAGONHEART_14_COMMANDERS,
             main: decks::SKANOS_DRAGONHEART_14_MAIN,
         },
+        // Seat 3969: Abdel Adrian, Gorion's Ward and Veteran Soldier's EDHREC average deck. `--pod-decks 3969`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Veteran Soldier (W)",
+            commanders: decks::ABDEL_ADRIAN_10_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_10_MAIN,
+        },
+        // Seat 3970: Alena, Kessig Trapper and Tymna the Weaver's EDHREC average deck. `--pod-decks 3970`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Tymna the Weaver (WBR)",
+            commanders: decks::ALENA_16_COMMANDERS,
+            main: decks::ALENA_16_MAIN,
+        },
+        // Seat 3971: Alora, Merry Thief and Noble Heritage's EDHREC average deck. `--pod-decks 3971`.
+        PodDeck {
+            name: "Alora, Merry Thief and Noble Heritage (WU)",
+            commanders: decks::ALORA_15_COMMANDERS,
+            main: decks::ALORA_15_MAIN,
+        },
+        // Seat 3972: Falthis, Shadowcat Familiar and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 3972`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Tormod, the Desecrator (B)",
+            commanders: decks::FALTHIS_13_COMMANDERS,
+            main: decks::FALTHIS_13_MAIN,
+        },
+        // Seat 3973: Gilanra, Caller of Wirewood and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3973`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Radiant, Serra Archangel (WG)",
+            commanders: decks::GILANRA_17_COMMANDERS,
+            main: decks::GILANRA_17_MAIN,
+        },
+        // Seat 3974: Glacian, Powerstone Engineer and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3974`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Siani, Eye of the Storm (U)",
+            commanders: decks::GLACIAN_22_COMMANDERS,
+            main: decks::GLACIAN_22_MAIN,
+        },
+        // Seat 3975: Halana, Kessig Ranger and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 3975`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Nadier, Agent of the Duskenel (BG)",
+            commanders: decks::HALANA_12_COMMANDERS,
+            main: decks::HALANA_12_MAIN,
+        },
+        // Seat 3976: Halana, Kessig Ranger and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3976`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Radiant, Serra Archangel (WG)",
+            commanders: decks::HALANA_13_COMMANDERS,
+            main: decks::HALANA_13_MAIN,
+        },
+        // Seat 3977: Ich-Tekik, Salvage Splicer and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3977`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Vial Smasher the Fierce (BRG)",
+            commanders: decks::ICH_TEKIK_25_COMMANDERS,
+            main: decks::ICH_TEKIK_25_MAIN,
+        },
+        // Seat 3978: Jeska, Thrice Reborn and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3978`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Vial Smasher the Fierce (BR)",
+            commanders: decks::JESKA_7_COMMANDERS,
+            main: decks::JESKA_7_MAIN,
+        },
+        // Seat 3979: Kydele, Chosen of Kruphix and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3979`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Radiant, Serra Archangel (WUG)",
+            commanders: decks::KYDELE_5_COMMANDERS,
+            main: decks::KYDELE_5_MAIN,
+        },
+        // Seat 3980: Sarevok, Deathbringer and Cloakwood Hermit's EDHREC average deck. `--pod-decks 3980`.
+        PodDeck {
+            name: "Sarevok, Deathbringer and Cloakwood Hermit (BG)",
+            commanders: decks::SAREVOK_12_COMMANDERS,
+            main: decks::SAREVOK_12_MAIN,
+        },
+        // Seat 3981: The Thirteenth Doctor and Jo Grant's EDHREC average deck. `--pod-decks 3981`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Jo Grant (WUG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_6_MAIN,
+        },
+        // Seat 3982: Viconia, Drow Apostate and Street Urchin's EDHREC average deck. `--pod-decks 3982`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Street Urchin (BR)",
+            commanders: decks::VICONIA_14_COMMANDERS,
+            main: decks::VICONIA_14_MAIN,
+        },
     ]
 }
 
@@ -30116,6 +30200,20 @@ mod tests {
             ("The Fifteenth Doctor and Romana II", &[0x1994]),
             ("Skanos Dragonheart and Acolyte of Bahamut", &[0x1995]),
             ("Skanos Dragonheart and Candlekeep Sage", &[0x1996]),
+            ("Abdel Adrian, Gorion's Ward and Veteran Soldier", &[0x1997]),
+            ("Alena, Kessig Trapper and Tymna the Weaver", &[0x1998]),
+            ("Alora, Merry Thief and Noble Heritage", &[0x1999]),
+            ("Falthis, Shadowcat Familiar and Tormod, the Desecrator", &[0x199A]),
+            ("Gilanra, Caller of Wirewood and Radiant, Serra Archangel", &[0x199B]),
+            ("Glacian, Powerstone Engineer and Siani, Eye of the Storm", &[0x199C]),
+            ("Halana, Kessig Ranger and Nadier, Agent of the Duskenel", &[0x199D]),
+            ("Halana, Kessig Ranger and Radiant, Serra Archangel", &[0x199E]),
+            ("Ich-Tekik, Salvage Splicer and Vial Smasher the Fierce", &[0x199F]),
+            ("Jeska, Thrice Reborn and Vial Smasher the Fierce", &[0x19A0]),
+            ("Kydele, Chosen of Kruphix and Radiant, Serra Archangel", &[0x19A1]),
+            ("Sarevok, Deathbringer and Cloakwood Hermit", &[0x19A2]),
+            ("The Thirteenth Doctor and Jo Grant", &[0x19A3]),
+            ("Viconia, Drow Apostate and Street Urchin", &[0x19A4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
