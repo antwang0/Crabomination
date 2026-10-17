@@ -536,3 +536,27 @@ fn the_neutrinos_blink_an_attacker_in() {
     assert!(g.attacking.iter().any(|a| a.attacker == bear), "the bear joined the attack");
     assert!(g.battlefield_find(bear).unwrap().tapped);
 }
+
+/// CR 702.188 / 614.12 — web-slung Scarlet Spider enters with counters equal
+/// to the returned creature's mana value; hard-cast, none.
+#[test]
+fn scarlet_spider_counts_the_returned_creatures_mana_value() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.battlefield_find_mut(giant).unwrap().tapped = true;
+    let s = g.add_card_to_hand(0, catalog::scarlet_spider_ben_reilly());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: s,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("web-slinging");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant), "the Giant went back");
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 4, "Hill Giant's MV");
+}

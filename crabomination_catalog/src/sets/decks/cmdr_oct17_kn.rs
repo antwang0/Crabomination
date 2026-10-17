@@ -783,6 +783,31 @@ pub fn winnowing() -> CardDefinition {
     }
 }
 
+// ── Scarlet Spider, Ben Reilly / Miles Morales ──────────────────────────────
+
+/// Scarlet Spider, Ben Reilly — {1}{R}{G} legendary 4/3 Spider Human Hero,
+/// trample. Web-slinging {R}{G} (CR 702.188); cast that way he enters with X
+/// +1/+1 counters, X the returned creature's mana value (CR 614.12).
+pub fn scarlet_spider_ben_reilly() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[r(), g()]),
+            return_to_hand: Some((R::Creature.and(R::Tapped), 1)),
+            returned_mana_value_is_x: true,
+            ..Default::default()
+        }),
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..legend(creature(
+            "Scarlet Spider, Ben Reilly",
+            cost(&[generic(1), r(), g()]),
+            vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            4,
+            3,
+        ))
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target
