@@ -299,12 +299,7 @@ pub fn mindwrack_liege() -> CardDefinition {
 /// Henge Walker — {3} 2/2 artifact Golem. Adamant — enters with a +1/+1
 /// counter if at least three mana of the same color was spent to cast it.
 pub fn henge_walker() -> CardDefinition {
-    let adamant = Predicate::Any(
-        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
-            .into_iter()
-            .map(|color| Predicate::SourceCastWithColorSpent { color, at_least: 3 })
-            .collect(),
-    );
+    let adamant = Predicate::SourceCastWithOneColorSpent { at_least: 3 };
     CardDefinition {
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
