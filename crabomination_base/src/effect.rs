@@ -8137,6 +8137,10 @@ pub enum Effect {
     /// team `-X/-X`. Declining (or an empty graveyard) skips `then`.
     MayExileFromYourGraveyard {
         filter: crate::card::SelectionRequirement,
+        /// At most this many ("you may exile a creature card" — Creeping Inn:
+        /// `Some(1)`); `None` is "one or more".
+        #[serde(default)]
+        max: Option<u32>,
         then: Box<Effect>,
     },
     /// "Exile all cards from all graveyards." (Rest in Peace's ETB — a

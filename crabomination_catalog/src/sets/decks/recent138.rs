@@ -137,6 +137,7 @@ pub fn specter_of_mortality() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::MayExileFromYourGraveyard {
+            max: None,
             filter: R::Creature,
             then: Box::new(Effect::PumpPT {
                 what: Selector::EachMatching {

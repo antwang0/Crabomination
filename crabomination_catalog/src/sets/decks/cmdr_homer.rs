@@ -830,6 +830,7 @@ pub fn masked_vandal() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Changeling],
         triggered_abilities: vec![etb(Effect::MayExileFromYourGraveyard {
+            max: None,
             filter: R::Creature,
             then: Box::new(Effect::Exile {
                 what: target_filtered(

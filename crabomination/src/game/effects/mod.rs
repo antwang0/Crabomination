@@ -16048,8 +16048,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MayExileFromYourGraveyard { filter, then } => {
-                
+            Effect::MayExileFromYourGraveyard { filter, max: cap, then } => {
                 let p = ctx.controller;
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .graveyard
@@ -16067,7 +16066,7 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let max = candidates.len() as u32;
+                let max = cap.map_or(candidates.len() as u32, |m| m.min(candidates.len() as u32));
                 let source = ctx.source.unwrap_or(CardId(0));
                 // Auto default: exile the single cheapest card — enough to
                 // fire the "when you do" rider at minimum fuel cost.
