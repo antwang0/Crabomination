@@ -23472,6 +23472,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VHAL_10_COMMANDERS,
             main: decks::VHAL_10_MAIN,
         },
+        // Seat 3837: Siani, Eye of the Storm and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 3837`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Tana, the Bloodsower (URG)",
+            commanders: decks::SIANI_5_COMMANDERS,
+            main: decks::SIANI_5_MAIN,
+        },
+        // Seat 3838: Numa, Joraga Chieftain and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3838`.
+        PodDeck {
+            name: "Numa, Joraga Chieftain and Sakashima of a Thousand Faces (UG)",
+            commanders: decks::NUMA_7_COMMANDERS,
+            main: decks::NUMA_7_MAIN,
+        },
+        // Seat 3839: Glacian, Powerstone Engineer and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 3839`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Ishai, Ojutai Dragonspeaker (WU)",
+            commanders: decks::GLACIAN_19_COMMANDERS,
+            main: decks::GLACIAN_19_MAIN,
+        },
+        // Seat 3840: Glacian, Powerstone Engineer and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 3840`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Prava of the Steel Legion (WU)",
+            commanders: decks::GLACIAN_20_COMMANDERS,
+            main: decks::GLACIAN_20_MAIN,
+        },
+        // Seat 3841: Imoen, Mystic Trickster and Sword Coast Sailor's EDHREC average deck. `--pod-decks 3841`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Sword Coast Sailor (U)",
+            commanders: decks::IMOEN_13_COMMANDERS,
+            main: decks::IMOEN_13_MAIN,
+        },
+        // Seat 3842: Skanos Dragonheart and Far Traveler's EDHREC average deck. `--pod-decks 3842`.
+        PodDeck {
+            name: "Skanos Dragonheart and Far Traveler (WG)",
+            commanders: decks::SKANOS_DRAGONHEART_11_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_11_MAIN,
+        },
+        // Seat 3843: The Eleventh Doctor and Romana II's EDHREC average deck. `--pod-decks 3843`.
+        PodDeck {
+            name: "The Eleventh Doctor and Romana II (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_7_MAIN,
+        },
+        // Seat 3844: Rebbec, Architect of Ascension and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3844`.
+        PodDeck {
+            name: "Rebbec, Architect of Ascension and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::REBBEC_5_COMMANDERS,
+            main: decks::REBBEC_5_MAIN,
+        },
+        // Seat 3845: Ghost of Ramirez DePietro and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3845`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Livio, Oathsworn Sentinel (WU)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_16_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_16_MAIN,
+        },
     ]
 }
 
@@ -29192,6 +29246,15 @@ mod tests {
             ("Kediss, Emberclaw Familiar and Livio, Oathsworn Sentinel", &[0x1910]),
             ("Akroma, Vision of Ixidor and Breeches, Brazen Plunderer", &[0x1911]),
             ("Vhal, Candlekeep Researcher and Popular Entertainer", &[0x1912]),
+            ("Siani, Eye of the Storm and Tana, the Bloodsower", &[0x1913]),
+            ("Numa, Joraga Chieftain and Sakashima of a Thousand Faces", &[0x1914]),
+            ("Glacian, Powerstone Engineer and Ishai, Ojutai Dragonspeaker", &[0x1915]),
+            ("Glacian, Powerstone Engineer and Prava of the Steel Legion", &[0x1916]),
+            ("Imoen, Mystic Trickster and Sword Coast Sailor", &[0x1917]),
+            ("Skanos Dragonheart and Far Traveler", &[0x1918]),
+            ("The Eleventh Doctor and Romana II", &[0x1919]),
+            ("Rebbec, Architect of Ascension and Sidar Kondo of Jamuraa", &[0x191A]),
+            ("Ghost of Ramirez DePietro and Livio, Oathsworn Sentinel", &[0x191B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
