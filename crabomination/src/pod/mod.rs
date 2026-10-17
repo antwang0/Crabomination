@@ -21366,6 +21366,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZELLIX_8_COMMANDERS,
             main: decks::ZELLIX_8_MAIN,
         },
+        // Seat 3486: Baeloth Barrityl, Entertainer and Popular Entertainer's EDHREC average deck. `--pod-decks 3486`.
+        PodDeck {
+            name: "Baeloth Barrityl, Entertainer and Popular Entertainer (R)",
+            commanders: decks::BAELOTH_BARRITYL_3_COMMANDERS,
+            main: decks::BAELOTH_BARRITYL_3_MAIN,
+        },
+        // Seat 3487: Esior, Wardwing Familiar and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3487`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Livio, Oathsworn Sentinel (WU)",
+            commanders: decks::ESIOR_6_COMMANDERS,
+            main: decks::ESIOR_6_MAIN,
+        },
+        // Seat 3488: Laurine, the Diversion's EDHREC average deck. `--pod-decks 3488`.
+        PodDeck {
+            name: "Laurine, the Diversion (R)",
+            commanders: decks::LAURINE_COMMANDERS,
+            main: decks::LAURINE_MAIN,
+        },
+        // Seat 3489: Gut, True Soul Zealot and Dungeon Delver's EDHREC average deck. `--pod-decks 3489`.
+        PodDeck {
+            name: "Gut, True Soul Zealot and Dungeon Delver (UR)",
+            commanders: decks::GUT_10_COMMANDERS,
+            main: decks::GUT_10_MAIN,
+        },
+        // Seat 3490: Imoen, Mystic Trickster and Veteran Soldier's EDHREC average deck. `--pod-decks 3490`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Veteran Soldier (WU)",
+            commanders: decks::IMOEN_COMMANDERS,
+            main: decks::IMOEN_MAIN,
+        },
     ]
 }
 
@@ -26735,6 +26765,11 @@ mod tests {
             ("Zara, Renegade Recruiter", &[0x17B1]),
             ("Zellix, Sanity Flayer and Feywild Visitor", &[0x17B2]),
             ("Zellix, Sanity Flayer and Inspiring Leader", &[0x17B3]),
+            ("Baeloth Barrityl, Entertainer and Popular Entertainer", &[0x17B4]),
+            ("Esior, Wardwing Familiar and Livio, Oathsworn Sentinel", &[0x17B5]),
+            ("Laurine, the Diversion", &[0x17B6]),
+            ("Gut, True Soul Zealot and Dungeon Delver", &[0x17B7]),
+            ("Imoen, Mystic Trickster and Veteran Soldier", &[0x17B8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

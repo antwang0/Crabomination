@@ -97728,3 +97728,145 @@ pub const ZELLIX_8_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const BAELOTH_BARRITYL_3_COMMANDERS: &[CardFactory] = &[baeloth_barrityl_entertainer, popular_entertainer];
+
+/// **Baeloth Barrityl, Entertainer and Popular Entertainer**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 29 Mountains = 98.
+/// Baeloth Barrityl, Entertainer and Popular Entertainer (EDHREC, fetched 2026-10-17).
+pub const BAELOTH_BARRITYL_3_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, bloodthirsty_blade, chainsaw, champions_helm,
+    commanders_plate, diamond_pick_axe, fire_diamond, hazorets_monument, lightning_greaves,
+    mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, tenza_godos_maul, the_fire_crystal,
+    the_reaver_cleaver, castle_embereth, myriad_landscape, nykthos_shrine_to_nyx,
+    rogues_passage, valakut_the_molten_pinnacle, war_room, agitator_ant,
+    alexios_deimos_of_kosmos, avatar_of_slaughter, bothersome_quasit, brash_taunter, death_kiss,
+    frenzied_saddlebrute, frontier_warmonger, geode_rager, gloin_dwarf_emissary,
+    goblin_spymaster, goldspan_dragon, grenzo_havoc_raiser, havoc_eater, insufferable_balladeer,
+    kazuul_tyrant_of_the_cliffs, komainu_battle_armor, life_of_the_party,
+    professional_face_breaker, puppet_master_string_puller, taunting_kobold, vengeful_ancestor,
+    xorn, acquired_mutation, claws_of_valakut, curse_of_opulence, hot_pursuit, rain_of_riches,
+    rite_of_the_raging_storm, shiny_impetus, the_sound_of_drums, abrade, big_score, chaos_warp,
+    lightning_bolt, thrill_of_possibility, unexpected_windfall, koth_fire_of_resistance,
+    besmirch, blasphemous_act, coronation_of_chaos, disrupt_decorum, faithless_looting,
+    insurrection, spectacular_showdown, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const ESIOR_6_COMMANDERS: &[CardFactory] = &[esior_wardwing_familiar, livio_oathsworn_sentinel];
+
+/// **Esior, Wardwing Familiar and Livio, Oathsworn Sentinel**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Islands + 10 Plains = 98.
+/// Esior, Wardwing Familiar and Livio, Oathsworn Sentinel (EDHREC, fetched 2026-10-17).
+pub const ESIOR_6_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, conjurers_closet, fellwar_stone, panharmonicon, sol_ring,
+    talisman_of_progress, thought_vessel, wayfarers_bauble, adarkar_wastes, command_tower,
+    demolition_field, deserted_beach, glacial_fortress, hallowed_fountain, mystic_gate,
+    mystic_sanctuary, nimbus_maze, port_town, prairie_stream, scavenger_grounds, sea_of_clouds,
+    skycloud_expanse, abdel_adrian_gorions_ward, aether_channeler, archaeomancer,
+    cavalier_of_dawn, charming_prince, cloudblazer, deadeye_navigator, deputy_of_detention,
+    dour_port_mage, elite_guardmage, fiend_hunter, hatut_zeraze_strike_force,
+    knight_of_the_white_orchid, lavinia_of_the_tenth, loran_of_the_third_path, mulldrifter,
+    peregrine_drake, reflector_mage, restoration_angel, sea_gate_oracle, skyclave_apparition,
+    solemn_simulacrum, soulherder, starfield_vocalist, sun_titan, venser_shaper_savant,
+    wall_of_omens, watcher_for_tomorrow, yorion_sky_nomad, dungeon_delver, ghostly_prison,
+    propaganda, smothering_tithe, teleportation_circle, training_grounds, undercellar_sweep,
+    an_offer_you_cant_refuse, cancel, cloudshift, counterspell, dovins_veto, eerie_interlude,
+    ephemerate, essence_flux, generous_gift, ghostly_flicker, laezels_acrobatics,
+    momentary_blink, path_to_exile, swords_to_plowshares, karn_the_great_creator,
+    hour_of_revelation, splash_portal, supreme_verdict, time_wipe,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const LAURINE_COMMANDERS: &[CardFactory] = &[laurine_the_diversion];
+
+/// **Laurine, the Diversion**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 17 Mountains = 99.
+/// Laurine, the Diversion (EDHREC, fetched 2026-10-17).
+pub const LAURINE_MAIN: &[CardFactory] = &[
+    arcane_signet, bloodthirsty_blade, chainsaw, cloak_and_dagger, coveted_jewel, cursed_mirror,
+    fellwar_stone, fire_diamond, ichor_wellspring, nimblewright_schematic, prized_statue,
+    servo_schematic, sol_ring, stonespeaker_crystal, thran_dynamo, transmutation_font,
+    wayfarers_bauble, big_apple_3_a_m, castle_doom, maze_of_ith, scene_of_the_crime,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, stardew_valley, treasure_vault,
+    academy_manufactor, agitator_ant, atsushi_the_blazing_sky, bloodboil_sorcerer,
+    bothersome_quasit, crime_novelist, draconic_visitor, goblin_kaboomist, grenzo_havoc_raiser,
+    impulsive_pilferer, insufferable_balladeer, ivora_insatiable_heir,
+    kazuul_tyrant_of_the_cliffs, olivias_attendants, professional_face_breaker,
+    puppet_master_string_puller, ravenous_robots, reckless_fireweaver, relic_retriever,
+    scrap_trawler, swashbuckler_extraordinaire, taunting_kobold, toggo_goblin_weaponsmith,
+    vault_robber, vengeful_ancestor, voldaren_epicure, descent_into_avernus, hot_pursuit,
+    loot_dispute, popular_entertainer, shiny_impetus, big_score, chaos_warp,
+    thrill_of_possibility, unexpected_windfall, wild_magic_surge, blasphemous_act,
+    bloody_betrayal, coronation_of_chaos, disrupt_decorum, faithless_looting, fast_forward,
+    seize_the_spoils, tormenting_voice, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const GUT_10_COMMANDERS: &[CardFactory] = &[gut_true_soul_zealot, dungeon_delver];
+
+/// **Gut, True Soul Zealot and Dungeon Delver**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 8 Islands + 8 Mountains = 98.
+/// Gut, True Soul Zealot and Dungeon Delver (EDHREC, fetched 2026-10-17).
+pub const GUT_10_MAIN: &[CardFactory] = &[
+    arcane_signet, coveted_jewel, cryogen_relic, cursed_mirror, dungeoneers_pack,
+    ichor_wellspring, izzet_signet, machine_gods_effigy, panharmonicon, sarevoks_tome,
+    shadowspear, sol_ring, spine_of_ish_sah, terrarion, the_one_ring, thran_dynamo,
+    trailblazers_torch, arena_of_glory, command_tower, exotic_orchard, fountainport,
+    minamo_school_at_waters_edge, misty_rainforest, mystic_sanctuary, prismatic_vista,
+    restless_spire, riverpyre_verge, shivan_reef, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_mountain, steam_vents, talon_gates_of_madara,
+    throne_of_the_high_city, urzas_saga, wooded_foothills, aarakocra_sneak, aboleth_spawn,
+    bloodboil_sorcerer, caves_of_chaos_adventurer, deadeye_navigator, emberwilde_captain,
+    enduring_curiosity, fblthp_the_lost, fear_of_missing_out, feywild_caretaker,
+    goblin_engineer, inferno_titan, magda_brazen_outlaw, mocking_doppelganger, myr_battlesphere,
+    professional_face_breaker, quantum_riddler, stirring_bard, subtlety,
+    toggo_goblin_weaponsmith, tomb_of_horrors_adventurer, court_of_embereth,
+    fable_of_the_mirror_breaker, heaven_sent, loot_dispute, rhystic_study,
+    struggle_for_project_purity, vault_21_house_gambit, an_offer_you_cant_refuse, arcane_denial,
+    bar_the_gate, chaos_warp, commit_memory, cyclonic_rift, force_of_will, mana_drain,
+    rapid_hybridization, three_steps_ahead, blasphemous_act, expressive_iteration,
+    faithless_looting, gitaxian_probe, reckless_handling, sea_gate_restoration, seize_the_spoils,
+    // Basics
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const IMOEN_COMMANDERS: &[CardFactory] = &[imoen_mystic_trickster, veteran_soldier];
+
+/// **Imoen, Mystic Trickster and Veteran Soldier**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 10 Islands + 15 Plains = 98.
+/// Imoen, Mystic Trickster and Veteran Soldier (EDHREC, fetched 2026-10-17).
+pub const IMOEN_MAIN: &[CardFactory] = &[
+    arcane_signet, atomic_microsizer, azorius_signet, idol_of_oblivion, mithril_coat,
+    prowlers_helm, sarevoks_tome, skullclamp, sol_ring, sword_of_hearth_and_home,
+    talisman_of_progress, thought_vessel, trailblazers_torch, adarkar_wastes, arid_mesa,
+    command_tower, flooded_strand, glacial_fortress, hallowed_fountain, mana_confluence,
+    misty_rainforest, reliquary_tower, scalding_tarn, sea_of_clouds, tundra, aarakocra_sneak,
+    bastion_protector, cloister_gargoyle, deep_gnome_terramancer, elesh_norn_grand_cenobite,
+    esper_sentinel, feywild_caretaker, goldnight_commander, goliath_paladin,
+    hama_pashar_ruin_seeker, midnight_pathlighter, palace_jailer, planar_ally, radiant_solar,
+    seasoned_dungeoneer, thousand_faced_shadow, tomb_of_horrors_adventurer, vexilus_praetor,
+    white_plume_adventurer, yuan_ti_malison, commanders_insignia, crescendo_of_war,
+    divine_visitation, dungeon_delver, inspiring_leader, smothering_tithe,
+    struggle_for_project_purity, teleportation_circle, undercellar_sweep, valor_in_akros,
+    an_offer_you_cant_refuse, arcane_denial, counterspell, dawn_charm, delay, everybody_lives,
+    generous_gift, itll_quench_ya, mana_sculpt, mirrorweave, mystic_reflection, negate,
+    riot_control, stroke_of_midnight, swords_to_plowshares, open_the_armory, rout,
+    steelshapers_gift,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
