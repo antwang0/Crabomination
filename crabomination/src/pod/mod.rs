@@ -23862,6 +23862,150 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_17_COMMANDERS,
             main: decks::GHOST_OF_RAMIREZ_DEPIETRO_17_MAIN,
         },
+        // Seat 3902: Vega, the Watcher's EDHREC average deck. `--pod-decks 3902`.
+        PodDeck {
+            name: "Vega, the Watcher (WU)",
+            commanders: decks::VEGA_COMMANDERS,
+            main: decks::VEGA_MAIN,
+        },
+        // Seat 3903: Winter Soldier, Icy Assassin's EDHREC average deck. `--pod-decks 3903`.
+        PodDeck {
+            name: "Winter Soldier, Icy Assassin (WB)",
+            commanders: decks::WINTER_SOLDIER_3_COMMANDERS,
+            main: decks::WINTER_SOLDIER_3_MAIN,
+        },
+        // Seat 3904: Isareth the Awakener's EDHREC average deck. `--pod-decks 3904`.
+        PodDeck {
+            name: "Isareth the Awakener (B)",
+            commanders: decks::ISARETH_THE_AWAKENER_COMMANDERS,
+            main: decks::ISARETH_THE_AWAKENER_MAIN,
+        },
+        // Seat 3905: Barrowin of Clan Undurr's EDHREC average deck. `--pod-decks 3905`.
+        PodDeck {
+            name: "Barrowin of Clan Undurr (WB)",
+            commanders: decks::BARROWIN_OF_CLAN_UNDURR_COMMANDERS,
+            main: decks::BARROWIN_OF_CLAN_UNDURR_MAIN,
+        },
+        // Seat 3906: Vhal, Candlekeep Researcher and Noble Heritage's EDHREC average deck. `--pod-decks 3906`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Noble Heritage (WU)",
+            commanders: decks::VHAL_13_COMMANDERS,
+            main: decks::VHAL_13_MAIN,
+        },
+        // Seat 3907: Shadowheart, Dark Justiciar and Dungeon Delver's EDHREC average deck. `--pod-decks 3907`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Dungeon Delver (UB)",
+            commanders: decks::SHADOWHEART_10_COMMANDERS,
+            main: decks::SHADOWHEART_10_MAIN,
+        },
+        // Seat 3908: Safana, Calimport Cutthroat and Far Traveler's EDHREC average deck. `--pod-decks 3908`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Far Traveler (WB)",
+            commanders: decks::SAFANA_9_COMMANDERS,
+            main: decks::SAFANA_9_MAIN,
+        },
+        // Seat 3909: Ghost of Ramirez DePietro and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 3909`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Ikra Shidiqi, the Usurper (UBG)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_18_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_18_MAIN,
+        },
+        // Seat 3910: Imoen, Mystic Trickster and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 3910`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Agent of the Shadow Thieves (UB)",
+            commanders: decks::IMOEN_17_COMMANDERS,
+            main: decks::IMOEN_17_MAIN,
+        },
+        // Seat 3911: Safana, Calimport Cutthroat and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 3911`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Agent of the Iron Throne (B)",
+            commanders: decks::SAFANA_10_COMMANDERS,
+            main: decks::SAFANA_10_MAIN,
+        },
+        // Seat 3912: Safana, Calimport Cutthroat and Noble Heritage's EDHREC average deck. `--pod-decks 3912`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Noble Heritage (WB)",
+            commanders: decks::SAFANA_11_COMMANDERS,
+            main: decks::SAFANA_11_MAIN,
+        },
+        // Seat 3913: Safana, Calimport Cutthroat and Sword Coast Sailor's EDHREC average deck. `--pod-decks 3913`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Sword Coast Sailor (UB)",
+            commanders: decks::SAFANA_12_COMMANDERS,
+            main: decks::SAFANA_12_MAIN,
+        },
+        // Seat 3914: Gilanra, Caller of Wirewood and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 3914`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Silas Renn, Seeker Adept (UBG)",
+            commanders: decks::GILANRA_16_COMMANDERS,
+            main: decks::GILANRA_16_MAIN,
+        },
+        // Seat 3915: Baeloth Barrityl, Entertainer and Feywild Visitor's EDHREC average deck. `--pod-decks 3915`.
+        PodDeck {
+            name: "Baeloth Barrityl, Entertainer and Feywild Visitor (UR)",
+            commanders: decks::BAELOTH_BARRITYL_5_COMMANDERS,
+            main: decks::BAELOTH_BARRITYL_5_MAIN,
+        },
+        // Seat 3916: The Tenth Doctor and Ryan Sinclair's EDHREC average deck. `--pod-decks 3916`.
+        PodDeck {
+            name: "The Tenth Doctor and Ryan Sinclair (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3917: Ghost of Ramirez DePietro and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 3917`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Silas Renn, Seeker Adept (UB)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_19_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_19_MAIN,
+        },
+        // Seat 3918: Burakos, Party Leader and Criminal Past's EDHREC average deck. `--pod-decks 3918`.
+        PodDeck {
+            name: "Burakos, Party Leader and Criminal Past (B)",
+            commanders: decks::BURAKOS_9_COMMANDERS,
+            main: decks::BURAKOS_9_MAIN,
+        },
+        // Seat 3919: Lae'zel, Vlaakith's Champion and Cloakwood Hermit's EDHREC average deck. `--pod-decks 3919`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Cloakwood Hermit (WG)",
+            commanders: decks::LAEZEL_2_COMMANDERS,
+            main: decks::LAEZEL_2_MAIN,
+        },
+        // Seat 3920: Imoen, Mystic Trickster and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 3920`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Agent of the Iron Throne (UB)",
+            commanders: decks::IMOEN_18_COMMANDERS,
+            main: decks::IMOEN_18_MAIN,
+        },
+        // Seat 3921: The Eighth Doctor and Ryan Sinclair's EDHREC average deck. `--pod-decks 3921`.
+        PodDeck {
+            name: "The Eighth Doctor and Ryan Sinclair (WUR)",
+            commanders: decks::THE_EIGHTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_10_MAIN,
+        },
+        // Seat 3922: The War Doctor and Sarah Jane Smith's EDHREC average deck. `--pod-decks 3922`.
+        PodDeck {
+            name: "The War Doctor and Sarah Jane Smith (WR)",
+            commanders: decks::THE_WAR_DOCTOR_6_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_6_MAIN,
+        },
+        // Seat 3923: Skanos Dragonheart and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3923`.
+        PodDeck {
+            name: "Skanos Dragonheart and Passionate Archaeologist (RG)",
+            commanders: decks::SKANOS_DRAGONHEART_12_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_12_MAIN,
+        },
+        // Seat 3924: Amber Gristle O'Maul and Haunted One's EDHREC average deck. `--pod-decks 3924`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Haunted One (BR)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_6_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_6_MAIN,
+        },
+        // Seat 3925: Durnan of the Yawning Portal and Veteran Soldier's EDHREC average deck. `--pod-decks 3925`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Veteran Soldier (WG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_9_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_9_MAIN,
+        },
     ]
 }
 
@@ -29647,6 +29791,30 @@ mod tests {
             ("Jem Lightfoote, Sky Explorer", &[0x1951]),
             ("The Second Doctor and Donna Noble", &[0x1952]),
             ("Ghost of Ramirez DePietro and Ishai, Ojutai Dragonspeaker", &[0x1953]),
+            ("Vega, the Watcher", &[0x1954]),
+            ("Winter Soldier, Icy Assassin", &[0x1955]),
+            ("Isareth the Awakener", &[0x1956]),
+            ("Barrowin of Clan Undurr", &[0x1957]),
+            ("Vhal, Candlekeep Researcher and Noble Heritage", &[0x1958]),
+            ("Shadowheart, Dark Justiciar and Dungeon Delver", &[0x1959]),
+            ("Safana, Calimport Cutthroat and Far Traveler", &[0x195A]),
+            ("Ghost of Ramirez DePietro and Ikra Shidiqi, the Usurper", &[0x195B]),
+            ("Imoen, Mystic Trickster and Agent of the Shadow Thieves", &[0x195C]),
+            ("Safana, Calimport Cutthroat and Agent of the Iron Throne", &[0x195D]),
+            ("Safana, Calimport Cutthroat and Noble Heritage", &[0x195E]),
+            ("Safana, Calimport Cutthroat and Sword Coast Sailor", &[0x195F]),
+            ("Gilanra, Caller of Wirewood and Silas Renn, Seeker Adept", &[0x1960]),
+            ("Baeloth Barrityl, Entertainer and Feywild Visitor", &[0x1961]),
+            ("The Tenth Doctor and Ryan Sinclair", &[0x1962]),
+            ("Ghost of Ramirez DePietro and Silas Renn, Seeker Adept", &[0x1963]),
+            ("Burakos, Party Leader and Criminal Past", &[0x1964]),
+            ("Lae'zel, Vlaakith's Champion and Cloakwood Hermit", &[0x1965]),
+            ("Imoen, Mystic Trickster and Agent of the Iron Throne", &[0x1966]),
+            ("The Eighth Doctor and Ryan Sinclair", &[0x1967]),
+            ("The War Doctor and Sarah Jane Smith", &[0x1968]),
+            ("Skanos Dragonheart and Passionate Archaeologist", &[0x1969]),
+            ("Amber Gristle O'Maul and Haunted One", &[0x196A]),
+            ("Durnan of the Yawning Portal and Veteran Soldier", &[0x196B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
