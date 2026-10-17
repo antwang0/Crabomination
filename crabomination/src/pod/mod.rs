@@ -22092,6 +22092,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_NINTH_DOCTOR_5_COMMANDERS,
             main: decks::THE_NINTH_DOCTOR_5_MAIN,
         },
+        // Seat 3607: Neerdiv, Devious Diver's EDHREC average deck. `--pod-decks 3607`.
+        PodDeck {
+            name: "Neerdiv, Devious Diver (U)",
+            commanders: decks::NEERDIV_COMMANDERS,
+            main: decks::NEERDIV_MAIN,
+        },
+        // Seat 3608: Daredevil, Fearless Fighter's EDHREC average deck. `--pod-decks 3608`.
+        PodDeck {
+            name: "Daredevil, Fearless Fighter (R)",
+            commanders: decks::DAREDEVIL_COMMANDERS,
+            main: decks::DAREDEVIL_MAIN,
+        },
+        // Seat 3609: Rhoda, Geist Avenger and Timin, Youthful Geist's EDHREC average deck. `--pod-decks 3609`.
+        PodDeck {
+            name: "Rhoda, Geist Avenger and Timin, Youthful Geist (WU)",
+            commanders: decks::RHODA_COMMANDERS,
+            main: decks::RHODA_MAIN,
+        },
+        // Seat 3610: Zalto, Fire Giant Duke's EDHREC average deck. `--pod-decks 3610`.
+        PodDeck {
+            name: "Zalto, Fire Giant Duke (R)",
+            commanders: decks::ZALTO_COMMANDERS,
+            main: decks::ZALTO_MAIN,
+        },
+        // Seat 3611: Venus, Torn Between Worlds's EDHREC average deck. `--pod-decks 3611`.
+        PodDeck {
+            name: "Venus, Torn Between Worlds (UG)",
+            commanders: decks::VENUS_COMMANDERS,
+            main: decks::VENUS_MAIN,
+        },
+        // Seat 3612: April O'Neil, Kunoichi Trainee's EDHREC average deck. `--pod-decks 3612`.
+        PodDeck {
+            name: "April O'Neil, Kunoichi Trainee (W)",
+            commanders: decks::APRIL_ONEIL_4_COMMANDERS,
+            main: decks::APRIL_ONEIL_4_MAIN,
+        },
+        // Seat 3613: White Tiger, Amulet Keeper's EDHREC average deck. `--pod-decks 3613`.
+        PodDeck {
+            name: "White Tiger, Amulet Keeper (G)",
+            commanders: decks::WHITE_TIGER_2_COMMANDERS,
+            main: decks::WHITE_TIGER_2_MAIN,
+        },
     ]
 }
 
@@ -27582,6 +27624,13 @@ mod tests {
             ("Malcolm, Keen-Eyed Navigator and Numa, Joraga Chieftain", &[0x182A]),
             ("Jaheira, Friend of the Forest and Hardy Outlander", &[0x182B]),
             ("The Ninth Doctor and Rose Noble", &[0x182C]),
+            ("Neerdiv, Devious Diver", &[0x182D]),
+            ("Daredevil, Fearless Fighter", &[0x182E]),
+            ("Rhoda, Geist Avenger and Timin, Youthful Geist", &[0x182F]),
+            ("Zalto, Fire Giant Duke", &[0x1830]),
+            ("Venus, Torn Between Worlds", &[0x1831]),
+            ("April O'Neil, Kunoichi Trainee", &[0x1832]),
+            ("White Tiger, Amulet Keeper", &[0x1833]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
