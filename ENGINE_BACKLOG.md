@@ -181,7 +181,7 @@ the handoff.
   new cross-slot atom `R::SharesCardTypeWithTargetSlot` (CR 601.2c).
 - **LANDED (batches 3-5, `decks::cmdr_oct17_a`..`_c`, tests `recent_b/cmdr_oct17_a.rs` / `_b.rs`):** ~135 one-card
   partner-pair gaps (Refurbish, Chronozoa, Captain's Hook, Omnipresence, Ral Caller of Storms, Chance for Glory, the
-  six Marvel gain lands, Killmonger, Genghis Frog, …). Seats 3319-3471 (153 decks, every one closed by these cards,
+  six Marvel gain lands, Killmonger, Genghis Frog, …). Seats 3339-3485 (147 decks, every one closed by these cards,
   exact-100 and identity-checked; the CR 903.4b chooser pairs — Faceless One, Piper, Clara — skipped).
 - **FIXED:** Final Fortune lost at the CASTING turn's end step — `DelayedTriggerKind::YourNextTurnsEndStep`.
   `EquipBonus.destroy_host_when_unattached` (Captain's Hook). Deathknell Berserker: a `CreatureDied` trigger
