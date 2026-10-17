@@ -12456,6 +12456,9 @@ impl GameState {
             A::RevealFromHandOrPay { .. } | A::BeholdOrPay { .. } => true,
             A::Behold { filter } => self.can_behold(filter, p, None),
             A::BeholdOfChosenType { count } => self.beheld_creature_type(p, None, *count).is_some(),
+            A::ExileFromGraveyardForPower { filter } => {
+                self.players[p].graveyard.iter().any(|c| self.evaluate_requirement_on_card(filter, c, p))
+            }
             // A mandatory reveal needs a matching card in hand.
             A::RevealFromHand { filter } => self.players[p]
                 .hand
@@ -12831,6 +12834,22 @@ impl GameState {
                             &ctx,
                             &mut events,
                         );
+                    }
+                }
+                A::ExileFromGraveyardForPower { filter } => {
+                    let pick = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .max_by_key(|c| (c.definition.power, std::cmp::Reverse(c.id)))
+                        .map(|c| (c.id, c.definition.power.max(0) as u32));
+                    if let Some((id, power)) = pick
+                        && let Some(card) = Self::take_card(&mut self.players[p].graveyard, id)
+                    {
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: id });
+                        self.note_exiled_from_graveyard(p, id, &mut events);
+                        sac_power = Some(power);
                     }
                 }
                 A::ExileFromGraveyard { filter, count } => {
@@ -16641,6 +16660,15 @@ impl GameState {
             && !self.player_ignores_creature_hexproof(caster)
         {
             return Err(GameError::TargetHasHexproof(*cid));
+        }
+        // Veilstone Amulet — the controller's creatures are out of their
+        // opponents' reach for the turn (a rules change, so a creature that
+        // enters later is covered too).
+        if self.players[controller].creatures_untargetable_by_opponents_this_turn
+            && !self.same_team(controller, caster)
+            && self.permanent_is_creature(*cid)
+        {
+            return Err(GameError::InvalidTarget);
         }
         // Tomik — a player's lands can't be targeted by an opponent's spells
         // or abilities.

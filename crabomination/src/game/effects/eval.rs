@@ -2650,6 +2650,9 @@ impl GameState {
             Predicate::SelectorCountAtLeast { sel, n } => {
                 self.resolve_selector(sel, ctx).len() as i32 >= self.evaluate_value(n, ctx)
             }
+            Predicate::OpponentDealtNoncombatDamageLastTurn => {
+                self.opponents_of(ctx.controller).iter().any(|&o| self.players[o].dealt_noncombat_damage_last_turn)
+            }
             Predicate::TwoShareACardType(sel) => {
                 let types: Vec<Vec<crate::card::CardType>> = self
                     .resolve_selector(sel, ctx)

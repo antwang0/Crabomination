@@ -232,6 +232,7 @@ pub fn knight_of_new_alara() -> CardDefinition {
                 exclude_self: false,
                 per_own_color: true,
                 per_own_counter: None,
+                per_own_pips: None,
             },
         }],
         ..creature("Knight of New Alara", cost(&[generic(2), g(), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)

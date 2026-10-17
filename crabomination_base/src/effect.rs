@@ -1902,6 +1902,9 @@ pub enum Predicate {
     /// Two of the objects `.0` resolves to share a card type (Rowdy Crew's "if
     /// two cards that share a card type are discarded this way").
     TwoShareACardType(Selector),
+    /// An opponent of the controller was dealt noncombat damage last turn
+    /// (`Player.dealt_noncombat_damage_last_turn` — Command the Stage).
+    OpponentDealtNoncombatDamageLastTurn,
     /// `who` tapped a land for mana this turn (Desolation).
     TappedLandForManaThisTurn(PlayerRef),
     /// `who` controls a land of every basic land type (Coalition Victory).
@@ -8857,6 +8860,10 @@ pub enum Effect {
     /// "You may cast sorcery spells this turn as though they had flash"
     /// (Complete the Circuit). Sets `Player.sorcery_spells_as_flash_this_turn`.
     GrantSorcerySpellsFlashThisTurn,
+    /// "Creatures you control can't be the targets of spells or abilities your
+    /// opponents control this turn" (Veilstone Amulet). Sets
+    /// `Player.creatures_untargetable_by_opponents_this_turn`.
+    YourCreaturesUntargetableByOpponentsThisTurn,
     /// Parade! (Starlight Spectacular): the controller lines up every creature
     /// they control one at a time; each gets +1/+1 until end of turn for each
     /// creature chosen before it. Headless, the smallest go first.

@@ -16109,6 +16109,7 @@ impl GameState {
                         exclude_self,
                         per_own_color,
                         per_own_counter,
+                        per_own_pips,
                     } = &sa.effect
                     else {
                         continue;
@@ -16162,7 +16163,9 @@ impl GameState {
                             });
                             continue;
                         }
-                        let count = if let Some(kind) = per_own_counter {
+                        let count = if let Some(color) = per_own_pips {
+                            target.definition.cost.pips_of(*color) as i32
+                        } else if let Some(kind) = per_own_counter {
                             target.counter_count(*kind) as i32
                         } else if *exclude_self
                             && self.evaluate_requirement_static_on(

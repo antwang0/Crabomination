@@ -23230,6 +23230,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::YourCreaturesUntargetableByOpponentsThisTurn => {
+                self.players[ctx.controller].creatures_untargetable_by_opponents_this_turn = true;
+                Ok(())
+            }
+
             Effect::GrantSorcerySpellsFlashThisTurn => {
                 self.players[ctx.controller].sorcery_spells_as_flash_this_turn = true;
                 Ok(())

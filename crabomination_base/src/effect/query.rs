@@ -1036,6 +1036,7 @@ impl Effect {
             | Effect::PlaysAmongGranted { .. }
             | Effect::CreaturesCantAttackYouUntilYourNextTurn
             | Effect::GrantSorcerySpellsFlashThisTurn
+            | Effect::YourCreaturesUntargetableByOpponentsThisTurn
             | Effect::Parade
             | Effect::TimeCountersOnEachPermanentAndSuspended { .. }
             | Effect::TripleYourSourcesDamageToOpponentsThisTurn

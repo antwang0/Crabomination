@@ -465,6 +465,11 @@ pub enum StaticEffect {
         /// `count_filter`.
         #[serde(default)]
         per_own_counter: Option<crate::card::CounterType>,
+        /// Chroma — "+1/+1 for each white mana symbol in its mana cost" (Light
+        /// from Within): each affected permanent counts its own pips of this
+        /// color instead of `count_filter`.
+        #[serde(default)]
+        per_own_pips: Option<crate::mana::Color>,
     },
     /// CR 121.2a — "If you would draw a card, you may instead search your
     /// library for a card, put that card into your hand, then shuffle."

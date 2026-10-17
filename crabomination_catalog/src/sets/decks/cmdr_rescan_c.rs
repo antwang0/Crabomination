@@ -222,6 +222,7 @@ pub fn nephilim_epochal() -> CardDefinition {
                     exclude_self: true,
                     per_own_color: false,
                     per_own_counter: None,
+                    per_own_pips: None,
                 },
             },
             StaticAbility {

@@ -71,6 +71,7 @@ pub fn hold_the_gates() -> CardDefinition {
                     exclude_self: false,
                     per_own_color: false,
                     per_own_counter: None,
+                    per_own_pips: None,
                 },
             },
             StaticAbility {

@@ -5173,6 +5173,10 @@ impl GameState {
             // One reach for the whole reset: the same single unshare, and
             // ~54 fewer refcount checks per seat per untap step.
             let pl = &mut **pl;
+            let noncombat = pl.damage_taken_this_turn > pl.combat_damage_taken_this_turn;
+            if pl.dealt_noncombat_damage_last_turn != noncombat {
+                pl.dealt_noncombat_damage_last_turn = noncombat;
+            }
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
             pl.greatest_hit_this_turn = 0;
@@ -5284,6 +5288,7 @@ impl GameState {
             pl.cant_activate_nonmana_abilities_this_turn = false;
             pl.creature_spells_as_flash_this_turn = false;
             pl.sorcery_spells_as_flash_this_turn = false;
+            pl.creatures_untargetable_by_opponents_this_turn = false;
             pl.spells_as_flash_this_turn = false;
             pl.cast_from_graveyard_top_this_turn = false;
             if !pl.next_spell_uncounterable.is_empty() {

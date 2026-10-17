@@ -282,6 +282,7 @@ pub fn clamavus() -> CardDefinition {
                 exclude_self: false,
                 per_own_color: false,
                 per_own_counter: Some(CounterType::PlusOnePlusOne),
+                per_own_pips: None,
             },
         }],
         ..creature(

@@ -803,6 +803,11 @@ pub struct PlayerData {
     /// Blitzball). Cleared alongside it at the turn boundary.
     #[serde(default)]
     pub combat_damage_taken_this_turn: u32,
+    /// This player was dealt noncombat damage during the previous turn (any
+    /// player's) — rolled from this turn's tallies at the turn boundary
+    /// (Command the Stage's "if an opponent was dealt noncombat damage last turn").
+    #[serde(default)]
+    pub dealt_noncombat_damage_last_turn: bool,
     /// Moonlit Meditation — the once-per-turn "first token batch becomes
     /// copies" replacement has already fired this turn.
     #[serde(default)]
@@ -920,6 +925,10 @@ pub struct PlayerData {
     /// turn. Cleared at the turn boundary.
     #[serde(default)]
     pub sorcery_spells_as_flash_this_turn: bool,
+    /// Veilstone Amulet — creatures this player controls can't be the targets
+    /// of spells or abilities their opponents control this turn.
+    #[serde(default)]
+    pub creatures_untargetable_by_opponents_this_turn: bool,
     /// Bösium Strip — "until end of turn, you may cast instant and sorcery
     /// spells from the top of your graveyard". Cleared at the turn boundary.
     #[serde(default)]
@@ -1807,6 +1816,7 @@ impl Player {
             cant_activate_nonmana_abilities_this_turn: false,
             creature_spells_as_flash_this_turn: false,
             sorcery_spells_as_flash_this_turn: false,
+            creatures_untargetable_by_opponents_this_turn: false,
             spells_as_flash_this_turn: false,
             cast_from_graveyard_top_this_turn: false,
             extra_loyalty_activations: 0,
@@ -1852,6 +1862,7 @@ impl Player {
             greatest_hit_this_turn: 0,
             damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
             combat_damage_taken_this_turn: 0,
+            dealt_noncombat_damage_last_turn: false,
             token_copy_replacement_used_this_turn: false,
             tokens_created_this_turn: 0,
             cards_cycled_this_turn: 0,

@@ -1927,6 +1927,7 @@ pub fn cid_timeless_artificer() -> CardDefinition {
                 exclude_self: false,
                 per_own_color: false,
                 per_own_counter: None,
+                per_own_pips: None,
             },
         }],
         ..Default::default()
@@ -1966,6 +1967,7 @@ pub fn warrior_of_light() -> CardDefinition {
                 exclude_self: false,
                 per_own_color: false,
                 per_own_counter: None,
+                per_own_pips: None,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

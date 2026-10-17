@@ -6682,6 +6682,11 @@ pub enum AdditionalCastCost {
     /// as the cost is announced and stamped on the spell's
     /// `chosen_creature_type`; nothing moves.
     BeholdOfChosenType { count: u32 },
+    /// "As an additional cost to cast this spell, exile a [filter] card from
+    /// your graveyard", the spell reading that card's power (Corpse
+    /// Explosion): the greatest-power match goes, its power becoming the X
+    /// `Value::XFromCost` reads.
+    ExileFromGraveyardForPower { filter: SelectionRequirement },
     /// CR 701.4a — "behold a [filter] or pay {pay}": with no matching
     /// permanent you control and no matching card in hand (the spell aside),
     /// `pay` generic joins the cost (Lys Alana Dignitary).
