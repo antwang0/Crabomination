@@ -210,7 +210,8 @@ the handoff.
 - **CLAIMED (batch 13) — don't duplicate:** Glittermonger, Contact Other Plane, Stirring Bard, Sword of Kaldra,
   Glorious End, Ajani Wise Counselor (LANDED, seats 3310-3318). Pod sweep 9705 over 3276-3309: 960 games, 0
   panics, 1 board-cap stall (Ninth Doctor + Parallel Lives token growth).
-- **CLAIMED (batch 14) — don't duplicate:** Bohn Beguiling Balladeer, Captain's Hook, Candlekeep Inspiration.
+- **CLAIMED (batch 14) — don't duplicate:** Bohn Beguiling Balladeer, Captain's Hook, Candlekeep Inspiration
+  (LANDED, seats 3319-3328; Twelfth Doctor + Clara refused — two colours past Clara's one choice).
   Researched, open: Feldon Ronom Excavator (exile N, choose ONE to play — `ExileTopAndGrantMayPlay` grants all),
   Chronomantic Escape (a player-level "creatures can't attack you" until your next turn — only per-creature
   grants and attack taxes exist), Bilbo Luckwearer (two targets that share a card type with each other).

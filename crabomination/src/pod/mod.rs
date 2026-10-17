@@ -20364,6 +20364,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::REYHAN_COMMANDERS,
             main: decks::REYHAN_MAIN,
         },
+        // Seat 3319: The Twelfth Doctor and Vislor Turlough's EDHREC average deck. `--pod-decks 3319`.
+        PodDeck {
+            name: "The Twelfth Doctor and Vislor Turlough (UBR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3320: The Twelfth Doctor and Romana II's EDHREC average deck. `--pod-decks 3320`.
+        PodDeck {
+            name: "The Twelfth Doctor and Romana II (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_4_MAIN,
+        },
+        // Seat 3321: Vhal, Candlekeep Researcher and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3321`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Passionate Archaeologist (UR)",
+            commanders: decks::VHAL_4_COMMANDERS,
+            main: decks::VHAL_4_MAIN,
+        },
+        // Seat 3322: The Twelfth Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 3322`.
+        PodDeck {
+            name: "The Twelfth Doctor and Yasmin Khan (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3323: The Twelfth Doctor's EDHREC average deck. `--pod-decks 3323`.
+        PodDeck {
+            name: "The Twelfth Doctor (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_6_MAIN,
+        },
+        // Seat 3324: Francisco, Fowl Marauder and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3324`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Toggo, Goblin Weaponsmith (BR)",
+            commanders: decks::FRANCISCO_2_COMMANDERS,
+            main: decks::FRANCISCO_2_MAIN,
+        },
+        // Seat 3325: The Twelfth Doctor and Peri Brown's EDHREC average deck. `--pod-decks 3325`.
+        PodDeck {
+            name: "The Twelfth Doctor and Peri Brown (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_7_MAIN,
+        },
+        // Seat 3326: Gale, Waterdeep Prodigy and Shameless Charlatan's EDHREC average deck. `--pod-decks 3326`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Shameless Charlatan (U)",
+            commanders: decks::GALE_7_COMMANDERS,
+            main: decks::GALE_7_MAIN,
+        },
+        // Seat 3327: The Twelfth Doctor and Leela, Sevateem Warrior's EDHREC average deck. `--pod-decks 3327`.
+        PodDeck {
+            name: "The Twelfth Doctor and Leela, Sevateem Warrior (URG)",
+            commanders: decks::THE_TWELFTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_8_MAIN,
+        },
+        // Seat 3328: Akroma, Vision of Ixidor and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 3328`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Malcolm, Keen-Eyed Navigator (WU)",
+            commanders: decks::AKROMA_7_COMMANDERS,
+            main: decks::AKROMA_7_MAIN,
+        },
     ]
 }
 
@@ -25566,6 +25626,16 @@ mod tests {
             ("Kediss, Emberclaw Familiar and The Prismatic Piper", &[0x170A]),
             ("Ganax, Astral Hunter and Flaming Fist", &[0x170B]),
             ("Reyhan, Last of the Abzan and The Prismatic Piper", &[0x170C]),
+            ("The Twelfth Doctor and Vislor Turlough", &[0x170D]),
+            ("The Twelfth Doctor and Romana II", &[0x170E]),
+            ("Vhal, Candlekeep Researcher and Passionate Archaeologist", &[0x170F]),
+            ("The Twelfth Doctor and Yasmin Khan", &[0x1710]),
+            ("The Twelfth Doctor", &[0x1711]),
+            ("Francisco, Fowl Marauder and Toggo, Goblin Weaponsmith", &[0x1712]),
+            ("The Twelfth Doctor and Peri Brown", &[0x1713]),
+            ("Gale, Waterdeep Prodigy and Shameless Charlatan", &[0x1714]),
+            ("The Twelfth Doctor and Leela, Sevateem Warrior", &[0x1715]),
+            ("Akroma, Vision of Ixidor and Malcolm, Keen-Eyed Navigator", &[0x1716]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
