@@ -24006,6 +24006,84 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_9_COMMANDERS,
             main: decks::DURNAN_OF_THE_YAWNING_PORTAL_9_MAIN,
         },
+        // Seat 3926: Pizza Face, Gastromancer's EDHREC average deck. `--pod-decks 3926`.
+        PodDeck {
+            name: "Pizza Face, Gastromancer (BG)",
+            commanders: decks::PIZZA_FACE_COMMANDERS,
+            main: decks::PIZZA_FACE_MAIN,
+        },
+        // Seat 3927: Varis, Silverymoon Ranger's EDHREC average deck. `--pod-decks 3927`.
+        PodDeck {
+            name: "Varis, Silverymoon Ranger (G)",
+            commanders: decks::VARIS_COMMANDERS,
+            main: decks::VARIS_MAIN,
+        },
+        // Seat 3928: Michelangelo, the Heart and Splinter, the Mentor's EDHREC average deck. `--pod-decks 3928`.
+        PodDeck {
+            name: "Michelangelo, the Heart and Splinter, the Mentor (BG)",
+            commanders: decks::MICHELANGELO_5_COMMANDERS,
+            main: decks::MICHELANGELO_5_MAIN,
+        },
+        // Seat 3929: Jaheira, Friend of the Forest and Dungeon Delver's EDHREC average deck. `--pod-decks 3929`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Dungeon Delver (UG)",
+            commanders: decks::JAHEIRA_9_COMMANDERS,
+            main: decks::JAHEIRA_9_MAIN,
+        },
+        // Seat 3930: Safana, Calimport Cutthroat and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3930`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Acolyte of Bahamut (BG)",
+            commanders: decks::SAFANA_13_COMMANDERS,
+            main: decks::SAFANA_13_MAIN,
+        },
+        // Seat 3931: The War Doctor and Bill Potts's EDHREC average deck. `--pod-decks 3931`.
+        PodDeck {
+            name: "The War Doctor and Bill Potts (WR)",
+            commanders: decks::THE_WAR_DOCTOR_7_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_7_MAIN,
+        },
+        // Seat 3932: Safana, Calimport Cutthroat and Raised by Giants's EDHREC average deck. `--pod-decks 3932`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Raised by Giants (BG)",
+            commanders: decks::SAFANA_14_COMMANDERS,
+            main: decks::SAFANA_14_MAIN,
+        },
+        // Seat 3933: Wilson, Refined Grizzly and Dungeon Delver's EDHREC average deck. `--pod-decks 3933`.
+        PodDeck {
+            name: "Wilson, Refined Grizzly and Dungeon Delver (UG)",
+            commanders: decks::WILSON_9_COMMANDERS,
+            main: decks::WILSON_9_MAIN,
+        },
+        // Seat 3934: The War Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 3934`.
+        PodDeck {
+            name: "The War Doctor and Rose Tyler (WR)",
+            commanders: decks::THE_WAR_DOCTOR_8_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_8_MAIN,
+        },
+        // Seat 3935: The Twelfth Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 3935`.
+        PodDeck {
+            name: "The Twelfth Doctor and Rose Tyler (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_14_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_14_MAIN,
+        },
+        // Seat 3936: Imoen, Mystic Trickster and Master Chef's EDHREC average deck. `--pod-decks 3936`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Master Chef (UG)",
+            commanders: decks::IMOEN_19_COMMANDERS,
+            main: decks::IMOEN_19_MAIN,
+        },
+        // Seat 3937: Imoen, Mystic Trickster and Raised by Giants's EDHREC average deck. `--pod-decks 3937`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Raised by Giants (UG)",
+            commanders: decks::IMOEN_20_COMMANDERS,
+            main: decks::IMOEN_20_MAIN,
+        },
+        // Seat 3938: Safana, Calimport Cutthroat and Master Chef's EDHREC average deck. `--pod-decks 3938`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Master Chef (BG)",
+            commanders: decks::SAFANA_15_COMMANDERS,
+            main: decks::SAFANA_15_MAIN,
+        },
     ]
 }
 
@@ -29815,6 +29893,19 @@ mod tests {
             ("Skanos Dragonheart and Passionate Archaeologist", &[0x1969]),
             ("Amber Gristle O'Maul and Haunted One", &[0x196A]),
             ("Durnan of the Yawning Portal and Veteran Soldier", &[0x196B]),
+            ("Pizza Face, Gastromancer", &[0x196C]),
+            ("Varis, Silverymoon Ranger", &[0x196D]),
+            ("Michelangelo, the Heart and Splinter, the Mentor", &[0x196E]),
+            ("Jaheira, Friend of the Forest and Dungeon Delver", &[0x196F]),
+            ("Safana, Calimport Cutthroat and Acolyte of Bahamut", &[0x1970]),
+            ("The War Doctor and Bill Potts", &[0x1971]),
+            ("Safana, Calimport Cutthroat and Raised by Giants", &[0x1972]),
+            ("Wilson, Refined Grizzly and Dungeon Delver", &[0x1973]),
+            ("The War Doctor and Rose Tyler", &[0x1974]),
+            ("The Twelfth Doctor and Rose Tyler", &[0x1975]),
+            ("Imoen, Mystic Trickster and Master Chef", &[0x1976]),
+            ("Imoen, Mystic Trickster and Raised by Giants", &[0x1977]),
+            ("Safana, Calimport Cutthroat and Master Chef", &[0x1978]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
