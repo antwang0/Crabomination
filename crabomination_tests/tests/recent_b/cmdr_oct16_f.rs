@@ -1359,3 +1359,108 @@ fn resonance_technician_copies_a_spell_of_mana_value_x() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 6, "Bolt and its copy");
 }
+
+/// Glittermonger taps for a Treasure.
+#[test]
+fn glittermonger_makes_a_treasure() {
+    let mut g = pod(2);
+    let gm = ready(&mut g, 0, catalog::glittermonger());
+    activate(&mut g, gm, 0, None).expect("treasure");
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Treasure").count(), 1);
+}
+
+/// CR 706.2 — Contact Other Plane's d20 picks the row: a 5 draws two, a 20
+/// draws three.
+#[test]
+fn contact_other_plane_reads_the_d20() {
+    for (roll, drawn) in [(5, 2), (14, 2), (20, 3)] {
+        let mut g = pod(2);
+        let c = g.add_card_to_hand(0, catalog::contact_other_plane());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(roll)]));
+        let hand = g.players[0].hand.len();
+        cast(&mut g, c, None).expect("Contact Other Plane");
+        assert_eq!(g.players[0].hand.len(), hand - 1 + drawn, "roll {roll}");
+    }
+}
+
+/// CR 725.2 — Stirring Bard takes the initiative on entry; its {T} gives a
+/// creature menace and haste.
+#[test]
+fn stirring_bard_takes_the_initiative_and_hastes() {
+    let mut g = pod(2);
+    let bard = g.add_card_to_hand(0, catalog::stirring_bard());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, bard, None).expect("Bard");
+    assert_eq!(g.initiative, Some(0));
+    g.clear_sickness(bard);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, bard, 0, Some(Target::Permanent(bear))).expect("mantle");
+    let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
+    assert!(kws.contains(&Keyword::Menace) && kws.contains(&Keyword::Haste));
+}
+
+/// CR 702.6a — Sword of Kaldra: +5/+5, and a creature the bearer damages is
+/// exiled (an indestructible blocker survives the damage, not the Sword).
+#[test]
+fn sword_of_kaldra_exiles_what_it_damages() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_kaldra());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7));
+    let myr = ready(&mut g, 1, catalog::darksteel_myr());
+    attack(&mut g, &[(bear, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(myr, bear)])).expect("block");
+    drain_stack(&mut g);
+    to_combat_damage(&mut g);
+    assert!(g.battlefield_find(myr).is_none());
+    assert!(g.exile.iter().any(|c| c.id == myr), "exiled, not just damaged");
+}
+
+/// CR 724.1 — Glorious End ends the turn (the stack is exiled with it) and you
+/// lose at the beginning of your next end step, not an opponent's.
+#[test]
+fn glorious_end_ends_the_turn_then_you_lose() {
+    let mut g = pod(3);
+    let ge = g.add_card_to_hand(0, catalog::glorious_end());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, ge, None).expect("Glorious End");
+    assert!(g.exile.iter().any(|c| c.id == ge), "ending the turn exiles it");
+    for _ in 0..60 {
+        if g.active_player_idx == 0 && g.turn_number > 1 && g.step == TurnStep::Cleanup {
+            break;
+        }
+        if g.players[0].eliminated {
+            break;
+        }
+        if let Ok(events) = g.advance_step(Vec::new()) {
+            g.dispatch_triggers_for_events(&events);
+        }
+        drain_stack(&mut g);
+        if g.active_player_idx != 0 {
+            assert!(!g.players[0].eliminated, "an opponent's end step isn't yours");
+        }
+    }
+    assert!(g.players[0].eliminated);
+}
+
+/// CR 606.3 — Ajani, Wise Counselor's +2 gains a life per creature you control.
+#[test]
+fn ajani_wise_counselor_gains_per_creature() {
+    let mut g = pod(2);
+    let ajani = g.add_card_to_battlefield(0, catalog::ajani_wise_counselor());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ajani, ability_index: 0, target: None, x_value: None }).expect("+2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+}

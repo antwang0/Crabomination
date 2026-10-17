@@ -2559,3 +2559,141 @@ pub fn resonance_technician() -> CardDefinition {
         )
     }
 }
+
+// ── batch 13 ────────────────────────────────────────────────────────────────
+
+/// Glittermonger — {3}{G} 1/4 Elf Rogue. {T}: create a Treasure.
+pub fn glittermonger() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(treasure_token()) },
+            ..Default::default()
+        }],
+        ..creature("Glittermonger", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Rogue], 1, 4)
+    }
+}
+
+/// Contact Other Plane — {3}{U} instant. Roll a d20: 1-9 draw two; 10-19
+/// scry 2 then draw two; 20 scry 3 then draw three.
+pub fn contact_other_plane() -> CardDefinition {
+    let draw = |n| Effect::Draw { who: Selector::You, amount: Value::Const(n) };
+    let scry = |n| Effect::Scry { who: PlayerRef::You, amount: Value::Const(n) };
+    CardDefinition {
+        name: "Contact Other Plane",
+        cost: cost(&[generic(3), crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::RollDie {
+            sides: 20,
+            count: Value::ONE,
+            modifier: Value::ZERO,
+            reroll_at_most: 0,
+            ignore_lowest: 0,
+            results: vec![
+                (1, 9, draw(2)),
+                (10, 19, Effect::Seq(vec![scry(2), draw(2)])),
+                (20, 20, Effect::Seq(vec![scry(3), draw(3)])),
+            ],
+            on_doubles: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Stirring Bard — {3}{R} 0/4 Dragon Bard, defender. ETB: take the
+/// initiative. {T}: target creature gains menace and haste until end of turn.
+pub fn stirring_bard() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::TakeInitiative { who: PlayerRef::You })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Menace, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Stirring Bard", cost(&[generic(3), r()]), vec![CreatureType::Dragon, CreatureType::Bard], 0, 4)
+    }
+}
+
+/// Sword of Kaldra — {4} legendary Equipment, equip {4}. +5/+5; whenever the
+/// equipped creature deals damage to a creature, exile that creature.
+pub fn sword_of_kaldra() -> CardDefinition {
+    CardDefinition {
+        name: "Sword of Kaldra",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        // The damage trigger rides on the bearer (the damaged creature binds
+        // to slot 0), the same grant Umezawa's Jitte's charge uses.
+        equipped_bonus: Some(EquipBonus {
+            power: 5,
+            toughness: 5,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
+                effect: Effect::Exile { what: Selector::Target(0) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Glorious End — {2}{R} instant. End the turn; at the beginning of your next
+/// end step, you lose the game.
+pub fn glorious_end() -> CardDefinition {
+    CardDefinition {
+        name: "Glorious End",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DelayUntil {
+                kind: crate::effect::DelayedTriggerKind::YourNextEndStep,
+                body: Box::new(Effect::LoseGame { who: PlayerRef::You }),
+            },
+            Effect::EndTheTurn,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ajani, Wise Counselor — {3}{W}{W}, loyalty 5. +2: gain 1 life per creature
+/// you control. −3: creatures you control get +2/+2 until end of turn. −9: X
+/// +1/+1 counters on target creature, X = your life total.
+pub fn ajani_wise_counselor() -> CardDefinition {
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Ajani, Wise Counselor",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Ajani], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::GainLife { who: Selector::You, amount: Value::count(team()) },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::PumpPT { what: team(), power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -9,
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::LifeOf(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -16713,6 +16713,12 @@ static DECKS: &[Factory] = &[
     super::decks::moonblade_shinobi,
     super::decks::dining_room,
     super::decks::resonance_technician,
+    super::decks::glittermonger,
+    super::decks::contact_other_plane,
+    super::decks::stirring_bard,
+    super::decks::sword_of_kaldra,
+    super::decks::glorious_end,
+    super::decks::ajani_wise_counselor,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
