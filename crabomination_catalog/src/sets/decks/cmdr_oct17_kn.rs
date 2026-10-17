@@ -530,6 +530,49 @@ pub fn bejeweled_warg() -> CardDefinition {
     }
 }
 
+// ── Higure, the Still Wind ──────────────────────────────────────────────────
+
+/// Futurist Operative — {3}{U} 3/4 Human Ninja. While tapped it's a Human
+/// Citizen with base P/T 1/1 and can't be blocked. {2}{U}: untap it.
+pub fn futurist_operative() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    let tapped = || Predicate::EntityMatches { what: Selector::This, filter: R::Tapped };
+    let while_tapped = |description, inner| StaticAbility {
+        description,
+        effect: SE::WhileCondition { condition: tapped(), inner: Box::new(inner) },
+    };
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as this creature is tapped, its base power and toughness are 1/1.",
+                effect: SE::SetBasePtIf { condition: tapped(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "As long as this creature is tapped, it can't be blocked.",
+                effect: SE::SelfHasKeywordWhilePredicate { keyword: Keyword::Unblockable, condition: tapped() },
+            },
+            while_tapped(
+                "As long as this creature is tapped, it's a Human Citizen.",
+                SE::MatchingLoseAllCreatureTypes { applies_to: Selector::This },
+            ),
+            while_tapped(
+                "As long as this creature is tapped, it's a Human Citizen.",
+                SE::AddCreatureTypeToMatching { applies_to: Selector::This, creature_type: CreatureType::Human },
+            ),
+            while_tapped(
+                "As long as this creature is tapped, it's a Human Citizen.",
+                SE::AddCreatureTypeToMatching { applies_to: Selector::This, creature_type: CreatureType::Citizen },
+            ),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+            ..Default::default()
+        }],
+        ..creature("Futurist Operative", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Ninja], 3, 4)
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

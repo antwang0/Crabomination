@@ -17111,6 +17111,7 @@ static DECKS: &[Factory] = &[
     super::decks::leonardo_leader_in_blue,
     super::decks::prehistoric_pet,
     super::decks::bejeweled_warg,
+    super::decks::futurist_operative,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

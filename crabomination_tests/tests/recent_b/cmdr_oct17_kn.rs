@@ -377,3 +377,20 @@ fn prehistoric_pet_bounces_only_on_your_turn() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
 }
+
+/// CR 613 — Futurist Operative tapped is a 1/1 unblockable Human Citizen
+/// (layers 4 and 7b); untapped it's the printed 3/4 Human Ninja.
+#[test]
+fn futurist_operative_shifts_while_tapped() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let op = ready(&mut g, 0, catalog::futurist_operative());
+    let cp = g.computed_permanent(op).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4));
+    g.battlefield_find_mut(op).unwrap().tapped = true;
+    let cp = g.computed_permanent(op).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords().contains(&Keyword::Unblockable));
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Citizen));
+    assert!(!cp.subtypes().creature_types.contains(&CreatureType::Ninja));
+}
