@@ -16756,9 +16756,7 @@ static DECKS: &[Factory] = &[
     super::decks::chronozoa,
     super::decks::gideons_memorial,
     super::decks::fire_giants_fury,
-    super::decks::dragons_disciple,
     super::decks::omnipresence,
-    super::decks::puppet_crafting,
     super::decks::novel_nunchaku,
     // cmdr_oct17_b / _c
     super::decks::forest_bear,
@@ -16825,7 +16823,6 @@ static DECKS: &[Factory] = &[
     super::decks::djerus_renunciation,
     super::decks::cruel_tutor,
     super::decks::perilous_voyage,
-    super::decks::dream_twist,
     super::decks::surgical_precision,
     super::decks::incendiary_sabotage,
     super::decks::spicy_oatmeal_pizza,

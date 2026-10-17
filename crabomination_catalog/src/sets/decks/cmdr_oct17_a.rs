@@ -5,7 +5,7 @@
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
     Keyword, LandType, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
-    Supertype, TriggeredAbility, Value, WardCost, Zone,
+    Supertype, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{backup, etb, target_any, target_filtered, token_copy_of};
 use crate::effect::{DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
@@ -733,31 +733,6 @@ pub fn fire_giants_fury() -> CardDefinition {
     }
 }
 
-/// Dragon's Disciple — {1}{W} 1/3 Human Monk. Enters with a +1/+1 counter if
-/// you reveal a Dragon card from your hand or control a Dragon. Dragons you
-/// control have ward {1}.
-pub fn dragons_disciple() -> CardDefinition {
-    let dragon = || R::HasCreatureType(CreatureType::Dragon);
-    CardDefinition {
-        as_enters_effect: Some(Effect::If {
-            cond: Predicate::Any(vec![
-                Predicate::SelectorExists(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: dragon() }),
-                Predicate::SelectorExists(Selector::ControlledBy { who: PlayerRef::You, filter: dragon() }),
-            ]),
-            then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
-            else_: Box::new(Effect::Noop),
-        }),
-        static_abilities: vec![StaticAbility {
-            description: "Dragons you control have ward {1}.",
-            effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(dragon())),
-                keyword: Keyword::Ward(WardCost::Mana(cost(&[generic(1)]))),
-            },
-        }],
-        ..creature("Dragon's Disciple", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Monk], 1, 3)
-    }
-}
-
 /// Omnipresence — {5}{G}{G}{G} Enchantment. You may cast spells with mana
 /// value at most the number of creatures you control from your hand without
 /// paying their mana costs.
@@ -769,35 +744,6 @@ pub fn omnipresence() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "You may cast spells with mana value less than or equal to the number of creatures you control from your hand without paying their mana costs.",
             effect: StaticEffect::CastFilteredSpellsFree { filter: R::ManaValueAtMostYourCount(Box::new(R::Creature)) },
-        }],
-        ..Default::default()
-    }
-}
-
-/// Puppet Crafting — {1}{G} Aura, enchant artifact or non-Aura enchantment.
-/// It's a 5/5 Construct creature in addition to its other types. {4}{G}:
-/// return this card from your graveyard to your hand.
-pub fn puppet_crafting() -> CardDefinition {
-    CardDefinition {
-        name: "Puppet Crafting",
-        cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach {
-            what: Selector::This,
-            to: target_filtered(R::Artifact.or(R::Enchantment.and(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura).negate()))),
-        },
-        equipped_bonus: Some(EquipBonus {
-            add_card_types: vec![CardType::Creature],
-            add_creature_types: vec![CreatureType::Construct],
-            set_base_pt: Some((5, 5)),
-            ..Default::default()
-        }),
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(4), g()]),
-            from_graveyard: true,
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
-            ..Default::default()
         }],
         ..Default::default()
     }

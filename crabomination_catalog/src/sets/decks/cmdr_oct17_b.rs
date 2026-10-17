@@ -895,14 +895,6 @@ pub fn perilous_voyage() -> CardDefinition {
     )
 }
 
-/// Dream Twist — {U} Instant. Target player mills three. Flashback {1}{U}.
-pub fn dream_twist() -> CardDefinition {
-    CardDefinition {
-        keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
-        ..spell("Dream Twist", cost(&[u()]), CardType::Instant, Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(3) })
-    }
-}
-
 /// Surgical Precision — {1}{W} Sorcery. Choose one: destroy target creature
 /// with toughness 4 or greater and gain 1 life; or draw a card and gain 2.
 pub fn surgical_precision() -> CardDefinition {
