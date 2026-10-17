@@ -1107,3 +1107,6 @@ pub use cmdr_oct17_u::*;
 #[path = "../../../src/sets/decks/cmdr_oct17_v.rs"]
 mod cmdr_oct17_v;
 pub use cmdr_oct17_v::*;
+#[path = "../../../src/sets/decks/cmdr_oct17_w.rs"]
+mod cmdr_oct17_w;
+pub use cmdr_oct17_w::*;
