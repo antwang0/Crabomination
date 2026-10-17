@@ -9285,6 +9285,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.zone_cast_lock(p, card_id)?;
         let pos = self
             .exile
             .iter()
@@ -14124,6 +14125,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.zone_cast_lock(p, card_id)?;
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
@@ -14397,6 +14399,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.zone_cast_lock(p, card_id)?;
         let graveyard_pos = self.players[p]
             .graveyard
             .iter()
@@ -14542,6 +14545,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.zone_cast_lock(p, card_id)?;
         let card = self.players[p]
             .graveyard
             .iter()
@@ -14637,6 +14641,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.zone_cast_lock(p, card_id)?;
         let graveyard_pos = self.players[p]
             .graveyard
             .iter()
@@ -14766,6 +14771,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.zone_cast_lock(p, card_id)?;
         let card = self
             .find_in_playable_graveyard(p, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?
@@ -14956,14 +14962,7 @@ impl GameState {
             }
         }
         // CR 101.2 — the cast locks bind a cast off a grant or an effect too.
-        if let Some(c) = self.find_card_anywhere(card_id) {
-            if self.spell_name_locked(p, c.definition.name) {
-                return Err(GameError::SpellNameLocked);
-            }
-            if let Some(e) = self.cast_lock_for(p, c, u32::MAX) {
-                return Err(e);
-            }
-        }
+        self.zone_cast_lock(p, card_id)?;
         // Lift the card out of the named zone. Owner-based zones
         // (graveyard, hand, library) walk all players to locate it.
         let mut card = match source_zone {
@@ -15535,16 +15534,11 @@ impl GameState {
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
-        let Some(card) = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id) else {
+        if self.alt_cast_source(p, zone).iter().all(|c| c.id != card_id) {
             return Err(GameError::CardNotInHand(card_id));
-        };
+        }
         // CR 101.2 — an alternative cost is still a cast: every lock binds it.
-        if self.spell_name_locked(p, card.definition.name) {
-            return Err(GameError::SpellNameLocked);
-        }
-        if let Some(e) = self.cast_lock_for(p, card, u32::MAX) {
-            return Err(e);
-        }
+        self.zone_cast_lock(p, card_id)?;
         // Validate the spell actually has an alternative cost; clone it before
         // any mutation so we don't borrow the card twice.
         let alt = self

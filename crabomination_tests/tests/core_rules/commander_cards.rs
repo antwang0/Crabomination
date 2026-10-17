@@ -2279,3 +2279,27 @@ fn cr_101_2_grid_monitor_and_meddling_mage_bind_the_commander() {
     g.remove_from_battlefield_to_graveyard_raw(mage);
     cast_commander(&mut g).expect("unlocked, it casts");
 }
+
+/// CR 101.2 — a flashback cast meets the same locks: Think Twice from the
+/// graveyard under a mana-value-2 lock is refused, and allowed once it lifts.
+#[test]
+fn cr_101_2_flashback_meets_the_mana_value_lock() {
+    let mut g = commander_game();
+    let tt = g.add_card_to_graveyard(0, catalog::think_twice());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[1].opponents_cant_cast_mv.push(2);
+    let flashback = GameAction::CastFlashback {
+        card_id: tt,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert_eq!(g.perform_action(flashback.clone()).unwrap_err(), GameError::SpellNameLocked);
+    g.players[1].opponents_cant_cast_mv.clear();
+    g.perform_action(flashback).expect("unlocked");
+}

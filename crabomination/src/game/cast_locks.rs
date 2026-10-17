@@ -5,7 +5,7 @@
 
 use super::GameState;
 use super::actions::cast_static;
-use crate::card::CardInstance;
+use crate::card::{CardId, CardInstance};
 use crate::game::GameError;
 
 impl GameState {
@@ -161,5 +161,20 @@ impl GameState {
             return Some(GameError::CantCastNoncreature);
         }
         None
+    }
+
+    /// Both checks for a cast that doesn't route through the hand path —
+    /// flashback, escape, foretell, retrace, harmonize, an alternative cost, a
+    /// may-play grant. Half-card casts (adventure, omen, split, aftermath) and
+    /// disturb cast another face and keep their own type checks.
+    pub(crate) fn zone_cast_lock(&self, p: usize, card_id: CardId) -> Result<(), GameError> {
+        let Some(card) = self.find_card_anywhere(card_id) else { return Ok(()) };
+        if self.spell_name_locked(p, card.definition.name) {
+            return Err(GameError::SpellNameLocked);
+        }
+        match self.cast_lock_for(p, card, u32::MAX) {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
     }
 }
