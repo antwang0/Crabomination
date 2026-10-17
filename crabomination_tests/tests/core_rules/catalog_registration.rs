@@ -3819,6 +3819,12 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     ("Bounty Hunter", "the cache entry is the Vanguard avatar; the catalog holds the creature"),
 ];
 
+/// CR 701.27a — any double-faced card can transform, a modal one included: a
+/// Marvel modal DFC whose front can turn itself over (Scryfall `modal_dfc`)
+/// prints a castable back face AND a transform ability. Each row is checked
+/// against the printing, not exempted.
+const MODAL_DFCS_THAT_TRANSFORM: &[&str] = &["Magik, Illyana Rasputin"];
+
 /// CR 712.1 — the catalog's transforming DFCs (`is_transforming_dfc`: an
 /// ability on either face turns the card over) and its modal DFCs must not
 /// be confused: a transforming card's back face prints no mana cost (CR
@@ -3834,7 +3840,7 @@ fn cr_712_transforming_and_modal_dfcs_are_told_apart() {
         let Some(back) = d.back_face.as_deref() else { continue };
         if d.is_transforming_dfc() {
             transforming += 1;
-            if !back.cost.symbols.is_empty() {
+            if !back.cost.symbols.is_empty() && !MODAL_DFCS_THAT_TRANSFORM.contains(&d.name) {
                 wrong.push(format!("{} // {}: transforms, yet its back face has a mana cost", d.name, back.name));
             }
         }
