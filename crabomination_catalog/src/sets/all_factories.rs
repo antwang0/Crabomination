@@ -17186,6 +17186,10 @@ static DECKS: &[Factory] = &[
     super::decks::rewrite_regrets,
     super::decks::armguard_familiar,
     super::decks::warriors_blades,
+    super::decks::veilstone_amulet,
+    super::decks::light_from_within,
+    super::decks::corpse_explosion,
+    super::decks::command_the_stage,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

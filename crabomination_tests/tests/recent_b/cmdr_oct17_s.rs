@@ -368,3 +368,86 @@ fn warriors_blades_burns_and_equips_cheaply() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (6, 5));
 }
+
+/// Veilstone Amulet: after a spell, an opponent's Bolt can't target your
+/// creature — including one that entered afterwards (a rules change, not a
+/// granted keyword); your own spells still can.
+#[test]
+fn veilstone_amulet_shields_from_opponents_only() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::veilstone_amulet());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    flood(&mut g, 0);
+    cast(&mut g, opt, None).expect("opt");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let r = g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None });
+    assert!(r.is_err(), "an opponent can't target it");
+    g.priority.player_with_priority = 0;
+    let mine = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, mine, Some(Target::Permanent(bear))).expect("its controller can");
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Light from Within (chroma): +1/+1 per {W} in each creature's own cost.
+#[test]
+fn light_from_within_counts_white_pips() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::light_from_within());
+    let knight = ready(&mut g, 0, catalog::white_knight());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let pt = |g: &GameState, id| {
+        let c = g.computed_permanent(id).unwrap();
+        (c.power, c.toughness)
+    };
+    assert_eq!(pt(&g, knight), (4, 4), "{{W}}{{W}}: +2/+2");
+    assert_eq!(pt(&g, bear), (2, 2), "no white pips");
+}
+
+/// Corpse Explosion exiles the biggest creature card as its cost and deals its
+/// power to every creature; it can't be cast with none.
+#[test]
+fn corpse_explosion_reads_the_exiled_power() {
+    let mut g = pod(2);
+    let ce = g.add_card_to_hand(0, catalog::corpse_explosion());
+    flood(&mut g, 0);
+    assert!(cast(&mut g, ce, None).is_err(), "no creature card to exile");
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let theirs = ready(&mut g, 1, catalog::hill_giant());
+    cast(&mut g, ce, None).expect("corpse explosion");
+    assert!(g.exile.iter().any(|c| c.id == giant), "the 3-power card paid");
+    assert!(g.battlefield_find(theirs).is_none(), "3 damage kills a 3/3");
+}
+
+/// Command the Stage: the second Cadet grows the first, and the card comes
+/// back at upkeep after an opponent took noncombat damage the turn before.
+#[test]
+fn command_the_stage_returns_after_noncombat_damage() {
+    let mut g = pod(2);
+    let cs = g.add_card_to_hand(0, catalog::command_the_stage());
+    flood(&mut g, 0);
+    cast(&mut g, cs, None).expect("first");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cs));
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cs), "no damage last turn: stays");
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    step_to(&mut g, 1, TurnStep::Draw);
+    assert!(g.players[0].hand.iter().any(|c| c.id == cs), "returned at the next upkeep");
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    flood(&mut g, 0);
+    cast(&mut g, cs, None).expect("second");
+    let mut cadets: Vec<i32> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Cadet")
+        .map(|c| g.computed_permanent(c.id).unwrap().power)
+        .collect();
+    cadets.sort();
+    assert_eq!(cadets, vec![2, 3]);
+}

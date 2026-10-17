@@ -4,7 +4,7 @@
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration, Predicate,
-    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value, WardCost,
+    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{draw, etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
@@ -440,5 +440,96 @@ pub fn warriors_blades() -> CardDefinition {
             Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
         ]))],
         ..Default::default()
+    }
+}
+
+/// Veilstone Amulet — {3} artifact. Whenever you cast a spell, creatures you
+/// control can't be the targets of spells or abilities your opponents control
+/// this turn.
+pub fn veilstone_amulet() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::YourCreaturesUntargetableByOpponentsThisTurn,
+        }],
+        ..spell("Veilstone Amulet", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Light from Within — {2}{W}{W} enchantment. Chroma — each creature you
+/// control gets +1/+1 for each white mana symbol in its mana cost.
+pub fn light_from_within() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Chroma — Each creature you control gets +1/+1 for each white mana symbol in its mana cost.",
+            effect: StaticEffect::PumpTeamByControlledPermanents {
+                applies_to: R::Creature,
+                count_filter: R::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_graveyard: false,
+                exclude_self: false,
+                per_own_color: false,
+                per_own_counter: None,
+                per_own_pips: Some(Color::White),
+            },
+        }],
+        ..spell("Light from Within", cost(&[generic(2), w(), w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Corpse Explosion — {1}{B}{R} sorcery. As an additional cost, exile a
+/// creature card from your graveyard; it deals damage equal to that card's
+/// power to each creature and each planeswalker.
+pub fn corpse_explosion() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyardForPower { filter: R::Creature }],
+        ..spell(
+            "Corpse Explosion",
+            cost(&[generic(1), b(), r()]),
+            CardType::Sorcery,
+            Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.or(R::Planeswalker)),
+                amount: Value::XFromCost,
+            },
+        )
+    }
+}
+
+/// Command the Stage — {2}{R} sorcery. Create a 2/2 Wizard Soldier "Cadet",
+/// then a +1/+1 counter on each other Wizard token you control. Each upkeep,
+/// if an opponent was dealt noncombat damage last turn, it returns from your
+/// graveyard to your hand.
+pub fn command_the_stage() -> CardDefinition {
+    let cadet = std::sync::Arc::new(TokenDefinition {
+        name: "Cadet".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        // Counters first, then the Cadet: "each other Wizard token".
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::FromYourGraveyardAnyPlayer)
+                .with_filter(Predicate::OpponentDealtNoncombatDamageLastTurn),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+        }],
+        ..spell(
+            "Command the Stage",
+            cost(&[generic(2), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        R::IsToken.and(R::HasCreatureType(CreatureType::Wizard)).and(R::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: cadet },
+            ]),
+        )
     }
 }
