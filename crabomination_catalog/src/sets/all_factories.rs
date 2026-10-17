@@ -1483,6 +1483,17 @@ static DECKS: &[Factory] = &[
     super::decks::lotus_ring,
     super::decks::feywild_trickster,
     super::decks::infinite_hourglass,
+    // cmdr_019y_m (session 019Y6J4R)
+    super::decks::metalhead,
+    super::decks::us_agent_john_walker,
+    super::decks::bladed_battle_fan,
+    super::decks::arnim_zola_bio_fanatic,
+    super::decks::liliana_death_mage,
+    super::decks::tragic_lesson,
+    super::decks::assimilate_essence,
+    super::decks::spring_cleaning,
+    super::decks::flaring_cinder,
+    super::decks::arcane_investigator,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
