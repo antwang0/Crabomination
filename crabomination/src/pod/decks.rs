@@ -98627,3 +98627,32 @@ pub const BILBO_BAGGINS_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island,
 ];
+
+pub const J_JONAH_JAMESON_COMMANDERS: &[CardFactory] = &[j_jonah_jameson];
+
+/// **J. Jonah Jameson**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// J. Jonah Jameson (EDHREC, fetched 2026-10-17).
+pub const J_JONAH_JAMESON_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, cursed_mirror, idol_of_oblivion, lightning_greaves,
+    ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal, the_reaver_cleaver,
+    arena_of_glory, castle_embereth, daily_bugle_building, mines_of_moria, rogues_passage,
+    war_room, academy_manufactor, avalanche_of_sector_7, broadside_bombardiers,
+    burnout_bashtronaut, crime_novelist, frantic_scapegoat, frontier_warmonger,
+    generous_plunderer, ghost_spider_gwen_stacy, goldhound, goldspan_dragon,
+    gut_true_soul_zealot, hellkite_tyrant, ingenious_artillerist, insolent_neonate,
+    irreverent_gremlin, kari_zev_skyship_raider, knuckles_the_echidna, komainu_battle_armor,
+    lightning_security_sergeant, magda_the_hoardmaster, pain_distributor,
+    professional_face_breaker, reckless_fireweaver, rotisserie_elemental, star_athlete,
+    the_mary_janes, veronica_dissident_scribe, vincent_vengeful_atoner, weftstalker_ardent,
+    xorn, zhao_the_moon_slayer, aggravated_assault, alchemists_talent, convenient_target,
+    daring_piracy, goblin_war_drums, rain_of_riches, sticky_fingers, abrade, big_score,
+    chaos_warp, demand_answers, great_train_heist, thrill_of_possibility, unexpected_windfall,
+    untimely_malfunction, blasphemous_act, disrupt_decorum, faithless_looting, full_throttle,
+    jeskas_will, seize_the_spoils, tentative_connection, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

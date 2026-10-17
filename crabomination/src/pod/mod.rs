@@ -21558,6 +21558,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BILBO_BAGGINS_COMMANDERS,
             main: decks::BILBO_BAGGINS_MAIN,
         },
+        // Seat 3518: J. Jonah Jameson's EDHREC average deck. `--pod-decks 3518`.
+        PodDeck {
+            name: "J. Jonah Jameson (R)",
+            commanders: decks::J_JONAH_JAMESON_COMMANDERS,
+            main: decks::J_JONAH_JAMESON_MAIN,
+        },
     ]
 }
 
@@ -26959,6 +26965,7 @@ mod tests {
             ("Bilbo, Retired Burglar", &[0x17D1]),
             ("Zurgo Bellstriker", &[0x17D2]),
             ("Bilbo Baggins, Burglar", &[0x17D3]),
+            ("J. Jonah Jameson", &[0x17D4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
