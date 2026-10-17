@@ -573,6 +573,23 @@ pub fn futurist_operative() -> CardDefinition {
     }
 }
 
+// ── Unesh / Zhuge Jin / The Ur-Sphinx ───────────────────────────────────────
+
+/// Sphinx Ambassador — {5}{U}{U} 5/5 Sphinx, flying. Combat damage to a player:
+/// search their library for a card; they name a card; a creature card without
+/// that name may enter under your control; they shuffle.
+pub fn sphinx_ambassador() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            // Combat binds the damaged player to slot 0.
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::SearchTheirLibraryAgainstNamedCard { who: PlayerRef::Target(0) },
+        }],
+        ..creature("Sphinx Ambassador", cost(&[generic(5), u(), u()]), vec![CreatureType::Sphinx], 5, 5)
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

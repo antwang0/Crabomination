@@ -394,3 +394,42 @@ fn futurist_operative_shifts_while_tapped() {
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Citizen));
     assert!(!cp.subtypes().creature_types.contains(&CreatureType::Ninja));
 }
+
+fn hit_player(g: &mut GameState, attacker: CardId, defender: usize) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(defender) }]))
+        .expect("attack");
+    drain_stack(g);
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// Sphinx Ambassador takes the searched creature only when the player it hit
+/// names a different card: over the two creature names on that ballot exactly
+/// one answer lets the Hill Giant go, and nobody else's library is touched.
+#[test]
+fn sphinx_ambassador_steals_an_unnamed_creature() {
+    let mut steals = 0;
+    for pick in 0..2 {
+        let mut g = pod(3);
+        let sphinx = ready(&mut g, 0, catalog::sphinx_ambassador());
+        let giant = g.add_card_to_library(2, catalog::hill_giant());
+        g.add_card_to_library(2, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Cards(vec![giant]),
+            DecisionAnswer::Amount(pick),
+            DecisionAnswer::Bool(true),
+        ]));
+        hit_player(&mut g, sphinx, 2);
+        if g.battlefield_find(giant).is_some_and(|c| c.controller == 0) {
+            steals += 1;
+        } else {
+            assert!(g.players[2].library.iter().any(|c| c.id == giant), "named: stays, shuffled in");
+        }
+        assert_eq!(g.players[1].library.len(), 10, "seat 1 untouched");
+    }
+    assert_eq!(steals, 1);
+}
