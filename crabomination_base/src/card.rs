@@ -3151,6 +3151,9 @@ pub enum SelectionRequirement {
     /// The graveyard sibling: a permanent cast from a graveyard on its way to
     /// the battlefield (Rocket-Powered Goblin Glider's mayhem attach).
     WasCastFromGraveyard,
+    /// The exile sibling: a permanent cast from exile on its way to the
+    /// battlefield (Extraordinary Journey's "or was cast from exile").
+    WasCastFromExile,
     /// The card shares a card type with a card exiled by the evaluating
     /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
     SharesCardTypeWithExiledBySource,

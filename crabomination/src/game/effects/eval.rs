@@ -6215,6 +6215,7 @@ impl GameState {
                     R::WasCastFromHand => !card.is_token && card.cast_from_hand,
                     R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
                     R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
+                    R::WasCastFromExile => !card.is_token && card.cast_from_exile,
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
                     // CR 613 — **every** P/T leaf below reads the *computed*
@@ -7456,6 +7457,7 @@ impl GameState {
             R::WasCastFromHand => !card.is_token && card.cast_from_hand,
             R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
             R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
+            R::WasCastFromExile => !card.is_token && card.cast_from_exile,
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,
