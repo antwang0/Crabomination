@@ -194,29 +194,6 @@ pub fn call_to_heel() -> CardDefinition {
     }
 }
 
-/// Candlekeep Inspiration — {4}{U} Sorcery. Until end of turn, creatures you
-/// control have base P/T X/X, X = cards you own in exile and in your
-/// graveyard that are instants, sorceries, and/or have an Adventure.
-pub fn candlekeep_inspiration() -> CardDefinition {
-    let spellish = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).or(R::HasAdventure);
-    let x = Value::Sum(vec![
-        Value::count(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Exile, filter: spellish() }),
-        Value::count(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: spellish() }),
-    ]);
-    CardDefinition {
-        name: "Candlekeep Inspiration",
-        cost: cost(&[generic(4), u()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::SetBasePT {
-            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-            power: x.clone(),
-            toughness: x,
-            duration: Duration::EndOfTurn,
-        },
-        ..Default::default()
-    }
-}
-
 /// Chandra, Bold Pyromancer — {4}{R}{R}, loyalty 5. +1: add {R}{R}, 2 damage
 /// to target player. −3: 3 damage to target creature or planeswalker. −7: 10
 /// damage to target player and each creature and planeswalker they control.
@@ -779,23 +756,6 @@ pub fn dragons_disciple() -> CardDefinition {
         }],
         ..creature("Dragon's Disciple", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Monk], 1, 3)
     }
-}
-
-/// Captain's Hook — {3} Equipment, equip {1}. +2/+0, menace, and a Pirate;
-/// whenever it becomes unattached from a permanent, destroy that permanent.
-pub fn captains_hook() -> CardDefinition {
-    equipment(
-        "Captain's Hook",
-        cost(&[generic(3)]),
-        cost(&[generic(1)]),
-        EquipBonus {
-            power: 2,
-            keywords: vec![Keyword::Menace],
-            add_creature_types: vec![CreatureType::Pirate],
-            destroy_host_when_unattached: true,
-            ..Default::default()
-        },
-    )
 }
 
 /// Omnipresence — {5}{G}{G}{G} Enchantment. You may cast spells with mana
