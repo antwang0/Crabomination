@@ -29768,6 +29768,22 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::CopyCardsAndCastFreeTotalMv { what, total } => {
+                let mut left = self.evaluate_value(total, ctx).max(0) as u32;
+                let mut ids: Vec<(u32, CardId)> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .filter_map(|id| self.find_card_anywhere(id).map(|c| (c.definition.cost.cmc(), id)))
+                    .collect();
+                ids.sort_by_key(|&(mv, id)| (std::cmp::Reverse(mv), id));
+                for (mv, id) in ids {
+                    if mv <= left && self.copy_card_and_cast_free(id, ctx, events) {
+                        left -= mv;
+                    }
+                }
+                Ok(())
+            }
             Effect::CopyCardAndCastFree { what } => {
                 // Reenact the Crime — copy the card wherever it now is and
                 // offer the copy as a free cast (CR 707.12).

@@ -7121,6 +7121,11 @@ pub enum Effect {
     /// as a `CopyCardAndCastFree`, priciest first, until `max` copies were
     /// cast; the uncast copies cease to exist (CR 707.12).
     CopyCardsAndCastFreeUpTo { what: Selector, max: u32 },
+    /// "Copy those cards. You may cast any number of spells with total mana
+    /// value `total` or less from among the copies without paying their mana
+    /// costs" (Uldaros Theorix): priciest first, each copy offered while its
+    /// mana value still fits what is left.
+    CopyCardsAndCastFreeTotalMv { what: Selector, total: Value },
     /// Imprint payoff: turn the card exiled face down with this source face up
     /// and, if it's a creature card, put it onto the battlefield under the
     /// source's controller (Summoner's Egg). Non-creature cards stay exiled

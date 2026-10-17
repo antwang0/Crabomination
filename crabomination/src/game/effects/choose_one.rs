@@ -25,6 +25,7 @@ fn pick_is_gain(e: &Effect) -> bool {
         | Effect::CastWithoutPayingImmediate { .. }
         | Effect::CopyCardAndCastFree { .. }
         | Effect::CopyCardsAndCastFreeUpTo { .. }
+        | Effect::CopyCardsAndCastFreeTotalMv { .. }
         | Effect::CastImmediateForLife { .. }
         | Effect::CastImmediateAnyManaType { .. } => true,
         // The pick is the model the rest copy (Sakashima's Will): the best one.
