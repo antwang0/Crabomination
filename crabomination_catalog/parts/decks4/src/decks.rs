@@ -21,6 +21,9 @@ pub use cmdr_019y_f::*;
 #[path = "../../../src/sets/decks/cmdr_019y_g.rs"]
 mod cmdr_019y_g;
 pub use cmdr_019y_g::*;
+#[path = "../../../src/sets/decks/cmdr_019y_h.rs"]
+mod cmdr_019y_h;
+pub use cmdr_019y_h::*;
 #[path = "../../../src/sets/decks/recent216.rs"]
 mod recent216;
 pub use recent216::*;
