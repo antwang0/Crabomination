@@ -23598,6 +23598,138 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KEDISS_11_COMMANDERS,
             main: decks::KEDISS_11_MAIN,
         },
+        // Seat 3858: Slinn Voda, the Rising Deep's EDHREC average deck. `--pod-decks 3858`.
+        PodDeck {
+            name: "Slinn Voda, the Rising Deep (U)",
+            commanders: decks::SLINN_VODA_COMMANDERS,
+            main: decks::SLINN_VODA_MAIN,
+        },
+        // Seat 3859: Rilsa Rael, Kingpin's EDHREC average deck. `--pod-decks 3859`.
+        PodDeck {
+            name: "Rilsa Rael, Kingpin (UB)",
+            commanders: decks::RILSA_RAEL_COMMANDERS,
+            main: decks::RILSA_RAEL_MAIN,
+        },
+        // Seat 3860: Akroma, Vision of Ixidor and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3860`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Rograkh, Son of Rohgahh (WR)",
+            commanders: decks::AKROMA_13_COMMANDERS,
+            main: decks::AKROMA_13_MAIN,
+        },
+        // Seat 3861: Akroma, Vision of Ixidor and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 3861`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Falthis, Shadowcat Familiar (WB)",
+            commanders: decks::AKROMA_14_COMMANDERS,
+            main: decks::AKROMA_14_MAIN,
+        },
+        // Seat 3862: Imoen, Mystic Trickster and Haunted One's EDHREC average deck. `--pod-decks 3862`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Haunted One (UB)",
+            commanders: decks::IMOEN_14_COMMANDERS,
+            main: decks::IMOEN_14_MAIN,
+        },
+        // Seat 3863: The Second Doctor and Amy Pond's EDHREC average deck. `--pod-decks 3863`.
+        PodDeck {
+            name: "The Second Doctor and Amy Pond (WUR)",
+            commanders: decks::THE_SECOND_DOCTOR_6_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_6_MAIN,
+        },
+        // Seat 3864: Ishai, Ojutai Dragonspeaker and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 3864`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Miara, Thorn of the Glade (WUB)",
+            commanders: decks::ISHAI_8_COMMANDERS,
+            main: decks::ISHAI_8_MAIN,
+        },
+        // Seat 3865: Nadier, Agent of the Duskenel and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3865`.
+        PodDeck {
+            name: "Nadier, Agent of the Duskenel and Rograkh, Son of Rohgahh (BR)",
+            commanders: decks::NADIER_8_COMMANDERS,
+            main: decks::NADIER_8_MAIN,
+        },
+        // Seat 3866: The Twelfth Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 3866`.
+        PodDeck {
+            name: "The Twelfth Doctor and Adric, Mathematical Genius (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_12_MAIN,
+        },
+        // Seat 3867: Rasaad yn Bashir and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 3867`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Agent of the Shadow Thieves (WB)",
+            commanders: decks::RASAAD_YN_BASHIR_17_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_17_MAIN,
+        },
+        // Seat 3868: The Twelfth Doctor and Sarah Jane Smith's EDHREC average deck. `--pod-decks 3868`.
+        PodDeck {
+            name: "The Twelfth Doctor and Sarah Jane Smith (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_13_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_13_MAIN,
+        },
+        // Seat 3869: Rasaad yn Bashir and Cultist of the Absolute's EDHREC average deck. `--pod-decks 3869`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Cultist of the Absolute (WB)",
+            commanders: decks::RASAAD_YN_BASHIR_18_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_18_MAIN,
+        },
+        // Seat 3870: Safana, Calimport Cutthroat and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3870`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Passionate Archaeologist (BR)",
+            commanders: decks::SAFANA_COMMANDERS,
+            main: decks::SAFANA_MAIN,
+        },
+        // Seat 3871: Safana, Calimport Cutthroat and Dragon Cultist's EDHREC average deck. `--pod-decks 3871`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Dragon Cultist (BR)",
+            commanders: decks::SAFANA_2_COMMANDERS,
+            main: decks::SAFANA_2_MAIN,
+        },
+        // Seat 3872: Safana, Calimport Cutthroat and Dungeon Delver's EDHREC average deck. `--pod-decks 3872`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Dungeon Delver (UB)",
+            commanders: decks::SAFANA_3_COMMANDERS,
+            main: decks::SAFANA_3_MAIN,
+        },
+        // Seat 3873: Safana, Calimport Cutthroat and Guild Artisan's EDHREC average deck. `--pod-decks 3873`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Guild Artisan (BR)",
+            commanders: decks::SAFANA_4_COMMANDERS,
+            main: decks::SAFANA_4_MAIN,
+        },
+        // Seat 3874: Imoen, Mystic Trickster and Scion of Halaster's EDHREC average deck. `--pod-decks 3874`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Scion of Halaster (UB)",
+            commanders: decks::IMOEN_15_COMMANDERS,
+            main: decks::IMOEN_15_MAIN,
+        },
+        // Seat 3875: Safana, Calimport Cutthroat and Clan Crafter's EDHREC average deck. `--pod-decks 3875`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Clan Crafter (UB)",
+            commanders: decks::SAFANA_5_COMMANDERS,
+            main: decks::SAFANA_5_MAIN,
+        },
+        // Seat 3876: Safana, Calimport Cutthroat and Street Urchin's EDHREC average deck. `--pod-decks 3876`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Street Urchin (BR)",
+            commanders: decks::SAFANA_6_COMMANDERS,
+            main: decks::SAFANA_6_MAIN,
+        },
+        // Seat 3877: Safana, Calimport Cutthroat and Folk Hero's EDHREC average deck. `--pod-decks 3877`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Folk Hero (WB)",
+            commanders: decks::SAFANA_7_COMMANDERS,
+            main: decks::SAFANA_7_MAIN,
+        },
+        // Seat 3878: Imoen, Mystic Trickster and Cultist of the Absolute's EDHREC average deck. `--pod-decks 3878`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Cultist of the Absolute (UB)",
+            commanders: decks::IMOEN_16_COMMANDERS,
+            main: decks::IMOEN_16_MAIN,
+        },
+        // Seat 3879: Safana, Calimport Cutthroat and Flaming Fist's EDHREC average deck. `--pod-decks 3879`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Flaming Fist (WB)",
+            commanders: decks::SAFANA_8_COMMANDERS,
+            main: decks::SAFANA_8_MAIN,
+        },
     ]
 }
 
@@ -29339,6 +29471,28 @@ mod tests {
             ("Vhal, Candlekeep Researcher and Shameless Charlatan", &[0x1925]),
             ("Katerina of Myra's Marvels and Tevesh Szat, Doom of Fools", &[0x1926]),
             ("Kediss, Emberclaw Familiar and Miara, Thorn of the Glade", &[0x1927]),
+            ("Slinn Voda, the Rising Deep", &[0x1928]),
+            ("Rilsa Rael, Kingpin", &[0x1929]),
+            ("Akroma, Vision of Ixidor and Rograkh, Son of Rohgahh", &[0x192A]),
+            ("Akroma, Vision of Ixidor and Falthis, Shadowcat Familiar", &[0x192B]),
+            ("Imoen, Mystic Trickster and Haunted One", &[0x192C]),
+            ("The Second Doctor and Amy Pond", &[0x192D]),
+            ("Ishai, Ojutai Dragonspeaker and Miara, Thorn of the Glade", &[0x192E]),
+            ("Nadier, Agent of the Duskenel and Rograkh, Son of Rohgahh", &[0x192F]),
+            ("The Twelfth Doctor and Adric, Mathematical Genius", &[0x1930]),
+            ("Rasaad yn Bashir and Agent of the Shadow Thieves", &[0x1931]),
+            ("The Twelfth Doctor and Sarah Jane Smith", &[0x1932]),
+            ("Rasaad yn Bashir and Cultist of the Absolute", &[0x1933]),
+            ("Safana, Calimport Cutthroat and Passionate Archaeologist", &[0x1934]),
+            ("Safana, Calimport Cutthroat and Dragon Cultist", &[0x1935]),
+            ("Safana, Calimport Cutthroat and Dungeon Delver", &[0x1936]),
+            ("Safana, Calimport Cutthroat and Guild Artisan", &[0x1937]),
+            ("Imoen, Mystic Trickster and Scion of Halaster", &[0x1938]),
+            ("Safana, Calimport Cutthroat and Clan Crafter", &[0x1939]),
+            ("Safana, Calimport Cutthroat and Street Urchin", &[0x193A]),
+            ("Safana, Calimport Cutthroat and Folk Hero", &[0x193B]),
+            ("Imoen, Mystic Trickster and Cultist of the Absolute", &[0x193C]),
+            ("Safana, Calimport Cutthroat and Flaming Fist", &[0x193D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
