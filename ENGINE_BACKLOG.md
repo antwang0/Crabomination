@@ -208,6 +208,10 @@ the handoff.
   revealed outside-game cards — a no-op in Commander, CR 903.11); combat damage to a **battle** has no
   `EventKind` (Rankle and Torbran joins Beamtown Beatstick's INCOMPLETE_CARDS row). Veiling Oddity (no "last time counter removed while exiled" event). Not attempted: Invasion of
   New Phyrexia, Teferi's Talent, Wizard's Spellbook, Beamsplitter Mage, Cryptic Spires.
+- **OPEN (bot):** a two-slot "any target and any other target" trigger (The Brothers' War III) had the
+  auto-picker aim slot 1 at its own controller in a 2-seat test once slot 0 took the opponent — the
+  "a hostile slot never falls back onto the caster's own face" guard in `auto_targets_for_effect_all_slots_x`
+  didn't hold on the saga-chapter path. The card test resolves III with named targets.
 - ⚠ **Myra's Marvels partners (Nocturno, Ignacio, Hardy, Fluros) are not Commander-legal** — the pair scan's
   biggest "blockers" (61 pair decks) can never seat. Several other one-gap commanders are Unfinity / acorn too
   (Sahir, Claire D'Loon, D00-DL, Brad Boimler, Devil K. Nevil, Truss, Solaflora, Tolabow, Rusko, Itazura) —

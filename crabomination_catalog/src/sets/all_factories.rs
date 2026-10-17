@@ -1423,6 +1423,15 @@ static DECKS: &[Factory] = &[
     super::decks::timebender,
     super::decks::soldevi_excavations,
     super::decks::glissa_herald_of_predation,
+    // cmdr_019y_i (session 019Y6J4R)
+    super::decks::the_brothers_war,
+    super::decks::overwhelming_encounter,
+    super::decks::basri_devoted_paladin,
+    super::decks::hold_for_ransom,
+    super::decks::renowned_weaponsmith,
+    super::decks::herdchaser_dragon,
+    super::decks::lurking_green_dragon,
+    super::decks::spare_supplies,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
