@@ -513,14 +513,6 @@ pub fn experimental_aviator() -> CardDefinition {
     }
 }
 
-/// Glittermonger — {3}{G} 1/4 Elf Rogue. {T}: create a Treasure.
-pub fn glittermonger() -> CardDefinition {
-    CardDefinition {
-        activated_abilities: vec![ActivatedAbility { tap_cost: true, effect: mint_treasures(1), ..Default::default() }],
-        ..creature("Glittermonger", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Rogue], 1, 4)
-    }
-}
-
 /// Stark Industries Executive — {R} 1/2 Human Advisor. {2}, {T}: create a
 /// Treasure.
 pub fn stark_industries_executive() -> CardDefinition {

@@ -601,41 +601,6 @@ pub fn huatli_radiant_champion() -> CardDefinition {
     }
 }
 
-/// Ajani, Wise Counselor — {3}{W}{W}, loyalty 5. +2: gain 1 life per creature
-/// you control. −3: creatures you control get +2/+2. −9: X +1/+1 counters on
-/// target creature (X = your life total).
-pub fn ajani_wise_counselor() -> CardDefinition {
-    CardDefinition {
-        name: "Ajani, Wise Counselor",
-        cost: cost(&[generic(3), w(), w()]),
-        supertypes: vec![Supertype::Legendary],
-        card_types: vec![CardType::Planeswalker],
-        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani], ..Default::default() },
-        base_loyalty: 5,
-        loyalty_abilities: vec![
-            loyalty(2, Effect::GainLife { who: Selector::You, amount: your_creatures() }),
-            loyalty(
-                -3,
-                Effect::PumpPT {
-                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                    power: Value::Const(2),
-                    toughness: Value::Const(2),
-                    duration: Duration::EndOfTurn,
-                },
-            ),
-            loyalty(
-                -9,
-                Effect::AddCounter {
-                    what: target_filtered(R::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::LifeOf(PlayerRef::You),
-                },
-            ),
-        ],
-        ..Default::default()
-    }
-}
-
 /// Last Chance — {R}{R} Sorcery. Take an extra turn after this one; at the
 /// beginning of that turn's end step, you lose the game.
 pub fn last_chance() -> CardDefinition {
