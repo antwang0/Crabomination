@@ -9,9 +9,10 @@ use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
 impl GameState {
-    /// `Effect::Parade` — every pick is asked first (a suspended seat replays
-    /// them), then the line is pumped. Headless, the smallest creature goes
-    /// first so the biggest bonus lands on the biggest body.
+    /// `Effect::Parade` — one ask, its pick order the line (a re-asked
+    /// pick per creature replayed wrong after a seat suspended); creatures
+    /// left unpicked join the end. Headless, the smallest goes first so the
+    /// biggest bonus lands on the biggest body.
     pub(super) fn parade(&mut self, effect: &Effect, ctx: &EffectContext, events: &mut Vec<GameEvent>) -> Result<(), GameError> {
         let me = ctx.controller;
         let mut left: Vec<(CardId, i32, String)> = self
@@ -23,24 +24,28 @@ impl GameState {
                 (c.id, power, c.definition.name.to_string())
             })
             .collect();
+        if left.len() < 2 {
+            return Ok(());
+        }
         left.sort_by_key(|(id, p, _)| (*p, *id));
-        let mut line = Vec::with_capacity(left.len());
-        while let Some(&(first, ..)) = left.first() {
-            let Some(picked) = self.choose_up_to_cards(
-                me,
-                format!("Parade: which creature is number {}?", line.len() + 1),
-                ctx.source.unwrap_or(CardId(0)),
-                left.iter().map(|(id, _, n)| (*id, n.clone())).collect(),
-                1,
-                PickValue::Gain,
-                effect,
-                vec![first],
-            ) else {
-                return Ok(());
-            };
-            let pick = picked.into_iter().find(|id| left.iter().any(|(c, ..)| c == id)).unwrap_or(first);
-            left.retain(|(c, ..)| *c != pick);
-            line.push(pick);
+        let by_power: Vec<CardId> = left.iter().map(|(id, ..)| *id).collect();
+        let Some(picked) = self.choose_up_to_cards(
+            me,
+            "Parade: line your creatures up, first to last".to_string(),
+            ctx.source.unwrap_or(CardId(0)),
+            left.iter().map(|(id, _, n)| (*id, n.clone())).collect(),
+            left.len() as u32,
+            PickValue::Gain,
+            effect,
+            by_power.clone(),
+        ) else {
+            return Ok(());
+        };
+        let mut line: Vec<CardId> = Vec::with_capacity(by_power.len());
+        for id in picked.into_iter().chain(by_power) {
+            if left.iter().any(|(c, ..)| *c == id) && !line.contains(&id) {
+                line.push(id);
+            }
         }
         for (before, id) in line.into_iter().enumerate().skip(1) {
             let n = Value::Const(before as i32);
