@@ -4780,6 +4780,17 @@ impl GameState {
             .map(|c| c.definition.cost.cmc())
     }
 
+    /// CR 201.2 — `card` has the trigger subject's name (last known for a
+    /// subject that left its zone). An empty name is no name and matches
+    /// nothing.
+    pub(crate) fn trigger_subject_shares_name(&self, card: &crate::card::CardInstance) -> bool {
+        let Some(id) = self.scratch.trigger_subject else { return false };
+        self.find_card_anywhere(id)
+            .or_else(|| self.died_card_snapshots.get(&id))
+            .or_else(|| self.leaves_bf_lki.get(&id))
+            .is_some_and(|s| !s.definition.name.is_empty() && s.definition.name == card.definition.name)
+    }
+
     pub(crate) fn trigger_subject_toughness(&self) -> Option<i32> {
         let id = self.scratch.trigger_subject?;
         if let Some(cp) = self.computed_permanent(id) {
@@ -5340,6 +5351,7 @@ impl GameState {
             R::ManaValueEqualsTriggerSubject => {
                 Some(self.trigger_subject_mana_value().is_some_and(|s| card.definition.cost.cmc() == s))
             }
+            R::SameNameAsTriggerSubject => Some(self.trigger_subject_shares_name(card)),
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
             R::FoughtThisTurn => Some(self.turn.fought_this_turn.contains(&cid)),
@@ -6839,6 +6851,9 @@ impl GameState {
                         .find_card_anywhere(*cid)
                         .zip(self.trigger_subject_mana_value())
                         .is_some_and(|(c, s)| c.definition.cost.cmc() == s),
+                    R::SameNameAsTriggerSubject => {
+                        self.find_card_anywhere(*cid).is_some_and(|c| self.trigger_subject_shares_name(c))
+                    }
                     // CR 601.2c — "**another** target": the battlefield walker
                     // reads the same stamp the cast/activation validator
                     // leaves, so the UI's candidate list and the picker agree
@@ -7852,6 +7867,7 @@ impl GameState {
             R::ManaValueEqualsTriggerSubject => {
                 self.trigger_subject_mana_value().is_some_and(|s| card.definition.cost.cmc() == s)
             }
+            R::SameNameAsTriggerSubject => self.trigger_subject_shares_name(card),
             // Source-less path: no `chosen_permanent` slot to consult.
             R::NotSourcesChosenPermanent => true,
             // A card in another zone is never the battlefield source.

@@ -17834,6 +17834,12 @@ impl GameState {
             let auto_target = if !std::ptr::eq(view, &effect) && !view.requires_target() {
                 None
             } else {
+                // "Target card with the same name as that spell" (Harness the
+                // Storm) reads the cast spell as the trigger's subject.
+                self.stamp_trigger_subject(
+                    view.primary_target_filter(),
+                    Some(crate::game::effects::EntityRef::Card(cast_card)),
+                );
                 self.auto_target_for_effect_avoiding(view, listener_controller, Some(source))
             };
             // CR 603.3d — a cast trigger with more than one target slot (Ms.

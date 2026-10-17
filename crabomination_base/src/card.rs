@@ -4029,6 +4029,10 @@ pub enum SelectionRequirement {
     /// creature you don't control with the same mana value" (Boxing Ring).
     /// Same stamp as `OtherThanTriggerSubject`.
     ManaValueEqualsTriggerSubject,
+    /// Shares a name with the trigger's subject — "target card with the same
+    /// name as that spell" (Harness the Storm). Same stamp as
+    /// `OtherThanTriggerSubject`; a nameless subject matches nothing.
+    SameNameAsTriggerSubject,
     /// Excludes the permanent stamped on the source's `chosen_permanent` slot
     /// — the "creatures other than this and the chosen creature" half of an
     /// ETB choose-a-creature rider (Zenos yae Galvus).
@@ -4731,7 +4735,8 @@ impl SelectionRequirement {
         match self {
             Self::OtherThanTriggerSubject
             | Self::ToughnessLessThanTriggerSubject
-            | Self::ManaValueEqualsTriggerSubject => true,
+            | Self::ManaValueEqualsTriggerSubject
+            | Self::SameNameAsTriggerSubject => true,
             Self::And(a, b) | Self::Or(a, b) => a.mentions_trigger_subject() || b.mentions_trigger_subject(),
             Self::Not(a) => a.mentions_trigger_subject(),
             _ => false,
