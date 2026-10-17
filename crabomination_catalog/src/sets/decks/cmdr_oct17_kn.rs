@@ -1739,13 +1739,14 @@ pub fn shackles_of_treachery() -> CardDefinition {
 
 /// Hostile Hostel // Creeping Inn — Land. {T}: add {C}. {1}, {T}, sacrifice a
 /// creature: a soul counter; at three, remove them, transform it, untap it
-/// (sorcery speed). Back: 3/7 artifact Horror Construct; attacking, it may
+/// (sorcery speed). Back: black (color indicator) 3/7 artifact Horror Construct; attacking, it may
 /// exile a creature card from your graveyard — if it does, each opponent loses
 /// X and you gain X, X the creature cards exiled with it. {4}: it phases out.
 pub fn hostile_hostel() -> CardDefinition {
     let x = || Value::CardsExiledWithSourceCount;
     let inn = CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
+        color_indicator: vec![Color::Black],
         triggered_abilities: vec![on_attack(Effect::MayExileFromYourGraveyard {
             filter: R::Creature,
             max: Some(1),
