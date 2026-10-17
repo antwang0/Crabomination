@@ -780,3 +780,61 @@ fn kumano_faces_kakkazan_pings_each_opponent() {
     assert_eq!(g.players[1].life, life[1] - 1);
     assert_eq!(g.players[2].life, life[2] - 1);
 }
+
+/// Kicked In Thrall to the Pit sacrifices the stolen creature at the end step.
+#[test]
+fn in_thrall_to_the_pit_kicked_sacrifices_at_end_step() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let s = g.add_card_to_hand(0, catalog::in_thrall_to_the_pit());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: s,
+        target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 0);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(g.battlefield_find(wurm).is_none(), "sacrificed at our end step");
+}
+
+/// Draining Whelk counters a spell and grows by its mana value.
+#[test]
+fn draining_whelk_counters_and_grows() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.players[1].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("wurm");
+    let w = g.add_card_to_hand(0, catalog::draining_whelk());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: w, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("flash Whelk");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == wurm), "countered");
+    assert_eq!(g.battlefield_find(w).unwrap().counter_count(CounterType::PlusOnePlusOne), 6);
+}
+
+/// Predatory Advantage: a Lizard at the end step of an opponent who cast no
+/// creature spell, none on our own turn.
+#[test]
+fn predatory_advantage_punishes_a_creatureless_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::predatory_advantage());
+    let lizards = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Lizard").count();
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert_eq!(lizards(&g), 0, "not on our end step");
+    step_to(&mut g, 0, TurnStep::Upkeep);
+    assert_eq!(lizards(&g), 1, "seat 1 cast no creature");
+}

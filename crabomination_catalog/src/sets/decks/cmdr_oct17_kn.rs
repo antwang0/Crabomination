@@ -1186,6 +1186,199 @@ pub fn kumano_faces_kakkazan() -> CardDefinition {
     }
 }
 
+/// Jace's Scrutiny — {1}{U} Instant. Target creature gets -4/-0 until end of
+/// turn. Investigate.
+pub fn jaces_scrutiny() -> CardDefinition {
+    spell(
+        "Jace's Scrutiny",
+        cost(&[generic(1), u()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-4),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            crate::effect::shortcut::investigate_by(PlayerRef::You, Value::ONE),
+        ]),
+    )
+}
+
+/// Manaplasm — {2}{G} 1/1 Ooze. Whenever you cast a spell, +X/+X until end of
+/// turn, X its mana value.
+pub fn manaplasm() -> CardDefinition {
+    let mv = || Value::ManaValueOf(Box::new(Selector::TriggerSource));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::PumpPT { what: Selector::This, power: mv(), toughness: mv(), duration: Duration::EndOfTurn },
+        }],
+        ..creature("Manaplasm", cost(&[generic(2), g()]), vec![CreatureType::Ooze], 1, 1)
+    }
+}
+
+/// In Thrall to the Pit — {3}{R} Sorcery, kicker {2}{B}. Threaten target
+/// creature; kicked, sacrifice it at the beginning of the next end step.
+pub fn in_thrall_to_the_pit() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), b()]))],
+        ..spell(
+            "In Thrall to the Pit",
+            cost(&[generic(3), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+                grant(Selector::Target(0), Keyword::Haste),
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::DelayUntilWithCapture {
+                        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                        capture: Selector::Target(0),
+                        body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Too Evil to Stay Dead — {2}{B} Sorcery, teamwork 4 (tap creatures with
+/// total power 4+). Return target creature card with mana value 4 or less from
+/// your graveyard to the battlefield; with teamwork, any creature card.
+pub fn too_evil_to_stay_dead() -> CardDefinition {
+    let back = |filter: R| Effect::Move {
+        what: target_filtered(R::Creature.and(R::InYourGraveyard).and(filter)),
+        to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    CardDefinition {
+        kicker_action_cost: Some(AdditionalCastCost::TapTotalPower { filter: R::Creature.and(R::ControlledByYou), power: 4 }),
+        ..spell(
+            "Too Evil to Stay Dead",
+            cost(&[generic(2), b()]),
+            CardType::Sorcery,
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(back(R::Any)),
+                else_: Box::new(back(R::ManaValueAtMost(4))),
+            },
+        )
+    }
+}
+
+/// The Modern Age // Vector Glider — {1}{U} Saga. I, II: draw, then discard.
+/// III: exile it, return it transformed (a 2/3 flying Spirit).
+pub fn the_modern_age() -> CardDefinition {
+    let glider = CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        color_indicator: vec![Color::Blue],
+        ..creature("Vector Glider", ManaCost::default(), vec![CreatureType::Spirit], 2, 3)
+    };
+    CardDefinition {
+        name: "The Modern Age",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![(1, loot()), (2, loot()), (3, Effect::ExileSelfReturnTransformed)],
+        back_face: Some(Box::new(glider)),
+        ..Default::default()
+    }
+}
+
+/// Colossal Badger // Dig Deep — {5}{G} 6/5 Badger; ETB gain 3 life. Adventure
+/// {1}{G} sorcery: choose target creature; mill four, then a +1/+1 counter on
+/// it for each creature card milled.
+pub fn colossal_badger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Dig Deep",
+            cost: cost(&[generic(1), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CreatureCardsMilledThisEffect,
+                },
+            ]),
+        })),
+        ..creature("Colossal Badger", cost(&[generic(5), g()]), vec![CreatureType::Badger], 6, 5)
+    }
+}
+
+/// Call Damage Control — {1}{G} Sorcery. Choose up to two: return target
+/// artifact / creature / enchantment / land card from your graveyard to hand.
+pub fn call_damage_control() -> CardDefinition {
+    let regrow = |kind: R| Effect::Move {
+        what: target_filtered(kind.and(R::InYourGraveyard)),
+        to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+    };
+    spell(
+        "Call Damage Control",
+        cost(&[generic(1), g()]),
+        CardType::Sorcery,
+        Effect::ChooseModesCast {
+            modes: vec![regrow(R::Artifact), regrow(R::Creature), regrow(R::Enchantment), regrow(R::Land)],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+        },
+    )
+}
+
+/// Draining Whelk — {4}{U}{U} 1/1 Illusion, flash, flying. ETB: counter target
+/// spell; X +1/+1 counters on it, X that spell's mana value (read first, while
+/// the spell is still on the stack).
+pub fn draining_whelk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        ]))],
+        ..creature("Draining Whelk", cost(&[generic(4), u(), u()]), vec![CreatureType::Illusion], 1, 1)
+    }
+}
+
+/// Predatory Advantage — {3}{R}{G} Enchantment. At the beginning of each
+/// opponent's end step, if that player didn't cast a creature spell this turn,
+/// create a 2/2 green Lizard.
+pub fn predatory_advantage() -> CardDefinition {
+    let lizard = std::sync::Arc::new(TokenDefinition {
+        name: "Lizard".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "Predatory Advantage",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::OpponentControl).with_filter(
+                Predicate::Not(Box::new(Predicate::CreaturesCastThisTurnAtLeast {
+                    who: PlayerRef::ActivePlayer,
+                    at_least: Value::ONE,
+                })),
+            ),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: lizard },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

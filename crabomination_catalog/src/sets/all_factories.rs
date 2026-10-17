@@ -17132,6 +17132,15 @@ static DECKS: &[Factory] = &[
     super::decks::wandering_troubadour,
     super::decks::delightful_discovery,
     super::decks::kumano_faces_kakkazan,
+    super::decks::jaces_scrutiny,
+    super::decks::manaplasm,
+    super::decks::in_thrall_to_the_pit,
+    super::decks::too_evil_to_stay_dead,
+    super::decks::the_modern_age,
+    super::decks::colossal_badger,
+    super::decks::call_damage_control,
+    super::decks::draining_whelk,
+    super::decks::predatory_advantage,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
