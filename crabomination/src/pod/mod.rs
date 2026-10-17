@@ -24150,6 +24150,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ITH_COMMANDERS,
             main: decks::ITH_MAIN,
         },
+        // Seat 3950: Alaundo the Seer's EDHREC average deck. `--pod-decks 3950`.
+        PodDeck {
+            name: "Alaundo the Seer (UG)",
+            commanders: decks::ALAUNDO_THE_SEER_COMMANDERS,
+            main: decks::ALAUNDO_THE_SEER_MAIN,
+        },
+        // Seat 3951: The Ninth Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 3951`.
+        PodDeck {
+            name: "The Ninth Doctor and Graham O'Brien (URG)",
+            commanders: decks::THE_NINTH_DOCTOR_15_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_15_MAIN,
+        },
+        // Seat 3952: The Thirteenth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 3952`.
+        PodDeck {
+            name: "The Thirteenth Doctor and K-9, Mark I (UG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3953: Radiant, Serra Archangel and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 3953`.
+        PodDeck {
+            name: "Radiant, Serra Archangel and Rograkh, Son of Rohgahh (WR)",
+            commanders: decks::RADIANT_5_COMMANDERS,
+            main: decks::RADIANT_5_MAIN,
+        },
+        // Seat 3954: The Eleventh Doctor and Leela, Sevateem Warrior's EDHREC average deck. `--pod-decks 3954`.
+        PodDeck {
+            name: "The Eleventh Doctor and Leela, Sevateem Warrior (WUG)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_8_MAIN,
+        },
+        // Seat 3955: Glacian, Powerstone Engineer and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3955`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Tevesh Szat, Doom of Fools (UB)",
+            commanders: decks::GLACIAN_21_COMMANDERS,
+            main: decks::GLACIAN_21_MAIN,
+        },
     ]
 }
 
@@ -29983,6 +30019,12 @@ mod tests {
             ("Ultron the Annihilator", &[0x1981]),
             ("Uldaros Theorix", &[0x1982]),
             ("Ith, High Arcanist", &[0x1983]),
+            ("Alaundo the Seer", &[0x1984]),
+            ("The Ninth Doctor and Graham O'Brien", &[0x1985]),
+            ("The Thirteenth Doctor and K-9, Mark I", &[0x1986]),
+            ("Radiant, Serra Archangel and Rograkh, Son of Rohgahh", &[0x1987]),
+            ("The Eleventh Doctor and Leela, Sevateem Warrior", &[0x1988]),
+            ("Glacian, Powerstone Engineer and Tevesh Szat, Doom of Fools", &[0x1989]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
