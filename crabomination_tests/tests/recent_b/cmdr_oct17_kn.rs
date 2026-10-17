@@ -560,3 +560,25 @@ fn scarlet_spider_counts_the_returned_creatures_mana_value() {
     assert!(g.players[0].hand.iter().any(|c| c.id == giant), "the Giant went back");
     assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 4, "Hill Giant's MV");
 }
+
+/// CR 614 — Darigaaz dies into exile with three egg counters, sheds one each
+/// upkeep of its owner, and hatches back onto the battlefield on the third.
+#[test]
+fn darigaaz_hatches_back_after_three_upkeeps() {
+    let mut g = pod(2);
+    let d = ready(&mut g, 0, catalog::darigaaz_reincarnated());
+    let doom = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_with(&mut g, doom, Some(Target::Permanent(d)), None).expect("murder");
+    let eggs = |g: &GameState| g.exile.iter().find(|c| c.id == d).map(|c| c.counter_count(CounterType::Egg));
+    assert_eq!(eggs(&g), Some(3), "exiled with three eggs");
+    for left in [2, 1] {
+        step_to(&mut g, 1, TurnStep::Upkeep);
+        step_to(&mut g, 0, TurnStep::Draw);
+        assert_eq!(eggs(&g), Some(left));
+    }
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert!(g.battlefield_find(d).is_some(), "hatched");
+}

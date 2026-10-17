@@ -808,6 +808,55 @@ pub fn scarlet_spider_ben_reilly() -> CardDefinition {
     }
 }
 
+// ── Darigaaz Reincarnated ───────────────────────────────────────────────────
+
+/// Darigaaz Reincarnated — {4}{B}{R}{G} legendary 7/7 Dragon, flying, trample,
+/// haste. If it would die, it's exiled with three egg counters instead. At the
+/// beginning of your upkeep, if it's exiled with an egg counter, remove one;
+/// then with none left, it returns to the battlefield.
+pub fn darigaaz_reincarnated() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    let eggs = || Predicate::EntityMatches { what: Selector::This, filter: R::InExile.and(R::WithCounter(CounterType::Egg)) };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "If Darigaaz would die, instead exile it with three egg counters on it.",
+            effect: SE::SelfDiesToExileWithCounters { counter: CounterType::Egg, count: 3 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                zone: crate::effect::TriggerZone::WhileExiled,
+                ..EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(eggs())
+            },
+            effect: Effect::If {
+                cond: eggs(),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::RemoveCounter { what: Selector::This, kind: CounterType::Egg, amount: Value::ONE },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: R::InExile.and(R::WithCounter(CounterType::Egg).negate()),
+                        },
+                        then: Box::new(Effect::Move {
+                            what: Selector::This,
+                            to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..legend(creature(
+            "Darigaaz Reincarnated",
+            cost(&[generic(4), b(), r(), g()]),
+            vec![CreatureType::Dragon],
+            7,
+            7,
+        ))
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target
