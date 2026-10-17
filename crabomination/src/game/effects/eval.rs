@@ -2841,6 +2841,22 @@ impl GameState {
                     }
                 })
                 .unwrap_or(false),
+            Predicate::PlayedLandNotFromHandThisTurn { who } => {
+                self.resolve_player(who, ctx).is_some_and(|p| self.players[p].played_land_not_from_hand_this_turn)
+            }
+            Predicate::SpellTargetsOnlyOne { what, filter } => {
+                let Some(id) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_card_id()) else {
+                    return false;
+                };
+                self.stack.iter().any(|s| match s {
+                    crate::game::types::StackItem::Spell { card, target: Some(t), additional_targets, .. } if card.id == id => {
+                        additional_targets.is_empty()
+                            && matches!(t, Target::Permanent(_))
+                            && self.evaluate_requirement_static(filter, t, ctx.controller, ctx.source)
+                    }
+                    _ => false,
+                })
+            }
             Predicate::ScriedOrSurveiledThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].scry_batches_this_turn | self.players[p].surveil_batches_this_turn != 0),

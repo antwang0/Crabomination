@@ -1615,6 +1615,7 @@ impl Effect {
             }
             Effect::EachPlayerRollsSourceCantAttackHighest { .. } => false,
             Effect::CopySpellForEachOtherLegalTarget { what } => sel_has_target(what),
+            Effect::CasterCopiesSpellForEachOtherMatchingTarget { what, .. } => sel_has_target(what),
             Effect::SpellDiscountUntilYourNextTurn { who, .. } => player_has_target(who),
             Effect::ChooseMode(modes) | Effect::AsEntersChooseMode(modes) => {
                 modes.iter().any(|e| e.requires_target())
@@ -2905,6 +2906,7 @@ impl Effect {
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
             | Effect::CopySpellForEachOtherLegalTarget { what }
+            | Effect::CasterCopiesSpellForEachOtherMatchingTarget { what, .. }
             | Effect::CounterSpellIfNameExiledWithSource { what }
             | Effect::CounterSpellExileSameNamed { what }
             | Effect::CounterSpellExileMayPlayFree { what }
@@ -5530,6 +5532,7 @@ impl Effect {
                 | Effect::ChangeSpellCreatureTarget { what }
                 | Effect::CounterSpell { what }
                 | Effect::CopySpellForEachOtherLegalTarget { what }
+                | Effect::CasterCopiesSpellForEachOtherMatchingTarget { what, .. }
                 | Effect::CounterSpellIfNameExiledWithSource { what }
                 | Effect::CounterSpellExileSameNamed { what }
                 | Effect::CounterSpellExileMayPlayFree { what }

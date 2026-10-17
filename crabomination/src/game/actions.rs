@@ -5439,6 +5439,9 @@ impl GameState {
         from_hand: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let card_id = card.id;
+        if !from_hand && !self.players[p].played_land_not_from_hand_this_turn {
+            self.players[p].played_land_not_from_hand_this_turn = true;
+        }
         // Damping Sphere: if any battlefield permanent grants
         // `LandsTapColorlessOnly`, downgrade this land's mana abilities
         // to `{T}: Add {C}` if the original would have produced more than

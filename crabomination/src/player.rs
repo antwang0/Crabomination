@@ -1145,6 +1145,10 @@ pub struct PlayerData {
     /// `spells_cast_from_exile_this_turn`). Reset each turn.
     #[serde(default)]
     pub played_land_from_exile_this_turn: bool,
+    /// This player played a land from anywhere other than their hand this
+    /// turn (Spider-Man 2099). Reset each turn.
+    #[serde(default)]
+    pub played_land_not_from_hand_this_turn: bool,
     /// Instant and sorcery spells this player cast from a graveyard this turn
     /// (Sevinne, the Chronoclasm's "your first … each turn"). Reset each turn.
     #[serde(default)]
@@ -1911,6 +1915,7 @@ impl Player {
             spells_cast_from_hand_this_turn: 0,
             spells_cast_from_exile_this_turn: 0,
             played_land_from_exile_this_turn: false,
+            played_land_not_from_hand_this_turn: false,
             instants_sorceries_cast_from_graveyard_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
             extra_etb_p1p1_counters_this_turn: 0,

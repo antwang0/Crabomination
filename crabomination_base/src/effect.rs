@@ -2021,6 +2021,12 @@ pub enum Predicate {
     /// Potential, CR 701.22 / 701.25). Backed by the per-turn scry and
     /// surveil batch tallies.
     ScriedOrSurveiledThisTurn { who: PlayerRef },
+    /// "If you've played a land … this turn from anywhere other than your
+    /// hand" (Spider-Man 2099) — `Player.played_land_not_from_hand_this_turn`.
+    PlayedLandNotFromHandThisTurn { who: PlayerRef },
+    /// "A spell that targets only a single [filter]" (Precursor Golem): the
+    /// spell `what` names has exactly one target, and it matches `filter`.
+    SpellTargetsOnlyOne { what: Selector, filter: crate::card::SelectionRequirement },
     /// CR 700.14 — true exactly on the spell-cast whose payment first
     /// pushes the active player's running mana-spent-on-spells total to
     /// `n` (i.e. prior total `< n` and new total `>= n`). Used as the
@@ -6135,6 +6141,10 @@ pub enum Effect {
     /// resolving controller's) aimed at a different one. Spells only; a
     /// targeted ability is not copied.
     CopySpellForEachOtherLegalTarget { what: Selector },
+    /// Precursor Golem — CR 707.10: the spell's CASTER copies the spell `what`
+    /// names once for each other permanent matching `filter` it could target,
+    /// each copy aimed at a different one.
+    CasterCopiesSpellForEachOtherMatchingTarget { what: Selector, filter: crate::card::SelectionRequirement },
     /// CR 701.15 / 611.2b — `Goad` that lasts as long as `hold` does rather
     /// than until the goader's next turn (Hot Pursuit, Immortal Obligation).
     GoadWhile { what: Selector, hold: GoadLasts },

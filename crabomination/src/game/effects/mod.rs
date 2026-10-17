@@ -13725,6 +13725,9 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::CasterCopiesSpellForEachOtherMatchingTarget { what, filter } => {
+                self.caster_copies_spell_for_each_other_matching_target(what, filter, ctx, events)
+            }
             Effect::CopySpellForEachOtherLegalTarget { what } => {
                 self.copy_spell_for_each_other_legal_target(what, ctx, events)
             }
