@@ -216,6 +216,8 @@ the handoff.
   Captain Kathryn Janeway, Dragon's Disciple, Puppet Crafting (LANDED, seats 3329-3338; Ganax + Veteran Soldier
   refused — its average deck is 93 cards). Release `--bench` after batch 14's primitives: 196,176 decisions /
   27.64 turns / 613.0 per game, byte-identical to the baseline.
+- **CLAIMED (batch 16) — don't duplicate:** Dungeon Delver (new `CommanderCreaturesRoomsTriggerTwice`), Insufferable
+  Balladeer.
   Researched, open: Feldon Ronom Excavator (exile N, choose ONE to play — `ExileTopAndGrantMayPlay` grants all),
   Chronomantic Escape (a player-level "creatures can't attack you" until your next turn — only per-creature
   grants and attack taxes exist), Bilbo Luckwearer (two targets that share a card type with each other).
