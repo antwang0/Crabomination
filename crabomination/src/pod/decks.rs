@@ -106018,3 +106018,86 @@ pub const ELLYN_HARBREEZE_9_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const AKROMA_10_COMMANDERS: &[CardFactory] = &[akroma_vision_of_ixidor, francisco_fowl_marauder];
+
+/// **Akroma, Vision of Ixidor and Francisco, Fowl Marauder**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 1 Plains + 16 Swamps = 98.
+/// Akroma, Vision of Ixidor and Francisco, Fowl Marauder (EDHREC, fetched 2026-10-17).
+pub const AKROMA_10_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, ashnods_altar, basalt_monolith, blasting_station,
+    defense_grid, expedition_map, fellwar_stone, lotus_petal, mana_vault, mox_amber, sol_ring,
+    talisman_of_hierarchy, the_one_ring, vexing_bauble, wishclaw_talisman, ancient_tomb,
+    caves_of_koilos, command_tower, emergence_zone, evolving_wilds, exotic_orchard,
+    fountainport, hostile_hostel, inventors_fair, nykthos_shrine_to_nyx, spire_of_industry,
+    tarnished_citadel, treasure_vault, urzas_saga, verdant_catacombs, windswept_heath,
+    archangel_of_thune, archfiend_of_depravity, blood_artist, cruel_celebrant,
+    drana_and_linvala, drannith_magistrate, esper_sentinel, fain_the_broker, grim_hireling,
+    heliod_sun_crowned, kingpin_wilson_fisk, liberator_urzas_battlethopter,
+    lotho_corrupt_shirriff, nadiers_nightblade, opposition_agent, pawn_of_ulamog,
+    pitiless_plunderer, razaketh_the_foulblooded, tataru_taru, treasure_dredger,
+    undercity_scrounger, walking_ballista, weathered_wayfarer, agent_of_the_iron_throne,
+    authority_of_the_consuls, case_of_the_stashed_skeleton, monologue_tax, necromancy,
+    smothering_tithe, angels_grace, culling_the_weak, dark_ritual, deadly_derision,
+    deadly_dispute, entomb, fanatical_offering, orims_chant, silence, swords_to_plowshares,
+    tainted_pact, village_rites, karn_the_great_creator, blood_money, diabolic_intent,
+    feed_the_swarm, grim_bounty, imperial_seal, sevinnes_reclamation, victimize,
+    // Basics
+    plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const IMOEN_12_COMMANDERS: &[CardFactory] = &[imoen_mystic_trickster, street_urchin];
+
+/// **Imoen, Mystic Trickster and Street Urchin**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 8 Islands + 11 Mountains = 98.
+/// Imoen, Mystic Trickster and Street Urchin (EDHREC, fetched 2026-10-17).
+pub const IMOEN_12_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bonders_ornament, commanders_sphere, cryptolith_fragment,
+    decanter_of_endless_water, dungeoneers_pack, glaring_spotlight, heart_shaped_herb,
+    izzet_signet, sarevoks_tome, skullclamp, sol_ring, talisman_of_creativity,
+    trailblazers_torch, arcane_lighthouse, command_tower, desert_of_the_fervent,
+    desert_of_the_mindful, exotic_orchard, ferrous_lake, izzet_boilerworks, myriad_landscape,
+    path_of_ancestry, prismari_campus, shivan_reef, sulfur_falls, swiftwater_cliffs,
+    thriving_isle, aarakocra_sneak, bazaar_trader, bloodboil_sorcerer, brimstone_vandal,
+    chasm_skulker, eccentric_apprentice, emberwilde_captain, feywild_caretaker, firbolg_flutist,
+    firmament_sage, impulsive_pilferer, loyal_apprentice, mad_ratter, nadir_kraken,
+    opportunistic_dragon, ornithopter_of_paradise, saheeli_the_suns_brilliance, stirring_bard,
+    tavern_scoundrel, tomb_of_horrors_adventurer, willbreaker, blood_mist, court_of_cunning,
+    court_of_ire, dictate_of_the_twin_gods, dungeon_delver, hazorets_favor, loot_dispute,
+    popular_entertainer, teferis_ageless_insight, anticognition, choreographed_sparks,
+    ghostly_flicker, grab_the_reins, kazuuls_fury, mystic_reflection, opt, reins_of_power,
+    temporary_insanity, word_of_seizing, chandra_awakened_inferno, claim_the_firstborn,
+    corporeal_projection, into_the_night, mark_of_mutiny, mob_rule, seize_the_spotlight,
+    shackles_of_treachery, threaten, traitorous_greed,
+    // Basics
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const SIVRISS_8_COMMANDERS: &[CardFactory] = &[sivriss_nightmare_speaker, tavern_brawler];
+
+/// **Sivriss, Nightmare Speaker and Tavern Brawler**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 13 Mountains + 14 Swamps = 98.
+/// Sivriss, Nightmare Speaker and Tavern Brawler (EDHREC, fetched 2026-10-17).
+pub const SIVRISS_8_MAIN: &[CardFactory] = &[
+    arcane_signet, blood_fountain, charcoal_diamond, commanders_sphere, fellwar_stone,
+    mind_stone, rakdos_signet, sol_ring, talisman_of_indulgence, wayfarers_bauble,
+    bloodfell_caves, bojuka_bog, command_tower, dragonskull_summit, evolving_wilds,
+    foreboding_ruins, forgotten_cave, geothermal_bog, shadowblood_ridge, smoldering_marsh,
+    anger, blood_artist, bloodghast, burnished_hart, bushmeat_poacher, enterprising_scallywag,
+    garna_the_bloodflame, grim_initiate, impulsive_pilferer, jadar_ghoulcaller_of_nephalia,
+    kardur_doomscourge, mahadi_emporium_master, mayhem_devil, mogis_god_of_slaughter,
+    ornithopter_of_paradise, patron_of_the_arts, piggy_bank, reassembling_skeleton, shriekmaw,
+    solemn_simulacrum, squee_the_immortal, syr_konrad_the_grim, totentanz_swarm_piper,
+    undercity_scrounger, voldaren_epicure, zookeeper_mechan, zoyowa_lava_tongue,
+    zulaport_cutthroat, bastion_of_remembrance, enchanters_bane, impact_tremors, manabarbs,
+    chaos_warp, dark_ritual, deadly_dispute, lightning_bolt, rakdos_charm, terminate,
+    thrill_of_possibility, tragic_slip, blasphemous_act, bloody_betrayal, diresight,
+    faithless_looting, feed_the_swarm, foreboding_fruit, price_of_loyalty,
+    shackles_of_treachery, vandalblast, victimize, wrangle,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

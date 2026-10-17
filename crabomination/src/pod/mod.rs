@@ -23142,6 +23142,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELLYN_HARBREEZE_9_COMMANDERS,
             main: decks::ELLYN_HARBREEZE_9_MAIN,
         },
+        // Seat 3782: Akroma, Vision of Ixidor and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 3782`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Francisco, Fowl Marauder (WB)",
+            commanders: decks::AKROMA_10_COMMANDERS,
+            main: decks::AKROMA_10_MAIN,
+        },
+        // Seat 3783: Imoen, Mystic Trickster and Street Urchin's EDHREC average deck. `--pod-decks 3783`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Street Urchin (UR)",
+            commanders: decks::IMOEN_12_COMMANDERS,
+            main: decks::IMOEN_12_MAIN,
+        },
+        // Seat 3784: Sivriss, Nightmare Speaker and Tavern Brawler's EDHREC average deck. `--pod-decks 3784`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Tavern Brawler (BR)",
+            commanders: decks::SIVRISS_8_COMMANDERS,
+            main: decks::SIVRISS_8_MAIN,
+        },
     ]
 }
 
@@ -28807,6 +28825,9 @@ mod tests {
             ("Francisco, Fowl Marauder and Ludevic, Necro-Alchemist", &[0x18D9]),
             ("Kediss, Emberclaw Familiar and Kraum, Ludevic's Opus", &[0x18DA]),
             ("Ellyn Harbreeze, Busybody and Far Traveler", &[0x18DB]),
+            ("Akroma, Vision of Ixidor and Francisco, Fowl Marauder", &[0x18DC]),
+            ("Imoen, Mystic Trickster and Street Urchin", &[0x18DD]),
+            ("Sivriss, Nightmare Speaker and Tavern Brawler", &[0x18DE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
