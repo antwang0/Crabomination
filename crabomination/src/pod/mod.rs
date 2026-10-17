@@ -20310,6 +20310,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TENTH_DOCTOR_COMMANDERS,
             main: decks::THE_TENTH_DOCTOR_MAIN,
         },
+        // Seat 3310: Eligeth, Crossroads Augur's EDHREC average deck. `--pod-decks 3310`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur (U)",
+            commanders: decks::ELIGETH_11_COMMANDERS,
+            main: decks::ELIGETH_11_MAIN,
+        },
+        // Seat 3311: The Third Doctor's EDHREC average deck. `--pod-decks 3311`.
+        PodDeck {
+            name: "The Third Doctor (UG)",
+            commanders: decks::THE_THIRD_DOCTOR_6_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_6_MAIN,
+        },
+        // Seat 3312: Ghost of Ramirez DePietro and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 3312`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Keleth, Sunmane Familiar (WU)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_6_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_6_MAIN,
+        },
+        // Seat 3313: Akiri, Line-Slinger and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 3313`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Gilanra, Caller of Wirewood (WRG)",
+            commanders: decks::AKIRI_8_COMMANDERS,
+            main: decks::AKIRI_8_MAIN,
+        },
+        // Seat 3314: Halana, Kessig Ranger and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 3314`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Ich-Tekik, Salvage Splicer (G)",
+            commanders: decks::HALANA_2_COMMANDERS,
+            main: decks::HALANA_2_MAIN,
+        },
+        // Seat 3315: Eligeth, Crossroads Augur and The Prismatic Piper's EDHREC average deck. `--pod-decks 3315`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and The Prismatic Piper (U)",
+            commanders: decks::ELIGETH_12_COMMANDERS,
+            main: decks::ELIGETH_12_MAIN,
+        },
+        // Seat 3316: Kediss, Emberclaw Familiar and The Prismatic Piper's EDHREC average deck. `--pod-decks 3316`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and The Prismatic Piper (R)",
+            commanders: decks::KEDISS_4_COMMANDERS,
+            main: decks::KEDISS_4_MAIN,
+        },
+        // Seat 3317: Ganax, Astral Hunter and Flaming Fist's EDHREC average deck. `--pod-decks 3317`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Flaming Fist (WR)",
+            commanders: decks::GANAX_5_COMMANDERS,
+            main: decks::GANAX_5_MAIN,
+        },
+        // Seat 3318: Reyhan, Last of the Abzan and The Prismatic Piper's EDHREC average deck. `--pod-decks 3318`.
+        PodDeck {
+            name: "Reyhan, Last of the Abzan and The Prismatic Piper (BG)",
+            commanders: decks::REYHAN_COMMANDERS,
+            main: decks::REYHAN_MAIN,
+        },
     ]
 }
 
@@ -25503,6 +25557,15 @@ mod tests {
             ("The Fugitive Doctor and Yasmin Khan", &[0x1701]),
             ("The Ninth Doctor and Martha Jones", &[0x1702]),
             ("The Tenth Doctor and Martha Jones", &[0x1703]),
+            ("Eligeth, Crossroads Augur", &[0x1704]),
+            ("The Third Doctor", &[0x1705]),
+            ("Ghost of Ramirez DePietro and Keleth, Sunmane Familiar", &[0x1706]),
+            ("Akiri, Line-Slinger and Gilanra, Caller of Wirewood", &[0x1707]),
+            ("Halana, Kessig Ranger and Ich-Tekik, Salvage Splicer", &[0x1708]),
+            ("Eligeth, Crossroads Augur and The Prismatic Piper", &[0x1709]),
+            ("Kediss, Emberclaw Familiar and The Prismatic Piper", &[0x170A]),
+            ("Ganax, Astral Hunter and Flaming Fist", &[0x170B]),
+            ("Reyhan, Last of the Abzan and The Prismatic Piper", &[0x170C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

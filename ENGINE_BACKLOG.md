@@ -208,7 +208,8 @@ the handoff.
   Adventurer, Calciform Pools — seats 3276-3301. **CLAIMED (batch 12) — don't duplicate:** Lifelink, Moonblade
   Shinobi, Dining Room, Resonance Technician (LANDED, seats 3302-3309).
 - **CLAIMED (batch 13) — don't duplicate:** Glittermonger, Contact Other Plane, Stirring Bard, Sword of Kaldra,
-  Glorious End, Ajani Wise Counselor.
+  Glorious End, Ajani Wise Counselor (LANDED, seats 3310-3318). Pod sweep 9705 over 3276-3309: 960 games, 0
+  panics, 1 board-cap stall (Ninth Doctor + Parallel Lives token growth).
 - **FIXED (`0128tsCy`):** `cast_spell_alternative_from` stamped no `cast_mana_spent_by_color` (an evoked Vibrance's
   "if {R}{R} was spent" was false, "if no mana was spent" true), passed converge 0 and `from_hand: true` for a
   command-zone alt cast; `finalize_cast` counted hop casts as hand casts. The Prismatic Piper never carried
