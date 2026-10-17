@@ -35532,6 +35532,7 @@ fn static_effect_to_effects(
             | StaticEffect::DiesToLibraryTopInstead { .. }
             | StaticEffect::DiesToOwnersHandInstead { .. }
             | StaticEffect::DiesToExileInstead { .. }
+            | StaticEffect::SelfDiesToExileWithCounters { .. }
             // OpponentsCantCastChosenColor (Iona) — gated at the cast
             // dispatch; no layer effect.
             | StaticEffect::OpponentsCantCastChosenColor

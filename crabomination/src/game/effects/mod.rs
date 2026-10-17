@@ -20874,8 +20874,9 @@ impl GameState {
                             }
                         }
                     // CR 122.1 — a card in exile carries counters too (Mari's
-                    // hit counters); the add arm already reaches it.
-                    else if let EntityRef::Card(cid) = ent
+                    // hit counters; Darigaaz's eggs, named by `This`, which
+                    // resolves to a permanent ref); the add arm already reaches it.
+                    else if let Some(cid) = ent.as_card_id()
                         && let Some(c) = self.exile.iter_mut().find(|c| c.id == cid)
                     {
                         let removed = c.remove_counters(*kind, n);

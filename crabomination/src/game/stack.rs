@@ -1455,6 +1455,22 @@ impl GameState {
                 }
             }
         }
+        // CR 113.6 — an exiled card's `WhileExiled` step triggers ("at the
+        // beginning of your upkeep, if this card is exiled…" — Darigaaz
+        // Reincarnated), owned and so controlled by its owner (CR 108.4a).
+        // Behind the exile pile's lane: one word load on a board without one.
+        if self.exile.has_exile_trigger() {
+            for c in self.exile.iter() {
+                for t in &c.definition.triggered_abilities {
+                    if t.event.zone == crate::effect::TriggerZone::WhileExiled
+                        && t.event.kind == kind
+                        && scope_matches(&t.event, c.owner)
+                    {
+                        candidates.push((c.id, t.effect.clone(), c.owner, t.event.filter.clone()));
+                    }
+                }
+            }
+        }
         // CR 902.5 — a Vanguard avatar's step triggers fire from the command
         // zone ("at the beginning of your upkeep" — Arcbound Overseer Avatar).
         // Behind one emptiness test, the shape `sweep_finished_schemes` and
@@ -9156,6 +9172,11 @@ impl GameState {
                 None
             };
             let slime_power = card.power().max(0) as u32;
+            // Darigaaz Reincarnated replaces its own death.
+            let self_exile_counters = card.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::SelfDiesToExileWithCounters { counter, count } => Some((counter, count)),
+                _ => None,
+            });
             // CR 614 — "If this permanent would be put into a graveyard, put
             // it on top of its owner's library instead" (Pulmonic Sliver's
             // Sliver-wide grant; the "may" is auto-taken).
@@ -9219,6 +9240,7 @@ impl GameState {
                 || slime_redirect.is_some()
                 || exile_instead
                 || rayami_counter.is_some()
+                || self_exile_counters.is_some()
             {
                 crate::card::Zone::Exile
             } else if library_top_redirect || card.definition.dies_to_library_bottom {
@@ -9305,6 +9327,11 @@ impl GameState {
                 && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
             {
                 c.add_counters(kind, 1);
+            }
+            if let (Some((kind, n)), crate::card::Zone::Exile) = (self_exile_counters, resolved)
+                && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
+            {
+                c.add_counters(kind, n);
             }
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);

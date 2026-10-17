@@ -3981,6 +3981,10 @@ pub enum StaticEffect {
     /// battlefield (layered) permanent just before it leaves, so a type an
     /// effect gave it counts; "you" is the static's controller.
     DiesToExileInstead { filter: crate::card::SelectionRequirement },
+    /// CR 614 — "If [this] would die, instead exile it with `count` `counter`
+    /// counters on it" (Darigaaz Reincarnated). Read off the dying card's own
+    /// snapshot, so it needs no board lane.
+    SelfDiesToExileWithCounters { counter: crate::card::CounterType, count: u32 },
     /// CR 614.5 — "If an opponent would mill one or more cards, they mill
     /// twice that many cards instead." (Bruvac the Grandiloquent.) Consulted
     /// by `GameState::mill_count_for` at every mill site.
