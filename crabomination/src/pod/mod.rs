@@ -22284,6 +22284,168 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_EVER_CHANGING_DANE_COMMANDERS,
             main: decks::THE_EVER_CHANGING_DANE_MAIN,
         },
+        // Seat 3639: Anara, Wolvid Familiar and Bruse Tarl, Boorish Herder's EDHREC average deck. `--pod-decks 3639`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Bruse Tarl, Boorish Herder (WRG)",
+            commanders: decks::ANARA_13_COMMANDERS,
+            main: decks::ANARA_13_MAIN,
+        },
+        // Seat 3640: Anara, Wolvid Familiar and Esior, Wardwing Familiar's EDHREC average deck. `--pod-decks 3640`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Esior, Wardwing Familiar (UG)",
+            commanders: decks::ANARA_14_COMMANDERS,
+            main: decks::ANARA_14_MAIN,
+        },
+        // Seat 3641: Anara, Wolvid Familiar and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 3641`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Ludevic, Necro-Alchemist (URG)",
+            commanders: decks::ANARA_15_COMMANDERS,
+            main: decks::ANARA_15_MAIN,
+        },
+        // Seat 3642: Anara, Wolvid Familiar and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3642`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Slurrk, All-Ingesting (G)",
+            commanders: decks::ANARA_16_COMMANDERS,
+            main: decks::ANARA_16_MAIN,
+        },
+        // Seat 3643: Ardenn, Intrepid Archaeologist and Katerina of Myra's Marvels's EDHREC average deck. `--pod-decks 3643`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Katerina of Myra's Marvels (W)",
+            commanders: decks::ARDENN_11_COMMANDERS,
+            main: decks::ARDENN_11_MAIN,
+        },
+        // Seat 3644: Ardenn, Intrepid Archaeologist and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3644`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Sakashima of a Thousand Faces (WU)",
+            commanders: decks::ARDENN_12_COMMANDERS,
+            main: decks::ARDENN_12_MAIN,
+        },
+        // Seat 3645: Ardenn, Intrepid Archaeologist and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 3645`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Tormod, the Desecrator (WB)",
+            commanders: decks::ARDENN_13_COMMANDERS,
+            main: decks::ARDENN_13_MAIN,
+        },
+        // Seat 3646: Breeches, Brazen Plunderer and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3646`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Slurrk, All-Ingesting (RG)",
+            commanders: decks::BREECHES_14_COMMANDERS,
+            main: decks::BREECHES_14_MAIN,
+        },
+        // Seat 3647: Brinelin, the Moon Kraken and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3647`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Livio, Oathsworn Sentinel (WU)",
+            commanders: decks::BRINELIN_11_COMMANDERS,
+            main: decks::BRINELIN_11_MAIN,
+        },
+        // Seat 3648: Burakos, Party Leader and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3648`.
+        PodDeck {
+            name: "Burakos, Party Leader and Passionate Archaeologist (BR)",
+            commanders: decks::BURAKOS_6_COMMANDERS,
+            main: decks::BURAKOS_6_MAIN,
+        },
+        // Seat 3649: Burakos, Party Leader and Shameless Charlatan's EDHREC average deck. `--pod-decks 3649`.
+        PodDeck {
+            name: "Burakos, Party Leader and Shameless Charlatan (UB)",
+            commanders: decks::BURAKOS_7_COMMANDERS,
+            main: decks::BURAKOS_7_MAIN,
+        },
+        // Seat 3650: Dargo, the Shipwrecker and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 3650`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Keskit, the Flesh Sculptor (BR)",
+            commanders: decks::DARGO_13_COMMANDERS,
+            main: decks::DARGO_13_MAIN,
+        },
+        // Seat 3651: Falthis, Shadowcat Familiar and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 3651`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Kydele, Chosen of Kruphix (UBG)",
+            commanders: decks::FALTHIS_8_COMMANDERS,
+            main: decks::FALTHIS_8_MAIN,
+        },
+        // Seat 3652: Gilanra, Caller of Wirewood and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3652`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Slurrk, All-Ingesting (G)",
+            commanders: decks::GILANRA_12_COMMANDERS,
+            main: decks::GILANRA_12_MAIN,
+        },
+        // Seat 3653: Halana, Kessig Ranger and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3653`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Slurrk, All-Ingesting (G)",
+            commanders: decks::HALANA_7_COMMANDERS,
+            main: decks::HALANA_7_MAIN,
+        },
+        // Seat 3654: Ikra Shidiqi, the Usurper and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3654`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Radiant, Serra Archangel (WBG)",
+            commanders: decks::IKRA_SHIDIQI_4_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_4_MAIN,
+        },
+        // Seat 3655: Imoen, Mystic Trickster and Folk Hero's EDHREC average deck. `--pod-decks 3655`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Folk Hero (WU)",
+            commanders: decks::IMOEN_2_COMMANDERS,
+            main: decks::IMOEN_2_MAIN,
+        },
+        // Seat 3656: Imoen, Mystic Trickster and Guild Artisan's EDHREC average deck. `--pod-decks 3656`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Guild Artisan (UR)",
+            commanders: decks::IMOEN_3_COMMANDERS,
+            main: decks::IMOEN_3_MAIN,
+        },
+        // Seat 3657: Kamahl, Heart of Krosa and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3657`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Slurrk, All-Ingesting (G)",
+            commanders: decks::KAMAHL_12_COMMANDERS,
+            main: decks::KAMAHL_12_MAIN,
+        },
+        // Seat 3658: Livio, Oathsworn Sentinel and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3658`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Vial Smasher the Fierce (WBR)",
+            commanders: decks::LIVIO_3_COMMANDERS,
+            main: decks::LIVIO_3_MAIN,
+        },
+        // Seat 3659: Lulu, Loyal Hollyphant and Tavern Brawler's EDHREC average deck. `--pod-decks 3659`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Tavern Brawler (WR)",
+            commanders: decks::LULU_6_COMMANDERS,
+            main: decks::LULU_6_MAIN,
+        },
+        // Seat 3660: Rasaad yn Bashir and Dungeon Delver's EDHREC average deck. `--pod-decks 3660`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Dungeon Delver (WU)",
+            commanders: decks::RASAAD_YN_BASHIR_16_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_16_MAIN,
+        },
+        // Seat 3661: Silas Renn, Seeker Adept and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3661`.
+        PodDeck {
+            name: "Silas Renn, Seeker Adept and Slurrk, All-Ingesting (UBG)",
+            commanders: decks::SILAS_RENN_COMMANDERS,
+            main: decks::SILAS_RENN_MAIN,
+        },
+        // Seat 3662: Slurrk, All-Ingesting and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3662`.
+        PodDeck {
+            name: "Slurrk, All-Ingesting and Tevesh Szat, Doom of Fools (BG)",
+            commanders: decks::SLURRK_2_COMMANDERS,
+            main: decks::SLURRK_2_MAIN,
+        },
+        // Seat 3663: Slurrk, All-Ingesting and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3663`.
+        PodDeck {
+            name: "Slurrk, All-Ingesting and Vial Smasher the Fierce (BRG)",
+            commanders: decks::SLURRK_3_COMMANDERS,
+            main: decks::SLURRK_3_MAIN,
+        },
+        // Seat 3664: The Eleventh Doctor and Martha Jones's EDHREC average deck. `--pod-decks 3664`.
+        PodDeck {
+            name: "The Eleventh Doctor and Martha Jones (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3665: The Fourth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3665`.
+        PodDeck {
+            name: "The Fourth Doctor and Ian Chesterton (WUG)",
+            commanders: decks::THE_FOURTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_FOURTH_DOCTOR_6_MAIN,
+        },
     ]
 }
 
@@ -27806,6 +27968,33 @@ mod tests {
             ("Raph & Leo, Sibling Rivals", &[0x184A]),
             ("Nihiloor", &[0x184B]),
             ("The Ever-Changing 'Dane", &[0x184C]),
+            ("Anara, Wolvid Familiar and Bruse Tarl, Boorish Herder", &[0x184D]),
+            ("Anara, Wolvid Familiar and Esior, Wardwing Familiar", &[0x184E]),
+            ("Anara, Wolvid Familiar and Ludevic, Necro-Alchemist", &[0x184F]),
+            ("Anara, Wolvid Familiar and Slurrk, All-Ingesting", &[0x1850]),
+            ("Ardenn, Intrepid Archaeologist and Katerina of Myra's Marvels", &[0x1851]),
+            ("Ardenn, Intrepid Archaeologist and Sakashima of a Thousand Faces", &[0x1852]),
+            ("Ardenn, Intrepid Archaeologist and Tormod, the Desecrator", &[0x1853]),
+            ("Breeches, Brazen Plunderer and Slurrk, All-Ingesting", &[0x1854]),
+            ("Brinelin, the Moon Kraken and Livio, Oathsworn Sentinel", &[0x1855]),
+            ("Burakos, Party Leader and Passionate Archaeologist", &[0x1856]),
+            ("Burakos, Party Leader and Shameless Charlatan", &[0x1857]),
+            ("Dargo, the Shipwrecker and Keskit, the Flesh Sculptor", &[0x1858]),
+            ("Falthis, Shadowcat Familiar and Kydele, Chosen of Kruphix", &[0x1859]),
+            ("Gilanra, Caller of Wirewood and Slurrk, All-Ingesting", &[0x185A]),
+            ("Halana, Kessig Ranger and Slurrk, All-Ingesting", &[0x185B]),
+            ("Ikra Shidiqi, the Usurper and Radiant, Serra Archangel", &[0x185C]),
+            ("Imoen, Mystic Trickster and Folk Hero", &[0x185D]),
+            ("Imoen, Mystic Trickster and Guild Artisan", &[0x185E]),
+            ("Kamahl, Heart of Krosa and Slurrk, All-Ingesting", &[0x185F]),
+            ("Livio, Oathsworn Sentinel and Vial Smasher the Fierce", &[0x1860]),
+            ("Lulu, Loyal Hollyphant and Tavern Brawler", &[0x1861]),
+            ("Rasaad yn Bashir and Dungeon Delver", &[0x1862]),
+            ("Silas Renn, Seeker Adept and Slurrk, All-Ingesting", &[0x1863]),
+            ("Slurrk, All-Ingesting and Tevesh Szat, Doom of Fools", &[0x1864]),
+            ("Slurrk, All-Ingesting and Vial Smasher the Fierce", &[0x1865]),
+            ("The Eleventh Doctor and Martha Jones", &[0x1866]),
+            ("The Fourth Doctor and Ian Chesterton", &[0x1867]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
