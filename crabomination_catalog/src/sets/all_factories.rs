@@ -17169,6 +17169,23 @@ static DECKS: &[Factory] = &[
     super::decks::complete_the_circuit,
     super::decks::starlight_spectacular,
     super::decks::soul_partition,
+    // cmdr_oct17_s
+    super::decks::mirror_sigil_sergeant,
+    super::decks::secrets_of_the_golden_city,
+    super::decks::magmatic_channeler,
+    super::decks::twinned_vision,
+    super::decks::choose_your_weapon,
+    super::decks::arcums_astrolabe,
+    super::decks::favor_of_jukai,
+    super::decks::twisted_fates,
+    super::decks::fateshaper_aspirant,
+    super::decks::snowslope_hunter,
+    super::decks::singing_bell_strike,
+    super::decks::underhanded_designs,
+    super::decks::last_one_standing,
+    super::decks::rewrite_regrets,
+    super::decks::armguard_familiar,
+    super::decks::warriors_blades,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
