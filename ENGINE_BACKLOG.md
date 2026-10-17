@@ -241,6 +241,9 @@ the handoff.
   27.64 turns / 613.0 per game, byte-identical to the baseline.
 - **CLAIMED (batch 16) — don't duplicate:** Dungeon Delver (new `CommanderCreaturesRoomsTriggerTwice`), Insufferable
   Balladeer (LANDED, seats 3486-3490; Faceless One + Sword Coast Sailor refused — three colours past one choice).
+- **Gates at the batch-16 tip (2026-10-17):** full suite 27,351/27,351; workspace clippy 0 warnings;
+  `release-fast` build green; pod sweeps 9706 (seats 3310-3338, 810 games) + 9707 (3486-3490, 180 games): 0 panics,
+  3 undecided — all CR 104.4 draws, no stalls; release `--bench` 196,176 / 27.64 / 613.0, byte-identical.
   Researched, open: Feldon Ronom Excavator (exile N, choose ONE to play — `ExileTopAndGrantMayPlay` grants all),
   Chronomantic Escape (a player-level "creatures can't attack you" until your next turn — only per-creature
   grants and attack taxes exist), Bilbo Luckwearer (two targets that share a card type with each other).
