@@ -22218,6 +22218,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DRAGONS_SMILE_COMMANDERS,
             main: decks::DRAGONS_SMILE_MAIN,
         },
+        // Seat 3628: Torgal, A Fine Hound's EDHREC average deck. `--pod-decks 3628`.
+        PodDeck {
+            name: "Torgal, A Fine Hound (G)",
+            commanders: decks::TORGAL_COMMANDERS,
+            main: decks::TORGAL_MAIN,
+        },
+        // Seat 3629: Olinda the Oblivious's EDHREC average deck. `--pod-decks 3629`.
+        PodDeck {
+            name: "Olinda the Oblivious (B)",
+            commanders: decks::OLINDA_THE_OBLIVIOUS_COMMANDERS,
+            main: decks::OLINDA_THE_OBLIVIOUS_MAIN,
+        },
+        // Seat 3630: Thassa, God of the Sea's EDHREC average deck. `--pod-decks 3630`.
+        PodDeck {
+            name: "Thassa, God of the Sea (U)",
+            commanders: decks::THASSA_2_COMMANDERS,
+            main: decks::THASSA_2_MAIN,
+        },
+        // Seat 3631: The Neutrinos's EDHREC average deck. `--pod-decks 3631`.
+        PodDeck {
+            name: "The Neutrinos (WR)",
+            commanders: decks::THE_NEUTRINOS_COMMANDERS,
+            main: decks::THE_NEUTRINOS_MAIN,
+        },
+        // Seat 3632: Falcon and Redwing's EDHREC average deck. `--pod-decks 3632`.
+        PodDeck {
+            name: "Falcon and Redwing (W)",
+            commanders: decks::FALCON_AND_REDWING_COMMANDERS,
+            main: decks::FALCON_AND_REDWING_MAIN,
+        },
     ]
 }
 
@@ -27729,6 +27759,11 @@ mod tests {
             ("Zhuge Jin, Wu Strategist", &[0x183F]),
             ("Lightning, Security Sergeant", &[0x1840]),
             ("Dragon's Smile", &[0x1841]),
+            ("Torgal, A Fine Hound", &[0x1842]),
+            ("Olinda the Oblivious", &[0x1843]),
+            ("Thassa, God of the Sea", &[0x1844]),
+            ("The Neutrinos", &[0x1845]),
+            ("Falcon and Redwing", &[0x1846]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
