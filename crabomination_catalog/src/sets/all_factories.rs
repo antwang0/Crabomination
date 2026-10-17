@@ -1416,6 +1416,9 @@ static DECKS: &[Factory] = &[
     super::decks::stockman_mad_fly_entist,
     super::decks::thorin_companys_leader,
     super::decks::brain_in_a_jar,
+    // cmdr_019y_g (session 019Y6J4R)
+    super::decks::alaundo_the_seer,
+    super::decks::corrupted_grafstone,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
