@@ -22446,6 +22446,132 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FOURTH_DOCTOR_6_COMMANDERS,
             main: decks::THE_FOURTH_DOCTOR_6_MAIN,
         },
+        // Seat 3666: Abdel Adrian, Gorion's Ward and Dungeon Delver's EDHREC average deck. `--pod-decks 3666`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Dungeon Delver (WU)",
+            commanders: decks::ABDEL_ADRIAN_6_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_6_MAIN,
+        },
+        // Seat 3667: Alora, Merry Thief and Dungeon Delver's EDHREC average deck. `--pod-decks 3667`.
+        PodDeck {
+            name: "Alora, Merry Thief and Dungeon Delver (U)",
+            commanders: decks::ALORA_10_COMMANDERS,
+            main: decks::ALORA_10_MAIN,
+        },
+        // Seat 3668: Baeloth Barrityl, Entertainer and Dungeon Delver's EDHREC average deck. `--pod-decks 3668`.
+        PodDeck {
+            name: "Baeloth Barrityl, Entertainer and Dungeon Delver (UR)",
+            commanders: decks::BAELOTH_BARRITYL_4_COMMANDERS,
+            main: decks::BAELOTH_BARRITYL_4_MAIN,
+        },
+        // Seat 3669: Eligeth, Crossroads Augur and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 3669`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Kraum, Ludevic's Opus (UR)",
+            commanders: decks::ELIGETH_18_COMMANDERS,
+            main: decks::ELIGETH_18_MAIN,
+        },
+        // Seat 3670: Eligeth, Crossroads Augur and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3670`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Vial Smasher the Fierce (UBR)",
+            commanders: decks::ELIGETH_19_COMMANDERS,
+            main: decks::ELIGETH_19_MAIN,
+        },
+        // Seat 3671: Gale, Waterdeep Prodigy and Dungeon Delver's EDHREC average deck. `--pod-decks 3671`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Dungeon Delver (U)",
+            commanders: decks::GALE_11_COMMANDERS,
+            main: decks::GALE_11_MAIN,
+        },
+        // Seat 3672: Ganax, Astral Hunter and Dungeon Delver's EDHREC average deck. `--pod-decks 3672`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Dungeon Delver (UR)",
+            commanders: decks::GANAX_7_COMMANDERS,
+            main: decks::GANAX_7_MAIN,
+        },
+        // Seat 3673: Imoen, Mystic Trickster and Candlekeep Sage's EDHREC average deck. `--pod-decks 3673`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Candlekeep Sage (U)",
+            commanders: decks::IMOEN_4_COMMANDERS,
+            main: decks::IMOEN_4_MAIN,
+        },
+        // Seat 3674: Imoen, Mystic Trickster and Clan Crafter's EDHREC average deck. `--pod-decks 3674`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Clan Crafter (U)",
+            commanders: decks::IMOEN_5_COMMANDERS,
+            main: decks::IMOEN_5_MAIN,
+        },
+        // Seat 3675: Imoen, Mystic Trickster and Dungeon Delver's EDHREC average deck. `--pod-decks 3675`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Dungeon Delver (U)",
+            commanders: decks::IMOEN_6_COMMANDERS,
+            main: decks::IMOEN_6_MAIN,
+        },
+        // Seat 3676: Imoen, Mystic Trickster and Far Traveler's EDHREC average deck. `--pod-decks 3676`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Far Traveler (WU)",
+            commanders: decks::IMOEN_7_COMMANDERS,
+            main: decks::IMOEN_7_MAIN,
+        },
+        // Seat 3677: Imoen, Mystic Trickster and Noble Heritage's EDHREC average deck. `--pod-decks 3677`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Noble Heritage (WU)",
+            commanders: decks::IMOEN_8_COMMANDERS,
+            main: decks::IMOEN_8_MAIN,
+        },
+        // Seat 3678: Imoen, Mystic Trickster and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3678`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Passionate Archaeologist (UR)",
+            commanders: decks::IMOEN_9_COMMANDERS,
+            main: decks::IMOEN_9_MAIN,
+        },
+        // Seat 3679: Imoen, Mystic Trickster and Popular Entertainer's EDHREC average deck. `--pod-decks 3679`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Popular Entertainer (UR)",
+            commanders: decks::IMOEN_10_COMMANDERS,
+            main: decks::IMOEN_10_MAIN,
+        },
+        // Seat 3680: Karlach, Fury of Avernus and Dungeon Delver's EDHREC average deck. `--pod-decks 3680`.
+        PodDeck {
+            name: "Karlach, Fury of Avernus and Dungeon Delver (UR)",
+            commanders: decks::KARLACH_3_COMMANDERS,
+            main: decks::KARLACH_3_MAIN,
+        },
+        // Seat 3681: Lulu, Loyal Hollyphant and Dungeon Delver's EDHREC average deck. `--pod-decks 3681`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Dungeon Delver (WU)",
+            commanders: decks::LULU_7_COMMANDERS,
+            main: decks::LULU_7_MAIN,
+        },
+        // Seat 3682: Skanos Dragonheart and Inspiring Leader's EDHREC average deck. `--pod-decks 3682`.
+        PodDeck {
+            name: "Skanos Dragonheart and Inspiring Leader (WG)",
+            commanders: decks::SKANOS_DRAGONHEART_9_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_9_MAIN,
+        },
+        // Seat 3683: The Fourteenth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3683`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Ian Chesterton (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3684: The War Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3684`.
+        PodDeck {
+            name: "The War Doctor and Ian Chesterton (WR)",
+            commanders: decks::THE_WAR_DOCTOR_4_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_4_MAIN,
+        },
+        // Seat 3685: Volo, Itinerant Scholar and Dungeon Delver's EDHREC average deck. `--pod-decks 3685`.
+        PodDeck {
+            name: "Volo, Itinerant Scholar and Dungeon Delver (U)",
+            commanders: decks::VOLO_8_COMMANDERS,
+            main: decks::VOLO_8_MAIN,
+        },
+        // Seat 3686: Wilson, Refined Grizzly and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3686`.
+        PodDeck {
+            name: "Wilson, Refined Grizzly and Acolyte of Bahamut (G)",
+            commanders: decks::WILSON_8_COMMANDERS,
+            main: decks::WILSON_8_MAIN,
+        },
     ]
 }
 
@@ -27995,6 +28121,27 @@ mod tests {
             ("Slurrk, All-Ingesting and Vial Smasher the Fierce", &[0x1865]),
             ("The Eleventh Doctor and Martha Jones", &[0x1866]),
             ("The Fourth Doctor and Ian Chesterton", &[0x1867]),
+            ("Abdel Adrian, Gorion's Ward and Dungeon Delver", &[0x1868]),
+            ("Alora, Merry Thief and Dungeon Delver", &[0x1869]),
+            ("Baeloth Barrityl, Entertainer and Dungeon Delver", &[0x186A]),
+            ("Eligeth, Crossroads Augur and Kraum, Ludevic's Opus", &[0x186B]),
+            ("Eligeth, Crossroads Augur and Vial Smasher the Fierce", &[0x186C]),
+            ("Gale, Waterdeep Prodigy and Dungeon Delver", &[0x186D]),
+            ("Ganax, Astral Hunter and Dungeon Delver", &[0x186E]),
+            ("Imoen, Mystic Trickster and Candlekeep Sage", &[0x186F]),
+            ("Imoen, Mystic Trickster and Clan Crafter", &[0x1870]),
+            ("Imoen, Mystic Trickster and Dungeon Delver", &[0x1871]),
+            ("Imoen, Mystic Trickster and Far Traveler", &[0x1872]),
+            ("Imoen, Mystic Trickster and Noble Heritage", &[0x1873]),
+            ("Imoen, Mystic Trickster and Passionate Archaeologist", &[0x1874]),
+            ("Imoen, Mystic Trickster and Popular Entertainer", &[0x1875]),
+            ("Karlach, Fury of Avernus and Dungeon Delver", &[0x1876]),
+            ("Lulu, Loyal Hollyphant and Dungeon Delver", &[0x1877]),
+            ("Skanos Dragonheart and Inspiring Leader", &[0x1878]),
+            ("The Fourteenth Doctor and Ian Chesterton", &[0x1879]),
+            ("The War Doctor and Ian Chesterton", &[0x187A]),
+            ("Volo, Itinerant Scholar and Dungeon Delver", &[0x187B]),
+            ("Wilson, Refined Grizzly and Acolyte of Bahamut", &[0x187C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
