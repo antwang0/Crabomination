@@ -171,6 +171,36 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-17 (Commander run, `3chree`) — 135 closer cards, ~105 seats
+
+- **Cards** in `decks::cmdr_oct17_q`, `_r`, `_s`, `_t`, `_u` (tests `recent_b/cmdr_oct17_{q,r,s,t,u}.rs`). The
+  `_t`/`_u` batches are long-tail one-deck closers drafted from existing card shapes, no new primitives.
+- **Seats** 3729-3836 (minus the three `yl8zjb` seated in between): pairs/singles closed by these cards, each
+  after an exact-100 + offline Scryfall identity check and `cr_903_5a_target_decks_are_legal`. Held back:
+  chosen-colour pairs (Prismatic Piper / Faceless One) the offline check can't vouch for, lists with cards the
+  Scryfall cache lacks, and the off-identity Eleventh Doctor // Clara Oswald average deck.
+- **Primitives:** `AdditionalCastCost::{BeholdOfChosenType, ExileFromGraveyardForPower}`;
+  `Effect::{PlaysAmongGranted, TimeCountersOnEachPermanentAndSuspended, YourRedSourcesDealExtraDamageThisTurn,
+  CreaturesCantAttackYouUntilYourNextTurn, GrantSorcerySpellsFlashThisTurn, Parade,
+  YourCreaturesUntargetableByOpponentsThisTurn, BecomeCopyKeepingColorAndThisAbility}`;
+  `Predicate::{TwoShareACardType, OpponentDealtNoncombatDamageLastTurn}`; `EntersAsCopy.keep_own_colors`;
+  `PumpTeamByControlledPermanents.per_own_pips` (chroma); `ColdState.group_plays_left`; Player fields
+  `red_source_damage_bonus_this_turn`, `sorcery_spells_as_flash_this_turn`,
+  `creatures_untargetable_by_opponents_this_turn`, `dealt_noncombat_damage_last_turn`.
+- **FIXED (bug classes):** a departed source's chosen creature type (a sacrificed Pennant, a resolving spell in
+  no zone) now reads LKI / the resolving-spell snapshot — such graveyard targets used to fizzle; a graveyard
+  cast cleared no stale `cast_from_hand` flag (Twinned Vision drew one on flashback); Parade's per-creature
+  asks replayed wrong after a suspend and looped to the action cap — one ask, its pick order the line.
+- **Approximation:** Aurora Awakener puts every revealed permanent card in ("any number" — all).
+- **OPEN, researched (each a missing primitive):** Teferi's Talent (granted loyalty ability), Eater of Virtue
+  (keywords from exiled cards), Miss Highwater (player contract counters + lose-game copies), Chaotic
+  Transformation (five optional typed slots + controller's reveal), Portal Manipulator (reassign attackers),
+  Sculpted Sunburst, Fishing Pole, Conqueror's Galleon (exile-and-return-transformed), Mosswood Dreadknight
+  (cast-as-Adventure grant from graveyard), Kitesail Skirmisher ("attacking the same player"), Precognition
+  Field, Skullmulcher (devoured count), Gilt-Leaf Winnower (P != T), Pack Attack (players attacked count),
+  Screaming Swarm (attacker count on "whenever you attack"), Cast Through Time (granted rebound). Board cap:
+  Hollowhenge Overlord's Wolves (pod seed 37306, seats 3729/3733/3753/3773, game 16).
+
 ## FIXED/OPEN 2026-10-17 (Commander run, `yl8zjb`) — claims first
 
 - **CLAIMED — don't duplicate:** Thorin Mountain-king, Twists and Turns (researched; see below). Cards in `decks::cmdr_oct17_kn`, tests

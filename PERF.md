@@ -3136,6 +3136,23 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-17 (Commander run, `3chree`) — guardrail; ~105 seats, 135 cards
+
+Hot-path touches: `damage_scaling_in_scope` also asks each player's
+`red_source_damage_bonus_this_turn`; the per-resolution scratch reset calls
+`departed_source_chosen_type` (a resolving-spell id compare, then an LKI map
+lookup); `check_target_legality` reads one more Player bool; two Player bools
+and one ColdState Vec added (cold). `profiling-fast` bot_ladder, 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the
+                 yl8zjb tip; determinism ok (all pairs split); games_per_s 210.9 (box noise)
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 37601): 0 undecided, 0 panics
+pods (new seats) 3729-3781 in 4-seat (14 x 60, seeds 37401-37414) and 6-seat (9 x 30,
+                 37501-37509) pods: 1,110 / 1,110 decided, 0 panics; one Parade loop found
+                 at the action cap first (seed 37306) and fixed
+```
+
 ### 2026-10-17 (Commander run, `yl8zjb`) — guardrail; 122 seats, 61 cards, thirteen primitives
 
 Hot-path touches: the damage funnel and `combat_damage_prevented_from` ask
