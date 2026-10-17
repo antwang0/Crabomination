@@ -90,6 +90,20 @@ impl GameState {
 }
 
 impl GameState {
+    /// One play through a grant of `group`: the last play it allows
+    /// (`ColdState.group_plays_left`, one by default) spends the rest.
+    pub(crate) fn spend_one_cast_group(&mut self, group: crate::card::CardId) {
+        if let Some(i) = self.cold.group_plays_left.iter().position(|(g, _)| *g == group) {
+            let left = &mut self.cold.group_plays_left;
+            left[i].1 -= 1;
+            if left[i].1 > 0 {
+                return;
+            }
+            left.remove(i);
+        }
+        self.clear_one_cast_group(group);
+    }
+
     /// "You may cast a spell from among them": a cast through one grant of
     /// `group` spends the others (`MayPlayPermission::one_cast_group`).
     pub(crate) fn clear_one_cast_group(&mut self, group: crate::card::CardId) {

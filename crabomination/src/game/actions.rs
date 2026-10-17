@@ -5312,7 +5312,7 @@ impl GameState {
             // restores the card unmodified. "Play one of them" (Nashi): the
             // land spends its group's other grants.
             if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
-                self.clear_one_cast_group(group);
+                self.spend_one_cast_group(group);
             }
             card.may_play_until = None;
             card.granted_alt_cast_cost_eot = None;
@@ -10890,6 +10890,13 @@ impl GameState {
                 || !kicker_options.is_empty()
                 || self.granted_offspring_cost(p, &card.definition).is_some());
         card.kicked = kicked;
+        // CR 701.4a — the beheld type is chosen as the cost is announced.
+        if kicked
+            && let Some(crate::card::AdditionalCastCost::BeholdOfChosenType { count }) =
+                card.definition.kicker_action_cost
+        {
+            card.chosen_creature_type = self.beheld_creature_type(p, Some(card.id), count);
+        }
         // Behind a read: `kicked_options` and `spree_modes` below are
         // `CardCold` fields, and a store of an empty list over an empty list
         // deep-copied the card's cold group on every cast — 10,164 a sealed
@@ -12446,6 +12453,7 @@ impl GameState {
             // enforces it.
             A::RevealFromHandOrPay { .. } | A::BeholdOrPay { .. } => true,
             A::Behold { filter } => self.can_behold(filter, p, None),
+            A::BeholdOfChosenType { count } => self.beheld_creature_type(p, None, *count).is_some(),
             // A mandatory reveal needs a matching card in hand.
             A::RevealFromHand { filter } => self.players[p]
                 .hand
@@ -12846,7 +12854,7 @@ impl GameState {
                 }
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
-                A::RevealFromHandOrPay { .. } | A::Behold { .. } | A::BeholdOrPay { .. } => {}
+                A::RevealFromHandOrPay { .. } | A::Behold { .. } | A::BeholdOrPay { .. } | A::BeholdOfChosenType { .. } => {}
                 // The revealed card stays in hand; stamp its power and mana
                 // value for the body. Each value reads the best match for it
                 // (Titan's Presence: power; Disaster Radius: mana value).
@@ -15075,7 +15083,7 @@ impl GameState {
             card.bottom_on_leave_stack = bottom_after;
         }
         if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
-            self.clear_one_cast_group(group);
+            self.spend_one_cast_group(group);
         }
         // Hedonist's Trove — one spell a turn through its grants.
         if let Some(crate::card::MayPlayDuration::WhileSourceOnBattlefield { source, one_spell_a_turn: true }) =

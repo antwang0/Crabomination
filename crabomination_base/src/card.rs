@@ -6677,6 +6677,11 @@ pub enum AdditionalCastCost {
     /// `kicker_action_cost` it is "you may behold", read by
     /// `Predicate::SpellWasKicked` (Hulk's Thunderclap).
     Behold { filter: SelectionRequirement },
+    /// CR 701.4a — "choose a creature type and behold `count` creatures of that
+    /// type" (Celestial Reunion, as a `kicker_action_cost`): the type is chosen
+    /// as the cost is announced and stamped on the spell's
+    /// `chosen_creature_type`; nothing moves.
+    BeholdOfChosenType { count: u32 },
     /// CR 701.4a — "behold a [filter] or pay {pay}": with no matching
     /// permanent you control and no matching card in hand (the spell aside),
     /// `pay` generic joins the cost (Lys Alana Dignitary).

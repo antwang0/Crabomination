@@ -1032,6 +1032,9 @@ impl Effect {
             | Effect::CantLoseThisTurn { .. }
             | Effect::Venture
             | Effect::DoubleYourSourcesDamageThisTurn
+            | Effect::YourRedSourcesDealExtraDamageThisTurn { .. }
+            | Effect::PlaysAmongGranted { .. }
+            | Effect::TimeCountersOnEachPermanentAndSuspended { .. }
             | Effect::TripleYourSourcesDamageToOpponentsThisTurn
             | Effect::DoubleYourSourcesDamageToOpponentPlayersThisTurn
             | Effect::ExileUncastCreaturesThisTurn

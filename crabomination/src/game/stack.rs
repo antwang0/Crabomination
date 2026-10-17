@@ -2628,6 +2628,7 @@ impl GameState {
                 // entry is already popped (the Chain cycle).
                 self.scratch.resolving_spell_snapshot =
                     Some(std::sync::Arc::new(crate::game::ResolvingSpell {
+                        card_id,
                         definition: card.definition.arc(),
                         target: target.clone(),
                         additional_targets: additional_targets.clone(),
@@ -5271,6 +5272,7 @@ impl GameState {
             }
             // Quest for Pure Flame's turn-scoped source-damage doubling.
             pl.double_your_source_damage_this_turn = false;
+            pl.red_source_damage_bonus_this_turn = 0;
             pl.triple_your_source_damage_to_opponents_this_turn = false;
             pl.double_your_source_damage_to_opponents_this_turn = false;
             pl.exiles_uncast_creatures_this_turn = false;

@@ -3400,7 +3400,7 @@ impl GameState {
             // to tokens created by *this* resolution.
             self.last_created_token = None;
             clear_scratch!(self.last_created_tokens);
-            self.chosen_creature_type_scratch = None;
+            self.chosen_creature_type_scratch = self.departed_source_chosen_type(ctx.source);
             // Reset last-moved-cards scratch — `Selector::LastMoved` only
             // refers to cards moved by *this* resolution (Practiced
             // Scrollsmith's ETB chains Move → GrantMayPlay on the same
@@ -10390,6 +10390,9 @@ impl GameState {
                 Ok(())
             }
             Effect::TimeTravel { who } => self.time_travel(who, ctx, events),
+            Effect::TimeCountersOnEachPermanentAndSuspended { add, amount } => {
+                self.time_counters_on_each(*add, *amount, ctx, events)
+            }
 
             Effect::PayEnergyOrElse { amount, otherwise } => {
                 // CR 107.16 — "sacrifice/return unless you pay {E}…". Pay when
@@ -23217,6 +23220,12 @@ impl GameState {
 
             Effect::DoubleYourSourcesDamageThisTurn => {
                 self.players[ctx.controller].double_your_source_damage_this_turn = true;
+                Ok(())
+            }
+
+            Effect::YourRedSourcesDealExtraDamageThisTurn { amount } => {
+                let p = &mut self.players[ctx.controller];
+                p.red_source_damage_bonus_this_turn = p.red_source_damage_bonus_this_turn.saturating_add(*amount);
                 Ok(())
             }
 
@@ -43107,6 +43116,17 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::PlaysAmongGranted { what, plays } => {
+                if let Some(src) = ctx.source {
+                    let left = &mut self.cold.group_plays_left;
+                    left.retain(|(g, _)| *g != src);
+                    if *plays > 1 {
+                        left.push((src, *plays));
+                    }
+                }
+                self.run_effect(&Effect::OneCastAmongGranted { what: what.clone() }, ctx, events)
             }
 
             Effect::OneCastAmongGranted { what } => {

@@ -57,6 +57,50 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::TimeCountersOnEachPermanentAndSuspended` (Dust of Moments):
+    /// every suspended card in exile and every permanent — on add, only those
+    /// already holding a time counter — gains or loses `amount` time counters.
+    /// Removing a suspended card's last counter casts it (CR 702.62a).
+    pub(super) fn time_counters_on_each(
+        &mut self,
+        add: bool,
+        amount: u32,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let suspended: Vec<CardId> = self.exile.iter().filter(|c| c.is_suspended()).map(|c| c.id).collect();
+        for id in suspended {
+            if add {
+                let Some(card) = self.exile.iter_mut().find(|c| c.id == id) else { continue };
+                card.add_counters(CounterType::Time, amount);
+                events.push(GameEvent::CounterAdded {
+                    card_id: id,
+                    counter_type: CounterType::Time,
+                    count: amount,
+                    placer: self.resolution_causer,
+                });
+            } else {
+                for _ in 0..amount {
+                    let mut evs = self.remove_suspend_time_counter(id);
+                    events.append(&mut evs);
+                }
+            }
+        }
+        let perms: Vec<CardId> =
+            self.battlefield.iter().filter(|c| c.counter_count(CounterType::Time) > 0).map(|c| c.id).collect();
+        if perms.is_empty() {
+            return Ok(());
+        }
+        let what = Selector::ExactObjects(perms);
+        let amount = Value::Const(amount as i32);
+        let effect = if add {
+            Effect::AddCounter { what, kind: CounterType::Time, amount }
+        } else {
+            Effect::RemoveCounter { what, kind: CounterType::Time, amount }
+        };
+        self.run_effect(&effect, ctx, events)
+    }
+
     /// `Effect::GrantSuspend` — CR 702.62: exile each selected object from
     /// wherever it is (a spell straight off the stack, Taigam) with `n` time
     /// counters; if it doesn't have suspend, it gains suspend. An object

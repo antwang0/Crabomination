@@ -22,6 +22,8 @@ pub(crate) struct CastChoices {
     split_cast: Option<u8>,
     cast_discarded_mana_value: Option<u32>,
     cast_collected_evidence: bool,
+    /// A type chosen as a cost was paid (Celestial Reunion's behold).
+    chosen_creature_type: Option<crate::card::CreatureType>,
 }
 
 impl CastChoices {
@@ -38,6 +40,7 @@ impl CastChoices {
             split_cast: c.split_cast,
             cast_discarded_mana_value: c.cast_discarded_mana_value,
             cast_collected_evidence: c.cast_collected_evidence,
+            chosen_creature_type: c.chosen_creature_type,
         }
     }
 
@@ -58,6 +61,13 @@ impl CastChoices {
         c.split_cast = self.split_cast;
         c.cast_discarded_mana_value = self.cast_discarded_mana_value;
         c.cast_collected_evidence = self.cast_collected_evidence;
+        c.chosen_creature_type = self.chosen_creature_type;
+    }
+}
+
+impl CastChoices {
+    pub(crate) fn chosen_creature_type(&self) -> Option<crate::card::CreatureType> {
+        self.chosen_creature_type
     }
 }
 

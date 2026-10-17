@@ -7164,6 +7164,7 @@ impl GameState {
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .and_then(|s| s.chosen_creature_type)
                         .or(self.chosen_creature_type_scratch)
+                        .or_else(|| self.departed_source_chosen_type(source))
                         .is_some_and(|ct| has_ctype(&ct) || self.permanent_is_changeling(card)),
                     // Extraplanar Lens — "a land with the same name as the
                     // exiled card".

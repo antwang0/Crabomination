@@ -888,6 +888,10 @@ pub struct PlayerData {
     /// for Pure Flame). Read in `scale_damage_to`, reset at the turn boundary.
     #[serde(default)]
     pub double_your_source_damage_this_turn: bool,
+    /// The Flame of Keld's chapter III — this player's red sources deal this
+    /// much extra damage to any permanent or player this turn (CR 614.1a).
+    #[serde(default)]
+    pub red_source_damage_bonus_this_turn: u32,
     /// Isengard Unleashed — this player's sources deal triple damage to their
     /// opponents and opponents' permanents this turn. Cleared at cleanup.
     #[serde(default)]
@@ -1870,6 +1874,7 @@ impl Player {
             freerunning_unlocked_this_turn: false,
             attacked_by_assassins_of: 0,
             double_your_source_damage_this_turn: false,
+            red_source_damage_bonus_this_turn: 0,
             triple_your_source_damage_to_opponents_this_turn: false,
             double_your_source_damage_to_opponents_this_turn: false,
             exiles_uncast_creatures_this_turn: false,

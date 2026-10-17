@@ -5721,6 +5721,11 @@ pub enum Effect {
     /// with time counters (vanishing — so it lives longer). UI per-object
     /// choice is a follow-up.
     TimeTravel { who: PlayerRef },
+    /// "Remove `amount` time counters from each permanent and each suspended
+    /// card" (`add: false`) / "put `amount` time counters on each permanent
+    /// with a time counter on it and each suspended card" (Dust of Moments).
+    /// A removal that takes a suspended card's last counter casts it (CR 702.62).
+    TimeCountersOnEachPermanentAndSuspended { add: bool, amount: u32 },
     /// "You may pay any amount of {E}; deal that much damage to `to`"
     /// (Galvanic Discharge). The controller spends energy at resolution; the
     /// bot heuristic pays exactly lethal to a creature target (its remaining
@@ -9564,6 +9569,10 @@ pub enum Effect {
     /// it deals double that damage instead." Sets the controller's
     /// turn-scoped flag read by `scale_damage_to` (Quest for Pure Flame).
     DoubleYourSourcesDamageThisTurn,
+    /// CR 614.1a — "If a red source you control would deal damage to a
+    /// permanent or player this turn, it deals that much damage plus `amount`
+    /// instead" (The Flame of Keld's chapter III). Stacks per resolution.
+    YourRedSourcesDealExtraDamageThisTurn { amount: u32 },
     /// CR 614.1a — "If a source you control would deal damage this turn to an
     /// opponent or a permanent an opponent controls, it deals triple that
     /// damage instead" (Isengard Unleashed). Sets
@@ -10697,6 +10706,10 @@ pub enum Effect {
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.
     OneCastAmongGranted { what: Selector },
+    /// The "up to `plays`" sibling of `OneCastAmongGranted` (March of Reckless
+    /// Joy's "you may play up to two of those cards"): the grants form one
+    /// group that `plays` plays spend (`ColdState.group_plays_left`).
+    PlaysAmongGranted { what: Selector, plays: u32 },
     /// Mark the may-play permission on each card `what` resolves to as "you
     /// may **cast**": a land among them can't be played (Ian Malcolm,
     /// Chaotician). Chain after `GrantMayPlay`.

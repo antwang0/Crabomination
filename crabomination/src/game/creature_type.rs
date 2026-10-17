@@ -62,6 +62,20 @@ impl GameState {
             .map_or_else(|| c.definition.has_land_type(lt), |cp| cp.subtypes().land_types.contains(&lt))
     }
 
+    /// A source's chosen creature type once the source is gone: the resolving
+    /// spell's (it is in no zone), or a permanent's last known one — a
+    /// Dawn-Blessed Pennant sacrificed to pay for its own ability (CR 608.2h).
+    pub(crate) fn departed_source_chosen_type(&self, src: Option<CardId>) -> Option<CreatureType> {
+        let src = src?;
+        if let Some(rs) = &self.scratch.resolving_spell_snapshot
+            && rs.card_id == src
+        {
+            return rs.cast_choices.chosen_creature_type();
+        }
+        let ct = self.leaves_bf_lki.get(&src)?.chosen_creature_type?;
+        self.battlefield_find(src).is_none().then_some(ct)
+    }
+
     /// CR 205.3 — does `card`, off the battlefield, have creature type `ct`?
     /// Printed line or changeling, plus the grants layers can't reach
     /// ([`Self::off_battlefield_type_grants`]).

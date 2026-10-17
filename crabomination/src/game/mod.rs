@@ -1679,6 +1679,11 @@ pub struct ColdState {
     /// Fomori), as (creature, player). Cleared with `attacking`.
     #[serde(default)]
     pub(crate) attack_player_requirements: Vec<(CardId, usize)>,
+    /// `Effect::PlaysAmongGranted` — plays left in a may-play grant group
+    /// beyond the one that spends it (March of Reckless Joy's "up to two").
+    /// Cold: only that effect writes it.
+    #[serde(default)]
+    pub(crate) group_plays_left: Vec<(CardId, u32)>,
     /// `Duration::UntilSourceCast` grants as (permanent, source card, the
     /// ability): `finalize_cast` strips each when its source is cast (Emrakul,
     /// the Exigent Doom's land). Cold: only that grant writes it.
@@ -4706,6 +4711,7 @@ impl Clone for GameState {
 /// entry has been popped (`Effect::MayCopyThisSpell`).
 #[derive(Debug, Clone)]
 pub(crate) struct ResolvingSpell {
+    pub card_id: CardId,
     pub definition: std::sync::Arc<crate::card::CardDefinition>,
     pub target: Option<crate::game::types::Target>,
     pub additional_targets: Vec<crate::game::types::Target>,
@@ -10394,7 +10400,7 @@ impl GameState {
         !self.doubled_damage_sources_this_turn.is_empty()
             || !self.staggered_damage_players.is_empty()
             || self.damage_becomes_this_turn.is_some()
-            || self.players.iter().any(|p| p.double_your_source_damage_this_turn)
+            || self.players.iter().any(|p| p.double_your_source_damage_this_turn || p.red_source_damage_bonus_this_turn > 0)
             || self.players.iter().any(|p| {
                 p.triple_your_source_damage_to_opponents_this_turn
                     || p.double_your_source_damage_to_opponents_this_turn
@@ -10682,6 +10688,12 @@ impl GameState {
                     }
                 }
             }
+        }
+        // The Flame of Keld — "+N from a red source you control" this turn.
+        if let Some((src_ctrl, src_colors)) = &source_info
+            && src_colors.contains(&crate::mana::Color::Red)
+        {
+            amount = amount.saturating_add(self.players[*src_ctrl].red_source_damage_bonus_this_turn);
         }
         // Quest for Pure Flame — the source's controller doubles all damage
         // their sources deal this turn (CR 614.5, any permanent or player).
