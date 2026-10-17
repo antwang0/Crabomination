@@ -2457,3 +2457,95 @@ pub fn veteran_adventurer() -> CardDefinition {
 pub fn calciform_pools() -> CardDefinition {
     crate::sets::storage_land("Calciform Pools", Color::White, Color::Blue)
 }
+
+// ── batch 12 ────────────────────────────────────────────────────────────────
+
+/// Lifelink — {W} Aura: enchanted creature has lifelink.
+pub fn lifelink() -> CardDefinition {
+    CardDefinition {
+        name: "Lifelink",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Lifelink], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Moonblade Shinobi — {3}{U} 3/2 Human Ninja, ninjutsu {2}{U}. Combat damage
+/// to a player: a 1/1 blue flying Illusion.
+pub fn moonblade_shinobi() -> CardDefinition {
+    use crate::mana::u;
+    let illusion = TokenDefinition {
+        name: "Illusion".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        colors: vec![Color::Blue],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(illusion) },
+        }],
+        ..creature("Moonblade Shinobi", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Ninja], 3, 2)
+    }
+}
+
+/// Dining Room — R/G tapland; {4}, {T}: investigate.
+pub fn dining_room() -> CardDefinition {
+    let mut d = crate::sets::dual_land_untyped("Dining Room", Color::Red, Color::Green, vec![]);
+    d.static_abilities.push(crate::sets::enters_tapped());
+    d.activated_abilities.push(ActivatedAbility {
+        tap_cost: true,
+        mana_cost: cost(&[generic(4)]),
+        effect: crate::effect::shortcut::investigate(1),
+        ..Default::default()
+    });
+    d
+}
+
+/// Resonance Technician — {3}{U/R}{U/R} 4/4 flying Weird Detective. ETB: you
+/// may discard a card; if you do, investigate twice. {T}, tap X untapped
+/// artifacts: copy target instant or sorcery spell you control with mana value
+/// X; new targets may be chosen.
+pub fn resonance_technician() -> CardDefinition {
+    let ur = || hybrid(Color::Blue, Color::Red);
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Discard a card to investigate twice?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                crate::effect::shortcut::investigate(2),
+            ])),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_n_filter: Some((R::Artifact, 0)),
+            tap_n_x: true,
+            effect: Effect::CopySpellMayChooseTargets {
+                what: target_filtered(
+                    R::IsSpellOnStack
+                        .and(R::ControlledByYou)
+                        .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))
+                        .and(R::ManaValueExactlyXFromCost),
+                ),
+                count: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Resonance Technician",
+            cost(&[generic(3), ur(), ur()]),
+            vec![CreatureType::Weird, CreatureType::Detective],
+            4,
+            4,
+        )
+    }
+}

@@ -16709,6 +16709,10 @@ static DECKS: &[Factory] = &[
     super::decks::library,
     super::decks::veteran_adventurer,
     super::decks::calciform_pools,
+    super::decks::lifelink,
+    super::decks::moonblade_shinobi,
+    super::decks::dining_room,
+    super::decks::resonance_technician,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

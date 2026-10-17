@@ -169,8 +169,8 @@ fn sensation_gorger_kinship_wheels_every_player() {
         g.step = TurnStep::Upkeep;
         g.fire_step_triggers(TurnStep::Upkeep);
         drain_stack(&mut g);
-        for seat in 0..3 {
-            let want = if shares { 4 } else { before[seat] };
+        for (seat, &held) in before.iter().enumerate() {
+            let want = if shares { 4 } else { held };
             assert_eq!(g.players[seat].hand.len(), want, "seat {seat}, shares {shares}");
         }
     }
@@ -1275,4 +1275,82 @@ fn lilianas_elite_counts_graveyard_creatures() {
     g.add_card_to_graveyard(0, catalog::forest());
     let cp = g.computed_permanent(e).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// CR 702.15b — Lifelink (the Aura) grants lifelink: the enchanted creature's
+/// damage gains its controller that much life.
+#[test]
+fn lifelink_aura_grants_lifelink() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::lifelink());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, aura, Some(Target::Permanent(bear))).expect("Lifelink");
+    let life = g.players[0].life;
+    attack(&mut g, &[(bear, 1)]);
+    to_combat_damage(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// CR 702.49a — Moonblade Shinobi ninjutsus in for an unblocked attacker;
+/// its combat damage to a player makes a 1/1 flying Illusion.
+#[test]
+fn moonblade_shinobi_ninjutsu_makes_an_illusion() {
+    let mut g = pod(2);
+    let sneaker = ready(&mut g, 0, catalog::grizzly_bears());
+    let ninja = g.add_card_to_hand(0, catalog::moonblade_shinobi());
+    attack(&mut g, &[(sneaker, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Ninjutsu { ninja, returning: sneaker }).expect("ninjutsu");
+    drain_stack(&mut g);
+    let opp = g.players[1].life;
+    to_combat_damage(&mut g);
+    assert_eq!(g.players[1].life, opp - 3);
+    let illusion = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Illusion").expect("Illusion");
+    assert!(illusion.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// CR 701.16a — Dining Room enters tapped; {4}, {T} investigates.
+#[test]
+fn dining_room_investigates() {
+    let mut g = pod(2);
+    let room = g.add_card_to_hand(0, catalog::dining_room());
+    g.perform_action(GameAction::PlayLand(room)).expect("land");
+    assert!(g.battlefield_find(room).unwrap().tapped, "enters tapped");
+    g.battlefield_find_mut(room).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, room, 2, None).expect("investigate");
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Clue"));
+}
+
+/// CR 707.10c — Resonance Technician taps X artifacts to copy an instant or
+/// sorcery you control with mana value exactly X.
+#[test]
+fn resonance_technician_copies_a_spell_of_mana_value_x() {
+    let mut g = pod(2);
+    let tech = ready(&mut g, 0, catalog::resonance_technician());
+    ready(&mut g, 0, catalog::sol_ring());
+    ready(&mut g, 0, catalog::sol_ring());
+    let opp = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let act = |g: &mut GameState, x| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: tech,
+            ability_index: 0,
+            target: Some(Target::Permanent(bolt)),
+            additional_targets: vec![],
+            x_value: Some(x),
+            mode: None,
+        })
+    };
+    assert!(act(&mut g, 2).is_err(), "Bolt's mana value is 1, not 2");
+    act(&mut g, 1).expect("copy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 6, "Bolt and its copy");
 }
