@@ -20424,6 +20424,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AKROMA_7_COMMANDERS,
             main: decks::AKROMA_7_MAIN,
         },
+        // Seat 3329: Gilanra, Caller of Wirewood and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 3329`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Halana, Kessig Ranger (G)",
+            commanders: decks::GILANRA_8_COMMANDERS,
+            main: decks::GILANRA_8_MAIN,
+        },
+        // Seat 3330: Erinis, Gloom Stalker and Criminal Past's EDHREC average deck. `--pod-decks 3330`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Criminal Past (BG)",
+            commanders: decks::ERINIS_5_COMMANDERS,
+            main: decks::ERINIS_5_MAIN,
+        },
+        // Seat 3331: Rasaad yn Bashir and Guild Artisan's EDHREC average deck. `--pod-decks 3331`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Guild Artisan (WR)",
+            commanders: decks::RASAAD_YN_BASHIR_9_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_9_MAIN,
+        },
+        // Seat 3332: Skanos Dragonheart and Flaming Fist's EDHREC average deck. `--pod-decks 3332`.
+        PodDeck {
+            name: "Skanos Dragonheart and Flaming Fist (WG)",
+            commanders: decks::SKANOS_DRAGONHEART_6_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_6_MAIN,
+        },
+        // Seat 3333: The Fourth Doctor and Vislor Turlough's EDHREC average deck. `--pod-decks 3333`.
+        PodDeck {
+            name: "The Fourth Doctor and Vislor Turlough (UBG)",
+            commanders: decks::THE_FOURTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_FOURTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3334: Gut, True Soul Zealot and Tavern Brawler's EDHREC average deck. `--pod-decks 3334`.
+        PodDeck {
+            name: "Gut, True Soul Zealot and Tavern Brawler (R)",
+            commanders: decks::GUT_6_COMMANDERS,
+            main: decks::GUT_6_MAIN,
+        },
+        // Seat 3335: Kamahl, Heart of Krosa and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 3335`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Reyhan, Last of the Abzan (BG)",
+            commanders: decks::KAMAHL_9_COMMANDERS,
+            main: decks::KAMAHL_9_MAIN,
+        },
+        // Seat 3336: Anara, Wolvid Familiar and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 3336`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Gilanra, Caller of Wirewood (G)",
+            commanders: decks::ANARA_5_COMMANDERS,
+            main: decks::ANARA_5_MAIN,
+        },
+        // Seat 3337: Zellix, Sanity Flayer and Shameless Charlatan's EDHREC average deck. `--pod-decks 3337`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Shameless Charlatan (U)",
+            commanders: decks::ZELLIX_6_COMMANDERS,
+            main: decks::ZELLIX_6_MAIN,
+        },
+        // Seat 3338: Eligeth, Crossroads Augur and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 3338`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Reyhan, Last of the Abzan (UBG)",
+            commanders: decks::ELIGETH_13_COMMANDERS,
+            main: decks::ELIGETH_13_MAIN,
+        },
     ]
 }
 
@@ -25636,6 +25696,16 @@ mod tests {
             ("Gale, Waterdeep Prodigy and Shameless Charlatan", &[0x1714]),
             ("The Twelfth Doctor and Leela, Sevateem Warrior", &[0x1715]),
             ("Akroma, Vision of Ixidor and Malcolm, Keen-Eyed Navigator", &[0x1716]),
+            ("Gilanra, Caller of Wirewood and Halana, Kessig Ranger", &[0x1717]),
+            ("Erinis, Gloom Stalker and Criminal Past", &[0x1718]),
+            ("Rasaad yn Bashir and Guild Artisan", &[0x1719]),
+            ("Skanos Dragonheart and Flaming Fist", &[0x171A]),
+            ("The Fourth Doctor and Vislor Turlough", &[0x171B]),
+            ("Gut, True Soul Zealot and Tavern Brawler", &[0x171C]),
+            ("Kamahl, Heart of Krosa and Reyhan, Last of the Abzan", &[0x171D]),
+            ("Anara, Wolvid Familiar and Gilanra, Caller of Wirewood", &[0x171E]),
+            ("Zellix, Sanity Flayer and Shameless Charlatan", &[0x171F]),
+            ("Eligeth, Crossroads Augur and Reyhan, Last of the Abzan", &[0x1720]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
