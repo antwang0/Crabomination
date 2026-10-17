@@ -3763,6 +3763,10 @@ impl GameState {
                     .and_then(|bc| bc.iter().find(|(c, _)| c == color))
                     .is_some_and(|(_, n)| *n >= *at_least)
             }
+            Predicate::SourceCastWithOneColorSpent { at_least } => ctx
+                .source
+                .and_then(|s| self.find_card_anywhere(s))
+                .is_some_and(|c| c.cast_mana_spent_by_color.iter().any(|(_, n)| *n >= *at_least)),
             Predicate::CastSpellSharesChosenColorOfSource => {
                 let Some(color) = ctx.source.and_then(|s| self.find_card_anywhere(s)).and_then(|c| c.chosen_color) else {
                     return false;

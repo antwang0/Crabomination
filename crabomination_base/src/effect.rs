@@ -2659,6 +2659,12 @@ pub enum Predicate {
     /// back at how their own creature was paid for (Gruul Scrapper's "if {R}
     /// was spent, gain haste"; Steamcore Weird's "if {R} was spent, deal 2").
     SourceCastWithColorSpent { color: crate::mana::Color, at_least: u32 },
+    /// CR 702.137 (Adamant) with no color named — "if at least `at_least` mana
+    /// of the same color was spent to cast this" (Henge Walker), read from the
+    /// source's own cast provenance like `SourceCastWithColorSpent`. Separate
+    /// from five `SourceCastWithColorSpent` arms because those colors would be
+    /// symbols in the card's CR 903.4 identity, and the card prints none.
+    SourceCastWithOneColorSpent { at_least: u32 },
     /// True if no *colored* mana was spent casting the just-cast spell
     /// (`ctx.trigger_source`) — Void Mirror's counter gate. Free casts
     /// (suspend, cascade) spend no mana, so they match.
