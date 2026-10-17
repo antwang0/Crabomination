@@ -7636,16 +7636,9 @@ impl GameState {
                     // grant's filter reads the granting permanent's choice,
                     // which the source-blind card check can't see, so it is
                     // concretized here (only when a choice is stamped).
-                    StaticEffect::PlayFromLibraryTop { filter } if c.chosen_creature_type.is_some() => {
-                        self.evaluate_requirement_on_card(
-                            &filter.resolve_chosen_creature_type(c.chosen_creature_type),
-                            card,
-                            p,
-                        )
-                    }
                     StaticEffect::PlayFromLibraryTop { filter }
                     | StaticEffect::PlayFromLibraryTopPayLife { filter } => {
-                        self.evaluate_requirement_on_card(filter, card, p)
+                        self.library_top_grant_covers(filter, c, card, p)
                     }
                     // Into the Pit — spells only, and only while there is
                     // something to sacrifice.
@@ -7665,7 +7658,7 @@ impl GameState {
                     // Johann — the once-per-turn grant lapses after the first
                     // top-of-library cast this turn.
                     StaticEffect::PlayFromLibraryTopOncePerTurn { filter } => {
-                        !capped_used && self.evaluate_requirement_on_card(filter, card, p)
+                        !capped_used && self.library_top_grant_covers(filter, c, card, p)
                     }
                     _ => false,
                 })
@@ -7714,6 +7707,35 @@ impl GameState {
         }
     }
 
+    /// A library-top grant's `filter` against `card`, its source-relative
+    /// leaves concretized against the granting permanent `src` first —
+    /// Realmwalker's chosen type, Cemetery Illuminator's exiled card types.
+    fn library_top_grant_covers(
+        &self,
+        filter: &crate::card::SelectionRequirement,
+        src: &crate::card::CardInstance,
+        card: &crate::card::CardInstance,
+        p: usize,
+    ) -> bool {
+        use std::borrow::Cow;
+        let mut f = Cow::Borrowed(filter);
+        if src.chosen_creature_type.is_some() {
+            f = Cow::Owned(f.resolve_chosen_creature_type(src.chosen_creature_type));
+        }
+        if f.mentions_exiled_by_source_types() {
+            let mut types: Vec<crate::card::CardType> = Vec::new();
+            for e in self.exile.iter().filter(|e| e.exiled_with == Some(src.id)) {
+                for t in &e.definition.card_types {
+                    if !types.contains(t) {
+                        types.push(t.clone());
+                    }
+                }
+            }
+            f = Cow::Owned(f.resolve_exiled_by_source_types(&types));
+        }
+        self.evaluate_requirement_on_card(&f, card, p)
+    }
+
     /// Into the Pit — when the only grant covering `card` (the top card, mid-
     /// cast) is a `PlayFromLibraryTopBySacrificing`, its source and sacrifice
     /// filter (the cast must also sacrifice a matching permanent).
@@ -7733,7 +7755,7 @@ impl GameState {
                 match eff {
                     StaticEffect::PlayFromLibraryTop { filter }
                     | StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
-                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                        if self.library_top_grant_covers(filter, c, card, p) =>
                     {
                         return None;
                     }
@@ -7787,16 +7809,12 @@ impl GameState {
                 let Some(eff) = self.active_static(&sa.effect, c) else { continue };
                 match eff {
                     StaticEffect::PlayFromLibraryTop { filter }
-                        if self.evaluate_requirement_on_card(
-                            &filter.resolve_chosen_creature_type(c.chosen_creature_type),
-                            card,
-                            p,
-                        ) =>
+                        if self.library_top_grant_covers(filter, c, card, p) =>
                     {
                         return None;
                     }
                     StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
-                        if capped.is_none() && self.evaluate_requirement_on_card(filter, card, p) =>
+                        if capped.is_none() && self.library_top_grant_covers(filter, c, card, p) =>
                     {
                         capped = Some(c.id);
                     }
@@ -10976,6 +10994,18 @@ impl GameState {
                 self.players[p].hand.push(card);
                 return Err(GameError::CantCastNoncreature);
             }
+        }
+
+        // Living Breakthrough — an opponent locked this spell's mana value
+        // until their next turn.
+        if self.players.iter().enumerate().any(|(i, pl)| {
+            !pl.opponents_cant_cast_mv.is_empty()
+                && !self.same_team(i, p)
+                && pl.opponents_cant_cast_mv.contains(&card.definition.cost.cmc())
+        }) {
+            cast_census::rollback(line!());
+            self.players[p].hand.push(card);
+            return Err(GameError::SpellNameLocked);
         }
 
         // City in a Bottle — a symmetric play-lock binds every seat.

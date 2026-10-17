@@ -4385,6 +4385,41 @@ impl SelectionRequirement {
         }
     }
 
+    /// Does the filter read `SharesCardTypeWithExiledBySource` anywhere?
+    pub fn mentions_exiled_by_source_types(&self) -> bool {
+        match self {
+            Self::SharesCardTypeWithExiledBySource => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.mentions_exiled_by_source_types() || b.mentions_exiled_by_source_types()
+            }
+            Self::Not(inner) => inner.mentions_exiled_by_source_types(),
+            _ => false,
+        }
+    }
+
+    /// Concretize `SharesCardTypeWithExiledBySource` against the card types of
+    /// the cards exiled with the source, for an evaluator that can't see the
+    /// source (Cemetery Illuminator's library-top grant).
+    pub fn resolve_exiled_by_source_types(&self, types: &[CardType]) -> Self {
+        match self {
+            Self::SharesCardTypeWithExiledBySource => types
+                .iter()
+                .map(|t| Self::HasCardType(t.clone()))
+                .reduce(|a, b| Self::Or(Box::new(a), Box::new(b)))
+                .unwrap_or_else(|| Self::Not(Box::new(Self::Any))),
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_exiled_by_source_types(types)),
+                Box::new(b.resolve_exiled_by_source_types(types)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_exiled_by_source_types(types)),
+                Box::new(b.resolve_exiled_by_source_types(types)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_exiled_by_source_types(types))),
+            other => other.clone(),
+        }
+    }
+
     /// Concretize `SharesCardTypeWithTarget` against the target's card types
     /// (an `Or` of `HasCardType`, or "matches nothing"), recursing through
     /// And/Or/Not.
