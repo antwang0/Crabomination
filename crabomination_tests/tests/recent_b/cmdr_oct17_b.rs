@@ -455,3 +455,29 @@ fn dies_trigger_filters_read_last_known_power() {
         assert_eq!(g.players[0].life, life + 5);
     }
 }
+
+/// CR 502.4 — no player receives priority in the untap step: King of the
+/// Oathbreakers phasing back in triggers there, and its Spirit token is made
+/// in the upkeep (it used to resolve inside the untap step, leaving a
+/// summoning-sick permanent behind the turn's start — a pod audit panic).
+#[test]
+fn cr_502_4_a_phase_in_trigger_waits_for_the_upkeep() {
+    let mut g = pod(2);
+    let king = ready(&mut g, 0, catalog::king_of_the_oathbreakers());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(king))).expect("bolt");
+    assert!(g.battlefield_find(king).is_none(), "targeted, it phased out");
+    let mut guard = 0;
+    while !(g.active_player_idx == 0 && g.turn_number > 1) && guard < 50 {
+        let ev = g.advance_step(Vec::new()).expect("step");
+        g.dispatch_triggers_for_events(&ev);
+        guard += 1;
+    }
+    assert_eq!(g.step, TurnStep::Upkeep);
+    assert!(g.battlefield_find(king).is_some(), "phased in");
+    assert!(!g.battlefield.iter().any(|c| c.is_token), "no token before anyone had priority");
+    assert_eq!(g.stack.len(), 1, "the phase-in trigger waits on the stack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
+}

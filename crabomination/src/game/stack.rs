@@ -406,6 +406,22 @@ impl GameState {
         self.priority.consecutive_passes + 1 < self.alive_count()
     }
 
+    /// CR 502.4 — leave the untap step, where no player receives priority.
+    /// The seeded pass counts as everyone passing; but a trigger the step's
+    /// phasing or day/night action put on the stack must wait for the upkeep
+    /// (King of the Oathbreakers' phase-in Spirit resolved in the untap step),
+    /// so a non-empty stack advances the step instead of resolving it.
+    fn leave_untap_step(&mut self, ap: usize) -> Result<Vec<GameEvent>, GameError> {
+        self.priority.player_with_priority = self.priority_recipient(ap);
+        if !self.stack.is_empty() {
+            self.priority.consecutive_passes = 0;
+            let events = self.event_scratch.take();
+            return self.advance_step(events);
+        }
+        self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
+        self.pass_priority()
+    }
+
     pub fn pass_priority(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let alive = self.alive_count();
         self.priority.consecutive_passes += 1;
@@ -693,9 +709,7 @@ impl GameState {
                         c.tapped = false;
                     }
                 }
-                self.priority.player_with_priority = self.priority_recipient(ap);
-                self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
-                let mut upkeep_events = self.pass_priority()?;
+                let mut upkeep_events = self.leave_untap_step(ap)?;
                 events.append(&mut upkeep_events);
                 self.recycle_events(upkeep_events);
                 return Ok(events);
@@ -825,10 +839,7 @@ impl GameState {
                 // Upkeep. Seed the pass count so the single pass below counts
                 // as everyone passing rather than needing a phantom extra
                 // client pass.
-                self.priority.player_with_priority =
-                    self.priority_recipient(self.active_player_idx);
-                self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
-                let mut upkeep_events = self.pass_priority()?;
+                let mut upkeep_events = self.leave_untap_step(self.active_player_idx)?;
                 events.append(&mut upkeep_events);
                 // The nested pass took the scratch slot's replacement (the
                 // outer one holds `events`); hand it back rather than drop
@@ -5854,6 +5865,7 @@ impl GameState {
         // Desperate Gambit's unspent doubler expires with the turn.
         clear_turn!(self.double_next_damage_from);
         self.damaged_creatures_die_this_turn = false;
+        self.damaged_opponent_creatures_die_for = 0;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
         clear_cold!(self.skipped_steps_this_turn);
@@ -6859,6 +6871,7 @@ impl GameState {
             self.no_other_sacrifice_armed.len(),
             self.steal_penalty_armed.len(),
             self.damaged_creatures_die_this_turn,
+            self.damaged_opponent_creatures_die_for,
         )
             .hash(&mut h);
         sba_census::tick(h.finish());
@@ -7066,7 +7079,8 @@ impl GameState {
             || (c.damage > 0
                 && ((c.damage as i32) >= t
                     || c.dealt_deathtouch_damage
-                    || self.damaged_creatures_die_this_turn))
+                    || self.damaged_creatures_die_this_turn
+                    || self.damaged_dies_to_opponent_breath(c.controller)))
     }
 
     /// CR 704.5f/g/h for one permanent, against a computed view the caller
@@ -7132,7 +7146,7 @@ impl GameState {
         // Shriveling Rot — "whenever a creature is dealt damage, destroy it"
         // for the rest of the turn. Indestructible has already returned above,
         // matching "destroy".
-        if self.damaged_creatures_die_this_turn && c.damage > 0 {
+        if (self.damaged_creatures_die_this_turn || self.damaged_dies_to_opponent_breath(c.controller)) && c.damage > 0 {
             return true;
         }
         c.dealt_deathtouch_damage && c.damage > 0
