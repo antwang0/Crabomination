@@ -22758,6 +22758,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_THIRD_DOCTOR_11_COMMANDERS,
             main: decks::THE_THIRD_DOCTOR_11_MAIN,
         },
+        // Seat 3718: Brinelin, the Moon Kraken and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 3718`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Ishai, Ojutai Dragonspeaker (WU)",
+            commanders: decks::BRINELIN_12_COMMANDERS,
+            main: decks::BRINELIN_12_MAIN,
+        },
+        // Seat 3719: Brinelin, the Moon Kraken and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 3719`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Kamahl, Heart of Krosa (UG)",
+            commanders: decks::BRINELIN_13_COMMANDERS,
+            main: decks::BRINELIN_13_MAIN,
+        },
+        // Seat 3720: Brinelin, the Moon Kraken and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3720`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Toggo, Goblin Weaponsmith (UR)",
+            commanders: decks::BRINELIN_14_COMMANDERS,
+            main: decks::BRINELIN_14_MAIN,
+        },
+        // Seat 3721: Ellyn Harbreeze, Busybody and Haunted One's EDHREC average deck. `--pod-decks 3721`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Haunted One (WB)",
+            commanders: decks::ELLYN_HARBREEZE_7_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_7_MAIN,
+        },
+        // Seat 3722: Glacian, Powerstone Engineer and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 3722`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Nadier, Agent of the Duskenel (UB)",
+            commanders: decks::GLACIAN_18_COMMANDERS,
+            main: decks::GLACIAN_18_MAIN,
+        },
+        // Seat 3723: Keleth, Sunmane Familiar and Kodama of the East Tree's EDHREC average deck. `--pod-decks 3723`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Kodama of the East Tree (WG)",
+            commanders: decks::KELETH_8_COMMANDERS,
+            main: decks::KELETH_8_MAIN,
+        },
+        // Seat 3724: Nadier, Agent of the Duskenel and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 3724`.
+        PodDeck {
+            name: "Nadier, Agent of the Duskenel and Rebbec, Architect of Ascension (WB)",
+            commanders: decks::NADIER_6_COMMANDERS,
+            main: decks::NADIER_6_MAIN,
+        },
+        // Seat 3725: Shadowheart, Dark Justiciar and Haunted One's EDHREC average deck. `--pod-decks 3725`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Haunted One (B)",
+            commanders: decks::SHADOWHEART_7_COMMANDERS,
+            main: decks::SHADOWHEART_7_MAIN,
+        },
+        // Seat 3726: The Ninth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 3726`.
+        PodDeck {
+            name: "The Ninth Doctor and K-9, Mark I (UR)",
+            commanders: decks::THE_NINTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_7_MAIN,
+        },
+        // Seat 3727: Vhal, Candlekeep Researcher and Dungeon Delver's EDHREC average deck. `--pod-decks 3727`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Dungeon Delver (U)",
+            commanders: decks::VHAL_8_COMMANDERS,
+            main: decks::VHAL_8_MAIN,
+        },
+        // Seat 3728: Zellix, Sanity Flayer and Dragon Cultist's EDHREC average deck. `--pod-decks 3728`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Dragon Cultist (UR)",
+            commanders: decks::ZELLIX_11_COMMANDERS,
+            main: decks::ZELLIX_11_MAIN,
+        },
     ]
 }
 
@@ -28359,6 +28425,17 @@ mod tests {
             ("The Fugitive Doctor and Nyssa of Traken", &[0x1899]),
             ("The Second Doctor and Bill Potts", &[0x189A]),
             ("The Third Doctor and Donna Noble", &[0x189B]),
+            ("Brinelin, the Moon Kraken and Ishai, Ojutai Dragonspeaker", &[0x189C]),
+            ("Brinelin, the Moon Kraken and Kamahl, Heart of Krosa", &[0x189D]),
+            ("Brinelin, the Moon Kraken and Toggo, Goblin Weaponsmith", &[0x189E]),
+            ("Ellyn Harbreeze, Busybody and Haunted One", &[0x189F]),
+            ("Glacian, Powerstone Engineer and Nadier, Agent of the Duskenel", &[0x18A0]),
+            ("Keleth, Sunmane Familiar and Kodama of the East Tree", &[0x18A1]),
+            ("Nadier, Agent of the Duskenel and Rebbec, Architect of Ascension", &[0x18A2]),
+            ("Shadowheart, Dark Justiciar and Haunted One", &[0x18A3]),
+            ("The Ninth Doctor and K-9, Mark I", &[0x18A4]),
+            ("Vhal, Candlekeep Researcher and Dungeon Delver", &[0x18A5]),
+            ("Zellix, Sanity Flayer and Dragon Cultist", &[0x18A6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
