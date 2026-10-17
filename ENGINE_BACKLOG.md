@@ -175,7 +175,7 @@ the handoff.
 
 - **CLAIMED — don't duplicate:** Thorin Mountain-king, Twists and Turns (researched; see below). Cards in `decks::cmdr_oct17_kn`, tests
   `recent_b/cmdr_oct17_kn.rs`.
-- **Seats** 3607-3728 (32 singles + 90 pairs; 61 cards). **Primitives:** `PlayerRef::DefendingPlayerOf` (CR 506.2, Jurin),
+- **Seats** 3607-3728, 3782-3784 (32 singles + 93 pairs; 63 cards). **Primitives:** `PlayerRef::DefendingPlayerOf` (CR 506.2, Jurin),
   `Keyword::DealsNoDamage` (CR 615 granted marker — Old Fat Spider's chapter II),
   `AdditionalCastCost::{Behold, BeholdOrPay}` (CR 701.4a; `Behold` as a `kicker_action_cost` is "you may
   behold", read by `SpellWasKicked`), `R::WasCastFromExile`, `Effect::SearchTheirLibraryAgainstNamedCard`
@@ -185,7 +185,8 @@ the handoff.
   `StaticEffect::SelfDiesToExileWithCounters` + `WhileExiled` **step** triggers (`fire_step_triggers` walks exile
   behind the lane — Darigaaz), `DelayedTriggerKind::WhenSourceLeavesOrUntaps` (Merieke). `R::SameNameAsTriggerSubject` (CR 201.2, Harness the Storm) — and the cast-trigger auto-target path now
   stamps `trigger_subject`, which it never did (a `ManaValueEqualsTriggerSubject` cast trigger would have matched
-  nothing). `MayCastFromHandFreeMatching` concretizes `SharesCardTypeWithTarget` (Counterlash). `free_exile_cast_waiver`
+  nothing). `MayCastFromHandFreeMatching` concretizes `SharesCardTypeWithTarget` (Counterlash). `R::AttachedToThisSource` (the source-precise
+  "attached to it" — Shackles of Treachery), `MayExileFromYourGraveyard.max` (Creeping Inn's "a creature card"). `free_exile_cast_waiver`
   reads a `WhileYourTurn` wrapper (Dragon's Smile). **FIXED:** the TDM Exhale cycle read "a Dragon was beheld"
   as "you control a Dragon" — now the caster's behold opt-in (hand or battlefield); `RemoveCounter` on an exiled
   card named by `This`; batch-9 Great Desert Prospector / Maulfist Squad bodies (also fixed concurrently);
@@ -197,8 +198,7 @@ the handoff.
   the explore arm re-runs whole), Arcee's back face ("that many" = count of your creatures a cast
   spell targets: no `Value`), The Flame of Keld III (red-source damage +2 this turn), Casey & Raph ("each
   mode must target a different player"), Cloak and Dagger (exile from hand *or* the chosen creature).
-- **Researched, not built (batch H/I):** Shackles of Treachery ("destroy target Equipment attached to it": no
-  source-precise attached-to *target* leaf; `AttachedToSource` is "attached to anything"), Fraying Line,
+- **Researched, not built (batch H/I):** Fraying Line,
   Inventive Iteration's back face (opponents can't cast spells of the same mana value until your next turn).
   (Soul Partition, Back for More and Fishing Pole were taken by `3chree`.)
 - **Bot note:** Elektra's "deal 2 damage to you: 4 to a creature" is declined by the `MayDo` self-cost
