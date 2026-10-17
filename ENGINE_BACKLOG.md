@@ -171,6 +171,41 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-17 (Commander run, `019Y6J4R`) — 60 closer cards, the cast-lock class
+
+- **Cards** in `decks::cmdr_019y_a`..`_e` (tests `recent_b/cmdr_019y_{a..e}.rs`), picked off a fresh 70-page
+  EDHREC scan plus the exact pair scan. **Closed from `3chree`'s open list:** Eater of Virtue, Gilt-Leaf Winnower.
+- **Seats** 3846-3847 (Hama Pashar and Moon-Boy — zero-gap singles nobody had seated), 3858-3879, 3888-3898,
+  3902-3925 and the batch-D seats: each after `cr_903_5a_target_decks_are_legal` and a 4-seat pod smoke.
+- **Primitives:** `R::PowerToughnessUnequal`; `Effect::{LockOpponentsManaValueUntilYourNextTurn,
+  DamageToPlayersAndBattlesPlusThisTurn (a `ColdState` field — `GameState` is at its 1,680-byte cap), ExileTopUntilNonlandWithSource, CopyCardsAndCastFreeTotalMv}`;
+  `R::{mentions,resolve}_exiled_by_source_types` + `actions.rs::library_top_grant_covers` (the four library-top
+  checks read a grant's filter source-blind); `PlayerCold.opponents_cant_cast_mv`;
+  `GameState.damage_to_players_bonus_this_turn`.
+- **FIXED (bug class, CR 101.2):** the cast locks lived inline in the hand path only. A commander cast from the
+  command zone, an alternative-cost cast (pitch spells; a commander's alt cost), flashback / escape / foretell /
+  retrace / harmonize / flashback-tap and the may-play / free-cast path asked none of Cease-Fire, Ranger-Captain,
+  Grid Monitor, Meddling Mage, Llawan, Codie, Gaddock Teeg, Nikya, Hymn, Hand to Hand, City in a Bottle, the name
+  locks. `game/cast_locks.rs` (`spell_name_locked`, `cast_lock_for`, `zone_cast_lock`) is now asked by all of
+  them. **Open:** half-card casts (adventure, omen, split, aftermath) and disturb cast another face and still
+  check only their own Ranger-Captain lock.
+- **OPEN, researched (each a missing primitive):** Aegar (no excess-damage event for combat damage or
+  planeswalkers, no "a Giant, Wizard, or spell you controlled dealt damage to it" history); Dawnhand Dissident
+  (blight-N as an *activation* cost; a cast from linked exile paying "remove three counters from among
+  creatures"); Deification (chosen planeswalker type + the all-but-one-loyalty replacement); Wee Champion (no
+  sticker-placed event; the catalog's only sticker card is in `cmdr_etali`); Fumble (attach the gained
+  attachments to a non-target "another creature" from a spell); Don & Raph (affinity for the next
+  *noncreature* spell — `pending_affinity_next_spell` is keyed on all spells); Hogaak (can't-spend-mana +
+  convoke/delve-only payment from the graveyard, and a bot that assembles it); Absorbing Man; Garruk, Veiled
+  Butcher's −3 (per-opponent nonland-discard count); Extrapolate the Impossible (an opponent picks between two
+  revealed outside-game cards — a no-op in Commander, CR 903.11); combat damage to a **battle** has no
+  `EventKind` (Rankle and Torbran joins Beamtown Beatstick's INCOMPLETE_CARDS row). Veiling Oddity (no "last time counter removed while exiled" event). Not attempted: Invasion of
+  New Phyrexia, Teferi's Talent, Wizard's Spellbook, Beamsplitter Mage, Cryptic Spires.
+- ⚠ **Myra's Marvels partners (Nocturno, Ignacio, Hardy, Fluros) are not Commander-legal** — the pair scan's
+  biggest "blockers" (61 pair decks) can never seat. Several other one-gap commanders are Unfinity / acorn too
+  (Sahir, Claire D'Loon, D00-DL, Brad Boimler, Devil K. Nevil, Truss, Solaflora, Tolabow, Rusko, Itazura) —
+  filter the scan by Scryfall legality before ranking.
+
 ## FIXED/OPEN 2026-10-17 (Commander run, `3chree`) — 161 closer cards, 135 seats
 
 - **Cards** in `decks::cmdr_oct17_q`..`_x` (tests `recent_b/cmdr_oct17_{q..x}.rs`). The
