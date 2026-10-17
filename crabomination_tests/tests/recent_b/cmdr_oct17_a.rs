@@ -425,3 +425,195 @@ fn linessa_grandeur_makes_a_player_return_one_of_each() {
     }
     assert!(g.battlefield_find(safe).is_some(), "only the target player returns");
 }
+
+/// Last Chance (and Final Fortune) lose at the EXTRA turn's end step, not at
+/// the end of the turn it was cast in.
+#[test]
+fn last_chance_loses_at_the_extra_turns_end_step() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::last_chance());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, s, None).expect("Last Chance");
+    let turn = g.turn_number;
+    let mut guard = 0;
+    while !g.players[0].eliminated && guard < 400 {
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+        guard += 1;
+    }
+    assert!(g.players[0].eliminated);
+    assert_eq!((g.turn_number, g.active_player_idx), (turn + 1, 0), "lost on the extra turn");
+}
+
+/// Vile Manifestation counts only cards with cycling in its owner's graveyard.
+#[test]
+fn vile_manifestation_counts_cycling_cards() {
+    let mut g = pod(2);
+    let vile = ready(&mut g, 0, catalog::vile_manifestation());
+    g.add_card_to_graveyard(0, catalog::granitic_titan());
+    g.add_card_to_graveyard(0, catalog::quakefoot_cyclops());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::granitic_titan());
+    assert_eq!(g.computed_permanent(vile).unwrap().power, 2);
+}
+
+/// Huatli's +1 adds a loyalty counter per creature you control (on top of the
+/// +1 cost); Ajani's −9 puts counters equal to your life total.
+#[test]
+fn huatli_and_ajani_scale_with_the_board_and_life() {
+    let mut g = pod(2);
+    let h = ready(&mut g, 0, catalog::huatli_radiant_champion());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+    }
+    ready(&mut g, 1, catalog::grizzly_bears());
+    loyalty(&mut g, h, 0, None);
+    assert_eq!(g.battlefield_find(h).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 3 + 1 + 3);
+
+    let a = ready(&mut g, 0, catalog::ajani_wise_counselor());
+    g.battlefield_find_mut(a).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 9);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].life = 13;
+    loyalty(&mut g, a, 2, Some(Target::Permanent(bears)));
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 15);
+}
+
+/// CR 614 — Crush the Weak exiles the creatures it kills.
+#[test]
+fn crush_the_weak_exiles_what_it_kills() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let s = g.add_card_to_hand(0, catalog::crush_the_weak());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    cast(&mut g, s, None).expect("Crush");
+    assert!(g.exile.iter().any(|c| c.id == bears), "exiled, not dead");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bears));
+    assert!(g.battlefield_find(wurm).is_some());
+}
+
+/// Venom Connoisseur: the second alliance trigger in a turn spreads
+/// deathtouch to the whole team.
+#[test]
+fn venom_connoisseur_second_alliance_gives_the_team_deathtouch() {
+    let mut g = pod(2);
+    let v = ready(&mut g, 0, catalog::venom_connoisseur());
+    let deathtouch = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Deathtouch);
+    let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, a, None).expect("bears");
+    assert!(deathtouch(&g, v) && !deathtouch(&g, a), "first time: itself only");
+    let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, b, None).expect("bears");
+    assert!(deathtouch(&g, a) && deathtouch(&g, b), "second time: everyone");
+}
+
+/// CR 702.63 — Chronozoa copies itself only when it dies with no time
+/// counters on it.
+#[test]
+fn chronozoa_splits_only_when_out_of_time() {
+    for (counters, copies) in [(0u32, 2usize), (2, 0)] {
+        let mut g = pod(2);
+        let c = g.add_card_to_battlefield(0, catalog::chronozoa());
+        if let Some(card) = g.battlefield_find_mut(c) {
+            card.counters.clear();
+            card.add_counters(crabomination::card::CounterType::Time, counters);
+        }
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Permanent(c))).expect("bolt");
+        let n = g.battlefield.iter().filter(|x| x.is_token && x.definition.name == "Chronozoa").count();
+        assert_eq!(n, copies, "{counters} time counters");
+    }
+}
+
+/// Gideon's Memorial pumps and grants vigilance to creature tokens only.
+#[test]
+fn gideons_memorial_pumps_tokens() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::gideons_memorial());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::supplant_form());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    cast(&mut g, s, Some(Target::Permanent(bears))).expect("copy the bears");
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("token").id;
+    let cp = g.computed_permanent(token).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
+}
+
+/// Dragon's Disciple enters with a counter when a Dragon card is in hand.
+#[test]
+fn dragons_disciple_counter_needs_a_dragon() {
+    for (dragon, power) in [(true, 2), (false, 1)] {
+        let mut g = pod(2);
+        if dragon {
+            g.add_card_to_hand(0, catalog::shivan_dragon());
+        }
+        let d = g.add_card_to_hand(0, catalog::dragons_disciple());
+        g.players[0].mana_pool.add(Color::White, 2);
+        cast(&mut g, d, None).expect("Disciple");
+        assert_eq!(g.computed_permanent(d).unwrap().power, power);
+    }
+}
+
+/// CR 301.5c — Captain's Hook destroys the creature it leaves when moved.
+#[test]
+fn captains_hook_destroys_its_old_host() {
+    let mut g = pod(2);
+    let hook = ready(&mut g, 0, catalog::captains_hook());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: hook, target: a }).expect("equip a");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4);
+    g.perform_action(GameAction::Equip { equipment: hook, target: b }).expect("equip b");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the old host is destroyed");
+    assert!(g.battlefield_find(b).is_some());
+}
+
+/// Omnipresence casts a spell free only while its mana value is at most the
+/// number of creatures you control.
+#[test]
+fn omnipresence_scales_with_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::omnipresence());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let free = |g: &mut GameState, id, target| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+    };
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    assert!(free(&mut g, wurm, None).is_err(), "one creature, a six-drop");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    free(&mut g, bolt, Some(Target::Player(1))).expect("a one-drop is free");
+}
+
+/// Puppet Crafting makes a noncreature artifact a 5/5 Construct.
+#[test]
+fn puppet_crafting_animates_an_artifact() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let p = g.add_card_to_hand(0, catalog::puppet_crafting());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, p, Some(Target::Permanent(ring))).expect("Puppet Crafting");
+    let cp = g.computed_permanent(ring).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+}
+
+/// Novel Nunchaku attaches on entry and its bearer fights.
+#[test]
+fn novel_nunchaku_attaches_and_fights() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let n = g.add_card_to_hand(0, catalog::novel_nunchaku());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    cast(&mut g, n, None).expect("Nunchaku");
+    assert_eq!(g.battlefield_find(n).unwrap().attached_to, Some(wurm));
+    assert!(g.battlefield_find(bears).is_none(), "the 7/5 fought the bears");
+}

@@ -3,14 +3,14 @@
 //! `tests/recent_b/cmdr_oct17_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
-    Keyword, LandType, LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
-    Supertype, TriggeredAbility, Value, Zone,
+    ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
+    Keyword, LandType, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    Supertype, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{backup, etb, target_any, target_filtered, token_copy_of};
-use crate::effect::{Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{Color, ManaCost, cost, g, generic, r, u, x};
+use crate::mana::{Color, ManaCost, SpendRestriction, b, cost, g, generic, r, u, w, x};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -504,5 +504,408 @@ pub fn linessa_zephyr_mage() -> CardDefinition {
             },
         ],
         ..creature("Linessa, Zephyr Mage", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 3)
+    }
+}
+
+// ── Batch 3: one-card partner-pair gaps ────────────────────────────────────
+
+fn equipment(name: &'static str, mana: ManaCost, equip: ManaCost, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+/// Refurbish — {3}{W} Sorcery. Return target artifact card from your
+/// graveyard to the battlefield.
+pub fn refurbish() -> CardDefinition {
+    CardDefinition {
+        name: "Refurbish",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Vile Manifestation — {1}{B} 0/4 Horror. +1/+0 for each card with cycling
+/// in your graveyard. Cycling {2}.
+pub fn vile_manifestation() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+0 for each card with cycling in your graveyard.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::count(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::HasCyclingAbility }),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        ..creature("Vile Manifestation", cost(&[generic(1), b()]), vec![CreatureType::Horror], 0, 4)
+    }
+}
+
+fn your_creatures() -> Value {
+    Value::count(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))
+}
+
+/// Huatli, Radiant Champion — {2}{G}{W}, loyalty 3. +1: a loyalty counter per
+/// creature you control. −1: target creature gets +X/+X (X = your
+/// creatures). −8: emblem — whenever a creature you control enters, you may
+/// draw a card.
+pub fn huatli_radiant_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Huatli, Radiant Champion",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Huatli], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            loyalty(1, Effect::AddCounter { what: Selector::This, kind: CounterType::Loyalty, amount: your_creatures() }),
+            loyalty(
+                -1,
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: your_creatures(),
+                    toughness: your_creatures(),
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            loyalty(
+                -8,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Huatli, Radiant Champion".into(),
+                    statics: vec![],
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+                        effect: Effect::MayDo {
+                            description: "Draw a card?".into(),
+                            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                        },
+                    }],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ajani, Wise Counselor — {3}{W}{W}, loyalty 5. +2: gain 1 life per creature
+/// you control. −3: creatures you control get +2/+2. −9: X +1/+1 counters on
+/// target creature (X = your life total).
+pub fn ajani_wise_counselor() -> CardDefinition {
+    CardDefinition {
+        name: "Ajani, Wise Counselor",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(2, Effect::GainLife { who: Selector::You, amount: your_creatures() }),
+            loyalty(
+                -3,
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            loyalty(
+                -9,
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::LifeOf(PlayerRef::You),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Last Chance — {R}{R} Sorcery. Take an extra turn after this one; at the
+/// beginning of that turn's end step, you lose the game.
+pub fn last_chance() -> CardDefinition {
+    CardDefinition {
+        name: "Last Chance",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextTurnsEndStep,
+                body: Box::new(Effect::LoseGame { who: PlayerRef::You }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Crush the Weak — {2}{R} Sorcery. 2 damage to each creature; a creature
+/// dealt damage this way that would die this turn is exiled instead.
+/// Foretell {R}.
+pub fn crush_the_weak() -> CardDefinition {
+    let each = || Selector::EachPermanent(R::Creature);
+    CardDefinition {
+        name: "Crush the Weak",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        foretell_cost: Some(cost(&[r()])),
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: each() },
+            Effect::DealDamage { to: each(), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Venom Connoisseur — {1}{G} 2/2 Human Druid. Alliance: it gains deathtouch
+/// until end of turn; the second time this resolves in a turn, all your
+/// creatures do.
+pub fn venom_connoisseur() -> CardDefinition {
+    let deathtouch = |what: Selector| Effect::GrantKeyword { what, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn };
+    let mine = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::EscalatingThisTurn {
+                modes: vec![
+                    deathtouch(Selector::This),
+                    Effect::Seq(vec![deathtouch(Selector::This), deathtouch(mine())]),
+                    deathtouch(Selector::This),
+                ],
+            },
+        }],
+        ..creature("Venom Connoisseur", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Druid], 2, 2)
+    }
+}
+
+/// Chronozoa — {3}{U} 3/3 flying Illusion. Vanishing 3. When it dies with no
+/// time counters on it, create two tokens that are copies of it.
+pub fn chronozoa() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vanishing(3)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
+                .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceHadCounter(CounterType::Time)))),
+            effect: token_copy_of(PlayerRef::You, Value::Const(2), Selector::TriggerSource),
+        }],
+        ..creature("Chronozoa", cost(&[generic(3), u()]), vec![CreatureType::Illusion], 3, 3)
+    }
+}
+
+/// Gideon's Memorial — {1}{W} legendary artifact. Creature tokens you control
+/// get +1/+0 and have vigilance. {T}: one mana of any color for planeswalker
+/// spells only. {1}{W}, discard it: 4 damage to target attacking or blocking
+/// creature.
+pub fn gideons_memorial() -> CardDefinition {
+    let tokens = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::IsToken));
+    CardDefinition {
+        name: "Gideon's Memorial",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creature tokens you control get +1/+0.",
+                effect: StaticEffect::PumpPT { applies_to: tokens(), power: 1, toughness: 0 },
+            },
+            StaticAbility {
+                description: "Creature tokens you control have vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: tokens(), keyword: Keyword::Vigilance },
+            },
+        ],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(Box::new(ManaPayload::AnyColors(Value::ONE)), SpendRestriction::PlaneswalkerSpellsOnly),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                from_hand: true,
+                discard_self_cost: true,
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                    amount: Value::Const(4),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fire Giant's Fury — {1}{R} Sorcery. Target Giant you control gets +2/+2
+/// and trample this turn; whenever it deals combat damage to a player this
+/// turn, exile that many cards from your top, playable until the end of your
+/// next turn.
+pub fn fire_giants_fury() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Giant's Fury",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::HasCreatureType(CreatureType::Giant))),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    effect: Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::TriggerEventAmount,
+                        duration: MayPlayDuration::EndOfControllersNextTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dragon's Disciple — {1}{W} 1/3 Human Monk. Enters with a +1/+1 counter if
+/// you reveal a Dragon card from your hand or control a Dragon. Dragons you
+/// control have ward {1}.
+pub fn dragons_disciple() -> CardDefinition {
+    let dragon = || R::HasCreatureType(CreatureType::Dragon);
+    CardDefinition {
+        as_enters_effect: Some(Effect::If {
+            cond: Predicate::Any(vec![
+                Predicate::SelectorExists(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: dragon() }),
+                Predicate::SelectorExists(Selector::ControlledBy { who: PlayerRef::You, filter: dragon() }),
+            ]),
+            then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+            else_: Box::new(Effect::Noop),
+        }),
+        static_abilities: vec![StaticAbility {
+            description: "Dragons you control have ward {1}.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(dragon())),
+                keyword: Keyword::Ward(WardCost::Mana(cost(&[generic(1)]))),
+            },
+        }],
+        ..creature("Dragon's Disciple", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Monk], 1, 3)
+    }
+}
+
+/// Captain's Hook — {3} Equipment, equip {1}. +2/+0, menace, and a Pirate;
+/// whenever it becomes unattached from a permanent, destroy that permanent.
+pub fn captains_hook() -> CardDefinition {
+    equipment(
+        "Captain's Hook",
+        cost(&[generic(3)]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Menace],
+            add_creature_types: vec![CreatureType::Pirate],
+            destroy_host_when_unattached: true,
+            ..Default::default()
+        },
+    )
+}
+
+/// Omnipresence — {5}{G}{G}{G} Enchantment. You may cast spells with mana
+/// value at most the number of creatures you control from your hand without
+/// paying their mana costs.
+pub fn omnipresence() -> CardDefinition {
+    CardDefinition {
+        name: "Omnipresence",
+        cost: cost(&[generic(5), g(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast spells with mana value less than or equal to the number of creatures you control from your hand without paying their mana costs.",
+            effect: StaticEffect::CastFilteredSpellsFree { filter: R::ManaValueAtMostYourCount(Box::new(R::Creature)) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Puppet Crafting — {1}{G} Aura, enchant artifact or non-Aura enchantment.
+/// It's a 5/5 Construct creature in addition to its other types. {4}{G}:
+/// return this card from your graveyard to your hand.
+pub fn puppet_crafting() -> CardDefinition {
+    CardDefinition {
+        name: "Puppet Crafting",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Artifact.or(R::Enchantment.and(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura).negate()))),
+        },
+        equipped_bonus: Some(EquipBonus {
+            add_card_types: vec![CardType::Creature],
+            add_creature_types: vec![CreatureType::Construct],
+            set_base_pt: Some((5, 5)),
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            from_graveyard: true,
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Novel Nunchaku — {2}{G} Equipment, equip {3}. ETB: attach to target
+/// creature you control; when you do, it fights up to one target creature an
+/// opponent controls. Equipped creature gets +1/+1 and has trample.
+pub fn novel_nunchaku() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::AttachedTo(Box::new(Selector::This))),
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::ApplyToTargets {
+                        min_targets: 0,
+                        max_targets: 1,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                        effect: Box::new(Effect::Fight {
+                            attacker: Selector::AttachedTo(Box::new(Selector::This)),
+                            defender: Selector::Target(0),
+                        }),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..equipment(
+            "Novel Nunchaku",
+            cost(&[generic(2), g()]),
+            cost(&[generic(3)]),
+            EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Trample], ..Default::default() },
+        )
     }
 }
