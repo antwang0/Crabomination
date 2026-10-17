@@ -173,6 +173,8 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-17 (Commander run, `01Htv6cF`) — claims first
 
+- **CLAIMED (batch 6, engine-blocked) — don't duplicate:** Green Dragon, Seasons Past, Thought Lash + Spock, Sahir
+  + Copper Tablet, Warrior's Blades, I Am Iron Man, Panther Pounce, Djeru With Eyes Open.
 - **CLAIMED (batch 1) — don't duplicate:** Granitic Titan, Quakefoot Cyclops (Yidaro); General Traag, Earth Tremor;
   Grafted Identity, Discontinuity (Zara); Call to Heel, Candlekeep Inspiration (Yuriko Hope); Chandra Bold
   Pyromancer, Chandra Dressed to Kill (Ertha Jo); Shifting Loyalties (Meneldor). Cards in `decks::cmdr_oct17_a`,
