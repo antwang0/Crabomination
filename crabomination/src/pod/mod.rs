@@ -23526,6 +23526,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_16_COMMANDERS,
             main: decks::GHOST_OF_RAMIREZ_DEPIETRO_16_MAIN,
         },
+        // Seat 3846: Hama Pashar, Ruin Seeker's EDHREC average deck. `--pod-decks 3846`.
+        PodDeck {
+            name: "Hama Pashar, Ruin Seeker (WU)",
+            commanders: decks::HAMA_PASHAR_COMMANDERS,
+            main: decks::HAMA_PASHAR_MAIN,
+        },
+        // Seat 3847: Moon-Boy, Dino Rider's EDHREC average deck. `--pod-decks 3847`.
+        PodDeck {
+            name: "Moon-Boy, Dino Rider (G)",
+            commanders: decks::MOON_BOY_COMMANDERS,
+            main: decks::MOON_BOY_MAIN,
+        },
     ]
 }
 
@@ -29255,6 +29267,8 @@ mod tests {
             ("The Eleventh Doctor and Romana II", &[0x1919]),
             ("Rebbec, Architect of Ascension and Sidar Kondo of Jamuraa", &[0x191A]),
             ("Ghost of Ramirez DePietro and Livio, Oathsworn Sentinel", &[0x191B]),
+            ("Hama Pashar, Ruin Seeker", &[0x191C]),
+            ("Moon-Boy, Dino Rider", &[0x191D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

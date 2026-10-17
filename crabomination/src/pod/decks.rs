@@ -107814,3 +107814,57 @@ pub const GHOST_OF_RAMIREZ_DEPIETRO_16_MAIN: &[CardFactory] = &[
     island, island, island, island, island, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const HAMA_PASHAR_COMMANDERS: &[CardFactory] = &[hama_pashar_ruin_seeker];
+
+/// **Hama Pashar, Ruin Seeker**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Islands + 12 Plains = 99.
+/// Hama Pashar, Ruin Seeker (EDHREC, fetched 2026-10-17).
+pub const HAMA_PASHAR_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, delvers_torch, dungeon_map, dungeoneers_pack, mind_stone,
+    panharmonicon, sarevoks_tome, sol_ring, talisman_of_progress, trailblazers_torch,
+    adarkar_wastes, azorius_chancery, command_tower, deserted_beach, dungeon_descent,
+    exotic_orchard, glacial_fortress, hallowed_fountain, port_town, prairie_stream,
+    sea_of_clouds, skycloud_expanse, temple_of_enlightenment, aarakocra_sneak, archaeomancer,
+    brago_king_eternal, cloister_gargoyle, displacer_beast, dour_port_mage,
+    eccentric_apprentice, feywild_caretaker, goliath_paladin, imoen_mystic_trickster,
+    karmic_guide, midnight_pathlighter, mulldrifter, nadaar_selfless_paladin,
+    oji_the_exquisite_blade, planar_ally, radiant_solar, rangers_hawk, restoration_angel,
+    seasoned_dungeoneer, secret_door, shortcut_seeker, solemn_simulacrum, soulherder,
+    tomb_of_horrors_adventurer, veteran_dungeoneer, white_plume_adventurer, yorion_sky_nomad,
+    yuan_ti_malison, dungeon_delver, fly, teleportation_circle, thorough_investigation,
+    undercellar_sweep, virtue_of_knowledge, bar_the_gate, cloudshift, counterspell, dovins_veto,
+    eerie_interlude, ephemerate, essence_flux, generous_gift, ghostly_flicker,
+    laezels_acrobatics, momentary_blink, negate, path_to_exile, swords_to_plowshares,
+    another_round, hallowed_respite, supreme_verdict, time_wipe,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const MOON_BOY_COMMANDERS: &[CardFactory] = &[moon_boy_dino_rider];
+
+/// **Moon-Boy, Dino Rider**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Forests = 99.
+/// Moon-Boy, Dino Rider (EDHREC, fetched 2026-10-17).
+pub const MOON_BOY_MAIN: &[CardFactory] = &[
+    emerald_medallion, heralds_horn, sol_ring, the_great_henge, the_skullspore_nexus,
+    castle_garenbrig, mosswort_bridge, oran_rief_the_vastwood, rogues_passage, three_tree_city,
+    ancient_imperiosaur, annoyed_altisaur, chomping_changeling, colossadactyl, curious_altisaur,
+    devil_dinosaur, dinosaur_egg, drover_of_the_mighty, earthshaker_dreadmaw,
+    ghalta_the_unstoppable, ghalta_primal_hunger, ghalta_stampede_tyrant, hulking_raptor,
+    ixallis_lorekeeper, knight_of_the_stampede, llanowar_elves, pugnacious_hammerskull,
+    quakestrider_ceratops, rampaging_brontodon, ranging_raptors, ravenous_sailback,
+    regal_behemoth, regal_imperiosaur, ripjaw_raptor, runic_armasaur, sauron_dino_devotee,
+    savage_land_dinosaur, scion_of_calamity, spider_rex_daring_dino, sunfrill_imitator,
+    thrashing_brontodon, thundering_spineback, topiary_stomper, tranquil_frillback,
+    vaultborn_tyrant, wayward_swordtooth, colossal_majesty, elemental_bond, garruks_uprising,
+    guardian_project, tribute_to_the_world_tree, welcome_to, beast_within, bite_down,
+    heroic_intervention, return_of_the_wildspeaker, snakeskin_veil, tamiyos_safekeeping,
+    commune_with_dinosaurs, cultivate, explore, harmonize, natures_lore, rampant_growth,
+    rishkars_expertise, savage_stomp, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
