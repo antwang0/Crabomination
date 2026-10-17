@@ -16877,6 +16877,8 @@ static DECKS: &[Factory] = &[
     super::decks::genghis_frog,
     super::decks::saurian_explorer,
     super::decks::stingcaster_mage,
+    super::decks::dungeon_delver,
+    super::decks::insufferable_balladeer,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

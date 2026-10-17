@@ -2896,3 +2896,38 @@ pub fn puppet_crafting() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 16 ────────────────────────────────────────────────────────────────
+
+/// Dungeon Delver — {1}{U} legendary Background. Commander creatures you own
+/// have "Room abilities of dungeons you own trigger an additional time."
+pub fn dungeon_delver() -> CardDefinition {
+    CardDefinition {
+        name: "Dungeon Delver",
+        cost: cost(&[generic(1), crate::mana::u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Background], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "Commander creatures you own have \"Room abilities of dungeons you own trigger an additional time.\"",
+            effect: StaticEffect::CommanderCreaturesRoomsTriggerTwice,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Insufferable Balladeer — {1}{R} 2/1 Dwarf Bard. ETB: target creature an
+/// opponent controls can't block this turn; goad it.
+pub fn insufferable_balladeer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Goad { what: Selector::Target(0) },
+        ]))],
+        ..creature("Insufferable Balladeer", cost(&[generic(1), r()]), vec![CreatureType::Dwarf, CreatureType::Bard], 2, 1)
+    }
+}

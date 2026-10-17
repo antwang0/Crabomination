@@ -1639,3 +1639,42 @@ fn puppet_crafting_animates_an_artifact() {
     activate(&mut g, gy, 0, None).expect("return");
     assert!(g.players[0].hand.iter().any(|c| c.id == gy));
 }
+
+/// CR 309.4c — Dungeon Delver doubles room abilities only while a commander
+/// creature you own is on the battlefield; in the command zone (CR 113.6) it
+/// does nothing.
+#[test]
+fn dungeon_delver_doubles_rooms_with_a_commander_out() {
+    for with_commander in [false, true] {
+        let mut g = pod(2);
+        g.seat_commanders(0, vec![catalog::dungeon_delver()]);
+        ready(&mut g, 0, catalog::dungeon_delver());
+        let src = ready(&mut g, 0, catalog::grizzly_bears());
+        if with_commander {
+            g.players[0].commanders.push(src);
+        }
+        let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(src);
+        for _ in 0..2 {
+            let events = g.resolve_effect(&crabomination::effect::Effect::Venture, &ctx).expect("venture");
+            g.dispatch_triggers_for_events(&events);
+            drain_stack(&mut g);
+        }
+        let goblins = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Goblin").count();
+        assert_eq!(goblins, if with_commander { 2 } else { 1 }, "Goblin Lair, commander {with_commander}");
+    }
+}
+
+/// CR 701.15a — Insufferable Balladeer: the target can't block this turn and
+/// is goaded.
+#[test]
+fn insufferable_balladeer_goads_and_stops_a_blocker() {
+    let mut g = pod(3);
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let ib = g.add_card_to_hand(0, catalog::insufferable_balladeer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, ib, None).expect("Balladeer");
+    assert!(g.goaded_by_player(g.battlefield_find(foe).unwrap(), 0));
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock));
+}
