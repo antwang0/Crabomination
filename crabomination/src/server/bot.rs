@@ -28045,6 +28045,8 @@ mod tests {
             moved,
             vec![
                 "Agony Warp",
+                // Commander-only (pod seat), in no two-player pool.
+                "Bounty of Might",
                 "Call for Blood",
                 "Consume Strength",
                 "Defile",
