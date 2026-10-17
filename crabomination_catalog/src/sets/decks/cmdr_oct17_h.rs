@@ -325,12 +325,12 @@ pub fn storm_fleet_pyromancer() -> CardDefinition {
     }
 }
 
-/// Maulfist Squad — {3}{B} 3/2 menace Human Artificer. Fabricate 1.
+/// Maulfist Squad — {3}{B} 3/1 menace Human Artificer. Fabricate 1.
 pub fn maulfist_squad() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![fabricate(1)],
-        ..creature("Maulfist Squad", cost(&[generic(3), b()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 2)
+        ..creature("Maulfist Squad", cost(&[generic(3), b()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 1)
     }
 }
 
@@ -408,7 +408,7 @@ pub fn roving_keep() -> CardDefinition {
     }
 }
 
-/// Great Desert Prospector — {4}{W} 4/2 Human Artificer. ETB: a tapped
+/// Great Desert Prospector — {4}{W} 3/2 Human Artificer. ETB: a tapped
 /// Powerstone token for each other creature you control.
 pub fn great_desert_prospector() -> CardDefinition {
     CardDefinition {
@@ -417,7 +417,7 @@ pub fn great_desert_prospector() -> CardDefinition {
             count: count_mine(R::Creature.and(R::OtherThanSource)),
             definition: Arc::new(TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() }),
         })],
-        ..creature("Great Desert Prospector", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Artificer], 4, 2)
+        ..creature("Great Desert Prospector", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 2)
     }
 }
 
