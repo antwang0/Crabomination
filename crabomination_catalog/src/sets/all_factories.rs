@@ -16758,6 +16758,8 @@ static DECKS: &[Factory] = &[
     super::decks::fire_giants_fury,
     super::decks::omnipresence,
     super::decks::novel_nunchaku,
+    super::decks::green_dragon,
+    super::decks::seasons_past,
     // cmdr_oct17_b / _c
     super::decks::forest_bear,
     super::decks::loxodon_wayfarer,

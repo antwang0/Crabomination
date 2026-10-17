@@ -481,3 +481,41 @@ fn cr_502_4_a_phase_in_trigger_waits_for_the_upkeep() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
 }
+
+// ── cmdr_oct17_d ───────────────────────────────────────────────────────────
+
+/// Green Dragon's Poison Breath kills damaged creatures of its controller's
+/// opponents only, and only this turn.
+#[test]
+fn green_dragon_poison_breath_hits_only_opponents() {
+    let mut g = pod(3);
+    let mine = ready(&mut g, 0, catalog::craw_wurm());
+    let theirs = ready(&mut g, 1, catalog::craw_wurm());
+    let d = g.add_card_to_hand(0, catalog::green_dragon());
+    g.players[0].mana_pool.add(Color::Green, 6);
+    cast(&mut g, d, None).expect("Green Dragon");
+    for id in [mine, theirs] {
+        g.battlefield_find_mut(id).unwrap().damage = 1;
+    }
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.battlefield_find(theirs).is_none(), "an opponent's damaged creature dies");
+    assert!(g.battlefield_find(mine).is_some(), "the controller's own survives");
+}
+
+/// Seasons Past returns at most one card per mana value and goes to the
+/// bottom of its owner's library.
+#[test]
+fn seasons_past_returns_one_card_per_mana_value() {
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let s = g.add_card_to_hand(0, catalog::seasons_past());
+    g.players[0].mana_pool.add(Color::Green, 6);
+    cast(&mut g, s, None).expect("Seasons Past");
+    let in_hand = |id| g.players[0].hand.iter().any(|x| x.id == id);
+    assert!(in_hand(c));
+    assert!(in_hand(a) ^ in_hand(b), "only one of the two mana-value-2 Bears");
+    assert_eq!(g.players[0].library.last().map(|x| x.id), Some(s), "bottom of the library");
+}
