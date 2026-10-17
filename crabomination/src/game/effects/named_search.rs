@@ -32,7 +32,7 @@ impl GameState {
         let library: Vec<(CardId, String, bool, u32)> = self.players[them]
             .library
             .iter()
-            .map(|c| (c.id, c.definition.name.to_string(), c.definition.is_creature(), c.definition.cost.cmc()))
+            .map(|c| (c.id, c.definition.name.to_string(), self.computed_is_creature(c), c.definition.cost.cmc()))
             .collect();
         if library.is_empty() {
             self.clear_answer_log();
