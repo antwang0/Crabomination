@@ -10563,58 +10563,9 @@ impl GameState {
                     ))),
             "cast_cost_scan missed a name-lock static",
         );
-        // Meddling Mage — spells with the chosen name can't be cast.
+        // Meddling Mage and the other name locks (`cast_locks.rs`).
         if let Some(name) = spell_name
-            && self.battlefield.iter().any(|c| {
-                c.named_card.as_deref().is_some_and(|n| crate::card::name_has(name, n))
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::NamedSpellCantBeCast)
-                    })
-            })
-        {
-            return Err(GameError::SpellNameLocked);
-        }
-        // Ashiok's Erasure — an opponent of the caster controls a permanent
-        // whose `OpponentsCantCastNamed` static locks this spell's name (the
-        // card exiled by the Erasure). The lock lives as long as that
-        // permanent stays on the battlefield.
-        if let Some(name) = spell_name
-            && self.battlefield.iter().any(|c| {
-                c.named_card.as_deref().is_some_and(|n| crate::card::name_has(name, n))
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantCastNamed)
-                    })
-                    && !self.same_team(c.controller, p)
-            })
-        {
-            return Err(GameError::SpellNameLocked);
-        }
-        // Circu, Dimir Lobotomist — an opponent of the caster controls a
-        // permanent, and a card exiled with it shares this spell's name.
-        if let Some(name) = spell_name
-            && self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::OpponentsCantCastNamesExiledWithSource
-                    )
-                })
-                    && !self.same_team(c.controller, p)
-                    && self
-                        .exile
-                        .iter()
-                        .any(|e| e.exiled_with == Some(c.id) && e.definition.name == name)
-            })
-        {
-            return Err(GameError::SpellNameLocked);
-        }
-        // Academic Probation mode 0 — an opponent of the caster named this
-        // spell ("Opponents can't cast spells with the chosen name until your
-        // next turn"); the lock lives on the naming player until their turn.
-        if let Some(name) = spell_name
-            && self.players.iter().enumerate().any(|(i, pl)| {
-                !self.same_team(i, p) && pl.opponents_cant_cast_named.iter().any(|n| crate::card::name_has(name, n))
-            })
+            && self.spell_name_locked(p, name)
         {
             return Err(GameError::SpellNameLocked);
         }
@@ -10976,101 +10927,11 @@ impl GameState {
             card.bestowed = true;
         }
 
-        // Ranger-Captain of Eos lock — this player can't cast noncreature
-        // spells for the rest of the turn.
-        if self.players[p].cant_cast_noncreature_this_turn
-            && !card.definition.is_creature()
-        {
+        // The player and board locks every cast path asks (`cast_locks.rs`).
+        if let Some(e) = self.cast_lock_for(p, &card, cost_statics) {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
-        }
-
-        // Cease-Fire — a turn-scoped, filtered cast lock.
-        if !self.players[p].cant_cast_matching_this_turn.is_empty() {
-            let locks = self.players[p].cant_cast_matching_this_turn.clone();
-            if locks.iter().any(|f| self.evaluate_requirement_on_card(f, &card, p)) {
-                cast_census::rollback(line!());
-                self.players[p].hand.push(card);
-                return Err(GameError::CantCastNoncreature);
-            }
-        }
-
-        // Living Breakthrough — an opponent locked this spell's mana value
-        // until their next turn.
-        if self.players.iter().enumerate().any(|(i, pl)| {
-            !pl.opponents_cant_cast_mv.is_empty()
-                && !self.same_team(i, p)
-                && pl.opponents_cant_cast_mv.contains(&card.definition.cost.cmc())
-        }) {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::SpellNameLocked);
-        }
-
-        // City in a Bottle — a symmetric play-lock binds every seat.
-        if self.play_locked_for_all(p, &card) {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::SpellNameLocked);
-        }
-
-        // Llawan — an opponent's static locks a whole class of spells.
-        if self.opponent_locks_cast_of(p, &card) {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
-        }
-
-        // Codie lock — this player can't cast permanent spells.
-        if card.definition.is_permanent() && self.player_cant_cast_permanent_spells(p) {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastPermanentSpells);
-        }
-
-        // Gaddock Teeg lock — high-mana-value / {X} noncreature spells can't be cast.
-        debug_assert!(
-            cost_statics & cast_static::NONCREATURE_LOCK != 0
-                || !self.noncreature_spell_cast_locked(&card.definition),
-            "cast_cost_scan missed a noncreature-cast lock",
-        );
-        if cost_statics & cast_static::NONCREATURE_LOCK != 0
-            && self.noncreature_spell_cast_locked(&card.definition)
-        {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
-        }
-
-        // Nikya of the Old Ways — its controller can't cast noncreature spells.
-        if !card.definition.is_creature() && self.player_cant_cast_noncreature_spells(p) {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
-        }
-
-        // Hymn of the Wilds — its controller can't cast instants or sorceries.
-        if (card.definition.is_instant() || card.definition.is_sorcery())
-            && self.player_cant_cast_instants_or_sorceries(p)
-        {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
-        }
-
-        // Hand to Hand — nobody casts instants during combat.
-        if card.definition.is_instant() && self.combat_spell_lock_active() {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
-        }
-
-        // Grid Monitor — its controller can't cast creature spells.
-        if card.definition.is_creature() && self.player_cant_cast_creature_spells(p) {
-            cast_census::rollback(line!());
-            self.players[p].hand.push(card);
-            return Err(GameError::CantCastNoncreature);
+            return Err(e);
         }
 
         // Validate convoke/improvise helpers up-front (before any state
@@ -15094,6 +14955,15 @@ impl GameState {
                 return Err(GameError::CardNotInHand(card_id));
             }
         }
+        // CR 101.2 — the cast locks bind a cast off a grant or an effect too.
+        if let Some(c) = self.find_card_anywhere(card_id) {
+            if self.spell_name_locked(p, c.definition.name) {
+                return Err(GameError::SpellNameLocked);
+            }
+            if let Some(e) = self.cast_lock_for(p, c, u32::MAX) {
+                return Err(e);
+            }
+        }
         // Lift the card out of the named zone. Owner-based zones
         // (graveyard, hand, library) walk all players to locate it.
         let mut card = match source_zone {
@@ -15487,6 +15357,19 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = false;
         self.stamp_as_cast_condition(&mut card, p);
+
+        // CR 101.2 — a lock that stops a hand cast stops a commander cast too
+        // (Silence, Grid Monitor, Meddling Mage naming the commander).
+        let lock = if self.spell_name_locked(p, card.definition.name) {
+            Some(GameError::SpellNameLocked)
+        } else {
+            self.cast_lock_for(p, &card, u32::MAX)
+        };
+        if let Some(e) = lock {
+            self.players[p].command.push(card);
+            self.offboard_keyword_grants = true;
+            return Err(e);
+        }
 
         // Sorcery-speed gate (commanders are creatures by definition,
         // which are sorcery-speed unless flash). We rebuild the same

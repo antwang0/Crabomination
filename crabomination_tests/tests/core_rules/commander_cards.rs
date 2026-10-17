@@ -2198,3 +2198,59 @@ fn cr_903_9b_a_commander_bounced_as_a_cost_goes_home() {
     assert!(g.players[0].command.iter().any(|c| c.id == id), "home, not in hand");
     assert!(g.players[0].hand.iter().all(|c| c.id != id));
 }
+
+// ── Cast locks reach the command zone ───────────────────────────────────────
+
+fn cast_commander(g: &mut GameState) -> Result<Vec<GameEvent>, GameError> {
+    let cmd = g.players[0].command[0].id;
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+}
+
+/// CR 101.2 — "can't" beats "can": Silence's "your opponents can't cast
+/// spells this turn" stops a commander cast from the command zone exactly as
+/// it stops a hand cast. The zone path asked no cast lock at all, so a
+/// commander walked through Silence, Grid Monitor and Meddling Mage.
+#[test]
+fn cr_101_2_silence_stops_a_command_zone_cast() {
+    let mut g = commander_game();
+    let silence = g.add_card_to_hand(1, catalog::silence());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: silence,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Silence at instant speed");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(cast_commander(&mut g).is_err(), "Silence holds the commander too");
+    assert_eq!(g.players[0].command.len(), 1, "and it stays in the command zone");
+}
+
+/// CR 101.2 — Grid Monitor's controller can't cast creature spells, and a
+/// creature commander is one; Meddling Mage naming the commander locks it.
+#[test]
+fn cr_101_2_grid_monitor_and_meddling_mage_bind_the_commander() {
+    let mut g = commander_game();
+    let monitor = g.add_card_to_battlefield(0, catalog::grid_monitor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(cast_commander(&mut g).is_err(), "no creature spells under Grid Monitor");
+    g.remove_from_battlefield_to_graveyard_raw(monitor);
+    let mage = g.add_card_to_battlefield(1, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Test Bear Commander".into());
+    assert!(matches!(cast_commander(&mut g), Err(GameError::SpellNameLocked)));
+    g.remove_from_battlefield_to_graveyard_raw(mage);
+    cast_commander(&mut g).expect("unlocked, it casts");
+}

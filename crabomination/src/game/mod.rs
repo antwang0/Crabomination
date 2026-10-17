@@ -168,6 +168,7 @@ mod milled_play;
 mod opponent_controls;
 mod creature_type;
 mod cast_cost;
+mod cast_locks;
 mod own_creature_target;
 // CR 601.2c — a required target nothing could fill makes the cast illegal.
 mod required_target;
