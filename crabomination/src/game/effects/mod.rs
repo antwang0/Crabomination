@@ -6751,6 +6751,21 @@ impl GameState {
             Effect::MayCastFromHandFreeMatching { filter, max_mv, else_ } => {
                 let cap = self.evaluate_value(max_mv, ctx);
                 let me = ctx.controller;
+                // "A spell that shares a card type with it" (Counterlash): the
+                // countered target's types, off its card in its new zone.
+                let shared;
+                let filter = if filter.mentions_target_card_types() {
+                    let types: Vec<crate::card::CardType> = match ctx.targets.first() {
+                        Some(crate::game::Target::Permanent(id)) => {
+                            self.find_card_anywhere(*id).map(|c| c.definition.card_types.clone()).unwrap_or_default()
+                        }
+                        _ => Vec::new(),
+                    };
+                    shared = filter.resolve_target_card_types(&types);
+                    &shared
+                } else {
+                    filter
+                };
                 self.may_cast_from_hand_free(
                     |c| {
                         (c.definition.cost.cmc() as i32) <= cap
