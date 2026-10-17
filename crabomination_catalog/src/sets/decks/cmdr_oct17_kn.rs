@@ -627,6 +627,163 @@ pub fn dragons_smile() -> CardDefinition {
     }
 }
 
+// ── Olinda the Oblivious ────────────────────────────────────────────────────
+
+/// Olinda the Oblivious — {3}{B} legendary 3/3 Skunk Rogue. Whenever she enters
+/// or attacks, for each opponent, an odor counter on up to one target creature
+/// that player controls without one; each has "at the beginning of your upkeep,
+/// you lose 2 life" for as long as it has an odor counter (CR 611.2c).
+pub fn olinda_the_oblivious() -> CardDefinition {
+    let stink = || Effect::ForEachOpponentTarget {
+        body: Box::new(Effect::ApplyToTargets {
+            max_targets: 15,
+            min_targets: 0,
+            filter: R::Creature.and(R::ControlledByOpponent).and(R::WithCounter(CounterType::Odor).negate()),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Odor, amount: Value::ONE },
+                Effect::GrantTriggeredAbility {
+                    what: Selector::Target(0),
+                    trigger: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                        effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                    }),
+                    duration: Duration::WhileHasCounter(CounterType::Odor),
+                },
+            ])),
+        }),
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(stink()), on_attack(stink())],
+        ..legend(creature("Olinda the Oblivious", cost(&[generic(3), b()]), vec![CreatureType::Skunk, CreatureType::Rogue], 3, 3))
+    }
+}
+
+// ── Thassa, God of the Sea / Slinn Voda ─────────────────────────────────────
+
+/// Reservoir Kraken — {2}{U}{U} 6/6 Kraken, trample, ward {2}. At the beginning
+/// of each combat, if it's untapped, any opponent may tap an untapped creature
+/// they control; if one does, tap the Kraken and create a 1/1 blue Fish with
+/// "this token can't be blocked".
+pub fn reservoir_kraken() -> CardDefinition {
+    let fish = std::sync::Arc::new(TokenDefinition {
+        name: "Fish".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        keywords: vec![Keyword::Unblockable],
+        ..Default::default()
+    });
+    let untapped = || R::Creature.and(R::Tapped.negate());
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::Tapped.negate() }),
+            effect: Effect::AnyPlayerMayAccept {
+                who: PlayerRef::EachOpponent,
+                prompt: "Tap an untapped creature you control to tap Reservoir Kraken (its controller gets a Fish)?".into(),
+                accepted: Box::new(Effect::If {
+                    cond: Predicate::SelectorCountAtLeast {
+                        sel: Selector::ControlledBy { who: PlayerRef::AcceptingPlayer, filter: untapped() },
+                        n: Value::ONE,
+                    },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::PlayerTapsUntapped { who: PlayerRef::AcceptingPlayer, filter: untapped(), amount: Value::ONE },
+                        Effect::Tap { what: Selector::This },
+                        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: fish },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                }),
+                otherwise: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Reservoir Kraken", cost(&[generic(2), u(), u()]), vec![CreatureType::Kraken], 6, 6)
+    }
+}
+
+// ── The Neutrinos ───────────────────────────────────────────────────────────
+
+/// The Neutrinos — {2}{R}{W} legendary 2/4 Elf Rebel, flying. Alliance: another
+/// creature of yours entering gives +1/+0 until end of turn. Whenever they
+/// attack, exile up to one target creature you own, then return it under your
+/// control tapped and attacking (CR 508.4).
+pub fn the_neutrinos() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            on_attack(Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature.and(R::OwnedByYou),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::Target(0), to: crate::effect::ZoneDest::Exile },
+                    Effect::Move {
+                        what: Selector::LastMoved,
+                        to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    },
+                    Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                ])),
+            }),
+        ],
+        ..legend(creature("The Neutrinos", cost(&[generic(2), r(), w()]), vec![CreatureType::Elf, CreatureType::Rebel], 2, 4))
+    }
+}
+
+/// Master of the Wild Hunt — {2}{G}{G} 3/3 Human Shaman. Upkeep: a 2/2 green
+/// Wolf. {T}: tap all your untapped Wolves; each deals damage equal to its power
+/// to target creature, which deals its power back divided among them by its
+/// controller.
+pub fn master_of_the_wild_hunt() -> CardDefinition {
+    let wolf = std::sync::Arc::new(TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: wolf },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::TapMatchingDealPowerAndTakeDivided {
+                filter: R::HasCreatureType(CreatureType::Wolf),
+                target: target_filtered(R::Creature),
+            },
+            ..Default::default()
+        }],
+        ..creature("Master of the Wild Hunt", cost(&[generic(2), g(), g()]), vec![CreatureType::Human, CreatureType::Shaman], 3, 3)
+    }
+}
+
+// ── Falcon and Redwing ──────────────────────────────────────────────────────
+
+/// Winnowing — {4}{W}{W} Sorcery, convoke. For each player you choose a
+/// creature they control; each player sacrifices every other creature that
+/// shares no creature type with it.
+pub fn winnowing() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke],
+        ..spell("Winnowing", cost(&[generic(4), w(), w()]), CardType::Sorcery, Effect::EachPlayerSacrificesUnlikeChosen)
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

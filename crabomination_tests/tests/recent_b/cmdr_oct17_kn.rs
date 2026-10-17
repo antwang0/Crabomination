@@ -459,3 +459,47 @@ fn dragons_smile_exiles_what_it_hits_for_and_casts_one_free() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some_and(|c| c.controller == 0));
 }
+
+/// Master of the Wild Hunt: three Wargs maul a 6/4 Craw Wurm for 9, and its 6
+/// power comes back divided among them — headless, exactly lethal each.
+#[test]
+fn master_of_the_wild_hunt_pack_mauls_and_takes_the_answer() {
+    let mut g = pod(2);
+    let master = ready(&mut g, 0, catalog::master_of_the_wild_hunt());
+    let wolves: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::bejeweled_warg())).collect();
+    let big = ready(&mut g, 1, catalog::craw_wurm());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: master,
+        ability_index: 0,
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("pack attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "9 damage kills the 6/4");
+    let alive = wolves.iter().filter(|w| g.battlefield_find(**w).is_some()).count();
+    assert_eq!(alive, 0, "6 power split 2/2/2 kills all three 3/2 Wargs");
+    assert!(wolves.iter().filter_map(|w| g.battlefield_find(*w)).all(|c| c.tapped));
+}
+
+/// Winnowing: each player keeps the chosen creature and whatever shares a
+/// creature type with it. Headless, our pick spares the most of ours and an
+/// opponent's spares the fewest.
+#[test]
+fn winnowing_keeps_only_the_chosen_types() {
+    let mut g = pod(2);
+    let b1 = ready(&mut g, 0, catalog::grizzly_bears());
+    let b2 = ready(&mut g, 0, catalog::grizzly_bears());
+    let pupil = ready(&mut g, 0, catalog::merfolk_pupil());
+    let o1 = ready(&mut g, 1, catalog::grizzly_bears());
+    let o2 = ready(&mut g, 1, catalog::grizzly_bears());
+    let w = g.add_card_to_hand(0, catalog::winnowing());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_with(&mut g, w, None, None).expect("winnow");
+    assert!(g.battlefield_find(b1).is_some() && g.battlefield_find(b2).is_some(), "the Bears pair survives");
+    assert!(g.battlefield_find(pupil).is_none(), "the Merfolk shares nothing");
+    assert_eq!([o1, o2].iter().filter(|id| g.battlefield_find(**id).is_some()).count(), 2, "two Bears share a type");
+}

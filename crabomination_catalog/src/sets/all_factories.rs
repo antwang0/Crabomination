@@ -17114,6 +17114,11 @@ static DECKS: &[Factory] = &[
     super::decks::futurist_operative,
     super::decks::sphinx_ambassador,
     super::decks::dragons_smile,
+    super::decks::olinda_the_oblivious,
+    super::decks::reservoir_kraken,
+    super::decks::the_neutrinos,
+    super::decks::master_of_the_wild_hunt,
+    super::decks::winnowing,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

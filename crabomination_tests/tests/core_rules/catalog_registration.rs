@@ -312,6 +312,7 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     // text, printed without the keyword (CR 702.118a).
     ("Locke, Treasure Hunter", "skulk"),
     ("Ant-Man, Elusive Avenger", "skulk"),
+    ("Prehistoric Pet", "skulk"),
     // "you may pay {N} any number of times" (the Adversary cycle) is
     // multikicker in everything but name. (Bloodthirsty Adversary pays on
     // its ETB with `MayPayRepeatedly`, as printed.)
