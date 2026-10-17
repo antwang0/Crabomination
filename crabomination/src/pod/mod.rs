@@ -23016,6 +23016,108 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NUMA_5_COMMANDERS,
             main: decks::NUMA_5_MAIN,
         },
+        // Seat 3761: Hazoret the Fervent's EDHREC average deck. `--pod-decks 3761`.
+        PodDeck {
+            name: "Hazoret the Fervent (R)",
+            commanders: decks::HAZORET_THE_FERVENT_COMMANDERS,
+            main: decks::HAZORET_THE_FERVENT_MAIN,
+        },
+        // Seat 3762: Ludevic, Necro-Alchemist and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3762`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Vial Smasher the Fierce (UBR)",
+            commanders: decks::LUDEVIC_9_COMMANDERS,
+            main: decks::LUDEVIC_9_MAIN,
+        },
+        // Seat 3763: Vhal, Candlekeep Researcher and Raised by Giants's EDHREC average deck. `--pod-decks 3763`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Raised by Giants (UG)",
+            commanders: decks::VHAL_9_COMMANDERS,
+            main: decks::VHAL_9_MAIN,
+        },
+        // Seat 3764: Esior, Wardwing Familiar and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 3764`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Falthis, Shadowcat Familiar (UB)",
+            commanders: decks::ESIOR_12_COMMANDERS,
+            main: decks::ESIOR_12_MAIN,
+        },
+        // Seat 3765: Burakos, Party Leader and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 3765`.
+        PodDeck {
+            name: "Burakos, Party Leader and Agent of the Iron Throne (B)",
+            commanders: decks::BURAKOS_8_COMMANDERS,
+            main: decks::BURAKOS_8_MAIN,
+        },
+        // Seat 3766: Shadowheart, Dark Justiciar and Candlekeep Sage's EDHREC average deck. `--pod-decks 3766`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Candlekeep Sage (UB)",
+            commanders: decks::SHADOWHEART_8_COMMANDERS,
+            main: decks::SHADOWHEART_8_MAIN,
+        },
+        // Seat 3767: Skanos Dragonheart and Hardy Outlander's EDHREC average deck. `--pod-decks 3767`.
+        PodDeck {
+            name: "Skanos Dragonheart and Hardy Outlander (G)",
+            commanders: decks::SKANOS_DRAGONHEART_10_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_10_MAIN,
+        },
+        // Seat 3768: The Ninth Doctor and Tegan Jovanka's EDHREC average deck. `--pod-decks 3768`.
+        PodDeck {
+            name: "The Ninth Doctor and Tegan Jovanka (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_11_MAIN,
+        },
+        // Seat 3769: Abdel Adrian, Gorion's Ward and Sword Coast Sailor's EDHREC average deck. `--pod-decks 3769`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Sword Coast Sailor (WU)",
+            commanders: decks::ABDEL_ADRIAN_7_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_7_MAIN,
+        },
+        // Seat 3770: Ghost of Ramirez DePietro and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 3770`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Tana, the Bloodsower (URG)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_15_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_15_MAIN,
+        },
+        // Seat 3771: Abdel Adrian, Gorion's Ward and Guild Artisan's EDHREC average deck. `--pod-decks 3771`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Guild Artisan (WR)",
+            commanders: decks::ABDEL_ADRIAN_8_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_8_MAIN,
+        },
+        // Seat 3772: Gale, Waterdeep Prodigy and Street Urchin's EDHREC average deck. `--pod-decks 3772`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Street Urchin (UR)",
+            commanders: decks::GALE_12_COMMANDERS,
+            main: decks::GALE_12_MAIN,
+        },
+        // Seat 3773: The Ninth Doctor and Peri Brown's EDHREC average deck. `--pod-decks 3773`.
+        PodDeck {
+            name: "The Ninth Doctor and Peri Brown (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_12_MAIN,
+        },
+        // Seat 3774: The Ninth Doctor and Romana II's EDHREC average deck. `--pod-decks 3774`.
+        PodDeck {
+            name: "The Ninth Doctor and Romana II (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_13_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_13_MAIN,
+        },
+        // Seat 3775: Katerina of Myra's Marvels and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3775`.
+        PodDeck {
+            name: "Katerina of Myra's Marvels and Siani, Eye of the Storm (WU)",
+            commanders: decks::KATERINA_OF_MYRAS_MARVELS_3_COMMANDERS,
+            main: decks::KATERINA_OF_MYRAS_MARVELS_3_MAIN,
+        },
+        // Seat 3776: Imoen, Mystic Trickster and Dragon Cultist's EDHREC average deck. `--pod-decks 3776`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Dragon Cultist (UR)",
+            commanders: decks::IMOEN_11_COMMANDERS,
+            main: decks::IMOEN_11_MAIN,
+        },
+        // Seat 3777: Ellyn Harbreeze, Busybody and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3777`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Passionate Archaeologist (WR)",
+            commanders: decks::ELLYN_HARBREEZE_8_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_8_MAIN,
+        },
     ]
 }
 
@@ -28660,6 +28762,23 @@ mod tests {
             ("Breeches, Brazen Plunderer and Livio, Oathsworn Sentinel", &[0x18C4]),
             ("Ghost of Ramirez DePietro and Toggo, Goblin Weaponsmith", &[0x18C5]),
             ("Numa, Joraga Chieftain and Silas Renn, Seeker Adept", &[0x18C6]),
+            ("Hazoret the Fervent", &[0x18C7]),
+            ("Ludevic, Necro-Alchemist and Vial Smasher the Fierce", &[0x18C8]),
+            ("Vhal, Candlekeep Researcher and Raised by Giants", &[0x18C9]),
+            ("Esior, Wardwing Familiar and Falthis, Shadowcat Familiar", &[0x18CA]),
+            ("Burakos, Party Leader and Agent of the Iron Throne", &[0x18CB]),
+            ("Shadowheart, Dark Justiciar and Candlekeep Sage", &[0x18CC]),
+            ("Skanos Dragonheart and Hardy Outlander", &[0x18CD]),
+            ("The Ninth Doctor and Tegan Jovanka", &[0x18CE]),
+            ("Abdel Adrian, Gorion's Ward and Sword Coast Sailor", &[0x18CF]),
+            ("Ghost of Ramirez DePietro and Tana, the Bloodsower", &[0x18D0]),
+            ("Abdel Adrian, Gorion's Ward and Guild Artisan", &[0x18D1]),
+            ("Gale, Waterdeep Prodigy and Street Urchin", &[0x18D2]),
+            ("The Ninth Doctor and Peri Brown", &[0x18D3]),
+            ("The Ninth Doctor and Romana II", &[0x18D4]),
+            ("Katerina of Myra's Marvels and Siani, Eye of the Storm", &[0x18D5]),
+            ("Imoen, Mystic Trickster and Dragon Cultist", &[0x18D6]),
+            ("Ellyn Harbreeze, Busybody and Passionate Archaeologist", &[0x18D7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
