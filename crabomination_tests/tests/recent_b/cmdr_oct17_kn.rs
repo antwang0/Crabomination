@@ -287,3 +287,31 @@ fn silvergill_mentor_beholds_or_pays() {
     let merfolk = g.battlefield.iter().filter(|c| c.definition.name == "Merfolk").count();
     assert_eq!(merfolk, 1, "the cast Mentor's token");
 }
+
+/// Extraordinary Journey exiles up to X creatures; the owner recasts theirs
+/// from exile (paying for it), and that entry draws the Journey's controller
+/// a card — once a turn.
+#[test]
+fn extraordinary_journey_draws_when_an_exiled_creature_returns() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let j = g.add_card_to_hand(0, catalog::extraordinary_journey());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: j, target: None, additional_targets: vec![], mode: None, x_value: Some(1) })
+        .expect("X = 1");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("the bear is exiled");
+    assert!(exiled.may_play_until.is_some(), "its owner may play it");
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("recast from exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cast from exile: a card");
+}

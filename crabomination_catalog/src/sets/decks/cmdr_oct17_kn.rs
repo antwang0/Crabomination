@@ -403,6 +403,51 @@ pub fn hollow_trees() -> CardDefinition {
     }
 }
 
+// ── Doc Aurlock, Grizzled Genius / Meneldor, Swift Savior ───────────────────
+
+/// Extraordinary Journey — {X}{X}{U}{U} Enchantment. ETB: exile up to X target
+/// creatures; each owner may play theirs while it stays exiled. Whenever one
+/// or more nontoken creatures enter from exile or cast from exile, draw a card
+/// (once each turn).
+pub fn extraordinary_journey() -> CardDefinition {
+    CardDefinition {
+        name: "Extraordinary Journey",
+        cost: cost(&[x(), x(), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::CapTargetsAt {
+                amount: Value::XFromCost,
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 10,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: Selector::Target(0), to: crate::effect::ZoneDest::Exile },
+                        Effect::GrantMayPlay {
+                            what: Selector::LastMoved,
+                            duration: crate::card::MayPlayDuration::WhileExiled,
+                            to_owner: true,
+                            exile_after: false,
+                            pay_own_cost: true,
+                            any_color: false,
+                        },
+                    ])),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::NotToken).and(R::EnteredFromExileThisTurn.or(R::WasCastFromExile)),
+                    })
+                    .once_per_turn(),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target
