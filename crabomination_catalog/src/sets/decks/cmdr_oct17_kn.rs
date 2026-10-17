@@ -1520,6 +1520,197 @@ pub fn hallowed_respite() -> CardDefinition {
     }
 }
 
+/// Lantern of Revealing — {3} Artifact. {T}: add one mana of any color. {4},
+/// {T}: look at the top card; a land may go onto the battlefield tapped. If it
+/// didn't (the library is no shorter), you may put it on the bottom.
+pub fn lantern_of_revealing() -> CardDefinition {
+    CardDefinition {
+        name: "Lantern of Revealing",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::WithX {
+                    x: Value::LibrarySizeOf(PlayerRef::You),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::LookTopMayDeployLand { tapped: true },
+                        Effect::If {
+                            cond: Predicate::ValueAtLeast(Value::LibrarySizeOf(PlayerRef::You), Value::XFromCost),
+                            then: Box::new(Effect::LookTopMayBottomAllElse {
+                                who: None,
+                                count: Value::ONE,
+                                then: Box::new(Effect::Noop),
+                                else_: Box::new(Effect::Noop),
+                            }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Counterlash — {4}{U}{U} Instant. Counter target spell; you may cast a spell
+/// that shares a card type with it from your hand without paying its mana cost.
+pub fn counterlash() -> CardDefinition {
+    spell(
+        "Counterlash",
+        cost(&[generic(4), u(), u()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::MayCastFromHandFreeMatching {
+                filter: R::SharesCardTypeWithTarget,
+                max_mv: Value::Const(i32::MAX),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Thornmantle Striker — {4}{B} 4/3 Elf Rogue. ETB, choose one (X = Elves you
+/// control): remove X counters from target permanent; or target creature an
+/// opponent controls gets -X/-X until end of turn.
+pub fn thornmantle_striker() -> CardDefinition {
+    let elves = || {
+        Value::CountOf(Box::new(Selector::EachPermanent(R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou))))
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::RemoveCountersUpTo { what: target_filtered(R::Permanent), amount: elves() },
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                power: Value::Negate(Box::new(elves())),
+                toughness: Value::Negate(Box::new(elves())),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..creature("Thornmantle Striker", cost(&[generic(4), b()]), vec![CreatureType::Elf, CreatureType::Rogue], 4, 3)
+    }
+}
+
+/// Reality Strobe — {4}{U}{U} Sorcery, suspend 3—{2}{U}. Return target
+/// permanent to its owner's hand; exile this with three time counters on it.
+pub fn reality_strobe() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(3, cost(&[generic(2), u()]))],
+        ..spell(
+            "Reality Strobe",
+            cost(&[generic(4), u(), u()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Permanent),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::ExileSelfSuspended,
+            ]),
+        )
+    }
+}
+
+/// Conduit of Storms // Conduit of Emrakul — {2}{R} 2/3 Werewolf Horror.
+/// Attacking adds {R} at the next main phase this turn; {3}{R}{R}: transform.
+/// Back: colorless 5/4 Eldrazi Werewolf whose attack adds {C}{C}.
+pub fn conduit_of_storms() -> CardDefinition {
+    let later = |pool: ManaPayload| {
+        on_attack(Effect::DelayUntil {
+            kind: crate::effect::DelayedTriggerKind::NextMainPhaseThisTurn,
+            body: Box::new(Effect::AddMana { who: PlayerRef::You, pool }),
+        })
+    };
+    let emrakul = CardDefinition {
+        triggered_abilities: vec![later(ManaPayload::Colorless(Value::Const(2)))],
+        ..creature("Conduit of Emrakul", ManaCost::default(), vec![CreatureType::Eldrazi, CreatureType::Werewolf], 5, 4)
+    };
+    CardDefinition {
+        triggered_abilities: vec![later(ManaPayload::Colors(vec![Color::Red]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r(), r()]),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(emrakul)),
+        ..creature("Conduit of Storms", cost(&[generic(2), r()]), vec![CreatureType::Werewolf, CreatureType::Horror], 2, 3)
+    }
+}
+
+/// Jerren, Corrupted Bishop // Ormendahl, the Corrupter — {2}{B} legendary 2/3
+/// Human Cleric. As it enters or another nontoken Human of yours dies: lose 1
+/// life, create a 1/1 white Human. {2}: target Human you control gains
+/// lifelink until end of turn. At your end step, at exactly 13 life, you may
+/// pay {4}{B}{B} to transform it. Back: 6/6 flying, trample, lifelink Demon;
+/// sacrifice another creature: draw a card.
+pub fn jerren_corrupted_bishop() -> CardDefinition {
+    let human = std::sync::Arc::new(TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    });
+    let recruit = || {
+        Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: human.clone() },
+        ])
+    };
+    let thirteen = Predicate::All(vec![
+        Predicate::ValueAtLeast(Value::LifeOf(PlayerRef::You), Value::Const(13)),
+        Predicate::ValueAtMost(Value::LifeOf(PlayerRef::You), Value::Const(13)),
+    ]);
+    let ormendahl = CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
+        color_indicator: vec![Color::Black],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..legend(creature("Ormendahl, the Corrupter", ManaCost::default(), vec![CreatureType::Demon], 6, 6))
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(recruit()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Human).and(R::Not(Box::new(R::IsToken))),
+                }),
+                effect: recruit(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(thirteen),
+                effect: Effect::MayPay {
+                    description: "Pay {4}{B}{B} to transform Jerren?".into(),
+                    mana_cost: cost(&[generic(4), b(), b()]),
+                    body: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: None,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: grant(target_filtered(R::HasCreatureType(CreatureType::Human).and(R::ControlledByYou)), Keyword::Lifelink),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(ormendahl)),
+        ..legend(creature("Jerren, Corrupted Bishop", cost(&[generic(2), b()]), vec![CreatureType::Human, CreatureType::Cleric], 2, 3))
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

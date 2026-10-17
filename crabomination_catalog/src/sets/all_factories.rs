@@ -17146,6 +17146,12 @@ static DECKS: &[Factory] = &[
     super::decks::hexhaven_battalion,
     super::decks::courier_of_comestibles,
     super::decks::hallowed_respite,
+    super::decks::lantern_of_revealing,
+    super::decks::counterlash,
+    super::decks::thornmantle_striker,
+    super::decks::reality_strobe,
+    super::decks::conduit_of_storms,
+    super::decks::jerren_corrupted_bishop,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

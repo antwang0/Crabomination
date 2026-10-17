@@ -925,3 +925,129 @@ fn hallowed_respite_counters_ours_and_taps_theirs() {
     let t = g.battlefield_find(theirs).unwrap();
     assert_eq!((t.controller, t.tapped, t.counter_count(CounterType::PlusOnePlusOne)), (1, true, 0));
 }
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), GameError> {
+    g.priority.player_with_priority = g.active_player_idx;
+    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: index, target, additional_targets: vec![], x_value: None, mode: None })?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Lantern of Revealing deploys a land on top tapped; a nonland it may bottom.
+#[test]
+fn lantern_of_revealing_deploys_a_land_or_bottoms_the_rest() {
+    let mut g = pod(2);
+    let l = ready(&mut g, 0, catalog::lantern_of_revealing());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, l, 1, None).expect("lantern");
+    assert_eq!(g.players[0].library.len(), 9);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Forest" && c.tapped));
+
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let l = ready(&mut g, 0, catalog::lantern_of_revealing());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, l, 1, None).expect("lantern");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bear), "the nonland went to the bottom");
+}
+
+/// Counterlash counters a creature spell and casts a creature from hand free;
+/// an instant in hand shares no type with it.
+#[test]
+fn counterlash_casts_a_same_typed_spell_free() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.players[1].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("wurm");
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let c = g.add_card_to_hand(0, catalog::counterlash());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear]), DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell { card_id: c, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("counterlash");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == wurm), "countered");
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.controller == 0), "a creature cast free");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt));
+}
+
+/// Thornmantle Striker's -X/-X counts the Elves you control (itself included).
+#[test]
+fn thornmantle_striker_shrinks_by_elf_count() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::llanowar_elves());
+    let ogre = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::thornmantle_striker());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast_with(&mut g, s, None, None).expect("striker");
+    assert!(g.battlefield_find(ogre).is_none(), "two Elves: -2/-2 kills the 2/2");
+}
+
+/// CR 702.62a — Reality Strobe bounces, then suspends itself with three time
+/// counters.
+#[test]
+fn reality_strobe_bounces_and_resuspends() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::reality_strobe());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_with(&mut g, s, Some(Target::Permanent(bear)), None).expect("strobe");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+    let e = g.exile.iter().find(|c| c.id == s).expect("exiled");
+    assert_eq!(e.counter_count(CounterType::Time), 3);
+}
+
+/// Conduit of Storms banks {R} for the postcombat main phase; {3}{R}{R}
+/// transforms it into colorless Conduit of Emrakul.
+#[test]
+fn conduit_of_storms_banks_red_for_second_main() {
+    let mut g = pod(2);
+    let c = ready(&mut g, 0, catalog::conduit_of_storms());
+    hit_player(&mut g, c, 1);
+    step_to(&mut g, 0, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, c, 0, None).expect("transform");
+    let back = g.battlefield_find(c).unwrap();
+    assert_eq!(back.definition.name, "Conduit of Emrakul");
+    assert_eq!(g.computed_permanent(c).unwrap().power, 5);
+}
+
+/// Jerren replaces a dying nontoken Human (not an Elf) for 1 life; at
+/// exactly 13 life the end step offers the {4}{B}{B} flip.
+#[test]
+fn jerren_recruits_and_flips_at_thirteen() {
+    let mut g = pod(2);
+    let j = ready(&mut g, 0, catalog::jerren_corrupted_bishop());
+    let elf = ready(&mut g, 0, catalog::elvish_visionary());
+    let soldier = ready(&mut g, 0, catalog::elite_vanguard());
+    let humans = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Human").count();
+    shock(&mut g, elf);
+    assert_eq!(humans(&g), 0, "an Elf is no Human");
+    let life = g.players[0].life;
+    shock(&mut g, soldier);
+    assert_eq!((humans(&g), g.players[0].life), (1, life - 1));
+    g.players[0].life = 13;
+    for _ in 0..6 {
+        ready(&mut g, 0, catalog::swamp());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    step_to(&mut g, 0, TurnStep::End);
+    assert_eq!(g.battlefield_find(j).unwrap().definition.name, "Ormendahl, the Corrupter");
+}
