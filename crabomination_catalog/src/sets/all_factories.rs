@@ -17086,6 +17086,19 @@ static DECKS: &[Factory] = &[
     super::decks::stingcaster_mage,
     super::decks::dungeon_delver,
     super::decks::insufferable_balladeer,
+    // cmdr_oct17_kn
+    super::decks::daredevils_billy_club,
+    super::decks::elektra_femme_fatale,
+    super::decks::merfolk_pupil,
+    super::decks::increasing_confusion,
+    super::decks::zalto_fire_giant_duke,
+    super::decks::kick_in_the_door,
+    super::decks::shield_spy_kit,
+    super::decks::venus_torn_between_worlds,
+    super::decks::sentinel_of_the_eternal_watch,
+    super::decks::distracting_geist,
+    super::decks::white_tiger_amulet_keeper,
+    super::decks::hollow_trees,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
