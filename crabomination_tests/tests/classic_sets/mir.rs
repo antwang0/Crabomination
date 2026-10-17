@@ -1160,7 +1160,8 @@ fn divine_retribution_counts_the_attackers() {
     assert_eq!(g.battlefield_find(b).unwrap().damage, 2);
 }
 
-/// Final Fortune buys a turn you don't live through.
+/// Final Fortune buys a turn you don't live through — and you DO live
+/// through the rest of this one: the loss is at the extra turn's end step.
 #[test]
 fn final_fortune_costs_the_game() {
     let mut g = two_player_game();
@@ -1169,11 +1170,19 @@ fn final_fortune_costs_the_game() {
     cast(&mut g, spell, None).expect("cast");
     drain_stack(&mut g);
     assert!(g.players[0].extra_turns > 0, "an extra turn is queued");
-    while g.step != TurnStep::End {
-        g.perform_action(GameAction::PassPriority).expect("pass");
+    let turn = g.turn_number;
+    let mut guard = 0;
+    while !g.players[0].eliminated && guard < 400 {
+        if g.step == TurnStep::End && g.turn_number == turn {
+            assert!(!g.players[0].eliminated, "alive through this turn's end step");
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+        guard += 1;
     }
-    drain_stack(&mut g);
-    assert!(g.players[0].eliminated, "and it kills you at that turn's end step");
+    assert!(g.players[0].eliminated, "and it kills you at the extra turn's end step");
+    assert_eq!(g.turn_number, turn + 1, "on the extra turn, not this one");
+    assert_eq!(g.active_player_idx, 0);
 }
 
 /// Decomposition rots its black host away and bills the controller.

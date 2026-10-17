@@ -14039,6 +14039,10 @@ pub enum DelayedTriggerKind {
     /// controller's own end step — this turn's if it's theirs and it hasn't
     /// begun, else their next turn's. `NextEndStep` fires on anyone's.
     YourNextEndStep,
+    /// "At the beginning of that turn's end step" for the extra turn this
+    /// effect grants (Final Fortune): the controller's end step on a LATER
+    /// turn, never this one's.
+    YourNextTurnsEndStep,
     /// Until end of turn, whenever a permanent an opponent controls deals
     /// damage to you — that permanent is the trigger source (Hellish
     /// Rebuke). Fires every time, not once.

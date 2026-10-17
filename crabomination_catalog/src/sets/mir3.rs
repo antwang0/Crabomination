@@ -813,7 +813,8 @@ pub fn final_fortune() -> CardDefinition {
         cost(&[r(), r()]),
         Effect::Seq(vec![
             Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
-            Effect::AtNextEndStep {
+            Effect::DelayUntil {
+                kind: crate::effect::DelayedTriggerKind::YourNextTurnsEndStep,
                 body: Box::new(Effect::LoseGame { who: PlayerRef::You }),
             },
         ]),
