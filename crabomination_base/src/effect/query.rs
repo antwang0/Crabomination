@@ -2411,6 +2411,7 @@ impl Effect {
             Effect::CopyAttackersAsBlockers => false,
             Effect::ChooseGraveyardCreaturesEachMayReturn
             | Effect::ExileTypeSpreadReturnPermanent { .. } => false,
+            Effect::SearchTheirLibraryAgainstNamedCard { who } => player_has_target(who),
             Effect::ReturnTargetCardsAtRandom { .. } => false,
             Effect::EachPlayerRecyclesArtifacts => false,
             Effect::OpponentChoosesPermanentThen { .. } => false,

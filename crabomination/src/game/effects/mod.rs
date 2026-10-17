@@ -38,6 +38,7 @@ mod delayed;
 mod eval;
 mod free_cast;
 mod graveyard_swap;
+mod named_search;
 mod graveyard_spread;
 mod dice_choices;
 mod order_bottom;
@@ -13754,6 +13755,9 @@ impl GameState {
             }
             Effect::ExileTypeSpreadReturnPermanent { min_types } => {
                 self.exile_type_spread_return_permanent(*min_types, ctx, events, effect)
+            }
+            Effect::SearchTheirLibraryAgainstNamedCard { who } => {
+                self.search_against_named_card(who, ctx, events, effect)
             }
             Effect::ChooseGraveyardCreaturesEachMayReturn => {
                 self.choose_graveyard_creatures_each_may_return(ctx, events, effect)

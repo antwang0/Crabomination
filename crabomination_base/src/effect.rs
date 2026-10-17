@@ -6524,6 +6524,11 @@ pub enum Effect {
     /// An opponent with a creature card must be picked when one exists; with
     /// none, you still name the opponent who picks from yours.
     ChooseGraveyardCreaturesEachMayReturn,
+    /// "Search `who`'s library for a card, then that player chooses a card
+    /// name. If you searched for a creature card that doesn't have that name,
+    /// you may put it onto the battlefield under your control. Then that
+    /// player shuffles." (Sphinx Ambassador.)
+    SearchTheirLibraryAgainstNamedCard { who: PlayerRef },
     /// "You may exile any number of cards from your graveyard with
     /// `min_types` or more card types among them. If you do, put a permanent
     /// card from among them onto the battlefield with a finality counter"
