@@ -857,6 +857,89 @@ pub fn darigaaz_reincarnated() -> CardDefinition {
     }
 }
 
+// ── Magik, Illyana Rasputin / Raph & Leo ────────────────────────────────────
+
+fn play_this_turn(what: Selector) -> Effect {
+    Effect::GrantMayPlay {
+        what,
+        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+        to_owner: false,
+        exile_after: false,
+        pay_own_cost: true,
+        any_color: false,
+    }
+}
+
+/// Magik, Illyana Rasputin // Darkchild, Demon Uncaged — {1}{B}{R} legendary
+/// 3/3 modal DFC. Upkeep: exile the top card, play it this turn. End step, if
+/// you sacrificed two or more permanents this turn: you may transform her.
+/// Back ({3}{B}{R} 4/4): upkeep, exile until a nonland card, play them this
+/// turn; pay 4 life: indestructible until end of turn, then tap her.
+pub fn magik_illyana_rasputin() -> CardDefinition {
+    let upkeep = |effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect,
+    };
+    let darkchild = CardDefinition {
+        triggered_abilities: vec![upkeep(Effect::Seq(vec![
+            Effect::ExileTopUntilMatching { filter: R::Nonland },
+            play_this_turn(Selector::ExiledThisResolution { filter: R::Any }),
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 4,
+            effect: Effect::Seq(vec![grant(Selector::This, Keyword::Indestructible), Effect::Tap { what: Selector::This }]),
+            ..Default::default()
+        }],
+        ..legend(creature(
+            "Darkchild, Demon Uncaged",
+            cost(&[generic(3), b(), r()]),
+            vec![CreatureType::Mutant, CreatureType::Demon, CreatureType::Sorcerer],
+            4,
+            4,
+        ))
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            upkeep(Effect::Seq(vec![
+                Effect::ClearLastMoved,
+                Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::ONE, link_to_source: false, face_down: false },
+                play_this_turn(Selector::LastMoved),
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                    Predicate::ValueAtLeast(Value::PermanentsSacrificedThisTurn(PlayerRef::You), Value::Const(2)),
+                ),
+                effect: Effect::MayDo {
+                    description: "Transform Magik?".into(),
+                    body: Box::new(Effect::Transform { what: Selector::This }),
+                },
+            },
+        ],
+        back_face: Some(Box::new(darkchild)),
+        ..legend(creature(
+            "Magik, Illyana Rasputin",
+            cost(&[generic(1), b(), r()]),
+            vec![CreatureType::Mutant, CreatureType::Sorcerer, CreatureType::Hero],
+            3,
+            3,
+        ))
+    }
+}
+
+/// Bot Bashing Time — {3}{R} Sorcery. 6 damage to target creature; if it would
+/// die this turn, it's exiled instead.
+pub fn bot_bashing_time() -> CardDefinition {
+    spell(
+        "Bot Bashing Time",
+        cost(&[generic(3), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::Creature) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) },
+        ]),
+    )
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

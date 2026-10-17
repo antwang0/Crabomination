@@ -17121,6 +17121,8 @@ static DECKS: &[Factory] = &[
     super::decks::winnowing,
     super::decks::scarlet_spider_ben_reilly,
     super::decks::darigaaz_reincarnated,
+    super::decks::magik_illyana_rasputin,
+    super::decks::bot_bashing_time,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -582,3 +582,33 @@ fn darigaaz_hatches_back_after_three_upkeeps() {
     step_to(&mut g, 0, TurnStep::Draw);
     assert!(g.battlefield_find(d).is_some(), "hatched");
 }
+
+/// Bot Bashing Time's 6 damage kills into exile, not the graveyard.
+#[test]
+fn bot_bashing_time_exiles_what_it_kills() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let s = g.add_card_to_hand(0, catalog::bot_bashing_time());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_with(&mut g, s, Some(Target::Permanent(wurm)), None).expect("bash");
+    assert!(g.exile.iter().any(|c| c.id == wurm));
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != wurm));
+}
+
+/// Magik flips at the end step only after two sacrifices this turn.
+#[test]
+fn magik_transforms_after_two_sacrifices() {
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::magik_illyana_rasputin());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].permanents_sacrificed_this_turn = 1;
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert_eq!(g.battlefield_find(m).unwrap().definition.name, "Magik, Illyana Rasputin", "one sacrifice: no flip");
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::magik_illyana_rasputin());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].permanents_sacrificed_this_turn = 2;
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert_eq!(g.battlefield_find(m).unwrap().definition.name, "Darkchild, Demon Uncaged");
+}
