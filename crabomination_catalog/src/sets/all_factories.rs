@@ -17319,6 +17319,20 @@ static DECKS: &[Factory] = &[
     super::decks::goblin_morningstar,
     super::decks::pompous_battlemage,
     super::decks::isareth_the_awakener,
+    // cmdr_oct17_x
+    super::decks::ant_mans_army,
+    super::decks::bob_reluctant_hydra_agent,
+    super::decks::stolen_stark_tech,
+    super::decks::the_death_of_gwen_stacy,
+    super::decks::roxxon_brutes,
+    super::decks::whiplash_vengeful_engineer,
+    super::decks::winter_soldier_icy_assassin,
+    super::decks::ms_marvel_elastic_ally,
+    super::decks::bereaved_survivor,
+    super::decks::skinshifter,
+    super::decks::belltoll_dragon,
+    super::decks::robot_domination,
+    super::decks::armor_wars,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
