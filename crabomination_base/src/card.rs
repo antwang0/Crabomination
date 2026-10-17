@@ -1101,6 +1101,8 @@ pub enum CounterType {
     Dread,
     /// Rotisserie Elemental's skewer counters.
     Skewer,
+    /// Olinda the Oblivious's odor counters.
+    Odor,
 }
 
 /// Every zone a card can occupy.
