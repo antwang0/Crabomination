@@ -188,6 +188,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::ControllerOf(s)
         | PlayerRef::EachPlayerExceptControllerOf(s)
         | PlayerRef::CombatDamagerController(s)
+        | PlayerRef::DefendingPlayerOf(s)
         | PlayerRef::LastDamagerControllerOf(s) => Some(s),
         // A filter, not a selector — it cannot hold a target.
         PlayerRef::MostControlledMatching(_)

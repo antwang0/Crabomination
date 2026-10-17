@@ -46501,6 +46501,15 @@ impl GameState {
                         }),
                     _ => None,
                 }),
+            PlayerRef::DefendingPlayerOf(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .find_map(|e| match e {
+                    EntityRef::Permanent(cid) => {
+                        self.attack_for(cid).map(|a| a.target).and_then(|t| self.defender_for(t))
+                    }
+                    _ => None,
+                }),
             PlayerRef::LastDamagerControllerOf(sel) => self
                 .resolve_selector(sel, ctx)
                 .into_iter()

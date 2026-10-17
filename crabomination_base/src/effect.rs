@@ -105,6 +105,11 @@ pub enum PlayerRef {
     /// that clears `block_map`, so a "whenever this is dealt combat damage"
     /// trigger can name the attacking player (Souls of the Faultless).
     CombatDamagerController(Box<Selector>),
+    /// CR 506.2 — the player (or planeswalker controller) the creature
+    /// `selector` resolves to is attacking; `None` when it isn't. The
+    /// per-attacker form of `DefendingPlayer` for a fan-out over several
+    /// attackers (Jurin, Leading the Charge).
+    DefendingPlayerOf(Box<Selector>),
     /// The controller of the most recent source that dealt damage to the
     /// permanent the inner selector resolves to this turn (reads the last entry
     /// of `CardInstance.damaged_by_this_turn`). Unlike `CombatDamagerController`
