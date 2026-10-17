@@ -101288,3 +101288,30 @@ pub const WHITE_TIGER_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const JURIN_COMMANDERS: &[CardFactory] = &[jurin_leading_the_charge];
+
+/// **Jurin, Leading the Charge**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Jurin, Leading the Charge (EDHREC, fetched 2026-10-17).
+pub const JURIN_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, dolmen_gate, embercleave, fire_diamond, hazorets_monument,
+    heraldic_banner, mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal,
+    the_reaver_cleaver, urabrasks_forge, wayfarers_bauble, castle_embereth, myriad_landscape,
+    nykthos_shrine_to_nyx, rogues_passage, spinerock_knoll, valakut_the_molten_pinnacle,
+    war_room, akroan_horse, anax_hardened_in_the_forge, anger, archetype_of_aggression,
+    balefang_the_unslayable, bloodthirster, combat_celebrant, elturel_survivors,
+    goblin_spymaster, hunted_dragon, karlach_fury_of_avernus, krenko_tin_street_kingpin,
+    legion_loyalist, legion_warboss, life_of_the_party, loyal_apprentice, moraug_fury_of_akoum,
+    phoenix_chick, port_razer, professional_face_breaker, relic_robber, solemn_simulacrum,
+    urabrask_the_hidden, varchilds_war_riders, varchild_betrayer_of_kjeldor, aggravated_assault,
+    bedlam, berserkers_onslaught, city_on_fire, curse_of_opulence, rite_of_the_raging_storm,
+    abrade, big_score, chaos_warp, deflecting_swat, great_train_heist, thrill_of_possibility,
+    unexpected_windfall, valakut_awakening, wild_magic_surge, zariel_archduke_of_avernus,
+    blasphemous_act, chain_reaction, disrupt_decorum, faithless_looting, jeskas_will,
+    mana_geyser, seize_the_day, tempt_with_vengeance, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

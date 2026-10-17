@@ -22134,6 +22134,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WHITE_TIGER_2_COMMANDERS,
             main: decks::WHITE_TIGER_2_MAIN,
         },
+        // Seat 3614: Jurin, Leading the Charge's EDHREC average deck. `--pod-decks 3614`.
+        PodDeck {
+            name: "Jurin, Leading the Charge (R)",
+            commanders: decks::JURIN_COMMANDERS,
+            main: decks::JURIN_MAIN,
+        },
     ]
 }
 
@@ -27631,6 +27637,7 @@ mod tests {
             ("Venus, Torn Between Worlds", &[0x1831]),
             ("April O'Neil, Kunoichi Trainee", &[0x1832]),
             ("White Tiger, Amulet Keeper", &[0x1833]),
+            ("Jurin, Leading the Charge", &[0x1834]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
