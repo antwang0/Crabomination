@@ -3655,6 +3655,11 @@ pub enum SelectionRequirement {
     /// makes "{T}, Unattach this Equipment" costs tap the right creature
     /// (Leonin Bola, Surestrike Trident).
     IsHostOfSource,
+    /// Attached to the ability's source itself — "target Equipment attached to
+    /// it" on a trigger a creature was granted (Shackles of Treachery). Unlike
+    /// `AttachedToSource` (attached to anything) it reads the source id, so a
+    /// source-less or off-battlefield walk matches nothing.
+    AttachedToThisSource,
     /// True when the candidate permanent has at least `n` Equipment attached
     /// (CR 301.5). Battlefield-only. Balan's "double strike as long as two or
     /// more Equipment are attached to it".

@@ -7225,6 +7225,7 @@ impl GameState {
                     // source-precise half of `AttachedToSource` (Necrotic
                     // Plague's granted upkeep sacrifice). A source-blind
                     // caller still answers `true`.
+                    R::AttachedToThisSource => source.is_some_and(|sid| card.attached_to == Some(sid)),
                     R::IsHostOfSource => {
                         match source.and_then(|sid| self.battlefield_find(sid)) {
                             Some(src) => src.attached_to == Some(card.id),
@@ -8026,6 +8027,8 @@ impl GameState {
                 n >= 5
             }
             R::IsHostOfSource => true,
+            // A card off the battlefield is attached to nothing.
+            R::AttachedToThisSource => false,
             // `self.attacking` keys by card id, so a card not on the battlefield
             // is never listed — this stays false there (Static Snare's affinity
             // "for each attacking creature" reads it from the affinity counter).
