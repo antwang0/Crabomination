@@ -2439,14 +2439,24 @@ pub fn library() -> CardDefinition {
 pub fn veteran_adventurer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
-        static_abilities: vec![StaticAbility {
+        // CR 604.3 / 613.1d — "is also a Cleric, Rogue, Warrior, and Wizard"
+        // is rules text over a printed `Human`, so it is a layer-4 static
+        // here (only the battlefield reads party types), not printed types.
+        static_abilities: std::iter::once(StaticAbility {
             description: "This spell costs {1} less to cast for each creature in your party.",
             effect: StaticEffect::SelfCostReducedByValue { amount: Value::PartyCount },
-        }],
+        })
+        .chain([CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard].map(|t| {
+            StaticAbility {
+                description: "Veteran Adventurer is also a Cleric, Rogue, Warrior, and Wizard.",
+                effect: StaticEffect::AddCreatureTypeToMatching { applies_to: Selector::This, creature_type: t },
+            }
+        }))
+        .collect(),
         ..creature(
             "Veteran Adventurer",
             cost(&[generic(5), g()]),
-            vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard],
+            vec![CreatureType::Human],
             5,
             5,
         )

@@ -1,6 +1,6 @@
 //! Commander: the 2026-10-16 (`0128tsCy`) rescan's gaps (`decks::cmdr_oct16_f`).
 
-use crabomination::card::{CardId, CounterType, Keyword};
+use crabomination::card::{CardId, CounterType, CreatureType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
@@ -1261,7 +1261,12 @@ fn veteran_adventurer_discounts_by_party() {
     assert!(cast(&mut g, va, None).is_err(), "Imoen is one party member, not two");
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, va, None).expect("{5}{G} less one");
-    assert!(g.battlefield_find(va).is_some());
+    // CR 604.3 — its "is also a Cleric, Rogue, Warrior, and Wizard" holds on
+    // the battlefield over a printed Human.
+    let types = g.computed_permanent(va).unwrap().subtypes().creature_types.clone();
+    for t in [CreatureType::Human, CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard] {
+        assert!(types.contains(&t), "{t:?}");
+    }
 }
 
 /// Liliana's Elite grows with your graveyard's creature cards.
