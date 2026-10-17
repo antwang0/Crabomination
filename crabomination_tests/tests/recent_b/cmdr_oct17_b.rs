@@ -519,3 +519,50 @@ fn seasons_past_returns_one_card_per_mana_value() {
     assert!(in_hand(a) ^ in_hand(b), "only one of the two mana-value-2 Bears");
     assert_eq!(g.players[0].library.last().map(|x| x.id), Some(s), "bottom of the library");
 }
+
+// ── cmdr_oct17_e ───────────────────────────────────────────────────────────
+
+/// Renegade Doppelganger copies an entering creature until end of turn.
+#[test]
+fn renegade_doppelganger_copies_until_end_of_turn() {
+    let mut g = pod(2);
+    let d = ready(&mut g, 0, catalog::renegade_doppelganger());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Green, 6);
+    cast(&mut g, wurm, None).expect("wurm");
+    assert_eq!(pt(&g, d), (6, 4), "a Craw Wurm this turn");
+}
+
+/// Spider-Man 2099 can't be cast during its controller's first three turns.
+#[test]
+fn spider_man_2099_waits_for_turn_four() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::spider_man_2099());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, s, None).is_err(), "turn one");
+    g.players[0].turns_begun = 4;
+    cast(&mut g, s, None).expect("turn four");
+    assert!(g.battlefield_find(s).is_some());
+}
+
+/// CR 707.10 — Precursor Golem: a spell targeting only one Golem is copied
+/// for each other Golem, by the spell's caster.
+#[test]
+fn precursor_golem_splits_a_bolt_across_golems() {
+    let mut g = pod(2);
+    let pg = g.add_card_to_hand(0, catalog::precursor_golem());
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, pg, None).expect("Precursor Golem");
+    let golems: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name.contains("Golem")).map(|c| c.id).collect();
+    assert_eq!(golems.len(), 3);
+    g.active_player_idx = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(golems[0])), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt a Golem");
+    drain_stack(&mut g);
+    assert!(golems.iter().all(|id| g.battlefield_find(*id).is_none()), "every Golem took a Bolt");
+}

@@ -16760,6 +16760,10 @@ static DECKS: &[Factory] = &[
     super::decks::novel_nunchaku,
     super::decks::green_dragon,
     super::decks::seasons_past,
+    super::decks::renegade_doppelganger,
+    super::decks::mathise_surge_channeler,
+    super::decks::spider_man_2099,
+    super::decks::precursor_golem,
     // cmdr_oct17_b / _c
     super::decks::forest_bear,
     super::decks::loxodon_wayfarer,
