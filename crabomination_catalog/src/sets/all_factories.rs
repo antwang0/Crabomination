@@ -17141,6 +17141,11 @@ static DECKS: &[Factory] = &[
     super::decks::call_damage_control,
     super::decks::draining_whelk,
     super::decks::predatory_advantage,
+    super::decks::harness_the_storm,
+    super::decks::iron_man_master_of_machines,
+    super::decks::hexhaven_battalion,
+    super::decks::courier_of_comestibles,
+    super::decks::hallowed_respite,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -838,3 +838,90 @@ fn predatory_advantage_punishes_a_creatureless_turn() {
     step_to(&mut g, 0, TurnStep::Upkeep);
     assert_eq!(lizards(&g), 1, "seat 1 cast no creature");
 }
+
+/// CR 601.2c / 201.2 — Harness the Storm's target is a graveyard card named
+/// like the spell just cast from hand; the recast pays its own cost.
+#[test]
+fn harness_the_storm_recasts_the_same_named_card() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::harness_the_storm());
+    let old = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let other = g.add_card_to_graveyard(0, catalog::shock());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    cast_with(&mut g, bolt, Some(Target::Player(1)), None).expect("bolt");
+    assert_eq!(g.players[1].life, life - 6, "both Bolts hit");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the recast paid {{R}}");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == other), "Shock's name differs");
+}
+
+/// Iron Man draws on attack only after an artifact entered this turn.
+#[test]
+fn iron_man_draws_after_an_artifact_entered() {
+    let mut g = pod(2);
+    let im = ready(&mut g, 0, catalog::iron_man_master_of_machines());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    cast_with(&mut g, ring, None, None).expect("ring");
+    assert_eq!(g.computed_permanent(im).unwrap().power, 2, "+1/+0 per other artifact");
+    let hand = g.players[0].hand.len();
+    hit_player(&mut g, im, 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Hexhaven Battalion: three named Cadets and an empowered Jace token.
+#[test]
+fn hexhaven_battalion_makes_cadets_and_a_jace() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::hexhaven_battalion());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_with(&mut g, s, None, None).expect("cast");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Cadet" && c.controller == 0).count(), 3);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.counter_count(CounterType::Loyalty) >= 2));
+}
+
+/// Courier of Comestibles makes a Food only when no card went to hand.
+#[test]
+fn courier_of_comestibles_falls_back_to_a_food_token() {
+    let mut g = pod(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let c = g.add_card_to_hand(0, catalog::courier_of_comestibles());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_with(&mut g, c, None, None).expect("courier");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Food").count(), 1, "no Food card to find");
+
+    let mut g = pod(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let pizza = g.add_card_to_library(0, catalog::spicy_oatmeal_pizza());
+    let c = g.add_card_to_hand(0, catalog::courier_of_comestibles());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_with(&mut g, c, None, None).expect("courier");
+    assert!(g.players[0].hand.iter().any(|c| c.id == pizza), "found the Food card");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"));
+}
+
+/// Hallowed Respite: our blinked creature gains a counter, theirs comes back
+/// to its owner tapped.
+#[test]
+fn hallowed_respite_counters_ours_and_taps_theirs() {
+    let mut g = pod(2);
+    let ours = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    for target in [ours, theirs] {
+        let s = g.add_card_to_hand(0, catalog::hallowed_respite());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        cast_with(&mut g, s, Some(Target::Permanent(target)), None).expect("respite");
+    }
+    let o = g.battlefield_find(ours).unwrap();
+    assert_eq!(o.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(!o.tapped);
+    let t = g.battlefield_find(theirs).unwrap();
+    assert_eq!((t.controller, t.tapped, t.counter_count(CounterType::PlusOnePlusOne)), (1, true, 0));
+}

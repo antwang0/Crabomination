@@ -1379,6 +1379,147 @@ pub fn predatory_advantage() -> CardDefinition {
     }
 }
 
+/// Harness the Storm — {2}{R} Enchantment. Whenever you cast an instant or
+/// sorcery spell from your hand, you may cast target card with the same name
+/// as that spell from your graveyard, paying its costs.
+pub fn harness_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Harness the Storm",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                Predicate::CastSpellFromHand,
+            ])),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: target_filtered(R::SameNameAsTriggerSubject.and(R::InYourGraveyard)),
+                source_zone: Zone::Graveyard,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Iron Man, Master of Machines — {2}{U}{R} legendary 1/4 artifact Human Hero,
+/// flying, vigilance; +1/+0 for each other artifact you control. Whenever it
+/// attacks, if an artifact entered under your control this turn, draw a card.
+pub fn iron_man_master_of_machines() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Iron Man gets +1/+0 for each other artifact you control.",
+            effect: SE::PumpSelfByControlledPermanents {
+                filter: R::Artifact.and(R::OtherThanSource),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::ArtifactEnteredThisTurn { who: PlayerRef::You }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..legend(creature(
+            "Iron Man, Master of Machines",
+            cost(&[generic(2), u(), r()]),
+            vec![CreatureType::Human, CreatureType::Hero],
+            1,
+            4,
+        ))
+    }
+}
+
+/// Hexhaven Battalion — {4}{W}{W} Sorcery. Create three 2/2 colorless Wizard
+/// Soldier tokens named Cadet. Empower Jace 2. Basic landcycling {2}.
+pub fn hexhaven_battalion() -> CardDefinition {
+    let cadet = std::sync::Arc::new(TokenDefinition {
+        name: "Cadet".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        keywords: vec![Keyword::Typecycling(Box::new((cost(&[generic(2)]), R::IsBasicLand)))],
+        ..spell(
+            "Hexhaven Battalion",
+            cost(&[generic(4), w(), w()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: cadet },
+                Effect::EmpowerJace { who: PlayerRef::You, count: Value::Const(2) },
+            ]),
+        )
+    }
+}
+
+/// Courier of Comestibles — {1}{G} 1/2 Human Citizen. ETB: you may search for a
+/// Food card and put it into your hand; if no card went to your hand this way,
+/// create a Food. (The hand count before the search is the X the If reads.)
+pub fn courier_of_comestibles() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::WithX {
+            x: Value::HandSizeOf(PlayerRef::You),
+            body: Box::new(Effect::Seq(vec![
+                Effect::MayDo {
+                    description: "Search your library for a Food card?".into(),
+                    body: Box::new(Effect::Search {
+                        who: PlayerRef::You,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Food),
+                        to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::XFromCost),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
+        ..creature("Courier of Comestibles", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Citizen], 1, 2)
+    }
+}
+
+/// Hallowed Respite — {W}{U} Sorcery, flashback {1}{W}{U}. Blink target
+/// nonlegendary creature to its owner; +1/+1 counter if it came back under
+/// your control, else tap it.
+pub fn hallowed_respite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), w(), u()]))],
+        ..spell(
+            "Hallowed Respite",
+            cost(&[w(), u()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::ExileAndReturnToOwner {
+                    what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasSupertype(Supertype::Legendary))))),
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ControlledByYou },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                },
+            ]),
+        )
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target
