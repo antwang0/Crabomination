@@ -1,7 +1,8 @@
 //! Commander: the 2026-10-17 (`yl8zjb`) two-card-gap closers
 //! (`decks::cmdr_oct17_kn`).
 
-use crabomination::card::{CardId, CounterType};
+use crabomination::card::{CardId, CounterType, Keyword};
+use crabomination::effect::{Effect, Selector, Value};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
@@ -177,4 +178,36 @@ fn jurin_pumps_each_attacker_by_its_own_defender() {
     let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
     assert_eq!(p(&g, jurin), 4 + 3);
     assert_eq!(p(&g, bear), 2 + 1);
+}
+
+/// CR 615 — Old Fat Spider's chapter II: the opposing creature it picks deals
+/// no combat damage while the Saga remains; chapter I hexproofs our own.
+#[test]
+fn old_fat_spider_shuts_off_an_opposing_creatures_damage() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let saga = g.add_card_to_hand(0, catalog::old_fat_spider_cant_see_me());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_with(&mut g, saga, None, None).expect("saga");
+    let kw = |g: &GameState, id, k| g.permanent_has_keyword(id, &k);
+    assert!(kw(&g, mine, Keyword::Hexproof), "chapter I on our creature");
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let add = Effect::AddCounter { what: Selector::ExactObjects(vec![saga]), kind: CounterType::Lore, amount: Value::ONE };
+    let evs = g.resolve_effect(&add, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(kw(&g, theirs, Keyword::DealsNoDamage), "chapter II aims at the opponent's");
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: theirs, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    let life = g.players[0].life;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    assert_eq!(g.players[0].life, life, "its damage is prevented");
 }

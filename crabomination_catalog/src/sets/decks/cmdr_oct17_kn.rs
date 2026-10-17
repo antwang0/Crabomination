@@ -58,6 +58,37 @@ fn tap_target_defenders_creature() -> Effect {
     Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)) }
 }
 
+// ── Bilbo, Luckwearer / Bard the Bowman / Guru Pathik / O'aka ───────────────
+
+/// Old Fat Spider Can't See Me — {2}{U} Saga. I: target creature you control
+/// gains hexproof while this Saga remains. II: prevent all damage up to one
+/// target creature would deal while it remains (CR 615). III, IV: draw.
+pub fn old_fat_spider_cant_see_me() -> CardDefinition {
+    let held = |what, keyword| Effect::GrantKeyword { what, keyword, duration: Duration::WhileSourceOnBattlefield };
+    let draw = || Effect::Draw { who: Selector::You, amount: Value::ONE };
+    CardDefinition {
+        name: "Old Fat Spider Can't See Me",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, held(target_filtered(R::Creature.and(R::ControlledByYou)), Keyword::Hexproof)),
+            (
+                2,
+                Effect::ApplyToTargets {
+                    min_targets: 0,
+                    max_targets: 1,
+                    filter: R::Creature,
+                    effect: Box::new(held(Selector::Target(0), Keyword::DealsNoDamage)),
+                },
+            ),
+            (3, draw()),
+            (4, draw()),
+        ],
+        ..Default::default()
+    }
+}
+
 // ── Daredevil, Fearless Fighter ─────────────────────────────────────────────
 
 /// Daredevil's Billy Club — {1}{R} Equipment. ETB: 2 damage to any target and
