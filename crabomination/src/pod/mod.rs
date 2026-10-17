@@ -23844,6 +23844,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIRST_DOCTOR_6_COMMANDERS,
             main: decks::THE_FIRST_DOCTOR_6_MAIN,
         },
+        // Seat 3899: Jem Lightfoote, Sky Explorer's EDHREC average deck. `--pod-decks 3899`.
+        PodDeck {
+            name: "Jem Lightfoote, Sky Explorer (WU)",
+            commanders: decks::JEM_LIGHTFOOTE_COMMANDERS,
+            main: decks::JEM_LIGHTFOOTE_MAIN,
+        },
+        // Seat 3900: The Second Doctor and Donna Noble's EDHREC average deck. `--pod-decks 3900`.
+        PodDeck {
+            name: "The Second Doctor and Donna Noble (WUR)",
+            commanders: decks::THE_SECOND_DOCTOR_8_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_8_MAIN,
+        },
+        // Seat 3901: Ghost of Ramirez DePietro and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 3901`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Ishai, Ojutai Dragonspeaker (WU)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_17_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_17_MAIN,
+        },
     ]
 }
 
@@ -29626,6 +29644,9 @@ mod tests {
             ("Alharu, Solemn Ritualist and Ghost of Ramirez DePietro", &[0x194E]),
             ("Vhal, Candlekeep Researcher and Acolyte of Bahamut", &[0x194F]),
             ("The First Doctor and Ian Chesterton", &[0x1950]),
+            ("Jem Lightfoote, Sky Explorer", &[0x1951]),
+            ("The Second Doctor and Donna Noble", &[0x1952]),
+            ("Ghost of Ramirez DePietro and Ishai, Ojutai Dragonspeaker", &[0x1953]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

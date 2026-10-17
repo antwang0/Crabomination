@@ -109309,3 +109309,88 @@ pub const THE_FIRST_DOCTOR_6_MAIN: &[CardFactory] = &[
     island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const JEM_LIGHTFOOTE_COMMANDERS: &[CardFactory] = &[jem_lightfoote_sky_explorer];
+
+/// **Jem Lightfoote, Sky Explorer**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Islands + 11 Plains = 99.
+/// Jem Lightfoote, Sky Explorer (EDHREC, fetched 2026-10-17).
+pub const JEM_LIGHTFOOTE_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, benders_waterskin, mind_stone, sol_ring,
+    talisman_of_progress, thought_vessel, adarkar_wastes, azorius_chancery, command_tower,
+    deserted_beach, glacial_fortress, hallowed_fountain, irrigated_farmland, port_town,
+    prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse, temple_of_enlightenment,
+    alms_collector, archivist_of_oghma, aven_interrupter, aven_mindcensor, brineborn_cutthroat,
+    cathar_commando, deep_gnome_terramancer, dust_animus, enduring_curiosity, errant_and_giada,
+    faerie_mastermind, faerie_vandal, fblthp_lost_on_the_range, final_word_phantom,
+    geyser_drake, guardian_of_faith, high_fae_trickster, hullbreaker_horror,
+    malcolm_alluring_scoundrel, naiad_of_hidden_coves, portal_manipulator, selfless_squire,
+    smirking_spelljacker, spectral_sailor, wavebreak_hippocamp, wrangler_of_the_damned,
+    amphibian_downpour, eaten_by_piranhas, leyline_of_anticipation, propaganda,
+    teferis_ageless_insight, utter_insignificance, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, behold_the_multiverse, brainstorm, counterspell, disenchant, dovins_veto,
+    frantic_search, generous_gift, hindering_light, negate, opt, path_to_exile, saw_it_coming,
+    stroke_of_midnight, swords_to_plowshares, three_steps_ahead, the_wandering_emperor,
+    approach_of_the_second_sun, doomskar, ravenform, supreme_verdict,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const THE_SECOND_DOCTOR_8_COMMANDERS: &[CardFactory] = &[the_second_doctor, donna_noble];
+
+/// **The Second Doctor and Donna Noble**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 4 Islands + 4 Mountains + 6 Plains = 98.
+/// The Second Doctor and Donna Noble (EDHREC, fetched 2026-10-17).
+pub const THE_SECOND_DOCTOR_8_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, fellwar_stone, izzet_signet, mithril_coat,
+    sol_ring, talisman_of_conviction, talisman_of_creativity, talisman_of_progress,
+    thought_vessel, adarkar_wastes, arid_mesa, battlefield_forge, clifftop_retreat,
+    command_tower, deserted_beach, exotic_orchard, flooded_strand, glacial_fortress,
+    hallowed_fountain, mystic_monastery, prairie_stream, raugrin_triome, reliquary_tower,
+    sacred_foundry, sea_of_clouds, shivan_reef, spectator_seating, steam_vents, sulfur_falls,
+    training_center, bastion_protector, body_of_knowledge, boros_reckoner, brash_taunter,
+    faerie_mastermind, ill_tempered_loner, kwain_itinerant_meddler, loran_of_the_third_path,
+    mangara_the_diplomat, mogg_maniac, nin_the_pain_artist, phyrexian_vindicator,
+    portal_manipulator, screaming_nemesis, sokrates_athenian_teacher, spitemare, stuffy_doll,
+    swans_of_bryn_argoll, the_council_of_four, ghostly_prison, guilty_conscience, pain_for_all,
+    pariah, propaganda, saving_grace, smothering_tithe, smugglers_share, trouble_in_pairs,
+    arcane_denial, arcbond, boros_charm, comeuppance, counterspell, deflecting_palm,
+    dovins_veto, flawless_maneuver, generous_gift, gideons_sacrifice, heroic_sacrifice,
+    martyrdom, new_way_forward, path_to_exile, reins_of_power, swords_to_plowshares,
+    take_the_bait, blasphemous_act, chain_reaction, disrupt_decorum, promise_of_loyalty,
+    rolling_earthquake, star_of_extinction, taunt_from_the_rampart,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const GHOST_OF_RAMIREZ_DEPIETRO_17_COMMANDERS: &[CardFactory] = &[ghost_of_ramirez_depietro, ishai_ojutai_dragonspeaker];
+
+/// **Ghost of Ramirez DePietro and Ishai, Ojutai Dragonspeaker**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Islands + 11 Plains = 98.
+/// Ghost of Ramirez DePietro and Ishai, Ojutai Dragonspeaker (EDHREC, fetched 2026-10-17).
+pub const GHOST_OF_RAMIREZ_DEPIETRO_17_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, moonsnare_prototype, pip_boy_3000, talisman_of_progress,
+    arid_archway, azorius_chancery, command_tower, conduit_pylons, eiganjo_seat_of_the_empire,
+    irrigated_farmland, lazotep_quarry, lotus_field, meticulous_archive, otawara_soaring_city,
+    path_of_ancestry, riptide_laboratory, angel_of_indemnity, angel_of_the_ruins, archaeomancer,
+    azami_lady_of_scrolls, champion_of_wits, deranged_assistant, dreamscape_artist,
+    galepowder_mage, gogo_master_of_mimicry, guardian_scalelord, hydroelectric_specimen,
+    jace_vryns_prodigy, karmic_guide, kitsa_otterball_elite, midnight_pathlighter,
+    mirrorshell_crab, niko_light_of_hope, nimbleclaw_adept, plagon_lord_of_the_beach,
+    portal_manipulator, radiant_solar, reflector_mage, sand_scout, sun_titan,
+    teferi_mage_of_zhalfir, thought_courier, tishanas_tidebinder, toby_beastie_befriender,
+    unsettled_mariner, vedalken_aethermage, vizier_of_tumbling_sands, waker_of_waves,
+    windrider_wizard, witch_enchanter, astral_drift, duelists_heritage, flaming_fist,
+    shark_typhoon, touch_the_spirit_realm, counterspell, destroy_evil, faithful_mending,
+    farm_market, frantic_search, generous_gift, ghostly_flicker, stroke_of_midnight,
+    three_steps_ahead, ascend_from_avernus, dusk_dawn, lorien_revealed, planar_birth,
+    requisition_raid, sevinnes_reclamation, split_up, step_through, the_battle_of_bywater,
+    winds_of_abandon,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
