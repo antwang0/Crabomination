@@ -940,6 +940,35 @@ pub fn bot_bashing_time() -> CardDefinition {
     )
 }
 
+// ── Nihiloor / Merieke Ri Berit / The Ever-Changing 'Dane ───────────────────
+
+/// Merieke Ri Berit — {W}{U}{B} legendary 1/1 Human; doesn't untap during your
+/// untap step. {T}: gain control of target creature for as long as you control
+/// Merieke; when Merieke leaves the battlefield or becomes untapped, destroy
+/// that creature (no regeneration).
+pub fn merieke_ri_berit() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Merieke Ri Berit doesn't untap during your untap step.",
+            effect: SE::PreventUntap { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GainControlWhileYouControlSource { what: target_filtered(R::Creature) },
+                Effect::DelayUntilWithCapture {
+                    kind: crate::effect::DelayedTriggerKind::WhenSourceLeavesOrUntaps,
+                    capture: Selector::Target(0),
+                    body: Box::new(Effect::DestroyNoRegen { what: Selector::Target(0) }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(creature("Merieke Ri Berit", cost(&[w(), u(), b()]), vec![CreatureType::Human], 1, 1))
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

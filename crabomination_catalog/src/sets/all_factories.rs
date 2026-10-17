@@ -17123,6 +17123,7 @@ static DECKS: &[Factory] = &[
     super::decks::darigaaz_reincarnated,
     super::decks::magik_illyana_rasputin,
     super::decks::bot_bashing_time,
+    super::decks::merieke_ri_berit,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

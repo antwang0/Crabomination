@@ -612,3 +612,28 @@ fn magik_transforms_after_two_sacrifices() {
     step_to(&mut g, 1, TurnStep::Upkeep);
     assert_eq!(g.battlefield_find(m).unwrap().definition.name, "Darkchild, Demon Uncaged");
 }
+
+/// Merieke takes a creature for as long as we control her; untapping her (or
+/// her leaving) destroys it.
+#[test]
+fn merieke_steals_until_she_untaps() {
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::merieke_ri_berit());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m,
+        ability_index: 0,
+        target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("steal");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 0);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Untap { what: Selector::ExactObjects(vec![m]), up_to: None }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "untapped: the Wurm is destroyed");
+}
