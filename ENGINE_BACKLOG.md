@@ -207,6 +207,8 @@ the handoff.
   Lake-town Mariners, Liliana's Elite, Primal Witchstalker, Razaketh's Rite, Topaz Dragon, Winds of Rebuke, Veteran
   Adventurer, Calciform Pools — seats 3276-3301. **CLAIMED (batch 12) — don't duplicate:** Lifelink, Moonblade
   Shinobi, Dining Room, Resonance Technician (LANDED, seats 3302-3309).
+- **CLAIMED (batch 13) — don't duplicate:** Glittermonger, Contact Other Plane, Stirring Bard, Sword of Kaldra,
+  Glorious End, Ajani Wise Counselor.
 - **FIXED (`0128tsCy`):** `cast_spell_alternative_from` stamped no `cast_mana_spent_by_color` (an evoked Vibrance's
   "if {R}{R} was spent" was false, "if no mana was spent" true), passed converge 0 and `from_hand: true` for a
   command-zone alt cast; `finalize_cast` counted hop casts as hand casts. The Prismatic Piper never carried
