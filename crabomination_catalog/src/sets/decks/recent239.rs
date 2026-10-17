@@ -421,9 +421,7 @@ pub fn bite_down_on_crime() -> CardDefinition {
 
 /// Behind the Mask — {U} Instant. Optional additional cost: collect evidence 6.
 /// Until end of turn, target artifact or creature becomes an artifact creature
-/// with base P/T 4/3 — or 1/1 instead if evidence was collected. (The added
-/// artifact type on a nonartifact target is approximated — `BecomeCreature`
-/// keeps its printed types and animates it.)
+/// with base P/T 4/3 — or 1/1 instead if evidence was collected.
 pub fn behind_the_mask() -> CardDefinition {
     let animate = |power| Effect::BecomeCreature {
         what: Selector::TargetFiltered {
@@ -444,11 +442,14 @@ pub fn behind_the_mask() -> CardDefinition {
             amount: 6,
             optional: true,
         }],
-        effect: Effect::If {
-            cond: Predicate::SpellCollectedEvidence,
-            then: Box::new(animate(1)),
-            else_: Box::new(animate(4)),
-        },
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::SpellCollectedEvidence,
+                then: Box::new(animate(1)),
+                else_: Box::new(animate(4)),
+            },
+            Effect::AddCardTypeIndefinitely { what: Selector::Target(0), card_type: CardType::Artifact, until_eot: true },
+        ]),
         ..Default::default()
     }
 }

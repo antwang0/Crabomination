@@ -235,6 +235,7 @@ pub fn suit_up() -> CardDefinition {
                 keywords: vec![],
                 duration: crate::effect::Duration::EndOfTurn,
             },
+            Effect::AddCardTypeIndefinitely { what: Selector::Target(0), card_type: CardType::Artifact, until_eot: true },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

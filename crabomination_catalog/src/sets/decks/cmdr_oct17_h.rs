@@ -576,6 +576,8 @@ pub fn i_am_iron_man() -> CardDefinition {
                 keywords: vec![Keyword::Flying],
                 duration: Duration::EndOfTurn,
             },
+            // CR 205.1b — it becomes an artifact in addition to its types.
+            Effect::AddCardTypeIndefinitely { what: Selector::Target(0), card_type: CardType::Artifact, until_eot: true },
             draw(1),
         ]),
     )

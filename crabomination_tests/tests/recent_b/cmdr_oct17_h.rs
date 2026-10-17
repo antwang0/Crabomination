@@ -418,3 +418,19 @@ fn goblinslide_pays_for_goblins() {
     cast(&mut g, s, None).expect("Join Shields");
     assert_eq!(g.battlefield.iter().filter(|p| p.definition.name == "Goblin").count(), 1);
 }
+
+/// I Am Iron Man makes a nonartifact creature an artifact creature (CR
+/// 205.1b), only until end of turn.
+#[test]
+fn i_am_iron_man_adds_the_artifact_type() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::i_am_iron_man());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, s, Some(Target::Permanent(bears))).expect("I Am Iron Man");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+}
