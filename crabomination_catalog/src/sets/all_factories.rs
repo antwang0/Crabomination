@@ -16764,6 +16764,12 @@ static DECKS: &[Factory] = &[
     super::decks::mathise_surge_channeler,
     super::decks::spider_man_2099,
     super::decks::precursor_golem,
+    super::decks::bilbo_luckwearer,
+    super::decks::feldon_ronom_excavator,
+    super::decks::warbringer,
+    super::decks::bilbo_baggins_burglar,
+    super::decks::riddles_in_the_dark,
+    super::decks::bilbos_burglaring,
     // cmdr_oct17_b / _c
     super::decks::forest_bear,
     super::decks::loxodon_wayfarer,

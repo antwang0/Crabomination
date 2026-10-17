@@ -566,3 +566,88 @@ fn precursor_golem_splits_a_bolt_across_golems() {
     drain_stack(&mut g);
     assert!(golems.iter().all(|id| g.battlefield_find(*id).is_none()), "every Golem took a Bolt");
 }
+
+// ── cmdr_oct17_f ───────────────────────────────────────────────────────────
+
+/// CR 601.2c — Burglar's Plot swaps two nonland permanents only when they
+/// share a card type.
+#[test]
+fn bilbos_burglars_plot_needs_a_shared_card_type() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::sol_ring());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::sol_ring());
+    let b = g.add_card_to_hand(0, catalog::bilbo_luckwearer());
+    let adv = |g: &mut GameState, t: CardId| {
+        g.players[0].mana_pool.add(Color::Blue, 5);
+        g.perform_action(GameAction::CastAdventure {
+            card_id: b,
+            target: Some(Target::Permanent(mine)),
+            additional_targets: vec![Target::Permanent(t)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(adv(&mut g, bears).is_err(), "an artifact and a creature");
+    adv(&mut g, theirs).expect("two artifacts");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+}
+
+/// Feldon exiles as many cards as the damage dealt to it and lets you play
+/// exactly one of them.
+#[test]
+fn feldon_exiles_that_many_and_grants_one() {
+    let mut g = pod(2);
+    let f = ready(&mut g, 0, catalog::feldon_ronom_excavator());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.exile.len();
+    cast(&mut g, shock, Some(Target::Permanent(f))).expect("Shock Feldon");
+    assert!(g.battlefield_find(f).is_none(), "2 damage kills the 2/2 — its trigger still fires");
+    assert_eq!(g.exile.len(), before + 2);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 1, "one of them is playable");
+}
+
+/// Warbringer's static makes your dash costs {2} cheaper: a second Warbringer
+/// dashes for {R}.
+#[test]
+fn warbringer_discounts_dash() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::warbringer());
+    let w = g.add_card_to_hand(0, catalog::warbringer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: w,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("dash for {R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(w).is_some());
+}
+
+/// Bilbo's Burglaring takes up to one artifact from EACH opponent.
+#[test]
+fn bilbos_burglaring_takes_one_artifact_per_opponent() {
+    let mut g = pod(3);
+    let a = ready(&mut g, 1, catalog::sol_ring());
+    let b = ready(&mut g, 2, catalog::sol_ring());
+    let s = g.add_card_to_hand(0, catalog::bilbos_burglaring());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Burglaring");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(b).unwrap().controller, 0);
+}
