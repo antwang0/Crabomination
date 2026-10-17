@@ -22260,6 +22260,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DARIGAAZ_REINCARNATED_COMMANDERS,
             main: decks::DARIGAAZ_REINCARNATED_MAIN,
         },
+        // Seat 3635: Magik, Illyana Rasputin's EDHREC average deck. `--pod-decks 3635`.
+        PodDeck {
+            name: "Magik, Illyana Rasputin (BR)",
+            commanders: decks::MAGIK_COMMANDERS,
+            main: decks::MAGIK_MAIN,
+        },
+        // Seat 3636: Raph & Leo, Sibling Rivals's EDHREC average deck. `--pod-decks 3636`.
+        PodDeck {
+            name: "Raph & Leo, Sibling Rivals (WR)",
+            commanders: decks::RAPH_LEO_COMMANDERS,
+            main: decks::RAPH_LEO_MAIN,
+        },
     ]
 }
 
@@ -27778,6 +27790,8 @@ mod tests {
             ("Falcon and Redwing", &[0x1846]),
             ("Scarlet Spider, Ben Reilly", &[0x1847]),
             ("Darigaaz Reincarnated", &[0x1848]),
+            ("Magik, Illyana Rasputin", &[0x1849]),
+            ("Raph & Leo, Sibling Rivals", &[0x184A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

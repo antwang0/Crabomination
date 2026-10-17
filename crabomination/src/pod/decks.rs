@@ -101872,3 +101872,62 @@ pub const DARIGAAZ_REINCARNATED_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const MAGIK_COMMANDERS: &[CardFactory] = &[magik_illyana_rasputin];
+
+/// **Magik, Illyana Rasputin**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 9 Mountains + 8 Swamps = 99.
+/// Magik, Illyana Rasputin (EDHREC, fetched 2026-10-17).
+pub const MAGIK_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_smile, interdimensional_web_watch, lightning_greaves, lotus_petal,
+    rakdos_signet, ruby_medallion, sol_ring, swiftfoot_boots, talisman_of_indulgence,
+    the_reaver_cleaver, arid_mesa, blazemire_verge, blood_crypt, bloodstained_mire, bojuka_bog,
+    command_tower, dragonskull_summit, fabled_passage, foreboding_ruins, graven_cairns,
+    haunted_ridge, luxury_suite, polluted_delta, raucous_theater, smoldering_marsh,
+    sulfurous_springs, tainted_peak, wooded_foothills, academy_manufactor, blood_pet,
+    bonehoard_dracosaur, etali_primal_storm, flaming_tyrannosaurus, goldspan_dragon,
+    grim_hireling, iraxxa_empress_of_mars, juri_master_of_the_revue, keeper_of_secrets,
+    laelia_the_blade_reforged, mayhem_devil, mirkwood_bats, nalfeshnee, nico_minoru_runaway,
+    party_thrasher, pitiless_plunderer, professional_face_breaker, prosper_tome_bound,
+    ragavan_nimble_pilferer, rev_tithe_extractor, smaug_the_magnificent, smaug_wicked_worm,
+    wild_magic_sorcerer, xorn, black_market_connections, charred_foyer_warped_space,
+    descent_into_avernus, passionate_archaeologist, rain_of_riches, spider_verse, wandas_vision,
+    bedevil, big_score, chaos_warp, dark_ritual, deadly_dispute, deadly_rollick,
+    deflecting_swat, delayed_blast_fireball, rakdos_charm, terminate, unexpected_windfall,
+    chandra_torch_of_defiance, blasphemous_act, feed_the_swarm, hex_magic,
+    improvisation_capstone, jeskas_will, light_up_the_stage, reanimate, strike_it_rich,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const RAPH_LEO_COMMANDERS: &[CardFactory] = &[raph_and_leo_sibling_rivals];
+
+/// **Raph & Leo, Sibling Rivals**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Plains = 99.
+/// Raph & Leo, Sibling Rivals (EDHREC, fetched 2026-10-17).
+pub const RAPH_LEO_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, dolmen_gate, fellwar_stone, hard_won_jitte, lightning_greaves,
+    quintessential_katana, skullclamp, sol_ring, swiftfoot_boots, sword_of_the_animist,
+    talisman_of_conviction, battlefield_forge, clifftop_retreat, command_tower, dimension_x,
+    exotic_orchard, furycalm_snarl, rogues_passage, rugged_prairie, sacred_foundry,
+    spectator_seating, sundown_pass, temple_of_triumph, turtle_lair, adeline_resplendent_cathar,
+    agent_bishop_man_in_black, anim_pakal_thousandth_moon, aurelia_the_law_above,
+    aurelia_the_warleader, blade_historian, combat_celebrant, etali_primal_storm,
+    firemane_commando, hero_of_bladehold, iroas_god_of_victory, karlach_fury_of_avernus,
+    kinscaer_sentry, krenko_tin_street_kingpin, leonardo_big_brother, leonardo_leader_in_blue,
+    lightning_army_of_one, loyal_apprentice, moraug_fury_of_akoum, port_razer,
+    professional_face_breaker, raphael_most_attitude, raphael_tag_team_tough,
+    raphael_tough_turtle, raphael_the_nightwatcher, sally_pride_lioness_leader,
+    slash_reptile_rampager, the_neutrinos, aggravated_assault, cool_but_rude,
+    endless_foot_assault, leaders_talent, reconnaissance, rising_of_the_day, windcrag_siege,
+    akromas_will, boros_charm, chaos_warp, continue_card, flawless_maneuver, make_your_move,
+    path_to_exile, raphaels_technique, swords_to_plowshares, the_last_ronins_technique,
+    blasphemous_act, bot_bashing_time, go_ninja_go, leonardos_technique, vandalblast,
+    waves_of_aggression,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
