@@ -3136,7 +3136,7 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
-### 2026-10-17 (Commander run, `yl8zjb`) — guardrail; 59 seats, 41 cards, eleven primitives
+### 2026-10-17 (Commander run, `yl8zjb`) — guardrail; 122 seats, 61 cards, thirteen primitives
 
 Hot-path touches: the damage funnel and `combat_damage_prevented_from` ask
 `source_deals_no_damage` (a `card_keyword_possible` gate before any layer read);
@@ -3154,6 +3154,20 @@ pods (release)   seed 9201, 2..8 seats x 500 = 3,500 decided, 0 undecided; turns
                  18.91 / 32.19 / 45.92 / 58.57 / 68.71 / 81.72 / 96.48
 pods (new seats) 3607-3638 in 4-seat pods (1,200 release) and 3607-3665 in 4/8-seat debug pods
                  (~1,000): all decided but CR 104.4a draws; one debug-assert panic found and fixed
+```
+
+Tail (batches H/I): the cast-trigger auto-target path now calls `stamp_trigger_subject` (a
+`mentions_trigger_subject` walk of the trigger's primary filter, written only when it names the
+subject), and `MayCastFromHandFreeMatching` concretizes `SharesCardTypeWithTarget`. Release
+`bot_ladder`, `e4ac93894` vs `a46584d3f`, run back to back:
+
+```text
+--bench  base    decisions 196,176 / 27.64 / 613.0 / 0 stalls; peak_rss 36.3 MiB; games_per_s 194.0
+--bench  tip     decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 peak_rss 40.6 MiB; games_per_s 250.6 (the base ran first, cold; the 231/244 pair
+                 above is the steadier reading — no throughput claim either way)
+pods (new seats) 3705-3728 in 4-seat pods: 360 release + 90 debug games, all decided but two
+                 CR 104.4a draws (seed 9402), 0 panics
 ```
 
 ### 2026-10-16 (Commander run, `01VDk2LU`) — guardrail; the exert listener walk, the fan-out defender
