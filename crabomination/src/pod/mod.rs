@@ -22572,6 +22572,114 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WILSON_8_COMMANDERS,
             main: decks::WILSON_8_MAIN,
         },
+        // Seat 3687: Alena, Kessig Trapper and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 3687`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Tana, the Bloodsower (RG)",
+            commanders: decks::ALENA_8_COMMANDERS,
+            main: decks::ALENA_8_MAIN,
+        },
+        // Seat 3688: Alora, Merry Thief and Clan Crafter's EDHREC average deck. `--pod-decks 3688`.
+        PodDeck {
+            name: "Alora, Merry Thief and Clan Crafter (U)",
+            commanders: decks::ALORA_11_COMMANDERS,
+            main: decks::ALORA_11_MAIN,
+        },
+        // Seat 3689: Anara, Wolvid Familiar and Armix, Filigree Thrasher's EDHREC average deck. `--pod-decks 3689`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Armix, Filigree Thrasher (BG)",
+            commanders: decks::ANARA_17_COMMANDERS,
+            main: decks::ANARA_17_MAIN,
+        },
+        // Seat 3690: Armix, Filigree Thrasher and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 3690`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Malcolm, Keen-Eyed Navigator (UB)",
+            commanders: decks::ARMIX_14_COMMANDERS,
+            main: decks::ARMIX_14_MAIN,
+        },
+        // Seat 3691: Breeches, Brazen Plunderer and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 3691`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Keskit, the Flesh Sculptor (BR)",
+            commanders: decks::BREECHES_15_COMMANDERS,
+            main: decks::BREECHES_15_MAIN,
+        },
+        // Seat 3692: Breeches, Brazen Plunderer and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3692`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Tevesh Szat, Doom of Fools (BR)",
+            commanders: decks::BREECHES_16_COMMANDERS,
+            main: decks::BREECHES_16_MAIN,
+        },
+        // Seat 3693: Erinis, Gloom Stalker and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 3693`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Agent of the Iron Throne (BG)",
+            commanders: decks::ERINIS_10_COMMANDERS,
+            main: decks::ERINIS_10_MAIN,
+        },
+        // Seat 3694: Erinis, Gloom Stalker and Cloakwood Hermit's EDHREC average deck. `--pod-decks 3694`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Cloakwood Hermit (G)",
+            commanders: decks::ERINIS_11_COMMANDERS,
+            main: decks::ERINIS_11_MAIN,
+        },
+        // Seat 3695: Falthis, Shadowcat Familiar and Kodama of the East Tree's EDHREC average deck. `--pod-decks 3695`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Kodama of the East Tree (BG)",
+            commanders: decks::FALTHIS_9_COMMANDERS,
+            main: decks::FALTHIS_9_MAIN,
+        },
+        // Seat 3696: Falthis, Shadowcat Familiar and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3696`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Slurrk, All-Ingesting (BG)",
+            commanders: decks::FALTHIS_10_COMMANDERS,
+            main: decks::FALTHIS_10_MAIN,
+        },
+        // Seat 3697: Ghost of Ramirez DePietro and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 3697`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Halana, Kessig Ranger (UG)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_12_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_12_MAIN,
+        },
+        // Seat 3698: Ghost of Ramirez DePietro and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 3698`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Yoshimaru, Ever Faithful (WU)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_13_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_13_MAIN,
+        },
+        // Seat 3699: Ikra Shidiqi, the Usurper and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 3699`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Kediss, Emberclaw Familiar (BRG)",
+            commanders: decks::IKRA_SHIDIQI_5_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_5_MAIN,
+        },
+        // Seat 3700: Kodama of the East Tree and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3700`.
+        PodDeck {
+            name: "Kodama of the East Tree and Slurrk, All-Ingesting (G)",
+            commanders: decks::KODAMA_OF_THE_EAST_TREE_8_COMMANDERS,
+            main: decks::KODAMA_OF_THE_EAST_TREE_8_MAIN,
+        },
+        // Seat 3701: Ludevic, Necro-Alchemist and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 3701`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Numa, Joraga Chieftain (URG)",
+            commanders: decks::LUDEVIC_7_COMMANDERS,
+            main: decks::LUDEVIC_7_MAIN,
+        },
+        // Seat 3702: The Ninth Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 3702`.
+        PodDeck {
+            name: "The Ninth Doctor and Barbara Wright (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_6_MAIN,
+        },
+        // Seat 3703: The Seventh Doctor and Romana II's EDHREC average deck. `--pod-decks 3703`.
+        PodDeck {
+            name: "The Seventh Doctor and Romana II (WU)",
+            commanders: decks::THE_SEVENTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_SEVENTH_DOCTOR_4_MAIN,
+        },
+        // Seat 3704: The Third Doctor and Ace, Fearless Rebel's EDHREC average deck. `--pod-decks 3704`.
+        PodDeck {
+            name: "The Third Doctor and Ace, Fearless Rebel (UG)",
+            commanders: decks::THE_THIRD_DOCTOR_10_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_10_MAIN,
+        },
     ]
 }
 
@@ -28142,6 +28250,24 @@ mod tests {
             ("The War Doctor and Ian Chesterton", &[0x187A]),
             ("Volo, Itinerant Scholar and Dungeon Delver", &[0x187B]),
             ("Wilson, Refined Grizzly and Acolyte of Bahamut", &[0x187C]),
+            ("Alena, Kessig Trapper and Tana, the Bloodsower", &[0x187D]),
+            ("Alora, Merry Thief and Clan Crafter", &[0x187E]),
+            ("Anara, Wolvid Familiar and Armix, Filigree Thrasher", &[0x187F]),
+            ("Armix, Filigree Thrasher and Malcolm, Keen-Eyed Navigator", &[0x1880]),
+            ("Breeches, Brazen Plunderer and Keskit, the Flesh Sculptor", &[0x1881]),
+            ("Breeches, Brazen Plunderer and Tevesh Szat, Doom of Fools", &[0x1882]),
+            ("Erinis, Gloom Stalker and Agent of the Iron Throne", &[0x1883]),
+            ("Erinis, Gloom Stalker and Cloakwood Hermit", &[0x1884]),
+            ("Falthis, Shadowcat Familiar and Kodama of the East Tree", &[0x1885]),
+            ("Falthis, Shadowcat Familiar and Slurrk, All-Ingesting", &[0x1886]),
+            ("Ghost of Ramirez DePietro and Halana, Kessig Ranger", &[0x1887]),
+            ("Ghost of Ramirez DePietro and Yoshimaru, Ever Faithful", &[0x1888]),
+            ("Ikra Shidiqi, the Usurper and Kediss, Emberclaw Familiar", &[0x1889]),
+            ("Kodama of the East Tree and Slurrk, All-Ingesting", &[0x188A]),
+            ("Ludevic, Necro-Alchemist and Numa, Joraga Chieftain", &[0x188B]),
+            ("The Ninth Doctor and Barbara Wright", &[0x188C]),
+            ("The Seventh Doctor and Romana II", &[0x188D]),
+            ("The Third Doctor and Ace, Fearless Rebel", &[0x188E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
