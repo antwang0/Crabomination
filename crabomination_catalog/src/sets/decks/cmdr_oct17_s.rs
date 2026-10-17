@@ -533,3 +533,29 @@ pub fn command_the_stage() -> CardDefinition {
         )
     }
 }
+
+/// Vesuvan Doppelganger — {3}{U}{U} 0/0 Shapeshifter. May enter as a copy of
+/// any creature, except it keeps its own color and has "At the beginning of
+/// your upkeep, you may have this become a copy of target creature, except it
+/// doesn't copy that creature's color and it has this ability."
+pub fn vesuvan_doppelganger() -> CardDefinition {
+    let recopy = TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect: Effect::MayDo {
+            description: "Have Vesuvan Doppelganger become a copy of target creature?".into(),
+            body: Box::new(Effect::BecomeCopyKeepingColorAndThisAbility {
+                what: Selector::This,
+                source: target_filtered(R::Creature),
+            }),
+        },
+    };
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Creature.and(R::OtherThanSource),
+            keep_own_colors: true,
+            extra_triggered: vec![recopy],
+            ..Default::default()
+        }),
+        ..creature("Vesuvan Doppelganger", cost(&[generic(3), u(), u()]), vec![CreatureType::Shapeshifter], 0, 0)
+    }
+}

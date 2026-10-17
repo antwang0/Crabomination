@@ -17190,6 +17190,7 @@ static DECKS: &[Factory] = &[
     super::decks::light_from_within,
     super::decks::corpse_explosion,
     super::decks::command_the_stage,
+    super::decks::vesuvan_doppelganger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -451,3 +451,28 @@ fn command_the_stage_returns_after_noncombat_damage() {
     cadets.sort();
     assert_eq!(cadets, vec![2, 3]);
 }
+
+/// Vesuvan Doppelganger (CR 707.9b): enters as a copy that stays blue, and at
+/// upkeep becomes a copy of another creature, keeping its color and the
+/// re-copy ability.
+#[test]
+fn vesuvan_doppelganger_copies_but_stays_blue() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let v = g.add_card_to_hand(0, catalog::vesuvan_doppelganger());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    cast(&mut g, v, None).expect("doppelganger");
+    let c = g.computed_permanent(v).expect("on the battlefield");
+    assert_eq!((c.power, c.toughness), (2, 2), "a Grizzly Bears");
+    assert_eq!(g.battlefield_find(v).unwrap().definition.printed_colors(), vec![Color::Blue]);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    step_to(&mut g, 0, TurnStep::Draw);
+    let _ = giant;
+    let c = g.computed_permanent(v).expect("still here");
+    assert_eq!((c.power, c.toughness), (3, 3), "now a Hill Giant");
+    let card = g.battlefield_find(v).unwrap();
+    assert_eq!(card.definition.printed_colors(), vec![Color::Blue]);
+    assert_eq!(card.definition.triggered_abilities.len(), 1, "it has this ability, once");
+}
