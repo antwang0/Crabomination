@@ -2048,6 +2048,11 @@ pub struct ColdState {
     /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
     #[serde(default)]
     pub(crate) doubled_damage_sources_this_turn: Vec<CardId>,
+    /// CR 614.1a — "if a source would deal damage to a player or battle this
+    /// turn, it deals that much damage plus N instead", any source (Rankle and
+    /// Torbran). Summed per resolution; cleared at cleanup. Cold: only that card writes it.
+    #[serde(default)]
+    pub(crate) damage_to_players_bonus_this_turn: u32,
     /// Kukemssa Pirates — creatures that assign no combat damage for the rest
     /// of the turn (CR 510.1a). Cleared at cleanup.
     #[serde(default)]
@@ -3602,11 +3607,6 @@ pub struct GameState {
     /// deals `.1` damage instead" (Equal Treatment). Cleared at cleanup.
     #[serde(default)]
     pub(crate) damage_becomes_this_turn: Option<(u32, u32)>,
-    /// CR 614.1a — "if a source would deal damage to a player or battle this
-    /// turn, it deals that much damage plus N instead", any source (Rankle and
-    /// Torbran). Summed per resolution; cleared at cleanup.
-    #[serde(default)]
-    pub(crate) damage_to_players_bonus_this_turn: u32,
     /// CR 701.38 — "you choose how each player votes this turn" (Illusion of
     /// Choice). Every vote this turn is answered by this seat on the voter's
     /// behalf; the votes are still *cast* by their own players. Cleared at the
@@ -4667,7 +4667,6 @@ impl Clone for GameState {
             additional_upkeep_steps: self.additional_upkeep_steps,
             upkeep_steps_this_turn: self.upkeep_steps_this_turn,
             damage_becomes_this_turn: self.damage_becomes_this_turn,
-            damage_to_players_bonus_this_turn: self.damage_to_players_bonus_this_turn,
             vote_controller_this_turn: self.vote_controller_this_turn,
             source_name_scratch: self.source_name_scratch,
             monarch_at_turn_start: self.monarch_at_turn_start,
@@ -4900,7 +4899,6 @@ impl GameState {
             additional_upkeep_steps: 0,
             upkeep_steps_this_turn: 0,
             damage_becomes_this_turn: None,
-            damage_to_players_bonus_this_turn: 0,
             vote_controller_this_turn: None,
             source_name_scratch: None,
             monarch_at_turn_start: None,

@@ -5846,7 +5846,9 @@ impl GameState {
         clear_cold!(self.draws_redirected_this_turn);
         clear_cold!(self.next_draw_impulse_this_turn);
         self.damage_becomes_this_turn = None;
-        self.damage_to_players_bonus_this_turn = 0;
+        if self.damage_to_players_bonus_this_turn != 0 {
+            self.damage_to_players_bonus_this_turn = 0;
+        }
         clear_cold!(self.combat_damage_prevented_to_players_this_turn);
         clear_cold!(self.combat_damage_prevented_to_walkers_this_turn);
         clear_cold!(self.auras_at_death);
