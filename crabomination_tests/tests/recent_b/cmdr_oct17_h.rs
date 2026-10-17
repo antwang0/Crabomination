@@ -256,3 +256,165 @@ fn anchor_to_the_aether_tops_the_creature() {
     assert!(g.players[1].library.iter().any(|c| c.id == bears));
     assert!(g.battlefield_find(bears).is_none());
 }
+
+// ── Second round (`decks::cmdr_oct17_i`) ───────────────────────────────────
+
+/// Gift of Growth: +2/+2, or +4/+4 kicked (CR 702.33).
+#[test]
+fn gift_of_growth_scales_with_kicker() {
+    for (kicked, want) in [(false, (4, 4)), (true, (6, 6))] {
+        let mut g = pod(2);
+        let bears = ready(&mut g, 0, catalog::grizzly_bears());
+        g.battlefield_find_mut(bears).unwrap().tapped = true;
+        let s = g.add_card_to_hand(0, catalog::gift_of_growth());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let target = Some(Target::Permanent(bears));
+        if kicked {
+            g.perform_action(GameAction::CastSpellKicked { card_id: s, target, additional_targets: vec![], mode: None, x_value: None }).expect("kicked");
+            drain_stack(&mut g);
+        } else {
+            cast(&mut g, s, target).expect("Gift");
+        }
+        assert_eq!(pt(&g, bears), want, "kicked: {kicked}");
+        assert!(!g.battlefield_find(bears).unwrap().tapped);
+    }
+}
+
+/// Henge Walker's adamant counter needs three mana of one color (CR 207.2c).
+#[test]
+fn henge_walker_adamant_counter() {
+    for (red, counters) in [(2, 0u32), (3, 1)] {
+        let mut g = pod(2);
+        let h = g.add_card_to_hand(0, catalog::henge_walker());
+        g.players[0].mana_pool.add(Color::Red, red);
+        g.players[0].mana_pool.add(Color::Blue, 3 - red);
+        cast(&mut g, h, None).expect("Henge Walker");
+        assert_eq!(g.battlefield_find(h).unwrap().counter_count(CounterType::PlusOnePlusOne), counters, "{red} red");
+    }
+}
+
+/// Golden Urn gains the charge counters it had as it was sacrificed (CR
+/// 608.2h last-known information).
+#[test]
+fn golden_urn_reads_counters_last_known() {
+    let mut g = pod(2);
+    let urn = ready(&mut g, 0, catalog::golden_urn());
+    g.battlefield_find_mut(urn).unwrap().add_counters(CounterType::Charge, 3);
+    let life = g.players[0].life;
+    activate(&mut g, urn, 0, None).expect("Urn");
+    assert!(g.battlefield_find(urn).is_none());
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Meadowboon evoked still leaves its counters on the target player's
+/// creatures (CR 702.74a: the sacrifice is a leave-the-battlefield event).
+#[test]
+fn meadowboon_evoke_leaves_counters() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::meadowboon());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: m,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("evoke");
+    for _ in 0..4 {
+        drain_stack(&mut g);
+        if g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne) > 0 {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert!(g.battlefield_find(m).is_none(), "evoked: sacrificed");
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Bolg's Company: haste only beside another Goblin; its mana ability eats a
+/// Goblin for {B}{R}.
+#[test]
+fn bolgs_company_needs_another_goblin() {
+    let mut g = pod(2);
+    let bolg = g.add_card_to_battlefield(0, catalog::bolgs_company());
+    let haste = |g: &GameState| g.computed_permanent(bolg).unwrap().keywords().contains(&crabomination::card::Keyword::Haste);
+    assert!(!haste(&g));
+    let gob = ready(&mut g, 0, catalog::goblin_mountaineer());
+    assert!(haste(&g));
+    activate(&mut g, bolg, 0, None).expect("mana");
+    assert!(g.battlefield_find(gob).is_none());
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black) + g.players[0].mana_pool.amount(Color::Red), 2);
+}
+
+/// Creakwood Safewright sheds a -1/-1 counter at your end step only with an
+/// Elf card in your graveyard.
+#[test]
+fn creakwood_safewright_recovers_with_an_elf_in_the_yard() {
+    for (elf, want) in [(false, 3u32), (true, 2)] {
+        let mut g = pod(2);
+        let c = g.add_card_to_hand(0, catalog::creakwood_safewright());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, c, None).expect("Safewright");
+        if elf {
+            g.add_card_to_graveyard(0, catalog::llanowar_elves());
+        }
+        let mut guard = 0;
+        while g.active_player_idx == 0 && guard < 50 {
+            let _ = g.perform_action(GameAction::PassPriority);
+            drain_stack(&mut g);
+            guard += 1;
+        }
+        assert_eq!(g.battlefield_find(c).unwrap().counter_count(CounterType::MinusOneMinusOne), want, "elf: {elf}");
+    }
+}
+
+/// Mindwrack Liege pumps other blue and red creatures, each once.
+#[test]
+fn mindwrack_liege_pumps_blue_and_red() {
+    let mut g = pod(2);
+    let liege = ready(&mut g, 0, catalog::mindwrack_liege());
+    let red = ready(&mut g, 0, catalog::goblin_mountaineer());
+    let green = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, red), (2, 2));
+    assert_eq!(pt(&g, green), (2, 2));
+    assert_eq!(pt(&g, liege), (4, 4));
+}
+
+/// Solitary Cell holds a cheap opponent permanent until it leaves.
+#[test]
+fn solitary_cell_exiles_until_it_leaves() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let cell = g.add_card_to_hand(0, catalog::solitary_cell());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, cell, None).expect("Cell");
+    let _ = g.perform_action(GameAction::PassPriority);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none());
+    let s = g.add_card_to_hand(0, catalog::machine_over_matter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, s, Some(Target::Permanent(cell))).expect("bounce Cell");
+    assert!(g.battlefield.iter().any(|p| p.definition.name == "Sol Ring" && p.controller == 1));
+}
+
+/// Goblinslide pays {1} per noncreature spell for a hasty Goblin.
+#[test]
+fn goblinslide_pays_for_goblins() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::goblinslide());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let s = g.add_card_to_hand(0, catalog::join_shields());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, s, None).expect("Join Shields");
+    assert_eq!(g.battlefield.iter().filter(|p| p.definition.name == "Goblin").count(), 1);
+}
