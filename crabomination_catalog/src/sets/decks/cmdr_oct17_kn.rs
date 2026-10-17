@@ -280,6 +280,38 @@ pub fn distracting_geist() -> CardDefinition {
     }
 }
 
+// ── Jurin, Leading the Charge ───────────────────────────────────────────────
+
+/// Jurin, Leading the Charge — {4}{R}{R} legendary 4/6 Human Barbarian,
+/// haste, must be blocked if able. Whenever Jurin attacks, each creature you
+/// control attacking a player gets +1/+0 for each creature *that* player
+/// controls (CR 506.2: each attacker's own defender).
+pub fn jurin_leading_the_charge() -> CardDefinition {
+    let theirs = Value::count(Selector::ControlledBy {
+        who: PlayerRef::DefendingPlayerOf(Box::new(Selector::TriggerSource)),
+        filter: R::Creature,
+    });
+    CardDefinition {
+        keywords: vec![Keyword::Haste, Keyword::MustBeBlocked],
+        triggered_abilities: vec![on_attack(Effect::ForEach {
+            selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::IsAttackingOpponentPlayer)),
+            body: Box::new(Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: theirs,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        ..legend(creature(
+            "Jurin, Leading the Charge",
+            cost(&[generic(4), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Barbarian],
+            4,
+            6,
+        ))
+    }
+}
+
 // ── White Tiger, Amulet Keeper ──────────────────────────────────────────────
 
 /// White Tiger, Amulet Keeper — {1}{G} legendary 3/1 Human Hero. {3}{G}, exile

@@ -17099,6 +17099,7 @@ static DECKS: &[Factory] = &[
     super::decks::distracting_geist,
     super::decks::white_tiger_amulet_keeper,
     super::decks::hollow_trees,
+    super::decks::jurin_leading_the_charge,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

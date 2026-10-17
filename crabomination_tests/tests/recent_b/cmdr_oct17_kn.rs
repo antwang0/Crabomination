@@ -4,7 +4,7 @@
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -154,4 +154,27 @@ fn hollow_trees_stores_while_tapped() {
     })
     .expect("cash out");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2);
+}
+
+/// CR 506.2 — Jurin pumps each attacker by the creatures of the player *it*
+/// attacks, not Jurin's defender.
+#[test]
+fn jurin_pumps_each_attacker_by_its_own_defender() {
+    let mut g = pod(3);
+    let jurin = ready(&mut g, 0, catalog::jurin_leading_the_charge());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        ready(&mut g, 1, catalog::grizzly_bears());
+    }
+    ready(&mut g, 2, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: jurin, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+    assert_eq!(p(&g, jurin), 4 + 3);
+    assert_eq!(p(&g, bear), 2 + 1);
 }
