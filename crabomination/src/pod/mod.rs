@@ -24348,6 +24348,138 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VICONIA_14_COMMANDERS,
             main: decks::VICONIA_14_MAIN,
         },
+        // Seat 3983: Anara, Wolvid Familiar and Eligeth, Crossroads Augur's EDHREC average deck. `--pod-decks 3983`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Eligeth, Crossroads Augur (UG)",
+            commanders: decks::ANARA_20_COMMANDERS,
+            main: decks::ANARA_20_MAIN,
+        },
+        // Seat 3984: Breeches, Brazen Plunderer and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 3984`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Nadier, Agent of the Duskenel (BR)",
+            commanders: decks::BREECHES_21_COMMANDERS,
+            main: decks::BREECHES_21_MAIN,
+        },
+        // Seat 3985: Brinelin, the Moon Kraken and Ravos, Soultender's EDHREC average deck. `--pod-decks 3985`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Ravos, Soultender (WUB)",
+            commanders: decks::BRINELIN_18_COMMANDERS,
+            main: decks::BRINELIN_18_MAIN,
+        },
+        // Seat 3986: Eligeth, Crossroads Augur and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 3986`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Keleth, Sunmane Familiar (WU)",
+            commanders: decks::ELIGETH_22_COMMANDERS,
+            main: decks::ELIGETH_22_MAIN,
+        },
+        // Seat 3987: Eligeth, Crossroads Augur and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 3987`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Miara, Thorn of the Glade (UB)",
+            commanders: decks::ELIGETH_23_COMMANDERS,
+            main: decks::ELIGETH_23_MAIN,
+        },
+        // Seat 3988: Francisco, Fowl Marauder and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 3988`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Miara, Thorn of the Glade (B)",
+            commanders: decks::FRANCISCO_8_COMMANDERS,
+            main: decks::FRANCISCO_8_MAIN,
+        },
+        // Seat 3989: Halana, Kessig Ranger and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 3989`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Kediss, Emberclaw Familiar (RG)",
+            commanders: decks::HALANA_14_COMMANDERS,
+            main: decks::HALANA_14_MAIN,
+        },
+        // Seat 3990: Halsin, Emerald Archdruid and Dungeon Delver's EDHREC average deck. `--pod-decks 3990`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Dungeon Delver (UG)",
+            commanders: decks::HALSIN_8_COMMANDERS,
+            main: decks::HALSIN_8_MAIN,
+        },
+        // Seat 3991: Halsin, Emerald Archdruid and Sword Coast Sailor's EDHREC average deck. `--pod-decks 3991`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Sword Coast Sailor (UG)",
+            commanders: decks::HALSIN_9_COMMANDERS,
+            main: decks::HALSIN_9_MAIN,
+        },
+        // Seat 3992: Imoen, Mystic Trickster and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3992`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Acolyte of Bahamut (UG)",
+            commanders: decks::IMOEN_21_COMMANDERS,
+            main: decks::IMOEN_21_MAIN,
+        },
+        // Seat 3993: Imoen, Mystic Trickster and Criminal Past's EDHREC average deck. `--pod-decks 3993`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Criminal Past (UB)",
+            commanders: decks::IMOEN_22_COMMANDERS,
+            main: decks::IMOEN_22_MAIN,
+        },
+        // Seat 3994: Imoen, Mystic Trickster and Feywild Visitor's EDHREC average deck. `--pod-decks 3994`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Feywild Visitor (U)",
+            commanders: decks::IMOEN_23_COMMANDERS,
+            main: decks::IMOEN_23_MAIN,
+        },
+        // Seat 3995: Kodama of the East Tree and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3995`.
+        PodDeck {
+            name: "Kodama of the East Tree and Siani, Eye of the Storm (UG)",
+            commanders: decks::KODAMA_OF_THE_EAST_TREE_9_COMMANDERS,
+            main: decks::KODAMA_OF_THE_EAST_TREE_9_MAIN,
+        },
+        // Seat 3996: Lulu, Loyal Hollyphant and Dragon Cultist's EDHREC average deck. `--pod-decks 3996`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Dragon Cultist (WR)",
+            commanders: decks::LULU_11_COMMANDERS,
+            main: decks::LULU_11_MAIN,
+        },
+        // Seat 3997: Rasaad yn Bashir and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 3997`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Agent of the Iron Throne (WB)",
+            commanders: decks::RASAAD_YN_BASHIR_19_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_19_MAIN,
+        },
+        // Seat 3998: Sarevok, Deathbringer and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3998`.
+        PodDeck {
+            name: "Sarevok, Deathbringer and Acolyte of Bahamut (BG)",
+            commanders: decks::SAREVOK_13_COMMANDERS,
+            main: decks::SAREVOK_13_MAIN,
+        },
+        // Seat 3999: The Fifteenth Doctor and Martha Jones's EDHREC average deck. `--pod-decks 3999`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Martha Jones (UR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_11_MAIN,
+        },
+        // Seat 4000: The First Doctor and Jo Grant's EDHREC average deck. `--pod-decks 4000`.
+        PodDeck {
+            name: "The First Doctor and Jo Grant (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_8_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_8_MAIN,
+        },
+        // Seat 4001: The First Doctor and Romana II's EDHREC average deck. `--pod-decks 4001`.
+        PodDeck {
+            name: "The First Doctor and Romana II (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_9_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_9_MAIN,
+        },
+        // Seat 4002: The Fugitive Doctor and Rose Noble's EDHREC average deck. `--pod-decks 4002`.
+        PodDeck {
+            name: "The Fugitive Doctor and Rose Noble (URG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_11_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_11_MAIN,
+        },
+        // Seat 4003: The Second Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 4003`.
+        PodDeck {
+            name: "The Second Doctor and Ian Chesterton (WU)",
+            commanders: decks::THE_SECOND_DOCTOR_9_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_9_MAIN,
+        },
+        // Seat 4004: Viconia, Drow Apostate and Popular Entertainer's EDHREC average deck. `--pod-decks 4004`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Popular Entertainer (BR)",
+            commanders: decks::VICONIA_15_COMMANDERS,
+            main: decks::VICONIA_15_MAIN,
+        },
     ]
 }
 
@@ -30214,6 +30346,28 @@ mod tests {
             ("Sarevok, Deathbringer and Cloakwood Hermit", &[0x19A2]),
             ("The Thirteenth Doctor and Jo Grant", &[0x19A3]),
             ("Viconia, Drow Apostate and Street Urchin", &[0x19A4]),
+            ("Anara, Wolvid Familiar and Eligeth, Crossroads Augur", &[0x19A5]),
+            ("Breeches, Brazen Plunderer and Nadier, Agent of the Duskenel", &[0x19A6]),
+            ("Brinelin, the Moon Kraken and Ravos, Soultender", &[0x19A7]),
+            ("Eligeth, Crossroads Augur and Keleth, Sunmane Familiar", &[0x19A8]),
+            ("Eligeth, Crossroads Augur and Miara, Thorn of the Glade", &[0x19A9]),
+            ("Francisco, Fowl Marauder and Miara, Thorn of the Glade", &[0x19AA]),
+            ("Halana, Kessig Ranger and Kediss, Emberclaw Familiar", &[0x19AB]),
+            ("Halsin, Emerald Archdruid and Dungeon Delver", &[0x19AC]),
+            ("Halsin, Emerald Archdruid and Sword Coast Sailor", &[0x19AD]),
+            ("Imoen, Mystic Trickster and Acolyte of Bahamut", &[0x19AE]),
+            ("Imoen, Mystic Trickster and Criminal Past", &[0x19AF]),
+            ("Imoen, Mystic Trickster and Feywild Visitor", &[0x19B0]),
+            ("Kodama of the East Tree and Siani, Eye of the Storm", &[0x19B1]),
+            ("Lulu, Loyal Hollyphant and Dragon Cultist", &[0x19B2]),
+            ("Rasaad yn Bashir and Agent of the Iron Throne", &[0x19B3]),
+            ("Sarevok, Deathbringer and Acolyte of Bahamut", &[0x19B4]),
+            ("The Fifteenth Doctor and Martha Jones", &[0x19B5]),
+            ("The First Doctor and Jo Grant", &[0x19B6]),
+            ("The First Doctor and Romana II", &[0x19B7]),
+            ("The Fugitive Doctor and Rose Noble", &[0x19B8]),
+            ("The Second Doctor and Ian Chesterton", &[0x19B9]),
+            ("Viconia, Drow Apostate and Popular Entertainer", &[0x19BA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
