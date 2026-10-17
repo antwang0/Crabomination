@@ -13,10 +13,12 @@ pub(crate) fn delayed_kind_from_effect(
     k: DelayedTriggerKind,
     target_player: Option<usize>,
     target_card: Option<crate::card::CardId>,
+    source: crate::card::CardId,
     controller: usize,
     turn: u32,
 ) -> DelayedKind {
     match k {
+        DelayedTriggerKind::WhenSourceLeavesOrUntaps => DelayedKind::WhenCardLeavesOrUntaps(source),
         // No permanent to watch: nothing can be lost, so it never fires.
         DelayedTriggerKind::WhenYouLoseControlOfTarget => {
             DelayedKind::WhenPlayerLosesControlOf { card: target_card.unwrap_or(crate::card::CardId(0)), player: controller }

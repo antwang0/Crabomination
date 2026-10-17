@@ -3598,6 +3598,7 @@ impl GameState {
         self.delayed_triggers.retain(|dt| {
             if dt.kind == DelayedKind::WhenCardLeavesBattlefield(id)
                 || dt.kind == DelayedKind::WhenCardLeavesBattlefieldThisTurn(id)
+                || dt.kind == DelayedKind::WhenCardLeavesOrUntaps(id)
             {
                 fire.push(dt.clone());
                 false

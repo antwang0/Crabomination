@@ -25542,6 +25542,7 @@ impl GameState {
             return;
         }
         self.fire_lose_control_delayed(events);
+        self.fire_untap_delayed(events);
         self.fire_cast_watch_delayed(events);
         self.stamp_absorbed_spells(events);
         self.fire_offspring_triggers(events);
@@ -30073,7 +30074,7 @@ impl GameState {
                         // Card stays in hand; register a delayed trigger that
                         // fires later (next upkeep / first main / end step).
                         use crate::game::types::DelayedTrigger;
-                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, None, p, self.turn_number);
+                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, None, cid, p, self.turn_number);
                         self.delayed_triggers.push(DelayedTrigger {
                             controller: p,
                             source: cid,

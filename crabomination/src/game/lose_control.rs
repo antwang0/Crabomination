@@ -10,6 +10,33 @@ use crate::game::effects::EntityRef;
 impl GameState {
     /// Fire and drop every `WhenPlayerLosesControlOf` watcher a control change
     /// in `events` satisfies. The permanent is the trigger subject and target.
+    /// Fire and drop the `WhenCardLeavesOrUntaps` watcher an untap in `events`
+    /// satisfies (the leaving half fires from the battlefield-exit path).
+    pub(crate) fn fire_untap_delayed(&mut self, events: &[GameEvent]) {
+        if !events.iter().any(|e| matches!(e, GameEvent::PermanentUntapped { .. }))
+            || !self.delayed_triggers.iter().any(|dt| matches!(dt.kind, DelayedKind::WhenCardLeavesOrUntaps(_)))
+        {
+            return;
+        }
+        for ev in events {
+            let GameEvent::PermanentUntapped { card_id } = *ev else { continue };
+            let mut i = 0;
+            while i < self.delayed_triggers.len() {
+                if self.delayed_triggers[i].kind != DelayedKind::WhenCardLeavesOrUntaps(card_id) {
+                    i += 1;
+                    continue;
+                }
+                let dt = self.delayed_triggers.remove(i);
+                self.push_stack(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect)
+                        .target(dt.target)
+                        .trigger_source(Some(EntityRef::Permanent(card_id)))
+                        .build(),
+                );
+            }
+        }
+    }
+
     pub(crate) fn fire_lose_control_delayed(&mut self, events: &[GameEvent]) {
         if !events.iter().any(|e| matches!(e, GameEvent::ControlChanged { .. })) {
             return;

@@ -14125,6 +14125,10 @@ pub enum DelayedTriggerKind {
     /// "When you lose control of [target permanent], …" (Ray of Command): fires
     /// once, on the first control change away from the registering player.
     WhenYouLoseControlOfTarget,
+    /// "When [this] leaves the battlefield or becomes untapped, …" (Merieke Ri
+    /// Berit): watches the registering source; fires once, on whichever
+    /// happens first.
+    WhenSourceLeavesOrUntaps,
     /// "When you cast [target card] this turn, …" (Havengul Lich): fires once,
     /// on that card's `SpellCast` by the registering player; lapses at cleanup
     /// or when the card leaves its zone some other way (CR 400.7).
