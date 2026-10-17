@@ -338,3 +338,4 @@ mod cmdr_oct17_g;
 mod cmdr_oct17_h;
 mod cmdr_oct17_kn;
 mod cmdr_oct17_q;
+mod cmdr_oct17_r;

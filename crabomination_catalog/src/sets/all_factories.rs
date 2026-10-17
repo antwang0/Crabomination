@@ -17159,6 +17159,16 @@ static DECKS: &[Factory] = &[
     super::decks::the_flame_of_keld,
     super::decks::celestial_reunion,
     super::decks::march_of_reckless_joy,
+    // cmdr_oct17_r
+    super::decks::chronomantic_escape,
+    super::decks::aurora_awakener,
+    super::decks::back_for_more,
+    super::decks::sword_of_once_and_future,
+    super::decks::gnarlroot_trapper,
+    super::decks::rowdy_crew,
+    super::decks::complete_the_circuit,
+    super::decks::starlight_spectacular,
+    super::decks::soul_partition,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
