@@ -2650,6 +2650,16 @@ impl GameState {
             Predicate::SelectorCountAtLeast { sel, n } => {
                 self.resolve_selector(sel, ctx).len() as i32 >= self.evaluate_value(n, ctx)
             }
+            Predicate::TwoShareACardType(sel) => {
+                let types: Vec<Vec<crate::card::CardType>> = self
+                    .resolve_selector(sel, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .filter_map(|id| self.find_card_anywhere(id))
+                    .map(|c| c.definition.card_types.to_vec())
+                    .collect();
+                types.iter().enumerate().any(|(i, a)| types[i + 1..].iter().any(|b| a.iter().any(|t| b.contains(t))))
+            }
             Predicate::AllMatchingShareAColor(filter) => {
                 // Common Cause — intersect the colours of every match; a
                 // colourless one empties the set immediately.

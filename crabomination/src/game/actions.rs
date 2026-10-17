@@ -18124,6 +18124,8 @@ impl GameState {
                 .iter()
                 .any(|t| def_is_creature_type(&card.definition, *t))
             || self.players[p].spells_as_flash_this_turn
+            || (self.players[p].sorcery_spells_as_flash_this_turn
+                && card.definition.card_types.contains(&crate::card::CardType::Sorcery))
     }
 
     pub(crate) fn try_pay_with_auto_tap(

@@ -37,6 +37,7 @@ mod exile_power;
 mod delayed;
 mod eval;
 mod free_cast;
+mod parade;
 mod graveyard_swap;
 mod named_search;
 mod pack_fight;
@@ -23222,6 +23223,19 @@ impl GameState {
                 self.players[ctx.controller].double_your_source_damage_this_turn = true;
                 Ok(())
             }
+
+            Effect::CreaturesCantAttackYouUntilYourNextTurn => {
+                let none = crate::card::SelectionRequirement::Any.negate();
+                self.players[ctx.controller].attackable_only_by_until_next_turn = Some(Box::new(none));
+                Ok(())
+            }
+
+            Effect::GrantSorcerySpellsFlashThisTurn => {
+                self.players[ctx.controller].sorcery_spells_as_flash_this_turn = true;
+                Ok(())
+            }
+
+            Effect::Parade => self.parade(effect, ctx, events),
 
             Effect::YourRedSourcesDealExtraDamageThisTurn { amount } => {
                 let p = &mut self.players[ctx.controller];

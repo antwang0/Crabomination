@@ -1034,6 +1034,9 @@ impl Effect {
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::YourRedSourcesDealExtraDamageThisTurn { .. }
             | Effect::PlaysAmongGranted { .. }
+            | Effect::CreaturesCantAttackYouUntilYourNextTurn
+            | Effect::GrantSorcerySpellsFlashThisTurn
+            | Effect::Parade
             | Effect::TimeCountersOnEachPermanentAndSuspended { .. }
             | Effect::TripleYourSourcesDamageToOpponentsThisTurn
             | Effect::DoubleYourSourcesDamageToOpponentPlayersThisTurn

@@ -1899,6 +1899,9 @@ pub enum Predicate {
     /// colour with all the others (Common Cause). Vacuously true when nothing
     /// matches; false as soon as one match is colourless.
     AllMatchingShareAColor(crate::card::SelectionRequirement),
+    /// Two of the objects `.0` resolves to share a card type (Rowdy Crew's "if
+    /// two cards that share a card type are discarded this way").
+    TwoShareACardType(Selector),
     /// `who` tapped a land for mana this turn (Desolation).
     TappedLandForManaThisTurn(PlayerRef),
     /// `who` controls a land of every basic land type (Coalition Victory).
@@ -5626,6 +5629,10 @@ pub enum Effect {
     /// each." Sets `Player.attack_tax_until_your_turn` on the controller;
     /// cleared at that player's next untap step.
     TaxAttackersUntilYourNextTurn { amount: Value },
+    /// "Until your next turn, creatures can't attack you" (Chronomantic
+    /// Escape): the controller's `attackable_only_by_until_next_turn` shield,
+    /// admitting no attacker. Planeswalkers they control stay attackable.
+    CreaturesCantAttackYouUntilYourNextTurn,
     /// Sivitri, Dragon Master's +1 — "until your next turn, creatures can't
     /// attack you or planeswalkers you control unless their controller pays
     /// {amount} life for each of those creatures." Sets
@@ -8847,6 +8854,13 @@ pub enum Effect {
     /// (Alchemist's Refuge). Sets `Player.spells_as_flash_this_turn`,
     /// cleared at the turn boundary.
     GrantSpellsFlashThisTurn { who: PlayerRef },
+    /// "You may cast sorcery spells this turn as though they had flash"
+    /// (Complete the Circuit). Sets `Player.sorcery_spells_as_flash_this_turn`.
+    GrantSorcerySpellsFlashThisTurn,
+    /// Parade! (Starlight Spectacular): the controller lines up every creature
+    /// they control one at a time; each gets +1/+1 until end of turn for each
+    /// creature chosen before it. Headless, the smallest go first.
+    Parade,
     /// Slaughter the Strong — "Each player chooses any number of creatures
     /// they control with total power `max` or less, then sacrifices all other
     /// creatures they control." Each seat keeps greedily, greatest power

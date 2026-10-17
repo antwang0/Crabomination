@@ -916,6 +916,10 @@ pub struct PlayerData {
     /// had flash". Cleared at the turn boundary.
     #[serde(default)]
     pub creature_spells_as_flash_this_turn: bool,
+    /// Complete the Circuit — this player's sorcery spells have flash this
+    /// turn. Cleared at the turn boundary.
+    #[serde(default)]
+    pub sorcery_spells_as_flash_this_turn: bool,
     /// Bösium Strip — "until end of turn, you may cast instant and sorcery
     /// spells from the top of your graveyard". Cleared at the turn boundary.
     #[serde(default)]
@@ -1802,6 +1806,7 @@ impl Player {
             cant_play_lands_this_turn: false,
             cant_activate_nonmana_abilities_this_turn: false,
             creature_spells_as_flash_this_turn: false,
+            sorcery_spells_as_flash_this_turn: false,
             spells_as_flash_this_turn: false,
             cast_from_graveyard_top_this_turn: false,
             extra_loyalty_activations: 0,
