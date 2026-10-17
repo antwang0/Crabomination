@@ -20262,6 +20262,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CLOUD_OF_DARKNESS_COMMANDERS,
             main: decks::CLOUD_OF_DARKNESS_MAIN,
         },
+        // Seat 3302: Akiri, Line-Slinger and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 3302`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Sidar Kondo of Jamuraa (WRG)",
+            commanders: decks::AKIRI_7_COMMANDERS,
+            main: decks::AKIRI_7_MAIN,
+        },
+        // Seat 3303: Alora, Merry Thief and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 3303`.
+        PodDeck {
+            name: "Alora, Merry Thief and Agent of the Shadow Thieves (UB)",
+            commanders: decks::ALORA_4_COMMANDERS,
+            main: decks::ALORA_4_MAIN,
+        },
+        // Seat 3304: Alora, Merry Thief and Master Chef's EDHREC average deck. `--pod-decks 3304`.
+        PodDeck {
+            name: "Alora, Merry Thief and Master Chef (UG)",
+            commanders: decks::ALORA_5_COMMANDERS,
+            main: decks::ALORA_5_MAIN,
+        },
+        // Seat 3305: Keskit, the Flesh Sculptor and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3305`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Radiant, Serra Archangel (WB)",
+            commanders: decks::KESKIT_4_COMMANDERS,
+            main: decks::KESKIT_4_MAIN,
+        },
+        // Seat 3306: The Fugitive Doctor and Donna Noble's EDHREC average deck. `--pod-decks 3306`.
+        PodDeck {
+            name: "The Fugitive Doctor and Donna Noble (RG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_4_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_4_MAIN,
+        },
+        // Seat 3307: The Fugitive Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 3307`.
+        PodDeck {
+            name: "The Fugitive Doctor and Yasmin Khan (RG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_5_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_5_MAIN,
+        },
+        // Seat 3308: The Ninth Doctor and Martha Jones's EDHREC average deck. `--pod-decks 3308`.
+        PodDeck {
+            name: "The Ninth Doctor and Martha Jones (UR)",
+            commanders: decks::THE_NINTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3309: The Tenth Doctor and Martha Jones's EDHREC average deck. `--pod-decks 3309`.
+        PodDeck {
+            name: "The Tenth Doctor and Martha Jones (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_MAIN,
+        },
     ]
 }
 
@@ -25447,6 +25495,14 @@ mod tests {
             ("Zellix, Sanity Flayer and Tavern Brawler", &[0x16F9]),
             ("Zellix, Sanity Flayer and Veteran Soldier", &[0x16FA]),
             ("Cloud of Darkness", &[0x16FB]),
+            ("Akiri, Line-Slinger and Sidar Kondo of Jamuraa", &[0x16FC]),
+            ("Alora, Merry Thief and Agent of the Shadow Thieves", &[0x16FD]),
+            ("Alora, Merry Thief and Master Chef", &[0x16FE]),
+            ("Keskit, the Flesh Sculptor and Radiant, Serra Archangel", &[0x16FF]),
+            ("The Fugitive Doctor and Donna Noble", &[0x1700]),
+            ("The Fugitive Doctor and Yasmin Khan", &[0x1701]),
+            ("The Ninth Doctor and Martha Jones", &[0x1702]),
+            ("The Tenth Doctor and Martha Jones", &[0x1703]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
