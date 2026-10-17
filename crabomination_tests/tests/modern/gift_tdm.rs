@@ -2104,7 +2104,7 @@ fn caustic_exhale_shrinks_creature() {
 #[test]
 fn dispelling_exhale_counters_more_with_dragon() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::pearl_lake_warden()); // a Dragon → "beheld"
+    g.add_card_to_battlefield(0, catalog::pearl_lake_warden()); // a Dragon to behold
     let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
     g.players[1].mana_pool.add(Color::Green, 1);
     g.players[1].mana_pool.add_colorless(3); // after {1}{G}, 2 left: can pay {2} not {4}
@@ -2118,10 +2118,11 @@ fn dispelling_exhale_counters_more_with_dragon() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
+    // CR 701.4a — beholding is the caster's choice: the action-kicker slot.
+    g.perform_action(GameAction::CastSpellKicked {
         card_id: exhale, target: Some(Target::Permanent(spell)),
         additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast Dispelling Exhale at the bears");
+    }).expect("cast Dispelling Exhale at the bears, beholding the Dragon");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "bears countered (cannot pay 4)");
 }

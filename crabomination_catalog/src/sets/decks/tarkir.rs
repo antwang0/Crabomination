@@ -2455,20 +2455,16 @@ pub fn desperate_measures() -> CardDefinition {
 
 // ── Exhale cycle (TDM "behold a Dragon") ────────────────────────────────────
 //
-// "Behold a Dragon" is an additional cost (choose a Dragon you control or
-// reveal one from hand). We don't model the cast-time reveal; the unconditional
-// half always resolves, and the "if a Dragon was beheld" rider is gated on
-// controlling a Dragon (the common faithful case — hand-reveal is omitted).
+// "Behold a Dragon" (CR 701.4a): choose a Dragon you control or reveal a Dragon
+// card from your hand. The optional form rides the action-kicker slot, so "if a
+// Dragon was beheld" reads `SpellWasKicked`.
 
-/// Returns a predicate true when you control a Dragon (our "beheld" proxy).
-fn beheld_a_dragon() -> Predicate {
-    Predicate::SelectorCountAtLeast {
-        sel: Selector::EachPermanent(
-            SelectionRequirement::HasCreatureType(CreatureType::Dragon)
-                .and(SelectionRequirement::ControlledByYou),
-        ),
-        n: Value::Const(1),
-    }
+fn dragon() -> SelectionRequirement {
+    SelectionRequirement::HasCreatureType(CreatureType::Dragon)
+}
+
+fn may_behold_a_dragon() -> Option<crate::card::AdditionalCastCost> {
+    Some(crate::card::AdditionalCastCost::Behold { filter: dragon() })
 }
 
 /// Caustic Exhale — {B} Instant. (Behold a Dragon or pay {1}.) Target creature
@@ -2478,14 +2474,7 @@ pub fn caustic_exhale() -> CardDefinition {
         name: "Caustic Exhale",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        // "As an additional cost, behold a Dragon or pay {1}" — a Dragon card
-        // revealed from hand, else {1} (the "choose a Dragon you control" half
-        // of behold is not read; it shipped with no cost at all — the `addl`
-        // audit column, 2026-09-10).
-        additional_cast_cost: vec![crate::card::AdditionalCastCost::RevealFromHandOrPay {
-            filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
-            pay: 1,
-        }],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::BeholdOrPay { filter: dragon(), pay: 1 }],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-3),
@@ -2500,6 +2489,7 @@ pub fn caustic_exhale() -> CardDefinition {
 /// blocking creature. If a Dragon was beheld, you gain 2 life.
 pub fn osseous_exhale() -> CardDefinition {
     CardDefinition {
+        kicker_action_cost: may_behold_a_dragon(),
         name: "Osseous Exhale",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
@@ -2513,7 +2503,7 @@ pub fn osseous_exhale() -> CardDefinition {
                 amount: Value::Const(5),
             },
             Effect::If {
-                cond: beheld_a_dragon(),
+                cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::GainLife {
                     who: Selector::You,
                     amount: Value::Const(2),
@@ -2553,11 +2543,12 @@ pub fn dispelling_exhale() -> CardDefinition {
         if_paid: None,
     };
     CardDefinition {
+        kicker_action_cost: may_behold_a_dragon(),
         name: "Dispelling Exhale",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: beheld_a_dragon(),
+            cond: Predicate::SpellWasKicked,
             then: Box::new(counter(4)),
             else_: Box::new(counter(2)),
         },
@@ -2570,6 +2561,7 @@ pub fn dispelling_exhale() -> CardDefinition {
 /// beheld, surveil 2.
 pub fn piercing_exhale() -> CardDefinition {
     CardDefinition {
+        kicker_action_cost: may_behold_a_dragon(),
         name: "Piercing Exhale",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
@@ -2586,7 +2578,7 @@ pub fn piercing_exhale() -> CardDefinition {
                 })),
             },
             Effect::If {
-                cond: beheld_a_dragon(),
+                cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::Surveil {
                     who: PlayerRef::You,
                     amount: Value::Const(2),
