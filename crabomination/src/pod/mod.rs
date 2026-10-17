@@ -22140,6 +22140,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JURIN_COMMANDERS,
             main: decks::JURIN_MAIN,
         },
+        // Seat 3615: Bilbo, Luckwearer's EDHREC average deck. `--pod-decks 3615`.
+        PodDeck {
+            name: "Bilbo, Luckwearer (U)",
+            commanders: decks::BILBO_6_COMMANDERS,
+            main: decks::BILBO_6_MAIN,
+        },
+        // Seat 3616: Bard the Bowman's EDHREC average deck. `--pod-decks 3616`.
+        PodDeck {
+            name: "Bard the Bowman (WU)",
+            commanders: decks::BARD_THE_BOWMAN_COMMANDERS,
+            main: decks::BARD_THE_BOWMAN_MAIN,
+        },
+        // Seat 3617: Guru Pathik's EDHREC average deck. `--pod-decks 3617`.
+        PodDeck {
+            name: "Guru Pathik (UG)",
+            commanders: decks::GURU_PATHIK_COMMANDERS,
+            main: decks::GURU_PATHIK_MAIN,
+        },
     ]
 }
 
@@ -27638,6 +27656,9 @@ mod tests {
             ("April O'Neil, Kunoichi Trainee", &[0x1832]),
             ("White Tiger, Amulet Keeper", &[0x1833]),
             ("Jurin, Leading the Charge", &[0x1834]),
+            ("Bilbo, Luckwearer", &[0x1835]),
+            ("Bard the Bowman", &[0x1836]),
+            ("Guru Pathik", &[0x1837]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

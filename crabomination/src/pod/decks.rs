@@ -101315,3 +101315,87 @@ pub const JURIN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const BILBO_6_COMMANDERS: &[CardFactory] = &[bilbo_luckwearer];
+
+/// **Bilbo, Luckwearer**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Bilbo, Luckwearer (EDHREC, fetched 2026-10-17).
+pub const BILBO_6_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, bilbos_ring, goldvein_pick, lightning_greaves,
+    lucky_clover, mind_stone, mithril_coat, sapphire_medallion, sky_diamond, sol_ring,
+    sting_bilbos_sword, swiftfoot_boots, sword_of_the_animist, thought_vessel, wayfarers_bauble,
+    myriad_landscape, mystic_sanctuary, otawara_soaring_city, reliquary_tower, rivendell,
+    agent_of_treachery, alandra_sky_dreamer, bilbo_baggins_burglar, bilbo_thief_in_the_night,
+    chasm_skulker, daughter_of_the_deep, dour_port_mage, emrakuls_messenger, enduring_curiosity,
+    faerie_mastermind, homunculus_horde, hullbreaker_horror, hydroelectric_specimen,
+    mischievous_mystic, mistblade_shinobi, moon_circuit_hacker, ornithopter_of_paradise,
+    prosperous_thief, psychosis_crawler, shrieking_drake, combat_research, curiosity,
+    imprisoned_in_the_moon, old_fat_spider_cant_see_me, propaganda, teferis_ageless_insight,
+    wizard_class, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    confusticate_and_bebother, counterspell, cyclonic_rift, frantic_search, high_tide, negate,
+    pongify, rapid_hybridization, run_away_together, sink_into_stupor, snap, arcane_heist,
+    boomerang_basics, ponder, preordain, shifting_grift, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const BARD_THE_BOWMAN_COMMANDERS: &[CardFactory] = &[bard_the_bowman];
+
+/// **Bard the Bowman**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 14 Islands + 11 Plains = 99.
+/// Bard the Bowman (EDHREC, fetched 2026-10-17).
+pub const BARD_THE_BOWMAN_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, great_gilded_boat, mind_stone, sol_ring,
+    talisman_of_progress, thought_vessel, thrors_map, adarkar_wastes, azorius_chancery,
+    command_tower, deserted_beach, exotic_orchard, glacial_fortress, hallowed_fountain,
+    lake_town, port_town, prairie_stream, reliquary_tower, bards_company, bard_king_of_dale,
+    belladonna_took, bilbo_baggins_burglar, bilbo_luckwearer, chasm_skulker, emrakuls_messenger,
+    esgaroth_garrison, faerie_mastermind, gandalf_wandering_wizard, homunculus_horde, kid_loki,
+    lake_town_lookout, lake_town_mariners, lake_town_toymaker, lakeshore_apothecary,
+    long_lake_nuisance, loran_of_the_third_path, mangara_the_diplomat, masters_councillors,
+    mischievous_mystic, patient_instructor, pensive_professor, prince_imrahil_the_fair,
+    ravenhill_flock, the_council_of_four, the_queen_of_dale, troop_of_ponies,
+    celebrate_the_mountain_king, enchanted_rivers_grasp, gleaming_splendor,
+    old_fat_spider_cant_see_me, profts_eidetic_memory, teferis_ageless_insight,
+    the_mountain_kings_return, wizard_class, arcane_denial, brainstorm,
+    confusticate_and_bebother, consider, counterspell, dovins_veto, frantic_search, opt,
+    path_to_exile, plunder_the_trollshaws, quick_study, sound_the_trumpets,
+    swords_to_plowshares, thorins_last_stand, damning_verdict, moment_of_glory, ponder,
+    preordain, supreme_verdict,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const GURU_PATHIK_COMMANDERS: &[CardFactory] = &[guru_pathik];
+
+/// **Guru Pathik**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 10 Islands = 99.
+/// Guru Pathik (EDHREC, fetched 2026-10-17).
+pub const GURU_PATHIK_MAIN: &[CardFactory] = &[
+    arcane_signet, simic_signet, sol_ring, thought_vessel, agna_qela, ba_sing_se,
+    botanical_sanctum, breeding_pool, command_tower, dreamroot_cascade, flooded_grove,
+    hinterland_harbor, overflowing_basin, reliquary_tower, simic_growth_chamber,
+    temple_of_mystery, white_lotus_hideout, badgermole, bumi_king_of_three_trials,
+    duskshell_crawler, fathom_mage, go_shintai_of_boundless_vigor, go_shintai_of_lost_wisdom,
+    gran_gran, hermitic_herbalist, master_pakku, sanctum_weaver, serpent_of_the_pass,
+    sin_unending_cataclysm, summon_fat_chocobo, summon_fenrir, summon_leviathan,
+    summon_magus_sisters, summon_shiva, summon_titan, summon_valefor, the_lion_turtle,
+    walltop_sentries, chakra_meditation, hardened_scales, honden_of_lifes_web,
+    honden_of_seeing_winds, jugan_defends_the_temple, kiora_bests_the_sea_god,
+    kyoshi_island_plaza, leaves_from_the_vine, old_fat_spider_cant_see_me, roll_roll_roll_roll,
+    sanctum_of_calm_waters, sanctum_of_fruitful_harvest, the_bath_song, the_legend_of_kuruk,
+    the_legend_of_kyoshi, the_spirit_oasis, accumulate_wisdom, cycle_of_renewal,
+    elemental_teachings, itll_quench_ya, lost_days, octopus_form, origin_of_metalbending,
+    sokkas_haiku, the_art_of_tea, whirlwind_technique, zukos_exile, aangs_journey,
+    boomerang_basics, containment_breach, earthbending_lesson, echocasting_symposium,
+    environmental_sciences, germination_practicum, match_the_odds, seismic_sense, shared_roots,
+    true_ancestry, waterbending_lesson,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+];
