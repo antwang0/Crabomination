@@ -165,8 +165,8 @@ fn bad_deal_costs_everyone() {
     g.players[0].mana_pool.add_colorless(4);
     cast(&mut g, s, None).expect("Bad Deal");
     assert_eq!(hand(&g, 0), 2);
-    for seat in 0..3 {
-        assert_eq!(g.players[seat].life, lives[seat] - 2);
+    for (p, life) in g.players.iter().zip(&lives) {
+        assert_eq!(p.life, life - 2);
     }
     assert_eq!((hand(&g, 1), hand(&g, 2)), (1, 1));
 }

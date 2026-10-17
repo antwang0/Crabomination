@@ -239,7 +239,7 @@ pub fn cunning_survivor() -> CardDefinition {
     }
 }
 
-/// Living Library — {2} 0/3 artifact Book Illusion. {6}, sacrifice it: target
+/// Living Library — {2} 0/4 artifact Book Illusion. {6}, sacrifice it: target
 /// creature or planeswalker an opponent controls is shuffled into its owner's
 /// library.
 pub fn living_library() -> CardDefinition {
@@ -253,7 +253,7 @@ pub fn living_library() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature("Living Library", cost(&[generic(2)]), vec![CreatureType::Book, CreatureType::Illusion], 0, 3)
+        ..artifact_creature("Living Library", cost(&[generic(2)]), vec![CreatureType::Book, CreatureType::Illusion], 0, 4)
     }
 }
 
@@ -334,7 +334,7 @@ pub fn maulfist_squad() -> CardDefinition {
     }
 }
 
-/// Mirkwood Meditator — {2}{U} 1/3 Elf Druid. Landfall — you may have its
+/// Mirkwood Meditator — {2}{U} 2/4 Elf Druid. Landfall — you may have its
 /// base power and toughness become 4/2 until end of turn.
 pub fn mirkwood_meditator() -> CardDefinition {
     CardDefinition {
@@ -347,7 +347,7 @@ pub fn mirkwood_meditator() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
         })],
-        ..creature("Mirkwood Meditator", cost(&[generic(2), u()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 3)
+        ..creature("Mirkwood Meditator", cost(&[generic(2), u()]), vec![CreatureType::Elf, CreatureType::Druid], 2, 4)
     }
 }
 

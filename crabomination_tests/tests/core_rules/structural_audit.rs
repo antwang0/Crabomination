@@ -595,6 +595,8 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         "Contract from Below",
         "Dangerous Wager",
         "Cycle of Renewal",
+        // "Discard your hand, then draw two cards" — the discard is the effect.
+        "Dangerous Wager",
         // "Sacrifice X Zombies, then reveal …" — the sacrifice is the effect.
         "Empty the Laboratory",
         "Entish Restoration",
