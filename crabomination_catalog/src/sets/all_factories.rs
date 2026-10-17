@@ -1364,6 +1364,13 @@ static DECKS: &[Factory] = &[
     super::decks::alchemists_gambit,
     super::decks::tamiyo_meets_the_story_circle,
     super::decks::eater_of_virtue,
+    // cmdr_019y_b (session 019Y6J4R)
+    super::decks::ravenous_demon,
+    super::decks::masters_guide_mural,
+    super::decks::foggy_swamp_visions,
+    super::decks::inventive_iteration,
+    super::decks::cemetery_illuminator,
+    super::decks::gwen_stacy,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

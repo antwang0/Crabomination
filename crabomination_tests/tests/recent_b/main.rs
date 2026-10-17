@@ -341,6 +341,7 @@ mod cmdr_oct17_q;
 mod cmdr_oct17_r;
 mod cmdr_oct17_s;
 mod cmdr_019y_a;
+mod cmdr_019y_b;
 mod cmdr_oct17_t;
 mod cmdr_oct17_u;
 mod cmdr_oct17_v;

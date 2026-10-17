@@ -3,6 +3,9 @@
 #[path = "../../../src/sets/decks/cmdr_019y_a.rs"]
 mod cmdr_019y_a;
 pub use cmdr_019y_a::*;
+#[path = "../../../src/sets/decks/cmdr_019y_b.rs"]
+mod cmdr_019y_b;
+pub use cmdr_019y_b::*;
 #[path = "../../../src/sets/decks/recent216.rs"]
 mod recent216;
 pub use recent216::*;
