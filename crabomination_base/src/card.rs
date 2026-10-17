@@ -7433,6 +7433,11 @@ pub struct AlternativeCost {
     /// sacrificed at the beginning of the next end step.
     #[serde(default)]
     pub blitz: bool,
+    /// The total mana value of the creature(s) `return_to_hand` bounced becomes
+    /// the spell's X — "enters with X +1/+1 counters, where X is the mana value
+    /// of the returned creature" (Scarlet Spider, Ben Reilly's Sensational Save).
+    #[serde(default)]
+    pub returned_mana_value_is_x: bool,
     /// True when casting via this alternative cost grants the spell flash
     /// timing (e.g. Rout's "cast as though it had flash if you pay {2}
     /// more"). Bypasses the sorcery-speed gate the alt-cast path otherwise

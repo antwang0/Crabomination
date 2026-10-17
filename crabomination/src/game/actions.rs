@@ -16246,6 +16246,11 @@ impl GameState {
         {
             self.sneak_defenders.push((card_id, target));
         }
+        let x_value = if alt.returned_mana_value_is_x {
+            Some(return_picks.iter().filter_map(|r| self.battlefield_find(*r)).map(|c| c.definition.cost.cmc()).sum())
+        } else {
+            x_value
+        };
         // Return-to-hand additional cost: bounce the picked permanents to
         // their owners' hands now that mana/life are paid. Reuses the full
         // `move_card_to` battlefield-exit path (combat removal, continuous-
