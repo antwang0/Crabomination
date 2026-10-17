@@ -1,5 +1,8 @@
 //! This part's share of `sets::decks`. See `crabomination_catalog/src/sets/mod.rs`.
 
+#[path = "../../../src/sets/decks/cmdr_019y_a.rs"]
+mod cmdr_019y_a;
+pub use cmdr_019y_a::*;
 #[path = "../../../src/sets/decks/recent216.rs"]
 mod recent216;
 pub use recent216::*;

@@ -1353,6 +1353,17 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_019y_a (session 019Y6J4R)
+    super::decks::gilt_leaf_winnower,
+    super::decks::vicious_battlerager,
+    super::decks::underdark_explorer,
+    super::decks::safana_calimport_cutthroat,
+    super::decks::fury_charm,
+    super::decks::pearl_lake_ancient,
+    super::decks::warriors_oath,
+    super::decks::alchemists_gambit,
+    super::decks::tamiyo_meets_the_story_circle,
+    super::decks::eater_of_virtue,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
