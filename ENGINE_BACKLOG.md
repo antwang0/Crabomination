@@ -206,10 +206,34 @@ the handoff.
   `EquipBonus.destroy_host_when_unattached` (Captain's Hook). Deathknell Berserker: a `CreatureDied` trigger
   FILTER read the graveyard card's printed power, not LKI. FIXED as a class: `Value::PowerOf`/`ToughnessOf` read the
   trigger subject's `leaves_bf_lki` outside resolution too, as the requirement walker (`PowerAtLeast`) already did.
-- **Researched, not built:** Warrior's Blades (equip discount per +1/+1 counter on the target), Djeru With Eyes Open
-  (prevent-1-to-your-planeswalkers static), I Am Iron Man (becomes an ARTIFACT creature), Panther Pounce (target
-  player investigates), Thought Lash (cumulative upkeep "exile top card" + an exile-top activation cost), Sahir
-  (LifeLost carries no source), Green Dragon (opponent-only damaged-creatures-die), Seasons Past (distinct-MV pick).
+- **LANDED (batch 6, the researched blockers):** Green Dragon (`Effect::DamagedOpponentCreaturesDieThisTurn`),
+  Seasons Past (`Effect::ReturnDistinctManaValuesFromGraveyard`), Precursor Golem
+  (`Predicate::SpellTargetsOnlyOne` + `Effect::CasterCopiesSpellForEachOtherMatchingTarget`), Spider-Man 2099
+  (`Predicate::PlayedLandNotFromHandThisTurn`), Renegade Doppelganger, Mathise; then Bilbo Luckwearer (the
+  cross-slot atom on an Adventure — FIXED: `half_targets_violate` never validated Adventure/Omen targets), Feldon,
+  Warbringer (`StaticEffect::ControllerDashCostsLess`), Rotisserie Elemental (`CounterType::Skewer`, LKI X), Frodo
+  Sauron's Bane. **FIXED (CR 502.4):** a trigger put on the stack during the untap step (a phase-in) resolved
+  there; `leave_untap_step` now advances to the upkeep, where players get priority.
+- **LANDED (batches 8-10, `decks::cmdr_oct17_g`..`_i`, tests `recent_b/cmdr_oct17_g.rs` / `_h.rs`):** 124 short
+  cards from the frequency scan, then 40 + 29 one-card closers (Karlov dual cyclers, Consulate Crackdown, Keldon
+  Warlord, Mindwrack Liege, Solitary Cell, Henge Walker, …). Seats 3519-3606. `CreatureType::Vulcan`;
+  `Predicate::SourceCastWithOneColorSpent` (same-colour adamant — five per-colour arms would have put all five
+  colours in Henge Walker's CR 903.4 identity). Refused: Faceless One + Agent of the Shadow Thieves / Inspiring
+  Leader, Zellix + Faceless One, Prismatic Piper + Vial Smasher (CR 903.4b chooser over budget), Gilanra + Ravos
+  (99 cards), Vhal + Sword Coast Sailor (Ley Weaver off-identity — `check_decks` passed it, the legality test did not).
+- **FIXED (late):** "becomes an artifact creature" on a nonartifact target added only Creature (I Am Iron Man,
+  Suit Up, Behind the Mask) — `AddCardTypeIndefinitely { until_eot }` beside `BecomeCreature`; the client's two
+  `CounterType` matches lacked Petrification / Dread / Skewer (only the client test build sees it).
+  **Gates at the close:** workspace clippy 0 (client excluded; client `check --all-targets` clean); suite 27,397 /
+  27,397 (6 skipped, precon long pole excluded, `CRAB_ANSWER_LOG=strict`) after fixing four printed bodies and
+  Dangerous Wager's audit row; golden traces unmoved; release `--bench` 196,176 decisions, 0 stalls, determinism ok
+  — byte-identical; overflow-checked pod sweeps 9830 (4 seats) / 9831 (6 seats) over seats 3519-3606: 9,600 games,
+  0 panics, the only undecided games CR 104.4a Descent into Avernus draws.
+- **Researched, open:** Nocturno / Ignacio / Hardy / Fluros of Myra's Marvels (rules-text word, card art, flavour
+  lines — 31 decks), Harness the Storm, Corrosive Ooze, Old Fat Spider Can't See Me (saga "for as long as this Saga
+  remains"), March of Reckless Joy / Celestial Reunion (exile-cards and behold additional costs), Chaotic
+  Transformation, Burning Sun's Avatar (a required slot then an up-to-one slot), Defang (prevent ALL damage by the
+  host, not only combat — `DealsNoCombatDamage` is the combat half).
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `0128tsCy`) — concurrent with `014Q2Gfw`; claims first
 
