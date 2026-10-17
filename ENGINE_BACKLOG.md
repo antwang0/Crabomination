@@ -179,6 +179,18 @@ the handoff.
   tests `recent_b/cmdr_oct17_a.rs`.
 - **FIXED:** Role Reversal / Legerdemain / Gauntlets of Chaos never enforced "shares a (card|permanent) type" —
   new cross-slot atom `R::SharesCardTypeWithTargetSlot` (CR 601.2c).
+- **LANDED (batches 3-5, `decks::cmdr_oct17_a`..`_c`, tests `recent_b/cmdr_oct17_a.rs` / `_b.rs`):** ~135 one-card
+  partner-pair gaps (Refurbish, Chronozoa, Captain's Hook, Omnipresence, Ral Caller of Storms, Chance for Glory, the
+  six Marvel gain lands, Killmonger, Genghis Frog, …). Seats 3319-3471 (153 decks, every one closed by these cards,
+  exact-100 and identity-checked; the CR 903.4b chooser pairs — Faceless One, Piper, Clara — skipped).
+- **FIXED:** Final Fortune lost at the CASTING turn's end step — `DelayedTriggerKind::YourNextTurnsEndStep`.
+  `EquipBonus.destroy_host_when_unattached` (Captain's Hook). Deathknell Berserker: a `CreatureDied` trigger
+  FILTER reads the graveyard card's printed power, not LKI — read LKI power in the body (CR 603.10). ⚠ That filter
+  behaviour is a class worth an audit: any "dies, if its power was …" written as an `EventSpec` filter.
+- **Researched, not built:** Warrior's Blades (equip discount per +1/+1 counter on the target), Djeru With Eyes Open
+  (prevent-1-to-your-planeswalkers static), I Am Iron Man (becomes an ARTIFACT creature), Panther Pounce (target
+  player investigates), Thought Lash (cumulative upkeep "exile top card" + an exile-top activation cost), Sahir
+  (LifeLost carries no source), Green Dragon (opponent-only damaged-creatures-die), Seasons Past (distinct-MV pick).
 
 ## FIXED/OPEN 2026-10-16 (Commander run, `0128tsCy`) — concurrent with `014Q2Gfw`; claims first
 
