@@ -212,6 +212,8 @@ the handoff.
   panics, 1 board-cap stall (Ninth Doctor + Parallel Lives token growth).
 - **CLAIMED (batch 14) — don't duplicate:** Bohn Beguiling Balladeer, Captain's Hook, Candlekeep Inspiration
   (LANDED, seats 3319-3328; Twelfth Doctor + Clara refused — two colours past Clara's one choice).
+- **CLAIMED (batch 15) — don't duplicate:** Bloodboil Sorcerer, Dream Twist, Old Fat Spider (the 6/7 creature),
+  Captain Kathryn Janeway, Dragon's Disciple, Puppet Crafting.
   Researched, open: Feldon Ronom Excavator (exile N, choose ONE to play — `ExileTopAndGrantMayPlay` grants all),
   Chronomantic Escape (a player-level "creatures can't attack you" until your next turn — only per-creature
   grants and attack taxes exist), Bilbo Luckwearer (two targets that share a card type with each other).
