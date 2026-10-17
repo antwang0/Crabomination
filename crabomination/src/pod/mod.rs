@@ -22824,6 +22824,198 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZELLIX_11_COMMANDERS,
             main: decks::ZELLIX_11_MAIN,
         },
+        // Seat 3729: Prowler, Misguided Mentor's EDHREC average deck. `--pod-decks 3729`.
+        PodDeck {
+            name: "Prowler, Misguided Mentor (G)",
+            commanders: decks::PROWLER_COMMANDERS,
+            main: decks::PROWLER_MAIN,
+        },
+        // Seat 3730: Bruse Tarl, Boorish Herder and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 3730`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Yoshimaru, Ever Faithful (WR)",
+            commanders: decks::BRUSE_TARL_13_COMMANDERS,
+            main: decks::BRUSE_TARL_13_MAIN,
+        },
+        // Seat 3731: Bruse Tarl, Boorish Herder and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 3731`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Kydele, Chosen of Kruphix (WURG)",
+            commanders: decks::BRUSE_TARL_14_COMMANDERS,
+            main: decks::BRUSE_TARL_14_MAIN,
+        },
+        // Seat 3732: The Ninth Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 3732`.
+        PodDeck {
+            name: "The Ninth Doctor and Rose Tyler (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_8_MAIN,
+        },
+        // Seat 3733: The Ninth Doctor and Susan Foreman's EDHREC average deck. `--pod-decks 3733`.
+        PodDeck {
+            name: "The Ninth Doctor and Susan Foreman (URG)",
+            commanders: decks::THE_NINTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_9_MAIN,
+        },
+        // Seat 3734: Bruse Tarl, Boorish Herder and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 3734`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Gilanra, Caller of Wirewood (WRG)",
+            commanders: decks::BRUSE_TARL_15_COMMANDERS,
+            main: decks::BRUSE_TARL_15_MAIN,
+        },
+        // Seat 3735: Jaheira, Friend of the Forest and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3735`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Passionate Archaeologist (RG)",
+            commanders: decks::JAHEIRA_8_COMMANDERS,
+            main: decks::JAHEIRA_8_MAIN,
+        },
+        // Seat 3736: Gilanra, Caller of Wirewood and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 3736`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Numa, Joraga Chieftain (G)",
+            commanders: decks::GILANRA_13_COMMANDERS,
+            main: decks::GILANRA_13_MAIN,
+        },
+        // Seat 3737: Miara, Thorn of the Glade and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3737`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Tevesh Szat, Doom of Fools (B)",
+            commanders: decks::MIARA_4_COMMANDERS,
+            main: decks::MIARA_4_MAIN,
+        },
+        // Seat 3738: The Tenth Doctor and Sarah Jane Smith's EDHREC average deck. `--pod-decks 3738`.
+        PodDeck {
+            name: "The Tenth Doctor and Sarah Jane Smith (WUR)",
+            commanders: decks::THE_TENTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_2_MAIN,
+        },
+        // Seat 3739: The Twelfth Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 3739`.
+        PodDeck {
+            name: "The Twelfth Doctor and Barbara Wright (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_11_MAIN,
+        },
+        // Seat 3740: The Eleventh Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 3740`.
+        PodDeck {
+            name: "The Eleventh Doctor and K-9, Mark I (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_6_MAIN,
+        },
+        // Seat 3741: The Fourteenth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 3741`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Amy Pond (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_6_MAIN,
+        },
+        // Seat 3742: Breeches, Brazen Plunderer and Kodama of the East Tree's EDHREC average deck. `--pod-decks 3742`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Kodama of the East Tree (RG)",
+            commanders: decks::BREECHES_17_COMMANDERS,
+            main: decks::BREECHES_17_MAIN,
+        },
+        // Seat 3743: Halsin, Emerald Archdruid and Folk Hero's EDHREC average deck. `--pod-decks 3743`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Folk Hero (WG)",
+            commanders: decks::HALSIN_5_COMMANDERS,
+            main: decks::HALSIN_5_MAIN,
+        },
+        // Seat 3744: The Ninth Doctor and Sarah Jane Smith's EDHREC average deck. `--pod-decks 3744`.
+        PodDeck {
+            name: "The Ninth Doctor and Sarah Jane Smith (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_10_MAIN,
+        },
+        // Seat 3745: Erinis, Gloom Stalker and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3745`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Passionate Archaeologist (RG)",
+            commanders: decks::ERINIS_12_COMMANDERS,
+            main: decks::ERINIS_12_MAIN,
+        },
+        // Seat 3746: Halsin, Emerald Archdruid and Shameless Charlatan's EDHREC average deck. `--pod-decks 3746`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Shameless Charlatan (UG)",
+            commanders: decks::HALSIN_6_COMMANDERS,
+            main: decks::HALSIN_6_MAIN,
+        },
+        // Seat 3747: Halana, Kessig Ranger and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 3747`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Miara, Thorn of the Glade (BG)",
+            commanders: decks::HALANA_9_COMMANDERS,
+            main: decks::HALANA_9_MAIN,
+        },
+        // Seat 3748: The Fifteenth Doctor and Ryan Sinclair's EDHREC average deck. `--pod-decks 3748`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Ryan Sinclair (UR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_8_MAIN,
+        },
+        // Seat 3749: The War Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 3749`.
+        PodDeck {
+            name: "The War Doctor and Barbara Wright (WR)",
+            commanders: decks::THE_WAR_DOCTOR_5_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_5_MAIN,
+        },
+        // Seat 3750: Prava of the Steel Legion and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3750`.
+        PodDeck {
+            name: "Prava of the Steel Legion and Radiant, Serra Archangel (W)",
+            commanders: decks::PRAVA_OF_THE_STEEL_LEGION_4_COMMANDERS,
+            main: decks::PRAVA_OF_THE_STEEL_LEGION_4_MAIN,
+        },
+        // Seat 3751: Ich-Tekik, Salvage Splicer and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 3751`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Tevesh Szat, Doom of Fools (BG)",
+            commanders: decks::ICH_TEKIK_24_COMMANDERS,
+            main: decks::ICH_TEKIK_24_MAIN,
+        },
+        // Seat 3752: Gut, True Soul Zealot and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3752`.
+        PodDeck {
+            name: "Gut, True Soul Zealot and Passionate Archaeologist (R)",
+            commanders: decks::GUT_12_COMMANDERS,
+            main: decks::GUT_12_MAIN,
+        },
+        // Seat 3753: Livaan, Cultist of Tiamat and Dungeon Delver's EDHREC average deck. `--pod-decks 3753`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Dungeon Delver (UR)",
+            commanders: decks::LIVAAN_5_COMMANDERS,
+            main: decks::LIVAAN_5_MAIN,
+        },
+        // Seat 3754: Breeches, Brazen Plunderer and Bruse Tarl, Boorish Herder's EDHREC average deck. `--pod-decks 3754`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Bruse Tarl, Boorish Herder (WR)",
+            commanders: decks::BREECHES_18_COMMANDERS,
+            main: decks::BREECHES_18_MAIN,
+        },
+        // Seat 3755: The Fifth Doctor and Nyssa of Traken's EDHREC average deck. `--pod-decks 3755`.
+        PodDeck {
+            name: "The Fifth Doctor and Nyssa of Traken (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_6_MAIN,
+        },
+        // Seat 3756: Gilanra, Caller of Wirewood and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 3756`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Kediss, Emberclaw Familiar (RG)",
+            commanders: decks::GILANRA_14_COMMANDERS,
+            main: decks::GILANRA_14_MAIN,
+        },
+        // Seat 3757: Katerina of Myra's Marvels and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3757`.
+        PodDeck {
+            name: "Katerina of Myra's Marvels and Radiant, Serra Archangel (W)",
+            commanders: decks::KATERINA_OF_MYRAS_MARVELS_2_COMMANDERS,
+            main: decks::KATERINA_OF_MYRAS_MARVELS_2_MAIN,
+        },
+        // Seat 3758: Breeches, Brazen Plunderer and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3758`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Livio, Oathsworn Sentinel (WR)",
+            commanders: decks::BREECHES_19_COMMANDERS,
+            main: decks::BREECHES_19_MAIN,
+        },
+        // Seat 3759: Ghost of Ramirez DePietro and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3759`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Toggo, Goblin Weaponsmith (UR)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_14_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_14_MAIN,
+        },
+        // Seat 3760: Numa, Joraga Chieftain and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 3760`.
+        PodDeck {
+            name: "Numa, Joraga Chieftain and Silas Renn, Seeker Adept (UBG)",
+            commanders: decks::NUMA_5_COMMANDERS,
+            main: decks::NUMA_5_MAIN,
+        },
     ]
 }
 
@@ -28436,6 +28628,38 @@ mod tests {
             ("The Ninth Doctor and K-9, Mark I", &[0x18A4]),
             ("Vhal, Candlekeep Researcher and Dungeon Delver", &[0x18A5]),
             ("Zellix, Sanity Flayer and Dragon Cultist", &[0x18A6]),
+            ("Prowler, Misguided Mentor", &[0x18A7]),
+            ("Bruse Tarl, Boorish Herder and Yoshimaru, Ever Faithful", &[0x18A8]),
+            ("Bruse Tarl, Boorish Herder and Kydele, Chosen of Kruphix", &[0x18A9]),
+            ("The Ninth Doctor and Rose Tyler", &[0x18AA]),
+            ("The Ninth Doctor and Susan Foreman", &[0x18AB]),
+            ("Bruse Tarl, Boorish Herder and Gilanra, Caller of Wirewood", &[0x18AC]),
+            ("Jaheira, Friend of the Forest and Passionate Archaeologist", &[0x18AD]),
+            ("Gilanra, Caller of Wirewood and Numa, Joraga Chieftain", &[0x18AE]),
+            ("Miara, Thorn of the Glade and Tevesh Szat, Doom of Fools", &[0x18AF]),
+            ("The Tenth Doctor and Sarah Jane Smith", &[0x18B0]),
+            ("The Twelfth Doctor and Barbara Wright", &[0x18B1]),
+            ("The Eleventh Doctor and K-9, Mark I", &[0x18B2]),
+            ("The Fourteenth Doctor and Amy Pond", &[0x18B3]),
+            ("Breeches, Brazen Plunderer and Kodama of the East Tree", &[0x18B4]),
+            ("Halsin, Emerald Archdruid and Folk Hero", &[0x18B5]),
+            ("The Ninth Doctor and Sarah Jane Smith", &[0x18B6]),
+            ("Erinis, Gloom Stalker and Passionate Archaeologist", &[0x18B7]),
+            ("Halsin, Emerald Archdruid and Shameless Charlatan", &[0x18B8]),
+            ("Halana, Kessig Ranger and Miara, Thorn of the Glade", &[0x18B9]),
+            ("The Fifteenth Doctor and Ryan Sinclair", &[0x18BA]),
+            ("The War Doctor and Barbara Wright", &[0x18BB]),
+            ("Prava of the Steel Legion and Radiant, Serra Archangel", &[0x18BC]),
+            ("Ich-Tekik, Salvage Splicer and Tevesh Szat, Doom of Fools", &[0x18BD]),
+            ("Gut, True Soul Zealot and Passionate Archaeologist", &[0x18BE]),
+            ("Livaan, Cultist of Tiamat and Dungeon Delver", &[0x18BF]),
+            ("Breeches, Brazen Plunderer and Bruse Tarl, Boorish Herder", &[0x18C0]),
+            ("The Fifth Doctor and Nyssa of Traken", &[0x18C1]),
+            ("Gilanra, Caller of Wirewood and Kediss, Emberclaw Familiar", &[0x18C2]),
+            ("Katerina of Myra's Marvels and Radiant, Serra Archangel", &[0x18C3]),
+            ("Breeches, Brazen Plunderer and Livio, Oathsworn Sentinel", &[0x18C4]),
+            ("Ghost of Ramirez DePietro and Toggo, Goblin Weaponsmith", &[0x18C5]),
+            ("Numa, Joraga Chieftain and Silas Renn, Seeker Adept", &[0x18C6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
