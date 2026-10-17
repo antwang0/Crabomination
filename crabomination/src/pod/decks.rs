@@ -101619,3 +101619,62 @@ pub const ZHUGE_JIN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island,
 ];
+
+pub const LIGHTNING_COMMANDERS: &[CardFactory] = &[lightning_security_sergeant];
+
+/// **Lightning, Security Sergeant**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Lightning, Security Sergeant (EDHREC, fetched 2026-10-17).
+pub const LIGHTNING_MAIN: &[CardFactory] = &[
+    arcane_signet, diamond_pick_axe, dragons_smile, fire_diamond, genji_glove,
+    lightning_greaves, ruby_medallion, sol_ring, swiftfoot_boots, sword_of_feast_and_famine,
+    sword_of_the_animist, the_fire_crystal, the_reaver_cleaver, unstable_amulet,
+    wayfarers_bauble, whispersilk_cloak, arena_of_glory, myriad_landscape,
+    nykthos_shrine_to_nyx, rogues_passage, spinerock_knoll, valakut_the_molten_pinnacle,
+    cait_sith_fortune_teller, etali_primal_storm, flaming_tyrannosaurus, freya_crescent,
+    iraxxa_empress_of_mars, kami_of_celebration, karlach_fury_of_avernus, keeper_of_secrets,
+    laelia_the_blade_reforged, lizard_blades, memory_worm, nalfeshnee, party_thrasher,
+    plargg_and_nassari, professional_face_breaker, rose_cutthroat_raider, runaway_steam_kin,
+    solemn_simulacrum, summon_brynhildr, sunset_strikemaster, wild_magic_sorcerer,
+    ajanis_anguish, charred_foyer_warped_space, curse_of_opulence, passionate_archaeologist,
+    tavern_brawler, triple_triad, abrade, big_score, chaos_warp, deflecting_swat,
+    delayed_blast_fireball, haste_magic, lightning_bolt, opera_love_song, seething_song,
+    thunder_magic, chandra_torch_of_defiance, blasphemous_act, faithless_looting,
+    improvisation_capstone, jeskas_will, light_up_the_stage, mana_geyser, suplex,
+    ultimate_magic_meteor, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const DRAGONS_SMILE_COMMANDERS: &[CardFactory] = &[dragons_smile];
+
+/// **Dragon's Smile**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Dragon's Smile (EDHREC, fetched 2026-10-17).
+pub const DRAGONS_SMILE_MAIN: &[CardFactory] = &[
+    arcane_signet, chimil_the_inner_sun, cursed_mirror, fellwar_stone,
+    interdimensional_web_watch, ruby_medallion, sol_ring, the_fire_crystal, the_reaver_cleaver,
+    thran_dynamo, throne_of_eldraine, wand_of_wonder, arena_of_glory, fire_nation_palace,
+    mech_hangar, myriad_landscape, nykthos_shrine_to_nyx, rogues_passage,
+    valakut_the_molten_pinnacle, war_room, ancient_copper_dragon, birgi_god_of_storytelling,
+    blazing_firesinger, bonehoard_dracosaur, cait_sith_fortune_teller, dragonhawk_fates_tempest,
+    emrakul_the_exigent_doom, etali_primal_storm, flaming_tyrannosaurus, goldspan_dragon,
+    inti_seneschal_of_the_sun, keeper_of_secrets, laelia_the_blade_reforged, nalfeshnee,
+    nico_minoru_runaway, party_thrasher, pinnacle_monk, plargg_and_nassari,
+    professional_face_breaker, ragavan_nimble_pilferer, sunset_strikemaster,
+    tannuk_steadfast_second, urabrask_heretic_praetor, wild_magic_sorcerer,
+    charred_foyer_warped_space, count_on_luck, passionate_archaeologist, spider_verse,
+    stolen_strategy, valakut_exploration, wild_wasteland, big_score, chaos_warp,
+    delayed_blast_fireball, redirect_lightning, return_the_favor, seething_song,
+    unexpected_windfall, untimely_malfunction, chandra_torch_of_defiance, blasphemous_act,
+    geosurge, glimpse_the_impossible, hex_magic, ignite_the_future, improvisation_capstone,
+    inspired_tinkering, jeskas_will, mana_geyser, reckless_impulse, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

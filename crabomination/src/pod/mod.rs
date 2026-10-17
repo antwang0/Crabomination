@@ -22206,6 +22206,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZHUGE_JIN_COMMANDERS,
             main: decks::ZHUGE_JIN_MAIN,
         },
+        // Seat 3626: Lightning, Security Sergeant's EDHREC average deck. `--pod-decks 3626`.
+        PodDeck {
+            name: "Lightning, Security Sergeant (R)",
+            commanders: decks::LIGHTNING_COMMANDERS,
+            main: decks::LIGHTNING_MAIN,
+        },
+        // Seat 3627: Dragon's Smile's EDHREC average deck. `--pod-decks 3627`.
+        PodDeck {
+            name: "Dragon's Smile (R)",
+            commanders: decks::DRAGONS_SMILE_COMMANDERS,
+            main: decks::DRAGONS_SMILE_MAIN,
+        },
     ]
 }
 
@@ -27715,6 +27727,8 @@ mod tests {
             ("Higure, the Still Wind", &[0x183D]),
             ("Unesh, Criosphinx Sovereign", &[0x183E]),
             ("Zhuge Jin, Wu Strategist", &[0x183F]),
+            ("Lightning, Security Sergeant", &[0x1840]),
+            ("Dragon's Smile", &[0x1841]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
