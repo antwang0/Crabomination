@@ -6757,6 +6757,10 @@ impl GameState {
             Effect::MayCastFromHandFreeMatching { filter, max_mv, else_ } => {
                 let cap = self.evaluate_value(max_mv, ctx);
                 let me = ctx.controller;
+                // CR 601.2b — a filter naming X (Brain in a Jar's "mana value
+                // equal to the number of charge counters", pinned by `WithX`).
+                let with_x = filter.resolve_x(ctx.x_value);
+                let filter = &with_x;
                 // "A spell that shares a card type with it" (Counterlash): the
                 // countered target's types, off its card in its new zone.
                 let shared;

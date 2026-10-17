@@ -2033,7 +2033,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // same approximation `CardMatchPowerGated` uses) — Tapestry Warden.
         R::ToughnessGreaterThanPower | R::PowerToughnessUnequal => true,
         // Mana value is a printed characteristic, read like the type leaves.
-        R::ManaValueAtMost(_) | R::ManaValueAtLeast(_) => true,
+        R::ManaValueAtMost(_) | R::ManaValueAtLeast(_) | R::ManaValueExactly(_) => true,
         // So is a name (`requirement_matches_card` reads it off the
         // definition). Missing here, a name-scoped grant was dropped outright
         // — Leitmotif Composer's "creatures named Leitmotif Composer can't be
@@ -2224,6 +2224,7 @@ pub(crate) fn requirement_matches_card_typed(
         // `false` and the `Not` animated every artifact — Mind Stone too.
         R::ManaValueAtMost(n) => def.cost.cmc() <= *n,
         R::ManaValueAtLeast(n) => def.cost.cmc() >= *n,
+        R::ManaValueExactly(n) => def.cost.cmc() == *n,
         _ => false,
     }
 }
