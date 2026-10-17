@@ -171,6 +171,23 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-17 (Commander run, `yl8zjb`) — claims first
+
+- **CLAIMED — don't duplicate:** Sphinx Ambassador, Thorin Mountain-king, Dragon's Smile, Twists and Turns,
+  Bejeweled Warg, Leonardo Leader in Blue + Prehistoric Pet. Cards in `decks::cmdr_oct17_kn`, tests
+  `recent_b/cmdr_oct17_kn.rs`.
+- **Seats** 3607-3621 (15 decks). **Primitives:** `PlayerRef::DefendingPlayerOf` (CR 506.2, Jurin),
+  `Keyword::DealsNoDamage` (CR 615 granted marker — Old Fat Spider's chapter II),
+  `AdditionalCastCost::{Behold, BeholdOrPay}` (CR 701.4a; `Behold` as a `kicker_action_cost` is "you may
+  behold", read by `SpellWasKicked`), `R::WasCastFromExile`. **FIXED:** the TDM Exhale cycle read "a
+  Dragon was beheld" as "you control a Dragon" — now the caster's behold opt-in (hand or battlefield).
+- **Researched, not built:** Thorin Mountain-king (its reflexive "that creature" needs the outer trigger's
+  slot captured into the `Reflexive` body), Arcee's back face ("that many" = count of your creatures a cast
+  spell targets: no `Value`), The Flame of Keld III (red-source damage +2 this turn), Casey & Raph ("each
+  mode must target a different player"), Cloak and Dagger (exile from hand *or* the chosen creature).
+- **Bot note:** Elektra's "deal 2 damage to you: 4 to a creature" is declined by the `MayDo` self-cost
+  screen (self-damage), as are similar riders.
+
 ## FIXED/OPEN 2026-10-17 (Commander run, `01Htv6cF`) — claims first
 
 - **CLAIMED (batch 6, engine-blocked) — don't duplicate:** Green Dragon, Seasons Past, Thought Lash + Spock, Sahir
