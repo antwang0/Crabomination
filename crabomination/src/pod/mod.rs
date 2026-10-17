@@ -23160,6 +23160,150 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIVRISS_8_COMMANDERS,
             main: decks::SIVRISS_8_MAIN,
         },
+        // Seat 3785: Chromium's EDHREC average deck. `--pod-decks 3785`.
+        PodDeck {
+            name: "Chromium (WUB)",
+            commanders: decks::CHROMIUM_2_COMMANDERS,
+            main: decks::CHROMIUM_2_MAIN,
+        },
+        // Seat 3786: Ikra Shidiqi, the Usurper and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3786`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Livio, Oathsworn Sentinel (WBG)",
+            commanders: decks::IKRA_SHIDIQI_6_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_6_MAIN,
+        },
+        // Seat 3787: Abdel Adrian, Gorion's Ward and Folk Hero's EDHREC average deck. `--pod-decks 3787`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Folk Hero (W)",
+            commanders: decks::ABDEL_ADRIAN_9_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_9_MAIN,
+        },
+        // Seat 3788: Kediss, Emberclaw Familiar and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 3788`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Toggo, Goblin Weaponsmith (R)",
+            commanders: decks::KEDISS_9_COMMANDERS,
+            main: decks::KEDISS_9_MAIN,
+        },
+        // Seat 3789: Anara, Wolvid Familiar and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 3789`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Sakashima of a Thousand Faces (UG)",
+            commanders: decks::ANARA_18_COMMANDERS,
+            main: decks::ANARA_18_MAIN,
+        },
+        // Seat 3790: Viconia, Drow Apostate and Shameless Charlatan's EDHREC average deck. `--pod-decks 3790`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Shameless Charlatan (UB)",
+            commanders: decks::VICONIA_11_COMMANDERS,
+            main: decks::VICONIA_11_MAIN,
+        },
+        // Seat 3791: Kraum, Ludevic's Opus and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 3791`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Prava of the Steel Legion (WUR)",
+            commanders: decks::KRAUM_6_COMMANDERS,
+            main: decks::KRAUM_6_MAIN,
+        },
+        // Seat 3792: Rograkh, Son of Rohgahh and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3792`.
+        PodDeck {
+            name: "Rograkh, Son of Rohgahh and Slurrk, All-Ingesting (RG)",
+            commanders: decks::ROGRAKH_4_COMMANDERS,
+            main: decks::ROGRAKH_4_MAIN,
+        },
+        // Seat 3793: Alena, Kessig Trapper and Krark, the Thumbless's EDHREC average deck. `--pod-decks 3793`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Krark, the Thumbless (R)",
+            commanders: decks::ALENA_10_COMMANDERS,
+            main: decks::ALENA_10_MAIN,
+        },
+        // Seat 3794: Durnan of the Yawning Portal and Cultist of the Absolute's EDHREC average deck. `--pod-decks 3794`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Cultist of the Absolute (BG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_8_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_8_MAIN,
+        },
+        // Seat 3795: Viconia, Drow Apostate and Haunted One's EDHREC average deck. `--pod-decks 3795`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Haunted One (B)",
+            commanders: decks::VICONIA_12_COMMANDERS,
+            main: decks::VICONIA_12_MAIN,
+        },
+        // Seat 3796: Francisco, Fowl Marauder and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3796`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Siani, Eye of the Storm (UB)",
+            commanders: decks::FRANCISCO_6_COMMANDERS,
+            main: decks::FRANCISCO_6_MAIN,
+        },
+        // Seat 3797: Lulu, Loyal Hollyphant and Passionate Archaeologist's EDHREC average deck. `--pod-decks 3797`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Passionate Archaeologist (WR)",
+            commanders: decks::LULU_10_COMMANDERS,
+            main: decks::LULU_10_MAIN,
+        },
+        // Seat 3798: Alora, Merry Thief and Cultist of the Absolute's EDHREC average deck. `--pod-decks 3798`.
+        PodDeck {
+            name: "Alora, Merry Thief and Cultist of the Absolute (UB)",
+            commanders: decks::ALORA_12_COMMANDERS,
+            main: decks::ALORA_12_MAIN,
+        },
+        // Seat 3799: Keleth, Sunmane Familiar and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3799`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Livio, Oathsworn Sentinel (W)",
+            commanders: decks::KELETH_9_COMMANDERS,
+            main: decks::KELETH_9_MAIN,
+        },
+        // Seat 3800: Viconia, Drow Apostate and Noble Heritage's EDHREC average deck. `--pod-decks 3800`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Noble Heritage (WB)",
+            commanders: decks::VICONIA_13_COMMANDERS,
+            main: decks::VICONIA_13_MAIN,
+        },
+        // Seat 3801: Brinelin, the Moon Kraken and Tymna the Weaver's EDHREC average deck. `--pod-decks 3801`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Tymna the Weaver (WUB)",
+            commanders: decks::BRINELIN_15_COMMANDERS,
+            main: decks::BRINELIN_15_MAIN,
+        },
+        // Seat 3802: Bruse Tarl, Boorish Herder and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3802`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Livio, Oathsworn Sentinel (WR)",
+            commanders: decks::BRUSE_TARL_16_COMMANDERS,
+            main: decks::BRUSE_TARL_16_MAIN,
+        },
+        // Seat 3803: Sivriss, Nightmare Speaker and Candlekeep Sage's EDHREC average deck. `--pod-decks 3803`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Candlekeep Sage (UB)",
+            commanders: decks::SIVRISS_9_COMMANDERS,
+            main: decks::SIVRISS_9_MAIN,
+        },
+        // Seat 3804: The Thirteenth Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 3804`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Graham O'Brien (UG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_4_MAIN,
+        },
+        // Seat 3805: Keleth, Sunmane Familiar and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3805`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Radiant, Serra Archangel (W)",
+            commanders: decks::KELETH_10_COMMANDERS,
+            main: decks::KELETH_10_MAIN,
+        },
+        // Seat 3806: Falthis, Shadowcat Familiar and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 3806`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Reyhan, Last of the Abzan (BG)",
+            commanders: decks::FALTHIS_11_COMMANDERS,
+            main: decks::FALTHIS_11_MAIN,
+        },
+        // Seat 3807: Alharu, Solemn Ritualist and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 3807`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Ikra Shidiqi, the Usurper (WBG)",
+            commanders: decks::ALHARU_9_COMMANDERS,
+            main: decks::ALHARU_9_MAIN,
+        },
+        // Seat 3808: Brinelin, the Moon Kraken and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 3808`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Sengir, the Dark Baron (UB)",
+            commanders: decks::BRINELIN_16_COMMANDERS,
+            main: decks::BRINELIN_16_MAIN,
+        },
     ]
 }
 
@@ -28828,6 +28972,30 @@ mod tests {
             ("Akroma, Vision of Ixidor and Francisco, Fowl Marauder", &[0x18DC]),
             ("Imoen, Mystic Trickster and Street Urchin", &[0x18DD]),
             ("Sivriss, Nightmare Speaker and Tavern Brawler", &[0x18DE]),
+            ("Chromium", &[0x18DF]),
+            ("Ikra Shidiqi, the Usurper and Livio, Oathsworn Sentinel", &[0x18E0]),
+            ("Abdel Adrian, Gorion's Ward and Folk Hero", &[0x18E1]),
+            ("Kediss, Emberclaw Familiar and Toggo, Goblin Weaponsmith", &[0x18E2]),
+            ("Anara, Wolvid Familiar and Sakashima of a Thousand Faces", &[0x18E3]),
+            ("Viconia, Drow Apostate and Shameless Charlatan", &[0x18E4]),
+            ("Kraum, Ludevic's Opus and Prava of the Steel Legion", &[0x18E5]),
+            ("Rograkh, Son of Rohgahh and Slurrk, All-Ingesting", &[0x18E6]),
+            ("Alena, Kessig Trapper and Krark, the Thumbless", &[0x18E7]),
+            ("Durnan of the Yawning Portal and Cultist of the Absolute", &[0x18E8]),
+            ("Viconia, Drow Apostate and Haunted One", &[0x18E9]),
+            ("Francisco, Fowl Marauder and Siani, Eye of the Storm", &[0x18EA]),
+            ("Lulu, Loyal Hollyphant and Passionate Archaeologist", &[0x18EB]),
+            ("Alora, Merry Thief and Cultist of the Absolute", &[0x18EC]),
+            ("Keleth, Sunmane Familiar and Livio, Oathsworn Sentinel", &[0x18ED]),
+            ("Viconia, Drow Apostate and Noble Heritage", &[0x18EE]),
+            ("Brinelin, the Moon Kraken and Tymna the Weaver", &[0x18EF]),
+            ("Bruse Tarl, Boorish Herder and Livio, Oathsworn Sentinel", &[0x18F0]),
+            ("Sivriss, Nightmare Speaker and Candlekeep Sage", &[0x18F1]),
+            ("The Thirteenth Doctor and Graham O'Brien", &[0x18F2]),
+            ("Keleth, Sunmane Familiar and Radiant, Serra Archangel", &[0x18F3]),
+            ("Falthis, Shadowcat Familiar and Reyhan, Last of the Abzan", &[0x18F4]),
+            ("Alharu, Solemn Ritualist and Ikra Shidiqi, the Usurper", &[0x18F5]),
+            ("Brinelin, the Moon Kraken and Sengir, the Dark Baron", &[0x18F6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
