@@ -17113,6 +17113,7 @@ static DECKS: &[Factory] = &[
     super::decks::bejeweled_warg,
     super::decks::futurist_operative,
     super::decks::sphinx_ambassador,
+    super::decks::dragons_smile,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

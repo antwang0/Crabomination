@@ -590,6 +590,43 @@ pub fn sphinx_ambassador() -> CardDefinition {
     }
 }
 
+// ── Lightning, Security Sergeant / Dragon's Smile / Magik ───────────────────
+
+/// Dragon's Smile — {5}{R}{R} legendary 4/5 Vehicle, flying, crew 3. Once during
+/// each of your turns, a spell you cast from exile may cost {0} (CR 118.9).
+/// Combat damage to a player: they exile that many cards from the top of their
+/// library; you may play them this turn.
+pub fn dragons_smile() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    CardDefinition {
+        name: "Dragon's Smile",
+        cost: cost(&[generic(5), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Crew(3)],
+        static_abilities: vec![StaticAbility {
+            description: "Once during each of your turns, you may pay {0} rather than pay the mana cost for a spell you cast from exile.",
+            effect: SE::WhileYourTurn { inner: Box::new(SE::FreeExileCastOncePerTurn) },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::Target(0),
+                count: Value::TriggerEventAmount,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

@@ -433,3 +433,29 @@ fn sphinx_ambassador_steals_an_unnamed_creature() {
     }
     assert_eq!(steals, 1);
 }
+
+/// Dragon's Smile crewed and connecting: the player hit exiles four cards and
+/// we may play them; the first spell from exile on our turn costs {0}.
+#[test]
+fn dragons_smile_exiles_what_it_hits_for_and_casts_one_free() {
+    let mut g = pod(2);
+    let smile = ready(&mut g, 0, catalog::dragons_smile());
+    let crew = ready(&mut g, 0, catalog::hill_giant());
+    g.perform_action(GameAction::Crew { vehicle: smile, crew_creatures: vec![crew] }).expect("crew 3");
+    drain_stack(&mut g);
+    g.players[1].library.clear();
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    hit_player(&mut g, smile, 1);
+    let bear = if g.exile.iter().any(|c| c.id == bear) { bear } else { g.exile.iter().find(|c| c.owner == 1).unwrap().id };
+    let exiled = g.exile.iter().filter(|c| c.owner == 1).count();
+    assert_eq!(exiled, 4, "four damage, four cards");
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{0} for the first spell from exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.controller == 0));
+}
