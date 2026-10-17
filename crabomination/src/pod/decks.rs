@@ -101931,3 +101931,31 @@ pub const RAPH_LEO_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const NIHILOOR_COMMANDERS: &[CardFactory] = &[nihiloor];
+
+/// **Nihiloor**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Islands + 4 Plains + 6 Swamps = 99.
+/// Nihiloor (EDHREC, fetched 2026-10-17).
+pub const NIHILOOR_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, commanders_sphere, conjurers_closet, dimir_signet,
+    fellwar_stone, orzhov_signet, sol_ring, talisman_of_dominance, talisman_of_progress,
+    arcane_sanctum, command_tower, dimir_aqueduct, drowned_catacomb, evolving_wilds,
+    exotic_orchard, glacial_fortress, godless_shrine, hallowed_fountain, isolated_chapel,
+    morphic_pool, port_town, prairie_stream, raffines_tower, reliquary_tower, shipwreck_marsh,
+    sunken_hollow, watery_grave, aboleth_spawn, agent_of_treachery, arvinox_the_mind_flail,
+    athreos_shroud_veiled, baleful_strix, beguiler_of_wills, brainstealer_dragon,
+    captain_nghathrod, daxos_of_meletis, dragonlord_silumgar, elder_brain,
+    gisa_glorious_resurrector, gonti_lord_of_luxury, grazilaxx_illithid_scholar, hostage_taker,
+    intellect_devourer, merieke_ri_berit, mind_flayer, nightveil_specter, sepulchral_primordial,
+    solemn_simulacrum, soulherder, sower_of_temptation, thief_of_sanity, thieving_amalgam,
+    xanathar_guild_kingpin, control_magic, corrupted_conscience, cunning_rhetoric,
+    debtors_knell, endless_evil, mind_control, propaganda, teleportation_circle, cloudshift,
+    counterspell, despark, dovins_veto, ephemerate, fracture, ghostly_flicker, path_to_exile,
+    siphon_insight, swords_to_plowshares, void_rend, tasha_the_witch_queen, blatant_thievery,
+    blue_suns_twilight, bribery, entrancing_melody, extract_brain, inevitable_betrayal,
+    mass_manipulation, reanimate,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

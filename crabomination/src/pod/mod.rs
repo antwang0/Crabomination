@@ -22272,6 +22272,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAPH_LEO_COMMANDERS,
             main: decks::RAPH_LEO_MAIN,
         },
+        // Seat 3637: Nihiloor's EDHREC average deck. `--pod-decks 3637`.
+        PodDeck {
+            name: "Nihiloor (WUB)",
+            commanders: decks::NIHILOOR_COMMANDERS,
+            main: decks::NIHILOOR_MAIN,
+        },
     ]
 }
 
@@ -27792,6 +27798,7 @@ mod tests {
             ("Darigaaz Reincarnated", &[0x1848]),
             ("Magik, Illyana Rasputin", &[0x1849]),
             ("Raph & Leo, Sibling Rivals", &[0x184A]),
+            ("Nihiloor", &[0x184B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

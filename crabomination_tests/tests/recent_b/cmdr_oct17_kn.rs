@@ -637,3 +637,26 @@ fn merieke_steals_until_she_untaps() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(wurm).is_none(), "untapped: the Wurm is destroyed");
 }
+
+/// CR 707.2 — the 'Dane becomes a copy of what it sacrificed and keeps the
+/// ability, so it can shift again.
+#[test]
+fn the_ever_changing_dane_copies_its_sacrifice() {
+    let mut g = pod(2);
+    let dane = ready(&mut g, 0, catalog::the_ever_changing_dane());
+    ready(&mut g, 0, catalog::craw_wurm());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dane,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("shift");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(dane).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 4), "a Craw Wurm now");
+    assert!(!g.battlefield_find(dane).unwrap().definition.activated_abilities.is_empty(), "kept this ability");
+}

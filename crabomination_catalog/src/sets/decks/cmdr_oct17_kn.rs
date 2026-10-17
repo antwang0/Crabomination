@@ -969,6 +969,28 @@ pub fn merieke_ri_berit() -> CardDefinition {
     }
 }
 
+/// The Ever-Changing 'Dane — {W}{U}{B} legendary 3/3 Shapeshifter. {1},
+/// sacrifice another creature: it becomes a copy of the sacrificed creature
+/// (its last known state, CR 707.2), except it has this ability.
+pub fn the_ever_changing_dane() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Creature.and(R::OtherThanSource), 1)),
+            effect: Effect::BecomeCopyOf {
+                what: Selector::This,
+                source: Selector::SacrificedCard,
+                extra_creature_types: vec![],
+                keep_own_triggered: false,
+                keep_own_activated: true,
+                keep_name: false,
+            },
+            ..Default::default()
+        }],
+        ..legend(creature("The Ever-Changing 'Dane", cost(&[w(), u(), b()]), vec![CreatureType::Shapeshifter], 3, 3))
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target
