@@ -835524,5 +835524,575 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=909551&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/155926?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Ms. Marvel, Elastic Ally": {
+    "object": "card",
+    "id": "bf9ce355-f472-4f0f-8d8e-96df363e1b02",
+    "oracle_id": "26a1b36c-3c27-4eb4-b85f-63459653b773",
+    "multiverse_ids": [],
+    "resource_id": "4A4010AE353E8E0B24BCDC353A531370CA9FE0424917B8D357E34F96E252BDBF",
+    "mtgo_id": 151937,
+    "arena_id": 105754,
+    "tcgplayer_id": 696883,
+    "cardmarket_id": 892221,
+    "name": "Ms. Marvel, Elastic Ally",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/bf9ce355-f472-4f0f-8d8e-96df363e1b02",
+    "scryfall_uri": "https://scryfall.com/card/msc/744/ms-marvel-elastic-ally?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:11Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.jpg?1783903031",
+      "normal": "https://cards.scryfall.io/normal/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.jpg?1783903031",
+      "large": "https://cards.scryfall.io/large/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.jpg?1783903031",
+      "png": "https://cards.scryfall.io/png/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.png?1783903031",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.jpg?1783903031",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.jpg?1783903031",
+      "thumb": "https://cards.scryfall.io/thumb/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.webp?1783903031",
+      "grid": "https://cards.scryfall.io/grid/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.webp?1783903031",
+      "display": "https://cards.scryfall.io/display/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.webp?1783903031",
+      "art": "https://cards.scryfall.io/art/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.webp?1783903031",
+      "crop": "https://cards.scryfall.io/crop/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.webp?1783903031",
+      "jpeg": "https://cards.scryfall.io/normal/front/b/f/bf9ce355-f472-4f0f-8d8e-96df363e1b02.jpg?1783903031"
+    },
+    "mana_cost": "{2}{G/W}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Mutant Inhuman Hero",
+    "oracle_text": "Reach\nWhen Ms. Marvel enters, target creature gets +2/+0 until end of turn.\nWhenever a creature you control with power greater than its base power deals combat damage to a player, draw a card. This ability triggers only once each turn.",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "keywords": [
+      "Reach"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/bf9ce355-f472-4f0f-8d8e-96df363e1b02/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A26a1b36c-3c27-4eb4-b85f-63459653b773&unique=prints",
+    "collector_number": "744",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Ben Harvey",
+    "artist_ids": [
+      "3b6a4f81-03e8-44a1-8e54-3c4038044954"
+    ],
+    "illustration_id": "1d5e278a-da17-48f7-8e92-f7035df1ca1c",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 27308,
+    "prices": {
+      "usd": "0.22",
+      "usd_foil": "0.41",
+      "usd_etched": null,
+      "eur": "0.19",
+      "eur_foil": "0.23",
+      "tix": "0.26"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DMs.%2BMarvel%252C%2BElastic%2BAlly",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DMs.%2BMarvel%252C%2BElastic%2BAlly",
+      "edhrec": "https://edhrec.com/route/?cc=Ms.+Marvel%2C+Elastic+Ally"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F696883%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892221&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151937?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Velvetwing Butterflies": {
+    "object": "card",
+    "id": "5cc0f994-5048-4898-926e-b56cbc97e0ca",
+    "oracle_id": "70a702fe-1dd6-4d7b-a85a-45744ecad741",
+    "multiverse_ids": [],
+    "resource_id": "BA9EBE5292CF1B6A7B121588314FFBB8A6E4D84B5E90F112C38471CCEC431B8B",
+    "mtgo_id": 153976,
+    "arena_id": 103399,
+    "tcgplayer_id": 709465,
+    "cardmarket_id": 900602,
+    "name": "Velvetwing Butterflies // Gaze in Wonder",
+    "lang": "en",
+    "released_at": "2026-08-14",
+    "uri": "https://api.scryfall.com/cards/5cc0f994-5048-4898-926e-b56cbc97e0ca",
+    "scryfall_uri": "https://scryfall.com/card/hob/30/velvetwing-butterflies-gaze-in-wonder?utm_source=api",
+    "layout": "adventure",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-31T11:23:51Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.jpg?1785497031",
+      "normal": "https://cards.scryfall.io/normal/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.jpg?1785497031",
+      "large": "https://cards.scryfall.io/large/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.jpg?1785497031",
+      "png": "https://cards.scryfall.io/png/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.png?1785497031",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.jpg?1785497031",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.jpg?1785497031",
+      "thumb": "https://cards.scryfall.io/thumb/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.webp?1785497031",
+      "grid": "https://cards.scryfall.io/grid/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.webp?1785497031",
+      "display": "https://cards.scryfall.io/display/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.webp?1785497031",
+      "art": "https://cards.scryfall.io/art/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.webp?1785497031",
+      "crop": "https://cards.scryfall.io/crop/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.webp?1785497031",
+      "jpeg": "https://cards.scryfall.io/normal/front/5/c/5cc0f994-5048-4898-926e-b56cbc97e0ca.jpg?1785497031"
+    },
+    "mana_cost": "{2}{W} // {1}{W}",
+    "cmc": 3.0,
+    "type_line": "Creature — Insect // Instant — Adventure",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [
+      "Flying"
+    ],
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Velvetwing Butterflies",
+        "mana_cost": "{2}{W}",
+        "type_line": "Creature — Insect",
+        "oracle_text": "Flying",
+        "power": "2",
+        "toughness": "2",
+        "flavor_text": "Bilbo's eyes were nearly blinded by the light. He could only hold on and blink at the sight of them.",
+        "artist": "Xabi Gaztelua",
+        "artist_id": "35b87e24-bfe0-43f4-83c3-2fa9574d6026",
+        "illustration_id": "6c9d9744-73c7-4167-b58d-ff68706b00b2"
+      },
+      {
+        "object": "card_face",
+        "name": "Gaze in Wonder",
+        "mana_cost": "{1}{W}",
+        "type_line": "Instant — Adventure",
+        "oracle_text": "Tap one or two target creatures. (Then exile this card. You may cast the creature later from exile.)",
+        "artist": "Xabi Gaztelua",
+        "artist_id": "35b87e24-bfe0-43f4-83c3-2fa9574d6026"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "59218c23-cb7a-4fde-9cff-3f2f71af1308",
+    "set": "hob",
+    "set_name": "The Hobbit",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/59218c23-cb7a-4fde-9cff-3f2f71af1308",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ahob&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/hob?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/5cc0f994-5048-4898-926e-b56cbc97e0ca/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A70a702fe-1dd6-4d7b-a85a-45744ecad741&unique=prints",
+    "collector_number": "30",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "Bilbo's eyes were nearly blinded by the light. He could only hold on and blink at the sight of them.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Xabi Gaztelua",
+    "artist_ids": [
+      "35b87e24-bfe0-43f4-83c3-2fa9574d6026"
+    ],
+    "illustration_id": "6c9d9744-73c7-4167-b58d-ff68706b00b2",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 24475,
+    "prices": {
+      "usd": "0.11",
+      "usd_foil": "0.23",
+      "usd_etched": null,
+      "eur": "0.05",
+      "eur_foil": "0.17",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DVelvetwing%2BButterflies%2B%252F%252F%2BGaze%2Bin%2BWonder",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DVelvetwing%2BButterflies%2B%252F%252F%2BGaze%2Bin%2BWonder",
+      "edhrec": "https://edhrec.com/route/?cc=Velvetwing+Butterflies"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709465%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=900602&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/153976?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Magnificent End": {
+    "object": "card",
+    "id": "430c8916-1167-400b-9cad-d301f59d5e5d",
+    "oracle_id": "82bdf9cb-61fe-4eaf-8762-c32002403d96",
+    "multiverse_ids": [],
+    "resource_id": "D239512ED62900BF58014C4D7AF967330022C11B529D2E99B8180E114B71B5CE",
+    "mtgo_id": 153954,
+    "arena_id": 103388,
+    "tcgplayer_id": 709461,
+    "cardmarket_id": 900598,
+    "name": "Magnificent End",
+    "lang": "en",
+    "released_at": "2026-08-14",
+    "uri": "https://api.scryfall.com/cards/430c8916-1167-400b-9cad-d301f59d5e5d",
+    "scryfall_uri": "https://scryfall.com/card/hob/20/magnificent-end?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-31T11:23:28Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.jpg?1785497008",
+      "normal": "https://cards.scryfall.io/normal/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.jpg?1785497008",
+      "large": "https://cards.scryfall.io/large/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.jpg?1785497008",
+      "png": "https://cards.scryfall.io/png/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.png?1785497008",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.jpg?1785497008",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.jpg?1785497008",
+      "thumb": "https://cards.scryfall.io/thumb/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.webp?1785497008",
+      "grid": "https://cards.scryfall.io/grid/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.webp?1785497008",
+      "display": "https://cards.scryfall.io/display/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.webp?1785497008",
+      "art": "https://cards.scryfall.io/art/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.webp?1785497008",
+      "crop": "https://cards.scryfall.io/crop/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.webp?1785497008",
+      "jpeg": "https://cards.scryfall.io/normal/front/4/3/430c8916-1167-400b-9cad-d301f59d5e5d.jpg?1785497008"
+    },
+    "mana_cost": "{4}{W}",
+    "cmc": 5.0,
+    "type_line": "Instant",
+    "oracle_text": "This spell costs {3} less to cast if it targets a tapped creature.\nMagnificent End deals 5 damage to target creature.",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "59218c23-cb7a-4fde-9cff-3f2f71af1308",
+    "set": "hob",
+    "set_name": "The Hobbit",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/59218c23-cb7a-4fde-9cff-3f2f71af1308",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ahob&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/hob?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/430c8916-1167-400b-9cad-d301f59d5e5d/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A82bdf9cb-61fe-4eaf-8762-c32002403d96&unique=prints",
+    "collector_number": "20",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "The flames were near him. His companions were leaving him. He bent his bow for the last time.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Yuhong Ding",
+    "artist_ids": [
+      "27a68c2e-7f7e-4256-acc9-6b4fcad1e772"
+    ],
+    "illustration_id": "922a61b1-7e86-46a1-a1cb-a8c105bfc2d8",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 20469,
+    "prices": {
+      "usd": "0.09",
+      "usd_foil": "0.19",
+      "usd_etched": null,
+      "eur": "0.03",
+      "eur_foil": "0.15",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DMagnificent%2BEnd",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DMagnificent%2BEnd",
+      "edhrec": "https://edhrec.com/route/?cc=Magnificent+End"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709461%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=900598&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/153954?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "T'Pol, Vulcan Representative": {
+    "object": "card",
+    "id": "686a0be0-9374-4454-8bc6-a1bcec95df40",
+    "oracle_id": "e8a548e8-057e-4023-ac20-bac973dbce09",
+    "multiverse_ids": [],
+    "name": "T'Pol, Vulcan Representative",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/686a0be0-9374-4454-8bc6-a1bcec95df40",
+    "scryfall_uri": "https://scryfall.com/card/trc/151/tpol-vulcan-representative?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-06T01:51:22Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.jpg?1785981082",
+      "normal": "https://cards.scryfall.io/normal/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.jpg?1785981082",
+      "large": "https://cards.scryfall.io/large/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.jpg?1785981082",
+      "png": "https://cards.scryfall.io/png/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.png?1785981082",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.jpg?1785981082",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.jpg?1785981082",
+      "thumb": "https://cards.scryfall.io/thumb/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.webp?1785981082",
+      "grid": "https://cards.scryfall.io/grid/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.webp?1785981082",
+      "display": "https://cards.scryfall.io/display/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.webp?1785981082",
+      "art": "https://cards.scryfall.io/art/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.webp?1785981082",
+      "crop": "https://cards.scryfall.io/crop/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.webp?1785981082",
+      "jpeg": "https://cards.scryfall.io/normal/front/6/8/686a0be0-9374-4454-8bc6-a1bcec95df40.jpg?1785981082"
+    },
+    "mana_cost": "{4}{U}",
+    "cmc": 5.0,
+    "type_line": "Legendary Creature — Vulcan Scientist",
+    "oracle_text": "When T'Pol enters, tap target creature an opponent controls and put two stun counters on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)",
+    "power": "4",
+    "toughness": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "a38c10be-90b1-4bb9-bd74-46784a751ac3",
+    "set": "trc",
+    "set_name": "Star Trek Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/a38c10be-90b1-4bb9-bd74-46784a751ac3",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/686a0be0-9374-4454-8bc6-a1bcec95df40/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ae8a548e8-057e-4023-ac20-bac973dbce09&unique=prints",
+    "collector_number": "151",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"Humans needed the help of the Vulcans when they discovered warp drive. That need hasn't changed.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Kieran Yanner",
+    "artist_ids": [
+      "aa7e89ed-d294-4633-9057-ce04dacfcfa4"
+    ],
+    "illustration_id": "d50f5884-b9ad-40ab-818d-1d2a775779d1",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 32280,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DT%2527Pol%252C%2BVulcan%2BRepresentative",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DT%2527Pol%252C%2BVulcan%2BRepresentative",
+      "edhrec": "https://edhrec.com/route/?cc=T%27Pol%2C+Vulcan+Representative"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fmagic%2Fproduct%3FproductLineName%3Dmagic%26q%3DT%2527Pol%252C%2BVulcan%2BRepresentative%26view%3Dgrid",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=T%27Pol%2C+Vulcan+Representative&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=T%27Pol%2C+Vulcan+Representative&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

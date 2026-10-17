@@ -171,6 +171,15 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-17 (Commander run, `01Htv6cF`) — claims first
+
+- **CLAIMED (batch 1) — don't duplicate:** Granitic Titan, Quakefoot Cyclops (Yidaro); General Traag, Earth Tremor;
+  Grafted Identity, Discontinuity (Zara); Call to Heel, Candlekeep Inspiration (Yuriko Hope); Chandra Bold
+  Pyromancer, Chandra Dressed to Kill (Ertha Jo); Shifting Loyalties (Meneldor). Cards in `decks::cmdr_oct17_a`,
+  tests `recent_b/cmdr_oct17_a.rs`.
+- **FIXED:** Role Reversal / Legerdemain / Gauntlets of Chaos never enforced "shares a (card|permanent) type" —
+  new cross-slot atom `R::SharesCardTypeWithTargetSlot` (CR 601.2c).
+
 ## FIXED/OPEN 2026-10-16 (Commander run, `0128tsCy`) — concurrent with `014Q2Gfw`; claims first
 
 - **CLAIMED (batch 1) — don't duplicate:** Blur of Heroism (Winter Soldier Reborn Avenger), Death to Our Enemies
