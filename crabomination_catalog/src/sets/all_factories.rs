@@ -16719,6 +16719,9 @@ static DECKS: &[Factory] = &[
     super::decks::sword_of_kaldra,
     super::decks::glorious_end,
     super::decks::ajani_wise_counselor,
+    super::decks::bohn_beguiling_balladeer,
+    super::decks::captains_hook,
+    super::decks::candlekeep_inspiration,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

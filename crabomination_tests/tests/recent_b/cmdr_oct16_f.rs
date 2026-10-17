@@ -1464,3 +1464,63 @@ fn ajani_wise_counselor_gains_per_creature() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 2);
 }
+
+/// CR 702.143a / 701.15a — Bohn grants foretell to hand cards, and the
+/// second spell of a turn goads an opponent's creature.
+#[test]
+fn bohn_foretells_and_goads_on_the_second_spell() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::bohn_beguiling_balladeer());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: bear }).expect("a hand card gains foretell");
+    assert!(g.exile.iter().any(|c| c.id == bear && c.face_down));
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 0;
+        cast(&mut g, bolt, Some(Target::Player(2))).expect("bolt");
+    }
+    assert!(g.goaded_by_player(g.battlefield_find(foe).unwrap(), 0), "goaded on the second spell");
+}
+
+/// CR 301.5c — Captain's Hook: +2/+0, menace, a Pirate; moving it destroys
+/// the creature it left.
+#[test]
+fn captains_hook_destroys_what_it_leaves() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    let hook = g.add_card_to_battlefield(0, catalog::captains_hook());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: hook, target: a }).expect("equip a");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&Keyword::Menace) && cp.subtypes().creature_types.contains(&CreatureType::Pirate));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: hook, target: b }).expect("equip b");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the old host is destroyed");
+    assert!(g.battlefield_find(b).is_some());
+}
+
+/// CR 613.4b — Candlekeep Inspiration counts instants, sorceries and
+/// Adventurers you own in exile and the graveyard.
+#[test]
+fn candlekeep_inspiration_sets_base_pt_from_spells_in_exile_and_graveyard() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::opt());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_exile(0, catalog::lightning_bolt());
+    g.add_card_to_exile(1, catalog::lightning_bolt());
+    let ci = g.add_card_to_hand(0, catalog::candlekeep_inspiration());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, ci, None).expect("Candlekeep");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "two in the graveyard and one owned in exile; the land and the opponent's card don't count");
+}

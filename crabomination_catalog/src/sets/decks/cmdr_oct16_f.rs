@@ -2697,3 +2697,71 @@ pub fn ajani_wise_counselor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 14 ────────────────────────────────────────────────────────────────
+
+/// Bohn, Beguiling Balladeer — {1}{U}{R} legendary 3/3 Human Bard. Each
+/// nonland card in your hand without foretell has foretell at its mana cost
+/// less {2}. Your second spell each turn goads target creature an opponent
+/// controls.
+pub fn bohn_beguiling_balladeer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each nonland card in your hand without foretell has foretell. Its foretell cost is equal to its mana cost reduced by {2}.",
+            effect: StaticEffect::HandNonlandCardsHaveForetell { reduce: 2 },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::flurry(Effect::Goad {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+        })],
+        ..legend(creature(
+            "Bohn, Beguiling Balladeer",
+            cost(&[generic(1), crate::mana::u(), r()]),
+            vec![CreatureType::Human, CreatureType::Bard],
+            3,
+            3,
+        ))
+    }
+}
+
+/// Captain's Hook — {3} Equipment, equip {1}. +2/+0, menace, and a Pirate;
+/// whenever it becomes unattached from a permanent, destroy that permanent.
+pub fn captains_hook() -> CardDefinition {
+    CardDefinition {
+        name: "Captain's Hook",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Menace],
+            add_creature_types: vec![CreatureType::Pirate],
+            destroy_host_when_unattached: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Candlekeep Inspiration — {4}{U} sorcery. Until end of turn, creatures you
+/// control have base power and toughness X/X, X = cards you own in exile and
+/// in your graveyard that are instants, sorceries and/or have an Adventure.
+pub fn candlekeep_inspiration() -> CardDefinition {
+    let spells = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).or(R::HasAdventure);
+    let x = Value::Sum(vec![
+        Value::CardsInExileOwnedMatching { who: PlayerRef::You, filter: spells() },
+        Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: spells() },
+    ]);
+    CardDefinition {
+        name: "Candlekeep Inspiration",
+        cost: cost(&[generic(4), crate::mana::u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SetBasePT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: x.clone(),
+            toughness: x,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
