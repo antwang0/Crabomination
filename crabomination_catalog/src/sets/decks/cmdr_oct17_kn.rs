@@ -448,6 +448,88 @@ pub fn extraordinary_journey() -> CardDefinition {
     }
 }
 
+// ── Leonardo, Leader in Blue ────────────────────────────────────────────────
+
+/// Leonardo, Leader in Blue — {W} legendary 2/1 Mutant Ninja Turtle. Sneak
+/// {3}{W}{W}; if his sneak cost was paid, creatures you control get +2/+0 until
+/// end of turn. {1}{W}: first strike until end of turn.
+pub fn leonardo_leader_in_blue() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            marks_kicked: true,
+            ..crate::effect::shortcut::sneak(cost(&[generic(3), w(), w()]))
+        }),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: grant(Selector::This, Keyword::FirstStrike),
+            ..Default::default()
+        }],
+        ..legend(creature(
+            "Leonardo, Leader in Blue",
+            cost(&[w()]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle],
+            2,
+            1,
+        ))
+    }
+}
+
+/// Prehistoric Pet — {W} 1/2 Dinosaur Ninja; can't be blocked by creatures with
+/// greater power (skulk). {1}{W}, {T}: return another target creature you
+/// control to its owner's hand; only during your turn.
+pub fn prehistoric_pet() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Skulk],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..creature("Prehistoric Pet", cost(&[w()]), vec![CreatureType::Dinosaur, CreatureType::Ninja], 1, 2)
+    }
+}
+
+// ── Torgal / Jandor / Tolsimir ──────────────────────────────────────────────
+
+/// Bejeweled Warg — {1}{G} 3/2 Wolf, trample. Combat damage to a player: a
+/// +1/+1 counter on target Wolf you control, or a Treasure.
+pub fn bejeweled_warg() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::HasCreatureType(CreatureType::Wolf).and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
+                },
+            ]),
+        }],
+        ..creature("Bejeweled Warg", cost(&[generic(1), g()]), vec![CreatureType::Wolf], 3, 2)
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

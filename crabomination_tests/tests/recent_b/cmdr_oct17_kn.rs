@@ -315,3 +315,65 @@ fn extraordinary_journey_draws_when_an_exiled_creature_returns() {
     assert!(g.battlefield_find(bear).is_some());
     assert_eq!(g.players[0].hand.len(), hand + 1, "cast from exile: a card");
 }
+
+/// CR 702.190 — Leonardo's sneak cost marks the cast, so his entry pumps the
+/// team; cast normally, no pump.
+#[test]
+fn leonardo_pumps_only_when_sneaked() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let other = ready(&mut g, 0, catalog::grizzly_bears());
+    let leo = g.add_card_to_hand(0, catalog::leonardo_leader_in_blue());
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: leo,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("sneak");
+    drain_stack(&mut g);
+    let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+    assert_eq!(p(&g, other), 4, "+2/+0 from the sneak");
+    assert_eq!(p(&g, leo), 4);
+
+    let mut g = pod(2);
+    let other = ready(&mut g, 0, catalog::grizzly_bears());
+    let leo = g.add_card_to_hand(0, catalog::leonardo_leader_in_blue());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_with(&mut g, leo, None, None).expect("hard cast");
+    assert_eq!(p(&g, other), 2, "no sneak, no pump");
+}
+
+/// Prehistoric Pet bounces another creature of yours only on your turn.
+#[test]
+fn prehistoric_pet_bounces_only_on_your_turn() {
+    let mut g = pod(2);
+    let pet = ready(&mut g, 0, catalog::prehistoric_pet());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let act = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pet,
+            ability_index: 0,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    g.active_player_idx = 1;
+    assert!(act(&mut g).is_err(), "not on an opponent's turn");
+    g.active_player_idx = 0;
+    act(&mut g).expect("your turn");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}

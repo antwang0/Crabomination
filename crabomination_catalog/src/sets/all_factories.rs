@@ -17108,6 +17108,9 @@ static DECKS: &[Factory] = &[
     super::decks::mudbutton_cursetosser,
     super::decks::silvergill_mentor,
     super::decks::extraordinary_journey,
+    super::decks::leonardo_leader_in_blue,
+    super::decks::prehistoric_pet,
+    super::decks::bejeweled_warg,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
