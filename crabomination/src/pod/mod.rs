@@ -24204,6 +24204,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TWELFTH_DOCTOR_15_COMMANDERS,
             main: decks::THE_TWELFTH_DOCTOR_15_MAIN,
         },
+        // Seat 3959: Glóin, Dwarf Emissary's EDHREC average deck. `--pod-decks 3959`.
+        PodDeck {
+            name: "Glóin, Dwarf Emissary (R)",
+            commanders: decks::GLOIN_COMMANDERS,
+            main: decks::GLOIN_MAIN,
+        },
+        // Seat 3960: The Sixth Doctor and Dan Lewis's EDHREC average deck. `--pod-decks 3960`.
+        PodDeck {
+            name: "The Sixth Doctor and Dan Lewis (URG)",
+            commanders: decks::THE_SIXTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_7_MAIN,
+        },
+        // Seat 3961: Durnan of the Yawning Portal and Dungeon Delver's EDHREC average deck. `--pod-decks 3961`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Dungeon Delver (UG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_10_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_10_MAIN,
+        },
+        // Seat 3962: The Fifteenth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3962`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Ian Chesterton (WUR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_9_MAIN,
+        },
+        // Seat 3963: Lae'zel, Vlaakith's Champion and Flaming Fist's EDHREC average deck. `--pod-decks 3963`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Flaming Fist (W)",
+            commanders: decks::LAEZEL_3_COMMANDERS,
+            main: decks::LAEZEL_3_MAIN,
+        },
+        // Seat 3964: Ardenn, Intrepid Archaeologist and Breeches, Brazen Plunderer's EDHREC average deck. `--pod-decks 3964`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Breeches, Brazen Plunderer (WR)",
+            commanders: decks::ARDENN_17_COMMANDERS,
+            main: decks::ARDENN_17_MAIN,
+        },
+        // Seat 3965: Dargo, the Shipwrecker and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3965`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Slurrk, All-Ingesting (RG)",
+            commanders: decks::DARGO_15_COMMANDERS,
+            main: decks::DARGO_15_MAIN,
+        },
+        // Seat 3966: The Fifteenth Doctor and Romana II's EDHREC average deck. `--pod-decks 3966`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Romana II (WUR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_10_MAIN,
+        },
+        // Seat 3967: Skanos Dragonheart and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3967`.
+        PodDeck {
+            name: "Skanos Dragonheart and Acolyte of Bahamut (G)",
+            commanders: decks::SKANOS_DRAGONHEART_13_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_13_MAIN,
+        },
+        // Seat 3968: Skanos Dragonheart and Candlekeep Sage's EDHREC average deck. `--pod-decks 3968`.
+        PodDeck {
+            name: "Skanos Dragonheart and Candlekeep Sage (UG)",
+            commanders: decks::SKANOS_DRAGONHEART_14_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_14_MAIN,
+        },
     ]
 }
 
@@ -30046,6 +30106,16 @@ mod tests {
             ("Halsin, Emerald Archdruid and Scion of Halaster", &[0x198A]),
             ("Siani, Eye of the Storm and Thrasios, Triton Hero", &[0x198B]),
             ("The Twelfth Doctor and Amy Pond", &[0x198C]),
+            ("Glóin, Dwarf Emissary", &[0x198D]),
+            ("The Sixth Doctor and Dan Lewis", &[0x198E]),
+            ("Durnan of the Yawning Portal and Dungeon Delver", &[0x198F]),
+            ("The Fifteenth Doctor and Ian Chesterton", &[0x1990]),
+            ("Lae'zel, Vlaakith's Champion and Flaming Fist", &[0x1991]),
+            ("Ardenn, Intrepid Archaeologist and Breeches, Brazen Plunderer", &[0x1992]),
+            ("Dargo, the Shipwrecker and Slurrk, All-Ingesting", &[0x1993]),
+            ("The Fifteenth Doctor and Romana II", &[0x1994]),
+            ("Skanos Dragonheart and Acolyte of Bahamut", &[0x1995]),
+            ("Skanos Dragonheart and Candlekeep Sage", &[0x1996]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
