@@ -21564,6 +21564,108 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::J_JONAH_JAMESON_COMMANDERS,
             main: decks::J_JONAH_JAMESON_MAIN,
         },
+        // Seat 3519: Frodo, Sauron's Bane's EDHREC average deck. `--pod-decks 3519`.
+        PodDeck {
+            name: "Frodo, Sauron's Bane (WB)",
+            commanders: decks::FRODO_3_COMMANDERS,
+            main: decks::FRODO_3_MAIN,
+        },
+        // Seat 3520: Krark, the Thumbless and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 3520`.
+        PodDeck {
+            name: "Krark, the Thumbless and Kraum, Ludevic's Opus (UR)",
+            commanders: decks::KRARK_4_COMMANDERS,
+            main: decks::KRARK_4_MAIN,
+        },
+        // Seat 3521: Falthis, Shadowcat Familiar and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 3521`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Prava of the Steel Legion (WB)",
+            commanders: decks::FALTHIS_6_COMMANDERS,
+            main: decks::FALTHIS_6_MAIN,
+        },
+        // Seat 3522: Alena, Kessig Trapper and Ardenn, Intrepid Archaeologist's EDHREC average deck. `--pod-decks 3522`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Ardenn, Intrepid Archaeologist (WR)",
+            commanders: decks::ALENA_6_COMMANDERS,
+            main: decks::ALENA_6_MAIN,
+        },
+        // Seat 3523: Bruse Tarl, Boorish Herder and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 3523`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Ludevic, Necro-Alchemist (WUR)",
+            commanders: decks::BRUSE_TARL_12_COMMANDERS,
+            main: decks::BRUSE_TARL_12_MAIN,
+        },
+        // Seat 3524: Armix, Filigree Thrasher and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 3524`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Tana, the Bloodsower (BRG)",
+            commanders: decks::ARMIX_9_COMMANDERS,
+            main: decks::ARMIX_9_MAIN,
+        },
+        // Seat 3525: Esior, Wardwing Familiar and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 3525`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Ghost of Ramirez DePietro (U)",
+            commanders: decks::ESIOR_8_COMMANDERS,
+            main: decks::ESIOR_8_MAIN,
+        },
+        // Seat 3526: Rasaad yn Bashir and Dragon Cultist's EDHREC average deck. `--pod-decks 3526`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Dragon Cultist (WR)",
+            commanders: decks::RASAAD_YN_BASHIR_12_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_12_MAIN,
+        },
+        // Seat 3527: Ich-Tekik, Salvage Splicer and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 3527`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Kamahl, Heart of Krosa (G)",
+            commanders: decks::ICH_TEKIK_21_COMMANDERS,
+            main: decks::ICH_TEKIK_21_MAIN,
+        },
+        // Seat 3528: Rasaad yn Bashir and Shameless Charlatan's EDHREC average deck. `--pod-decks 3528`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Shameless Charlatan (WU)",
+            commanders: decks::RASAAD_YN_BASHIR_13_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_13_MAIN,
+        },
+        // Seat 3529: Breeches, Brazen Plunderer and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 3529`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Vial Smasher the Fierce (BR)",
+            commanders: decks::BREECHES_10_COMMANDERS,
+            main: decks::BREECHES_10_MAIN,
+        },
+        // Seat 3530: Armix, Filigree Thrasher and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3530`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Slurrk, All-Ingesting (BG)",
+            commanders: decks::ARMIX_10_COMMANDERS,
+            main: decks::ARMIX_10_MAIN,
+        },
+        // Seat 3531: Gilanra, Caller of Wirewood and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 3531`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Glacian, Powerstone Engineer (UG)",
+            commanders: decks::GILANRA_10_COMMANDERS,
+            main: decks::GILANRA_10_MAIN,
+        },
+        // Seat 3532: Ich-Tekik, Salvage Splicer and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3532`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Radiant, Serra Archangel (WG)",
+            commanders: decks::ICH_TEKIK_22_COMMANDERS,
+            main: decks::ICH_TEKIK_22_MAIN,
+        },
+        // Seat 3533: Dargo, the Shipwrecker and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 3533`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Radiant, Serra Archangel (WR)",
+            commanders: decks::DARGO_10_COMMANDERS,
+            main: decks::DARGO_10_MAIN,
+        },
+        // Seat 3534: Ardenn, Intrepid Archaeologist and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3534`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Slurrk, All-Ingesting (WG)",
+            commanders: decks::ARDENN_7_COMMANDERS,
+            main: decks::ARDENN_7_MAIN,
+        },
+        // Seat 3535: Dargo, the Shipwrecker and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 3535`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Siani, Eye of the Storm (UR)",
+            commanders: decks::DARGO_11_COMMANDERS,
+            main: decks::DARGO_11_MAIN,
+        },
     ]
 }
 
@@ -26966,6 +27068,23 @@ mod tests {
             ("Zurgo Bellstriker", &[0x17D2]),
             ("Bilbo Baggins, Burglar", &[0x17D3]),
             ("J. Jonah Jameson", &[0x17D4]),
+            ("Frodo, Sauron's Bane", &[0x17D5]),
+            ("Krark, the Thumbless and Kraum, Ludevic's Opus", &[0x17D6]),
+            ("Falthis, Shadowcat Familiar and Prava of the Steel Legion", &[0x17D7]),
+            ("Alena, Kessig Trapper and Ardenn, Intrepid Archaeologist", &[0x17D8]),
+            ("Bruse Tarl, Boorish Herder and Ludevic, Necro-Alchemist", &[0x17D9]),
+            ("Armix, Filigree Thrasher and Tana, the Bloodsower", &[0x17DA]),
+            ("Esior, Wardwing Familiar and Ghost of Ramirez DePietro", &[0x17DB]),
+            ("Rasaad yn Bashir and Dragon Cultist", &[0x17DC]),
+            ("Ich-Tekik, Salvage Splicer and Kamahl, Heart of Krosa", &[0x17DD]),
+            ("Rasaad yn Bashir and Shameless Charlatan", &[0x17DE]),
+            ("Breeches, Brazen Plunderer and Vial Smasher the Fierce", &[0x17DF]),
+            ("Armix, Filigree Thrasher and Slurrk, All-Ingesting", &[0x17E0]),
+            ("Gilanra, Caller of Wirewood and Glacian, Powerstone Engineer", &[0x17E1]),
+            ("Ich-Tekik, Salvage Splicer and Radiant, Serra Archangel", &[0x17E2]),
+            ("Dargo, the Shipwrecker and Radiant, Serra Archangel", &[0x17E3]),
+            ("Ardenn, Intrepid Archaeologist and Slurrk, All-Ingesting", &[0x17E4]),
+            ("Dargo, the Shipwrecker and Siani, Eye of the Storm", &[0x17E5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
