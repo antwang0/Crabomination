@@ -22158,6 +22158,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GURU_PATHIK_COMMANDERS,
             main: decks::GURU_PATHIK_MAIN,
         },
+        // Seat 3618: Hulk, Strongest There Is's EDHREC average deck. `--pod-decks 3618`.
+        PodDeck {
+            name: "Hulk, Strongest There Is (G)",
+            commanders: decks::HULK_3_COMMANDERS,
+            main: decks::HULK_3_MAIN,
+        },
+        // Seat 3619: Hulk, Brutal Brawler's EDHREC average deck. `--pod-decks 3619`.
+        PodDeck {
+            name: "Hulk, Brutal Brawler (G)",
+            commanders: decks::HULK_4_COMMANDERS,
+            main: decks::HULK_4_MAIN,
+        },
     ]
 }
 
@@ -27659,6 +27671,8 @@ mod tests {
             ("Bilbo, Luckwearer", &[0x1835]),
             ("Bard the Bowman", &[0x1836]),
             ("Guru Pathik", &[0x1837]),
+            ("Hulk, Strongest There Is", &[0x1838]),
+            ("Hulk, Brutal Brawler", &[0x1839]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -101399,3 +101399,58 @@ pub const GURU_PATHIK_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, island, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const HULK_3_COMMANDERS: &[CardFactory] = &[hulk_strongest_there_is];
+
+/// **Hulk, Strongest There Is**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Hulk, Strongest There Is (EDHREC, fetched 2026-10-17).
+pub const HULK_3_MAIN: &[CardFactory] = &[
+    arcane_signet, bone_sabres, emerald_medallion, maskwood_nexus, mithril_coat,
+    ozolith_the_shattered_spire, power_fist, sol_ring, swiftfoot_boots, the_earth_crystal,
+    the_great_henge, the_ozolith, boseiju_who_endures, nykthos_shrine_to_nyx,
+    oran_rief_the_vastwood, reliquary_tower, rogues_passage, tyrite_sanctum,
+    abomination_irradiated_brute, bristly_bill_spine_sower, canopy_gargantuan, defiler_of_vigor,
+    doc_samson_super_psychiatrist, elvish_mystic, evolution_sage, fanatic_of_rhonas,
+    forgotten_ancient, gamma_grotesque, hulk_brutal_brawler, kalonian_hydra,
+    kami_of_whispered_hopes, llanowar_elves, ouroboroid, quilled_greatwurm, roaming_throne,
+    shang_chi_martial_mentor, she_hulk_jade_defender, toski_bearer_of_secrets, vigor,
+    vorinclex_monstrous_raider, branching_evolution, doubling_season, hardened_scales,
+    high_score, hydras_growth, innkeepers_talent, level_up, sphere_grid, terrasymbiosis,
+    unnatural_growth, world_war_hulk, beast_within, gaeas_gift, heroic_intervention,
+    inspiring_call, invigorating_surge, return_of_the_wildspeaker, snakeskin_veil,
+    strength_of_will, tamiyos_safekeeping, tyvars_stand, cultivate, epic_fight,
+    fangs_of_kalonia, germination_practicum, hulks_thunderclap, kodamas_reach, natures_lore,
+    rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const HULK_4_COMMANDERS: &[CardFactory] = &[hulk_brutal_brawler];
+
+/// **Hulk, Brutal Brawler**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Forests = 99.
+/// Hulk, Brutal Brawler (EDHREC, fetched 2026-10-17).
+pub const HULK_4_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lightning_greaves, ozolith_the_shattered_spire, sol_ring,
+    the_earth_crystal, the_great_henge, boseiju_who_endures, evendo_waking_haven, karns_bastion,
+    rogues_passage, beast_whisperer, birds_of_paradise, bristly_bill_spine_sower,
+    champion_of_lambholt, doc_samson_super_psychiatrist, elvish_mystic, evolution_witness,
+    fanatic_of_rhonas, forgotten_ancient, frenzied_baloth, fyndhorn_elves, ghalta_primal_hunger,
+    gnarlid_colony, gyre_sage, hulk_strongest_there_is, incubation_druid, kalonian_hydra,
+    kami_of_whispered_hopes, llanowar_elves, managorger_hydra, marwyn_the_nurturer,
+    michelangelo_weirdness_to_11, ohran_frostfang, oran_rief_ooze, ouroboroid, pathbreaker_ibex,
+    selvala_heart_of_the_wilds, toski_bearer_of_secrets, vigor, branching_evolution,
+    court_of_garenbrig, garruks_uprising, hardened_scales, high_score, innkeepers_talent,
+    level_up, sphere_grid, terrasymbiosis, tribute_to_the_world_tree, world_war_hulk,
+    archdruids_charm, beast_within, heroic_intervention, inspiring_call,
+    return_of_the_wildspeaker, snakeskin_veil, tamiyos_safekeeping, tyvars_stand, cultivate,
+    finale_of_devastation, green_suns_zenith, harmonize, hulks_thunderclap, natures_lore,
+    overwhelming_stampede, rishkars_expertise,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
