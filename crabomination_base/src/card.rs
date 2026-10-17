@@ -3408,6 +3408,10 @@ pub enum SelectionRequirement {
     /// control that share a creature type" — Secret Tunnel). Vacuously true
     /// while that slot is unchosen.
     SharesCreatureTypeWithTargetSlot(u8),
+    /// CR 601.2c — cross-slot filter: shares a card type with the object
+    /// already chosen for slot `.0` ("two target permanents that share a
+    /// permanent type" — Role Reversal). Vacuously true while unchosen.
+    SharesCardTypeWithTargetSlot(u8),
     /// CR 601.2c — cross-slot filter: a name no other chosen target has
     /// ("up to six target creature cards with different names" — Behold the
     /// Sinister Six!). Read against every slot chosen so far.
@@ -4770,6 +4774,7 @@ impl SelectionRequirement {
             | Self::SameToughnessAsTargetSlot(_)
             | Self::ManaValueAtMostTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
+            | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
@@ -4793,6 +4798,7 @@ impl SelectionRequirement {
             | Self::SameToughnessAsTargetSlot(_)
             | Self::ManaValueAtMostTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
+            | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
@@ -4815,6 +4821,7 @@ impl SelectionRequirement {
             Self::SameToughnessAsTargetSlot(n) => Self::SameToughnessAsTargetSlot(s(n)),
             Self::ManaValueAtMostTargetSlot(n) => Self::ManaValueAtMostTargetSlot(s(n)),
             Self::SharesCreatureTypeWithTargetSlot(n) => Self::SharesCreatureTypeWithTargetSlot(s(n)),
+            Self::SharesCardTypeWithTargetSlot(n) => Self::SharesCardTypeWithTargetSlot(s(n)),
             Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
             Self::And(a, b) => Self::And(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
             Self::Or(a, b) => Self::Or(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),

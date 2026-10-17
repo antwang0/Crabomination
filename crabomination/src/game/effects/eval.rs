@@ -1281,11 +1281,14 @@ impl GameState {
                 .map(|q| self.players[q].cards_drawn_this_turn as i32)
                 .max()
                 .unwrap_or(0),
-            Value::DistinctCreatureTypesAmongYourCreatures => {
+            Value::DistinctCreatureTypesAmongYourCreatures | Value::DistinctCreatureTypesAmongYourNonBorgCreatures => {
+                let skip_borg = matches!(v, Value::DistinctCreatureTypesAmongYourNonBorgCreatures);
                 let mut seen: Vec<crate::card::CreatureType> = Vec::new();
                 for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
                     let Some(cp) = self.computed_permanent(c.id) else { continue };
-                    if !cp.card_types().contains(&crate::card::CardType::Creature) {
+                    if !cp.card_types().contains(&crate::card::CardType::Creature)
+                        || (skip_borg && cp.subtypes().creature_types.contains(&crate::card::CreatureType::Borg))
+                    {
                         continue;
                     }
                     // CR 702.73a — every creature type: more than any cap.
@@ -4725,6 +4728,10 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|o| self.targets_share_creature_type(o, target)),
+            R::SharesCardTypeWithTargetSlot(slot) => slots
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|o| self.targets_share_card_type(o, target)),
             R::NameDiffersFromOtherTargets => self.name_differs_from_other_targets(target, slots),
             _ => true,
         }
@@ -4805,6 +4812,22 @@ impl GameState {
             (Some((ta, ca)), Some((tb, cb))) => {
                 (ca && !tb.is_empty()) || (cb && !ta.is_empty()) || (ca && cb) || ta.iter().any(|t| tb.contains(t))
             }
+            _ => false,
+        }
+    }
+
+    /// Whether two targeted objects share a card type (CR 205.2a), read off
+    /// the computed type line on the battlefield.
+    fn targets_share_card_type(&self, a: &Target, b: &Target) -> bool {
+        let types = |t: &Target| match t {
+            Target::Permanent(cid) => self
+                .computed_permanent(*cid)
+                .map(|cp| cp.card_types().to_vec())
+                .or_else(|| self.find_card_anywhere(*cid).map(|c| c.definition.card_types.clone())),
+            Target::Player(_) => None,
+        };
+        match (types(a), types(b)) {
+            (Some(ta), Some(tb)) => ta.iter().any(|t| tb.contains(t)),
             _ => false,
         }
     }
@@ -5583,6 +5606,11 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|other| self.targets_share_creature_type(other, target)),
+            R::SharesCardTypeWithTargetSlot(slot) => self
+                .target_slots_scratch
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|other| self.targets_share_card_type(other, target)),
             R::NameDiffersFromOtherTargets => self.name_differs_from_other_targets(target, &self.target_slots_scratch),
             R::OtherThanTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
@@ -7571,6 +7599,7 @@ impl GameState {
             | R::SameToughnessAsTargetSlot(_)
             | R::ManaValueAtMostTargetSlot(_)
             | R::SharesCreatureTypeWithTargetSlot(_)
+            | R::SharesCardTypeWithTargetSlot(_)
             | R::NameDiffersFromOtherTargets
             | R::SameGraveyardAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {

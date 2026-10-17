@@ -305,7 +305,8 @@ pub fn gauntlets_of_chaos() -> CardDefinition {
                     b: Selector::TargetFiltered {
                         slot: 1,
                         filter: R::ControlledByOpponent
-                            .and(R::Artifact.or(R::Creature).or(R::Land)),
+                            .and(R::Artifact.or(R::Creature).or(R::Land))
+                            .and(R::SharesCardTypeWithTargetSlot(0)),
                     },
                 },
                 Effect::Destroy { what: Selector::AttachedTo(Box::new(Selector::Target(0))) },

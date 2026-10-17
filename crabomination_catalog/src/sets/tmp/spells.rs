@@ -326,7 +326,10 @@ pub fn legerdemain() -> CardDefinition {
         cost(&[generic(2), u(), u()]),
         Effect::ExchangeControl {
             a: Selector::TargetFiltered { slot: 0, filter: R::Artifact.or(R::Creature) },
-            b: Selector::TargetFiltered { slot: 1, filter: R::Artifact.or(R::Creature).and(R::OtherThanTargetSlot(0))},
+            b: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Artifact.or(R::Creature).and(R::OtherThanTargetSlot(0)).and(R::SharesCardTypeWithTargetSlot(0)),
+            },
         },
     )
 }

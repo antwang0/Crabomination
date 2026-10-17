@@ -3759,9 +3759,8 @@ pub fn enter_the_god_eternals() -> CardDefinition {
     }
 }
 
-/// Role Reversal — {U}{U}{R} Sorcery. Exchange control of two target permanents.
-/// (The printed "that share a permanent type" restriction is not enforced at
-/// cast time.)
+/// Role Reversal — {U}{U}{R} Sorcery. Exchange control of two target
+/// permanents that share a permanent type.
 pub fn role_reversal() -> CardDefinition {
     CardDefinition {
         name: "Role Reversal",
@@ -3774,7 +3773,7 @@ pub fn role_reversal() -> CardDefinition {
             },
             b: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Permanent,
+                filter: R::Permanent.and(R::SharesCardTypeWithTargetSlot(0)),
             },
         },
         ..Default::default()

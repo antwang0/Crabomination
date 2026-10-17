@@ -1135,6 +1135,9 @@ pub enum Value {
     /// controls (Valiant Changeling's discount). A changeling has every type,
     /// so it saturates the count.
     DistinctCreatureTypesAmongYourCreatures,
+    /// The Federation count — creature types among the controller's non-Borg
+    /// creatures (Hoshi Sato, Exolinguist).
+    DistinctCreatureTypesAmongYourNonBorgCreatures,
     /// The greatest number of cards any one opponent of the controller has
     /// drawn this turn (Thought Sponge).
     GreatestCardsDrawnThisTurnByAnOpponent,
