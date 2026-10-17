@@ -647,7 +647,7 @@ impl GameState {
                     // dying object's last-known power, counters/pumps
                     // included, in preference to the graveyard's printed P/T.
                     // Covers both the trigger's source and its dead subject.
-                    if let Some(snap) = self.lki_snapshot(cid) {
+                    if let Some(snap) = self.lki_snapshot(cid).or_else(|| self.trigger_subject_lki(cid, ctx)) {
                         return Some(snap.power());
                     }
                     // CR 121 / Lorehold Excavation: read power from the
@@ -683,7 +683,7 @@ impl GameState {
                     // so "gain life equal to its toughness" (Proper Burial) can
                     // read the dead creature's last-known toughness (CR 603.10).
                     let cid = e.as_card_id()?;
-                    if let Some(snap) = self.lki_snapshot(cid) {
+                    if let Some(snap) = self.lki_snapshot(cid).or_else(|| self.trigger_subject_lki(cid, ctx)) {
                         return Some(snap.toughness());
                     }
                     // CR 613, as in `PowerOf` above.
@@ -4830,6 +4830,15 @@ impl GameState {
             (Some(ta), Some(tb)) => ta.iter().any(|t| tb.contains(t)),
             _ => false,
         }
+    }
+
+    /// CR 603.10 — the last-known information of a trigger's own subject that
+    /// has left the battlefield, outside resolution: a trigger FILTER ("when
+    /// this dies, if its power was 3 or greater") reads it as the
+    /// requirement walker already does, not the graveyard card's printed P/T.
+    fn trigger_subject_lki(&self, cid: CardId, ctx: &EffectContext) -> Option<&CardInstance> {
+        let subject = matches!(ctx.trigger_source, Some(EntityRef::Card(id) | EntityRef::Permanent(id)) if id == cid);
+        (subject && self.battlefield_find(cid).is_none()).then(|| self.leaves_bf_lki.get(&cid)).flatten()
     }
 
     /// A targeted object's mana value (CR 202.3); 0 for a player.

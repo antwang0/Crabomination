@@ -428,3 +428,30 @@ fn ral_caller_of_storms_ultimate() {
     assert_eq!(g.players[0].hand.len(), hand + 7);
     assert!(g.battlefield_find(theirs).is_none() && g.battlefield_find(mine).is_some());
 }
+
+/// CR 603.10 — a dies-trigger FILTER reads the creature's last-known power,
+/// both through a requirement (`PowerAtLeast`) and through a value
+/// (`PowerOf(TriggerSource)`); the graveyard card's printed 2 would fail both.
+#[test]
+fn dies_trigger_filters_read_last_known_power() {
+    use crabomination::card::{EventKind, EventScope, EventSpec, SelectionRequirement as R, TriggeredAbility};
+    use crabomination::effect::{Effect, Predicate, Selector, Value};
+    for filter in [
+        Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::TriggerSource)), Value::Const(3)),
+        Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::PowerAtLeast(3) },
+    ] {
+        let mut g = pod(2);
+        let mut d = catalog::grizzly_bears();
+        d.triggered_abilities = vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource).with_filter(filter),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+        }];
+        let b = ready(&mut g, 0, d);
+        g.battlefield_find_mut(b).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+        let life = g.players[0].life;
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Permanent(b))).expect("bolt");
+        assert_eq!(g.players[0].life, life + 5);
+    }
+}

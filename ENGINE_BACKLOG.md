@@ -185,8 +185,8 @@ the handoff.
   exact-100 and identity-checked; the CR 903.4b chooser pairs — Faceless One, Piper, Clara — skipped).
 - **FIXED:** Final Fortune lost at the CASTING turn's end step — `DelayedTriggerKind::YourNextTurnsEndStep`.
   `EquipBonus.destroy_host_when_unattached` (Captain's Hook). Deathknell Berserker: a `CreatureDied` trigger
-  FILTER reads the graveyard card's printed power, not LKI — read LKI power in the body (CR 603.10). ⚠ That filter
-  behaviour is a class worth an audit: any "dies, if its power was …" written as an `EventSpec` filter.
+  FILTER read the graveyard card's printed power, not LKI. FIXED as a class: `Value::PowerOf`/`ToughnessOf` read the
+  trigger subject's `leaves_bf_lki` outside resolution too, as the requirement walker (`PowerAtLeast`) already did.
 - **Researched, not built:** Warrior's Blades (equip discount per +1/+1 counter on the target), Djeru With Eyes Open
   (prevent-1-to-your-planeswalkers static), I Am Iron Man (becomes an ARTIFACT creature), Panther Pounce (target
   player investigates), Thought Lash (cumulative upkeep "exile top card" + an exile-top activation cost), Sahir
