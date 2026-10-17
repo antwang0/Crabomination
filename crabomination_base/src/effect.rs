@@ -915,6 +915,11 @@ pub enum Value {
     CreaturesDiedThisResolution,
     /// Number of cards `who` owns in the exile zone (Kaya, Orzhov Usurper's −5).
     CardsInExileOwnedBy(PlayerRef),
+    /// Cards `who` owns in exile matching `filter` (Candlekeep Inspiration's
+    /// "cards you own in exile ... that are instant cards, are sorcery cards,
+    /// and/or have an Adventure"). Sum with a graveyard count for "in exile
+    /// and in your graveyard".
+    CardsInExileOwnedMatching { who: PlayerRef, filter: SelectionRequirement },
     /// Distinct card types among cards in `who`'s graveyard (the delirium
     /// count as a number — Lucid Dreams' "draw X").
     CardTypesInGraveyard(PlayerRef),

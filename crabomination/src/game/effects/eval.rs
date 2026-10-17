@@ -2136,6 +2136,21 @@ impl GameState {
                 }
                 seen.len() as i32
             }
+            Value::CardsInExileOwnedMatching { who, filter } => {
+                let seats = self.resolve_players(who, ctx);
+                let ids: Vec<CardId> =
+                    self.exile.iter().filter(|c| !c.is_token && seats.contains(&c.owner)).map(|c| c.id).collect();
+                ids.into_iter()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .count() as i32
+            }
             Value::CardsInGraveyardMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let ids: Vec<CardId> =

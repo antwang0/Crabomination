@@ -12,7 +12,8 @@ use crate::game::types::PendingTriggerPush;
 
 impl GameState {
     /// Queue the Grafted trigger if `def` carries it: sacrifice `host`, which
-    /// its controller does only while they still control it (ruling). A host
+    /// its controller does only while they still control it (ruling), or —
+    /// Captain's Hook's `destroy_host_when_unattached` — destroy it. A host
     /// that has left the battlefield gets nothing — the ability "won't do
     /// anything in that case".
     pub(crate) fn note_unattached(
@@ -22,15 +23,20 @@ impl GameState {
         controller: usize,
         host: CardId,
     ) {
-        if !def.equipped_bonus.as_ref().is_some_and(|b| b.sacrifice_host_when_unattached)
+        let Some(bonus) = def.equipped_bonus.as_ref() else { return };
+        if !(bonus.sacrifice_host_when_unattached || bonus.destroy_host_when_unattached)
             || self.battlefield_find(host).is_none()
         {
             return;
         }
-        let effect = Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ControlledByYou },
-            then: Box::new(Effect::SacrificePermanent { what: Selector::TriggerSource }),
-            else_: Box::new(Effect::Noop),
+        let effect = if bonus.destroy_host_when_unattached {
+            Effect::Destroy { what: Selector::TriggerSource }
+        } else {
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ControlledByYou },
+                then: Box::new(Effect::SacrificePermanent { what: Selector::TriggerSource }),
+                else_: Box::new(Effect::Noop),
+            }
         };
         self.push_pending_trigger(
             PendingTriggerPush {

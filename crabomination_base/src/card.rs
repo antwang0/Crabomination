@@ -6722,6 +6722,11 @@ pub struct EquipBonus {
     /// queued by `GameState::note_unattached` at every unattach site.
     #[serde(default)]
     pub sacrifice_host_when_unattached: bool,
+    /// "Whenever this Equipment becomes unattached from a permanent, destroy
+    /// that permanent" (Captain's Hook) — the destroy twin of
+    /// `sacrifice_host_when_unattached`, with no controller check.
+    #[serde(default)]
+    pub destroy_host_when_unattached: bool,
     /// CR 702.16k — "This effect doesn't remove this Aura" (Pledge of
     /// Loyalty): the narrower sibling of `protection_keeps_auras`, exempting
     /// only the granting Aura itself from the 704.5m shed.
