@@ -3306,6 +3306,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
+        | ManaPayload::AnyColorAmongCardsInYourGraveyard
         | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
@@ -5053,6 +5054,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         // source table reads `AnyColorOfSource` off its source instead.)
         ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
+        | ManaPayload::AnyColorAmongCardsInYourGraveyard
         | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents

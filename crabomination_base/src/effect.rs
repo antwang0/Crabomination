@@ -3498,6 +3498,10 @@ pub enum ManaPayload {
     /// graveyard (The Grey Havens) — their printed colors; nothing when there
     /// are none.
     AnyColorAmongLegendaryCreatureCardsInYourGraveyard,
+    /// "Choose a color of a card in your graveyard. Add one mana of that
+    /// color" (Corrupted Grafstone) — any card's printed colors; nothing when
+    /// the graveyard holds only colorless cards.
+    AnyColorAmongCardsInYourGraveyard,
     /// "Add one mana of any of this creature's colors" — the source
     /// permanent's own computed colors (Katilda's granted Human ability);
     /// nothing off a colorless source.
@@ -12595,6 +12599,11 @@ pub enum Effect {
     /// counters on it equal to its mana value. If it doesn't have suspend, it
     /// gains suspend" (The Eleventh Doctor, The Wedding of River Song).
     MayExileFromHandSuspended { who: PlayerRef, filter: SelectionRequirement },
+    /// Alaundo the Seer — `who` exiles a card from their hand with time
+    /// counters equal to its mana value; it gains only suspend's last-counter
+    /// cast (no upkeep tick, CR 702.62a). Then a time counter comes off each
+    /// other card `who` owns in exile, through the suspend funnel.
+    ExileFromHandWithTimeCountersThenTick { who: PlayerRef },
     /// "Choose a suspended card you own and remove `amount` time counters from
     /// it" (Amy Pond) — through the suspend funnel, so the last one casts it
     /// (CR 702.62).

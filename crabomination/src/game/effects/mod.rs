@@ -14805,15 +14805,18 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
-                    ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard => {
+                    ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
+                    | ManaPayload::AnyColorAmongCardsInYourGraveyard => {
                         // The Grey Havens — printed colors of the legendary
-                        // creature cards in the controller's graveyard.
+                        // creature cards in the controller's graveyard;
+                        // Corrupted Grafstone — of any card there.
+                        let any = matches!(pool, ManaPayload::AnyColorAmongCardsInYourGraveyard);
                         let mut legal: Vec<Color> = Vec::new();
                         for c in self.players[p].graveyard.iter().filter(|c| {
-                            c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
-                                && self.computed_is_creature(c)
+                            any || (c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
+                                && self.computed_is_creature(c))
                         }) {
-                            for col in c.definition.cost.colors() {
+                            for col in c.definition.printed_colors() {
                                 if !legal.contains(&col) {
                                     legal.push(col);
                                 }
@@ -36733,6 +36736,9 @@ impl GameState {
             }
 
             Effect::GrantSuspendManaValueCounters { what } => self.grant_suspend_mana_value_counters(what, ctx, events),
+            Effect::ExileFromHandWithTimeCountersThenTick { who } => {
+                self.exile_from_hand_with_time_counters_then_tick(who, effect, ctx, events)
+            }
             Effect::MayExileFromHandSuspended { who, filter } => {
                 self.may_exile_from_hand_suspended(who, filter, effect, ctx, events)
             }

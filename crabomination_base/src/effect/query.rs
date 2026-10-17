@@ -1696,6 +1696,7 @@ impl Effect {
             | Effect::PermanentsEnterTappedThisTurn
             | Effect::CreaturesFromExileShuffleThisTurn
             | Effect::MayExileFromHandSuspended { .. }
+            | Effect::ExileFromHandWithTimeCountersThenTick { .. }
             | Effect::RemoveTimeCountersFromSuspended { .. }
             | Effect::ExileAllButConvokerKin
             | Effect::CastFromHandPayingSuspendCost => false,
@@ -1988,6 +1989,7 @@ impl Effect {
                     | ManaPayload::AnyColorAGateYouControlCouldProduce
                     | ManaPayload::AnyColorAmongLegendaries
                     | ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
+                    | ManaPayload::AnyColorAmongCardsInYourGraveyard
                     | ManaPayload::AnyColorOfSource
                     | ManaPayload::AnyColorInCommanderIdentity
                     | ManaPayload::DraftNotedColorOfSource => false,

@@ -38,6 +38,67 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::ExileFromHandWithTimeCountersThenTick` (Alaundo the Seer). The
+    /// exiled card gets no suspend, so `process_suspend` never ticks it; only
+    /// a later tick here (or another time-counter remover) brings it back. A
+    /// headless seat exiles its priciest card.
+    pub(super) fn exile_from_hand_with_time_counters_then_tick(
+        &mut self,
+        who: &PlayerRef,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        if !self.players[p].is_alive() {
+            return Ok(());
+        }
+        let mut candidates: Vec<(CardId, String, u32)> = self.players[p]
+            .hand
+            .iter()
+            .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+            .collect();
+        let mut exiled = None;
+        if !candidates.is_empty() {
+            candidates.sort_by_key(|(id, _, mv)| (std::cmp::Reverse(*mv), *id));
+            let auto = vec![candidates[0].0];
+            let picked = self
+                .choose_up_to_cards(
+                    p,
+                    format!("P{p}: exile a card from your hand with time counters equal to its mana value"),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
+                    1,
+                    PickValue::Cost,
+                    effect,
+                    auto.clone(),
+                )
+                .unwrap_or_default();
+            // Mandatory: an empty answer takes the default pick.
+            let cid = picked.iter().copied().find(|id| candidates.iter().any(|(c, _, _)| c == id)).unwrap_or(auto[0]);
+            let mv = candidates.iter().find(|(c, _, _)| *c == cid).map_or(0, |(_, _, mv)| *mv);
+            if let Some(mut card) = self.players[p].remove_from_hand(cid) {
+                if mv > 0 {
+                    card.add_counters(CounterType::Time, mv);
+                }
+                self.exile.push(card);
+                self.note_exiled_from_hand_or_by(p);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                exiled = Some(cid);
+            }
+        }
+        let others: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| c.owner == p && Some(c.id) != exiled && c.counter_count(CounterType::Time) > 0)
+            .map(|c| c.id)
+            .collect();
+        for id in others {
+            events.append(&mut self.remove_suspend_time_counter(id));
+        }
+        Ok(())
+    }
+
     /// `Effect::MayExileFromHandSuspended` — `who` may exile one matching card
     /// from their hand; it gets its mana value in time counters and suspend.
     /// A headless seat takes the highest mana value it holds (the longest
