@@ -211,3 +211,79 @@ fn old_fat_spider_shuts_off_an_opposing_creatures_damage() {
     g.dispatch_triggers_for_events(&ev);
     assert_eq!(g.players[0].life, life, "its damage is prevented");
 }
+
+fn gamma() -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, CreatureType, Subtypes};
+    CardDefinition {
+        name: "Gamma Test Brute",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gamma], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        ..Default::default()
+    }
+}
+
+/// CR 701.4a / 601.2c — Hulk's Thunderclap's third target exists only when a
+/// Gamma creature was beheld, and the behold needs one to show.
+#[test]
+fn hulks_thunderclap_beholds_for_its_third_target() {
+    let mut g = pod(2);
+    let brute = ready(&mut g, 0, gamma());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let s = g.add_card_to_hand(0, catalog::hulks_thunderclap());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: s,
+        target: Some(Target::Permanent(brute)),
+        additional_targets: vec![Target::Permanent(bear), Target::Permanent(ring)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("beheld the Gamma");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "5 damage");
+    assert!(g.battlefield_find(ring).is_none(), "the behold rider");
+
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::hulks_thunderclap());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let kicked = g.perform_action(GameAction::CastSpellKicked {
+        card_id: s,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    });
+    assert!(kicked.is_err(), "no Gamma to behold");
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("unbeheld");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// CR 701.4a — "behold a Merfolk or pay {2}": a Merfolk on the battlefield or
+/// in hand waives the {2}; without one the cast costs {3}{U}.
+#[test]
+fn silvergill_mentor_beholds_or_pays() {
+    let mut g = pod(2);
+    let m = g.add_card_to_hand(0, catalog::silvergill_mentor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast_with(&mut g, m, None, None).is_err(), "{{2}} more with no Merfolk");
+    ready(&mut g, 0, catalog::silvergill_mentor());
+    cast_with(&mut g, m, None, None).expect("a Merfolk on the battlefield");
+    let merfolk = g.battlefield.iter().filter(|c| c.definition.name == "Merfolk").count();
+    assert_eq!(merfolk, 1, "the cast Mentor's token");
+}

@@ -17101,6 +17101,12 @@ static DECKS: &[Factory] = &[
     super::decks::hollow_trees,
     super::decks::jurin_leading_the_charge,
     super::decks::old_fat_spider_cant_see_me,
+    super::decks::hulks_thunderclap,
+    super::decks::hyperions_atomic_vision,
+    super::decks::lys_alana_dignitary,
+    super::decks::kinsbaile_aspirant,
+    super::decks::mudbutton_cursetosser,
+    super::decks::silvergill_mentor,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

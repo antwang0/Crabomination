@@ -2,14 +2,14 @@
 //! missing cards of an unseated deck. Tests in `tests/recent_b/cmdr_oct17_kn.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    ActivatedAbility, AdditionalCastCost, TokenDefinition, Zone, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{enrage, etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{enrage, etb, on_attack, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w, x};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -400,5 +400,150 @@ pub fn hollow_trees() -> CardDefinition {
             ..Default::default()
         }],
         ..Default::default()
+    }
+}
+
+// ── Behold (CR 701.4) ───────────────────────────────────────────────────────
+
+/// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target
+/// creature you control deals damage equal to its power to another target
+/// creature; if the behold was paid, destroy target noncreature artifact or
+/// noncreature enchantment (that slot exists only then, CR 601.2c).
+pub fn hulks_thunderclap() -> CardDefinition {
+    CardDefinition {
+        kicker_action_cost: Some(AdditionalCastCost::Behold {
+            filter: R::Creature.and(R::HasCreatureType(CreatureType::Gamma)),
+        }),
+        ..spell(
+            "Hulk's Thunderclap",
+            cost(&[generic(1), g()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::DealDamageEqualToPower {
+                    source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0)) },
+                },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::Destroy {
+                        what: Selector::TargetFiltered {
+                            slot: 2,
+                            filter: R::Artifact.or(R::Enchantment).and(R::Creature.negate()),
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Hyperion's Atomic Vision — {1}{W} Instant. You may behold a Hero. Destroy
+/// target tapped creature; if a Hero was beheld, scry 2.
+pub fn hyperions_atomic_vision() -> CardDefinition {
+    CardDefinition {
+        kicker_action_cost: Some(AdditionalCastCost::Behold { filter: R::HasCreatureType(CreatureType::Hero) }),
+        ..spell(
+            "Hyperion's Atomic Vision",
+            cost(&[generic(1), w()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Creature.and(R::Tapped)) },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+fn behold_or_pay(kind: CreatureType, def: CardDefinition) -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![AdditionalCastCost::BeholdOrPay { filter: R::HasCreatureType(kind), pay: 2 }],
+        ..def
+    }
+}
+
+/// Lys Alana Dignitary — {1}{G} 2/3 Elf Advisor. Behold an Elf or pay {2}.
+/// {T}: {G}{G}, only with an Elf card in your graveyard.
+pub fn lys_alana_dignitary() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: R::HasCreatureType(CreatureType::Elf),
+                },
+                n: Value::ONE,
+            }),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green, Color::Green]) },
+            ..Default::default()
+        }],
+        ..behold_or_pay(
+            CreatureType::Elf,
+            creature("Lys Alana Dignitary", cost(&[generic(1), g()]), vec![CreatureType::Elf, CreatureType::Advisor], 2, 3),
+        )
+    }
+}
+
+/// Kinsbaile Aspirant — {W} 2/1 Kithkin Citizen. Behold a Kithkin or pay {2}.
+/// Whenever another creature you control enters, +1/+1 until end of turn.
+pub fn kinsbaile_aspirant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..behold_or_pay(
+            CreatureType::Kithkin,
+            creature("Kinsbaile Aspirant", cost(&[w()]), vec![CreatureType::Kithkin, CreatureType::Citizen], 2, 1),
+        )
+    }
+}
+
+/// Mudbutton Cursetosser — {B} 2/1 Goblin Warlock. Behold a Goblin or pay {2}.
+/// Can't block. Dies: destroy target creature an opponent controls with power
+/// 2 or less.
+pub fn mudbutton_cursetosser() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBlock],
+        triggered_abilities: vec![on_dies(Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::PowerAtMost(2))),
+        })],
+        ..behold_or_pay(
+            CreatureType::Goblin,
+            creature("Mudbutton Cursetosser", cost(&[b()]), vec![CreatureType::Goblin, CreatureType::Warlock], 2, 1),
+        )
+    }
+}
+
+/// Silvergill Mentor — {1}{U} 2/1 Merfolk Wizard. Behold a Merfolk or pay {2}.
+/// ETB: a 1/1 white and blue Merfolk token.
+pub fn silvergill_mentor() -> CardDefinition {
+    let merfolk = std::sync::Arc::new(TokenDefinition {
+        name: "Merfolk".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: merfolk })],
+        ..behold_or_pay(
+            CreatureType::Merfolk,
+            creature("Silvergill Mentor", cost(&[generic(1), u()]), vec![CreatureType::Merfolk, CreatureType::Wizard], 2, 1),
+        )
     }
 }
