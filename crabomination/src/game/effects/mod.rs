@@ -28021,7 +28021,7 @@ impl GameState {
             }
             Effect::DamagedOpponentCreaturesDieThisTurn => {
                 if ctx.controller < 64 {
-                    self.damaged_opponent_creatures_die_for |= 1u64 << ctx.controller;
+                    self.turn.damaged_opponent_creatures_die_for |= 1u64 << ctx.controller;
                 }
                 self.check_state_based_actions_mid_resolution(events);
                 Ok(())

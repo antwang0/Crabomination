@@ -5868,7 +5868,9 @@ impl GameState {
         // Desperate Gambit's unspent doubler expires with the turn.
         clear_turn!(self.double_next_damage_from);
         self.damaged_creatures_die_this_turn = false;
-        self.damaged_opponent_creatures_die_for = 0;
+        if self.turn.damaged_opponent_creatures_die_for != 0 {
+            self.turn.damaged_opponent_creatures_die_for = 0;
+        }
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
         clear_cold!(self.skipped_steps_this_turn);
@@ -6874,7 +6876,7 @@ impl GameState {
             self.no_other_sacrifice_armed.len(),
             self.steal_penalty_armed.len(),
             self.damaged_creatures_die_this_turn,
-            self.damaged_opponent_creatures_die_for,
+            self.turn.damaged_opponent_creatures_die_for,
         )
             .hash(&mut h);
         sba_census::tick(h.finish());

@@ -95,6 +95,11 @@ fn bng_inspired_triggers_on_untap() {
     let mut g = main_phase();
     let butcher = g.add_card_to_battlefield(0, catalog::kragma_butcher());
     g.battlefield_find_mut(butcher).unwrap().tapped = true;
+    // CR 502.4 — the inspired trigger now resolves in the upkeep, after
+    // seat 1's turn has drawn: give that library cards so it doesn't deck.
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
     for _ in 0..40 {
         let _ = g.advance_step(Vec::new());
         drain_stack(&mut g);
@@ -501,6 +506,9 @@ fn pain_seer_inspired_reveals_for_life() {
     let seer = g.add_card_to_battlefield(0, catalog::pain_seer());
     g.battlefield_find_mut(seer).unwrap().tapped = true;
     g.add_card_to_library(0, catalog::great_hart()); // {3}{W} — MV 4
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
     let life = g.players[0].life;
     for _ in 0..40 {
         let _ = g.advance_step(Vec::new());

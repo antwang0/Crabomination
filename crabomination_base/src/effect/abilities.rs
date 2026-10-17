@@ -960,6 +960,9 @@ pub enum StaticEffect {
     /// being cast when the caster is the active player. Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedDuringYourTurn { amount: u32 },
+    /// "Dash costs you pay cost {amount} less" (Warbringer) — read off the
+    /// battlefield by the dash cast path for the static's controller only.
+    ControllerDashCostsLess { amount: u32 },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is your
     /// devotion to `colors`" (Theros — Daybreak Chimera, etc.). Read by
     /// `cost_reduction_for_spell` off the *spell being cast*; the count is the

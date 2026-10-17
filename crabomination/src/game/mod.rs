@@ -1472,6 +1472,11 @@ pub struct TurnRegistries {
     /// turn (CR 120.4a/120.10 — Rith, Liberated Primeval). Cleared at cleanup.
     #[serde(default)]
     pub(crate) excess_damaged_seats: Vec<usize>,
+    /// Green Dragon's Poison Breath — seats (bits) whose OPPONENTS' damaged
+    /// creatures die this turn (the per-seat sibling of
+    /// `damaged_creatures_die_this_turn`). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damaged_opponent_creatures_die_for: u64,
     /// Sources whose "cast a spell from among them" grant group was spent
     /// this turn (`clear_one_cast_group`). Read by
     /// `Effect::OneCastPerTurnAmongGranted` (Maralen, Fae Ascendant's "once
@@ -3616,11 +3621,6 @@ pub struct GameState {
     /// destroyed by the lethal-damage SBA while set. Cleared at cleanup.
     #[serde(default)]
     pub(crate) damaged_creatures_die_this_turn: bool,
-    /// Green Dragon's Poison Breath — seats (bits) whose OPPONENTS' damaged
-    /// creatures die this turn, the per-seat sibling of the flag above.
-    /// Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) damaged_opponent_creatures_die_for: u64,
     /// Shriveling Rot mode 2 — "until end of turn, whenever a creature dies,
     /// that creature's controller loses life equal to its toughness". Applied
     /// in `remove_to_graveyard_with_triggers`. Cleared at cleanup.
@@ -4668,7 +4668,6 @@ impl Clone for GameState {
             block_tax_this_turn: self.block_tax_this_turn,
             acted_on_own_turn_mask: self.acted_on_own_turn_mask,
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
-            damaged_opponent_creatures_die_for: self.damaged_opponent_creatures_die_for,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
             search_batch: self.search_batch,
@@ -4900,7 +4899,6 @@ impl GameState {
             block_tax_this_turn: 0,
             acted_on_own_turn_mask: 0,
             damaged_creatures_die_this_turn: false,
-            damaged_opponent_creatures_die_for: 0,
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
             search_batch: Default::default(),
@@ -6556,10 +6554,24 @@ impl GameState {
     ///
     /// Identical to the unfiltered form while nobody has been eliminated,
     /// which is every turn of a duel: one elimination there ends the game.
+    /// "Dash costs you pay cost {N} less" — the sum over `caster`'s
+    /// `ControllerDashCostsLess` permanents (Warbringer).
+    pub(crate) fn controller_dash_discount(&self, caster: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == caster)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .map(|sa| match sa.effect {
+                crate::effect::StaticEffect::ControllerDashCostsLess { amount } => amount,
+                _ => 0,
+            })
+            .sum()
+    }
+
     /// Whether a damaged creature `controller` controls dies to a Poison
     /// Breath (`damaged_opponent_creatures_die_for`) one of its opponents set.
     pub(crate) fn damaged_dies_to_opponent_breath(&self, controller: usize) -> bool {
-        let mask = self.damaged_opponent_creatures_die_for;
+        let mask = self.turn.damaged_opponent_creatures_die_for;
         mask != 0
             && (0..self.players.len().min(64)).any(|s| {
                 mask & (1u64 << s) != 0
@@ -35696,6 +35708,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedByDistinctLandNames
             // SelfCostReducedDuringYourTurn (Mental Modulation) — same.
             | StaticEffect::SelfCostReducedDuringYourTurn { .. }
+            // ControllerDashCostsLess (Warbringer) — read by the dash cast path.
+            | StaticEffect::ControllerDashCostsLess { .. }
             // SelfCostReducedByDevotion (Daybreak Chimera) — same, off the spell.
             | StaticEffect::SelfCostReducedByDevotion { .. }
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional

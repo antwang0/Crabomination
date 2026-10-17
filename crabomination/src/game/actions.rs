@@ -9388,6 +9388,9 @@ impl GameState {
         if let Some(ref tgt) = target {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
         }
+        if self.half_targets_violate(&adv.effect, target.as_ref(), &additional_targets, mode, p, card_id) {
+            return Err(GameError::SelectionRequirementViolated);
+        }
         // CR 601.2b — the Adventure half's own additional cost, checked before
         // any mana is spent and paid after it.
         let extra = self.players[p]
@@ -9474,6 +9477,9 @@ impl GameState {
         }
         if let Some(ref tgt) = target {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        if self.half_targets_violate(&omen.effect, target.as_ref(), &additional_targets, mode, p, card_id) {
+            return Err(GameError::SelectionRequirementViolated);
         }
         let mut cost = if omen.cost.has_x() {
             omen.cost.with_x_value(x_value.unwrap_or(0))
@@ -15999,7 +16005,9 @@ impl GameState {
         // spell` returns the same delta in each. The alt cost is often
         // {0} for pitch spells (Force of Negation, Mystical Dispute), in
         // which case the reduction simply no-ops (clamps at zero).
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction + per_target_less;
+        let dash_less = if alt.dash { self.controller_dash_discount(p) } else { 0 };
+        let reduction =
+            cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction + per_target_less + dash_less;
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
@@ -16363,6 +16371,42 @@ impl GameState {
     /// permanent: a card in a graveyard or in exile is out of its reach
     /// unless the effect can reach off the board or the filter names that
     /// zone — the scope the target enumerator and auto-picker walk.
+    /// CR 601.2c — whether an Adventure / Omen half's chosen targets break its
+    /// own per-slot filters, cross-slot atoms included (Burglar's Plot's
+    /// "two target nonland permanents that share a card type"). The full
+    /// cast path runs the same check against the card's main effect.
+    pub(crate) fn half_targets_violate(
+        &mut self,
+        effect: &crate::effect::Effect,
+        target: Option<&Target>,
+        additional_targets: &[Target],
+        mode: Option<usize>,
+        p: usize,
+        card_id: CardId,
+    ) -> bool {
+        self.target_slots_scratch =
+            std::iter::once(target.cloned()).chain(additional_targets.iter().cloned().map(Some)).collect();
+        let slots: Vec<(u8, Target)> = target
+            .into_iter()
+            .cloned()
+            .map(|t| (0u8, t))
+            .chain(additional_targets.iter().cloned().enumerate().map(|(i, t)| ((i + 1) as u8, t)))
+            .collect();
+        let bad = slots.iter().any(|(slot, tgt)| {
+            if crate::game::target_hole::is_hole(tgt) {
+                return false;
+            }
+            let filter = effect.target_filter_for_slot_in_mode_kicked(*slot, mode, false);
+            self.target_out_of_zone(effect, filter, tgt)
+                || filter.is_some_and(|f| {
+                    !self.evaluate_requirement_static(f, tgt, p, Some(card_id))
+                        || (f.mentions_cross_slot() && !self.cross_slot_targets_ok(f, tgt, &self.target_slots_scratch))
+                })
+        });
+        self.target_slots_scratch.clear();
+        bad
+    }
+
     pub(crate) fn target_out_of_zone(
         &self,
         effect: &crate::effect::Effect,
