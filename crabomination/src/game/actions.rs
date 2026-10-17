@@ -417,17 +417,21 @@ impl GameState {
     /// CR 118.9 — whether `p` may pay {0} for `card` cast from exile this
     /// turn: Warped Space (any spell) or Tlincalli Hunter (a matching one),
     /// once per turn between them (`Player.free_exile_cast_used_this_turn`).
+    /// Dragon's Smile's "once during each of your turns" is the same grant
+    /// under `WhileYourTurn`.
     pub(crate) fn free_exile_cast_waiver(&self, p: usize, card: &CardInstance) -> bool {
+        use crate::effect::StaticEffect as SE;
+        fn grants(g: &GameState, e: &SE, p: usize, card: &CardInstance) -> bool {
+            match e {
+                SE::FreeExileCastOncePerTurn => true,
+                SE::FreeExileCastOncePerTurnMatching(f) => g.evaluate_requirement_on_card(f, card, p),
+                SE::WhileYourTurn { inner } => g.active_player_idx == p && grants(g, inner, p, card),
+                _ => false,
+            }
+        }
         !self.players[p].free_exile_cast_used_this_turn
             && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                        crate::effect::StaticEffect::FreeExileCastOncePerTurn => true,
-                        crate::effect::StaticEffect::FreeExileCastOncePerTurnMatching(f) => {
-                            self.evaluate_requirement_on_card(f, card, p)
-                        }
-                        _ => false,
-                    })
+                c.controller == p && c.definition.static_abilities.iter().any(|sa| grants(self, &sa.effect, p, card))
             })
     }
 
