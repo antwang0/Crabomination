@@ -3280,6 +3280,9 @@ pub enum SelectionRequirement {
     /// Fodder's "creatures that each have toughness greater than their power").
     /// Battlefield-only; false for non-creatures.
     ToughnessGreaterThanPower,
+    /// Creature whose power and toughness aren't equal (Gilt-Leaf Winnower).
+    /// Battlefield-only; false for non-creatures.
+    PowerToughnessUnequal,
     /// Candidate's current power exceeds its printed base power — i.e. it has
     /// been pumped (counters / bonuses). Kutzil, Malamet Exemplar; Sovereign
     /// Okinec Ahau. Battlefield-only; false for non-creatures.

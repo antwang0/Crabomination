@@ -6279,6 +6279,10 @@ impl GameState {
                         self.computed_is_creature(card)
                             && self.effective_toughness(card) > self.effective_power(card)
                     }
+                    R::PowerToughnessUnequal => {
+                        self.computed_is_creature(card)
+                            && self.effective_toughness(card) != self.effective_power(card)
+                    }
                     // "…has power greater than its *base* power": the left
                     // half is the CR 613 answer, the right half is the
                     // printed line the wording names.
@@ -7519,6 +7523,9 @@ impl GameState {
             R::ToughnessAtLeast(n) => self.computed_is_creature(card) && card.toughness() >= *n,
             R::ToughnessGreaterThanPower => {
                 self.computed_is_creature(card) && card.toughness() > card.power()
+            }
+            R::PowerToughnessUnequal => {
+                self.computed_is_creature(card) && card.toughness() != card.power()
             }
             R::PowerGreaterThanBasePower => {
                 self.computed_is_creature(card) && card.power() > card.definition.power

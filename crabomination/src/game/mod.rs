@@ -36875,6 +36875,7 @@ fn blocker_matches_block_filter(
         R::ToughnessAtMost(n) => computed.toughness <= *n,
         R::ToughnessAtLeast(n) => computed.toughness >= *n,
         R::ToughnessGreaterThanPower => computed.toughness > computed.power,
+        R::PowerToughnessUnequal => computed.toughness != computed.power,
         R::HasCardType(ct) => computed.card_types().contains(ct),
         R::And(a, b) => {
             blocker_matches_block_filter(blocker, computed, enchanted, monarch, a)

@@ -2090,7 +2090,7 @@ fn every_block_filter_leaf_is_read_by_the_block_walker() {
         "Enchantment", "HasArtifactSubtype", "HasCardType", "HasColor", "HasCreatureType", "HasKeyword",
         "HasModular", "HasMutate", "HasNoAbilities", "HasSupertype", "HasToxic", "IsEnchanted", "IsToken", "Land", "Monocolored", "Not",
         "NotToken", "Or", "Permanent", "PowerAtLeast", "PowerAtMost", "ToughnessAtLeast",
-        "ToughnessAtMost", "ToughnessGreaterThanPower",
+        "ToughnessAtMost", "ToughnessGreaterThanPower", "PowerToughnessUnequal",
     ];
     /// The requirement's leaf tags, not descending into a leaf's payload.
     fn leaves(v: &Value, out: &mut Vec<String>) {

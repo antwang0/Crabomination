@@ -12307,7 +12307,7 @@ fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
         "Any", "Permanent", "Creature", "Artifact", "Enchantment", "Land", "IsToken", "NotToken",
         "HasColor", "Colorless", "Monocolored", "HasKeyword", "HasToxic", "HasModular", "HasMutate", "HasNoAbilities",
         "HasCreatureType", "HasArtifactSubtype", "HasSupertype", "ControlledByMonarch", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
-        "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "IsEnchanted", "And", "Or",
+        "ToughnessAtLeast", "ToughnessGreaterThanPower", "PowerToughnessUnequal", "HasCardType", "IsEnchanted", "And", "Or",
         "Not",
     ];
     // Known dead leaves, with the card that carries them. A fix deletes a

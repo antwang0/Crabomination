@@ -2031,7 +2031,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::OtherThanSource => true,
         // Read against printed P/T + counters on each layer recompute (the
         // same approximation `CardMatchPowerGated` uses) — Tapestry Warden.
-        R::ToughnessGreaterThanPower => true,
+        R::ToughnessGreaterThanPower | R::PowerToughnessUnequal => true,
         // Mana value is a printed characteristic, read like the type leaves.
         R::ManaValueAtMost(_) | R::ManaValueAtLeast(_) => true,
         // So is a name (`requirement_matches_card` reads it off the
@@ -2215,6 +2215,7 @@ pub(crate) fn requirement_matches_card_typed(
             let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
             (def.base_toughness() + plus - minus) > (def.base_power() + plus - minus)
         }
+        R::PowerToughnessUnequal => def.base_toughness() != def.base_power(),
         // A card that names itself in its own printed filter (Gravebane
         // Zombie's dies-replacement).
         R::HasName(n) => def.has_name(n),
