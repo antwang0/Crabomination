@@ -2765,3 +2765,134 @@ pub fn candlekeep_inspiration() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── batch 15 ────────────────────────────────────────────────────────────────
+
+/// Bloodboil Sorcerer — {3}{R} 3/3 Human Shaman Sorcerer. ETB: take the
+/// initiative. {1}{R}, sacrifice an artifact or creature: goad target creature.
+pub fn bloodboil_sorcerer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::TakeInitiative { who: PlayerRef::You })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sac_other_filter: Some((R::Artifact.or(R::Creature), 1)),
+            sac_other_may_be_source: true,
+            effect: Effect::Goad { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Bloodboil Sorcerer",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Shaman, CreatureType::Sorcerer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Dream Twist — {U} instant: target player mills three. Flashback {1}{U}.
+pub fn dream_twist() -> CardDefinition {
+    CardDefinition {
+        name: "Dream Twist",
+        cost: cost(&[crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), crate::mana::u()]))],
+        effect: Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Old Fat Spider — {4}{G}{G} 6/7 Spider, reach; can't be blocked by power 2
+/// or less; becoming the target of an opponent's spell or ability draws a card.
+pub fn old_fat_spider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::CantBeBlockedByPowerAtMost(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource).caused_by(R::ControlledByOpponent),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..creature("Old Fat Spider", cost(&[generic(4), g(), g()]), vec![CreatureType::Spider], 6, 7)
+    }
+}
+
+/// Captain Kathryn Janeway — {3}{G} legendary 2/3 Human Officer. An
+/// additional land each turn; whenever she or another creature you control
+/// enters, it explores.
+pub fn captain_kathryn_janeway() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature,
+            }),
+            effect: Effect::Explore { who: Selector::TriggerSource },
+        }],
+        ..legend(creature(
+            "Captain Kathryn Janeway",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Human, CreatureType::Officer],
+            2,
+            3,
+        ))
+    }
+}
+
+/// Dragon's Disciple — {1}{W} 1/3 Human Monk. Enters with a +1/+1 counter if
+/// you reveal a Dragon card from your hand or control a Dragon; Dragons you
+/// control have ward {1}.
+pub fn dragons_disciple() -> CardDefinition {
+    let dragon = || R::HasCreatureType(CreatureType::Dragon);
+    let dragons = Value::Sum(vec![
+        Value::count(Selector::EachPermanent(dragon().and(R::ControlledByYou))),
+        Value::count(Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: dragon() }),
+    ]);
+    CardDefinition {
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfAtLeast { value: Box::new(dragons), threshold: 1, then: Box::new(Value::ONE), else_: Box::new(Value::ZERO) },
+        )),
+        static_abilities: vec![StaticAbility {
+            description: "Dragons you control have ward {1}.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(dragon()).and(R::ControlledByYou)),
+                keyword: Keyword::Ward(crate::card::WardCost::generic(1)),
+            },
+        }],
+        ..creature("Dragon's Disciple", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Monk], 1, 3)
+    }
+}
+
+/// Puppet Crafting — {1}{G} Aura on an artifact or non-Aura enchantment: it
+/// is a 5/5 Construct creature in addition to its other types. {4}{G}: return
+/// this card from your graveyard to your hand.
+pub fn puppet_crafting() -> CardDefinition {
+    CardDefinition {
+        name: "Puppet Crafting",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                R::Artifact.or(R::HasCardType(CardType::Enchantment).and(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura).negate())),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus {
+            add_card_types: vec![CardType::Creature],
+            add_creature_types: vec![CreatureType::Construct],
+            set_base_pt: Some((5, 5)),
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            from_graveyard: true,
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -16722,6 +16722,12 @@ static DECKS: &[Factory] = &[
     super::decks::bohn_beguiling_balladeer,
     super::decks::captains_hook,
     super::decks::candlekeep_inspiration,
+    super::decks::bloodboil_sorcerer,
+    super::decks::dream_twist,
+    super::decks::old_fat_spider,
+    super::decks::captain_kathryn_janeway,
+    super::decks::dragons_disciple,
+    super::decks::puppet_crafting,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

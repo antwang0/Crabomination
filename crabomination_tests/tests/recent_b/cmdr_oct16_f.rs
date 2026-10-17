@@ -1524,3 +1524,118 @@ fn candlekeep_inspiration_sets_base_pt_from_spells_in_exile_and_graveyard() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "two in the graveyard and one owned in exile; the land and the opponent's card don't count");
 }
+
+/// CR 725.2 / 701.15a — Bloodboil Sorcerer takes the initiative; its Crown of
+/// Madness sacrifices an artifact or creature to goad.
+#[test]
+fn bloodboil_sorcerer_takes_the_initiative_and_goads() {
+    let mut g = pod(3);
+    let bs = g.add_card_to_hand(0, catalog::bloodboil_sorcerer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, bs, None).expect("Sorcerer");
+    assert_eq!(g.initiative, Some(0));
+    let rock = ready(&mut g, 0, catalog::sol_ring());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    activate(&mut g, bs, 0, Some(Target::Permanent(foe))).expect("goad");
+    assert!(g.goaded_by_player(g.battlefield_find(foe).unwrap(), 0));
+    assert!(g.battlefield_find(rock).is_none() || g.battlefield_find(bs).is_none(), "an artifact or creature paid");
+}
+
+/// CR 702.34a — Dream Twist mills three, then again from the graveyard.
+#[test]
+fn dream_twist_mills_three_twice() {
+    let mut g = pod(2);
+    let dt = g.add_card_to_hand(0, catalog::dream_twist());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let lib = g.players[1].library.len();
+    cast(&mut g, dt, Some(Target::Player(1))).expect("Dream Twist");
+    assert_eq!(g.players[1].library.len(), lib - 3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback { card_id: dt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("flashback");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 6);
+}
+
+/// CR 603.2 — Old Fat Spider draws when an opponent targets it, not when
+/// you do.
+#[test]
+fn old_fat_spider_draws_when_an_opponent_targets_it() {
+    let mut g = pod(2);
+    let spider = ready(&mut g, 0, catalog::old_fat_spider());
+    let hand = g.players[0].hand.len();
+    let mine = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, mine, Some(Target::Permanent(spider))).expect("own pump");
+    assert_eq!(g.players[0].hand.len(), hand, "your own spell draws nothing");
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, shock, Some(Target::Permanent(spider))).expect("opponent's shock");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// CR 701.44a / 305.2 — Captain Janeway allows a second land, and each
+/// creature you control that enters explores.
+#[test]
+fn captain_kathryn_janeway_explores_entering_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::captain_kathryn_janeway());
+    on_top(&mut g, 0, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    cast(&mut g, bear, None).expect("bear");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "a nonland reveal: +1/+1");
+    let a = g.add_card_to_hand(0, catalog::forest());
+    let b = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(a)).expect("first land");
+    g.perform_action(GameAction::PlayLand(b)).expect("second land");
+}
+
+/// CR 702.21a — Dragon's Disciple enters with a counter only alongside a
+/// Dragon, and gives your Dragons ward {1}.
+#[test]
+fn dragons_disciple_counts_a_dragon_and_wards_dragons() {
+    for with_dragon in [false, true] {
+        let mut g = pod(2);
+        if with_dragon {
+            g.add_card_to_hand(0, catalog::shivan_dragon());
+        }
+        let dd = g.add_card_to_hand(0, catalog::dragons_disciple());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, dd, None).expect("Disciple");
+        assert_eq!(g.battlefield_find(dd).unwrap().counter_count(CounterType::PlusOnePlusOne), u32::from(with_dragon));
+    }
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::dragons_disciple());
+    let dragon = ready(&mut g, 0, catalog::shivan_dragon());
+    assert!(g.computed_permanent(dragon).unwrap().keywords().iter().any(|k| matches!(k, Keyword::Ward(_))));
+}
+
+/// CR 613.1d — Puppet Crafting makes an artifact a 5/5 Construct creature,
+/// and climbs back to hand from the graveyard.
+#[test]
+fn puppet_crafting_animates_an_artifact() {
+    let mut g = pod(2);
+    let rock = ready(&mut g, 0, catalog::sol_ring());
+    let pc = g.add_card_to_hand(0, catalog::puppet_crafting());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, pc, Some(Target::Permanent(rock))).expect("Puppet Crafting");
+    let cp = g.computed_permanent(rock).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Construct));
+    let gy = g.add_card_to_graveyard(0, catalog::puppet_crafting());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, gy, 0, None).expect("return");
+    assert!(g.players[0].hand.iter().any(|c| c.id == gy));
+}
