@@ -21426,6 +21426,84 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FOURTH_DOCTOR_5_COMMANDERS,
             main: decks::THE_FOURTH_DOCTOR_5_MAIN,
         },
+        // Seat 3496: Ich-Tekik, Salvage Splicer and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 3496`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Livio, Oathsworn Sentinel (WG)",
+            commanders: decks::ICH_TEKIK_17_COMMANDERS,
+            main: decks::ICH_TEKIK_17_MAIN,
+        },
+        // Seat 3497: The Thirteenth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 3497`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Donna Noble (URG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_3_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_3_MAIN,
+        },
+        // Seat 3498: The Twelfth Doctor and Ryan Sinclair's EDHREC average deck. `--pod-decks 3498`.
+        PodDeck {
+            name: "The Twelfth Doctor and Ryan Sinclair (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_10_MAIN,
+        },
+        // Seat 3499: Bruse Tarl, Boorish Herder and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 3499`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Ich-Tekik, Salvage Splicer (WRG)",
+            commanders: decks::BRUSE_TARL_10_COMMANDERS,
+            main: decks::BRUSE_TARL_10_MAIN,
+        },
+        // Seat 3500: Ich-Tekik, Salvage Splicer and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 3500`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Tormod, the Desecrator (BG)",
+            commanders: decks::ICH_TEKIK_18_COMMANDERS,
+            main: decks::ICH_TEKIK_18_MAIN,
+        },
+        // Seat 3501: Ich-Tekik, Salvage Splicer and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 3501`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Keleth, Sunmane Familiar (WG)",
+            commanders: decks::ICH_TEKIK_19_COMMANDERS,
+            main: decks::ICH_TEKIK_19_MAIN,
+        },
+        // Seat 3502: Bruse Tarl, Boorish Herder and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 3502`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Rebbec, Architect of Ascension (WR)",
+            commanders: decks::BRUSE_TARL_11_COMMANDERS,
+            main: decks::BRUSE_TARL_11_MAIN,
+        },
+        // Seat 3503: Ich-Tekik, Salvage Splicer and Krark, the Thumbless's EDHREC average deck. `--pod-decks 3503`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Krark, the Thumbless (RG)",
+            commanders: decks::ICH_TEKIK_20_COMMANDERS,
+            main: decks::ICH_TEKIK_20_MAIN,
+        },
+        // Seat 3504: Spider-Man 2099's EDHREC average deck. `--pod-decks 3504`.
+        PodDeck {
+            name: "Spider-Man 2099 (UR)",
+            commanders: decks::SPIDER_MAN_2099_2_COMMANDERS,
+            main: decks::SPIDER_MAN_2099_2_MAIN,
+        },
+        // Seat 3505: Bohn, Beguiling Balladeer's EDHREC average deck. `--pod-decks 3505`.
+        PodDeck {
+            name: "Bohn, Beguiling Balladeer (UR)",
+            commanders: decks::BOHN_COMMANDERS,
+            main: decks::BOHN_MAIN,
+        },
+        // Seat 3506: Keiga, the Tide Star's EDHREC average deck. `--pod-decks 3506`.
+        PodDeck {
+            name: "Keiga, the Tide Star (U)",
+            commanders: decks::KEIGA_COMMANDERS,
+            main: decks::KEIGA_MAIN,
+        },
+        // Seat 3507: Golden Argosy's EDHREC average deck. `--pod-decks 3507`.
+        PodDeck {
+            name: "Golden Argosy (C)",
+            commanders: decks::GOLDEN_ARGOSY_COMMANDERS,
+            main: decks::GOLDEN_ARGOSY_MAIN,
+        },
+        // Seat 3508: Mavinda, Students' Advocate's EDHREC average deck. `--pod-decks 3508`.
+        PodDeck {
+            name: "Mavinda, Students' Advocate (W)",
+            commanders: decks::MAVINDA_COMMANDERS,
+            main: decks::MAVINDA_MAIN,
+        },
     ]
 }
 
@@ -26805,6 +26883,19 @@ mod tests {
             ("Erinis, Gloom Stalker and Acolyte of Bahamut", &[0x17BB]),
             ("Erinis, Gloom Stalker and Folk Hero", &[0x17BC]),
             ("The Fourth Doctor and Nardole, Resourceful Cyborg", &[0x17BD]),
+            ("Ich-Tekik, Salvage Splicer and Livio, Oathsworn Sentinel", &[0x17BE]),
+            ("The Thirteenth Doctor and Donna Noble", &[0x17BF]),
+            ("The Twelfth Doctor and Ryan Sinclair", &[0x17C0]),
+            ("Bruse Tarl, Boorish Herder and Ich-Tekik, Salvage Splicer", &[0x17C1]),
+            ("Ich-Tekik, Salvage Splicer and Tormod, the Desecrator", &[0x17C2]),
+            ("Ich-Tekik, Salvage Splicer and Keleth, Sunmane Familiar", &[0x17C3]),
+            ("Bruse Tarl, Boorish Herder and Rebbec, Architect of Ascension", &[0x17C4]),
+            ("Ich-Tekik, Salvage Splicer and Krark, the Thumbless", &[0x17C5]),
+            ("Spider-Man 2099", &[0x17C6]),
+            ("Bohn, Beguiling Balladeer", &[0x17C7]),
+            ("Keiga, the Tide Star", &[0x17C8]),
+            ("Golden Argosy", &[0x17C9]),
+            ("Mavinda, Students' Advocate", &[0x17CA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

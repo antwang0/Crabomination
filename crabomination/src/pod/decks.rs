@@ -98007,3 +98007,371 @@ pub const THE_FOURTH_DOCTOR_5_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const ICH_TEKIK_17_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, livio_oathsworn_sentinel];
+
+/// **Ich-Tekik, Salvage Splicer and Livio, Oathsworn Sentinel**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 11 Forests + 12 Plains = 98.
+/// Ich-Tekik, Salvage Splicer and Livio, Oathsworn Sentinel (EDHREC, fetched 2026-10-17).
+pub const ICH_TEKIK_17_MAIN: &[CardFactory] = &[
+    arcane_signet, bootleggers_stash, commanders_sphere, conjurers_closet, idol_of_oblivion,
+    mind_stone, nexus_of_becoming, panharmonicon, sol_ring, throne_of_geth, wayfarers_bauble,
+    ancient_den, bountiful_promenade, brushland, canopy_vista, command_tower, fortified_village,
+    krosan_verge, overgrown_farmland, selesnya_sanctuary, sungrass_prairie, sunpetal_grove,
+    temple_garden, thornglint_bridge, tomb_of_the_spirit_dragon, tree_of_tales, blade_splicer,
+    bronze_guardian, chomping_changeling, cradle_clearcutter, darksteel_splicer,
+    eldrazi_displacer, eternal_witness, farhaven_elf, garruks_packleader, geode_golem,
+    golden_guardian, illustrious_wanderglyph, losheel_clockwork_scholar, master_splicer,
+    maul_splicer, meteor_golem, mondrak_glory_dominus, phyrexian_triniform, precursor_golem,
+    rootwire_amalgam, sandstorm_salvager, sensor_splicer, solemn_simulacrum, steel_overseer,
+    tireless_provisioner, tireless_tracker, triplicate_titan, vital_splicer, wood_elves,
+    anointed_procession, doubling_season, elemental_bond, growing_ranks, inspiring_leader,
+    teleportation_circle, tempered_steel, eerie_interlude, ephemerate, inspiring_call,
+    laezels_acrobatics, path_to_exile, rootborn_defenses, sundering_growth,
+    swords_to_plowshares, cultivate, hour_of_reckoning, kodamas_reach, organic_extinction,
+    rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const THE_THIRTEENTH_DOCTOR_3_COMMANDERS: &[CardFactory] = &[the_thirteenth_doctor, donna_noble];
+
+/// **The Thirteenth Doctor and Donna Noble**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 6 Forests + 5 Islands + 5 Mountains = 98.
+/// The Thirteenth Doctor and Donna Noble (EDHREC, fetched 2026-10-17).
+pub const THE_THIRTEENTH_DOCTOR_3_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, darksteel_plate, dawnsire_sunstar_dreadnought, mithril_coat,
+    sol_ring, sonic_screwdriver, tardis, breeding_pool, cinder_glade, command_tower,
+    dreamroot_cascade, exotic_orchard, frontier_bivouac, frostboil_snarl, ketria_triome,
+    misty_rainforest, rejuvenating_springs, rockfall_vale, rogues_passage, rootbound_crag,
+    spire_garden, steam_vents, stomping_ground, stormcarved_coast, training_center,
+    anara_wolvid_familiar, bilbo_thief_in_the_night, brash_taunter, doc_aurlock_grizzled_genius,
+    etali_primal_conqueror, flaming_tyrannosaurus, fyndhorn_elves, giggling_skitterspike,
+    hornet_nest, incubation_druid, kami_of_whispered_hopes, laelia_the_blade_reforged,
+    llanowar_elves, party_thrasher, sab_sunen_luxa_embodied, screaming_nemesis,
+    sisterhood_of_karn, spider_man_2099, stuffy_doll, the_foretold_soldier, the_twelfth_doctor,
+    ulvenwald_tracker, bigger_on_the_inside, innkeepers_talent, loading_zone, lure,
+    pain_for_all, the_flux, wild_growth, an_offer_you_cant_refuse, arcane_denial, beast_within,
+    chaos_warp, decisive_denial, fierce_guardianship, heroic_intervention, inspiring_call,
+    khalni_ambush, setessan_tactics, surge_of_brilliance, chandra_torch_of_defiance,
+    blasphemous_act, bridgeworks_battle, bushwhack, chain_reaction, farseek,
+    germination_practicum, improvisation_capstone, inspired_tinkering, into_the_time_vortex,
+    jeskas_will, natures_lore, rampant_growth, roar_of_challenge, star_of_extinction,
+    zenith_festival,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const THE_TWELFTH_DOCTOR_10_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, ryan_sinclair];
+
+/// **The Twelfth Doctor and Ryan Sinclair**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 12 Islands + 13 Mountains = 98.
+/// The Twelfth Doctor and Ryan Sinclair (EDHREC, fetched 2026-10-17).
+pub const THE_TWELFTH_DOCTOR_10_MAIN: &[CardFactory] = &[
+    arcane_signet, diary_of_dreams, fellwar_stone, glamdring_foe_hammer, izzet_signet, sol_ring,
+    swiftfoot_boots, tablet_of_discovery, talisman_of_creativity, twinning_staff, wizards_staff,
+    command_tower, exotic_orchard, frostboil_snarl, hexhaven_dueling_arena, izzet_boilerworks,
+    mystic_sanctuary, reliquary_tower, rogues_passage, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, temple_of_epiphany, training_center, trenzalore_clocktower,
+    archmage_emeritus, balmor_battlemage_captain, etali_primal_storm, goblin_electromancer,
+    guttersnipe, keeper_of_secrets, laelia_the_blade_reforged, memory_worm, party_thrasher,
+    sanar_unfinished_genius, spider_man_2099, storm_kiln_artist, wild_magic_sorcerer,
+    winter_team_player, yasmin_khan, young_pyromancer, heaven_sent, passionate_archaeologist,
+    powerbalance, tavern_brawler, thousand_year_storm, wild_wasteland, an_offer_you_cant_refuse,
+    blazing_crescendo, brainstorm, chaos_warp, counterspell, demand_answers, galvanic_iteration,
+    haste_magic, increasing_vengeance, lightning_bolt, perfected_theory, pongify,
+    rapid_hybridization, surge_of_brilliance, blasphemous_act, expressive_iteration,
+    faithless_looting, impending_flux, jeskas_will, ponder, preordain, pym_particles,
+    quantum_misalignment, rousing_refrain, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BRUSE_TARL_10_COMMANDERS: &[CardFactory] = &[bruse_tarl_boorish_herder, ich_tekik_salvage_splicer];
+
+/// **Bruse Tarl, Boorish Herder and Ich-Tekik, Salvage Splicer**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 4 Forests + 5 Mountains + 4 Plains = 98.
+/// Bruse Tarl, Boorish Herder and Ich-Tekik, Salvage Splicer (EDHREC, fetched 2026-10-17).
+pub const BRUSE_TARL_10_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, cloud_key, coin_of_mastery, legion_extruder, lightning_greaves,
+    maskwood_nexus, sol_ring, talisman_of_conviction, the_ozolith, the_reaver_cleaver,
+    vulshok_factory, wayfarers_bauble, arid_mesa, bountiful_promenade, canopy_vista,
+    cinder_glade, command_tower, exotic_orchard, jetmirs_garden, jungle_shrine,
+    needleverge_pathway, overgrown_farmland, rockfall_vale, rustvale_bridge, sacred_foundry,
+    spectator_seating, spire_garden, stomping_ground, sundown_pass, temple_garden,
+    thornglint_bridge, windswept_heath, wooded_foothills, alibou_ancient_witness,
+    arcbound_reclaimer, birds_of_paradise, blade_splicer, bronze_guardian, colossus_of_akros,
+    cradle_clearcutter, darksteel_colossus, darksteel_splicer, esper_sentinel, geode_golem,
+    gingerbrute, goldspan_dragon, master_splicer, maul_splicer, meteor_golem,
+    mondrak_glory_dominus, old_gnawbone, phyrexian_triniform, precursor_golem,
+    professional_face_breaker, roaming_throne, rootwire_amalgam, sandstorm_salvager,
+    sensor_splicer, solemn_simulacrum, tormods_cryptkeeper, triplicate_titan, vital_splicer,
+    aura_shards, beastmaster_ascension, elemental_bond, hardened_scales, quantum_entanglement,
+    smothering_tithe, beast_within, boros_charm, ephemerate, flawless_maneuver, generous_gift,
+    heroic_intervention, path_to_exile, sundering_growth, swords_to_plowshares,
+    the_eternal_wanderer, blasphemous_act, cultivate, farseek, natures_lore,
+    shamanic_revelation, three_visits,
+    // Basics
+    forest, forest, forest, forest, mountain, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains,
+];
+
+pub const ICH_TEKIK_18_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, tormod_the_desecrator];
+
+/// **Ich-Tekik, Salvage Splicer and Tormod, the Desecrator**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 7 Forests + 8 Swamps = 98.
+/// Ich-Tekik, Salvage Splicer and Tormod, the Desecrator (EDHREC, fetched 2026-10-17).
+pub const ICH_TEKIK_18_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cloud_key, collectors_vault, desecrated_tomb,
+    executioners_capsule, grim_reapers_scythe, senseis_divining_top, skullclamp, sol_ring,
+    vat_of_rebirth, wayfarers_bauble, bojuka_bog, command_tower, darkbore_pathway,
+    darkmoss_bridge, deathcap_glade, inventors_fair, llanowar_wastes, nurturing_peatland,
+    overgrown_tomb, phyrexian_tower, temple_of_malady, tree_of_tales, twilight_mire,
+    undergrowth_stadium, urborg_tomb_of_yawgmoth, vault_of_whispers, verdant_catacombs,
+    wastewood_verge, woodland_cemetery, yavimaya_cradle_of_growth, arcbound_ravager,
+    armix_filigree_thrasher, chronomancer, eternal_witness, fang_fearless_lcie,
+    foundry_inspector, glissa_the_traitor, haywire_mite, honest_rutstein, imotekh_the_stormlord,
+    junk_diver, kuldotha_forgemaster, marionette_apprentice, marionette_master, maul_splicer,
+    meteor_golem, mole_man_moloid_master, myr_retriever, phyrexian_triniform,
+    pitiless_plunderer, precursor_golem, scrap_trawler, scrapyard_recombiner, skeleton_crew,
+    solemn_simulacrum, technomancer, undead_hand_ninja, viscera_seer, workshop_assistant,
+    chalk_outline, insidious_roots, ripples_of_undeath, soul_enervation, tevals_judgment,
+    tortured_existence, beast_within, entomb, fell_the_profane, hagra_mauling, malakir_rebirth,
+    revitalizing_repast, bala_ged_recovery, beseech_the_mirror, insatiable_avarice,
+    life_from_the_loam, natures_lore, rampant_growth, their_number_is_legion, three_visits,
+    victimize, will_of_the_abzan,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const ICH_TEKIK_19_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, keleth_sunmane_familiar];
+
+/// **Ich-Tekik, Salvage Splicer and Keleth, Sunmane Familiar**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 11 Forests + 13 Plains = 98.
+/// Ich-Tekik, Salvage Splicer and Keleth, Sunmane Familiar (EDHREC, fetched 2026-10-17).
+pub const ICH_TEKIK_19_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, ashnods_transmogrant, astral_cornucopia, bagel_and_schmear,
+    commanders_sphere, culling_dais, heaped_harvest, implement_of_ferocity,
+    ozolith_the_shattered_spire, power_conduit, sol_ring, soul_guide_lantern,
+    staff_of_compleation, the_ozolith, tome_of_legends, voyager_staff, wayfarers_bauble,
+    canopy_vista, command_tower, fortified_village, krosan_verge, mirrex, mosswort_bridge,
+    opal_palace, path_of_ancestry, sunpetal_grove, temple_of_plenty, treasure_vault,
+    windbrisk_heights, abzan_falconer, ainok_bond_kin, arcbound_ravager, basris_lieutenant,
+    blade_splicer, botanical_brawler, bronze_guardian, chomping_changeling, conclave_mentor,
+    cradle_clearcutter, envoy_of_the_ancestors, geode_golem, gilded_goose, gingerbrute,
+    haliya_ascendant_cadet, haywire_mite, kami_of_whispered_hopes, lord_jyscal_guado,
+    master_splicer, maul_splicer, meteor_golem, michelangelo_mutant_bff, precursor_golem,
+    pridemalkin, reveillark, rootwire_amalgam, sandstorm_salvager, sensor_splicer,
+    solemn_simulacrum, vital_splicer, gleam_of_authority, hardened_scales, high_score,
+    master_chef, ninja_pizza, resourceful_defense, getaway_glamer, inspiring_call,
+    razorgrass_ambush, rootborn_defenses, signature_slam, collective_effort, fangs_of_kalonia,
+    splicers_skill, vanquish_the_horde,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const BRUSE_TARL_11_COMMANDERS: &[CardFactory] = &[bruse_tarl_boorish_herder, rebbec_architect_of_ascension];
+
+/// **Bruse Tarl, Boorish Herder and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 8 Mountains + 8 Plains = 98.
+/// Bruse Tarl, Boorish Herder and Rebbec, Architect of Ascension (EDHREC, fetched
+/// 2026-10-17).
+pub const BRUSE_TARL_11_MAIN: &[CardFactory] = &[
+    aerial_surveyor, arcane_signet, boros_signet, cursed_mirror, expedition_map, fellwar_stone,
+    fractured_powerstone, liquimetal_torque, nautiloid_ship, panharmonicon, salvation_engine,
+    skysovereign_consul_flagship, sol_ring, talisman_of_conviction, thought_vessel,
+    wayfarers_bauble, weatherlight, worn_powerstone, battlefield_forge, buried_ruin,
+    command_tower, cori_mountain_monastery, darksteel_citadel, furycalm_snarl, prismatic_vista,
+    rustvale_bridge, sacred_foundry, spire_of_industry, sunhome_fortress_of_the_legion,
+    urzas_saga, windswept_heath, wooded_foothills, ancient_stone_idol, angel_of_the_ruins,
+    anim_pakal_thousandth_moon, archivist_of_oghma, audacious_reshapers, bosh_iron_golem,
+    burnished_hart, canoptek_scarab_swarm, combat_thresher, combustible_gearhulk,
+    eidolon_of_rhetoric, elesh_norn_mother_of_machines, esper_sentinel, foundry_inspector,
+    gerrard_weatherlight_hero, golden_guardian, hofri_ghostforge, iroas_god_of_victory,
+    iron_myr, jor_kadeen_the_prevailer, losheel_clockwork_scholar, loyal_apprentice,
+    oltec_matterweaver, palladium_myr, precursor_golem, purphoros_bronze_blooded,
+    purphoros_god_of_the_forge, queen_kayla_bin_kroog, reckless_fireweaver, scrap_trawler,
+    steel_hellkite, thopter_engineer, treasure_nabber, triplicate_titan, deafening_silence,
+    rule_of_law, smothering_tithe, smugglers_share, boros_charm, deflecting_palm, dispatch,
+    generous_gift, path_to_exile, sejiri_shelter, shock, swords_to_plowshares, austere_command,
+    faithless_looting, jeskas_will, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ICH_TEKIK_20_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, krark_the_thumbless];
+
+/// **Ich-Tekik, Salvage Splicer and Krark, the Thumbless**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 11 Forests + 12 Mountains = 98.
+/// Ich-Tekik, Salvage Splicer and Krark, the Thumbless (EDHREC, fetched 2026-10-17).
+pub const ICH_TEKIK_20_MAIN: &[CardFactory] = &[
+    arcane_signet, c_a_m_p, fellwar_stone, heaped_harvest, hoard_hauler, krarks_thumb,
+    legion_extruder, liquimetal_torque, maskwood_nexus, shadowspear, sol_ring, thought_vessel,
+    twinning_staff, vedalken_orrery, castle_embereth, cinder_glade, command_tower,
+    exotic_orchard, geier_reach_sanitarium, kher_keep, roadside_reliquary, scavenger_grounds,
+    spinerock_knoll, temple_of_abandon, tree_of_tales, atsushi_the_blazing_sky,
+    cradle_clearcutter, harmonic_prodigy, haywire_mite, humble_defector, ingenious_artillerist,
+    jaxis_the_troublemaker, jolene_the_plunder_queen, magda_brazen_outlaw, marching_duodrone,
+    precursor_golem, reckless_fireweaver, rootwire_amalgam, solemn_simulacrum,
+    storm_kiln_artist, sylvok_replica, tavern_scoundrel, triplicate_titan, xorn,
+    zada_hedron_grinder, chance_encounter, double_vision, fable_of_the_mirror_breaker,
+    impulsive_maneuvers, archdruids_charm, atarkas_command, confront_the_unknown,
+    defend_the_rider, evolution_charm, gift_of_the_viper, gold_rush, invoke_calamity,
+    lightning_bolt, reiterate, return_of_the_wildspeaker, tibalts_trickery, tyvars_stand,
+    brasss_bounty, crack_open, electroduplicate, heat_shimmer, inspired_tinkering, jeskas_will,
+    mizzixs_mastery, natures_rhythm, primal_command, seize_the_spoils, seize_the_spotlight,
+    structural_assault, turntimber_symbiosis,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const SPIDER_MAN_2099_2_COMMANDERS: &[CardFactory] = &[spider_man_2099];
+
+/// **Spider-Man 2099**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Islands + 11 Mountains = 99.
+/// Spider-Man 2099 (EDHREC, fetched 2026-10-17).
+pub const SPIDER_MAN_2099_2_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, blackblade_reforged, champions_helm, fellwar_stone,
+    interdimensional_web_watch, izzet_signet, sol_ring, swiftfoot_boots,
+    sword_of_forge_and_frontier, talisman_of_creativity, the_key_to_the_vault,
+    wrecking_ball_arm, cascade_bluffs, command_tower, cori_mountain_monastery, exotic_orchard,
+    frostboil_snarl, izzet_boilerworks, riverpyre_verge, rogues_passage, shivan_reef,
+    steam_vents, stormcarved_coast, sulfur_falls, swarmyard, temple_of_epiphany,
+    training_center, bohn_beguiling_balladeer, cait_sith_fortune_teller,
+    chameleon_master_of_disguise, eruth_tormented_prophet, etali_primal_storm,
+    fblthp_lost_on_the_range, flaming_tyrannosaurus, inti_seneschal_of_the_sun,
+    kami_of_celebration, laelia_the_blade_reforged, lyla_holographic_assistant, party_thrasher,
+    plargg_and_nassari, professional_face_breaker, sage_of_the_beyond, spider_punk,
+    the_reality_chip, wild_magic_sorcerer, curiosity, future_flight, passionate_archaeologist,
+    shadow_of_the_goblin, spider_verse, tavern_brawler, wild_wasteland,
+    an_offer_you_cant_refuse, behold_the_multiverse, blazing_crescendo, brainstorm, bulk_up,
+    chaos_warp, counterspell, delayed_blast_fireball, haste_magic, opera_love_song, pongify,
+    saw_it_coming, slip_out_the_back, spider_sense, unleash_fury, blasphemous_act,
+    expressive_iteration, faithless_looting, heroes_hangout, hex_magic, jeskas_will,
+    light_up_the_stage, ravenform, reckless_charge, reckless_impulse, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BOHN_COMMANDERS: &[CardFactory] = &[bohn_beguiling_balladeer];
+
+/// **Bohn, Beguiling Balladeer**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Mountains = 99.
+/// Bohn, Beguiling Balladeer (EDHREC, fetched 2026-10-17).
+pub const BOHN_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, lightning_greaves, midnight_clock,
+    resonating_lute, sol_ring, talisman_of_creativity, thought_vessel, cascade_bluffs,
+    command_tower, frostboil_snarl, izzet_boilerworks, mystic_sanctuary, reliquary_tower,
+    scalding_tarn, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    temple_of_epiphany, training_center, archmage_emeritus, archmage_of_runes,
+    birgi_god_of_storytelling, bothersome_quasit, cosmos_charger, exalted_flamer_of_tzeentch,
+    flaming_tyrannosaurus, goblin_electromancer, guttersnipe, jori_en_ruin_diver,
+    keeper_of_secrets, mathise_surge_channeler, mizzix_replica_rider, nalfeshnee,
+    prismari_the_inspiration, sage_of_the_beyond, storm_kiln_artist, vengeful_ancestor,
+    wild_magic_sorcerer, braid_of_fire, leyline_of_anticipation, passionate_archaeologist,
+    propaganda, the_lost_and_the_damned, thousand_year_storm, aetherize, behold_the_multiverse,
+    big_score, brainstorm, chaos_warp, counterspell, delayed_blast_fireball, frantic_search,
+    reinterpret, rewind, saw_it_coming, seething_song, spell_swindle, surge_of_brilliance,
+    unexpected_windfall, unwind, ral_crackling_wit, blasphemous_act, disrupt_decorum,
+    expressive_iteration, impending_flux, improvisation_capstone, jeskas_will, mana_geyser,
+    mizzixs_mastery, ponder, ravenform, see_the_truth, tales_of_the_ancestors, vandalblast,
+    windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const KEIGA_COMMANDERS: &[CardFactory] = &[keiga_the_tide_star];
+
+/// **Keiga, the Tide Star**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Keiga, the Tide Star (EDHREC, fetched 2026-10-17).
+pub const KEIGA_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_selves, everflowing_chalice, midnight_clock, mimic_vat, mind_stone,
+    sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel, thran_dynamo,
+    wayfarers_bauble, worn_powerstone, arcane_lighthouse, mirrorpool, myriad_landscape,
+    mystic_sanctuary, reliquary_tower, war_room, agent_of_treachery, apprentice_wizard,
+    clever_impersonator, clone_card, cryptoplasm, deceptive_frostkite, flesh_duplicate,
+    glasspool_mimic, mirror_image, mirrorhall_mimic, phantasmal_image, phyrexian_metamorph,
+    renegade_doppelganger, silent_hallcreeper, silver_myr, solemn_simulacrum, stunt_double,
+    undercover_operative, visage_bandit, vizier_of_many_faces, dance_of_many, endless_evil,
+    extravagant_replication, followed_footsteps, mirror_mockery, propaganda, rhystic_study,
+    aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm, cackling_counterpart,
+    counterspell, fact_or_fiction, fated_infatuation, high_tide, negate, pongify,
+    rapid_hybridization, see_double, sublime_epiphany, three_steps_ahead, echocasting_symposium,
+    mirage_mockery, ponder, quasiduplicate, rite_of_replication, sakashimas_will,
+    stolen_identity, will_of_the_temur,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const GOLDEN_ARGOSY_COMMANDERS: &[CardFactory] = &[golden_argosy];
+
+/// **Golden Argosy**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 16 Wastes = 99.
+/// Golden Argosy (EDHREC, fetched 2026-10-17).
+pub const GOLDEN_ARGOSY_MAIN: &[CardFactory] = &[
+    cloud_key, conjurers_closet, everflowing_chalice, forsaken_monument, genesis_chamber,
+    hedron_archive, knight_paladin, lightning_greaves, manifold_key, mind_stone, mirrorworks,
+    mystic_forge, panharmonicon, scroll_of_fate, sculpting_steel, sol_ring, thought_vessel,
+    thran_dynamo, unwinding_clock, worn_powerstone, access_tunnel, buried_ruin,
+    darksteel_citadel, guildless_commons, inventors_fair, muraganda_raceway, reliquary_tower,
+    rogues_passage, scavenger_grounds, shrine_of_the_forsaken_gods, temple_of_the_false_god,
+    thespians_stage, tomb_of_the_spirit_dragon, urzas_cave, urzas_mine, urzas_power_plant,
+    urzas_saga, urzas_tower, urzas_workshop, war_room, zhalfirin_void, anticausal_vestige,
+    arcbound_crusher, archive_arbiter, atraxas_skitterfang, bronze_walrus,
+    canoptek_scarab_swarm, canoptek_spyder, circuit_mender, clockwork_fox, dauntless_scrapbot,
+    duplicant, foundry_inspector, glaring_fleshraker, herbie_scout_unit, meteor_golem,
+    myr_battlesphere, palladium_myr, pierce_strider, pilgrims_eye, precursor_golem,
+    sandstone_oracle, scampering_surveyor, searchlight_companion, skittering_surveyor,
+    skyscanner, solemn_simulacrum, stone_retrieval_unit, summon_bahamut, thran_spider,
+    threefold_thunderhulk, ticket_tortoise, triskelion, ultima_origin_of_oblivion,
+    echoes_of_eternity, eldrazi_confluence, eldritch_immunity, null_elemental_blast,
+    warping_wail, ugin_eye_of_the_storms, ugin_the_ineffable, all_is_dust,
+    selective_obliteration,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes, wastes, wastes, wastes,
+];
+
+pub const MAVINDA_COMMANDERS: &[CardFactory] = &[mavinda_students_advocate];
+
+/// **Mavinda, Students' Advocate**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Mavinda, Students' Advocate (EDHREC, fetched 2026-10-17).
+pub const MAVINDA_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, benders_waterskin, diary_of_dreams, marble_diamond,
+    mind_stone, pearl_medallion, primal_amulet, sol_ring, castle_ardenvale,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith, myriad_landscape,
+    secluded_steppe, war_room, brigone_soldier_of_meletis, cosmogrand_zenith,
+    enduring_innocence, illuminator_virtuoso, informed_inkwright, knight_of_the_white_orchid,
+    leonin_lightscribe, loran_of_the_third_path, loyal_warhound, monastery_mentor,
+    phalanx_leader, precursor_golem, skyclave_apparition, solemn_simulacrum, spirited_companion,
+    stirring_hopesinger, sun_titan, thalias_geistcaller, vanguard_of_brimaz, wall_of_omens,
+    welcoming_vampire, witch_enchanter, aligned_heart, graduation_day, tocasias_welcome,
+    acrobatic_maneuver, bandage, carom, cloudshift, defiant_strike, dual_sun_technique,
+    eerie_interlude, ephemerate, flicker_of_fate, getaway_glamer, gods_willing, guided_strike,
+    niveous_wisps, oblation, path_to_exile, rebellious_strike, scrollshift, sejiri_shelter,
+    semesters_end, shelter, show_of_confidence, swords_to_plowshares, thats_rough_buddy,
+    valorous_stance, austere_command, fell_the_mighty, honor, secret_rendezvous,
+    settle_beyond_reality, sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
