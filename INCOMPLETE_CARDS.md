@@ -1978,6 +1978,7 @@ library-exile event.
 | Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |
 | Beamtown Beatstick | "Whenever equipped creature deals combat damage to a player **or battle**" — only the player half triggers | no `EventKind` for combat damage to a battle (Attentive Skywarden shares the gap) |
 | Rankle and Torbran | "Whenever Rankle and Torbran deals combat damage to a player **or battle**" — only the player half triggers | same missing `EventKind` |
+| Thorin, Company's Leader | "Whenever a Dwarf you control deals combat damage to a player **or battle**" — only the player half triggers | same missing `EventKind` |
 
 ### EDHREC average-deck seats (`decks::cmdr_edhrec3`, 2026-10-11 Commander run) — open residuals
 

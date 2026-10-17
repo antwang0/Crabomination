@@ -1408,6 +1408,14 @@ static DECKS: &[Factory] = &[
     super::decks::disappearing_act,
     super::decks::abuelos_awakening,
     super::decks::brilliance_unleashed,
+    // cmdr_019y_f (session 019Y6J4R)
+    super::decks::conch_horn,
+    super::decks::lunar_force,
+    super::decks::oroku_saki_shredder_rising,
+    super::decks::korvold_and_the_noble_thief,
+    super::decks::stockman_mad_fly_entist,
+    super::decks::thorin_companys_leader,
+    super::decks::brain_in_a_jar,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
