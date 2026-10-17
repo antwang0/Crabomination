@@ -203,6 +203,10 @@ the handoff.
   seats 3236-3275). Researched, open: Thornmantle Striker ("remove X counters from target permanent" of any kinds —
   only single-kind removal exists), Precursor Golem (7 decks; `014Q2Gfw`'s note), Splicer's-Skill-style splice now
   exists for any instant or sorcery.
+- **LANDED (batch 11):** Bonecaller Cleric, Defiant Salvager, Destructor Dragon, Dire Fleet Hoarder, Entropic Cloud,
+  Lake-town Mariners, Liliana's Elite, Primal Witchstalker, Razaketh's Rite, Topaz Dragon, Winds of Rebuke, Veteran
+  Adventurer, Calciform Pools — seats 3276-3301. **CLAIMED (batch 12) — don't duplicate:** Lifelink, Moonblade
+  Shinobi, Dining Room, Resonance Technician.
 - **FIXED (`0128tsCy`):** `cast_spell_alternative_from` stamped no `cast_mana_spent_by_color` (an evoked Vibrance's
   "if {R}{R} was spent" was false, "if no mana was spent" true), passed converge 0 and `from_hand: true` for a
   command-zone alt cast; `finalize_cast` counted hop casts as hand casts. The Prismatic Piper never carried
