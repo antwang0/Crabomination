@@ -2232,3 +2232,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Nick Fury, Spymaster | the put-in creature attacks the attacker's defender or the most hostile opponent, not a chosen one (CR 508.4) | `DeployCreatureFromHandAttacking` |
 | 🟡 Feed the Pack | the sacrificed nontoken creature is auto-picked (weakest first), so X isn't the toughness you'd choose | `MaySacrifice` + `SacrificedToughness` |
 | 🟡 Planar Atlas | the look keeps any one of the four on top (not only a land) and isn't optional | `LookTopKeepOneRestToGraveyard { rest_bottom_random }` |
+| 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
+| 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |

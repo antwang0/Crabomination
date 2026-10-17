@@ -6955,6 +6955,14 @@ pub enum Effect {
     /// (Misleading Signpost). Ignores attack restrictions and costs, and is
     /// not a new attack (no "whenever … attacks" trigger) — the rulings.
     /// `players_only`: "which player" — no planeswalker (Capricopian).
+    /// "Choose target player and any number of target attacking creatures
+    /// their opponents control. Those creatures are now attacking that player"
+    /// (Portal Manipulator). Both picks are made as it resolves: the player
+    /// (the controller's ask; headless, whoever can take the most), then every
+    /// attack aimed at the controller or its planeswalkers that the controller
+    /// could target moves. Not a new attack — restrictions, costs and attack
+    /// triggers are ignored.
+    AttackersNowAttackChosenPlayer,
     ReselectAttackTarget {
         what: Selector,
         #[serde(default)]

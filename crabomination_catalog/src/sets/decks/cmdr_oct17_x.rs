@@ -596,3 +596,26 @@ pub fn armor_wars() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Portal Manipulator — {2}{W/U}{W/U} 3/2 flash Human Wizard. When it enters
+/// during the declare attackers step, attacks on you move to a player of your
+/// choice (both picks made on resolution; every attack you could redirect
+/// moves).
+pub fn portal_manipulator() -> CardDefinition {
+    let wu = || hybrid(Color::White, Color::Blue);
+    let mut redirect = crate::effect::shortcut::etb(Effect::AttackersNowAttackChosenPlayer);
+    // "During the declare attackers step" is an intervening if (CR 603.4).
+    redirect.event =
+        redirect.event.with_filter(Predicate::CurrentStepIs(crate::game::types::TurnStep::DeclareAttackers));
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![redirect],
+        ..creature(
+            "Portal Manipulator",
+            cost(&[generic(2), wu(), wu()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            2,
+        )
+    }
+}

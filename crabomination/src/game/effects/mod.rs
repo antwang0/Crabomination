@@ -12196,6 +12196,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AttackersNowAttackChosenPlayer => {
+                self.attackers_now_attack_chosen_player(ctx, effect);
+                Ok(())
+            }
             Effect::ReselectAttackTarget { what, players_only } => {
                 self.reselect_attack_target(what, *players_only, ctx, effect);
                 Ok(())

@@ -355,3 +355,23 @@ fn armor_wars_chapter_one_draws_per_artifact() {
     assert_eq!(g.players[0].hand.len(), 2);
     assert_eq!(g.players[1].hand.len(), 1);
 }
+
+/// Portal Manipulator: flashed in during declare attackers, it turns an
+/// attack aimed at its controller onto another player (not a new attack).
+#[test]
+fn portal_manipulator_redirects_an_attack() {
+    let mut g = pod(3);
+    step_to(&mut g, 1, TurnStep::DeclareAttackers);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    let pm = g.add_card_to_hand(0, catalog::portal_manipulator());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: pm, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("flash");
+    drain_stack(&mut g);
+    let target = g.attacking.iter().find(|a| a.attacker == bear).map(|a| a.target);
+    assert_eq!(target, Some(AttackTarget::Player(2)));
+}

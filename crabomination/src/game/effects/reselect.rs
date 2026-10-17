@@ -72,4 +72,53 @@ impl GameState {
             a.target = target;
         }
     }
+
+    /// `Effect::AttackersNowAttackChosenPlayer` (Portal Manipulator): the
+    /// attacks aimed at the controller or its planeswalkers whose creature the
+    /// controller could target move to a player of its choice that doesn't
+    /// control that creature. Headless, the player who takes the most.
+    pub(crate) fn attackers_now_attack_chosen_player(&mut self, ctx: &EffectContext, effect: &Effect) {
+        let me = ctx.controller;
+        let mine: Vec<(crate::card::CardId, usize)> = self
+            .attacking
+            .iter()
+            .filter(|a| match a.target {
+                AttackTarget::Player(q) => q == me,
+                AttackTarget::Planeswalker(c) | AttackTarget::Battle(c) => {
+                    self.battlefield_find(c).is_some_and(|x| x.controller == me)
+                }
+            })
+            .filter(|a| self.check_target_legality(&crate::game::types::Target::Permanent(a.attacker), me).is_ok())
+            .filter_map(|a| self.battlefield_find(a.attacker).map(|c| (a.attacker, c.controller)))
+            .collect();
+        if mine.is_empty() {
+            return;
+        }
+        let takes = |p: usize| mine.iter().filter(|(_, c)| *c != p && !self.same_team(*c, p)).count();
+        let mut seats: Vec<usize> =
+            (0..self.players.len()).filter(|&p| p != me && self.players[p].is_alive() && takes(p) > 0).collect();
+        if seats.is_empty() {
+            return;
+        }
+        seats.sort_by_key(|&p| (std::cmp::Reverse(takes(p)), std::cmp::Reverse(self.players[p].life), p));
+        let mut cursor = 0;
+        let labels = seats.iter().map(|p| format!("Player {}", p + 1)).collect();
+        let Some(idx) = self.ask_seat_option(
+            &mut cursor,
+            me,
+            "Which player do those attackers now attack?".to_string(),
+            ctx.source.unwrap_or(crate::card::CardId(0)),
+            labels,
+            effect,
+        ) else {
+            return;
+        };
+        self.clear_answer_log();
+        let Some(&p) = seats.get(idx) else { return };
+        for a in self.attacking.iter_mut() {
+            if mine.iter().any(|(c, ctrl)| *c == a.attacker && *ctrl != p) {
+                a.target = AttackTarget::Player(p);
+            }
+        }
+    }
 }

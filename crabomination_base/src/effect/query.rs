@@ -1038,6 +1038,7 @@ impl Effect {
             | Effect::CreaturesCantAttackYouUntilYourNextTurn
             | Effect::GrantSorcerySpellsFlashThisTurn
             | Effect::YourCreaturesUntargetableByOpponentsThisTurn
+            | Effect::AttackersNowAttackChosenPlayer
             | Effect::Parade
             | Effect::TimeCountersOnEachPermanentAndSuspended { .. }
             | Effect::TripleYourSourcesDamageToOpponentsThisTurn

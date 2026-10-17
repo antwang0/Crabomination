@@ -17340,6 +17340,7 @@ static DECKS: &[Factory] = &[
     super::decks::belltoll_dragon,
     super::decks::robot_domination,
     super::decks::armor_wars,
+    super::decks::portal_manipulator,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
