@@ -23778,6 +23778,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALHARU_10_COMMANDERS,
             main: decks::ALHARU_10_MAIN,
         },
+        // Seat 3888: Gwen Stacy's EDHREC average deck. `--pod-decks 3888`.
+        PodDeck {
+            name: "Gwen Stacy (WUR)",
+            commanders: decks::GWEN_STACY_COMMANDERS,
+            main: decks::GWEN_STACY_MAIN,
+        },
+        // Seat 3889: Malcator, Purity Overseer's EDHREC average deck. `--pod-decks 3889`.
+        PodDeck {
+            name: "Malcator, Purity Overseer (WU)",
+            commanders: decks::MALCATOR_COMMANDERS,
+            main: decks::MALCATOR_MAIN,
+        },
+        // Seat 3890: Jerren, Corrupted Bishop's EDHREC average deck. `--pod-decks 3890`.
+        PodDeck {
+            name: "Jerren, Corrupted Bishop (B)",
+            commanders: decks::JERREN_COMMANDERS,
+            main: decks::JERREN_MAIN,
+        },
+        // Seat 3891: Hama, the Bloodbender's EDHREC average deck. `--pod-decks 3891`.
+        PodDeck {
+            name: "Hama, the Bloodbender (UB)",
+            commanders: decks::HAMA_COMMANDERS,
+            main: decks::HAMA_MAIN,
+        },
+        // Seat 3892: O'aka, Traveling Merchant's EDHREC average deck. `--pod-decks 3892`.
+        PodDeck {
+            name: "O'aka, Traveling Merchant (U)",
+            commanders: decks::OAKA_COMMANDERS,
+            main: decks::OAKA_MAIN,
+        },
+        // Seat 3893: Gale, Waterdeep Prodigy and Noble Heritage's EDHREC average deck. `--pod-decks 3893`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Noble Heritage (WU)",
+            commanders: decks::GALE_13_COMMANDERS,
+            main: decks::GALE_13_MAIN,
+        },
+        // Seat 3894: The Eighth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3894`.
+        PodDeck {
+            name: "The Eighth Doctor and Ian Chesterton (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_8_MAIN,
+        },
+        // Seat 3895: The Eighth Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 3895`.
+        PodDeck {
+            name: "The Eighth Doctor and Barbara Wright (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_9_MAIN,
+        },
+        // Seat 3896: Alharu, Solemn Ritualist and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 3896`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Ghost of Ramirez DePietro (WU)",
+            commanders: decks::ALHARU_11_COMMANDERS,
+            main: decks::ALHARU_11_MAIN,
+        },
+        // Seat 3897: Vhal, Candlekeep Researcher and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3897`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Acolyte of Bahamut (UG)",
+            commanders: decks::VHAL_12_COMMANDERS,
+            main: decks::VHAL_12_MAIN,
+        },
+        // Seat 3898: The First Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3898`.
+        PodDeck {
+            name: "The First Doctor and Ian Chesterton (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_6_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_6_MAIN,
+        },
     ]
 }
 
@@ -29549,6 +29615,17 @@ mod tests {
             ("Akroma, Vision of Ixidor and Halana, Kessig Ranger", &[0x1943]),
             ("Ardenn, Intrepid Archaeologist and Ravos, Soultender", &[0x1944]),
             ("Alharu, Solemn Ritualist and Gilanra, Caller of Wirewood", &[0x1945]),
+            ("Gwen Stacy", &[0x1946]),
+            ("Malcator, Purity Overseer", &[0x1947]),
+            ("Jerren, Corrupted Bishop", &[0x1948]),
+            ("Hama, the Bloodbender", &[0x1949]),
+            ("O'aka, Traveling Merchant", &[0x194A]),
+            ("Gale, Waterdeep Prodigy and Noble Heritage", &[0x194B]),
+            ("The Eighth Doctor and Ian Chesterton", &[0x194C]),
+            ("The Eighth Doctor and Barbara Wright", &[0x194D]),
+            ("Alharu, Solemn Ritualist and Ghost of Ramirez DePietro", &[0x194E]),
+            ("Vhal, Candlekeep Researcher and Acolyte of Bahamut", &[0x194F]),
+            ("The First Doctor and Ian Chesterton", &[0x1950]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
