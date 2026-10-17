@@ -9803,6 +9803,8 @@ impl GameState {
             .ok_or(GameError::CardNotInGraveyard(card_id))?;
         card.cast_from_hand = false;
         card.cast_from_graveyard = true;
+        // A card cast from hand earlier this game still carries that flag.
+        card.cast_from_hand = false;
         card.split_cast = Some(1);
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -14181,6 +14183,8 @@ impl GameState {
         let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_graveyard = true;
+        // A card cast from hand earlier this game still carries that flag.
+        card.cast_from_hand = false;
         self.players[p].note_card_left_graveyard(&card);
         self.entered_from_graveyard_this_turn.insert(card_id);
         // Flip to the back face — the transformed spell goes on the stack
@@ -14597,6 +14601,8 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         self.entered_from_graveyard_this_turn.insert(card_id);
         card.cast_from_graveyard = true;
+        // A card cast from hand earlier this game still carries that flag.
+        card.cast_from_hand = false;
         card.cast_via_flashback = !plain_graveyard_cast;
         // CR 702.187 — a Mayhem cast stamps the spell so "if the mayhem cost
         // was paid" riders can branch at resolution (Sandman's Quicksand).
@@ -14694,6 +14700,8 @@ impl GameState {
         let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_graveyard = true;
+        // A card cast from hand earlier this game still carries that flag.
+        card.cast_from_hand = false;
         self.players[p].note_card_left_graveyard(&card);
         events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -14816,6 +14824,8 @@ impl GameState {
         // ETB rider on Kroxa/Uro sees this entered via Escape.
         card.cast_from_escape = true;
         card.cast_from_graveyard = true;
+        // A card cast from hand earlier this game still carries that flag.
+        card.cast_from_hand = false;
         if let Some(src) = once_grant {
             self.players[p].graveyard_sac_cast_sources_this_turn.push(src);
         }
