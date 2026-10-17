@@ -1089,3 +1089,6 @@ pub use cmdr_oct17_i::*;
 #[path = "../../../src/sets/decks/cmdr_oct17_kn.rs"]
 mod cmdr_oct17_kn;
 pub use cmdr_oct17_kn::*;
+#[path = "../../../src/sets/decks/cmdr_oct17_q.rs"]
+mod cmdr_oct17_q;
+pub use cmdr_oct17_q::*;

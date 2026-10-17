@@ -17152,6 +17152,13 @@ static DECKS: &[Factory] = &[
     super::decks::reality_strobe,
     super::decks::conduit_of_storms,
     super::decks::jerren_corrupted_bishop,
+    // cmdr_oct17_q
+    super::decks::dust_of_moments,
+    super::decks::on_thin_ice,
+    super::decks::dawn_blessed_pennant,
+    super::decks::the_flame_of_keld,
+    super::decks::celestial_reunion,
+    super::decks::march_of_reckless_joy,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
