@@ -197,11 +197,10 @@ the handoff.
   the explore arm re-runs whole), Arcee's back face ("that many" = count of your creatures a cast
   spell targets: no `Value`), The Flame of Keld III (red-source damage +2 this turn), Casey & Raph ("each
   mode must target a different player"), Cloak and Dagger (exile from hand *or* the chosen creature).
-- **Researched, not built (batch H/I):** Soul Partition (a may-play grant whose cast costs {2} more for an
-  opponent — no taxed `GrantMayPlay`), Shackles of Treachery ("destroy target Equipment attached to it": no
-  source-precise attached-to *target* leaf; `AttachedToSource` is "attached to anything"), Back for More (the
-  reflexive fight names the returned card, but a `Reflexive` body re-targets slot 0), Fishing Pole / Fraying Line,
+- **Researched, not built (batch H/I):** Shackles of Treachery ("destroy target Equipment attached to it": no
+  source-precise attached-to *target* leaf; `AttachedToSource` is "attached to anything"), Fraying Line,
   Inventive Iteration's back face (opponents can't cast spells of the same mana value until your next turn).
+  (Soul Partition, Back for More and Fishing Pole were taken by `3chree`.)
 - **Bot note:** Elektra's "deal 2 damage to you: 4 to a creature" is declined by the `MayDo` self-cost
   screen (self-damage), as are similar riders.
 
