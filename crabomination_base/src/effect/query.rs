@@ -1747,6 +1747,7 @@ impl Effect {
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
+            Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_has_target(target),
             Effect::CreateTokensToFightEach { .. } => false,
             Effect::DealDamageEqualToPower { source, target } => {
                 sel_has_target(source) || sel_has_target(target)
@@ -2412,6 +2413,7 @@ impl Effect {
             Effect::ChooseGraveyardCreaturesEachMayReturn
             | Effect::ExileTypeSpreadReturnPermanent { .. } => false,
             Effect::SearchTheirLibraryAgainstNamedCard { who } => player_has_target(who),
+            Effect::EachPlayerSacrificesUnlikeChosen => false,
             Effect::ReturnTargetCardsAtRandom { .. } => false,
             Effect::EachPlayerRecyclesArtifacts => false,
             Effect::OpponentChoosesPermanentThen { .. } => false,
@@ -2798,6 +2800,7 @@ impl Effect {
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
+            Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_filter(target),
             // Either slot can be the target: Feral Contest picks the attacker,
             // Turntimber Basilisk's landfall picks the lured blocker.
             Effect::MustBlockTarget { blocker, attacker } => {
@@ -3651,6 +3654,7 @@ impl Effect {
                 | Effect::ExileUntilSourceLeaves { .. }
                 | Effect::DealDamage { .. }
                 | Effect::Fight { .. }
+                | Effect::TapMatchingDealPowerAndTakeDivided { .. }
                 | Effect::SacrificePermanent { .. }
                 | Effect::GainControl { .. }
                 | Effect::GainControlWhileSourceRemains { .. }
@@ -4788,6 +4792,7 @@ impl Effect {
             | Effect::ExchangeControl { .. }
             | Effect::ExchangeControlChoosing { .. }
             | Effect::DealDamageEqualToPowerToEach { .. }
+            | Effect::TapMatchingDealPowerAndTakeDivided { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -5374,6 +5379,7 @@ impl Effect {
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
+                Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_find(target, slot),
                 Effect::MustBlockTarget { blocker, attacker } => {
                     sel_find(blocker, slot).or_else(|| sel_find(attacker, slot))
                 }

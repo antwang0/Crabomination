@@ -145,7 +145,7 @@ impl GameState {
 
     /// Do two permanents share a creature type (CR 205.3, changeling
     /// included)? Reads the computed types.
-    fn permanents_share_creature_type(&self, a: CardId, b: CardId) -> bool {
+    pub(super) fn permanents_share_creature_type(&self, a: CardId, b: CardId) -> bool {
         let (Some(ca), Some(cb)) = (self.computed_permanent(a), self.computed_permanent(b)) else { return false };
         let wild = |cp: &crate::game::layers::ComputedPermanent| cp.keywords().contains(&crate::card::Keyword::Changeling);
         let a_types = &ca.subtypes().creature_types;

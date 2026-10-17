@@ -6529,6 +6529,16 @@ pub enum Effect {
     /// you may put it onto the battlefield under your control. Then that
     /// player shuffles." (Sphinx Ambassador.)
     SearchTheirLibraryAgainstNamedCard { who: PlayerRef },
+    /// "Tap all untapped [filter] you control. Each one tapped this way deals
+    /// damage equal to its power to `target`. That creature deals damage equal
+    /// to its power divided as its controller chooses among any number of
+    /// those" (Master of the Wild Hunt). The division is asked first, of the
+    /// target's controller; headless it kills the most, smallest first.
+    TapMatchingDealPowerAndTakeDivided { filter: SelectionRequirement, target: Selector },
+    /// "For each player, you choose a creature that player controls. Then each
+    /// player sacrifices all other creatures they control that don't share a
+    /// creature type with the chosen creature they control" (Winnowing).
+    EachPlayerSacrificesUnlikeChosen,
     /// "You may exile any number of cards from your graveyard with
     /// `min_types` or more card types among them. If you do, put a permanent
     /// card from among them onto the battlefield with a finality counter"

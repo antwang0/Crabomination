@@ -39,6 +39,8 @@ mod eval;
 mod free_cast;
 mod graveyard_swap;
 mod named_search;
+mod pack_fight;
+mod winnow;
 mod graveyard_spread;
 mod dice_choices;
 mod order_bottom;
@@ -13756,6 +13758,10 @@ impl GameState {
             Effect::ExileTypeSpreadReturnPermanent { min_types } => {
                 self.exile_type_spread_return_permanent(*min_types, ctx, events, effect)
             }
+            Effect::TapMatchingDealPowerAndTakeDivided { filter, target } => {
+                self.tap_matching_deal_power_and_take_divided(filter, target, ctx, events, effect)
+            }
+            Effect::EachPlayerSacrificesUnlikeChosen => self.each_player_sacrifices_unlike_chosen(ctx, events, effect),
             Effect::SearchTheirLibraryAgainstNamedCard { who } => {
                 self.search_against_named_card(who, ctx, events, effect)
             }
