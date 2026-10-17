@@ -6656,6 +6656,9 @@ pub enum Effect {
     /// card." The exiled cards stay in exile; the stopping card's mana value
     /// is published as `Value::LastExiledManaValue` (Undying Flames).
     ExileTopUntilNonland { who: PlayerRef },
+    /// [`Effect::ExileTopUntilNonland`] with every card stamped
+    /// `exiled_with = source` (Krang & Shredder's "a card exiled with").
+    ExileTopUntilNonlandWithSource { who: PlayerRef },
     /// "Exile cards from the top of your library until you exile a [filter]
     /// card": every exiled card is recorded for `Selector::ExiledThisResolution`
     /// (Unpredictable Cyclone's cycling replacement chains the free cast and

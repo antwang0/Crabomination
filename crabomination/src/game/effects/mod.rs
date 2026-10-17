@@ -16867,12 +16867,17 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopUntilNonland { who } => {
+            Effect::ExileTopUntilNonland { who } | Effect::ExileTopUntilNonlandWithSource { who } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let dest = if matches!(effect, Effect::ExileTopUntilNonland { .. }) {
+                    ZoneDest::Exile
+                } else {
+                    ZoneDest::ExileWithSourceStamp
+                };
                 while let Some(top) = self.players[seat].library.first().map(|c| c.id) {
                     let is_land =
                         self.players[seat].library.first().is_some_and(|c| c.definition.is_land());
-                    self.move_card_to(top, &ZoneDest::Exile, ctx, events);
+                    self.move_card_to(top, &dest, ctx, events);
                     if !is_land {
                         break;
                     }

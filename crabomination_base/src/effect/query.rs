@@ -1060,6 +1060,7 @@ impl Effect {
             | Effect::ReturnAnyNumberToHand { .. }
             | Effect::PutAnyNumberFromGraveyardOnTop { .. }
             | Effect::ExileTopUntilNonland { .. }
+            | Effect::ExileTopUntilNonlandWithSource { .. }
             | Effect::ExileUntilNonlandToHandRepeat { .. }
             | Effect::EachPlayerMayExileHandDraw { .. }
             | Effect::EachPlayerGainsChosenFromRightNeighbor { .. }
