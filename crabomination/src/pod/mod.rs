@@ -22278,6 +22278,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NIHILOOR_COMMANDERS,
             main: decks::NIHILOOR_MAIN,
         },
+        // Seat 3638: The Ever-Changing 'Dane's EDHREC average deck. `--pod-decks 3638`.
+        PodDeck {
+            name: "The Ever-Changing 'Dane (WUB)",
+            commanders: decks::THE_EVER_CHANGING_DANE_COMMANDERS,
+            main: decks::THE_EVER_CHANGING_DANE_MAIN,
+        },
     ]
 }
 
@@ -27799,6 +27805,7 @@ mod tests {
             ("Magik, Illyana Rasputin", &[0x1849]),
             ("Raph & Leo, Sibling Rivals", &[0x184A]),
             ("Nihiloor", &[0x184B]),
+            ("The Ever-Changing 'Dane", &[0x184C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -101959,3 +101959,32 @@ pub const NIHILOOR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_EVER_CHANGING_DANE_COMMANDERS: &[CardFactory] = &[the_ever_changing_dane];
+
+/// **The Ever-Changing 'Dane**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 6 Islands + 4 Plains + 7 Swamps = 99.
+/// The Ever-Changing 'Dane (EDHREC, fetched 2026-10-17).
+pub const THE_EVER_CHANGING_DANE_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, mimic_vat, orzhov_signet, sol_ring,
+    talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress, arcane_sanctum,
+    caves_of_koilos, command_tower, drowned_catacomb, exotic_orchard, glacial_fortress,
+    godless_shrine, hallowed_fountain, isolated_chapel, marsh_flats, morphic_pool,
+    polluted_delta, prairie_stream, raffines_tower, sea_of_clouds, shipwreck_marsh,
+    sunken_hollow, vault_of_champions, watery_grave, activated_sleeper, ao_the_dawn_sky,
+    athreos_shroud_veiled, avacyn_angel_of_horror, baleful_strix, bane_lord_of_darkness,
+    body_launderer, carmen_cruel_skymarcher, cemetery_puca, clever_impersonator,
+    elas_il_kor_sadistic_pilgrim, evil_twin, grim_haruspex, junji_the_midnight_sky,
+    kairi_the_swirling_sky, keiga_the_tide_star, kokusho_the_evening_star, likeness_looter,
+    luminous_broodmoth, merieke_ri_berit, midnight_reaper, mind_flayer, morbid_opportunist,
+    nightmare_shepherd, phyrexian_metamorph, pitiless_plunderer, ratadrabik_of_urborg,
+    solemn_simulacrum, sower_of_temptation, teysa_karlov, animate_dead, chamber_of_manipulation,
+    phyrexian_arena, phyrexian_reclamation, rhystic_study, smothering_tithe,
+    an_offer_you_cant_refuse, anguished_unmaking, counterspell, domineering_will, dovins_veto,
+    frantic_search, malakir_rebirth, path_to_exile, saw_in_half, swords_to_plowshares,
+    void_rend, austere_command, come_back_wrong, damn, reanimate, supreme_verdict,
+    unburial_rites, victimize,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
