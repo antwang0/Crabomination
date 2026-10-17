@@ -179,3 +179,63 @@ pub fn rotisserie_elemental() -> CardDefinition {
         ..creature("Rotisserie Elemental", cost(&[r()]), vec![CreatureType::Elemental], 1, 1)
     }
 }
+
+/// Frodo, Sauron's Bane — {W} legendary 1/2 Halfling Citizen. {W/B}{W/B}: if
+/// it's a Citizen, it becomes a Halfling Scout with base 2/3 and lifelink.
+/// {B}{B}{B}: if it's a Scout, it becomes a Halfling Rogue with "Whenever this
+/// creature deals combat damage to a player, that player loses the game if
+/// the Ring has tempted you four or more times this game; otherwise the Ring
+/// tempts you."
+pub fn frodo_saurons_bane() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::mana::{Color, b, hybrid, w};
+    let is = |t: CreatureType| crate::card::Predicate::EntityMatches { what: Selector::This, filter: R::HasCreatureType(t) };
+    let wb = || hybrid(Color::White, Color::Black);
+    let rogue_trigger = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: crate::card::Predicate::RingTemptedAtLeast { who: PlayerRef::You, n: 4 },
+            then: Box::new(Effect::LoseGame { who: PlayerRef::TriggerEventPlayer }),
+            else_: Box::new(Effect::RingTempts { who: PlayerRef::You }),
+        },
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            crate::effect::ActivatedAbility {
+                mana_cost: cost(&[wb(), wb()]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Citizen),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreatureType {
+                            what: Selector::This,
+                            creature_types: vec![CreatureType::Halfling, CreatureType::Scout],
+                            duration: Duration::Permanent,
+                        },
+                        Effect::SetBasePT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(3), duration: Duration::Permanent },
+                        Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::Permanent },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+            crate::effect::ActivatedAbility {
+                mana_cost: cost(&[b(), b(), b()]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Scout),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreatureType {
+                            what: Selector::This,
+                            creature_types: vec![CreatureType::Halfling, CreatureType::Rogue],
+                            duration: Duration::Permanent,
+                        },
+                        Effect::GrantTriggeredAbility { what: Selector::This, trigger: Box::new(rogue_trigger), duration: Duration::Permanent },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Frodo, Sauron's Bane", cost(&[w()]), vec![CreatureType::Halfling, CreatureType::Citizen], 1, 2)
+    }
+}

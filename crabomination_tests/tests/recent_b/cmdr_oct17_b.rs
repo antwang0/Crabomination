@@ -669,3 +669,47 @@ fn rotisserie_elemental_reads_skewers_after_the_sacrifice() {
     assert!(g.battlefield_find(rot).is_none(), "sacrificed");
     assert_eq!(g.exile.len(), before + 2, "two skewer counters → exile two");
 }
+
+/// Frodo levels Citizen → Scout (2/3 lifelink) → Rogue; the Rogue's hit kills
+/// a player once the Ring has tempted you four times, and each ability does
+/// nothing out of order.
+#[test]
+fn frodo_saurons_bane_levels_up_and_wins() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let f = ready(&mut g, 0, catalog::frodo_saurons_bane());
+    let act = |g: &mut GameState, i: usize| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility { card_id: f, ability_index: i, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("activate");
+        drain_stack(g);
+    };
+    g.players[0].mana_pool.add(Color::Black, 3);
+    act(&mut g, 1);
+    assert!(!g.computed_permanent(f).unwrap().subtypes().creature_types.contains(&CreatureType::Rogue), "a Citizen can't become a Rogue");
+    g.players[0].mana_pool.add(Color::White, 2);
+    act(&mut g, 0);
+    let cp = g.computed_permanent(f).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3));
+    assert!(cp.keywords().contains(&Keyword::Lifelink) && cp.subtypes().creature_types.contains(&CreatureType::Scout));
+    g.players[0].mana_pool.add(Color::Black, 3);
+    act(&mut g, 1);
+    assert!(g.computed_permanent(f).unwrap().subtypes().creature_types.contains(&CreatureType::Rogue));
+    g.players[0].ring_temptations = 4;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: f,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    for _ in 0..6 {
+        if g.players[1].eliminated {
+            break;
+        }
+        if let Ok(ev) = g.advance_step(Vec::new()) {
+            g.dispatch_triggers_for_events(&ev);
+        }
+        drain_stack(&mut g);
+    }
+    assert!(g.players[1].eliminated, "the Rogue's hit ends the game for that player");
+}
