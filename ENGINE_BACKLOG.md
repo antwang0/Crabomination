@@ -173,16 +173,26 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-17 (Commander run, `yl8zjb`) — claims first
 
-- **CLAIMED — don't duplicate:** Sphinx Ambassador, Thorin Mountain-king, Dragon's Smile, Twists and Turns,
-  Bejeweled Warg, Leonardo Leader in Blue + Prehistoric Pet. Cards in `decks::cmdr_oct17_kn`, tests
+- **CLAIMED — don't duplicate:** Thorin Mountain-king, Twists and Turns (researched; see below). Cards in `decks::cmdr_oct17_kn`, tests
   `recent_b/cmdr_oct17_kn.rs`.
-- **Seats** 3607-3621 (15 decks). **Primitives:** `PlayerRef::DefendingPlayerOf` (CR 506.2, Jurin),
+- **Seats** 3607-3665 (32 singles + 27 pairs). **Primitives:** `PlayerRef::DefendingPlayerOf` (CR 506.2, Jurin),
   `Keyword::DealsNoDamage` (CR 615 granted marker — Old Fat Spider's chapter II),
   `AdditionalCastCost::{Behold, BeholdOrPay}` (CR 701.4a; `Behold` as a `kicker_action_cost` is "you may
-  behold", read by `SpellWasKicked`), `R::WasCastFromExile`. **FIXED:** the TDM Exhale cycle read "a
-  Dragon was beheld" as "you control a Dragon" — now the caster's behold opt-in (hand or battlefield).
+  behold", read by `SpellWasKicked`), `R::WasCastFromExile`, `Effect::SearchTheirLibraryAgainstNamedCard`
+  (Sphinx Ambassador; three logged asks, a stable-scrambled name ballot), `Effect::TapMatchingDealPowerAndTakeDivided`
+  (Master of the Wild Hunt), `Effect::EachPlayerSacrificesUnlikeChosen` (Winnowing), `CounterType::Odor`,
+  `AlternativeCost.returned_mana_value_is_x` (Scarlet Spider's Sensational Save),
+  `StaticEffect::SelfDiesToExileWithCounters` + `WhileExiled` **step** triggers (`fire_step_triggers` walks exile
+  behind the lane — Darigaaz), `DelayedTriggerKind::WhenSourceLeavesOrUntaps` (Merieke). `free_exile_cast_waiver`
+  reads a `WhileYourTurn` wrapper (Dragon's Smile). **FIXED:** the TDM Exhale cycle read "a Dragon was beheld"
+  as "you control a Dragon" — now the caster's behold opt-in (hand or battlefield); `RemoveCounter` on an exiled
+  card named by `This`; batch-9 Great Desert Prospector / Maulfist Squad bodies (also fixed concurrently);
+  Guided Passage's "an opponent chooses" was `EachOpponent` resolved singly (pod seed 9330 debug assert) — now
+  `HostileOpponent`. ⚠ **Run pods in a DEBUG build too:** release strips the `resolve_player` fan-out assert, so a
+  release-only smoke cannot see that class.
 - **Researched, not built:** Thorin Mountain-king (its reflexive "that creature" needs the outer trigger's
-  slot captured into the `Reflexive` body), Arcee's back face ("that many" = count of your creatures a cast
+  slot captured into the `Reflexive` body), Twists and Turns (a scry inside `Effect::Explore` that can suspend —
+  the explore arm re-runs whole), Arcee's back face ("that many" = count of your creatures a cast
   spell targets: no `Value`), The Flame of Keld III (red-source damage +2 this turn), Casey & Raph ("each
   mode must target a different player"), Cloak and Dagger (exile from hand *or* the chosen creature).
 - **Bot note:** Elektra's "deal 2 damage to you: 4 to a creature" is declined by the `MayDo` self-cost
