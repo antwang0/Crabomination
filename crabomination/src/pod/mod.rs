@@ -22170,6 +22170,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HULK_4_COMMANDERS,
             main: decks::HULK_4_MAIN,
         },
+        // Seat 3620: Doc Aurlock, Grizzled Genius's EDHREC average deck. `--pod-decks 3620`.
+        PodDeck {
+            name: "Doc Aurlock, Grizzled Genius (UG)",
+            commanders: decks::DOC_AURLOCK_COMMANDERS,
+            main: decks::DOC_AURLOCK_MAIN,
+        },
+        // Seat 3621: Meneldor, Swift Savior's EDHREC average deck. `--pod-decks 3621`.
+        PodDeck {
+            name: "Meneldor, Swift Savior (U)",
+            commanders: decks::MENELDOR_COMMANDERS,
+            main: decks::MENELDOR_MAIN,
+        },
     ]
 }
 
@@ -27673,6 +27685,8 @@ mod tests {
             ("Guru Pathik", &[0x1837]),
             ("Hulk, Strongest There Is", &[0x1838]),
             ("Hulk, Brutal Brawler", &[0x1839]),
+            ("Doc Aurlock, Grizzled Genius", &[0x183A]),
+            ("Meneldor, Swift Savior", &[0x183B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

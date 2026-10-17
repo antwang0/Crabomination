@@ -101454,3 +101454,58 @@ pub const HULK_4_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const DOC_AURLOCK_COMMANDERS: &[CardFactory] = &[doc_aurlock_grizzled_genius];
+
+/// **Doc Aurlock, Grizzled Genius**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Forests + 12 Islands = 99.
+/// Doc Aurlock, Grizzled Genius (EDHREC, fetched 2026-10-17).
+pub const DOC_AURLOCK_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, lucky_clover, simic_signet, sol_ring, breeding_pool,
+    command_tower, dreamroot_cascade, flooded_grove, hedge_maze, hinterland_harbor,
+    rejuvenating_springs, reliquary_tower, simic_growth_chamber, temple_of_mystery,
+    vineglimmer_snarl, yavimaya_coast, anticausal_vestige, battle_mammoth, beanstalk_giant,
+    beanstalk_wurm, cosmos_charger, fblthp_lost_on_the_range, horned_loch_whale,
+    illithid_harvester, kellan_inquisitive_prodigy, lier_disciple_of_the_drowned, loan_shark,
+    mirrorhall_mimic, outcaster_trailblazer, railway_brawler, rootcoil_creeper,
+    rosethorn_acolyte, sage_of_the_beyond, sapphire_dragon, savvy_trader, sisterhood_of_karn,
+    slickshot_lockpicker, starwinder, stormkeld_vanguard, sword_coast_serpent, tempest_hart,
+    the_foretold_soldier, the_thirteenth_doctor, tlincalli_hunter, visage_bandit,
+    extraordinary_journey, fortune_tellers_talent, secrets_of_the_dead, virtue_of_strength,
+    beast_within, behold_the_multiverse, cackling_counterpart, counterspell, growth_spiral,
+    lifestreams_blessing, moments_peace, otherworldly_gaze, saw_it_coming, surge_of_brilliance,
+    think_twice, jace_reawakened, alrunds_epiphany, croaking_counterpart, cultivate,
+    deep_analysis, dryads_revival, increasing_savagery, kodamas_reach, lock_and_load,
+    make_your_own_luck, mass_diminish, plan_the_heist, ravenform, step_between_worlds,
+    tumbleweed_rising,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
+
+pub const MENELDOR_COMMANDERS: &[CardFactory] = &[meneldor_swift_savior];
+
+/// **Meneldor, Swift Savior**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Meneldor, Swift Savior (EDHREC, fetched 2026-10-17).
+pub const MENELDOR_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, fireshrieker, mind_stone, panharmonicon,
+    sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel, access_tunnel,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, rogues_passage, aether_channeler,
+    agent_of_treachery, archaeomancer, circuit_mender, cloud_of_faeries, cloudkin_seer,
+    coveted_falcon, daring_thief, djinn_of_infinite_deceits, dour_port_mage, identity_thief,
+    kitsune_dragons_daughter, man_o_war, mulldrifter, peregrine_drake, perplexing_chimera,
+    scampering_surveyor, scourge_of_fleets, sea_gate_oracle, serum_visionary, shield_broker,
+    solemn_simulacrum, spawnbroker, thassa_deep_dwelling, venser_shaper_savant,
+    volatile_stormdrake, watcher_for_tomorrow, whirler_rogue, aqueous_form, combat_research,
+    extraordinary_journey, gossips_talent, pucas_mischief, virtue_of_knowledge, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, blur, counterspell, displace, essence_flux,
+    ghostly_flicker, negate, planar_incision, rapid_hybridization, run_away_together,
+    sudden_substitution, legerdemain, modify_memory, shifting_grift, shifting_loyalties,
+    switcheroo, voidwalk,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
