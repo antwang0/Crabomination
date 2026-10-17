@@ -1087,6 +1087,105 @@ pub fn corrosive_ooze() -> CardDefinition {
     }
 }
 
+/// Displacer Beast — {2}{U} 3/2 Cat Beast. ETB: venture into the dungeon.
+/// Displacement — {3}{U}: return it to its owner's hand.
+pub fn displacer_beast() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Venture)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            },
+            ..Default::default()
+        }],
+        ..creature("Displacer Beast", cost(&[generic(2), u()]), vec![CreatureType::Cat, CreatureType::Beast], 3, 2)
+    }
+}
+
+/// Wandering Troubadour — {3}{G} 4/2 Dragon Bard. At the beginning of your end
+/// step, if a land entered under your control this turn, venture.
+pub fn wandering_troubadour() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::LandsEnteredThisTurnAtLeast { who: PlayerRef::You, at_least: 1 }),
+            effect: Effect::Venture,
+        }],
+        ..creature("Wandering Troubadour", cost(&[generic(3), g()]), vec![CreatureType::Dragon, CreatureType::Bard], 4, 2)
+    }
+}
+
+/// Delightful Discovery — {4}{U} Instant; {1} less for each spell your
+/// opponents cast this turn. Scry 2, then draw two.
+pub fn delightful_discovery() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast for each spell your opponents have cast this turn.",
+            effect: SE::SelfCostReducedByValue {
+                amount: Value::Diff(
+                    Box::new(Value::SpellsCastThisTurnTotal),
+                    Box::new(Value::SpellsCastThisTurn(PlayerRef::You)),
+                ),
+            },
+        }],
+        ..spell(
+            "Delightful Discovery",
+            cost(&[generic(4), u()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        )
+    }
+}
+
+/// Kumano Faces Kakkazan // Etching of Kumano — {R} Saga. I: 1 damage to each
+/// opponent and each planeswalker they control. II: the next creature spell
+/// you cast this turn enters with an additional +1/+1 counter. III: exile it,
+/// return it transformed. Back: 2/2 Human Shaman, haste; a creature dealt
+/// damage this turn by a source you controlled that would die is exiled.
+pub fn kumano_faces_kakkazan() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect as SE};
+    let etching = CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        keywords: vec![Keyword::Haste],
+        color_indicator: vec![Color::Red],
+        static_abilities: vec![StaticAbility {
+            description: "If a creature dealt damage this turn by a source you controlled would die, exile it instead.",
+            effect: SE::DiesToExileInstead {
+                filter: R::Creature.and(R::DamagedThisTurnByMatching(Box::new(R::ControlledByYou))),
+            },
+        }],
+        ..creature("Etching of Kumano", ManaCost::default(), vec![CreatureType::Human, CreatureType::Shaman], 2, 2)
+    };
+    CardDefinition {
+        name: "Kumano Faces Kakkazan",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                    Effect::DealDamage {
+                        to: Selector::EachPermanent(R::Planeswalker.and(R::ControlledByOpponent)),
+                        amount: Value::ONE,
+                    },
+                ]),
+            ),
+            (2, Effect::GrantNextCreatureSpellCounters { kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(etching)),
+        ..Default::default()
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

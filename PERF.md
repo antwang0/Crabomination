@@ -3136,6 +3136,26 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-17 (Commander run, `yl8zjb`) — guardrail; 59 seats, 41 cards, eleven primitives
+
+Hot-path touches: the damage funnel and `combat_damage_prevented_from` ask
+`source_deals_no_damage` (a `card_keyword_possible` gate before any layer read);
+`fire_step_triggers` walks exile behind the `has_exile_trigger` lane; the event
+dispatcher calls `fire_untap_delayed` (an event scan, then a delayed-trigger scan,
+both empty in the fixed pool). Release `bot_ladder`, base `10d2be241` vs tip
+`e4ac93894`, same box:
+
+```text
+--bench  base    decisions 196,176 / 27.64 / 613.0 / 0 stalls; peak_rss 40.9 MiB; games_per_s 231.0
+--bench  tip     decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 thread_determinism ok (3 vs 1); peak_rss 40.4 MiB; games_per_s 244.1
+pools            cube / sos / sealed x seeds 41001-41002 x 300 games: 15,000 decided, 0 undecided
+pods (release)   seed 9201, 2..8 seats x 500 = 3,500 decided, 0 undecided; turns/game
+                 18.91 / 32.19 / 45.92 / 58.57 / 68.71 / 81.72 / 96.48
+pods (new seats) 3607-3638 in 4-seat pods (1,200 release) and 3607-3665 in 4/8-seat debug pods
+                 (~1,000): all decided but CR 104.4a draws; one debug-assert panic found and fixed
+```
+
 ### 2026-10-16 (Commander run, `01VDk2LU`) — guardrail; the exert listener walk, the fan-out defender
 
 Hot-path touches: `declare_attackers` keeps an `exerted` list (empty unless an attacker paid
@@ -19922,6 +19942,17 @@ were re-read on a quiet box; the serial cells reproduce to ~2 %. Nothing here
 is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
+
+### 2026-10-17 — `loop_hazard::sets_up_loop` is half of a Bard the Bowman pod
+
+Commander-only (two-player play never probes). Seat 3616 (Bard the Bowman) in a
+4-seat pod with three fast decks: 4.8 games/s against 60-130 for any other new
+seat. Callgrind, 6 games, seed 9320, `--pod-decks 3616,3607,3608,3609`: 2.395 G Ir,
+`sets_up_loop` 1.180 G (49.3 %) → `resolve_probe` 1.172 G → SBA passes 0.96 G.
+The deck carries a mandatory "a permanent enters → create a token" trigger, so
+the probe clones and resolves on every main-phase candidate. Candidate: memoise
+the probe verdict per (seat, settled-state digest) within a decision, or gate it
+on the candidate itself being a permanent spell/token-maker.
 
 ### 2026-10-04 — the CR 120.10 excess tally reads lethal damage on every hit
 

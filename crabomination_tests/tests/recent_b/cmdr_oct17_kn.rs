@@ -743,3 +743,40 @@ fn guided_passage_has_one_opponent_pick_in_a_pod() {
     cast_with(&mut g, s, None, None).expect("Guided Passage");
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "a creature and a land");
 }
+
+/// Displacer Beast ventures on entry and bounces itself for {3}{U}.
+#[test]
+fn displacer_beast_ventures_and_displaces() {
+    let mut g = pod(2);
+    let b = g.add_card_to_hand(0, catalog::displacer_beast());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_with(&mut g, b, None, None).expect("Beast");
+    assert!(g.players[0].dungeon.is_some());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: b,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("displacement");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == b));
+}
+
+/// Kumano's chapter I pings each opponent and their planeswalkers, not us.
+#[test]
+fn kumano_faces_kakkazan_pings_each_opponent() {
+    let mut g = pod(3);
+    let s = g.add_card_to_hand(0, catalog::kumano_faces_kakkazan());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    cast_with(&mut g, s, None, None).expect("saga");
+    assert_eq!(g.players[0].life, life[0]);
+    assert_eq!(g.players[1].life, life[1] - 1);
+    assert_eq!(g.players[2].life, life[2] - 1);
+}

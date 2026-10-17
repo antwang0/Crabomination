@@ -17128,6 +17128,10 @@ static DECKS: &[Factory] = &[
     super::decks::fly,
     super::decks::helm_of_kaldra,
     super::decks::corrosive_ooze,
+    super::decks::displacer_beast,
+    super::decks::wandering_troubadour,
+    super::decks::delightful_discovery,
+    super::decks::kumano_faces_kakkazan,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
