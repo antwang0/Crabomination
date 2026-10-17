@@ -27463,14 +27463,26 @@ impl GameState {
     }
 
     /// Hama Pashar (`StaticEffect::DungeonRoomsTriggerTwice`) — how many extra
-    /// times a room ability of `owner`'s dungeon triggers.
+    /// times a room ability of `owner`'s dungeon triggers. Dungeon Delver's
+    /// grant (`CommanderCreaturesRoomsTriggerTwice`, a Background — CR 113.6,
+    /// it functions on the battlefield only) adds one per commander creature
+    /// `owner` owns and controls.
     pub(crate) fn dungeon_room_extra_fires(&self, owner: usize) -> usize {
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == owner)
-            .flat_map(|c| &c.definition.static_abilities)
-            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::DungeonRoomsTriggerTwice))
-            .count()
+        use crate::effect::StaticEffect;
+        let has = |c: &crate::card::CardInstance, want: fn(&StaticEffect) -> bool| {
+            c.definition.static_abilities.iter().filter(|sa| want(&sa.effect)).count()
+        };
+        let mine = self.battlefield.iter().filter(|c| c.controller == owner);
+        let hama: usize = mine.clone().map(|c| has(c, |e| matches!(e, StaticEffect::DungeonRoomsTriggerTwice))).sum();
+        let delver = |e: &StaticEffect| matches!(e, StaticEffect::CommanderCreaturesRoomsTriggerTwice);
+        let grants: usize = mine.clone().map(|c| has(c, delver)).sum();
+        if grants == 0 {
+            return hama;
+        }
+        let commanders = mine
+            .filter(|c| c.owner == owner && self.is_commander(c.id) && self.computed_is_creature(c))
+            .count();
+        hama + grants * commanders
     }
 
     pub(crate) fn push_ordered_trigger_candidates(
@@ -35008,6 +35020,7 @@ fn static_effect_to_effects(
             // Hama Pashar — read in `Effect::Venture` via
             // `dungeon_room_extra_fires`; no layer effect.
             | StaticEffect::DungeonRoomsTriggerTwice
+            | StaticEffect::CommanderCreaturesRoomsTriggerTwice
             // Panoptic Projektor — read at trigger dispatch via
             // `face_up_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerTurnedFaceUpTriggers

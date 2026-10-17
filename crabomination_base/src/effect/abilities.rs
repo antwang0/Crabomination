@@ -2100,6 +2100,11 @@ pub enum StaticEffect {
     /// trigger (`dungeon_room_extra_fires`); the extra copies carry no
     /// CR 309.6 completion tail, so a dungeon completes once.
     DungeonRoomsTriggerTwice,
+    /// Dungeon Delver (a Background) — "Commander creatures you own have
+    /// 'Room abilities of dungeons you own trigger an additional time.'" One
+    /// extra fire per commander creature its owner controls, read off the
+    /// battlefield by `dungeon_room_extra_fires`.
+    CommanderCreaturesRoomsTriggerTwice,
     /// Panoptic Projektor — "If turning a face-down permanent face up causes
     /// a triggered ability of a permanent you control to trigger, that
     /// ability triggers an additional time." Read at trigger dispatch off the
