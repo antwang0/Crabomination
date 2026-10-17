@@ -991,6 +991,102 @@ pub fn the_ever_changing_dane() -> CardDefinition {
     }
 }
 
+// ── Pair-deck closers ───────────────────────────────────────────────────────
+
+/// Fly — {U} Aura. Enchanted creature has flying and "whenever this creature
+/// deals combat damage to a player, venture into the dungeon".
+pub fn fly() -> CardDefinition {
+    CardDefinition {
+        name: "Fly",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Venture,
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Helm of Kaldra — {3} legendary Equipment. Equipped creature has first
+/// strike, trample, and haste. {1}: if you control Equipment named Helm, Sword
+/// and Shield of Kaldra, create Kaldra, a legendary 4/4 colorless Avatar, and
+/// attach those Equipment to it. Equip {2}.
+pub fn helm_of_kaldra() -> CardDefinition {
+    let named = |n: &str| R::HasName(n.into()).and(R::HasArtifactSubtype(ArtifactSubtype::Equipment)).and(R::ControlledByYou);
+    let have = |n: &str| Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(named(n)), n: Value::ONE };
+    let set = || named("Helm of Kaldra").or(named("Sword of Kaldra")).or(named("Shield of Kaldra"));
+    let kaldra = std::sync::Arc::new(TokenDefinition {
+        name: "Kaldra".into(),
+        power: 4,
+        toughness: 4,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::If {
+                cond: Predicate::All(vec![have("Helm of Kaldra"), have("Sword of Kaldra"), have("Shield of Kaldra")]),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: kaldra },
+                    Effect::Attach { what: Selector::EachPermanent(set()), to: Selector::LastCreatedToken },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..equipment(
+            "Helm of Kaldra",
+            cost(&[generic(3)]),
+            cost(&[generic(2)]),
+            EquipBonus { keywords: vec![Keyword::FirstStrike, Keyword::Trample, Keyword::Haste], ..Default::default() },
+        )
+    }
+}
+
+/// Corrosive Ooze — {1}{G} 2/2 Ooze. Whenever it blocks or becomes blocked by
+/// an equipped creature, destroy all Equipment attached to that creature at
+/// end of combat (the creature is captured now, CR 603.7).
+pub fn corrosive_ooze() -> CardDefinition {
+    let at_end_of_combat = |who: Selector| Effect::DelayUntilWithCapture {
+        kind: crate::effect::DelayedTriggerKind::EndOfCombat,
+        capture: who,
+        body: Box::new(Effect::Destroy {
+            what: Selector::MatchingAmong {
+                inner: Box::new(Selector::AttachedToMe(Box::new(Selector::Target(0)))),
+                filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+            },
+        }),
+    };
+    let each_equipped = |among: Selector| Effect::ForEach {
+        selector: Selector::MatchingAmong { inner: Box::new(among), filter: R::IsEquipped },
+        body: Box::new(at_end_of_combat(Selector::TriggerSource)),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: each_equipped(Selector::BlockedAttacker),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: each_equipped(Selector::BlockingCreatures),
+            },
+        ],
+        ..creature("Corrosive Ooze", cost(&[generic(1), g()]), vec![CreatureType::Ooze], 2, 2)
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

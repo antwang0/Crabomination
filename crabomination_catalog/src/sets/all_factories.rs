@@ -17125,6 +17125,9 @@ static DECKS: &[Factory] = &[
     super::decks::bot_bashing_time,
     super::decks::merieke_ri_berit,
     super::decks::the_ever_changing_dane,
+    super::decks::fly,
+    super::decks::helm_of_kaldra,
+    super::decks::corrosive_ooze,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

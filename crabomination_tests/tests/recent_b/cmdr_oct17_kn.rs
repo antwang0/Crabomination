@@ -660,3 +660,71 @@ fn the_ever_changing_dane_copies_its_sacrifice() {
     assert_eq!((cp.power, cp.toughness), (6, 4), "a Craw Wurm now");
     assert!(!g.battlefield_find(dane).unwrap().definition.activated_abilities.is_empty(), "kept this ability");
 }
+
+/// Fly's granted trigger ventures when the enchanted creature connects.
+#[test]
+fn fly_ventures_on_combat_damage() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::fly());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast_with(&mut g, f, Some(Target::Permanent(bear)), None).expect("Fly");
+    assert!(g.permanent_has_keyword(bear, &Keyword::Flying));
+    hit_player(&mut g, bear, 1);
+    assert!(g.players[0].dungeon.is_some(), "ventured");
+}
+
+/// Helm of Kaldra assembles Kaldra only with all three named Equipment.
+#[test]
+fn helm_of_kaldra_assembles_kaldra() {
+    let mut g = pod(2);
+    let helm = ready(&mut g, 0, catalog::helm_of_kaldra());
+    let act = |g: &mut GameState| {
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: helm,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("activate");
+        drain_stack(g);
+    };
+    let kaldra = |g: &GameState| g.battlefield.iter().find(|c| c.definition.name == "Kaldra").map(|c| c.id);
+    act(&mut g);
+    assert!(kaldra(&g).is_none(), "the Helm alone makes nothing");
+    let sword = ready(&mut g, 0, catalog::sword_of_kaldra());
+    let shield = ready(&mut g, 0, catalog::shield_of_kaldra());
+    act(&mut g);
+    let k = kaldra(&g).expect("Kaldra");
+    for e in [helm, sword, shield] {
+        assert_eq!(g.battlefield_find(e).unwrap().attached_to, Some(k));
+    }
+}
+
+/// Corrosive Ooze blocking an equipped attacker destroys its Equipment at end
+/// of combat.
+#[test]
+fn corrosive_ooze_eats_the_attackers_equipment() {
+    let mut g = pod(2);
+    let ooze = ready(&mut g, 1, catalog::corrosive_ooze());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let kit = ready(&mut g, 0, catalog::shield_spy_kit());
+    g.battlefield_find_mut(kit).unwrap().attached_to = Some(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(ooze, bear)])).expect("block");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(kit).is_none(), "the Spy Kit is destroyed at end of combat");
+}
