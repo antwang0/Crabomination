@@ -22188,6 +22188,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LEONARDO_5_COMMANDERS,
             main: decks::LEONARDO_5_MAIN,
         },
+        // Seat 3623: Higure, the Still Wind's EDHREC average deck. `--pod-decks 3623`.
+        PodDeck {
+            name: "Higure, the Still Wind (U)",
+            commanders: decks::HIGURE_COMMANDERS,
+            main: decks::HIGURE_MAIN,
+        },
+        // Seat 3624: Unesh, Criosphinx Sovereign's EDHREC average deck. `--pod-decks 3624`.
+        PodDeck {
+            name: "Unesh, Criosphinx Sovereign (U)",
+            commanders: decks::UNESH_COMMANDERS,
+            main: decks::UNESH_MAIN,
+        },
+        // Seat 3625: Zhuge Jin, Wu Strategist's EDHREC average deck. `--pod-decks 3625`.
+        PodDeck {
+            name: "Zhuge Jin, Wu Strategist (U)",
+            commanders: decks::ZHUGE_JIN_COMMANDERS,
+            main: decks::ZHUGE_JIN_MAIN,
+        },
     ]
 }
 
@@ -27694,6 +27712,9 @@ mod tests {
             ("Doc Aurlock, Grizzled Genius", &[0x183A]),
             ("Meneldor, Swift Savior", &[0x183B]),
             ("Leonardo, Leader in Blue", &[0x183C]),
+            ("Higure, the Still Wind", &[0x183D]),
+            ("Unesh, Criosphinx Sovereign", &[0x183E]),
+            ("Zhuge Jin, Wu Strategist", &[0x183F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

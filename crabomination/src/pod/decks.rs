@@ -101536,3 +101536,86 @@ pub const LEONARDO_5_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const HIGURE_COMMANDERS: &[CardFactory] = &[higure_the_still_wind];
+
+/// **Higure, the Still Wind**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Higure, the Still Wind (EDHREC, fetched 2026-10-17).
+pub const HIGURE_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, heraldic_banner, lightning_greaves, maskwood_nexus,
+    mind_stone, quietus_spike, sai_of_the_shinobi, sapphire_medallion, sky_diamond, sol_ring,
+    swiftfoot_boots, thought_vessel, whispersilk_cloak, access_tunnel, halimar_depths,
+    minamo_school_at_waters_edge, myriad_landscape, mystic_sanctuary, otawara_soaring_city,
+    reliquary_tower, rogues_passage, covert_technician, donatello_gadget_master,
+    enduring_curiosity, futurist_operative, grazilaxx_illithid_scholar, gudul_lurker,
+    invisible_stalker, mist_cloaked_herald, mist_syndicate_naga, mistblade_shinobi,
+    moon_circuit_hacker, moonblade_shinobi, moonsnare_specialist, ninja_of_the_deep_hours,
+    peregrine_drake, phantom_ninja, prosperous_thief, saiba_cryptomancer, sakashimas_student,
+    slither_blade, tetsuko_umezawa_fugitive, thalakos_seer, thousand_faced_shadow,
+    triton_shorestalker, walker_of_secret_ways, arcane_adaptation, coastal_piracy,
+    cunning_evasion, kindred_discovery, leyline_of_transformation, reconnaissance_mission,
+    smoke_shroud, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell,
+    cyclonic_rift, high_tide, march_of_swirling_mist, negate, pongify, rapid_hybridization,
+    reality_shift, snap, kaito_cunning_infiltrator, enter_the_enigma, fabricate, ponder,
+    preordain, ravenform,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
+
+pub const UNESH_COMMANDERS: &[CardFactory] = &[unesh_criosphinx_sovereign];
+
+/// **Unesh, Criosphinx Sovereign**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Unesh, Criosphinx Sovereign (EDHREC, fetched 2026-10-17).
+pub const UNESH_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, fellwar_stone, heralds_horn, kefnets_monument, lightning_greaves,
+    mind_stone, panharmonicon, sapphire_medallion, sky_diamond, sol_ring, thought_vessel,
+    urzas_incubator, wayfarers_bauble, castle_vantress, myriad_landscape, mystic_sanctuary,
+    nykthos_shrine_to_nyx, otawara_soaring_city, path_of_ancestry, reliquary_tower,
+    arbiter_of_the_ideal, argent_sphinx, atemsis_all_seeing, chancellor_of_the_spires,
+    consecrated_sphinx, conspiracy_unraveler, conundrum_sphinx, curator_of_destinies,
+    curator_of_mysteries, dazzling_sphinx, defiler_of_dreams, dream_eater, enigma_thief,
+    guardian_of_tazeem, master_of_predicaments, ormos_archive_keeper, prognostic_sphinx,
+    scholar_of_the_lost_trove, serum_sovereign, sphinx_ambassador, sphinx_of_enlightenment,
+    sphinx_of_foresight, sphinx_of_forgotten_lore, sphinx_of_uthuun, sphinx_of_the_final_word,
+    sphinx_of_the_second_sun, warden_of_evos_isle, windreader_sphinx, imprisoned_in_the_moon,
+    omniscience, propaganda, reflections_of_littjara, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, counterspell, cyclonic_rift, high_tide, mana_drain, negate, pongify,
+    rapid_hybridization, reality_shift, resculpt, swan_song, curse_of_the_swine,
+    raise_the_palisade, rite_of_replication, spectral_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const ZHUGE_JIN_COMMANDERS: &[CardFactory] = &[zhuge_jin_wu_strategist];
+
+/// **Zhuge Jin, Wu Strategist**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Zhuge Jin, Wu Strategist (EDHREC, fetched 2026-10-17).
+pub const ZHUGE_JIN_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, bloodforged_battle_axe, deluxe_dragster, fellwar_stone,
+    lightning_greaves, mask_of_memory, mind_stone, quietus_spike, sapphire_medallion,
+    sky_diamond, sol_ring, swiftfoot_boots, sword_of_feast_and_famine, sword_of_the_animist,
+    thought_vessel, castle_vantress, minamo_school_at_waters_edge, myriad_landscape,
+    mystic_sanctuary, otawara_soaring_city, reliquary_tower, rogues_passage, war_room,
+    acquisition_octopus, blightsteel_colossus, cephalid_constable, chasm_skulker,
+    enduring_curiosity, etherium_sculptor, glasspool_mimic, kappa_cannoneer, keeper_of_keys,
+    lu_xun_scholar_general, malcolm_alluring_scoundrel, mischievous_catgeist,
+    mist_syndicate_naga, mistblade_shinobi, nezahal_primal_tide, phyrexian_metamorph,
+    psychosis_crawler, schema_thief, shoreline_looter, spawning_kraken, sphinx_ambassador,
+    thada_adel_acquisitor, thassa_god_of_the_sea, unctus_grand_metatect, aqueous_form,
+    coastal_piracy, imprisoned_in_the_moon, ominous_seas, propaganda, reconnaissance_mission,
+    rhystic_study, aetherize, an_offer_you_cant_refuse, brainstorm, counterspell, cyclonic_rift,
+    high_tide, negate, opt, pongify, rapid_hybridization, sink_into_stupor,
+    kaito_cunning_infiltrator, fabricate, open_into_wonder, ponder, ravenform, relms_sketching,
+    sea_gate_restoration,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
