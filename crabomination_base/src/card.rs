@@ -247,6 +247,8 @@ pub enum CreatureType {
     Samurai,
     // Edge of Eternities (2025) subtypes.
     Drix, Scientist,
+    // Star Trek (Xenobotanist).
+    Vulcan,
     // Outlaws of Thunder Junction Mount subtype (Saddle, CR 702.171).
     Mount,
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
