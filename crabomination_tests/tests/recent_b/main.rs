@@ -334,3 +334,4 @@ mod cmdr_oct16_e;
 mod cmdr_oct16_f;
 mod cmdr_oct17_a;
 mod cmdr_oct17_b;
+mod cmdr_oct17_g;
