@@ -1820,6 +1820,11 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                     tax += pay;
                 }
             }
+            crate::card::AdditionalCastCost::BeholdOrPay { filter, pay }
+                if !state.can_behold(filter, caster, Some(card.id)) =>
+            {
+                tax += pay;
+            }
             crate::card::AdditionalCastCost::SacrificeOrPay { filter, pay } => {
                 let gates = crate::game::effects::PrintedGates::default();
                 let has_match = state.battlefield.iter().any(|c| {
@@ -12435,7 +12440,8 @@ impl GameState {
             // announceable: with no match the pay half is folded into the
             // spell's cost (`extra_cost_for_spell`) and mana payment
             // enforces it.
-            A::RevealFromHandOrPay { .. } => true,
+            A::RevealFromHandOrPay { .. } | A::BeholdOrPay { .. } => true,
+            A::Behold { filter } => self.can_behold(filter, p, None),
             // A mandatory reveal needs a matching card in hand.
             A::RevealFromHand { filter } => self.players[p]
                 .hand
@@ -12836,7 +12842,7 @@ impl GameState {
                 }
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
-                A::RevealFromHandOrPay { .. } => {}
+                A::RevealFromHandOrPay { .. } | A::Behold { .. } | A::BeholdOrPay { .. } => {}
                 // The revealed card stays in hand; stamp its power and mana
                 // value for the body. Each value reads the best match for it
                 // (Titan's Presence: power; Disaster Radius: mana value).

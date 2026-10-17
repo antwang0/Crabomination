@@ -116,6 +116,7 @@ macro_rules! clear_opt_scratch {
 // reach items like `effects::EffectContext`; not part of the supported API.
 #[doc(hidden)]
 pub mod actions;
+mod behold;
 #[doc(hidden)]
 pub mod affordances;
 /// CR 614.12 — the one funnel every battlefield entry applies the

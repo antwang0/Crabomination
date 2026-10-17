@@ -6662,6 +6662,15 @@ pub enum AdditionalCastCost {
     /// the `…OrPay` shape — with a creature to blight the blight half is paid,
     /// else the pay half joins the cost (CR 601.2b, 701.68b).
     BlightOrPay { n: u32, pay: u32 },
+    /// CR 701.4a — "behold a [filter]": choose a [filter] permanent you control
+    /// or reveal a [filter] card from your hand; nothing moves. As a
+    /// `kicker_action_cost` it is "you may behold", read by
+    /// `Predicate::SpellWasKicked` (Hulk's Thunderclap).
+    Behold { filter: SelectionRequirement },
+    /// CR 701.4a — "behold a [filter] or pay {pay}": with no matching
+    /// permanent you control and no matching card in hand (the spell aside),
+    /// `pay` generic joins the cost (Lys Alana Dignitary).
+    BeholdOrPay { filter: SelectionRequirement, pay: u32 },
     /// CR 701.68a + 601.2b — "blight X. X can't be greater than the greatest
     /// toughness among creatures you control" (Soul Immolation): X -1/-1
     /// counters on a creature you control, X threaded into the spell's X
