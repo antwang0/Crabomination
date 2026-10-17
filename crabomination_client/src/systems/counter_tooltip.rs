@@ -935,6 +935,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::MustBeBlocked => "Must be blocked if able.",
         K::CantBeCopied => "Can't be copied.",
         K::DealsNoCombatDamage => "Assigns no combat damage.",
+        K::DealsNoDamage => "Damage it would deal is prevented.",
         K::AssignsCombatDamageByToughness => {
             "Assigns combat damage equal to its toughness rather than its power."
         }
@@ -1221,6 +1222,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantAttackAlone => "Can't attack alone".into(),
         K::CantAttackOrBlockAlone => "Can't attack or block alone".into(),
         K::DealsNoCombatDamage => "Deals no combat damage".into(),
+        K::DealsNoDamage => "Deals no damage".into(),
         K::AssignsCombatDamageByToughness => "Assigns combat damage by toughness".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
         K::AllMustBlock => "All creatures able to block this do so".into(),

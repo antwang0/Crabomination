@@ -4912,6 +4912,7 @@ impl Effect {
                 | Keyword::CantAttack
                 | Keyword::CantAttackAlone
                 | Keyword::CantAttackOrBlockAlone
+                | Keyword::DealsNoDamage
         )
     }
 

@@ -10263,6 +10263,13 @@ impl GameState {
             })
     }
 
+    /// CR 615 — `src` carries [`Keyword::DealsNoDamage`]. Presence-gated, so a
+    /// board with no such grant pays one keyword-possibility scan.
+    pub(crate) fn source_deals_no_damage(&self, src: CardId) -> bool {
+        let kw = Keyword::DealsNoDamage;
+        self.card_keyword_possible(src, |k| *k == kw) && self.permanent_has_keyword(src, &kw)
+    }
+
     /// CR 615 — does `src` match a filter-described "prevent all damage that
     /// would be dealt by …" shield (Obscuring Haze)?
     ///
@@ -10292,6 +10299,7 @@ impl GameState {
         if self.combat_damage_prevented_by_this_turn.contains(&dealer)
             || self.all_damage_prevented_by_this_turn.contains(&dealer)
             || self.all_damage_from_source_matches_a_shield(dealer)
+            || self.source_deals_no_damage(dealer)
         {
             return true;
         }

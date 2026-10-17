@@ -1495,7 +1495,8 @@ impl GameState {
             && (self.damage_sealed_by_aura(src, false)
                 || (!self.prevention_off()
                     && (self.all_damage_prevented_by_this_turn.contains(&src)
-                        || self.all_damage_from_source_matches_a_shield(src))))
+                        || self.all_damage_from_source_matches_a_shield(src)
+                        || self.source_deals_no_damage(src))))
         {
             return;
         }

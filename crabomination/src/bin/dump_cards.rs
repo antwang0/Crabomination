@@ -265,7 +265,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBlockUnlessHandSizeAtLeast(_)
         | Keyword::CantAttackUnlessMoreCreaturesThanDefender
         | Keyword::CantBlockUnlessMoreCreaturesThanAttacker
-        | Keyword::DealsNoCombatDamage | Keyword::AssignsCombatDamageByToughness
+        | Keyword::DealsNoCombatDamage | Keyword::DealsNoDamage | Keyword::AssignsCombatDamageByToughness
         | Keyword::AssignsCombatDamageAsThoughPowerPositive
         | Keyword::DividesCombatDamageAmongDefenders
         | Keyword::PreventDamageFromMatching(_)

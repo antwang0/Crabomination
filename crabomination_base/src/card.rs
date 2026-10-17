@@ -2503,6 +2503,11 @@ pub enum Keyword {
     /// *computed* keyword set to zero out the bearer's combat damage in
     /// both the first-strike and regular damage steps.
     DealsNoCombatDamage,
+    /// CR 615 — "prevent all damage that would be dealt by [this]", combat and
+    /// noncombat alike. A marker granted for a duration (Old Fat Spider Can't
+    /// See Me's chapter II, while the Saga remains); read off the source's
+    /// computed keywords in the damage funnel.
+    DealsNoDamage,
     /// "You may assign this creature's combat damage divided as you choose
     /// among defending player and/or any number of creatures they control"
     /// (Butcher Orgg). Read off the *computed* keyword set in `combat.rs`:
