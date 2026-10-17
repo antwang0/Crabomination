@@ -21396,6 +21396,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IMOEN_COMMANDERS,
             main: decks::IMOEN_MAIN,
         },
+        // Seat 3491: Renari, Merchant of Marvels and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3491`.
+        PodDeck {
+            name: "Renari, Merchant of Marvels and Acolyte of Bahamut (UG)",
+            commanders: decks::RENARI_6_COMMANDERS,
+            main: decks::RENARI_6_MAIN,
+        },
+        // Seat 3492: Skanos Dragonheart and Raised by Giants's EDHREC average deck. `--pod-decks 3492`.
+        PodDeck {
+            name: "Skanos Dragonheart and Raised by Giants (G)",
+            commanders: decks::SKANOS_DRAGONHEART_8_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_8_MAIN,
+        },
+        // Seat 3493: Erinis, Gloom Stalker and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 3493`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Acolyte of Bahamut (G)",
+            commanders: decks::ERINIS_7_COMMANDERS,
+            main: decks::ERINIS_7_MAIN,
+        },
+        // Seat 3494: Erinis, Gloom Stalker and Folk Hero's EDHREC average deck. `--pod-decks 3494`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Folk Hero (WG)",
+            commanders: decks::ERINIS_8_COMMANDERS,
+            main: decks::ERINIS_8_MAIN,
+        },
+        // Seat 3495: The Fourth Doctor and Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 3495`.
+        PodDeck {
+            name: "The Fourth Doctor and Nardole, Resourceful Cyborg (UG)",
+            commanders: decks::THE_FOURTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_FOURTH_DOCTOR_5_MAIN,
+        },
     ]
 }
 
@@ -26770,6 +26800,11 @@ mod tests {
             ("Laurine, the Diversion", &[0x17B6]),
             ("Gut, True Soul Zealot and Dungeon Delver", &[0x17B7]),
             ("Imoen, Mystic Trickster and Veteran Soldier", &[0x17B8]),
+            ("Renari, Merchant of Marvels and Acolyte of Bahamut", &[0x17B9]),
+            ("Skanos Dragonheart and Raised by Giants", &[0x17BA]),
+            ("Erinis, Gloom Stalker and Acolyte of Bahamut", &[0x17BB]),
+            ("Erinis, Gloom Stalker and Folk Hero", &[0x17BC]),
+            ("The Fourth Doctor and Nardole, Resourceful Cyborg", &[0x17BD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

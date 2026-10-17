@@ -97870,3 +97870,140 @@ pub const IMOEN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const RENARI_6_COMMANDERS: &[CardFactory] = &[renari_merchant_of_marvels, acolyte_of_bahamut];
+
+/// **Renari, Merchant of Marvels and Acolyte of Bahamut**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Forests + 11 Islands = 98.
+/// Renari, Merchant of Marvels and Acolyte of Bahamut (EDHREC, fetched 2026-10-17).
+pub const RENARI_6_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_hoard, dragonstorm_globe, heralds_horn, jade_orb_of_dragonkind,
+    lapis_orb_of_dragonkind, mox_jasper, simic_signet, sol_ring, talisman_of_curiosity,
+    urzas_incubator, breeding_pool, command_tower, dreamroot_cascade, flooded_grove,
+    haven_of_the_spirit_dragon, hinterland_harbor, maelstrom_of_the_spirit_dragon,
+    mosswort_bridge, path_of_ancestry, rejuvenating_springs, reliquary_tower,
+    simic_growth_chamber, temple_of_the_dragon_queen, vineglimmer_snarl, yavimaya_coast,
+    ancient_bronze_dragon, ancient_silver_dragon, astral_dragon, bloomvine_regent,
+    broodcaller_scourge, canopy_gargantuan, deceptive_frostkite, draconic_muralists,
+    dragonologist, earthquake_dragon, emerald_dragon, green_dragon, hammerhead_tyrant,
+    icefall_regent, iymrith_desert_doom, juvenile_mist_dragon, kairi_the_swirling_sky,
+    keiga_the_tide_star, korlessa_scale_singer, kura_the_boundless_sky, marang_river_regent,
+    nimbleclaw_adept, old_gnawbone, sapphire_dragon, scaled_nurturer, skanos_dragonheart,
+    steel_hellkite, sword_coast_serpent, transcendent_dragon, encroaching_dragonstorm,
+    frontier_siege, garruks_uprising, reflections_of_littjara, roiling_dragonstorm,
+    wilderness_reclamation, beast_within, counterspell, dispelling_exhale, draconic_lore,
+    growth_spiral, heroic_intervention, negate, reality_shift, return_of_the_wildspeaker,
+    rewind, silumgars_scorn, cultivate, kodamas_reach, natures_lore, raise_the_palisade,
+    rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const SKANOS_DRAGONHEART_8_COMMANDERS: &[CardFactory] = &[skanos_dragonheart, raised_by_giants];
+
+/// **Skanos Dragonheart and Raised by Giants**'s EDHREC average deck, card for card:
+/// 63 nonbasic cards + 35 Forests = 98.
+/// Skanos Dragonheart and Raised by Giants (EDHREC, fetched 2026-10-17).
+pub const SKANOS_DRAGONHEART_8_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_hoard, dragonstorm_globe, emerald_medallion, jade_orb_of_dragonkind,
+    key_to_the_side_door, sol_ring, swiftfoot_boots, thought_vessel, haven_of_the_spirit_dragon,
+    myriad_landscape, oran_rief_the_vastwood, rogues_passage, ambitious_dragonborn,
+    ancient_bronze_dragon, beast_whisperer, bloomvine_regent, boulderborn_dragon,
+    broodcaller_scourge, canopy_gargantuan, destructor_dragon, draco, draconic_muralists,
+    dread_linnorm, earthquake_dragon, emerald_dragon, foe_razer_regent, fyndhorn_elves,
+    green_dragon, jugan_the_rising_star, kura_the_boundless_sky, llanowar_elves, old_gnawbone,
+    sagu_wildling, sakura_tribe_elder, scaled_nurturer, springbloom_druid, steel_hellkite,
+    acolyte_of_bahamut, bear_umbra, colossal_majesty, encroaching_dragonstorm, frontier_siege,
+    garruks_uprising, jugan_defends_the_temple, prodigious_growth, unnatural_growth, fog,
+    heroic_intervention, krosan_grip, return_of_the_wildspeaker, snakeskin_veil, tyvars_stand,
+    worldly_tutor, cultivate, explore, explosive_vegetation, harmonize, kodamas_reach,
+    natures_lore, overwhelming_stampede, rampant_growth, rishkars_expertise,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest,
+];
+
+pub const ERINIS_7_COMMANDERS: &[CardFactory] = &[erinis_gloom_stalker, acolyte_of_bahamut];
+
+/// **Erinis, Gloom Stalker and Acolyte of Bahamut**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 26 Forests = 98.
+/// Erinis, Gloom Stalker and Acolyte of Bahamut (EDHREC, fetched 2026-10-17).
+pub const ERINIS_7_MAIN: &[CardFactory] = &[
+    blackblade_reforged, conduit_of_worlds, dragons_hoard, jade_orb_of_dragonkind, skullclamp,
+    sol_ring, the_great_henge, zephyr_boots, blast_zone, blighted_woodland, cabaretti_courtyard,
+    evolving_wilds, fabled_passage, lotus_field, maze_of_ith, mirrorpool, mosswort_bridge,
+    myriad_landscape, riveteers_overlook, tranquil_thicket, urzas_cave, aftermath_analyst,
+    ancient_bronze_dragon, avenging_hunter, bloomvine_regent, broodcaller_scourge,
+    canopy_gargantuan, crashing_drawbridge, destructor_dragon, draconic_muralists,
+    dread_linnorm, earthquake_dragon, elvish_reclaimer, emerald_dragon, foe_razer_regent,
+    green_dragon, jugan_the_rising_star, kura_the_boundless_sky, old_gnawbone,
+    radagast_of_rhosgobel, realmwalker, scaled_nurturer, skanos_dragonheart, springbloom_druid,
+    steel_hellkite, traxos_scourge_eternal, case_of_the_locked_hothouse, elemental_bond,
+    exploration, familys_favor, garruks_uprising, kenriths_transformation, undergrowth_recon,
+    up_the_beanstalk, wild_growth, archdruids_charm, crop_rotation, entish_restoration, harrow,
+    ram_through, return_of_the_wildspeaker, return_to_nature, roiling_regrowth, snakeskin_veil,
+    you_look_upon_the_tarrasque, ugin_the_ineffable, cultivate, edge_of_autumn, harmonize,
+    sylvan_scrying, viewpoint_synchronization, wear_down,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
+];
+
+pub const ERINIS_8_COMMANDERS: &[CardFactory] = &[erinis_gloom_stalker, folk_hero];
+
+/// **Erinis, Gloom Stalker and Folk Hero**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Forests + 8 Plains = 98.
+/// Erinis, Gloom Stalker and Folk Hero (EDHREC, fetched 2026-10-17).
+pub const ERINIS_8_MAIN: &[CardFactory] = &[
+    sol_ring, the_great_henge, vanquishers_banner, vedalken_orrery, arid_mesa, canopy_vista,
+    command_tower, ghost_quarter, lotus_field, lush_portico, marsh_flats, misty_rainforest,
+    path_of_ancestry, remote_farm, scattered_groves, shire_terrace, temple_garden, the_shire,
+    windswept_heath, wooded_foothills, yavimaya_cradle_of_growth, arbor_elf, archivist_of_oghma,
+    attuned_hunter, avacyns_pilgrim, banquet_guests, beast_whisperer, belladonna_took,
+    bilbo_fellow_conspirator, birds_of_paradise, brandywine_farmer, chameleon_colossus,
+    chomping_changeling, delighted_halfling, dr_beverly_crusher, eastfarthing_farmer,
+    elanor_gardner, farmer_cotton, feasting_hobbit, flock_impostor, gilded_goose,
+    guardian_gladewalker, impostor_of_the_sixth_pride, juniper_order_ranger, masked_vandal,
+    meriadoc_brandybuck, merry_warden_of_isengard, mirror_entity, nimble_hobbit, peregrin_took,
+    prosperous_innkeeper, ranger_of_eos, rosie_cotton_of_south_lane, sam_loyal_attendant,
+    samwise_gamgee, samwise_the_stouthearted, saradoc_master_of_buckland, shire_shirriff,
+    the_gaffer, tireless_tracker, beorns_hospitality, night_of_the_sweets_revenge, ninja_pizza,
+    of_herbs_and_stewed_rabbit, utopia_sprawl, wild_growth, beast_within, crib_swap,
+    entish_restoration, get_lost, harrow, path_to_exile, roiling_regrowth, swords_to_plowshares,
+    austere_command, formless_genesis, revive_the_shire, seasons_past, the_battle_of_bywater,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const THE_FOURTH_DOCTOR_5_COMMANDERS: &[CardFactory] = &[the_fourth_doctor, nardole_resourceful_cyborg];
+
+/// **The Fourth Doctor and Nardole, Resourceful Cyborg**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Forests + 10 Islands = 98.
+/// The Fourth Doctor and Nardole, Resourceful Cyborg (EDHREC, fetched 2026-10-17).
+pub const THE_FOURTH_DOCTOR_5_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, elixir_of_immortality, mind_stone, mirror_of_galadriel,
+    moxite_refinery, palantir_of_orthanc, planetarium_of_wan_shi_tong, sol_ring,
+    talisman_of_curiosity, the_ozolith, the_temporal_anchor, boseiju_who_endures, breeding_pool,
+    castle_vantress, command_tower, gallifrey_council_chamber, hinterland_harbor,
+    myriad_landscape, otawara_soaring_city, path_of_ancestry, rivendell, seat_of_the_synod,
+    temple_of_mystery, terramorphic_expanse, the_grey_havens, trenzalore_clocktower,
+    vineglimmer_snarl, artificers_assistant, arwen_undomiel, elrond_lord_of_rivendell,
+    elrond_master_of_healing, elvish_mariner, faerie_seer, galadriel_of_lothlorien,
+    koma_cosmos_serpent, matoya_archon_elder, nimrodel_watcher, oaka_traveling_merchant,
+    seedborn_muse, sin_unending_cataclysm, thassa_god_of_the_sea, the_thirteenth_doctor,
+    azusas_many_journeys, behold_the_unspeakable, doubling_season, elven_chorus, exploration,
+    fortune_tellers_talent, garruks_uprising, hardened_scales, lost_isle_calling,
+    omen_of_the_sea, season_of_growth, simic_ascendancy, the_bath_song, the_sea_devils,
+    aetherize, arcane_denial, bioshift, councils_deliberation, dissolve, fading_hope,
+    fierce_guardianship, growth_spiral, heroic_intervention, sublime_epiphany, veil_of_summer,
+    kasmina_enigma_sage, cultivate, elven_farsight, explore, foresee, introduction_to_prophecy,
+    ponder, preordain, reason_believe, regrowth, seasons_past,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island,
+    island, island, island, island, island, island, island, island,
+];
