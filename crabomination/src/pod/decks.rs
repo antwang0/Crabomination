@@ -101509,3 +101509,30 @@ pub const MENELDOR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island,
 ];
+
+pub const LEONARDO_5_COMMANDERS: &[CardFactory] = &[leonardo_leader_in_blue];
+
+/// **Leonardo, Leader in Blue**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Leonardo, Leader in Blue (EDHREC, fetched 2026-10-17).
+pub const LEONARDO_5_MAIN: &[CardFactory] = &[
+    arcane_signet, explorers_scope, fireshrieker, haunted_cloak, heraldic_banner,
+    marble_diamond, mask_of_avacyn, oketras_monument, retrofitter_foundry, skullclamp, sol_ring,
+    springleaf_drum, thought_vessel, ancient_tomb, castle_ardenvale, idyllic_grange,
+    myriad_landscape, secluded_steppe, urzas_saga, adeline_resplendent_cathar,
+    dauntless_veteran, esper_sentinel, goldnight_commander, guiding_hydra, helpful_hunter,
+    hero_of_bladehold, inspiring_unicorn, jacked_rabbit, jazal_goldmane,
+    knight_of_the_white_orchid, leonardo_cutting_edge, leonardo_sewer_samurai,
+    lionheart_glimmer, mentor_of_the_meek, momo_playful_pet, novice_inspector, nurturing_pixie,
+    odric_master_tactician, prehistoric_pet, reverent_hoplite, rumor_gatherer, selfless_spirit,
+    skyhunter_strike_force, solitude, sunpearl_kirin, the_queen_of_dale, thraben_inspector,
+    warden_of_the_inner_sky, whitemane_lion, champions_from_beyond, felidar_retreat,
+    gleaming_splendor, political_triumph, tocasias_welcome, alley_evasion, brave_the_elements,
+    duty_beyond_death, generous_gift, guardians_pledge, kabira_takedown, path_to_exile,
+    stroke_of_midnight, swords_to_plowshares, the_last_ronins_technique,
+    youre_ambushed_on_the_road, honor, hop_to_it, leonardos_technique, moment_of_glory,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];

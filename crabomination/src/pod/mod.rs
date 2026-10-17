@@ -22182,6 +22182,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MENELDOR_COMMANDERS,
             main: decks::MENELDOR_MAIN,
         },
+        // Seat 3622: Leonardo, Leader in Blue's EDHREC average deck. `--pod-decks 3622`.
+        PodDeck {
+            name: "Leonardo, Leader in Blue (W)",
+            commanders: decks::LEONARDO_5_COMMANDERS,
+            main: decks::LEONARDO_5_MAIN,
+        },
     ]
 }
 
@@ -27687,6 +27693,7 @@ mod tests {
             ("Hulk, Brutal Brawler", &[0x1839]),
             ("Doc Aurlock, Grizzled Genius", &[0x183A]),
             ("Meneldor, Swift Savior", &[0x183B]),
+            ("Leonardo, Leader in Blue", &[0x183C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
