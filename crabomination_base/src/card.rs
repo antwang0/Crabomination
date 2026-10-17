@@ -1097,6 +1097,8 @@ pub enum CounterType {
     Petrification,
     /// Grasping Shadows // Shadows' Lair's dread counters.
     Dread,
+    /// Rotisserie Elemental's skewer counters.
+    Skewer,
 }
 
 /// Every zone a card can occupy.
