@@ -12790,6 +12790,10 @@ pub enum Effect {
     /// owner's (an opponent's) spells of that name until the controller's
     /// next turn clears it.
     LockTargetNameUntilYourNextTurn { what: Selector },
+    /// "Your opponents can't cast spells with mana value `mv` until your next
+    /// turn" (Living Breakthrough): recorded in the controller's
+    /// `opponents_cant_cast_mv`, cleared as that player's next turn begins.
+    LockOpponentsManaValueUntilYourNextTurn { mv: Value },
 
     /// "[Player] skips their next `count` turns." Bumps the affected
     /// player's `skip_turns` counter; the turn-advance logic in

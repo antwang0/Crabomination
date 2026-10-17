@@ -5081,6 +5081,9 @@ impl GameState {
             if ends(q) && !self.players[q].opponents_cant_cast_named.is_empty() {
                 self.players[q].opponents_cant_cast_named.clear();
             }
+            if ends(q) && !self.players[q].opponents_cant_cast_mv.is_empty() {
+                self.players[q].opponents_cant_cast_mv.clear();
+            }
         }
         // Stagger damage-doubling windows expire as the registrant's turn
         // begins (Lightning, Army of One).

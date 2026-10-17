@@ -927,6 +927,7 @@ impl Effect {
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
+            | Effect::LockOpponentsManaValueUntilYourNextTurn { .. }
             | Effect::ClearLastMoved
             | Effect::LicidDetach
             | Effect::SearchEachBasicLandType { .. }

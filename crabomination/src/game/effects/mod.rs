@@ -39030,6 +39030,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LockOpponentsManaValueUntilYourNextTurn { mv } => {
+                let mv = self.evaluate_value(mv, ctx).max(0) as u32;
+                let me = ctx.controller;
+                if !self.players[me].opponents_cant_cast_mv.contains(&mv) {
+                    self.players[me].opponents_cant_cast_mv.push(mv);
+                }
+                Ok(())
+            }
+
             Effect::GrantCastBackFromGraveyard { what } => {
                 // Flag the resolved card (typically Selector::This, now in the
                 // graveyard after a sac cost) so its back face becomes castable

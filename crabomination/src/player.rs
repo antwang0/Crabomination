@@ -340,6 +340,10 @@ pub struct PlayerCold {
     /// player's `do_untap`; consulted by the cast-legality gate.
     #[serde(default)]
     pub opponents_cant_cast_named: Vec<String>,
+    /// Mana values this player's opponents can't cast until this player's
+    /// next turn (Living Breakthrough). Same lifetime as the name lock above.
+    #[serde(default)]
+    pub opponents_cant_cast_mv: Vec<u32>,
     /// Sources whose static effect this player has bought their way out of for
     /// the turn (`Effect::IgnoreStaticFromSourceThisTurn` — Damping Engine).
     /// Cleared at cleanup.
