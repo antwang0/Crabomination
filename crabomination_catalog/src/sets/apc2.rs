@@ -382,11 +382,13 @@ pub fn wild_research() -> CardDefinition {
     }
 }
 
-/// Guided Passage — {G}{U}{R}. Three cards, but an opponent picks them.
+/// Guided Passage — {G}{U}{R}. Three cards, but an opponent picks them — ONE
+/// opponent (`HostileOpponent`); `EachOpponent` resolved singularly dropped
+/// seats in a pod (the `resolve_player` fan-out debug assert).
 pub fn guided_passage() -> CardDefinition {
     let pick = |filter| Effect::SearchPickedBy {
         who: PlayerRef::You,
-        picker: PlayerRef::EachOpponent,
+        picker: PlayerRef::HostileOpponent,
         filter,
         to: ZoneDest::Hand(PlayerRef::You),
     };

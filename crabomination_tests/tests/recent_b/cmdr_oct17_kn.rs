@@ -728,3 +728,18 @@ fn corrosive_ooze_eats_the_attackers_equipment() {
     }
     assert!(g.battlefield_find(kit).is_none(), "the Spy Kit is destroyed at end of combat");
 }
+
+/// Bug fix (pod seed 9330): Guided Passage's "an opponent chooses" is one
+/// opponent — in a 4-seat pod it named `EachOpponent` and resolved it singly.
+#[test]
+fn guided_passage_has_one_opponent_pick_in_a_pod() {
+    let mut g = pod(4);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::guided_passage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand = g.players[0].hand.len();
+    cast_with(&mut g, s, None, None).expect("Guided Passage");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "a creature and a land");
+}
