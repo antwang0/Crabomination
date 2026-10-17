@@ -23250,6 +23250,11 @@ impl GameState {
 
             Effect::Parade => self.parade(effect, ctx, events),
 
+            Effect::DamageToPlayersAndBattlesPlusThisTurn { amount } => {
+                self.damage_to_players_bonus_this_turn =
+                    self.damage_to_players_bonus_this_turn.saturating_add(*amount);
+                Ok(())
+            }
             Effect::YourRedSourcesDealExtraDamageThisTurn { amount } => {
                 let p = &mut self.players[ctx.controller];
                 p.red_source_damage_bonus_this_turn = p.red_source_damage_bonus_this_turn.saturating_add(*amount);

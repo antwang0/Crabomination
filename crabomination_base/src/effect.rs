@@ -9606,6 +9606,10 @@ pub enum Effect {
     /// permanent or player this turn, it deals that much damage plus `amount`
     /// instead" (The Flame of Keld's chapter III). Stacks per resolution.
     YourRedSourcesDealExtraDamageThisTurn { amount: u32 },
+    /// CR 614.1a — "If a source would deal damage to a player or battle this
+    /// turn, it deals that much damage plus `amount` instead" — every source,
+    /// every player (Rankle and Torbran). Stacks per resolution.
+    DamageToPlayersAndBattlesPlusThisTurn { amount: u32 },
     /// CR 614.1a — "If a source you control would deal damage this turn to an
     /// opponent or a permanent an opponent controls, it deals triple that
     /// damage instead" (Isengard Unleashed). Sets

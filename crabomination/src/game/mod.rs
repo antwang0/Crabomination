@@ -3601,6 +3601,11 @@ pub struct GameState {
     /// deals `.1` damage instead" (Equal Treatment). Cleared at cleanup.
     #[serde(default)]
     pub(crate) damage_becomes_this_turn: Option<(u32, u32)>,
+    /// CR 614.1a — "if a source would deal damage to a player or battle this
+    /// turn, it deals that much damage plus N instead", any source (Rankle and
+    /// Torbran). Summed per resolution; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_to_players_bonus_this_turn: u32,
     /// CR 701.38 — "you choose how each player votes this turn" (Illusion of
     /// Choice). Every vote this turn is answered by this seat on the voter's
     /// behalf; the votes are still *cast* by their own players. Cleared at the
@@ -4661,6 +4666,7 @@ impl Clone for GameState {
             additional_upkeep_steps: self.additional_upkeep_steps,
             upkeep_steps_this_turn: self.upkeep_steps_this_turn,
             damage_becomes_this_turn: self.damage_becomes_this_turn,
+            damage_to_players_bonus_this_turn: self.damage_to_players_bonus_this_turn,
             vote_controller_this_turn: self.vote_controller_this_turn,
             source_name_scratch: self.source_name_scratch,
             monarch_at_turn_start: self.monarch_at_turn_start,
@@ -4893,6 +4899,7 @@ impl GameState {
             additional_upkeep_steps: 0,
             upkeep_steps_this_turn: 0,
             damage_becomes_this_turn: None,
+            damage_to_players_bonus_this_turn: 0,
             vote_controller_this_turn: None,
             source_name_scratch: None,
             monarch_at_turn_start: None,
@@ -10400,6 +10407,7 @@ impl GameState {
         !self.doubled_damage_sources_this_turn.is_empty()
             || !self.staggered_damage_players.is_empty()
             || self.damage_becomes_this_turn.is_some()
+            || self.damage_to_players_bonus_this_turn > 0
             || self.players.iter().any(|p| p.double_your_source_damage_this_turn || p.red_source_damage_bonus_this_turn > 0)
             || self.players.iter().any(|p| {
                 p.triple_your_source_damage_to_opponents_this_turn
@@ -10694,6 +10702,16 @@ impl GameState {
             && src_colors.contains(&crate::mana::Color::Red)
         {
             amount = amount.saturating_add(self.players[*src_ctrl].red_source_damage_bonus_this_turn);
+        }
+        // Rankle and Torbran — any source, to a player or a battle.
+        if self.damage_to_players_bonus_this_turn > 0
+            && match ent {
+                EntityRef::Player(_) => true,
+                EntityRef::Permanent(c) => self.battlefield_find(c).is_some_and(|c| c.definition.is_battle()),
+                EntityRef::Card(_) => false,
+            }
+        {
+            amount = amount.saturating_add(self.damage_to_players_bonus_this_turn);
         }
         // Quest for Pure Flame — the source's controller doubles all damage
         // their sources deal this turn (CR 614.5, any permanent or player).

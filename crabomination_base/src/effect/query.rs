@@ -928,6 +928,7 @@ impl Effect {
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::LockOpponentsManaValueUntilYourNextTurn { .. }
+            | Effect::DamageToPlayersAndBattlesPlusThisTurn { .. }
             | Effect::ClearLastMoved
             | Effect::LicidDetach
             | Effect::SearchEachBasicLandType { .. }
