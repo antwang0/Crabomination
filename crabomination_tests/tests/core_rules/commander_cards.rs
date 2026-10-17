@@ -2214,29 +2214,54 @@ fn cast_commander(g: &mut GameState) -> Result<Vec<GameEvent>, GameError> {
     })
 }
 
-/// CR 101.2 — "can't" beats "can": Silence's "your opponents can't cast
-/// spells this turn" stops a commander cast from the command zone exactly as
-/// it stops a hand cast. The zone path asked no cast lock at all, so a
-/// commander walked through Silence, Grid Monitor and Meddling Mage.
+/// CR 101.2 — "can't" beats "can": Cease-Fire's "target player can't cast
+/// creature spells this turn" stops a commander cast from the command zone
+/// exactly as it stops a hand cast. The zone path asked none of the player
+/// locks, so a commander walked through Cease-Fire, Grid Monitor and Meddling
+/// Mage (Silence has its own action-level gate and always held).
 #[test]
-fn cr_101_2_silence_stops_a_command_zone_cast() {
+fn cr_101_2_cease_fire_stops_a_command_zone_cast() {
     let mut g = commander_game();
-    let silence = g.add_card_to_hand(1, catalog::silence());
+    let fire = g.add_card_to_hand(1, catalog::cease_fire());
     g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(2);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: silence,
-        target: None,
+        card_id: fire,
+        target: Some(Target::Player(0)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Silence at instant speed");
+    .expect("Cease-Fire at instant speed");
     drain_stack(&mut g);
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Green, 1);
-    assert!(cast_commander(&mut g).is_err(), "Silence holds the commander too");
+    assert!(cast_commander(&mut g).is_err(), "Cease-Fire holds the commander too");
     assert_eq!(g.players[0].command.len(), 1, "and it stays in the command zone");
+}
+
+/// CR 101.2 — an alternative cost is still a cast: Force of Will pitched under
+/// an opponent's Living Breakthrough lock on mana value 5 is refused (the
+/// alternative-cost path asked no player lock either).
+#[test]
+fn cr_101_2_a_pitch_cast_meets_the_mana_value_lock() {
+    let mut g = commander_game();
+    let fow = g.add_card_to_hand(0, catalog::force_of_will());
+    let blue = g.add_card_to_hand(0, catalog::counterspell());
+    g.players[1].opponents_cant_cast_mv.push(5);
+    let err = g
+        .perform_action(GameAction::CastSpellAlternative {
+            card_id: fow,
+            pitch_card: Some(blue),
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_err();
+    assert_eq!(err, GameError::SpellNameLocked);
+    assert!(g.players[0].hand.iter().any(|c| c.id == blue), "nothing was pitched");
 }
 
 /// CR 101.2 — Grid Monitor's controller can't cast creature spells, and a

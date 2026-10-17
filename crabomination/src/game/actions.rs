@@ -15535,8 +15535,15 @@ impl GameState {
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
-        if self.alt_cast_source(p, zone).iter().all(|c| c.id != card_id) {
+        let Some(card) = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id) else {
             return Err(GameError::CardNotInHand(card_id));
+        };
+        // CR 101.2 — an alternative cost is still a cast: every lock binds it.
+        if self.spell_name_locked(p, card.definition.name) {
+            return Err(GameError::SpellNameLocked);
+        }
+        if let Some(e) = self.cast_lock_for(p, card, u32::MAX) {
+            return Err(e);
         }
         // Validate the spell actually has an alternative cost; clone it before
         // any mutation so we don't borrow the card twice.
