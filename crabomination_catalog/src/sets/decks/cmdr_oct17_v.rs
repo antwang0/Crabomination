@@ -767,10 +767,11 @@ pub fn moonring_island() -> CardDefinition {
                     sel: Selector::EachPermanent(R::HasColor(Color::Blue).and(R::ControlledByYou)),
                     n: Value::Const(2),
                 }),
-                effect: Effect::LookAtTop {
-                    who: PlayerRef::Target(0),
-                    amount: Value::ONE,
-                },
+                // The "lose 0 life" step declares slot 0 as a player target.
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife { who: target_filtered(R::Player), amount: Value::Const(0) },
+                    Effect::LookAtTop { who: PlayerRef::Target(0), amount: Value::ONE },
+                ]),
                 ..Default::default()
             },
         ],
