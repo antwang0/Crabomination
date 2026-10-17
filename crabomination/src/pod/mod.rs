@@ -24084,6 +24084,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAFANA_15_COMMANDERS,
             main: decks::SAFANA_15_MAIN,
         },
+        // Seat 3939: April O'Neil, Live on the Scene and Splinter, the Mentor's EDHREC average deck. `--pod-decks 3939`.
+        PodDeck {
+            name: "April O'Neil, Live on the Scene and Splinter, the Mentor (UB)",
+            commanders: decks::APRIL_ONEIL_5_COMMANDERS,
+            main: decks::APRIL_ONEIL_5_MAIN,
+        },
+        // Seat 3940: Alora, Merry Thief and Tavern Brawler's EDHREC average deck. `--pod-decks 3940`.
+        PodDeck {
+            name: "Alora, Merry Thief and Tavern Brawler (UR)",
+            commanders: decks::ALORA_14_COMMANDERS,
+            main: decks::ALORA_14_MAIN,
+        },
+        // Seat 3941: Safana, Calimport Cutthroat and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 3941`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Agent of the Shadow Thieves (B)",
+            commanders: decks::SAFANA_16_COMMANDERS,
+            main: decks::SAFANA_16_MAIN,
+        },
+        // Seat 3942: The First Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 3942`.
+        PodDeck {
+            name: "The First Doctor and Barbara Wright (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_7_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_7_MAIN,
+        },
+        // Seat 3943: Armix, Filigree Thrasher and Breeches, Brazen Plunderer's EDHREC average deck. `--pod-decks 3943`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Breeches, Brazen Plunderer (BR)",
+            commanders: decks::ARMIX_15_COMMANDERS,
+            main: decks::ARMIX_15_MAIN,
+        },
+        // Seat 3944: Eligeth, Crossroads Augur and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 3944`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Yoshimaru, Ever Faithful (WU)",
+            commanders: decks::ELIGETH_21_COMMANDERS,
+            main: decks::ELIGETH_21_MAIN,
+        },
+        // Seat 3945: The Fugitive Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 3945`.
+        PodDeck {
+            name: "The Fugitive Doctor and Ian Chesterton (WRG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_10_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_10_MAIN,
+        },
+        // Seat 3946: The Ur-Sphinx's EDHREC average deck. `--pod-decks 3946`.
+        PodDeck {
+            name: "The Ur-Sphinx (WUB)",
+            commanders: decks::THE_UR_SPHINX_COMMANDERS,
+            main: decks::THE_UR_SPHINX_MAIN,
+        },
+        // Seat 3947: Ultron the Annihilator's EDHREC average deck. `--pod-decks 3947`.
+        PodDeck {
+            name: "Ultron the Annihilator (B)",
+            commanders: decks::ULTRON_THE_ANNIHILATOR_COMMANDERS,
+            main: decks::ULTRON_THE_ANNIHILATOR_MAIN,
+        },
+        // Seat 3948: Uldaros Theorix's EDHREC average deck. `--pod-decks 3948`.
+        PodDeck {
+            name: "Uldaros Theorix (UB)",
+            commanders: decks::ULDAROS_THEORIX_COMMANDERS,
+            main: decks::ULDAROS_THEORIX_MAIN,
+        },
+        // Seat 3949: Ith, High Arcanist's EDHREC average deck. `--pod-decks 3949`.
+        PodDeck {
+            name: "Ith, High Arcanist (WU)",
+            commanders: decks::ITH_COMMANDERS,
+            main: decks::ITH_MAIN,
+        },
     ]
 }
 
@@ -29906,6 +29972,17 @@ mod tests {
             ("Imoen, Mystic Trickster and Master Chef", &[0x1976]),
             ("Imoen, Mystic Trickster and Raised by Giants", &[0x1977]),
             ("Safana, Calimport Cutthroat and Master Chef", &[0x1978]),
+            ("April O'Neil, Live on the Scene and Splinter, the Mentor", &[0x1979]),
+            ("Alora, Merry Thief and Tavern Brawler", &[0x197A]),
+            ("Safana, Calimport Cutthroat and Agent of the Shadow Thieves", &[0x197B]),
+            ("The First Doctor and Barbara Wright", &[0x197C]),
+            ("Armix, Filigree Thrasher and Breeches, Brazen Plunderer", &[0x197D]),
+            ("Eligeth, Crossroads Augur and Yoshimaru, Ever Faithful", &[0x197E]),
+            ("The Fugitive Doctor and Ian Chesterton", &[0x197F]),
+            ("The Ur-Sphinx", &[0x1980]),
+            ("Ultron the Annihilator", &[0x1981]),
+            ("Uldaros Theorix", &[0x1982]),
+            ("Ith, High Arcanist", &[0x1983]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
