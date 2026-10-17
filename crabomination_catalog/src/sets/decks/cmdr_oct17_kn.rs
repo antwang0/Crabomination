@@ -727,13 +727,12 @@ pub fn the_neutrinos() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: R::Creature.and(R::OwnedByYou),
+                // "You own" makes its owner you, so the owner's return is
+                // "under your control"; the handle survives the blink, and
+                // joining combat taps it (CR 508.4).
                 effect: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::Target(0), to: crate::effect::ZoneDest::Exile },
-                    Effect::Move {
-                        what: Selector::LastMoved,
-                        to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-                    },
-                    Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                    Effect::ExileAndReturnToOwner { what: Selector::Target(0) },
+                    Effect::JoinCombatAttacking { what: Selector::Target(0) },
                 ])),
             }),
         ],

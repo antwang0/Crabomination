@@ -503,3 +503,36 @@ fn winnowing_keeps_only_the_chosen_types() {
     assert!(g.battlefield_find(pupil).is_none(), "the Merfolk shares nothing");
     assert_eq!([o1, o2].iter().filter(|id| g.battlefield_find(**id).is_some()).count(), 2, "two Bears share a type");
 }
+
+/// CR 611.2c — Olinda's odor counter carries "at the beginning of your upkeep,
+/// you lose 2 life" to the creature's controller: one creature per opponent.
+#[test]
+fn olinda_stinks_up_one_creature_per_opponent() {
+    let mut g = pod(3);
+    let b1 = ready(&mut g, 1, catalog::grizzly_bears());
+    let b2 = ready(&mut g, 2, catalog::grizzly_bears());
+    let o = g.add_card_to_hand(0, catalog::olinda_the_oblivious());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_with(&mut g, o, None, None).expect("Olinda");
+    for b in [b1, b2] {
+        assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::Odor), 1);
+    }
+    let life = g.players[1].life;
+    step_to(&mut g, 1, TurnStep::Draw);
+    assert_eq!(g.players[1].life, life - 2, "seat 1's upkeep");
+}
+
+/// The Neutrinos blink a creature we own back in tapped and attacking.
+#[test]
+fn the_neutrinos_blink_an_attacker_in() {
+    let mut g = pod(2);
+    let n = ready(&mut g, 0, catalog::the_neutrinos());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: n, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.attacking.iter().any(|a| a.attacker == bear), "the bear joined the attack");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+}
