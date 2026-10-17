@@ -1051,3 +1051,44 @@ fn jerren_recruits_and_flips_at_thirteen() {
     step_to(&mut g, 0, TurnStep::End);
     assert_eq!(g.battlefield_find(j).unwrap().definition.name, "Ormendahl, the Corrupter");
 }
+
+/// Shackles of Treachery: the stolen creature's damage destroys the Equipment
+/// on it, and only that Equipment.
+#[test]
+fn shackles_of_treachery_breaks_the_stolen_creatures_equipment() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let on = ready(&mut g, 1, catalog::bonesplitter());
+    let off = ready(&mut g, 1, catalog::bonesplitter());
+    g.battlefield_find_mut(on).unwrap().attached_to = Some(bear);
+    let s = g.add_card_to_hand(0, catalog::shackles_of_treachery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_with(&mut g, s, Some(Target::Permanent(bear)), None).expect("shackles");
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    hit_player(&mut g, bear, 1);
+    assert!(g.battlefield_find(on).is_none(), "the attached Equipment is destroyed");
+    assert!(g.battlefield_find(off).is_some(), "an unattached one is not");
+}
+
+/// Hostile Hostel flips on its third soul counter and comes back untapped;
+/// Creeping Inn drains by the creature cards exiled with it.
+#[test]
+fn hostile_hostel_becomes_creeping_inn() {
+    let mut g = pod(2);
+    let h = ready(&mut g, 0, catalog::hostile_hostel());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+        g.battlefield_find_mut(h).unwrap().tapped = false;
+        g.players[0].mana_pool.add_colorless(1);
+        activate(&mut g, h, 1, None).expect("feed the inn");
+    }
+    let inn = g.battlefield_find(h).unwrap();
+    assert_eq!((inn.definition.name, inn.tapped), ("Creeping Inn", false));
+    g.clear_sickness(h);
+    let life = (g.players[0].life, g.players[1].life);
+    hit_player(&mut g, h, 1);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 1, "one Bear exiled");
+    assert_eq!(g.players[1].life, life.1 - 1 - 3, "1 drained, 3 combat");
+    assert_eq!(g.players[0].life, life.0 + 1);
+}

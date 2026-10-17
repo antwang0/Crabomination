@@ -1711,6 +1711,92 @@ pub fn jerren_corrupted_bishop() -> CardDefinition {
     }
 }
 
+/// Shackles of Treachery — {2}{R} Sorcery. Threaten target creature; until end
+/// of turn it also has "whenever this creature deals damage, destroy target
+/// Equipment attached to it".
+pub fn shackles_of_treachery() -> CardDefinition {
+    spell(
+        "Shackles of Treachery",
+        cost(&[generic(2), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            grant(Selector::Target(0), Keyword::Haste),
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+                    effect: Effect::Destroy {
+                        what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::AttachedToThisSource)),
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Hostile Hostel // Creeping Inn — Land. {T}: add {C}. {1}, {T}, sacrifice a
+/// creature: a soul counter; at three, remove them, transform it, untap it
+/// (sorcery speed). Back: 3/7 artifact Horror Construct; attacking, it may
+/// exile a creature card from your graveyard — if it does, each opponent loses
+/// X and you gain X, X the creature cards exiled with it. {4}: it phases out.
+pub fn hostile_hostel() -> CardDefinition {
+    let x = || Value::CardsExiledWithSourceCount;
+    let inn = CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![on_attack(Effect::MayExileFromYourGraveyard {
+            filter: R::Creature,
+            max: Some(1),
+            then: Box::new(Effect::Seq(vec![
+                Effect::LinkLastMovedExilesToSource,
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: x() },
+                Effect::GainLife { who: Selector::You, amount: x() },
+            ])),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::PhaseOut { what: Selector::This, until_source_leaves: false },
+            ..Default::default()
+        }],
+        ..creature("Creeping Inn", ManaCost::default(), vec![CreatureType::Horror, CreatureType::Construct], 3, 7)
+    };
+    let souls = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Soul };
+    CardDefinition {
+        name: "Hostile Hostel",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                sac_other_filter: Some((R::Creature, 1)),
+                sorcery_speed: true,
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::Soul, amount: Value::ONE },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(souls(), Value::Const(3)),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::RemoveCounter { what: Selector::This, kind: CounterType::Soul, amount: souls() },
+                            Effect::Transform { what: Selector::This },
+                            Effect::Untap { what: Selector::This, up_to: None },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(inn)),
+        ..Default::default()
+    }
+}
+
 // ── Behold (CR 701.4) ───────────────────────────────────────────────────────
 
 /// Hulk's Thunderclap — {1}{G} Sorcery. You may behold a Gamma creature. Target

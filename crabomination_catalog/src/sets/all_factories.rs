@@ -17152,6 +17152,8 @@ static DECKS: &[Factory] = &[
     super::decks::reality_strobe,
     super::decks::conduit_of_storms,
     super::decks::jerren_corrupted_bishop,
+    super::decks::shackles_of_treachery,
+    super::decks::hostile_hostel,
     // cmdr_oct17_q
     super::decks::dust_of_moments,
     super::decks::on_thin_ice,
