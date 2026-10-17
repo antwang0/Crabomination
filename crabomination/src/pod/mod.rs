@@ -24186,6 +24186,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GLACIAN_21_COMMANDERS,
             main: decks::GLACIAN_21_MAIN,
         },
+        // Seat 3956: Halsin, Emerald Archdruid and Scion of Halaster's EDHREC average deck. `--pod-decks 3956`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Scion of Halaster (BG)",
+            commanders: decks::HALSIN_7_COMMANDERS,
+            main: decks::HALSIN_7_MAIN,
+        },
+        // Seat 3957: Siani, Eye of the Storm and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 3957`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Thrasios, Triton Hero (UG)",
+            commanders: decks::SIANI_6_COMMANDERS,
+            main: decks::SIANI_6_MAIN,
+        },
+        // Seat 3958: The Twelfth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 3958`.
+        PodDeck {
+            name: "The Twelfth Doctor and Amy Pond (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_15_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_15_MAIN,
+        },
     ]
 }
 
@@ -30025,6 +30043,9 @@ mod tests {
             ("Radiant, Serra Archangel and Rograkh, Son of Rohgahh", &[0x1987]),
             ("The Eleventh Doctor and Leela, Sevateem Warrior", &[0x1988]),
             ("Glacian, Powerstone Engineer and Tevesh Szat, Doom of Fools", &[0x1989]),
+            ("Halsin, Emerald Archdruid and Scion of Halaster", &[0x198A]),
+            ("Siani, Eye of the Storm and Thrasios, Triton Hero", &[0x198B]),
+            ("The Twelfth Doctor and Amy Pond", &[0x198C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

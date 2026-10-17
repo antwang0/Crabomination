@@ -110901,3 +110901,91 @@ pub const GLACIAN_21_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const HALSIN_7_COMMANDERS: &[CardFactory] = &[halsin_emerald_archdruid, scion_of_halaster];
+
+/// **Halsin, Emerald Archdruid and Scion of Halaster**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 14 Forests + 9 Swamps = 98.
+/// Halsin, Emerald Archdruid and Scion of Halaster (EDHREC, fetched 2026-10-17).
+pub const HALSIN_7_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, idol_of_oblivion, locket_of_yesterdays, primal_amulet,
+    sol_ring, spellweaver_helix, bojuka_bog, command_tower, deathcap_glade, golgari_rot_farm,
+    haunted_mire, llanowar_wastes, necroblossom_snarl, tainted_wood, twilight_mire, vernal_fen,
+    viridescent_bog, woodland_cemetery, armorcraft_judge, beorn_the_fierce,
+    carnivorous_cultivator, cemetery_prowler, disciple_of_freyalise, glissa_herald_of_predation,
+    jaheira_friend_of_the_forest, llanowar_elves, magus_of_the_will, michelangelo_game_master,
+    michelangelo_mutant_bff, mutagen_man_living_ooze, pizza_face_gastromancer, roadkill_rodney,
+    sakura_tribe_elder, tippy_toe_terrific_partner, tireless_provisioner, doubling_season,
+    march_of_the_world_ooze, ripples_of_undeath, terrasymbiosis,
+    walk_in_closet_forgotten_cellar, assassins_trophy, beast_within, fell_the_profane,
+    hostile_negotiations, natures_claim, putrefy, return_of_the_wildspeaker,
+    revitalizing_repast, rise_of_the_deathbringer, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SIANI_6_COMMANDERS: &[CardFactory] = &[siani_eye_of_the_storm, thrasios_triton_hero];
+
+/// **Siani, Eye of the Storm and Thrasios, Triton Hero**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 10 Forests + 15 Islands = 98.
+/// Siani, Eye of the Storm and Thrasios, Triton Hero (EDHREC, fetched 2026-10-17).
+pub const SIANI_6_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, heartstone, illusionists_bracers, lifecrafters_bestiary,
+    mirror_of_galadriel, planetarium_of_wan_shi_tong, simic_signet, sol_ring,
+    the_temporal_anchor, thought_vessel, thran_turbine, command_tower, hinterland_harbor,
+    quandrix_campus, rivendell, simic_growth_chamber, soldevi_excavations, temple_of_mystery,
+    the_grey_havens, tropical_island, urzas_saga, ancient_silver_dragon,
+    archetype_of_imagination, artificers_assistant, arwen_undomiel, avenger_of_zendikar,
+    birds_of_paradise, celeborn_the_wise, consecrated_sphinx, courser_of_kruphix,
+    cryptic_annelid, elrond_lord_of_rivendell, elrond_master_of_healing, elvish_mariner,
+    faerie_seer, fog_bank, galadriel_of_lothlorien, glorfindel_dauntless_rescuer,
+    hydroid_krasis, kenessos_priest_of_thassa, matoya_archon_elder, mulldrifter,
+    network_disruptor, ornithopter_of_paradise, peregrine_drake, princess_yue,
+    rampaging_baloths, siren_stormtamer, sphinx_of_the_second_sun, tatyova_benthic_druid,
+    thassa_god_of_the_sea, tireless_provisioner, wonder, counterbalance, lost_isle_calling,
+    psychic_impetus, retreat_to_coralhelm, season_of_growth, song_of_earendil, arcane_denial,
+    cancel, counterspell, kozileks_command, mana_drain, opt, scour_for_scrap,
+    kasmina_enigma_sage, cultivate, elven_farsight, farseek, preordain, reason_believe,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
+
+pub const THE_TWELFTH_DOCTOR_15_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, amy_pond];
+
+/// **The Twelfth Doctor and Amy Pond**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 8 Islands + 6 Mountains = 98.
+/// The Twelfth Doctor and Amy Pond (EDHREC, fetched 2026-10-17).
+pub const THE_TWELFTH_DOCTOR_15_MAIN: &[CardFactory] = &[
+    chimil_the_inner_sun, helm_of_awakening, lotus_bloom, mox_tantalite, river_songs_diary,
+    sol_ring, sol_talisman, the_millennium_calendar, cascade_bluffs, city_of_brass, cliffgate,
+    command_tower, exotic_orchard, fabled_passage, fiery_islet, flooded_strand, frostboil_snarl,
+    mystic_sanctuary, otawara_soaring_city, reliquary_tower, riverglide_pathway, shivan_reef,
+    spirebluff_canal, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    trenzalore_clocktower, aeon_chronicler, aurora_phoenix, bohn_beguiling_balladeer,
+    clara_oswald, combat_celebrant, deep_sea_kraken, epochrasite, eruth_tormented_prophet,
+    etali_primal_storm, greater_gargadon, jhoira_of_the_ghitu, jhoiras_timebug,
+    plargg_and_nassari, riftwing_cloudskate, river_song, sibylline_soothsayer,
+    sinister_concierge, star_whale, taigam_master_opportunist, the_tenth_doctor, time_beetle,
+    timebender, watcher_of_hours, wild_magic_sorcerer, as_foretold, forced_fruition,
+    paradox_haze, the_parting_of_the_ways, clockspinning, fury_charm, nexus_of_fate, pongify,
+    run_for_your_life, seething_song, suspend, timecrafting, all_of_history_all_at_once,
+    ancestral_vision, arc_blade, blasphemous_act, ecstatic_beauty, embrace_the_unknown,
+    faithless_looting, glimpse_the_impossible, impending_flux, inevitable_betrayal,
+    inspiring_refrain, past_in_flames, reckless_impulse, rousing_refrain, sea_gate_restoration,
+    seize_the_day, shivan_meteor, temporal_manipulation, wibbly_wobbly_timey_wimey,
+    wrenns_resolve,
+    // Basics
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
