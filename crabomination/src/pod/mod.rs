@@ -22680,6 +22680,84 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_THIRD_DOCTOR_10_COMMANDERS,
             main: decks::THE_THIRD_DOCTOR_10_MAIN,
         },
+        // Seat 3705: Alena, Kessig Trapper and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3705`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Slurrk, All-Ingesting (RG)",
+            commanders: decks::ALENA_9_COMMANDERS,
+            main: decks::ALENA_9_MAIN,
+        },
+        // Seat 3706: Halana, Kessig Ranger and Krark, the Thumbless's EDHREC average deck. `--pod-decks 3706`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Krark, the Thumbless (RG)",
+            commanders: decks::HALANA_8_COMMANDERS,
+            main: decks::HALANA_8_MAIN,
+        },
+        // Seat 3707: Halsin, Emerald Archdruid and Tavern Brawler's EDHREC average deck. `--pod-decks 3707`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Tavern Brawler (RG)",
+            commanders: decks::HALSIN_4_COMMANDERS,
+            main: decks::HALSIN_4_MAIN,
+        },
+        // Seat 3708: Krark, the Thumbless and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3708`.
+        PodDeck {
+            name: "Krark, the Thumbless and Slurrk, All-Ingesting (RG)",
+            commanders: decks::KRARK_6_COMMANDERS,
+            main: decks::KRARK_6_MAIN,
+        },
+        // Seat 3709: Kraum, Ludevic's Opus and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3709`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Slurrk, All-Ingesting (URG)",
+            commanders: decks::KRAUM_5_COMMANDERS,
+            main: decks::KRAUM_5_MAIN,
+        },
+        // Seat 3710: Ludevic, Necro-Alchemist and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 3710`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Slurrk, All-Ingesting (URG)",
+            commanders: decks::LUDEVIC_8_COMMANDERS,
+            main: decks::LUDEVIC_8_MAIN,
+        },
+        // Seat 3711: Lulu, Loyal Hollyphant and Candlekeep Sage's EDHREC average deck. `--pod-decks 3711`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Candlekeep Sage (WU)",
+            commanders: decks::LULU_8_COMMANDERS,
+            main: decks::LULU_8_MAIN,
+        },
+        // Seat 3712: Lulu, Loyal Hollyphant and Veteran Soldier's EDHREC average deck. `--pod-decks 3712`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Veteran Soldier (W)",
+            commanders: decks::LULU_9_COMMANDERS,
+            main: decks::LULU_9_MAIN,
+        },
+        // Seat 3713: Sivriss, Nightmare Speaker and Inspiring Leader's EDHREC average deck. `--pod-decks 3713`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Inspiring Leader (WB)",
+            commanders: decks::SIVRISS_7_COMMANDERS,
+            main: decks::SIVRISS_7_MAIN,
+        },
+        // Seat 3714: The Fifth Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 3714`.
+        PodDeck {
+            name: "The Fifth Doctor and Graham O'Brien (WUG)",
+            commanders: decks::THE_FIFTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_5_MAIN,
+        },
+        // Seat 3715: The Fugitive Doctor and Nyssa of Traken's EDHREC average deck. `--pod-decks 3715`.
+        PodDeck {
+            name: "The Fugitive Doctor and Nyssa of Traken (URG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_9_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_9_MAIN,
+        },
+        // Seat 3716: The Second Doctor and Bill Potts's EDHREC average deck. `--pod-decks 3716`.
+        PodDeck {
+            name: "The Second Doctor and Bill Potts (WUR)",
+            commanders: decks::THE_SECOND_DOCTOR_4_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_4_MAIN,
+        },
+        // Seat 3717: The Third Doctor and Donna Noble's EDHREC average deck. `--pod-decks 3717`.
+        PodDeck {
+            name: "The Third Doctor and Donna Noble (URG)",
+            commanders: decks::THE_THIRD_DOCTOR_11_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_11_MAIN,
+        },
     ]
 }
 
@@ -28268,6 +28346,19 @@ mod tests {
             ("The Ninth Doctor and Barbara Wright", &[0x188C]),
             ("The Seventh Doctor and Romana II", &[0x188D]),
             ("The Third Doctor and Ace, Fearless Rebel", &[0x188E]),
+            ("Alena, Kessig Trapper and Slurrk, All-Ingesting", &[0x188F]),
+            ("Halana, Kessig Ranger and Krark, the Thumbless", &[0x1890]),
+            ("Halsin, Emerald Archdruid and Tavern Brawler", &[0x1891]),
+            ("Krark, the Thumbless and Slurrk, All-Ingesting", &[0x1892]),
+            ("Kraum, Ludevic's Opus and Slurrk, All-Ingesting", &[0x1893]),
+            ("Ludevic, Necro-Alchemist and Slurrk, All-Ingesting", &[0x1894]),
+            ("Lulu, Loyal Hollyphant and Candlekeep Sage", &[0x1895]),
+            ("Lulu, Loyal Hollyphant and Veteran Soldier", &[0x1896]),
+            ("Sivriss, Nightmare Speaker and Inspiring Leader", &[0x1897]),
+            ("The Fifth Doctor and Graham O'Brien", &[0x1898]),
+            ("The Fugitive Doctor and Nyssa of Traken", &[0x1899]),
+            ("The Second Doctor and Bill Potts", &[0x189A]),
+            ("The Third Doctor and Donna Noble", &[0x189B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
