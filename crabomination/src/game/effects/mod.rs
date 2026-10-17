@@ -7,6 +7,7 @@
 //! [`GameEvent`]s.
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
+mod distinct_mv_return;
 mod energy_sweep;
 mod among;
 mod may_cost;
@@ -28014,6 +28015,16 @@ impl GameState {
                 self.damaged_creatures_die_this_turn = true;
                 self.check_state_based_actions_mid_resolution(events);
                 Ok(())
+            }
+            Effect::DamagedOpponentCreaturesDieThisTurn => {
+                if ctx.controller < 64 {
+                    self.damaged_opponent_creatures_die_for |= 1u64 << ctx.controller;
+                }
+                self.check_state_based_actions_mid_resolution(events);
+                Ok(())
+            }
+            Effect::ReturnDistinctManaValuesFromGraveyard { who } => {
+                self.return_distinct_mana_values_from_graveyard(who, effect, ctx, events)
             }
 
             Effect::CreatureDeathsDrainToughnessThisTurn => {

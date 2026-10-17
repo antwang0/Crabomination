@@ -7522,6 +7522,15 @@ pub enum Effect {
     /// damage, destroy it". The lethal-damage SBA treats *any* marked damage as
     /// lethal for the rest of the turn (indestructible still survives).
     DamagedCreaturesDieThisTurn,
+    /// Green Dragon's Poison Breath — "until end of turn, whenever a creature
+    /// an opponent controls is dealt damage, destroy it": the
+    /// `DamagedCreaturesDieThisTurn` sweep scoped to the controller's
+    /// opponents' creatures.
+    DamagedOpponentCreaturesDieThisTurn,
+    /// "Return any number of cards with different mana values from your
+    /// graveyard to your hand" (Seasons Past). The picker keeps at most one
+    /// card per mana value.
+    ReturnDistinctManaValuesFromGraveyard { who: PlayerRef },
     /// Shriveling Rot mode 2 — "until end of turn, whenever a creature dies,
     /// that creature's controller loses life equal to its toughness".
     CreatureDeathsDrainToughnessThisTurn,
