@@ -3151,6 +3151,12 @@ and one ColdState Vec added (cold). `profiling-fast` bot_ladder, 4-core Xeon @ 2
 pods (new seats) 3729-3781 in 4-seat (14 x 60, seeds 37401-37414) and 6-seat (9 x 30,
                  37501-37509) pods: 1,110 / 1,110 decided, 0 panics; one Parade loop found
                  at the action cap first (seed 37306) and fixed
+                 3782-3887: 4-seat (seeds 37701-37714, 38001-38013) and 6-seat (37801-37810,
+                 38101-38109): 2,100 / 2,101 decided (one CR 104.4a draw), 0 panics
+random 8-seat    20 pods drawn from all 3,836 seats x 10 games (seeds 37901-37920): 200 / 200
+clippy           workspace (client excluded) 0 warnings
+suite            27,570 / 27,571 (the one: a cr_115_1 bare slot on Moonring Island, fixed);
+                 the per-seat precon pod test excluded — hours in debug on 4 cores
 ```
 
 ### 2026-10-17 (Commander run, `yl8zjb`) — guardrail; 122 seats, 61 cards, thirteen primitives
