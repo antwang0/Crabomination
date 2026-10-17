@@ -23730,6 +23730,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAFANA_8_COMMANDERS,
             main: decks::SAFANA_8_MAIN,
         },
+        // Seat 3880: The Second Doctor and Dan Lewis's EDHREC average deck. `--pod-decks 3880`.
+        PodDeck {
+            name: "The Second Doctor and Dan Lewis (WUR)",
+            commanders: decks::THE_SECOND_DOCTOR_7_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_7_MAIN,
+        },
+        // Seat 3881: Sivriss, Nightmare Speaker and Street Urchin's EDHREC average deck. `--pod-decks 3881`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Street Urchin (BR)",
+            commanders: decks::SIVRISS_10_COMMANDERS,
+            main: decks::SIVRISS_10_MAIN,
+        },
+        // Seat 3882: The Eighth Doctor and Vislor Turlough's EDHREC average deck. `--pod-decks 3882`.
+        PodDeck {
+            name: "The Eighth Doctor and Vislor Turlough (WUB)",
+            commanders: decks::THE_EIGHTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_7_MAIN,
+        },
+        // Seat 3883: Ardenn, Intrepid Archaeologist and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 3883`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Nadier, Agent of the Duskenel (WB)",
+            commanders: decks::ARDENN_15_COMMANDERS,
+            main: decks::ARDENN_15_MAIN,
+        },
+        // Seat 3884: Erinis, Gloom Stalker and Cultist of the Absolute's EDHREC average deck. `--pod-decks 3884`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Cultist of the Absolute (BG)",
+            commanders: decks::ERINIS_13_COMMANDERS,
+            main: decks::ERINIS_13_MAIN,
+        },
+        // Seat 3885: Akroma, Vision of Ixidor and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 3885`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Halana, Kessig Ranger (WG)",
+            commanders: decks::AKROMA_15_COMMANDERS,
+            main: decks::AKROMA_15_MAIN,
+        },
+        // Seat 3886: Ardenn, Intrepid Archaeologist and Ravos, Soultender's EDHREC average deck. `--pod-decks 3886`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Ravos, Soultender (WB)",
+            commanders: decks::ARDENN_16_COMMANDERS,
+            main: decks::ARDENN_16_MAIN,
+        },
+        // Seat 3887: Alharu, Solemn Ritualist and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 3887`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Gilanra, Caller of Wirewood (WG)",
+            commanders: decks::ALHARU_10_COMMANDERS,
+            main: decks::ALHARU_10_MAIN,
+        },
     ]
 }
 
@@ -29493,6 +29541,14 @@ mod tests {
             ("Safana, Calimport Cutthroat and Folk Hero", &[0x193B]),
             ("Imoen, Mystic Trickster and Cultist of the Absolute", &[0x193C]),
             ("Safana, Calimport Cutthroat and Flaming Fist", &[0x193D]),
+            ("The Second Doctor and Dan Lewis", &[0x193E]),
+            ("Sivriss, Nightmare Speaker and Street Urchin", &[0x193F]),
+            ("The Eighth Doctor and Vislor Turlough", &[0x1940]),
+            ("Ardenn, Intrepid Archaeologist and Nadier, Agent of the Duskenel", &[0x1941]),
+            ("Erinis, Gloom Stalker and Cultist of the Absolute", &[0x1942]),
+            ("Akroma, Vision of Ixidor and Halana, Kessig Ranger", &[0x1943]),
+            ("Ardenn, Intrepid Archaeologist and Ravos, Soultender", &[0x1944]),
+            ("Alharu, Solemn Ritualist and Gilanra, Caller of Wirewood", &[0x1945]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
