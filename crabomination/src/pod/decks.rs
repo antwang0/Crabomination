@@ -115849,3 +115849,207 @@ pub const DONALD_BLAKE_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const THORIN_3_COMMANDERS: &[CardFactory] = &[thorin_king_of_durins_folk];
+
+/// **Thorin, King of Durin's Folk**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Mountains + 9 Plains = 99.
+/// Thorin, King of Durin's Folk (EDHREC, fetched 2026-10-18).
+pub const THORIN_3_MAIN: &[CardFactory] = &[
+    arcane_signet, bearded_axe, bloodforged_battle_axe, diamond_pick_axe, dwarven_mattock,
+    dwarven_shortsword, goldvein_pick, heralds_horn, lightning_greaves, long_lost_lances,
+    mithril_coat, orcrist_goblin_cleaver, sol_ring, sting_bilbos_sword, talisman_of_conviction,
+    the_arkenstone, the_reaver_cleaver, battlefield_forge, clifftop_retreat, command_tower,
+    dragon_cursed_halls, dwarven_mine, furycalm_snarl, iron_hills, minas_tirith, mines_of_moria,
+    path_of_ancestry, radiant_summit, rogues_passage, rugged_prairie, sacred_foundry,
+    sundown_pass, the_lonely_mountain, academy_manufactor, balin_loremaster,
+    bifur_melodic_rider, bofur_reliable_guardian, bombur_gentle_dreamer, bruenor_battlehammer,
+    dori_bearer_of_friends, dwalin_weaponmaster, dwarven_mauler, dwarven_recruiter,
+    dain_ironfoot, dain_of_the_ancient_halls, dains_company, dain_lord_of_the_iron_hills,
+    fili_and_kili_joyous, fili_the_pathfinder, gimli_of_the_glittering_caves,
+    giott_king_of_the_dwarves, gloin_the_mighty, gloin_dwarf_emissary, iron_hills_blacksmith,
+    kili_the_resourceful, magda_brazen_outlaw, nori_teller_of_tales, ori_plate_stacker,
+    smaug_the_magnificent, thorin_oakenshield, thorin_companys_leader, thorin_mountain_king,
+    oin_the_brave, an_unexpected_party, gleaming_splendor, rain_of_riches, smothering_tithe,
+    the_misty_mountains_cold, there_and_back_again, big_score, bilbos_gambit, boros_charm,
+    path_to_exile, swords_to_plowshares, thorins_last_stand, unexpected_windfall, vow_to_erebor,
+    blasphemous_act, seize_the_spoils, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const DAIN_OF_THE_ANCIENT_HALLS_COMMANDERS: &[CardFactory] = &[dain_of_the_ancient_halls];
+
+/// **Dáin of the Ancient Halls**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Mountains + 9 Plains = 99.
+/// Dáin of the Ancient Halls (EDHREC, fetched 2026-10-18).
+pub const DAIN_OF_THE_ANCIENT_HALLS_MAIN: &[CardFactory] = &[
+    arcane_signet, bearded_axe, bloodforged_battle_axe, diamond_pick_axe, dwarven_mattock,
+    dwarven_shortsword, hammer_of_nazahn, heralds_horn, lightning_greaves, mithril_coat,
+    orcrist_goblin_cleaver, sol_ring, swiftfoot_boots, sword_of_the_animist,
+    talisman_of_conviction, the_arkenstone, the_reaver_cleaver, battlefield_forge,
+    clifftop_retreat, command_tower, dwarven_mine, furycalm_snarl, iron_hills, minas_tirith,
+    mines_of_moria, path_of_ancestry, radiant_summit, rogues_passage, rugged_prairie,
+    sacred_foundry, spectator_seating, sundown_pass, the_lonely_mountain, balin_loremaster,
+    bifur_melodic_rider, bofur_reliable_guardian, bruenor_battlehammer, dori_bearer_of_friends,
+    dwalin_weaponmaster, dwarven_mauler, dwarven_recruiter, dain_ironfoot, dains_company,
+    dain_lord_of_the_iron_hills, fili_and_kili_joyous, fili_the_pathfinder,
+    gimli_of_the_glittering_caves, giott_king_of_the_dwarves, gloin_the_mighty,
+    gloin_dwarf_emissary, iron_hills_blacksmith, koll_the_forgemaster, kili_the_resourceful,
+    magda_brazen_outlaw, ori_plate_stacker, reyav_master_smith, sram_senior_edificer,
+    thorin_oakenshield, thorin_companys_leader, thorin_king_of_durins_folk,
+    thorin_mountain_king, torbran_thane_of_red_fell, oin_the_brave, aggravated_assault,
+    an_unexpected_party, forge_anew, gleaming_splendor, smothering_tithe,
+    the_misty_mountains_cold, akromas_will, big_score, bilbos_gambit, boros_charm, chaos_warp,
+    flawless_maneuver, path_to_exile, swords_to_plowshares, blasphemous_act, steelshapers_gift,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const THORIN_OAKENSHIELD_COMMANDERS: &[CardFactory] = &[thorin_oakenshield];
+
+/// **Thorin Oakenshield**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Plains = 99.
+/// Thorin Oakenshield (EDHREC, fetched 2026-10-18).
+pub const THORIN_OAKENSHIELD_MAIN: &[CardFactory] = &[
+    arcane_signet, bearded_axe, bloodforged_battle_axe, colossus_hammer, diamond_pick_axe,
+    dwarven_mattock, dwarven_shortsword, gimlis_axe, goldvein_pick, long_lost_lances,
+    mithril_coat, orcrist_goblin_cleaver, ragged_short_spear, sol_ring, sting_bilbos_sword,
+    swiftfoot_boots, the_arkenstone, the_black_arrow, thrors_map, battlefield_forge,
+    clifftop_retreat, command_tower, dwarven_mine, furycalm_snarl, iron_hills, mines_of_moria,
+    path_of_ancestry, rogues_passage, rugged_prairie, sacred_foundry, sundown_pass,
+    the_lonely_mountain, balin_loremaster, bifur_melodic_rider, bofur_reliable_guardian,
+    bombur_gentle_dreamer, bruenor_battlehammer, dori_bearer_of_friends, dwalin_weaponmaster,
+    dwarven_mauler, dwarven_provisioner, dain_ironfoot, dains_company,
+    dain_lord_of_the_iron_hills, fili_and_kili_joyous, fili_the_pathfinder,
+    gimli_of_the_glittering_caves, gloin_the_mighty, gloin_dwarf_emissary,
+    iron_hills_blacksmith, iron_hills_stalwart, kili_the_resourceful, magda_brazen_outlaw,
+    nori_teller_of_tales, ori_keeper_of_songs, sram_senior_edificer, thorin_king_of_durins_folk,
+    thorin_mountain_king, oin_the_brave, an_unexpected_party, burn_burn_tree_and_fern,
+    celebrate_the_mountain_king, gleaming_splendor, the_misty_mountains_cold,
+    the_mountain_kings_return, bilbos_gambit, boros_charm, path_to_exile, settle_the_wreckage,
+    stone_by_sunlight, swords_to_plowshares, thorins_last_stand, vow_to_erebor, blasphemous_act,
+    moment_of_glory, open_the_armory,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const IRON_MAN_6_COMMANDERS: &[CardFactory] = &[iron_man_master_of_machines];
+
+/// **Iron Man, Master of Machines**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Mountains = 99.
+/// Iron Man, Master of Machines (EDHREC, fetched 2026-10-18).
+pub const IRON_MAN_6_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arc_reactor, arcane_signet, fellwar_stone, futurist_forge,
+    improvised_arsenal, iron_man_armor, izzet_signet, lightning_greaves, mind_stone,
+    mjolnir_hammer_of_thor, mystic_forge, simulacrum_synthesizer, sol_ring, super_suit,
+    swiftfoot_boots, talisman_of_creativity, thought_vessel, unwinding_clock,
+    uthros_research_craft, vibranium_energy_daggers, academy_ruins, cascade_bluffs,
+    command_tower, darksteel_citadel, frostboil_snarl, great_furnace, reliquary_tower,
+    seat_of_the_synod, shivan_reef, silverbluff_bridge, stark_industries, steam_vents,
+    stormcarved_coast, sulfur_falls, cyberdrive_awakener, enthusiastic_mechanaut,
+    etherium_sculptor, foundry_inspector, hydra_assault_robot, hydraulic_helper,
+    iron_lad_diverging_destiny, iron_lad_young_avenger, iron_man_bleeding_edge,
+    iron_man_modern_marvel, iron_spider_stark_upgrade, ironheart_clever_champion,
+    jhoira_weatherlight_captain, kappa_cannoneer, machinesmith_automaton,
+    ornithopter_of_paradise, padeem_consul_of_innovation, pinnacle_emissary, ravenous_robots,
+    sai_master_thopterist, shuri_wakandan_inventor, solemn_simulacrum,
+    stark_industries_executive, steel_overseer, tony_stark, ultron_artificial_malevolence,
+    armor_wars, efficient_construction, mechanized_production, thopter_spy_network,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, i_am_iron_man, negate,
+    scour_for_scrap, thirst_for_knowledge, vision_of_love, saheeli_sublime_artificer,
+    blasphemous_act, repulsor_blast, thoughtcast, vision_quest,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BIFUR_COMMANDERS: &[CardFactory] = &[bifur_melodic_rider];
+
+/// **Bifur, Melodic Rider**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Mountains + 11 Plains = 99.
+/// Bifur, Melodic Rider (EDHREC, fetched 2026-10-18).
+pub const BIFUR_MAIN: &[CardFactory] = &[
+    arcane_signet, bearded_axe, bloodforged_battle_axe, boros_signet, diamond_pick_axe,
+    dwarven_mattock, dwarven_shortsword, goldvein_pick, heralds_horn, orcrist_goblin_cleaver,
+    sol_ring, sting_bilbos_sword, swiftfoot_boots, sword_of_the_animist, talisman_of_conviction,
+    the_arkenstone, the_reaver_cleaver, thrors_map, battlefield_forge, clifftop_retreat,
+    command_tower, dwarven_mine, furycalm_snarl, iron_hills, mines_of_moria, path_of_ancestry,
+    radiant_summit, rugged_prairie, sacred_foundry, sundown_pass, the_lonely_mountain,
+    balin_loremaster, bofur_reliable_guardian, bombur_gentle_dreamer, dori_bearer_of_friends,
+    dwalin_weaponmaster, dwarven_mauler, dain_ironfoot, dain_of_the_ancient_halls,
+    dains_company, dain_lord_of_the_iron_hills, fili_and_kili_joyous, fili_the_pathfinder,
+    gimli_of_the_glittering_caves, gimli_counter_of_kills, giott_king_of_the_dwarves,
+    gloin_the_mighty, gloin_dwarf_emissary, iron_hills_blacksmith, iron_hills_stalwart,
+    kili_the_resourceful, magda_brazen_outlaw, nori_teller_of_tales, ori_keeper_of_songs,
+    sram_senior_edificer, thorin_oakenshield, thorin_companys_leader,
+    thorin_king_of_durins_folk, thorin_mountain_king, oin_the_brave, an_unexpected_party,
+    burn_burn_tree_and_fern, celebrate_the_mountain_king, gleaming_splendor,
+    the_misty_mountains_cold, the_mountain_kings_return, bilbos_gambit, boros_charm,
+    path_to_exile, settle_the_wreckage, stone_by_sunlight, swords_to_plowshares,
+    thorins_last_stand, vow_to_erebor, blasphemous_act, moment_of_glory, open_the_armory,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const NORI_COMMANDERS: &[CardFactory] = &[nori_teller_of_tales];
+
+/// **Nori, Teller of Tales**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 13 Mountains + 12 Plains = 99.
+/// Nori, Teller of Tales (EDHREC, fetched 2026-10-18).
+pub const NORI_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, boros_signet, colossus_hammer, dwarven_hammer,
+    dwarven_mattock, dwarven_shortsword, gimlis_axe, goldvein_pick, haunted_cloak, mind_stone,
+    ragged_short_spear, sol_ring, talisman_of_conviction, thought_vessel, ancient_den,
+    boros_garrison, buried_ruin, clifftop_retreat, command_tower, dwarven_mine, evolving_wilds,
+    terramorphic_expanse, the_lonely_mountain, wind_scarred_crag, axgard_cavalry,
+    balin_loremaster, bifur_melodic_rider, bofur_reliable_guardian, bombur_gentle_dreamer,
+    dori_bearer_of_friends, dwalin_weaponmaster, dwarven_provisioner, dain_ironfoot,
+    erebor_flamesmith, fili_and_kili_joyous, gimli_counter_of_kills, gloin_the_mighty,
+    gloin_dwarf_emissary, iron_hills_blacksmith, iron_hills_stalwart, magda_brazen_outlaw,
+    ori_keeper_of_songs, puresteel_paladin, shattered_acolyte, sram_senior_edificer,
+    thorin_king_of_durins_folk, thorin_mountain_king, witty_roastmaster, oin_the_brave,
+    an_unexpected_party, forge_anew, impact_tremors, pacifism, the_misty_mountains_cold, abrade,
+    big_score, boros_charm, demand_answers, disenchant, expedite, generous_gift, mana_tithe,
+    path_to_exile, smaugs_fury, thrill_of_possibility, unexpected_windfall, vow_to_erebor,
+    blasphemous_act, faithless_looting, farewell, mana_geyser, seize_the_spoils, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const MICHELANGELO_6_COMMANDERS: &[CardFactory] = &[michelangelo_game_master];
+
+/// **Michelangelo, Game Master**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Michelangelo, Game Master (EDHREC, fetched 2026-10-18).
+pub const MICHELANGELO_6_MAIN: &[CardFactory] = &[
+    bag_end_banquet, guac_and_marshmallow_pizza, idol_of_oblivion, novel_nunchaku,
+    omni_cheese_pizza, skateboard, sol_ring, swiftfoot_boots, the_ooze, turtle_van,
+    blighted_woodland, escape_tunnel, evolving_wilds, gingerbread_cabin, hobbit_hole,
+    myriad_landscape, riveteers_overlook, terramorphic_expanse, beast_whisperer,
+    bristlebud_farmer, duskshell_crawler, elanor_gardner, fangren_marauder, feasting_troll_king,
+    frog_butler, gene_pollinator, gilded_goose, honored_dreyleader, michelangelo_improviser,
+    michelangelo_mutant_bff, michelangelo_on_the_scene, michelangelo_weirdness_to_11,
+    michelangelo_the_heart, mutagen_man_living_ooze, peregrin_took, ragamuffin_raptor,
+    sakura_tribe_elder, spider_ham_peter_porker, steelbane_hydra, the_notary_hobbits,
+    thrashing_brontodon, ticket_tortoise, tireless_provisioner, unlucky_cabbage_merchant,
+    voracious_hydra, west_wind_avatar, zoo_escapees, awakening_zone, hardened_scales,
+    kenriths_transformation, killer_service, night_of_the_sweets_revenge, ninja_pizza,
+    party_dude, beast_within, heroic_intervention, hunters_insight, inspiring_call, ram_through,
+    return_of_the_wildspeaker, saved_by_the_shell, tenderize, bala_ged_recovery, bushwhack,
+    cowabunga, cultivate, harmonize, mutant_chain_reaction, new_generations_technique,
+    revive_the_shire,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];

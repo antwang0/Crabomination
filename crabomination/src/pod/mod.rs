@@ -25236,6 +25236,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DONALD_BLAKE_COMMANDERS,
             main: decks::DONALD_BLAKE_MAIN,
         },
+        // Seat 4131: Thorin, King of Durin's Folk's EDHREC average deck. `--pod-decks 4131`.
+        PodDeck {
+            name: "Thorin, King of Durin's Folk (WR)",
+            commanders: decks::THORIN_3_COMMANDERS,
+            main: decks::THORIN_3_MAIN,
+        },
+        // Seat 4132: Dáin of the Ancient Halls's EDHREC average deck. `--pod-decks 4132`.
+        PodDeck {
+            name: "Dáin of the Ancient Halls (WR)",
+            commanders: decks::DAIN_OF_THE_ANCIENT_HALLS_COMMANDERS,
+            main: decks::DAIN_OF_THE_ANCIENT_HALLS_MAIN,
+        },
+        // Seat 4133: Thorin Oakenshield's EDHREC average deck. `--pod-decks 4133`.
+        PodDeck {
+            name: "Thorin Oakenshield (WR)",
+            commanders: decks::THORIN_OAKENSHIELD_COMMANDERS,
+            main: decks::THORIN_OAKENSHIELD_MAIN,
+        },
+        // Seat 4134: Iron Man, Master of Machines's EDHREC average deck. `--pod-decks 4134`.
+        PodDeck {
+            name: "Iron Man, Master of Machines (UR)",
+            commanders: decks::IRON_MAN_6_COMMANDERS,
+            main: decks::IRON_MAN_6_MAIN,
+        },
+        // Seat 4135: Bifur, Melodic Rider's EDHREC average deck. `--pod-decks 4135`.
+        PodDeck {
+            name: "Bifur, Melodic Rider (WR)",
+            commanders: decks::BIFUR_COMMANDERS,
+            main: decks::BIFUR_MAIN,
+        },
+        // Seat 4136: Nori, Teller of Tales's EDHREC average deck. `--pod-decks 4136`.
+        PodDeck {
+            name: "Nori, Teller of Tales (WR)",
+            commanders: decks::NORI_COMMANDERS,
+            main: decks::NORI_MAIN,
+        },
+        // Seat 4137: Michelangelo, Game Master's EDHREC average deck. `--pod-decks 4137`.
+        PodDeck {
+            name: "Michelangelo, Game Master (G)",
+            commanders: decks::MICHELANGELO_6_COMMANDERS,
+            main: decks::MICHELANGELO_6_MAIN,
+        },
     ]
 }
 
@@ -31261,6 +31303,13 @@ mod tests {
             ("Arcee, Sharpshooter", &[0x1A36]),
             ("The Prima Vista", &[0x1A37]),
             ("Donald Blake, Guise of Thor", &[0x1A38]),
+            ("Thorin, King of Durin's Folk", &[0x1A39]),
+            ("Dáin of the Ancient Halls", &[0x1A3A]),
+            ("Thorin Oakenshield", &[0x1A3B]),
+            ("Iron Man, Master of Machines", &[0x1A3C]),
+            ("Bifur, Melodic Rider", &[0x1A3D]),
+            ("Nori, Teller of Tales", &[0x1A3E]),
+            ("Michelangelo, Game Master", &[0x1A3F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
