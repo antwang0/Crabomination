@@ -24612,6 +24612,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VICONIA_16_COMMANDERS,
             main: decks::VICONIA_16_MAIN,
         },
+        // Seat 4027: Bruse Tarl, Boorish Herder and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4027`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Siani, Eye of the Storm (WUR)",
+            commanders: decks::BRUSE_TARL_17_COMMANDERS,
+            main: decks::BRUSE_TARL_17_MAIN,
+        },
+        // Seat 4028: Dargo, the Shipwrecker and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 4028`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Keleth, Sunmane Familiar (WR)",
+            commanders: decks::DARGO_16_COMMANDERS,
+            main: decks::DARGO_16_MAIN,
+        },
+        // Seat 4029: Ellyn Harbreeze, Busybody and Dungeon Delver's EDHREC average deck. `--pod-decks 4029`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Dungeon Delver (WU)",
+            commanders: decks::ELLYN_HARBREEZE_11_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_11_MAIN,
+        },
+        // Seat 4030: Francisco, Fowl Marauder and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 4030`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Silas Renn, Seeker Adept (UB)",
+            commanders: decks::FRANCISCO_9_COMMANDERS,
+            main: decks::FRANCISCO_9_MAIN,
+        },
+        // Seat 4031: Gale, Waterdeep Prodigy and Veteran Soldier's EDHREC average deck. `--pod-decks 4031`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Veteran Soldier (WU)",
+            commanders: decks::GALE_14_COMMANDERS,
+            main: decks::GALE_14_MAIN,
+        },
+        // Seat 4032: Ganax, Astral Hunter and Hardy Outlander's EDHREC average deck. `--pod-decks 4032`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Hardy Outlander (RG)",
+            commanders: decks::GANAX_8_COMMANDERS,
+            main: decks::GANAX_8_MAIN,
+        },
+        // Seat 4033: Keleth, Sunmane Familiar and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 4033`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Kraum, Ludevic's Opus (WUR)",
+            commanders: decks::KELETH_12_COMMANDERS,
+            main: decks::KELETH_12_MAIN,
+        },
+        // Seat 4034: Ms. Marvel, Elastic Ally's EDHREC average deck. `--pod-decks 4034`.
+        PodDeck {
+            name: "Ms. Marvel, Elastic Ally (WG)",
+            commanders: decks::MS_MARVEL_2_COMMANDERS,
+            main: decks::MS_MARVEL_2_MAIN,
+        },
+        // Seat 4035: The Eleventh Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 4035`.
+        PodDeck {
+            name: "The Eleventh Doctor and Ian Chesterton (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_9_MAIN,
+        },
+        // Seat 4036: The Ninth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 4036`.
+        PodDeck {
+            name: "The Ninth Doctor and Ian Chesterton (WUR)",
+            commanders: decks::THE_NINTH_DOCTOR_17_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_17_MAIN,
+        },
+        // Seat 4037: The Second Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 4037`.
+        PodDeck {
+            name: "The Second Doctor and Barbara Wright (WU)",
+            commanders: decks::THE_SECOND_DOCTOR_10_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_10_MAIN,
+        },
+        // Seat 4038: The Third Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 4038`.
+        PodDeck {
+            name: "The Third Doctor and Ian Chesterton (WUG)",
+            commanders: decks::THE_THIRD_DOCTOR_12_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_12_MAIN,
+        },
     ]
 }
 
@@ -30522,6 +30594,18 @@ mod tests {
             ("The Thirteenth Doctor and Tegan Jovanka", &[0x19CE]),
             ("U.S.Agent, John Walker", &[0x19CF]),
             ("Viconia, Drow Apostate and Dungeon Delver", &[0x19D0]),
+            ("Bruse Tarl, Boorish Herder and Siani, Eye of the Storm", &[0x19D1]),
+            ("Dargo, the Shipwrecker and Keleth, Sunmane Familiar", &[0x19D2]),
+            ("Ellyn Harbreeze, Busybody and Dungeon Delver", &[0x19D3]),
+            ("Francisco, Fowl Marauder and Silas Renn, Seeker Adept", &[0x19D4]),
+            ("Gale, Waterdeep Prodigy and Veteran Soldier", &[0x19D5]),
+            ("Ganax, Astral Hunter and Hardy Outlander", &[0x19D6]),
+            ("Keleth, Sunmane Familiar and Kraum, Ludevic's Opus", &[0x19D7]),
+            ("Ms. Marvel, Elastic Ally", &[0x19D8]),
+            ("The Eleventh Doctor and Ian Chesterton", &[0x19D9]),
+            ("The Ninth Doctor and Ian Chesterton", &[0x19DA]),
+            ("The Second Doctor and Barbara Wright", &[0x19DB]),
+            ("The Third Doctor and Ian Chesterton", &[0x19DC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
