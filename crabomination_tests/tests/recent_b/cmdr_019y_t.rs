@@ -383,3 +383,37 @@ fn musician_grants_one_toll_that_grows() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "destroyed: no {{2}} to pay");
 }
+
+/// CR 506.4 / 509.1h — Balduvian Warlord pulls my bear off the attacking
+/// bear (which, blocked by nothing else, becomes unblocked) and makes it
+/// block the Craw Wurm instead.
+#[test]
+fn balduvian_warlord_moves_a_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    let warlord = ready(&mut g, 1, catalog::balduvian_warlord());
+    let mine = ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: wurm, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(mine, a)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.attacker_is_blocked(a));
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: warlord, ability_index: 0, target: Some(Target::Permanent(mine)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("warlord");
+    drain_stack(&mut g);
+    assert!(!g.attacker_is_blocked(a), "unblocked");
+    assert!(g.attacker_is_blocked(wurm), "now blocked");
+    assert_eq!(g.blockers_of(wurm).as_slice(), &[mine]);
+}

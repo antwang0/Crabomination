@@ -332,3 +332,27 @@ pub fn musician() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Balduvian Warlord — {3}{R} 3/2 Human Barbarian. {T}: remove target
+/// blocking creature from combat; creatures it was blocking that no other
+/// creature blocks become unblocked, then it blocks an attacking creature of
+/// your choice. Activate only during the declare blockers step.
+pub fn balduvian_warlord() -> CardDefinition {
+    CardDefinition {
+        name: "Balduvian Warlord",
+        cost: cost(&[generic(3), crate::mana::r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Barbarian], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::CurrentStepIs(TurnStep::DeclareBlockers)),
+            effect: Effect::RemoveBlockerThenReblock {
+                what: crate::effect::shortcut::target_filtered(R::Creature.and(R::IsBlocking)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
