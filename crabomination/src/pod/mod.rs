@@ -24876,6 +24876,90 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TENTH_DOCTOR_12_COMMANDERS,
             main: decks::THE_TENTH_DOCTOR_12_MAIN,
         },
+        // Seat 4071: Alena, Kessig Trapper and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 4071`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Rograkh, Son of Rohgahh (R)",
+            commanders: decks::ALENA_18_COMMANDERS,
+            main: decks::ALENA_18_MAIN,
+        },
+        // Seat 4072: Brinelin, the Moon Kraken and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 4072`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Reyhan, Last of the Abzan (UBG)",
+            commanders: decks::BRINELIN_19_COMMANDERS,
+            main: decks::BRINELIN_19_MAIN,
+        },
+        // Seat 4073: Gale, Waterdeep Prodigy and Guild Artisan's EDHREC average deck. `--pod-decks 4073`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Guild Artisan (UR)",
+            commanders: decks::GALE_15_COMMANDERS,
+            main: decks::GALE_15_MAIN,
+        },
+        // Seat 4074: Rograkh, Son of Rohgahh and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 4074`.
+        PodDeck {
+            name: "Rograkh, Son of Rohgahh and Sakashima of a Thousand Faces (UR)",
+            commanders: decks::ROGRAKH_6_COMMANDERS,
+            main: decks::ROGRAKH_6_MAIN,
+        },
+        // Seat 4075: The Eighth Doctor and Ace, Fearless Rebel's EDHREC average deck. `--pod-decks 4075`.
+        PodDeck {
+            name: "The Eighth Doctor and Ace, Fearless Rebel (WUG)",
+            commanders: decks::THE_EIGHTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_12_MAIN,
+        },
+        // Seat 4076: The Eleventh Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 4076`.
+        PodDeck {
+            name: "The Eleventh Doctor and Rose Tyler (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_11_MAIN,
+        },
+        // Seat 4077: The Ninth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4077`.
+        PodDeck {
+            name: "The Ninth Doctor and Amy Pond (UR)",
+            commanders: decks::THE_NINTH_DOCTOR_18_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_18_MAIN,
+        },
+        // Seat 4078: The Thirteenth Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 4078`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Rose Tyler (WUG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_8_MAIN,
+        },
+        // Seat 4079: Tui and La, Moon and Ocean's EDHREC average deck. `--pod-decks 4079`.
+        PodDeck {
+            name: "Tui and La, Moon and Ocean (U)",
+            commanders: decks::TUI_AND_LA_COMMANDERS,
+            main: decks::TUI_AND_LA_MAIN,
+        },
+        // Seat 4080: Viconia, Drow Apostate and Candlekeep Sage's EDHREC average deck. `--pod-decks 4080`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Candlekeep Sage (UB)",
+            commanders: decks::VICONIA_17_COMMANDERS,
+            main: decks::VICONIA_17_MAIN,
+        },
+        // Seat 4081: Volo, Itinerant Scholar and Guild Artisan's EDHREC average deck. `--pod-decks 4081`.
+        PodDeck {
+            name: "Volo, Itinerant Scholar and Guild Artisan (UR)",
+            commanders: decks::VOLO_9_COMMANDERS,
+            main: decks::VOLO_9_MAIN,
+        },
+        // Seat 4082: Don & Raph, Hard Science's EDHREC average deck. `--pod-decks 4082`.
+        PodDeck {
+            name: "Don & Raph, Hard Science (UR)",
+            commanders: decks::DON_RAPH_COMMANDERS,
+            main: decks::DON_RAPH_MAIN,
+        },
+        // Seat 4083: Donatello, the Brains and Raphael, the Muscle's EDHREC average deck. `--pod-decks 4083`.
+        PodDeck {
+            name: "Donatello, the Brains and Raphael, the Muscle (UR)",
+            commanders: decks::DONATELLO_4_COMMANDERS,
+            main: decks::DONATELLO_4_MAIN,
+        },
+        // Seat 4084: The Fifteenth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 4084`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Donna Noble (UR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_12_MAIN,
+        },
     ]
 }
 
@@ -30841,6 +30925,20 @@ mod tests {
             ("The Tenth Doctor and K-9, Mark I", &[0x19FA]),
             ("The Tenth Doctor and Romana II", &[0x19FB]),
             ("The Tenth Doctor and Tegan Jovanka", &[0x19FC]),
+            ("Alena, Kessig Trapper and Rograkh, Son of Rohgahh", &[0x19FD]),
+            ("Brinelin, the Moon Kraken and Reyhan, Last of the Abzan", &[0x19FE]),
+            ("Gale, Waterdeep Prodigy and Guild Artisan", &[0x19FF]),
+            ("Rograkh, Son of Rohgahh and Sakashima of a Thousand Faces", &[0x1A00]),
+            ("The Eighth Doctor and Ace, Fearless Rebel", &[0x1A01]),
+            ("The Eleventh Doctor and Rose Tyler", &[0x1A02]),
+            ("The Ninth Doctor and Amy Pond", &[0x1A03]),
+            ("The Thirteenth Doctor and Rose Tyler", &[0x1A04]),
+            ("Tui and La, Moon and Ocean", &[0x1A05]),
+            ("Viconia, Drow Apostate and Candlekeep Sage", &[0x1A06]),
+            ("Volo, Itinerant Scholar and Guild Artisan", &[0x1A07]),
+            ("Don & Raph, Hard Science", &[0x1A08]),
+            ("Donatello, the Brains and Raphael, the Muscle", &[0x1A09]),
+            ("The Fifteenth Doctor and Donna Noble", &[0x1A0A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
