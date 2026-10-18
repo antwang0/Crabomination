@@ -25170,6 +25170,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GIOTT_COMMANDERS,
             main: decks::GIOTT_MAIN,
         },
+        // Seat 4120: Absorbing Man's EDHREC average deck. `--pod-decks 4120`.
+        PodDeck {
+            name: "Absorbing Man (UG)",
+            commanders: decks::ABSORBING_MAN_COMMANDERS,
+            main: decks::ABSORBING_MAN_MAIN,
+        },
+        // Seat 4121: Halana, Kessig Ranger and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 4121`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Kraum, Ludevic's Opus (URG)",
+            commanders: decks::HALANA_15_COMMANDERS,
+            main: decks::HALANA_15_MAIN,
+        },
+        // Seat 4122: The First Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 4122`.
+        PodDeck {
+            name: "The First Doctor and Jamie McCrimmon (WUG)",
+            commanders: decks::THE_FIRST_DOCTOR_10_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_10_MAIN,
+        },
+        // Seat 4123: Siani, Eye of the Storm and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 4123`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Yoshimaru, Ever Faithful (WU)",
+            commanders: decks::SIANI_8_COMMANDERS,
+            main: decks::SIANI_8_MAIN,
+        },
+        // Seat 4124: The Fifth Doctor and Rose Noble's EDHREC average deck. `--pod-decks 4124`.
+        PodDeck {
+            name: "The Fifth Doctor and Rose Noble (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_8_MAIN,
+        },
     ]
 }
 
@@ -31184,6 +31214,11 @@ mod tests {
             ("Araumi of the Dead Tide", &[0x1A2B]),
             ("Gandalf of the Secret Fire", &[0x1A2C]),
             ("Giott, King of the Dwarves", &[0x1A2D]),
+            ("Absorbing Man", &[0x1A2E]),
+            ("Halana, Kessig Ranger and Kraum, Ludevic's Opus", &[0x1A2F]),
+            ("The First Doctor and Jamie McCrimmon", &[0x1A30]),
+            ("Siani, Eye of the Storm and Yoshimaru, Ever Faithful", &[0x1A31]),
+            ("The Fifth Doctor and Rose Noble", &[0x1A32]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

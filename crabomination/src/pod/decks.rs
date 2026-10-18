@@ -115544,3 +115544,146 @@ pub const GIOTT_MAIN: &[CardFactory] = &[
     mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const ABSORBING_MAN_COMMANDERS: &[CardFactory] = &[absorbing_man];
+
+/// **Absorbing Man**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 8 Forests + 9 Islands = 99.
+/// Absorbing Man (EDHREC, fetched 2026-10-18).
+pub const ABSORBING_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, chimil_the_inner_sun, expedition_map, helm_of_the_host, liquimetal_coating,
+    liquimetal_torque, mirage_mirror, mirror_box, simic_signet, sol_ring, swiftfoot_boots,
+    talisman_of_curiosity, the_great_henge, the_one_ring, boseiju_who_endures, breeding_pool,
+    command_tower, dark_depths, darksteel_citadel, dreamroot_cascade, flooded_grove, hedge_maze,
+    hinterland_harbor, lotus_field, misty_rainforest, rejuvenating_springs, reliquary_tower,
+    simic_growth_chamber, sodden_verdure, thespians_stage, willowrush_verge, yavimaya_coast,
+    yavimaya_cradle_of_growth, auton_soldier, badgermole_cub, birds_of_paradise,
+    chameleon_master_of_disguise, clever_impersonator, delighted_halfling, elvish_mystic,
+    enduring_curiosity, eternal_witness, faerie_mastermind, fanatic_of_rhonas,
+    irma_part_time_mutant, llanowar_elves, mockingbird, overlord_of_the_floodpits,
+    overlord_of_the_hauntwoods, phyrexian_metamorph, sakashima_of_a_thousand_faces,
+    sakashima_the_impostor, silent_hallcreeper, spark_double, cosmic_crucible,
+    extravagant_replication, garruks_uprising, impostor_syndrome, mirrormade, mystic_remora,
+    propaganda, rhystic_study, unnatural_growth, an_offer_you_cant_refuse, arcane_denial,
+    beast_within, counterspell, crop_rotation, growth_spiral, heroic_intervention, pongify,
+    rapid_hybridization, sink_into_stupor, swan_song, cultivate, doppelgang, farseek,
+    irenicuss_vile_duplication, natures_lore, quantum_misalignment, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const HALANA_15_COMMANDERS: &[CardFactory] = &[halana_kessig_ranger, kraum_ludevics_opus];
+
+/// **Halana, Kessig Ranger and Kraum, Ludevic's Opus**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 5 Forests + 5 Islands + 3 Mountains = 98.
+/// Halana, Kessig Ranger and Kraum, Ludevic's Opus (EDHREC, fetched 2026-10-18).
+pub const HALANA_15_MAIN: &[CardFactory] = &[
+    arcane_signet, chrome_mox, emerald_medallion, lotus_petal, mana_vault, sol_ring,
+    the_one_ring, alchemists_refuge, ancient_tomb, arid_mesa, boseiju_who_endures,
+    breeding_pool, command_tower, exotic_orchard, hinterland_harbor, mana_confluence,
+    misty_rainforest, otawara_soaring_city, scalding_tarn, sodden_verdure, spire_garden,
+    steam_vents, stomping_ground, training_center, windswept_heath, wooded_foothills,
+    absorbing_man, ambush_viper, archmage_emeritus, bilbo_luckwearer, birds_of_paradise,
+    bloom_tender, delighted_halfling, disciple_of_freyalise, elvish_mystic, eternal_witness,
+    faerie_mastermind, goblin_anarchomancer, imperial_recruiter, kinnan_bonder_prodigy,
+    llanowar_elves, mockingbird, professional_face_breaker, protean_hulk,
+    ragavan_nimble_pilferer, slumbering_trudge, stormcatch_mentor, sylvan_safekeeper,
+    tangled_florahedron, thryx_the_sudden_storm, tinder_wall, uro, carpet_of_flowers,
+    elemental_bond, garruks_uprising, mystic_remora, rhystic_study, underworld_breach, abrade,
+    an_offer_you_cant_refuse, beast_within, chord_of_calling, deflecting_swat, force_of_will,
+    heroic_intervention, lightning_bolt, mana_drain, mental_misstep, mystical_tutor,
+    noxious_revival, swan_song, worldly_tutor, the_theorist_jace_beleren, blasphemous_act,
+    cultivate, eldritch_evolution, faithless_looting, farseek, gamble, green_suns_zenith,
+    jeskas_will, natures_lore, natures_rhythm, neoform, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, mountain,
+    mountain, mountain,
+];
+
+pub const THE_FIRST_DOCTOR_10_COMMANDERS: &[CardFactory] = &[the_first_doctor, jamie_mccrimmon];
+
+/// **The First Doctor and Jamie McCrimmon**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 6 Forests + 5 Islands + 4 Plains = 98.
+/// The First Doctor and Jamie McCrimmon (EDHREC, fetched 2026-10-18).
+pub const THE_FIRST_DOCTOR_10_MAIN: &[CardFactory] = &[
+    aces_baseball_bat, arcane_signet, bessie_the_doctors_roadster, commanders_sphere,
+    heros_blade, heroes_podium, lightning_greaves, mind_stone, sol_ring, swiftfoot_boots,
+    tardis, talisman_of_progress, talisman_of_unity, thought_vessel, wayfarers_bauble,
+    canopy_vista, celestial_colonnade, command_tower, exotic_orchard, fortified_village,
+    gallifrey_council_chamber, glacial_fortress, irrigated_farmland, overgrown_farmland,
+    path_of_ancestry, prairie_stream, scattered_groves, seaside_citadel, skycloud_expanse,
+    sungrass_prairie, temple_of_enlightenment, temple_of_mystery, temple_of_plenty,
+    trenzalore_clocktower, vineglimmer_snarl, absorbing_man, adric_mathematical_genius,
+    alistair_the_brigadier, barbara_wright, bonny_pall_clearcutter, displaced_dinosaurs,
+    emry_lurker_of_the_loch, ethersworn_sphinx, foundry_inspector, imoti_celebrant_of_bounty,
+    impossible_man, jo_grant, k_9_mark_i, kutzil_malamet_exemplar, metalwork_colossus,
+    peri_brown, raff_capashen_ships_mage, sarah_jane_smith, shardless_agent,
+    sojourners_companion, solemn_simulacrum, tegan_jovanka, the_eighth_doctor, the_fifth_doctor,
+    the_fourth_doctor, the_sixth_doctor, vrestin_menoptra_leader, an_unearthly_child,
+    banish_to_another_universe, city_of_death, day_of_destiny, gallifrey_stands,
+    the_night_of_the_doctor, trial_of_a_time_lord, growth_spiral, heroic_intervention,
+    path_to_exile, return_to_dust, reverse_the_polarity, swords_to_plowshares,
+    the_wandering_emperor, cultivate, explore, the_five_doctors, three_visits, time_wipe,
+    traverse_eternity, urzas_ruinous_blast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    plains, plains, plains, plains,
+];
+
+pub const SIANI_8_COMMANDERS: &[CardFactory] = &[siani_eye_of_the_storm, yoshimaru_ever_faithful];
+
+/// **Siani, Eye of the Storm and Yoshimaru, Ever Faithful**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 16 Islands + 10 Plains = 98.
+/// Siani, Eye of the Storm and Yoshimaru, Ever Faithful (EDHREC, fetched 2026-10-18).
+pub const SIANI_8_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, helm_of_the_host, heroes_podium, hithlain_rope,
+    patchwork_banner, pearl_medallion, relic_of_legends, shadowspear, sol_ring,
+    the_temporal_anchor, thran_temporal_gateway, abandoned_air_temple, celestial_colonnade,
+    cryptic_spires, deserted_beach, floodfarm_verge, hengegate_pathway, otawara_soaring_city,
+    rivendell, sea_of_clouds, windbrisk_heights, avacyn_angel_of_hope, azor_the_lawbringer,
+    brago_king_eternal, cynette_jelly_drover, dragonlord_ojutai, eligeth_crossroads_augur,
+    errant_and_giada, esior_wardwing_familiar, geist_of_saint_traft, grand_arbiter_augustin_iv,
+    ishai_ojutai_dragonspeaker, isperia_supreme_judge, iymrith_desert_doom, jhoiras_familiar,
+    kangee_aerie_keeper, kangee_sky_warden, kira_great_glass_spinner, kykar_zephyr_awakener,
+    linvala_keeper_of_silence, malcolm_alluring_scoundrel, odric_lunarch_marshal,
+    ojer_pakpatiq_deepest_epoch, raff_capashen_ships_mage, senu_keen_eyed_protector,
+    shabraz_the_skyshark, talrand_sky_summoner, teshar_ancestors_apostle,
+    tura_kennerud_skyknight, vendilion_clique, zeriam_golden_wind, zetalpa_primal_dawn,
+    armored_ascension, ashas_favor, day_of_destiny, favorable_winds,
+    flowering_of_the_white_tree, gravitational_shift, military_intelligence, moat,
+    monologue_tax, access_denied, desynchronization, glen_elendras_answer, lofty_denial, opt,
+    you_cannot_pass, dovin_grand_arbiter, arwens_gift, chart_a_course, gust_of_wind,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const THE_FIFTH_DOCTOR_8_COMMANDERS: &[CardFactory] = &[the_fifth_doctor, rose_noble];
+
+/// **The Fifth Doctor and Rose Noble**'s EDHREC average deck, card for card:
+/// 62 nonbasic cards + 22 Islands + 14 Plains = 98.
+/// The Fifth Doctor and Rose Noble (EDHREC, fetched 2026-10-18).
+pub const THE_FIFTH_DOCTOR_8_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_cluestone, azorius_locket, bitterthorn_nissas_animus,
+    brotherhood_vertibird, careening_mine_cart, elixir_of_immortality, glistening_sphere,
+    hulldrifter, luxurious_locomotive, sol_ring, tardis, adarkar_wastes, cryptic_spires,
+    myriad_landscape, reliquary_tower, avacyn_angel_of_hope, belisarius_cawl, gold_myr,
+    hanna_ships_navigator, herald_of_secret_streams, k_9_mark_i, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners, silver_myr,
+    the_council_of_four, the_eleventh_doctor, the_first_doctor, the_seventh_doctor,
+    arcane_adaptation, rhystic_study, arcane_denial, cancel, censor, condescend, daze,
+    disappearing_act, experimental_augury, negate, path_to_exile, swords_to_plowshares,
+    austere_command, boon_of_the_wish_giver, depopulate, quantum_misalignment,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
