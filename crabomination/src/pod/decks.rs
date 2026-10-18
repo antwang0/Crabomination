@@ -116528,3 +116528,58 @@ pub const THE_THING_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const TOLSIMIR_COMMANDERS: &[CardFactory] = &[tolsimir_friend_to_wolves];
+
+/// **Tolsimir, Friend to Wolves**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 15 Forests + 7 Plains = 99.
+/// Tolsimir, Friend to Wolves (EDHREC, fetched 2026-10-18).
+pub const TOLSIMIR_MAIN: &[CardFactory] = &[
+    arcane_signet, lifecrafters_bestiary, patchwork_banner, selesnya_signet, sol_ring,
+    sword_of_body_and_mind, vanquishers_banner, blossoming_sands, bountiful_promenade,
+    canopy_vista, command_tower, fortified_village, gavony_township, krosan_verge,
+    oran_rief_the_vastwood, overgrown_farmland, selesnya_sanctuary, sunpetal_grove,
+    temple_garden, temple_of_plenty, anara_wolvid_familiar, ascendant_packleader,
+    beast_whisperer, bejeweled_warg, cemetery_prowler, ferocious_pup, hollowhenge_overlord,
+    kessig_cagebreakers, llanowar_elves, master_of_the_wild_hunt, nightpack_ambusher,
+    pack_guardian, packsong_pup, primal_adversary, sarulfs_packmate, silverfur_partisan,
+    spirit_of_the_hunt, summon_fenrir, tolsimir_wolfblood, tolsimir_midnights_light,
+    tovolars_huntmaster, watchwolf, witchstalker, wolfbriar_elemental, wolfir_avenger,
+    wolfir_silverheart, wrens_run_packmaster, young_wolf, beastmaster_ascension, feed_the_pack,
+    howling_moon, howlpack_resurgence, mantle_of_the_wolf, miraris_wake, parallel_lives,
+    raised_by_wolves, ranger_class, sylvan_anthem, tribute_to_the_world_tree, wolfcallers_howl,
+    beast_within, heroic_intervention, moonlight_hunt, path_to_exile, predators_howl,
+    rootborn_defenses, second_harvest, sundering_growth, swords_to_plowshares,
+    arlinn_voice_of_the_pack, cultivate, harmonize, howl_of_the_night_pack, kodamas_reach,
+    natures_lore, rampant_growth, shamanic_revelation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const TOLSIMIR_2_COMMANDERS: &[CardFactory] = &[tolsimir_midnights_light];
+
+/// **Tolsimir, Midnight's Light**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Plains = 99.
+/// Tolsimir, Midnight's Light (EDHREC, fetched 2026-10-18).
+pub const TOLSIMIR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bow_of_nylea, patchwork_banner, selesnya_signet, sol_ring, swiftfoot_boots,
+    vanquishers_banner, blossoming_sands, bountiful_promenade, brushland, canopy_vista,
+    command_tower, fortified_village, overgrown_farmland, rogues_passage, selesnya_sanctuary,
+    sungrass_prairie, sunpetal_grove, temple_garden, temple_of_plenty, anara_wolvid_familiar,
+    ascendant_packleader, beast_whisperer, bejeweled_warg, bounding_wolf, cemetery_prowler,
+    elvish_mystic, ferocious_pup, hollowhenge_overlord, kessig_cagebreakers, llanowar_elves,
+    master_of_the_wild_hunt, nightpack_ambusher, packsong_pup, primal_adversary,
+    sarulfs_packmate, silverfur_partisan, somberwald_alpha, spirit_of_the_hunt, summon_fenrir,
+    tolsimir_wolfblood, tolsimir_friend_to_wolves, torgal_a_fine_hound, watchwolf,
+    wolfbriar_elemental, wolfir_silverheart, young_wolf, beastmaster_ascension, feed_the_pack,
+    growing_ranks, howling_moon, howlpack_resurgence, mantle_of_the_wolf, miraris_wake,
+    raised_by_wolves, ranger_class, tribute_to_the_world_tree, unnatural_growth,
+    wolfcallers_howl, beast_within, generous_gift, heroic_intervention, moonlight_hunt,
+    path_to_exile, predators_howl, return_of_the_wildspeaker, rootborn_defenses,
+    sundering_growth, swords_to_plowshares, arlinn_voice_of_the_pack, cultivate, farseek,
+    howl_of_the_night_pack, kodamas_reach, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

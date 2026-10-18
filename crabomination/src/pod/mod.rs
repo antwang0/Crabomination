@@ -25380,6 +25380,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_THING_2_COMMANDERS,
             main: decks::THE_THING_2_MAIN,
         },
+        // Seat 4155: Tolsimir, Friend to Wolves's EDHREC average deck. `--pod-decks 4155`.
+        PodDeck {
+            name: "Tolsimir, Friend to Wolves (WG)",
+            commanders: decks::TOLSIMIR_COMMANDERS,
+            main: decks::TOLSIMIR_MAIN,
+        },
+        // Seat 4156: Tolsimir, Midnight's Light's EDHREC average deck. `--pod-decks 4156`.
+        PodDeck {
+            name: "Tolsimir, Midnight's Light (WG)",
+            commanders: decks::TOLSIMIR_2_COMMANDERS,
+            main: decks::TOLSIMIR_2_MAIN,
+        },
     ]
 }
 
@@ -31429,6 +31441,8 @@ mod tests {
             ("Tadeas, Juniper Ascendant", &[0x1A4E]),
             ("Norin, Swift Survivalist", &[0x1A4F]),
             ("The Thing, Ben Grimm", &[0x1A50]),
+            ("Tolsimir, Friend to Wolves", &[0x1A51]),
+            ("Tolsimir, Midnight's Light", &[0x1A52]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
