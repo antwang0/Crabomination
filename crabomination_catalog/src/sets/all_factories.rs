@@ -17621,6 +17621,8 @@ static DECKS: &[Factory] = &[
     super::decks::falco_spara_pactweaver,
     super::decks::evelyn_the_covetous,
     super::decks::garza_zol_plague_queen,
+    super::decks::optimus_prime_hero,
+    super::decks::ultra_magnus_tactician,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

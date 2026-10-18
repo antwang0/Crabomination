@@ -600,3 +600,139 @@ pub fn garza_zol_plague_queen() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// A Transformers back face: a legendary artifact Vehicle with living metal
+/// and a printed color indicator (CR 105.2c).
+fn converted_vehicle(name: &'static str, colors: Vec<Color>, power: i32, toughness: i32) -> CardDefinition {
+    legend(CardDefinition {
+        name,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        color_indicator: colors,
+        power,
+        toughness,
+        keywords: vec![Keyword::LivingMetal],
+        ..Default::default()
+    })
+}
+
+/// A Transformers front face: a legendary artifact creature Robot cast
+/// converted for its More Than Meets the Eye cost (CR 702.162).
+fn robot_front(name: &'static str, c: crate::mana::ManaCost, mtmte: crate::mana::ManaCost, pt: (i32, i32), back: CardDefinition) -> CardDefinition {
+    legend(CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: pt.0,
+        toughness: pt.1,
+        alternative_cost: Some(AlternativeCost { mana_cost: mtmte, converted: true, ..Default::default() }),
+        back_face: Some(Box::new(back)),
+        ..Default::default()
+    })
+}
+
+/// Optimus Prime, Hero // Optimus Prime, Autobot Leader — {3}{U}{R}{W} 4/8;
+/// More Than Meets the Eye {2}{U}{R}{W}. Each end step, bolster 1 (CR
+/// 701.39); dying, it returns converted. The 6/8 trample Vehicle: whenever
+/// you attack, bolster 2, the chosen creature gains trample, and when it
+/// deals combat damage to a player this turn, Optimus converts.
+pub fn optimus_prime_hero() -> CardDefinition {
+    let mut leader = converted_vehicle("Optimus Prime, Autobot Leader", vec![Color::Blue, Color::Red, Color::White], 6, 8);
+    leader.keywords.push(Keyword::Trample);
+    leader.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+        effect: Effect::ForEach {
+            selector: Selector::LeastToughnessYouControl,
+            body: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Trample,
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                Effect::WhenObjectDealsCombatDamageToPlayerThisTurn {
+                    what: Selector::TriggerSource,
+                    body: Box::new(Effect::Transform { what: Selector::This }),
+                },
+            ])),
+        },
+    });
+    let mut hero = robot_front(
+        "Optimus Prime, Hero",
+        cost(&[generic(3), u(), r(), w()]),
+        cost(&[generic(2), u(), r(), w()]),
+        (4, 8),
+        leader,
+    );
+    hero.triggered_abilities = vec![
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::AddCounter {
+                what: Selector::LeastToughnessYouControl,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::ExileSelfReturnTransformed,
+        },
+    ];
+    hero
+}
+
+/// Ultra Magnus, Tactician // Ultra Magnus, Armored Carrier — {4}{R}{G}{W}
+/// 7/7 ward {2}; More Than Meets the Eye {2}{R}{G}{W}. Attacking, it may put
+/// an artifact creature card from hand onto the battlefield tapped and
+/// attacking, and then converts at end of combat. The 4/7 haste Vehicle's
+/// Formidable: attacking creatures you control gain indestructible, and at
+/// total power 8 or more it converts.
+pub fn ultra_magnus_tactician() -> CardDefinition {
+    let attackers = || Selector::EachPermanent(R::Creature.and(R::IsAttacking).and(R::ControlledByYou));
+    let mut carrier = converted_vehicle("Ultra Magnus, Armored Carrier", vec![Color::Red, Color::Green, Color::White], 4, 7);
+    carrier.keywords.push(Keyword::Haste);
+    carrier.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: attackers(),
+                keyword: Keyword::Indestructible,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::PowerOf(Box::new(attackers())), Value::Const(8)),
+                then: Box::new(Effect::Transform { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    });
+    let mut tactician = robot_front(
+        "Ultra Magnus, Tactician",
+        cost(&[generic(4), r(), g(), w()]),
+        cost(&[generic(2), r(), g(), w()]),
+        (7, 7),
+        carrier,
+    );
+    tactician.keywords = vec![Keyword::Ward(crate::card::WardCost::generic(2))];
+    tactician.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::DeployCreatureFromHandAttacking {
+                filter: R::Artifact.and(R::Creature),
+                return_to_hand_eot: false,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(Selector::LastMoved)), Value::ONE),
+                then: Box::new(Effect::AtEndOfCombat { body: Box::new(Effect::Transform { what: Selector::This }) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    }];
+    tactician
+}

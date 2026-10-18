@@ -420,3 +420,74 @@ fn garza_zol_grows_off_its_kills() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(g.battlefield_find(garza).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+fn attack(g: &mut GameState, attackers: &[CardId]) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers.iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    drain_stack(g);
+}
+
+/// Optimus Prime, Hero bolsters 1 each end step and comes back converted
+/// when it dies; the Autobot Leader bolsters 2 as you attack, and that
+/// creature's combat damage converts Optimus back.
+#[test]
+fn optimus_prime_bolsters_and_converts() {
+    let mut g = pod(2);
+    let optimus = ready(&mut g, 0, catalog::optimus_prime_hero());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::PostCombatMain;
+    while g.step != TurnStep::End && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let plus = |g: &GameState, id: CardId| g.battlefield_find(id).map_or(0, |c| c.counter_count(CounterType::PlusOnePlusOne));
+    assert_eq!(plus(&g, bear), 1, "the bear has the least toughness");
+    let kill = Effect::Destroy { what: Selector::ExactObjects(vec![optimus]) };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let leader = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Optimus Prime, Autobot Leader")
+        .map(|c| c.id)
+        .expect("back, converted");
+    g.clear_sickness(leader);
+    g.active_player_idx = 0;
+    attack(&mut g, &[bear]);
+    assert_eq!(plus(&g, bear), 3, "bolster 2");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Trample));
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(leader).unwrap().definition.name, "Optimus Prime, Hero");
+}
+
+/// Ultra Magnus puts an artifact creature from hand in attacking and
+/// converts at end of combat; the Armored Carrier's Formidable makes the
+/// attackers indestructible and converts it back at 8 total power.
+#[test]
+fn ultra_magnus_deploys_then_converts() {
+    let mut g = pod(2);
+    let magnus = ready(&mut g, 0, catalog::ultra_magnus_tactician());
+    let thopter = g.add_card_to_hand(0, catalog::ornithopter());
+    attack(&mut g, &[magnus]);
+    assert!(g.attacking.iter().any(|a| a.attacker == thopter), "deployed attacking");
+    g.step = TurnStep::CombatDamage;
+    while g.step != TurnStep::PostCombatMain && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(magnus).unwrap().definition.name, "Ultra Magnus, Armored Carrier");
+    g.battlefield_find_mut(magnus).unwrap().tapped = false;
+    let big = ready(&mut g, 0, catalog::craw_wurm());
+    g.attacking.clear();
+    attack(&mut g, &[magnus, big]);
+    assert!(g.computed_permanent(big).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+    assert_eq!(g.battlefield_find(magnus).unwrap().definition.name, "Ultra Magnus, Tactician", "4 + 6 power converts it");
+}
