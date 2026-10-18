@@ -1054,6 +1054,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
                 | S::ChainsOfMephistopheles
                 | S::EmptyHandDrawBonus { .. }
                 | S::DrawsRevealedTaxed { .. }
+                | S::DrawsRevealedOthersMayPayLifeToBin { .. }
                 | S::OpponentExtraDrawsRedirected
                 | S::ControllerDrawsFromBottom
         )

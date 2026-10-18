@@ -3378,6 +3378,11 @@ pub enum StaticEffect {
     /// and reveal it. If it matches `filter`, that player discards it unless
     /// they pay `life` life" (Breathstealer's Crypt). Global.
     DrawsRevealedTaxed { filter: SelectionRequirement, life: u32 },
+    /// CR 121.2a — "If a player would draw a card, they reveal it instead.
+    /// Then any other player may pay `life` life. If a player does, put that
+    /// card into its owner's graveyard. Otherwise, that player draws a card"
+    /// (Zur's Weirding; `game/zurs_weirding.rs`). Global.
+    DrawsRevealedOthersMayPayLifeToBin { life: u32 },
     /// Alpine Moon — lands matching the source's chosen name
     /// (`CardInstance.named_card`) that opponents control lose all land
     /// types and abilities. Pair with a `GrantActivatedAbility` over

@@ -149,6 +149,7 @@ mod source_scoped_effects;
 mod blight_cost;
 mod linked_exile_counter_cast;
 mod loyalty_twice_turn;
+mod zurs_weirding;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -23186,6 +23187,9 @@ impl GameState {
             if self.creature_draws_to_graveyard(p) {
                 applicable.push(DrawDig::CreatureToGraveyard);
             }
+            if self.others_may_bin_draw().is_some() {
+                applicable.push(DrawDig::OthersMayBin);
+            }
             if self.player_may_tutor_instead_of_drawing(p) {
                 applicable.push(DrawDig::Tutor);
             }
@@ -23577,6 +23581,7 @@ impl GameState {
             // card", which is the plain draw the caller falls through to
             // (`false` here declines only this replacement, CR 614.5). An
             // empty library reveals nothing and draws (CR 104.3c).
+            DrawDig::OthersMayBin => self.apply_others_may_bin_draw(p, events),
             DrawDig::CreatureToGraveyard => {
                 let Some(top) = self.players[p].library.first() else { return false };
                 if !self.computed_is_creature(top) {
@@ -35773,6 +35778,7 @@ fn static_effect_to_effects(
             | StaticEffect::ReplaceDrawWithImpulse { .. }
             | StaticEffect::ReplaceDrawWithExileFaceDownWithSource
             | StaticEffect::ReplaceDrawCreaturesToGraveyard
+            | StaticEffect::DrawsRevealedOthersMayPayLifeToBin { .. }
             | StaticEffect::DrawsRevealedTaxed { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
@@ -37042,6 +37048,9 @@ pub(crate) enum DrawDig {
     /// Enduring Renewal — reveal the top card; a creature card goes to the
     /// graveyard, anything else is drawn.
     CreatureToGraveyard,
+    /// Zur's Weirding — reveal it; another player may pay life to bin it,
+    /// otherwise it is drawn.
+    OthersMayBin,
 }
 
 impl DrawDig {
@@ -37056,6 +37065,7 @@ impl DrawDig {
             DrawDig::CounterOnSource => "Put a counter on it instead",
             DrawDig::MillOneOfTwo => "Look at the top two, bin one, then draw",
             DrawDig::CreatureToGraveyard => "Reveal the top card; bin it if it's a creature",
+            DrawDig::OthersMayBin => "Reveal it; another player may pay life to bin it",
         }
     }
 }
