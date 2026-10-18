@@ -536,6 +536,7 @@ impl Effect {
             | Effect::OnYourNextSpellMatchingThisTurn { body, .. }
             | Effect::OnYourNextNamedSpellThisTurn { body, .. }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { body, .. }
+            | Effect::WhenObjectDealsCombatDamageToPlayerThisTurn { body, .. }
             | Effect::AtEachCombatThisTurn { body, .. }
             | Effect::AtTheAddedCombat { body }
             | Effect::WhenLastCreatedTokenLeaves { body, .. } => {
@@ -2020,6 +2021,7 @@ impl Effect {
             | Effect::GrantDamageExilesVictimThisTurn { what }
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
+            | Effect::WhenObjectDealsCombatDamageToPlayerThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantJumpStartThisTurn { what }
             | Effect::GrantFlashbackWithCostThisTurn { what, .. }
@@ -2912,6 +2914,7 @@ impl Effect {
             | Effect::GrantDamageExilesVictimThisTurn { what }
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
+            | Effect::WhenObjectDealsCombatDamageToPlayerThisTurn { what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantJumpStartThisTurn { what }
             | Effect::GrantFlashbackWithCostThisTurn { what, .. }
@@ -5567,6 +5570,7 @@ impl Effect {
                 | Effect::GrantDamageExilesVictimThisTurn { what }
                 | Effect::GrantDamageDeniesRegenerationThisTurn { what }
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
+                | Effect::WhenObjectDealsCombatDamageToPlayerThisTurn { what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantJumpStartThisTurn { what }
                 | Effect::GrantFlashbackWithCostThisTurn { what, .. }

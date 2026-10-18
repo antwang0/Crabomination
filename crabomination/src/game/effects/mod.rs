@@ -35675,6 +35675,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenObjectDealsCombatDamageToPlayerThisTurn { what, body } => {
+                let watched: Vec<crate::card::CardId> =
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
+                for cid in watched {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        kind: crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(cid),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GainLifeWhenTargetDealsDamageThisTurn { slot } => {
                 // Watch the targeted creature; each time it deals damage this
                 // turn the ability's controller gains that much life.

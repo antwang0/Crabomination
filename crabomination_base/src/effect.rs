@@ -12472,6 +12472,11 @@ pub enum Effect {
         #[serde(default)]
         this_combat: bool,
     },
+    /// CR 603.7 — "When [the object `what` names] deals combat damage to a
+    /// player this turn, [body]": the untargeted sibling of
+    /// `WhenTargetDealsCombatDamageToPlayerThisTurn`, firing once (Optimus
+    /// Prime, Autobot Leader's bolstered creature, bound by a `ForEach`).
+    WhenObjectDealsCombatDamageToPlayerThisTurn { what: Selector, body: Box<Effect> },
 
     /// "Until end of turn, whenever a creature you control dies, [body]."
     /// Registers a turn-scoped delayed trigger (CR 603.4) that fires once per
