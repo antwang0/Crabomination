@@ -25362,6 +25362,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRISHNAKH_COMMANDERS,
             main: decks::GRISHNAKH_MAIN,
         },
+        // Seat 4152: Tadeas, Juniper Ascendant's EDHREC average deck. `--pod-decks 4152`.
+        PodDeck {
+            name: "Tadeas, Juniper Ascendant (WG)",
+            commanders: decks::TADEAS_COMMANDERS,
+            main: decks::TADEAS_MAIN,
+        },
+        // Seat 4153: Norin, Swift Survivalist's EDHREC average deck. `--pod-decks 4153`.
+        PodDeck {
+            name: "Norin, Swift Survivalist (R)",
+            commanders: decks::NORIN_2_COMMANDERS,
+            main: decks::NORIN_2_MAIN,
+        },
+        // Seat 4154: The Thing, Ben Grimm's EDHREC average deck. `--pod-decks 4154`.
+        PodDeck {
+            name: "The Thing, Ben Grimm (G)",
+            commanders: decks::THE_THING_2_COMMANDERS,
+            main: decks::THE_THING_2_MAIN,
+        },
     ]
 }
 
@@ -31408,6 +31426,9 @@ mod tests {
             ("Feldon, Ronom Excavator", &[0x1A4B]),
             ("Bartel Runeaxe", &[0x1A4C]),
             ("Grishnákh, Brash Instigator", &[0x1A4D]),
+            ("Tadeas, Juniper Ascendant", &[0x1A4E]),
+            ("Norin, Swift Survivalist", &[0x1A4F]),
+            ("The Thing, Ben Grimm", &[0x1A50]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

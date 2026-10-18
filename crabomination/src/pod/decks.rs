@@ -116446,3 +116446,85 @@ pub const GRISHNAKH_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const TADEAS_COMMANDERS: &[CardFactory] = &[tadeas_juniper_ascendant];
+
+/// **Tadeas, Juniper Ascendant**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 15 Forests + 10 Plains = 99.
+/// Tadeas, Juniper Ascendant (EDHREC, fetched 2026-10-18).
+pub const TADEAS_MAIN: &[CardFactory] = &[
+    arcane_signet, meekstone, sol_ring, thought_vessel, bountiful_promenade, brushland,
+    canopy_vista, command_tower, fortified_village, horizon_canopy, overgrown_farmland,
+    reliquary_tower, sungrass_prairie, sunpetal_grove, temple_garden, arasta_of_the_endless_web,
+    arboreal_grazer, atzocan_archer, baldin_century_herdmaster, bedrock_tortoise,
+    bugenhagen_wise_elder, canopy_spider, chainweb_aracnir, champion_of_lambholt,
+    clifftop_lookout, deadly_recluse, dragon_sniper, ezuris_archers, hitchclaw_recluse,
+    intrepid_stablemaster, jaspera_sentinel, juvenile_gloomwidow, legolas_greenleaf,
+    legolas_master_archer, nyxborn_hydra, ohran_frostfang, poison_dart_frog, rasaad_yn_bashir,
+    ruins_recluse, sidar_kondo_of_jamuraa, silhana_starfletcher, snarespinner, sporecap_spider,
+    sporeweb_weaver, tapestry_warden, thornweald_archer, toski_bearer_of_secrets, tower_winder,
+    twin_silk_spider, assault_formation, builders_blessing, castle, curse_of_clinging_webs,
+    druids_repository, grasp_of_fate, natures_will, arachnogenesis, bar_the_door, beast_within,
+    divine_resilience, generous_gift, path_to_exile, restoration_magic, solidarity,
+    swords_to_plowshares, tower_defense, huatli_the_suns_heart, adventure_awaits, cultivate,
+    dusk_dawn, fell_the_mighty, malevolent_rumble, rampant_growth, requisition_raid,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const NORIN_2_COMMANDERS: &[CardFactory] = &[norin_swift_survivalist];
+
+/// **Norin, Swift Survivalist**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Norin, Swift Survivalist (EDHREC, fetched 2026-10-18).
+pub const NORIN_2_MAIN: &[CardFactory] = &[
+    arc_spitter, arcane_signet, bonesplitter, dead_iron_sledge, hazorets_monument,
+    infiltration_lens, prism_ring, ruby_medallion, sai_of_the_shinobi, short_sword, sol_ring,
+    tormentors_helm, trusty_machete, arena_of_glory, castle_embereth, myriad_landscape,
+    war_room, agate_instigator, blisterspit_gremlin, cacophony_scamp, charming_scoundrel,
+    dire_fleet_daredevil, dragonmaster_outcast, exuberant_fuseling, fanatic_of_mogis,
+    fireblade_charger, frantic_scapegoat, gingerbrute, goblin_javelineer, grenzo_havoc_raiser,
+    iraxxa_empress_of_mars, karplusan_wolverine, laccolith_whelp, molten_gatekeeper,
+    professional_face_breaker, rotisserie_elemental, runaway_steam_kin, sawblade_scamp,
+    scorch_spitter, simian_sling, spectrum_sentinel, spikeshot_elder, taunting_kobold,
+    voldaren_epicure, weftstalker_ardent, witty_roastmaster, curse_of_opulence, flame_blitz,
+    guild_artisan, hammerhand, impact_tremors, invasion_plans, passionate_archaeologist,
+    sticky_fingers, abrade, chaos_warp, heightened_reflexes, infuriate, lightning_bolt, smelt,
+    untimely_malfunction, blasphemous_act, call_for_aid, deface, faithless_looting,
+    goblin_grenade, seize_the_spotlight, vandalblast, vengeful_possession,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const THE_THING_2_COMMANDERS: &[CardFactory] = &[the_thing_ben_grimm];
+
+/// **The Thing, Ben Grimm**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// The Thing, Ben Grimm (EDHREC, fetched 2026-10-18).
+pub const THE_THING_2_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lightning_greaves, ozolith_the_shattered_spire, sol_ring,
+    swiftfoot_boots, the_earth_crystal, the_ozolith, thought_vessel, avengers_tower,
+    baxter_building, command_tower, karns_bastion, mosswort_bridge, oran_rief_the_vastwood,
+    rogues_passage, big_bertha, birds_of_paradise, doc_samson_super_psychiatrist, elvish_mystic,
+    forgotten_ancient, giant_man_gargantuan_genius, goliath_mass_manipulator, guerrilla_gorilla,
+    hercules_prince_of_power, hulk_brutal_brawler, hulk_strongest_there_is,
+    hulkling_burgeoning_bruiser, jocasta_automaton_avenger, ka_zar_of_the_savage_land,
+    llanowar_elves, medusa_inhuman_queen, nakia_wakandan_operative, pet_avengers,
+    shang_chi_martial_mentor, she_hulk_jade_defender, spider_man_brooklyn_visionary,
+    spider_man_miles_morales, spider_rex_daring_dino, storm_shaker_of_skies,
+    wakandan_royal_guard, branching_evolution, colossal_majesty, garruks_uprising,
+    hardened_scales, kenriths_transformation, super_strength, terrasymbiosis, training_regimen,
+    beast_within, gaeas_gift, heroic_intervention, hunters_insight, inspiring_call,
+    origin_of_metalbending, punishing_punch, ram_through, snakeskin_veil, tamiyos_safekeeping,
+    thing_swing, call_damage_control, cultivate, harmonize, its_clobberin_time, kodamas_reach,
+    natures_lore, rampant_growth, restorative_technique, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
