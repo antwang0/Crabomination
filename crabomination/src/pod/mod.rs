@@ -25488,6 +25488,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HULKLING_2_COMMANDERS,
             main: decks::HULKLING_2_MAIN,
         },
+        // Seat 4173: The Twelfth Doctor and Ace, Fearless Rebel's EDHREC average deck. `--pod-decks 4173`.
+        PodDeck {
+            name: "The Twelfth Doctor and Ace, Fearless Rebel (URG)",
+            commanders: decks::THE_TWELFTH_DOCTOR_17_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_17_MAIN,
+        },
+        // Seat 4174: Balthor the Stout's EDHREC average deck. `--pod-decks 4174`.
+        PodDeck {
+            name: "Balthor the Stout (R)",
+            commanders: decks::BALTHOR_THE_STOUT_COMMANDERS,
+            main: decks::BALTHOR_THE_STOUT_MAIN,
+        },
+        // Seat 4175: Karlach, Fury of Avernus and Haunted One's EDHREC average deck. `--pod-decks 4175`.
+        PodDeck {
+            name: "Karlach, Fury of Avernus and Haunted One (BR)",
+            commanders: decks::KARLACH_4_COMMANDERS,
+            main: decks::KARLACH_4_MAIN,
+        },
+        // Seat 4176: The Sixth Doctor and Bill Potts's EDHREC average deck. `--pod-decks 4176`.
+        PodDeck {
+            name: "The Sixth Doctor and Bill Potts (URG)",
+            commanders: decks::THE_SIXTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_9_MAIN,
+        },
+        // Seat 4177: The Twelfth Doctor and Bill Potts's EDHREC average deck. `--pod-decks 4177`.
+        PodDeck {
+            name: "The Twelfth Doctor and Bill Potts (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_18_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_18_MAIN,
+        },
     ]
 }
 
@@ -31555,6 +31585,11 @@ mod tests {
             ("Spider-Man, Web-Slinger", &[0x1A60]),
             ("Alex Wilder, Runaway", &[0x1A61]),
             ("Hulkling, Burgeoning Bruiser", &[0x1A62]),
+            ("The Twelfth Doctor and Ace, Fearless Rebel", &[0x1A63]),
+            ("Balthor the Stout", &[0x1A64]),
+            ("Karlach, Fury of Avernus and Haunted One", &[0x1A65]),
+            ("The Sixth Doctor and Bill Potts", &[0x1A66]),
+            ("The Twelfth Doctor and Bill Potts", &[0x1A67]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

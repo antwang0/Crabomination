@@ -117030,3 +117030,144 @@ pub const HULKLING_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const THE_TWELFTH_DOCTOR_17_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, ace_fearless_rebel];
+
+/// **The Twelfth Doctor and Ace, Fearless Rebel**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 8 Forests + 6 Islands + 10 Mountains = 98.
+/// The Twelfth Doctor and Ace, Fearless Rebel (EDHREC, fetched 2026-10-18).
+pub const THE_TWELFTH_DOCTOR_17_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, chromatic_lantern, diamond_pick_axe, fountainport_bell, horn_of_gondor,
+    junk_jet, mirror_box, power_fist, silver_shroud_costume, sol_ring, sonic_screwdriver,
+    tardis, the_reaver_cleaver, wand_of_wonder, archway_of_innovation, boseiju_who_endures,
+    bountiful_landscape, breeding_pool, command_tower, fabled_passage, ketria_triome,
+    misty_rainforest, scalding_tarn, spire_garden, steam_vents, stomping_ground, taiga,
+    tyrite_sanctum, birds_of_paradise, bohn_beguiling_balladeer, brandywine_farmer,
+    breyas_apprentice, bristly_bill_spine_sower, clockwork_percussionist, crimson_caravaneer,
+    disciple_of_freyalise, enterprising_scallywag, etali_primal_conqueror,
+    faldorn_dread_wolf_herald, generous_plunderer, green_slime, hexing_squelcher,
+    inti_seneschal_of_the_sun, jewel_thief, magda_the_hoardmaster, me_the_immortal, musician,
+    party_thrasher, raccoon_rallier, rashmi_and_ragavan, stirring_bard, tireless_provisioner,
+    tireless_tracker, transit_mage, wandering_troubadour, descent_into_avernus, exploration,
+    hadanas_climb, spiteful_banditry, struggle_for_project_purity, bulk_up, gnawing_crescendo,
+    heroic_intervention, repulsive_mutation, song_of_inspiration, transcendent_message,
+    you_find_some_prisoners, blasphemous_act, bridgeworks_battle, inspiring_refrain,
+    search_for_tomorrow, stump_stomp, sundering_eruption, windfall,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const BALTHOR_THE_STOUT_COMMANDERS: &[CardFactory] = &[balthor_the_stout];
+
+/// **Balthor the Stout**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Balthor the Stout (EDHREC, fetched 2026-10-18).
+pub const BALTHOR_THE_STOUT_MAIN: &[CardFactory] = &[
+    arcane_signet, fire_diamond, gauntlet_of_power, hall_of_triumph, hazorets_monument,
+    heralds_horn, heraldic_banner, mind_stone, patchwork_banner, ruby_medallion, sol_ring,
+    vanquishers_banner, wayfarers_bauble, barbarian_ring, castle_embereth, dwarven_mine,
+    path_of_ancestry, rogues_passage, valakut_the_molten_pinnacle, war_room, adaptive_automaton,
+    archetype_of_aggression, balduvian_barbarians, balduvian_horde, balduvian_warlord,
+    barbarian_bully, barbarian_lunatic, barbarian_riftcutter, caves_of_chaos_adventurer,
+    godo_bandit_warlord, halberdier, hell_bent_raider, hobgoblin_captain, jeska_warrior_adept,
+    jurin_leading_the_charge, kamahl_pit_fighter, karlach_fury_of_avernus, keldon_champion,
+    keldon_warlord, lovisa_coldeyes, metallic_mimic, pardic_arsonist, plundering_barbarian,
+    reckless_barbarian, sardian_cliffstomper, spellgorger_barbarian, taurean_mauler,
+    tiger_tribe_hunter, zalto_fire_giant_duke, berserkers_onslaught, collective_inferno,
+    rage_reflection, rising_of_the_day, shared_animosity, warstorm_surge, abrade, battle_hymn,
+    big_score, chaos_warp, demand_answers, lightning_bolt, thrill_of_possibility,
+    unexpected_windfall, koth_of_the_hammer, blasphemous_act, crash_through, faithless_looting,
+    mana_geyser, mizzium_mortars, vandalblast, wild_guess,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const KARLACH_4_COMMANDERS: &[CardFactory] = &[karlach_fury_of_avernus, haunted_one];
+
+/// **Karlach, Fury of Avernus and Haunted One**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Mountains + 8 Swamps = 98.
+/// Karlach, Fury of Avernus and Haunted One (EDHREC, fetched 2026-10-18).
+pub const KARLACH_4_MAIN: &[CardFactory] = &[
+    arcane_signet, dolmen_gate, embercleave, fellwar_stone, heralds_horn, lightning_greaves,
+    maskwood_nexus, mind_stone, rakdos_signet, sol_ring, swiftfoot_boots, sword_of_the_animist,
+    talisman_of_indulgence, blood_crypt, bojuka_bog, castle_embereth, command_tower,
+    dragonskull_summit, foreboding_ruins, haunted_ridge, luxury_suite, path_of_ancestry,
+    rakdos_carnarium, rogues_passage, shadowblood_ridge, smoldering_marsh, sulfurous_springs,
+    tainted_peak, adaptive_automaton, balduvian_warlord, balthor_the_stout,
+    caves_of_chaos_adventurer, changeling_outcast, elturel_survivors, godo_bandit_warlord,
+    graveshifter, grim_hireling, guildsworn_prowler, hoard_robber, hobgoblin_captain,
+    jurin_leading_the_charge, kamahl_pit_fighter, lovisa_coldeyes, moraug_fury_of_akoum,
+    passageway_seer, plundering_barbarian, reckless_barbarian, sardian_cliffstomper,
+    shivan_zombie, taurean_mauler, tiger_tribe_hunter, undead_gladiator, vicious_battlerager,
+    zalto_fire_giant_duke, berserkers_onslaught, black_market_connections, city_on_fire,
+    retribution_of_the_ancients, rising_of_the_day, shared_animosity, bedevil, chaos_warp,
+    dark_ritual, deadly_dispute, great_train_heist, infernal_grasp, rakdos_charm, terminate,
+    thrill_of_possibility, zariel_archduke_of_avernus, blasphemous_act, feed_the_swarm,
+    jeskas_will, nights_whisper, overpowering_attack, relentless_assault, sign_in_blood,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_SIXTH_DOCTOR_9_COMMANDERS: &[CardFactory] = &[the_sixth_doctor, bill_potts];
+
+/// **The Sixth Doctor and Bill Potts**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 4 Forests + 6 Islands + 5 Mountains = 98.
+/// The Sixth Doctor and Bill Potts (EDHREC, fetched 2026-10-18).
+pub const THE_SIXTH_DOCTOR_9_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, gruul_signet, simic_signet, sol_ring,
+    talisman_of_curiosity, temur_monument, twinning_staff, breeding_pool, cinder_glade,
+    command_tower, evolving_wilds, exotic_orchard, frontier_bivouac, game_trail, ketria_triome,
+    misty_rainforest, molten_tributary, rejuvenating_springs, rootbound_crag, shivan_reef,
+    steam_vents, sulfur_falls, tangled_islet, terramorphic_expanse, training_center,
+    wooded_foothills, yavimaya_coast, adrix_and_nev_twincasters, beamsplitter_mage,
+    chrome_companion, deekah_fractal_theorist, ivy_gleeful_spellthief,
+    jhoira_weatherlight_captain, loot_the_pathfinder, moritte_of_the_frost, orvar_the_all_form,
+    quandrix_apprentice, songcrafter_mage, storm_kiln_artist, talrand_sky_summoner,
+    third_path_iconoclast, venerated_rotpriest, young_pyromancer, zada_hedron_grinder,
+    zookeeper_mechan, city_of_death, frontline_heroism, march_of_the_world_ooze, parallel_lives,
+    season_of_growth, vesuvan_duplimancy, auroral_procession, cackling_counterpart,
+    cerulean_wisps, chaos_warp, charge_through, crimson_wisps, expedite, fists_of_flame, leap,
+    second_harvest, see_double, shadow_rift, twisted_image, viridescent_wisps, arlinn_kord,
+    garruk_unleashed, ral_storm_conduit, saheeli_sublime_artificer, cultivate,
+    enter_the_unknown, farseek, mirage_mockery, mythos_of_illuna, natures_lore,
+    quantum_misalignment, quasiduplicate, rampant_growth, scale_the_heights, season_of_weaving,
+    slip_through_space, three_visits,
+    // Basics
+    forest, forest, forest, forest, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const THE_TWELFTH_DOCTOR_18_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, bill_potts];
+
+/// **The Twelfth Doctor and Bill Potts**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Islands + 12 Mountains = 98.
+/// The Twelfth Doctor and Bill Potts (EDHREC, fetched 2026-10-18).
+pub const THE_TWELFTH_DOCTOR_18_MAIN: &[CardFactory] = &[
+    arcane_signet, izzet_signet, mind_stone, river_songs_diary, sol_ring, sonic_screwdriver,
+    talisman_of_creativity, thought_vessel, twinning_staff, cascade_bluffs, command_tower,
+    ferrous_lake, fiery_islet, frostboil_snarl, izzet_boilerworks, reliquary_tower,
+    rogues_passage, shivan_reef, stormcarved_coast, sulfur_falls, temple_of_epiphany,
+    trenzalore_clocktower, archmage_emeritus, balmor_battlemage_captain, beamsplitter_mage,
+    electro_assaulting_battery, goblin_electromancer, guttersnipe, johann_apprentice_sorcerer,
+    melek_izzet_paragon, ms_marvel_kamala_khan, stella_lee_wild_card, storm_kiln_artist,
+    stormcatch_mentor, taigam_master_opportunist, thunderclap_drake, veyran_voice_of_duality,
+    zada_hedron_grinder, arcane_bombardment, heaven_sent, leyline_of_resonance, return_the_past,
+    vesuvan_duplimancy, blazing_crescendo, bulk_up, chaos_warp, counterspell, crimson_wisps,
+    delayed_blast_fireball, expedite, fists_of_flame, galvanic_iteration, invigorated_rampage,
+    leap, might_of_the_meek, reverse_the_polarity, run_for_your_life, shadow_rift,
+    slip_out_the_back, souls_fire, sudden_breakthrough, temur_battle_rage, twinferno,
+    ral_storm_conduit, artful_dodge, blasphemous_act, distortion_strike, enter_the_enigma,
+    expressive_iteration, grapeshot, into_the_time_vortex, jeskas_will, pym_particles,
+    quantum_misalignment, rile, slip_through_space,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
