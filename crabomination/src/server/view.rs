@@ -3082,7 +3082,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
         Effect::GrantHexproofFromColorThisTurn { .. } => "Hexproof from color",
-        Effect::Explore { .. } => "Explore",
+        Effect::Explore { .. } | Effect::ExploreAfterScry { .. } => "Explore",
         Effect::Investigate { .. } => "Investigate",
         Effect::Goad { .. } | Effect::GoadForTheGame { .. } | Effect::GoadWhile { .. } => "Goad",
         Effect::Provoke { .. } => "Provoke",

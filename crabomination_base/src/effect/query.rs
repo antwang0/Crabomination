@@ -1878,7 +1878,7 @@ impl Effect {
             Effect::ExileLibraryExceptBottom { who, keep } => {
                 player_has_target(who) || value_has_target(keep)
             }
-            Effect::Explore { who } => sel_has_target(who),
+            Effect::Explore { who } | Effect::ExploreAfterScry { who } => sel_has_target(who),
             Effect::Goad { what }
             | Effect::LureTargetToSourceNextTurn { what }
             | Effect::GoadForTheGame { what }
@@ -3419,7 +3419,8 @@ impl Effect {
             | Effect::NameCard { what, .. }
             | Effect::RememberNamedCard { what }
             | Effect::LockTargetNameUntilYourNextTurn { what }
-            | Effect::Explore { who: what } => sel_filter(what),
+            | Effect::Explore { who: what }
+            | Effect::ExploreAfterScry { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to }
             | Effect::MoveAnyNumberOfCounters { from, to }
             | Effect::MoveCounter { from, to, .. }
@@ -4409,7 +4410,7 @@ impl Effect {
             Effect::Sacrifice { .. } => "sacrifice".into(),
             Effect::SacrificeSource => "sacrifice this".into(),
             Effect::ExileSource => "exile this".into(),
-            Effect::Explore { .. } => "explore".into(),
+            Effect::Explore { .. } | Effect::ExploreAfterScry { .. } => "explore".into(),
             Effect::Investigate { .. } => "investigate".into(),
             Effect::Goad { .. } | Effect::GoadForTheGame { .. } | Effect::GoadWhile { .. } => {
                 "goad target creature".into()
@@ -5863,7 +5864,8 @@ impl Effect {
                 | Effect::NameCard { what, .. }
                 | Effect::RememberNamedCard { what }
                 | Effect::LockTargetNameUntilYourNextTurn { what }
-                | Effect::Explore { who: what } => sel_find(what, slot),
+                | Effect::Explore { who: what }
+                | Effect::ExploreAfterScry { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
                 Effect::SearchSameNameAs { subject, .. } => sel_find(subject, slot),
                 Effect::LandsDontUntapNextUntapStep { who }

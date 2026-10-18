@@ -6747,6 +6747,11 @@ pub enum Effect {
     /// Each explore emits `GameEvent::Explored` so payoff triggers
     /// ("whenever a creature you control explores") can fire.
     Explore { who: Selector },
+    /// One explore with no "would explore" replacement left to apply — what
+    /// `Explore` becomes after Twists and Turns' "instead you scry 1, then
+    /// that creature explores" (`game/explore.rs`). Engine-built, never on a
+    /// card.
+    ExploreAfterScry { who: Selector },
     /// "Look at the top `count` cards of your library, put one of them into
     /// your hand, and the rest on the bottom of your library (or into your
     /// graveyard if `rest_to_graveyard`)." Impulse / Strategic Planning /

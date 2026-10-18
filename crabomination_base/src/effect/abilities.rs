@@ -2484,6 +2484,10 @@ pub enum StaticEffect {
     /// "If a creature you control would explore, instead it explores, then it
     /// explores again" (Topography Tracker) — read by `Effect::Explore`.
     ExploresTwice,
+    /// "If a creature you control would explore, instead you scry 1, then that
+    /// creature explores" (Twists and Turns) — read by `Effect::Explore`
+    /// (`game/explore.rs`); each such permanent adds a scry 1.
+    ScryBeforeExploring,
     /// "You gain life rather than lose life from radiation" (Strong, the
     /// Brutish Thespian) — read by the rad-counter turn-based action.
     GainLifeFromRadiation,

@@ -949,6 +949,7 @@ pub fn effect_moves_library_card(e: &Effect) -> bool {
             | Effect::Mill { .. }
             | Effect::Surveil { .. }
             | Effect::Explore { .. }
+            | Effect::ExploreAfterScry { .. }
             | Effect::Discover { .. }
             | Effect::Search { .. }
             | Effect::SearchUpToN { .. }

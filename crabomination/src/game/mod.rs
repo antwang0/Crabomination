@@ -142,6 +142,7 @@ mod exile_reveal_shared;
 mod target_type_slots;
 mod noncreature_affinity;
 mod jace_instant_loyalty;
+mod explore;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -35358,8 +35359,9 @@ fn static_effect_to_effects(
             // Read on permanent entry (`apply_permanent_ascend`).
             | StaticEffect::Ascend
             | StaticEffect::Storied
-            // Read by `Effect::Explore`.
+            // Read by `Effect::Explore` (`game/explore.rs`).
             | StaticEffect::ExploresTwice
+            | StaticEffect::ScryBeforeExploring
             // Read by the rad-counter turn-based action.
             | StaticEffect::GainLifeFromRadiation
             // Read by `Effect::Surveil` and the surveil answer.

@@ -14231,64 +14231,16 @@ impl GameState {
             }
 
             Effect::Explore { who } => {
-                // CR 701.44 — each resolved permanent explores: reveal the
-                // top card of its controller's library; a land goes to hand,
-                // otherwise the permanent gets a +1/+1 counter (the revealed
-                // nonland card stays on top — the optional graveyard choice
-                // is collapsed). An empty library still explores (counter,
-                // no card). Emits `Explored` so payoff triggers can fire.
+                // CR 701.44 — see `game/explore.rs`.
+                self.resolve_explore(who, ctx, events)
+            }
+
+            Effect::ExploreAfterScry { who } => {
                 for ent in self.resolve_selector(who, ctx) {
-                    // `as_card_id` so a reanimated explorer reached via
-                    // `Selector::LastMoved` (an `EntityRef::Card`) is honored;
-                    // the `battlefield_find` below still gates to permanents.
-                    let Some(cid) = ent.as_card_id() else { continue };
-                    let Some(controller) =
-                        self.battlefield_find(cid).map(|c| c.controller)
-                    else {
-                        continue;
-                    };
-                    // Topography Tracker — "instead it explores, then it
-                    // explores again", once per such permanent its controller
-                    // controls.
-                    let reps = 1 + self
-                        .battlefield
-                        .iter()
-                        .filter(|c| c.controller == controller)
-                        .flat_map(|c| c.definition.static_abilities.iter())
-                        .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExploresTwice))
-                        .count();
-                    for _ in 0..reps {
-                        let top = self.players[controller].library.first();
-                        let is_land = top.map(|c| c.definition.is_land());
-                        if let Some(name) = top.map(|c| c.definition.name) {
-                            events.push(GameEvent::TopCardRevealed {
-                                player: controller,
-                                card_name: name,
-                                is_land: is_land.unwrap_or(false),
-                            });
-                        }
-                        if is_land == Some(true) {
-                            let card = self.players[controller].library.remove(0);
-                            self.players[controller].hand.push(card);
-                        } else {
-                            // Nonland revealed (or empty library): +1/+1 counter.
-                            // CR 614.16 — counter replacement effects apply.
-                            let n = self.scaled_counter_count_on(cid, CounterType::PlusOnePlusOne, 1);
-                            if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.add_counters(CounterType::PlusOnePlusOne, n);
-                                events.push(GameEvent::CounterAdded {
-                                    card_id: cid,
-                                    counter_type: CounterType::PlusOnePlusOne,
-                                    count: n, placer: self.resolution_causer,
-                                });
-                                self.turn.permanents_gained_counter_this_turn.insert(cid);
-                            }
-                        }
-                        events.push(GameEvent::Explored {
-                            card_id: cid,
-                            controller,
-                            explored_land: is_land == Some(true),
-                        });
+                    if let Some(cid) = ent.as_card_id()
+                        && let Some(controller) = self.battlefield_find(cid).map(|c| c.controller)
+                    {
+                        self.explore_once(cid, controller, events);
                     }
                 }
                 self.check_state_based_actions_mid_resolution(events);
