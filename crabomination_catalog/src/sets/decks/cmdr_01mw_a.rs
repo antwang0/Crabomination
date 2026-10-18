@@ -1710,3 +1710,73 @@ pub fn wakandan_royal_guard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Arc Spitter — {1} Equipment: equipped creature has "{1}: this creature
+/// deals 1 damage to target creature that's blocking it." Equip {1}.
+pub fn arc_spitter() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Arc Spitter",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::DealDamage {
+                    to: crate::effect::shortcut::target_filtered(R::Creature.and(R::BlockingOrBlockedBySource)),
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Goblin Javelineer — {R} 1/1 haste Goblin Warrior. Whenever it becomes
+/// blocked, it deals 1 damage to target creature blocking it.
+pub fn goblin_javelineer() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Javelineer",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Warrior], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_filtered(R::Creature.and(R::BlockingOrBlockedBySource)),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tormentor's Helm — {R} Equipment: +1/+1; whenever the equipped creature
+/// becomes blocked, it deals 1 damage to the defending player. Equip {1}.
+pub fn tormentors_helm() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Tormentor's Helm",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

@@ -2239,3 +2239,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Thorin, Mountain-king | the Equipment aren't targeted (ward/hexproof on one is ignored), and the bite's "up to one target creature" is chosen with the ETB, not as a reflexive trigger after the attach (CR 603.7d) | `AttachAnyNumberTo` + `If(count(LastMoved))` + `DealDamageEqualToPower` |
 | 🟡 Tetsuo, Imperial Champion | N reads every permanent attached to Tetsuo (an Aura's mana value counts, not only Equipment) | `HighestManaValueAmong(AttachedToMe(This))` |
 | 🟡 Wicked Slumber | with two targets the two stun counters go one each; "both on either" isn't offered | `ApplyToTargets` + `If(count(AllTargets) <= 1)` |
+| 🟡 Arc Spitter | the granted ping may also aim at a creature the wearer is blocking, not only one blocking it | `R::BlockingOrBlockedBySource` |

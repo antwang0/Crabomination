@@ -818,3 +818,30 @@ fn thing_swing_hits_for_double_power() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(wurm).is_none(), "8 damage kills the 6/4");
 }
+
+/// Goblin Javelineer pings its blocker; Tormentor's Helm's wearer, blocked,
+/// hits the player it attacked — seat 2 at three seats, not seat 1.
+#[test]
+fn becomes_blocked_triggers_find_the_blocker_and_defender() {
+    let mut g = pod(3);
+    let jav = ready(&mut g, 0, catalog::goblin_javelineer());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let helm = ready(&mut g, 0, catalog::tormentors_helm());
+    g.battlefield_find_mut(helm).unwrap().attached_to = Some(bear);
+    let wall = ready(&mut g, 2, catalog::wall_of_mist());
+    let wall2 = ready(&mut g, 2, catalog::glacial_wall());
+    let lives = [g.players[1].life, g.players[2].life];
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: jav, target: AttackTarget::Player(2) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 2;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, jav), (wall2, bear)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wall).unwrap().damage, 1, "Javelineer's ping");
+    assert_eq!([g.players[1].life, g.players[2].life], [lives[0], lives[1] - 1], "the Helm hits the defender");
+}

@@ -17572,6 +17572,9 @@ static DECKS: &[Factory] = &[
     super::decks::super_strength,
     super::decks::thing_swing,
     super::decks::wakandan_royal_guard,
+    super::decks::arc_spitter,
+    super::decks::goblin_javelineer,
+    super::decks::tormentors_helm,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
