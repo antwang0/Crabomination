@@ -159,8 +159,9 @@ pub fn chronatog_avatar() -> CardDefinition {
     }
 }
 
-/// Maraxus of Keld — {1} for a point of power on anything.
-pub fn maraxus_of_keld() -> CardDefinition {
+/// Maraxus of Keld Avatar — {1} for a point of power on anything. (Named
+/// apart from the Weatherlight creature, like the other MTGO avatars.)
+pub fn maraxus_of_keld_avatar() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![cz_ability(
             cost(&[generic(1)]),
@@ -171,6 +172,6 @@ pub fn maraxus_of_keld() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         )],
-        ..avatar("Maraxus of Keld", -1, 6)
+        ..avatar("Maraxus of Keld Avatar", -1, 6)
     }
 }

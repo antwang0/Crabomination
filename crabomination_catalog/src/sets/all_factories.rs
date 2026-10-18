@@ -17607,6 +17607,11 @@ static DECKS: &[Factory] = &[
     super::decks::invasion_of_karsus,
     super::decks::druid_of_the_emerald_grove,
     super::decks::the_lady_of_otaria,
+    super::decks::april_oneil_hacktivist,
+    super::decks::bruce_banner,
+    super::decks::peter_parker,
+    super::decks::public_enemy,
+    super::decks::maraxus_of_keld,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
@@ -30383,7 +30388,7 @@ static VANGUARD: &[Factory] = &[
     super::vanguard::arcbound_overseer_avatar,
     super::vanguard::squee_goblin_nabob_avatar,
     super::vanguard::chronatog_avatar,
-    super::vanguard::maraxus_of_keld,
+    super::vanguard::maraxus_of_keld_avatar,
 ];
 static VIS: &[Factory] = &[
     super::vis::coral_atoll,
