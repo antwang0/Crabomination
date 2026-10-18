@@ -50,3 +50,33 @@ pub fn teferis_talent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Clone Saga — {3}{U} Saga. I — surveil 3. II — when you next cast a
+/// creature spell this turn, copy it, except the copy isn't legendary. III —
+/// choose a card name; whenever a creature with the chosen name deals combat
+/// damage to a player this turn, draw a card.
+pub fn the_clone_saga() -> CardDefinition {
+    CardDefinition {
+        name: "The Clone Saga",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) }),
+            (
+                2,
+                Effect::OnYourNextSpellMatchingThisTurn {
+                    filter: R::Creature,
+                    body: Box::new(Effect::CopySpellNonLegendary { what: Selector::TriggerSource }),
+                },
+            ),
+            (
+                3,
+                Effect::NameCardThenNamedCreatureCombatDamageThisTurn {
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

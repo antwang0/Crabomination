@@ -64,3 +64,45 @@ fn teferis_talent_charges_on_draws() {
 
 #[allow(dead_code)]
 fn _unused(_: TurnStep, _: Option<GameAction>) {}
+
+/// The Clone Saga II copies the next creature spell as a nonlegendary token
+/// (CR 707.9b); III names a creature and draws when it connects (CR 603.7).
+#[test]
+fn the_clone_saga_copies_then_draws_on_the_named_creature() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::the_clone_saga());
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    cast(&mut g, bear, None).expect("bear");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count(),
+        2,
+        "the bear and its copy"
+    );
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    for c in g.battlefield.iter_mut() {
+        c.summoning_sick = false;
+    }
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::End && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+        drain_stack(&mut g);
+        if g.step == TurnStep::PostCombatMain {
+            break;
+        }
+    }
+    assert_eq!(g.players[1].life, 18);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the named Bear connected");
+}
