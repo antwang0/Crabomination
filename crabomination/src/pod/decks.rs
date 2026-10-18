@@ -118284,3 +118284,60 @@ pub const RAPHAEL_6_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const DOCTOR_DOOM_2_COMMANDERS: &[CardFactory] = &[doctor_doom];
+
+/// **Doctor Doom**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Doctor Doom (EDHREC, fetched 2026-10-18).
+pub const DOCTOR_DOOM_2_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bolass_citadel, conjurers_closet, cranial_plating,
+    dooms_time_platform, helm_of_the_host, jet_medallion, mind_stone, nim_deathmantle,
+    panharmonicon, sol_ring, swiftfoot_boots, the_darkness_crystal, the_soul_stone,
+    thought_vessel, bojuka_bog, cabal_coffers, cabal_stronghold, castle_doom, inventors_fair,
+    phyrexian_tower, reliquary_tower, urborg_tomb_of_yawgmoth, vault_of_whispers,
+    anrakyr_the_traveller, blood_artist, crypt_ghast, cryptothrall, cyberman_patrol,
+    cybermen_squadron, doctor_doom_unrivaled, doombot_harbinger, foundry_inspector,
+    gray_merchant_of_asphodel, krang_utrom_warlord, leaden_myr, m_o_d_o_k,
+    marionette_apprentice, myr_retriever, noxious_gearhulk, pitiless_plunderer, scrap_trawler,
+    skorpekh_lord, solemn_simulacrum, steel_overseer, ultron_the_annihilator,
+    ultron_artificial_malevolence, wurmcoil_engine, biotransference, black_market_connections,
+    construct_a_cosmic_cube, doom_reigns_supreme, phyrexian_arena, robot_domination,
+    culling_the_weak, dark_ritual, darkness, deadly_dispute, deadly_rollick, defile, doom_blade,
+    malakir_rebirth, withering_torment, damnation, demonic_tutor, feed_the_swarm, reanimate,
+    their_name_is_death, their_number_is_legion, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const ULTRON_3_COMMANDERS: &[CardFactory] = &[ultron_unlimited];
+
+/// **Ultron, Unlimited**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 8 Islands + 9 Swamps = 99.
+/// Ultron, Unlimited (EDHREC, fetched 2026-10-18).
+pub const ULTRON_3_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, dimir_signet, fellwar_stone, krark_clan_ironworks,
+    lightning_greaves, mask_of_the_schemer, monument_to_endurance, sol_ring, swiftfoot_boots,
+    talisman_of_dominance, the_soul_stone, thought_vessel, academy_ruins, castle_doom,
+    choked_estuary, command_tower, drowned_catacomb, hidden_lair, morphic_pool, reliquary_tower,
+    seat_of_the_synod, shipwreck_marsh, spymasters_vault, sunken_hollow, tainted_isle,
+    underground_river, uthros_titanic_godcore, vault_of_whispers, villainous_hideout,
+    watery_grave, baron_strucker_hydra_overlord, chameleon_master_of_disguise,
+    containment_construct, cryptothrall, cyberdrive_awakener, cybermen_squadron, doctor_doom,
+    doctor_octopus_master_planner, etherium_sculptor, foundry_inspector,
+    golbez_crystal_collector, iron_monger_sadistic_tycoon, kang_temporal_tyrant,
+    krang_utrom_warlord, leader_super_genius, ledger_shredder, m_o_d_o_k, prowler_clawed_thief,
+    scientist_supreme_of_a_i_m, skorpekh_lord, steel_overseer, tombstone_career_criminal,
+    ultron_drone, ultron_the_annihilator, ultrons_auxiliary, ultron_artificial_malevolence,
+    ultron_machine_overlord, age_of_ultron, biotransference, construct_a_cosmic_cube,
+    doom_reigns_supreme, glorious_purpose, mechanized_production, robot_domination,
+    an_offer_you_cant_refuse, arcane_denial, change_of_plans, counterspell, dark_ritual,
+    deadly_dispute, deadly_rollick, lethal_scheme, unstable_experiment, withering_torment,
+    dread_return, feed_the_swarm, reanimate, their_name_is_death, too_evil_to_stay_dead,
+    toxic_deluge, victimize,
+    // Basics
+    island, island, island, island, island, island, island, island, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];

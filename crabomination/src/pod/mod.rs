@@ -25752,6 +25752,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAPHAEL_6_COMMANDERS,
             main: decks::RAPHAEL_6_MAIN,
         },
+        // Seat 4217: Doctor Doom's EDHREC average deck. `--pod-decks 4217`.
+        PodDeck {
+            name: "Doctor Doom (B)",
+            commanders: decks::DOCTOR_DOOM_2_COMMANDERS,
+            main: decks::DOCTOR_DOOM_2_MAIN,
+        },
+        // Seat 4218: Ultron, Unlimited's EDHREC average deck. `--pod-decks 4218`.
+        PodDeck {
+            name: "Ultron, Unlimited (UB)",
+            commanders: decks::ULTRON_3_COMMANDERS,
+            main: decks::ULTRON_3_MAIN,
+        },
     ]
 }
 
@@ -31869,6 +31881,8 @@ mod tests {
             ("Soundwave, Sonic Spy", &[0x1A8C]),
             ("Cosmic Spider-Man", &[0x1A8D]),
             ("Raphael, Most Attitude", &[0x1A8E]),
+            ("Doctor Doom", &[0x1A8F]),
+            ("Ultron, Unlimited", &[0x1A90]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
