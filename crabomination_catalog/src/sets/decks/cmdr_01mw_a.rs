@@ -2125,3 +2125,46 @@ pub fn team_tactics() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Countersculpt — {U}{U} instant; as an additional cost, behold a Jace or pay
+/// {1}. Counter target spell. Empower Jace 1.
+pub fn countersculpt() -> CardDefinition {
+    use crate::card::{AdditionalCastCost, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Countersculpt",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::BeholdOrPay {
+            filter: R::HasPlaneswalkerType(PlaneswalkerSubtype::Jace),
+            pay: 1,
+        }],
+        effect: Effect::Seq(vec![
+            crate::effect::shortcut::counter_target_spell(),
+            Effect::EmpowerJace { who: PlayerRef::You, count: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Alhammarret, High Arbiter — {5}{U}{U} legendary 5/5 flying Sphinx. As it
+/// enters, name a nonland card; your opponents can't cast spells with that
+/// name while it's on the battlefield.
+pub fn alhammarret_high_arbiter() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Alhammarret, High Arbiter",
+        cost: cost(&[generic(5), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        as_enters_effect: Some(Effect::NameCard { what: Selector::This, restrict_to: Some(R::Nonland) }),
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't cast spells with the chosen name.",
+            effect: StaticEffect::OpponentsCantCastNamed,
+        }],
+        ..Default::default()
+    }
+}

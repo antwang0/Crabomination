@@ -909,3 +909,22 @@ fn cr_702_193_hulk_discounts_abominations_power_up() {
     assert_eq!(g.battlefield_find(abom).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert!(g.battlefield_find(bear).is_none(), "fought");
 }
+
+/// Alhammarret's named card is locked for its opponents only.
+#[test]
+fn alhammarret_locks_the_name_for_opponents() {
+    let mut g = pod(2);
+    let al = ready(&mut g, 0, catalog::alhammarret_high_arbiter());
+    g.battlefield_find_mut(al).unwrap().named_card = Some("Shock".into());
+    let mine = g.add_card_to_hand(0, catalog::shock());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: mine, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("its controller may cast it");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    let theirs = g.add_card_to_hand(1, catalog::shock());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    assert!(g
+        .perform_action(GameAction::CastSpell { card_id: theirs, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .is_err());
+}

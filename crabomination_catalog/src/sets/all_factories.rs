@@ -17589,6 +17589,8 @@ static DECKS: &[Factory] = &[
     super::decks::hulk_gamma_goliath,
     super::decks::abomination_terrifying_titan,
     super::decks::team_tactics,
+    super::decks::countersculpt,
+    super::decks::alhammarret_high_arbiter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
