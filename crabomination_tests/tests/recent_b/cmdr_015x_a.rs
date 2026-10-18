@@ -671,3 +671,38 @@ fn soundwave_copies_a_graveyard_spell_then_makes_ravage() {
     assert_eq!(g.battlefield_find(wave).unwrap().definition.name, "Soundwave, Sonic Spy");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Ravage" && c.controller == 0));
 }
+
+/// Cosmic Spider-Man hands his five keywords to your other Spiders at the
+/// beginning of combat on your turn — not to a non-Spider.
+#[test]
+fn cosmic_spider_man_shares_his_keywords_with_spiders() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::cosmic_spider_man());
+    let peter = ready(&mut g, 0, catalog::peter_parker());
+    flood(&mut g);
+    activate(&mut g, peter, 0, None);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let spidey = g.computed_permanent(peter).unwrap();
+    for k in [Keyword::Flying, Keyword::FirstStrike, Keyword::Trample, Keyword::Lifelink, Keyword::Haste] {
+        assert!(spidey.keywords().contains(&k), "{k:?}");
+    }
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+}
+
+/// Zog's entry leaves a target creature unable to block this turn.
+#[test]
+fn zog_stops_a_blocker() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    let zog = g.add_card_to_hand(0, catalog::zog_triceraton_castaway());
+    cast(&mut g, zog, None);
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::CantBlock));
+}

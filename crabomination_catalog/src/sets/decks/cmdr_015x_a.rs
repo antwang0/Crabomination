@@ -1048,3 +1048,65 @@ pub fn soundwave_sonic_spy() -> CardDefinition {
     }];
     spy
 }
+
+/// Cosmic Spider-Man — {W}{U}{B}{R}{G} legendary 5/5 Spider Human Hero with
+/// flying, first strike, trample, lifelink, and haste. At the beginning of
+/// combat on your turn, your other Spiders gain all five until end of turn.
+pub fn cosmic_spider_man() -> CardDefinition {
+    let five = [Keyword::Flying, Keyword::FirstStrike, Keyword::Trample, Keyword::Lifelink, Keyword::Haste];
+    legend(CardDefinition {
+        name: "Cosmic Spider-Man",
+        cost: cost(&[w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: five.to_vec(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(
+                five.iter()
+                    .map(|k| Effect::GrantKeyword {
+                        what: Selector::EachPermanent(
+                            R::Creature
+                                .and(R::HasCreatureType(CreatureType::Spider))
+                                .and(R::ControlledByYou)
+                                .and(R::OtherThanSource),
+                        ),
+                        keyword: k.clone(),
+                        duration: crate::effect::Duration::EndOfTurn,
+                    })
+                    .collect(),
+            ),
+        }],
+        ..Default::default()
+    })
+}
+
+/// Zog, Triceraton Castaway — {4}{R} legendary 5/4 reach, trample Dinosaur
+/// Soldier. Entering, target creature can't block this turn.
+/// Mountaincycling {2}.
+pub fn zog_triceraton_castaway() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Zog, Triceraton Castaway",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur, CreatureType::Soldier], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Reach,
+            Keyword::Trample,
+            Keyword::Landcycling(cost(&[generic(2)]), crate::card::LandType::Mountain),
+        ],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(R::Creature),
+            keyword: Keyword::CantBlock,
+            duration: crate::effect::Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    })
+}
