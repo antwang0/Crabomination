@@ -179,6 +179,43 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-18 night (Commander run, `015XaGkQ`) — 47 closer cards, 32 seats, three rules fixes
+
+- **Seats** 4183-4196, 4199-4200, 4205-4206, 4210-4223 (`decks::cmdr_015x_a`, tests `recent_b/cmdr_015x_a.rs`):
+  Chisei and Bessie (zero-gap, never seated), Maraxus of Keld (its creature — the Vanguard avatar that held
+  the name is now `Maraxus of Keld Avatar`), April O'Neil, Bruce Banner, Peter Parker, Ramses Overdark
+  (Public Enemy), Prowl, Codie, Nick Fury, Miles Morales, Falco Spara, Evelyn, Garza Zol, Optimus Prime
+  Hero, Ultra Magnus, Fblthp Knows the Way (Rootpath Purifier), Mai and Zuko (Boiling Rock Rioter),
+  Rielle (Nahiri's Wrath), Nathan Drake, Kotose, Flamewar, Soundwave, Cosmic Spider-Man, Raphael Most
+  Attitude (Casey & Raph + Zog), Doctor Doom and Ultron (the two Plans), The Fantasticar (Jeweled Amulet +
+  Lodestone Bauble), Tazri, Sensational Spider-Man (+ Involuntary Cooldown), Fblthp Lost on the Range
+  (Delif's Cone), Merieke Ri Berit (Robaran Mercenaries + Energy Arc). ⚠ **Miss Highwater is not
+  Commander-legal** (Mystery Booster Commander).
+- **FIXED (rules):** CR 104.4b life drained from a seat still in at 0 or less is loop growth (Vito +
+  Exquisite Blood vs Platinum Angel, seed 924354); CR 704.3 an SBA unattach is announced so the sweep
+  repeats (Grip of Phyresis's 0/0 Germ under Konda's Banner, seed 924092); CR 506.4 an attacked
+  planeswalker that changes control leaves combat — its attackers re-aim at a ghost id with the original
+  defender recorded (Inniaz's exchange, seed 924760: the walker's new controller blocked).
+- **Primitives:** `Value::{CardTypesAmongSpellsCastThisTurn, CastDiscardedManaValue}` (the latter reads the
+  resolving-spell snapshot; `cast_discarded_mana_value` is now the cost's total), `StaticEffect::
+  {GrantWebSlingingToSpells, AllCreaturesAttackEnchantedController, PlayFromLibraryTopByRemovingCounter,
+  LandsAndLibraryLandsAreBasic}`, `AdditionalCastCost::RemoveCountersFromCreatures`, `R::IsPreparedSpell`,
+  `Effect::{WhenObjectDealsCombatDamageToPlayerThisTurn, NoteSpentManaTypeOnSource}`,
+  `Predicate::CastImmediatelyThisResolution`, `CounterType::{Collection, Intel}`,
+  `Effect::{WhenTargetAttacksUnblockedThisTurn, RemoveCountersOfKindAmongUpTo}`,
+  `StaticEffect::HasActivatedAbilitiesOfControlledLegendaryCreatures`; a same-name sweep's exiles are
+  `LastMoved`. **FIXED:** the printed walker answered false for `HasActivatedAbility` /
+  `HasNonManaActivatedAbility`, so a milled or revealed card never matched either.
+- **Approximations** (INCOMPLETE_CARDS rows): Nick Fury's optional transform, Falco Spara's auto-picked
+  counter, Evelyn / Kotose's "one" as one-a-turn, Boiling Rock Rioter / Nathan Drake / Soundwave's
+  auto-picked card, Rootpath Purifier vs layer-4 nonbasic hate, the Plans' reflexive target.
+- **Released (each a primitive):** Wan Shi Tong (a cards-into-library `EventKind` — the u128 mask is full),
+  Sanar (vivid reveal), Vazi (Treasure mana spent on an *activation* by an opponent).
+- **Sweeps** (audit build, seeds 9215-9220, ~13,600 pod games incl. one `--a dflt` and one
+  `CRAB_POD_CONCEDE=20` block): three aborts, all fixed above; the rest CR 104.4a draws (Descent into
+  Avernus) and board caps (Cadric + Elspeth Storm Slayer seed 924158, Ocelot Pride 925460, Soul Warden +
+  Hare Apparent 924108, Growing Ranks + Trostani 923238).
+
 ## FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes
 
 - **Sweeps (audit build, `scripts/pod_sweep.py`, one game a block over every deck):** seeds 9201 (4,6 seats),
