@@ -118225,3 +118225,33 @@ pub const SOUNDWAVE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const COSMIC_SPIDER_MAN_COMMANDERS: &[CardFactory] = &[cosmic_spider_man];
+
+/// **Cosmic Spider-Man**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 5 Forests + 3 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Cosmic Spider-Man (EDHREC, fetched 2026-10-18).
+pub const COSMIC_SPIDER_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, heralds_horn, lightning_greaves,
+    patchwork_banner, sol_ring, spider_suit, avengers_tower, breeding_pool, command_tower,
+    daily_bugle_building, exotic_orchard, godless_shrine, multiversal_passage,
+    oscorp_industries, overgrown_tomb, path_of_ancestry, sacred_foundry, savage_mansion,
+    secluded_courtyard, stomping_ground, suburban_sanctuary, swarmyard, temple_garden,
+    unclaimed_territory, university_campus, urban_retreat, vibrant_cityscape,
+    arasta_of_the_endless_web, arana_heart_of_the_spider, aunt_may, gwen_stacy,
+    gwenom_remorseless, mary_jane_watson, miles_morales, peter_parker, radioactive_spider,
+    sp_dr_piloted_by_peni, scarlet_spider_ben_reilly, shelob_child_of_ungoliant,
+    silk_web_weaver, spectacular_spider_man, spider_manifestation, spider_byte_web_warden,
+    spider_gwen_free_spirit, spider_ham_peter_porker, spider_man_2099, spider_man_india,
+    spider_man_noir, spider_man_brooklyn_visionary, spider_man_miles_morales, spider_punk,
+    spider_uk, spider_woman_stunning_savior, spiders_man_heroic_horde, spinneret_and_spiderling,
+    superior_spider_man, symbiote_spider_man, twitching_doll, web_warriors, impostor_syndrome,
+    origin_of_spider_man, spider_man_no_more, spider_verse, wall_crawl, web_up,
+    web_of_life_and_destiny, amazing_acrobatics, arachnogenesis, counterspell, grow_extra_arms,
+    heroic_intervention, path_to_exile, spectacular_tactics, spider_sense, strength_of_will,
+    swords_to_plowshares, cultivate, farseek, kodamas_reach, natures_lore, three_visits,
+    villainous_wrath,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, mountain, mountain, plains,
+    plains, plains, swamp, swamp,
+];

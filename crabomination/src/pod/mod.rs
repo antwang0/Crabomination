@@ -25740,6 +25740,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SOUNDWAVE_COMMANDERS,
             main: decks::SOUNDWAVE_MAIN,
         },
+        // Seat 4215: Cosmic Spider-Man's EDHREC average deck. `--pod-decks 4215`.
+        PodDeck {
+            name: "Cosmic Spider-Man (WUBRG)",
+            commanders: decks::COSMIC_SPIDER_MAN_COMMANDERS,
+            main: decks::COSMIC_SPIDER_MAN_MAIN,
+        },
     ]
 }
 
@@ -31849,6 +31855,7 @@ mod tests {
             ("Kotose, the Silent Spider", &[0x1A8A]),
             ("Flamewar, Brash Veteran", &[0x1A8B]),
             ("Soundwave, Sonic Spy", &[0x1A8C]),
+            ("Cosmic Spider-Man", &[0x1A8D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
