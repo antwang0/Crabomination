@@ -1427,7 +1427,10 @@ impl GameState {
     /// opponent first: a hostile slot (damage, discard, life loss, …) for a
     /// seat with `hostile_player_targets`, and in every pod — the frozen
     /// two-player control's caster-first pick burned its own face with
-    /// Crackle with Power at a four-seat table (audit sweep 43001).
+    /// Crackle with Power at a four-seat table (audit sweep 43001) — and in a
+    /// two-seat Commander game, whose caster-first Jaya's Immolating Inferno
+    /// named its own face for X = 25 (sweep seed 924898). Non-Commander duels
+    /// keep the control's pick.
     pub(crate) fn hostile_player_slot(
         &self,
         controller: usize,
@@ -1435,7 +1438,9 @@ impl GameState {
         slot: u8,
         mode: Option<usize>,
     ) -> bool {
-        (self.players[controller].hostile_player_targets || self.players.len() > 2)
+        (self.players[controller].hostile_player_targets
+            || self.players.len() > 2
+            || self.players.iter().any(|p| !p.commanders.is_empty()))
             && eff.player_slot_is_hostile(slot, mode)
     }
 }

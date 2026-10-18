@@ -2482,3 +2482,18 @@ fn glimpse_of_tomorrow_shuffles_in_new_objects() {
     assert!(c.is_some(), "the commander waits in the library or re-entered");
     assert!(c.is_none_or(|c| !c.tapped), "the commander kept its tapped state");
 }
+
+/// CR 601.2c — in a two-seat Commander game a hostile player slot names the
+/// opponent first: Jaya's Immolating Inferno's "each of up to three targets"
+/// led with its own caster's face under the duel control's caster-first pick
+/// and X = 25 killed it (sweep seed 924898).
+#[test]
+fn a_two_seat_commander_game_aims_hostile_slots_at_the_opponent() {
+    let mut g = commander_game();
+    let jaya = g.add_card_to_hand(0, catalog::jayas_immolating_inferno());
+    let eff = g.players[0].hand.iter().find(|c| c.id == jaya).unwrap().definition.effect.clone();
+    let (first, rest) = g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, Some(jaya), Some(5));
+    let all: Vec<Target> = first.into_iter().chain(rest).collect();
+    assert!(all.contains(&Target::Player(1)), "{all:?}");
+    assert!(!all.contains(&Target::Player(0)), "never its own face: {all:?}");
+}
