@@ -473,3 +473,59 @@ fn ajani_vengeant_ultimate_razes_one_player() {
     assert!(g.battlefield_find(lands[2]).is_none());
     assert!(g.battlefield_find(lands[1]).is_some() && g.battlefield_find(lands[0]).is_some());
 }
+
+/// CR 702.193 — Donald Blake's power-up: 3/5 flying, and a God Warrior Hero
+/// with no other creature types.
+#[test]
+fn cr_702_193_donald_blake_powers_up_into_a_god() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = pod(2);
+    let db = ready(&mut g, 0, catalog::donald_blake_guise_of_thor());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, db, 0, None).expect("power-up");
+    let cp = g.computed_permanent(db).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 5));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    let types = g.computed_permanent(db).unwrap().subtypes().creature_types.clone();
+    assert!(types.contains(&CreatureType::God) && types.contains(&CreatureType::Hero));
+    assert!(!types.contains(&CreatureType::Human));
+}
+
+/// End Hostilities takes the attachments on creatures with them; an
+/// unattached Equipment survives.
+#[test]
+fn end_hostilities_takes_attachments_too() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let on = ready(&mut g, 1, catalog::bonesplitter());
+    g.battlefield_find_mut(on).unwrap().attached_to = Some(bear);
+    let off = ready(&mut g, 1, catalog::bonesplitter());
+    g.resolve_effect(&catalog::end_hostilities().effect, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(on).is_none());
+    assert!(g.battlefield_find(off).is_some());
+}
+
+/// Bring to Life animates a noncreature artifact as a 0/0 with four
+/// +1/+1 counters, still an artifact.
+#[test]
+fn bring_to_life_animates_an_artifact() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let fae = g.add_card_to_hand(0, catalog::animating_faerie());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: fae,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bring to Life");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ring).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+}

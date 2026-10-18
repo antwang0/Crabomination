@@ -805,3 +805,135 @@ pub fn detritivore() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Donald Blake, Guise of Thor — {1}{W} legendary 1/3 lifelink Human Doctor.
+/// Power-up {4}{W}{W}: two +1/+1 counters and a flying counter; he becomes a
+/// God Warrior Hero (CR 702.193).
+pub fn donald_blake_guise_of_thor() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Donald Blake, Guise of Thor",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Doctor], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w(), w()]),
+            power_up: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Flying, amount: Value::ONE },
+                Effect::BecomeCreatureType {
+                    what: Selector::This,
+                    creature_types: vec![CreatureType::God, CreatureType::Warrior, CreatureType::Hero],
+                    duration: Duration::Permanent,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// End Hostilities — {3}{W}{W} sorcery. Destroy all creatures and all
+/// permanents attached to creatures.
+pub fn end_hostilities() -> CardDefinition {
+    CardDefinition {
+        name: "End Hostilities",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy { what: Selector::EachPermanent(R::Creature.or(R::AttachedToCreature)) },
+        ..Default::default()
+    }
+}
+
+/// Animating Faerie // Bring to Life — {2}{U} 2/2 flying Faerie. Adventure
+/// {2}{U} sorcery: target noncreature artifact you control becomes a 0/0
+/// artifact creature with four +1/+1 counters.
+pub fn animating_faerie() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Animating Faerie",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Bring to Life",
+            cost: cost(&[generic(2), u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::BecomeCreature {
+                    what: crate::effect::shortcut::target_filtered(
+                        R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ControlledByYou),
+                    ),
+                    power: Value::ZERO,
+                    toughness: Value::ZERO,
+                    creature_types: vec![],
+                    keywords: vec![],
+                    duration: Duration::Permanent,
+                },
+                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(4) },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Blinding Spray — {4}{U} instant. Creatures your opponents control get
+/// -4/-0 until end of turn. Draw a card.
+pub fn blinding_spray() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Blinding Spray",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                power: Value::Const(-4),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Built to Last — {W} instant. Target creature gets +2/+2 until end of turn;
+/// an artifact creature also gains indestructible.
+pub fn built_to_last() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Built to Last",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: crate::effect::shortcut::target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Artifact },
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
