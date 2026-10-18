@@ -5641,7 +5641,8 @@ impl Effect {
                 | Effect::CopySpellTargeting { what, .. }
                 | Effect::EyeOfTheStorm { what }
                 | Effect::SearchOpponentLibraryForSameName { what }
-                | Effect::GainControlAndReattachAura { what } => sel_find(what, slot),
+                | Effect::GainControlAndReattachAura { what }
+                | Effect::BounceStealAttachmentsReattach { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::BecomeCopyOfExiledCard { what, .. }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
