@@ -25602,6 +25602,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CODIE_2_COMMANDERS,
             main: decks::CODIE_2_MAIN,
         },
+        // Seat 4192: Nick Fury, Agent of S.H.I.E.L.D.'s EDHREC average deck. `--pod-decks 4192`.
+        PodDeck {
+            name: "Nick Fury, Agent of S.H.I.E.L.D. (WUBRG)",
+            commanders: decks::NICK_FURY_COMMANDERS,
+            main: decks::NICK_FURY_MAIN,
+        },
+        // Seat 4193: Miles Morales's EDHREC average deck. `--pod-decks 4193`.
+        PodDeck {
+            name: "Miles Morales (WRG)",
+            commanders: decks::MILES_MORALES_COMMANDERS,
+            main: decks::MILES_MORALES_MAIN,
+        },
     ]
 }
 
@@ -31688,6 +31700,8 @@ mod tests {
             ("Ramses Overdark", &[0x1A73]),
             ("Prowl, Stoic Strategist", &[0x1A74]),
             ("Codie, Ravenous Codex", &[0x1A75]),
+            ("Nick Fury, Agent of S.H.I.E.L.D.", &[0x1A76]),
+            ("Miles Morales", &[0x1A77]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -117571,3 +117571,62 @@ pub const CODIE_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, island, mountain, mountain, plains, plains,
     swamp, swamp,
 ];
+
+pub const NICK_FURY_COMMANDERS: &[CardFactory] = &[nick_fury_agent_of_shield];
+
+/// **Nick Fury, Agent of S.H.I.E.L.D.**'s EDHREC average deck, card for card:
+/// 90 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 2 Plains + 1 Swamp = 99.
+/// Nick Fury, Agent of S.H.I.E.L.D. (EDHREC, fetched 2026-10-18).
+pub const NICK_FURY_MAIN: &[CardFactory] = &[
+    arcane_signet, avengers_quinjet, captain_americas_shield, chromatic_lantern, chrome_mox,
+    fellwar_stone, lotus_petal, mjolnir_hammer_of_thor, mox_amber, relic_of_legends, sol_ring,
+    the_mind_stone, arid_mesa, avengers_tower, badlands, baxter_building, bloodstained_mire,
+    city_of_brass, command_tower, exotic_orchard, flooded_strand, hallowed_fountain,
+    mana_confluence, marsh_flats, misty_rainforest, path_of_ancestry, plaza_of_heroes,
+    polluted_delta, scalding_tarn, scrubland, secluded_courtyard, tundra, underground_sea,
+    verdant_catacombs, volcanic_island, windswept_heath, agent_phil_coulson, birds_of_paradise,
+    black_widow_agile_avenger, bruce_banner, captain_america_living_legend,
+    captain_america_super_soldier, captain_america_team_leader,
+    captain_america_wings_of_freedom, captain_marvel_apex_avenger, daredevil_man_without_fear,
+    director_nick_fury, esper_sentinel, hawkeye_trick_shot, human_torch_johnny_storm,
+    invisible_woman_sue_storm, iron_man_armored_avenger, jennifer_walters, king_tchalla,
+    miles_morales, monica_rambeau, peter_parker, scarlet_witch_chaotic_avenger,
+    the_mighty_thor_jane_foster, the_thing_ben_grimm, thor_god_of_thunder, tony_stark,
+    wonder_man_hollywood_hero, avengers_assemble, kindred_discovery, mystic_remora,
+    origin_of_the_avengers, rhystic_study, underworld_breach, an_offer_you_cant_refuse,
+    counterspell, dark_ritual, deflecting_swat, enlightened_tutor, ephemerate,
+    fierce_guardianship, flusterstorm, force_of_will, heroic_intervention, path_to_exile,
+    silence, swords_to_plowshares, vampiric_tutor, cultivate, demonic_tutor,
+    earths_mightiest_heroes, farseek, imperial_seal, raise_the_palisade, three_visits,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, swamp,
+];
+
+pub const MILES_MORALES_COMMANDERS: &[CardFactory] = &[miles_morales];
+
+/// **Miles Morales**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 8 Forests + 4 Mountains + 5 Plains = 99.
+/// Miles Morales (EDHREC, fetched 2026-10-18).
+pub const MILES_MORALES_MAIN: &[CardFactory] = &[
+    arcane_signet, costume_closet, ozolith_the_shattered_spire, sol_ring, the_earth_crystal,
+    the_great_henge, the_ozolith, canopy_vista, cinder_glade, clifftop_retreat, command_tower,
+    daily_bugle_building, exotic_orchard, jetmirs_garden, jungle_shrine, multiversal_passage,
+    overgrown_farmland, path_of_ancestry, rogues_passage, rootbound_crag, sacred_foundry,
+    stomping_ground, sunpetal_grove, temple_garden, vibrant_cityscape, aragorn_hornburg_hero,
+    arasta_of_the_endless_web, arana_heart_of_the_spider, arwen_weaver_of_hope, aunt_may,
+    bright_palm_soul_awakener, guy_in_the_chair, halana_and_alena, hamza_guardian_of_arashin,
+    kami_of_whispered_hopes, kodama_of_the_west_tree, kutzil_malamet_exemplar, mary_jane_watson,
+    radioactive_spider, rishkar_peema_renegade, scarlet_spider_ben_reilly, shalai_and_hallar,
+    silk_web_weaver, silver_sable_mercenary_leader, spectacular_spider_man,
+    spider_manifestation, spider_gwen_free_spirit, spider_ham_peter_porker, spider_man_india,
+    spider_man_brooklyn_visionary, spider_man_miles_morales, spider_punk,
+    spinneret_and_spiderling, twitching_doll, web_warriors, annie_joins_up, branching_evolution,
+    garruks_uprising, hardened_scales, innkeepers_talent, origin_of_spider_man,
+    rhythm_of_the_wild, sphere_grid, terrasymbiosis, arachnogenesis, beast_within,
+    heroic_intervention, inspiring_call, path_to_exile, silkguard, spectacular_tactics,
+    strength_of_will, swords_to_plowshares, terrific_team_up, blasphemous_act, cultivate,
+    damning_verdict, farseek, kapow, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains,
+];
