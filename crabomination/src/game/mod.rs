@@ -143,6 +143,7 @@ mod target_type_slots;
 mod noncreature_affinity;
 mod jace_instant_loyalty;
 mod explore;
+mod same_defender;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.

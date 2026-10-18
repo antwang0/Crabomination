@@ -3491,6 +3491,11 @@ pub enum SelectionRequirement {
     /// evaluating source's `chosen_player` — "creatures attacking the last
     /// chosen player" (Triarch Stalker). False without a source.
     IsAttackingChosenPlayerOfSource,
+    /// An attacking creature attacking the same player, planeswalker or
+    /// battle as the source — "another target creature attacking the same
+    /// player or planeswalker" (Kitesail Skirmisher; `game/same_defender.rs`).
+    /// False when either isn't attacking or there's no source.
+    IsAttackingSameAsSource,
     /// An attacking creature whose defender is the player the firing event
     /// named — "target creature that's attacking that player" on a
     /// `YouAttackedPlayer` trigger (Echoing Assault). False outside a trigger.
