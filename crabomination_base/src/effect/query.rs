@@ -2539,6 +2539,7 @@ impl Effect {
             | Effect::SagaFinalChapterResolved
             | Effect::EachPlayerKeepsPartySacrificesRest
             | Effect::LookTopTakeParty { .. }
+            | Effect::RevealTopTakeOnePerCastType { .. }
             | Effect::StampTokenCopyExceptions { .. }
             | Effect::EachPushesTrigger { .. }
             | Effect::EachOpponentChooses { .. }

@@ -6348,6 +6348,12 @@ pub enum Effect {
     /// among them and put those cards into your hand. Put the rest on the
     /// bottom in a random order" (Harper Recruiter): a largest party.
     LookTopTakeParty { who: PlayerRef, count: Value },
+    /// "Reveal the top `count` cards of your library. For each card type
+    /// among noncreature spells you've cast this turn, you may put a card of
+    /// that type from among the revealed cards into your hand. Put the rest
+    /// on the bottom of your library in a random order" (Hurkyl, Master
+    /// Wizard; `game/effects/reveal_cast_types.rs`).
+    RevealTopTakeOnePerCastType { who: PlayerRef, count: Value },
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
