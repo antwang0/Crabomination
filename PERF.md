@@ -3168,6 +3168,31 @@ casts build one probe each (already built for the cost walk). `profiling-fast` b
 pods (audit)     seeds 9201-9207, every deck, 4/6/8 seats: 13,000+ games, 0 panics after the fixes
 ```
 
+### 2026-10-18 late (Commander run, `019Y6J4R`, batches Q-T) — guardrail; 263 seats, 178 cards
+
+Hot-path touches: `on_left_battlefield` asks `drop_self_scoped_effects` (one `any()` over the
+continuous effects, a retain only when one names the leaver as `AffectedPermanents::Source`);
+an activation asks `blight_cost > 0`; `cast_from_zone_without_paying` asks
+`linked_exile_counter_cast` for an exile cast with no may-play grant (an `exiled_with`
+`Option` read first); `loyalty_twice_each_turn_for` reads one Player `Option<u32>` first; the
+bot's exile-cast loop and `may_play_castable_on` read `exiled_with` before the Dissident check.
+`profiling-fast` bot_ladder (`--no-default-features`), 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the previous
+                 entry; determinism ok (all pairs split); games_per_s 263.4 (box noise);
+                 peak_rss_mib 39.4
+pods (new seats) every new seat (4107-4181, mine) in 4-seat pods, 24 games a pod, seed 73
+                 (plus 16-game pods for 4107-4115): every game decided, 0 panics
+random pods      over all 4,181 seats, release, seed 91001: 4-seat 100 pods x 4 games, 6-seat
+                 20 x 3, 8-seat 10 x 3 — 490 / 490 decided, 0 panics, stall rate 0
+clippy           workspace (client excluded): two warnings in this run's code (clone_on_copy,
+                 single_element_loop), fixed — by `8e2881313` too, identical — then 0
+suite            27,844 / 27,844 (6 skipped), precon pod test excluded
+precon pod test  one game a seat over 4,181 seats, alone under --cargo-profile overflow:
+                 pass, 350 s
+```
+
 ### 2026-10-18 (Commander run, `019Y6J4R`) — guardrail; 188 seats, 144 cards, two engine fixes
 
 Hot-path touches: `ally_trigger_extra_fires`' presence gate peels each static through
