@@ -311,3 +311,21 @@ fn unscythe_exiles_its_victims_for_zombies() {
     assert!(g.exile.iter().any(|c| c.id == giant), "exiled");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie" && c.controller == 0));
 }
+
+/// Thorin, King of Durin's Folk: a Dwarf entering makes a Treasure, and each
+/// artifact token pumps the other Dwarves (not Thorin, not a non-Dwarf).
+#[test]
+fn thorin_king_of_durins_folk_mints_and_pumps() {
+    let mut g = pod(2);
+    let thorin = ready(&mut g, 0, catalog::thorin_king_of_durins_folk());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let dwarf = g.add_card_to_hand(0, catalog::bombur_gentle_dreamer());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, dwarf);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
+    let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+    assert_eq!(p(&g, dwarf), 6, "Bombur 5 + 1 Treasure");
+    assert_eq!(p(&g, thorin), 4);
+    assert_eq!(p(&g, bear), 2);
+}

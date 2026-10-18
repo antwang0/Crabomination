@@ -1534,6 +1534,8 @@ static DECKS: &[Factory] = &[
     super::decks::way_of_the_warlord,
     super::decks::twists_and_turns,
     super::decks::kitesail_skirmisher,
+    super::decks::conquerors_galleon,
+    super::decks::dawnhand_dissident,
     // cmdr_01mw_a (session 01MWhJbe)
     super::decks::ixallis_diviner,
     super::decks::origin_of_iron_man,
@@ -1550,8 +1552,7 @@ static DECKS: &[Factory] = &[
     super::decks::wicked_slumber,
     super::decks::tetsuo_imperial_champion,
     super::decks::unscythe_killer_of_kings,
-    super::decks::conquerors_galleon,
-    super::decks::dawnhand_dissident,
+    super::decks::thorin_king_of_durins_folk,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

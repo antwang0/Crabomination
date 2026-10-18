@@ -550,3 +550,34 @@ pub fn unscythe_killer_of_kings() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thorin, King of Durin's Folk — {3}{R}{W} legendary 4/4 Dwarf Noble. It or
+/// another Dwarf you control entering makes a Treasure; other Dwarves you
+/// control get +1/+0 for each artifact token you control.
+pub fn thorin_king_of_durins_folk() -> CardDefinition {
+    use crate::card::{Predicate, StaticAbility, StaticEffect};
+    let dwarf = || R::Creature.and(R::HasCreatureType(CreatureType::Dwarf));
+    CardDefinition {
+        name: "Thorin, King of Durin's Folk",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Noble], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: dwarf() }),
+            effect: crate::effect::shortcut::mint_treasures(1),
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Other Dwarves you control get +1/+0 for each artifact token you control.",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: Selector::EachPermanent(dwarf().and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: Value::count(Selector::EachPermanent(R::Artifact.and(R::IsToken).and(R::ControlledByYou))),
+                toughness: Value::ZERO,
+            },
+        }],
+        ..Default::default()
+    }
+}
