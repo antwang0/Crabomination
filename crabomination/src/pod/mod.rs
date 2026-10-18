@@ -31540,8 +31540,20 @@ mod tests {
         // cores when it walked the list on one thread). Each game is seeded,
         // so the order they run in changes nothing. `RUST_MIN_STACK` (32 MiB,
         // `.cargo/config.toml`) sizes the workers' stacks.
-        let jobs: Vec<(&str, u64)> =
-            seats.iter().flat_map(|(name, seeds)| seeds.iter().map(move |&seed| (*name, seed))).collect();
+        // `CRAB_SEAT_SHARD=i/n` runs every n-th job from the i-th (0-based):
+        // at ~4,050 seats the whole list outruns a two-hour window on four
+        // cores, so it can be checked in pieces.
+        let shard = std::env::var("CRAB_SEAT_SHARD").ok().and_then(|v| {
+            let (i, n) = v.split_once('/')?;
+            Some((i.parse::<usize>().ok()?, n.parse::<usize>().ok()?.max(1)))
+        });
+        let jobs: Vec<(&str, u64)> = seats
+            .iter()
+            .flat_map(|(name, seeds)| seeds.iter().map(move |&seed| (*name, seed)))
+            .enumerate()
+            .filter(|(k, _)| shard.is_none_or(|(i, n)| k % n == i))
+            .map(|(_, j)| j)
+            .collect();
         let next = std::sync::atomic::AtomicUsize::new(0);
         let workers = std::thread::available_parallelism().map_or(1, |n| n.get()).min(jobs.len());
         std::thread::scope(|s| {
