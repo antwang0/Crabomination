@@ -578,3 +578,32 @@ fn nathan_drake_casts_an_opponents_exiled_spell() {
     assert!(g.exile.iter().any(|c| c.id == mine), "my top card is exiled too");
     assert_eq!(g.battlefield_find(ox).map(|c| c.controller), Some(0), "their bear, cast with blue");
 }
+
+/// Kotose exiles a card from an opponent's graveyard and its namesakes from
+/// their hand and library; its controller may play one of them, with mana of
+/// any color.
+#[test]
+fn kotose_steals_a_name_and_plays_one() {
+    let mut g = pod(2);
+    let anchor = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let in_hand = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let in_lib = g.add_card_to_library(1, catalog::grizzly_bears());
+    flood(&mut g);
+    let kotose = g.add_card_to_hand(0, catalog::kotose_the_silent_spider());
+    cast(&mut g, kotose, None);
+    for id in [anchor, in_hand, in_lib] {
+        assert!(g.exile.iter().any(|c| c.id == id), "{id:?} swept");
+    }
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: in_hand,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("their bear, with blue");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(in_hand).map(|c| c.controller), Some(0));
+}

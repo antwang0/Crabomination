@@ -17631,6 +17631,7 @@ static DECKS: &[Factory] = &[
     super::decks::boiling_rock_rioter,
     super::decks::nahiris_wrath,
     super::decks::nathan_drake_treasure_hunter,
+    super::decks::kotose_the_silent_spider,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -866,3 +866,36 @@ pub fn nathan_drake_treasure_hunter() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// Kotose, the Silent Spider — {3}{U}{B} legendary 4/4 Human Ninja. Entering,
+/// it exiles target non-basic-land card from an opponent's graveyard and every
+/// card of that name from that player's graveyard, hand, and library; while
+/// you control Kotose you may play one of them, mana as though any color.
+pub fn kotose_the_silent_spider() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Kotose, the Silent Spider",
+        cost: cost(&[generic(3), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Ninja], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::ExileSameNameAsTarget {
+                what: target_filtered(R::InOpponentGraveyard.and(R::IsBasicLand.negate())),
+            },
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: MayPlayDuration::WhileSourceOnBattlefield {
+                    source: crate::card::CardId(0),
+                    one_spell_a_turn: true,
+                },
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: true,
+            },
+        ]))],
+        ..Default::default()
+    })
+}
