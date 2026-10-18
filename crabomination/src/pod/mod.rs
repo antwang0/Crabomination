@@ -25656,6 +25656,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ULTRA_MAGNUS_COMMANDERS,
             main: decks::ULTRA_MAGNUS_MAIN,
         },
+        // Seat 4201: The Third Doctor and Bill Potts's EDHREC average deck. `--pod-decks 4201`.
+        PodDeck {
+            name: "The Third Doctor and Bill Potts (URG)",
+            commanders: decks::THE_THIRD_DOCTOR_13_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_13_MAIN,
+        },
+        // Seat 4202: The Twelfth Doctor and Nyssa of Traken's EDHREC average deck. `--pod-decks 4202`.
+        PodDeck {
+            name: "The Twelfth Doctor and Nyssa of Traken (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_19_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_19_MAIN,
+        },
+        // Seat 4203: Gale, Waterdeep Prodigy and Candlekeep Sage's EDHREC average deck. `--pod-decks 4203`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Candlekeep Sage (U)",
+            commanders: decks::GALE_16_COMMANDERS,
+            main: decks::GALE_16_MAIN,
+        },
+        // Seat 4204: Gale, Waterdeep Prodigy and Sword Coast Sailor's EDHREC average deck. `--pod-decks 4204`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Sword Coast Sailor (U)",
+            commanders: decks::GALE_17_COMMANDERS,
+            main: decks::GALE_17_MAIN,
+        },
     ]
 }
 
@@ -31751,6 +31775,10 @@ mod tests {
             ("Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools", &[0x1A7C]),
             ("Optimus Prime, Hero", &[0x1A7D]),
             ("Ultra Magnus, Tactician", &[0x1A7E]),
+            ("The Third Doctor and Bill Potts", &[0x1A7F]),
+            ("The Twelfth Doctor and Nyssa of Traken", &[0x1A80]),
+            ("Gale, Waterdeep Prodigy and Candlekeep Sage", &[0x1A81]),
+            ("Gale, Waterdeep Prodigy and Sword Coast Sailor", &[0x1A82]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -117833,3 +117833,114 @@ pub const ULTRA_MAGNUS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
     mountain, plains, plains, plains, plains, plains,
 ];
+
+pub const THE_THIRD_DOCTOR_13_COMMANDERS: &[CardFactory] = &[the_third_doctor, bill_potts];
+
+/// **The Third Doctor and Bill Potts**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 3 Forests + 8 Islands + 4 Mountains = 98.
+/// The Third Doctor and Bill Potts (EDHREC, fetched 2026-10-18).
+pub const THE_THIRD_DOCTOR_13_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, nuka_cola_vending_machine, sol_ring, synthesis_pod,
+    the_great_henge, twinning_staff, boseiju_who_endures, breeding_pool, cinder_glade,
+    command_tower, evolving_wilds, exotic_orchard, hedge_maze, hinterland_harbor, ketria_triome,
+    misty_rainforest, rootbound_crag, scalding_tarn, steam_vents, stomping_ground, sulfur_falls,
+    taiga, the_shire, thundering_falls, training_center, wooded_foothills, academy_manufactor,
+    archmage_emeritus, ardent_elementalist, displacer_kitten, draconic_visitor, eternal_witness,
+    goblin_electromancer, goldspan_dragon, hexing_squelcher, ivy_gleeful_spellthief,
+    jaheira_friend_of_the_forest, james_wandering_dad, karok_wrangler, lonis_cryptozoologist,
+    peregrin_took, quina_qu_gourmet, roxanne_starfall_savant, stark_industries_executive,
+    storm_kiln_artist, thunderclap_drake, veyran_voice_of_duality, zada_hedron_grinder,
+    frontline_heroism, killer_service, leyline_of_resonance, vesuvan_duplimancy, blur,
+    crimson_wisps, displace, essence_flux, expedite, fists_of_flame, flick_a_coin, gold_rush,
+    hide_on_the_ceiling, hunters_insight, illusionists_stratagem, monstrous_rage,
+    planar_incision, startle, tyvars_stand, unexpected_windfall, verdant_rebirth,
+    asinine_antics, bala_ged_recovery, bloody_betrayal, bridgeworks_battle,
+    ember_island_production, enter_the_enigma, exponential_growth, farseek,
+    irenicuss_vile_duplication, last_night_together, natures_lore, nibelheim_aflame,
+    three_visits,
+    // Basics
+    forest, forest, forest, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const THE_TWELFTH_DOCTOR_19_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, nyssa_of_traken];
+
+/// **The Twelfth Doctor and Nyssa of Traken**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Islands + 11 Mountains = 98.
+/// The Twelfth Doctor and Nyssa of Traken (EDHREC, fetched 2026-10-18).
+pub const THE_TWELFTH_DOCTOR_19_MAIN: &[CardFactory] = &[
+    arcane_signet, detectives_satchel, izzet_signet, lichs_tomb, nobles_purse, ruby_medallion,
+    sapphire_medallion, sol_ring, synthesis_pod, twinning_staff, academy_ruins, cascade_bluffs,
+    cephalid_coliseum, ferrous_lake, fiery_islet, riverglide_pathway, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, terramorphic_expanse, thundering_falls, training_center,
+    baral_chief_of_compliance, birgi_god_of_storytelling, bohn_beguiling_balladeer,
+    eruth_tormented_prophet, gale_waterdeep_prodigy, inti_seneschal_of_the_sun,
+    laelia_the_blade_reforged, leveler, life_of_the_party, ojer_pakpatiq_deepest_epoch,
+    osgood_operation_double, party_thrasher, piper_wright_publick_reporter,
+    professional_face_breaker, the_reality_chip, tribute_mage, wildfire_devils,
+    case_of_the_filched_falcon, curse_of_opulence, heaven_sent, tamiyo_meets_the_story_circle,
+    trail_of_evidence, wild_wasteland, an_offer_you_cant_refuse, big_score, brainstorm,
+    chaos_warp, commune_with_lava, confirm_suspicions, deduce, demand_answers,
+    eliminate_the_impossible, final_fortune, flusterstorm, march_of_reckless_joy,
+    otherworldly_gaze, pongify, saw_it_coming, surge_of_brilliance, think_twice,
+    unexpected_windfall, dack_fayden, embrace_the_unknown, faithless_looting, gamble,
+    last_chance, press_for_answers, reckless_impulse, see_the_truth, throes_of_chaos,
+    torch_the_witness, warriors_oath, wrenns_resolve,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const GALE_16_COMMANDERS: &[CardFactory] = &[gale_waterdeep_prodigy, candlekeep_sage];
+
+/// **Gale, Waterdeep Prodigy and Candlekeep Sage**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Islands = 98.
+/// Gale, Waterdeep Prodigy and Candlekeep Sage (EDHREC, fetched 2026-10-18).
+pub const GALE_16_MAIN: &[CardFactory] = &[
+    arcane_signet, decanter_of_endless_water, mind_stone, sapphire_medallion, sky_diamond,
+    sol_ring, thought_vessel, wizards_spellbook, castle_vantress, myriad_landscape,
+    mystic_sanctuary, otawara_soaring_city, reliquary_tower, riptide_laboratory, archaeomancer,
+    archmage_emeritus, archmage_of_runes, baral_chief_of_compliance, displacer_kitten,
+    haughty_djinn, hullbreaker_horror, laboratory_maniac, murmuring_mystic,
+    naban_dean_of_iteration, naru_meha_master_wizard, peregrine_drake, spellseeker,
+    talrand_sky_summoner, thassas_oracle, triskaidekaphile, wizards_of_thay,
+    case_of_the_ransacked_lab, jaces_sanctum, propaganda, secrets_of_the_dead, wizard_class,
+    aetherize, an_offer_you_cant_refuse, arcane_denial, archmages_charm, blur, brainstorm,
+    consider, counterspell, displace, essence_flux, frantic_search, gales_redirection,
+    ghostly_flicker, high_tide, negate, opt, planar_incision, pongify, snap,
+    jace_wielder_of_mysteries, candlekeep_inspiration, curse_of_the_swine, personal_tutor,
+    ponder, preordain, ravenform, see_the_truth, serum_visions, solve_the_equation,
+    step_through, strategic_planning, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const GALE_17_COMMANDERS: &[CardFactory] = &[gale_waterdeep_prodigy, sword_coast_sailor];
+
+/// **Gale, Waterdeep Prodigy and Sword Coast Sailor**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 27 Islands = 98.
+/// Gale, Waterdeep Prodigy and Sword Coast Sailor (EDHREC, fetched 2026-10-18).
+pub const GALE_17_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, blue_mages_cane, glamdring, isochron_scepter,
+    mind_stone, mindsplice_apparatus, robe_of_the_archmagi, sapphire_medallion, sol_ring,
+    swiftfoot_boots, thought_vessel, wizards_spellbook, great_hall_of_the_biblioplex,
+    lonely_sandbar, minamo_school_at_waters_edge, myriad_landscape, mystic_sanctuary,
+    reliquary_tower, academy_wall, archmage_emeritus, archmage_of_runes,
+    baral_chief_of_compliance, diluvian_primordial, eluge_the_shoreless_sea,
+    gandalf_friend_of_the_shire, haughty_djinn, hermes_overseer_of_elpis, laboratory_maniac,
+    mocking_sprite, murmuring_mystic, talrand_sky_summoner, triskaidekaphile,
+    wan_shi_tong_librarian, jaces_sanctum, leyline_of_anticipation, omniscience, propaganda,
+    rhystic_study, secrets_of_the_dead, teferis_ageless_insight, wizard_class, aetherize,
+    arcane_denial, archmages_charm, brainstorm, consider, counterspell, cyclonic_rift,
+    dramatic_reversal, fierce_guardianship, force_of_negation, frantic_search, high_tide,
+    mana_drain, mana_sculpt, negate, opt, snap, turnabout, narset_parter_of_veils,
+    candlekeep_inspiration, enter_the_infinite, gitaxian_probe, mass_manipulation,
+    personal_tutor, ponder, preordain, sleight_of_hand, solve_the_equation, step_through,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
