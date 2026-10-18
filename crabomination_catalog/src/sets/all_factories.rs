@@ -17588,6 +17588,7 @@ static DECKS: &[Factory] = &[
     super::decks::whirlwind_killer_cyclone,
     super::decks::hulk_gamma_goliath,
     super::decks::abomination_terrifying_titan,
+    super::decks::team_tactics,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

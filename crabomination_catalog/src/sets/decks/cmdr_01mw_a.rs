@@ -2099,3 +2099,29 @@ pub fn abomination_terrifying_titan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Team Tactics — {1}{R} instant. Teamwork 1. Target creature gains double
+/// strike until end of turn, and trample too if teamwork was paid.
+pub fn team_tactics() -> CardDefinition {
+    use crate::card::{AdditionalCastCost, Predicate};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Team Tactics",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        kicker_action_cost: Some(AdditionalCastCost::TapTotalPower { filter: R::Creature.and(R::ControlledByYou), power: 1 }),
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(R::Creature),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
