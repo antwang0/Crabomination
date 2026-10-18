@@ -24738,6 +24738,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TWELFTH_DOCTOR_16_COMMANDERS,
             main: decks::THE_TWELFTH_DOCTOR_16_MAIN,
         },
+        // Seat 4048: Ant-Man, Colony Commander's EDHREC average deck. `--pod-decks 4048`.
+        PodDeck {
+            name: "Ant-Man, Colony Commander (UG)",
+            commanders: decks::ANT_MAN_4_COMMANDERS,
+            main: decks::ANT_MAN_4_MAIN,
+        },
+        // Seat 4049: Baeloth Barrityl, Entertainer and Street Urchin's EDHREC average deck. `--pod-decks 4049`.
+        PodDeck {
+            name: "Baeloth Barrityl, Entertainer and Street Urchin (R)",
+            commanders: decks::BAELOTH_BARRITYL_6_COMMANDERS,
+            main: decks::BAELOTH_BARRITYL_6_MAIN,
+        },
+        // Seat 4050: Beast, Erudite Aerialist's EDHREC average deck. `--pod-decks 4050`.
+        PodDeck {
+            name: "Beast, Erudite Aerialist (UG)",
+            commanders: decks::BEAST_COMMANDERS,
+            main: decks::BEAST_MAIN,
+        },
+        // Seat 4051: Keskit, the Flesh Sculptor and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 4051`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Reyhan, Last of the Abzan (BG)",
+            commanders: decks::KESKIT_8_COMMANDERS,
+            main: decks::KESKIT_8_MAIN,
+        },
+        // Seat 4052: Safana, Calimport Cutthroat and Scion of Halaster's EDHREC average deck. `--pod-decks 4052`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Scion of Halaster (B)",
+            commanders: decks::SAFANA_18_COMMANDERS,
+            main: decks::SAFANA_18_MAIN,
+        },
+        // Seat 4053: The Eighth Doctor and Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 4053`.
+        PodDeck {
+            name: "The Eighth Doctor and Nardole, Resourceful Cyborg (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_11_MAIN,
+        },
+        // Seat 4054: The Fifth Doctor and Barbara Wright's EDHREC average deck. `--pod-decks 4054`.
+        PodDeck {
+            name: "The Fifth Doctor and Barbara Wright (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_7_MAIN,
+        },
     ]
 }
 
@@ -30680,6 +30722,13 @@ mod tests {
             ("Lulu, Loyal Hollyphant and Shameless Charlatan", &[0x19E3]),
             ("Rowan Kenrith and Will Kenrith", &[0x19E4]),
             ("The Twelfth Doctor and Ian Chesterton", &[0x19E5]),
+            ("Ant-Man, Colony Commander", &[0x19E6]),
+            ("Baeloth Barrityl, Entertainer and Street Urchin", &[0x19E7]),
+            ("Beast, Erudite Aerialist", &[0x19E8]),
+            ("Keskit, the Flesh Sculptor and Reyhan, Last of the Abzan", &[0x19E9]),
+            ("Safana, Calimport Cutthroat and Scion of Halaster", &[0x19EA]),
+            ("The Eighth Doctor and Nardole, Resourceful Cyborg", &[0x19EB]),
+            ("The Fifth Doctor and Barbara Wright", &[0x19EC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
