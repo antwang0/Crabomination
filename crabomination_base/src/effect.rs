@@ -3447,6 +3447,12 @@ pub enum ManaPayload {
     /// before this variant existed and no non-Commander trace moves. In a
     /// Commander game, where the rule has something to say, it is faithful.
     AnyColorInCommanderIdentity,
+    /// "Add one mana of either of the circled colors" (Cryptic Spires): two
+    /// colors circled as the deck is built. The engine has no deck-building
+    /// choice, so it reads them off the controller's commander identity —
+    /// exact for a one- or two-color identity, its first two colors (WUBRG
+    /// order) otherwise; with no commander, white and blue.
+    CircledColors,
     /// Add one mana of any color a controller's opponent's land could
     /// produce. The pool of legal colors is the union of basic-land
     /// types under any opponent's control (`Plains` → White, `Island`

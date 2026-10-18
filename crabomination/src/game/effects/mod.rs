@@ -14604,12 +14604,15 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
-                    ManaPayload::AnyColorInCommanderIdentity => {
+                    ManaPayload::AnyColorInCommanderIdentity | ManaPayload::CircledColors => {
                         // CR 903.4 — "any color in your commander's color
                         // identity". Same shape as `ImprintedCardColor`: a
                         // restricted `ChooseColor`, one pip.
                         let source = ctx.source.unwrap_or(CardId(0));
-                        let legal = self.commander_identity_colors(p);
+                        let mut legal = self.commander_identity_colors(p);
+                        if matches!(pool, ManaPayload::CircledColors) {
+                            legal.truncate(2);
+                        }
                         // A colourless commander's identity has no colour in
                         // it, so the ability adds nothing — and explicitly not
                         // {C} (rulings 2020-11-10). `legal[0]` below also made

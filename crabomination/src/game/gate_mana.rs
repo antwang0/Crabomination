@@ -29,6 +29,7 @@ fn pool_types(state: &GameState, p: usize, pool: &ManaPayload) -> (ColorSet, boo
         ManaPayload::Colorless(_) => (ColorSet::empty(), true),
         // CR 903.4 — Command Tower makes only its controller's identity.
         ManaPayload::AnyColorInCommanderIdentity => (state.players[p].commander_identity, false),
+        ManaPayload::CircledColors => (state.commander_identity_colors(p).into_iter().take(2).collect(), false),
         ManaPayload::Restricted(inner, _) => pool_types(state, p, inner),
         other => (crate::game::actions::payload_produced_colors(other), false),
     }

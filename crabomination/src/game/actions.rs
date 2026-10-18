@@ -3294,6 +3294,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
     match pool {
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColorInCommanderIdentity
+        | ManaPayload::CircledColors
         | ManaPayload::AnyColors(_)
         | ManaPayload::DifferentColors(_)
         | ManaPayload::DevotionOfChosenColor
@@ -5049,6 +5050,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         // and it fails the payment rather than producing a wrong color.
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColorInCommanderIdentity
+        | ManaPayload::CircledColors
         | ManaPayload::AnyColors(_)
         | ManaPayload::DifferentColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce

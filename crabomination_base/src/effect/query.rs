@@ -1997,6 +1997,7 @@ impl Effect {
                     | ManaPayload::AnyColorAmongCardsInYourGraveyard
                     | ManaPayload::AnyColorOfSource
                     | ManaPayload::AnyColorInCommanderIdentity
+                    | ManaPayload::CircledColors
                     | ManaPayload::DraftNotedColorOfSource => false,
                 }
             }
