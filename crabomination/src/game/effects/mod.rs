@@ -20647,7 +20647,11 @@ impl GameState {
                                     counter_type: *kind,
                                     count: n, placer: self.resolution_causer,
                                 });
-                            } else if self.scratch.exiled_card_ids_this_resolution.contains(&cid)
+                            } else if (self.scratch.exiled_card_ids_this_resolution.contains(&cid)
+                                // CR 702.62b — a suspended card's own ability
+                                // counting itself (Pardic Dragon's time counter).
+                                || (ctx.source == Some(cid)
+                                    && self.exile.iter().any(|c| c.id == cid && c.is_suspended())))
                                 && let Some(c) = self.exile.iter_mut().find(|c| c.id == cid)
                             {
                                 // CR 400.7 / 122.1 — "exile it with a page
