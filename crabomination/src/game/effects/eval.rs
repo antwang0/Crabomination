@@ -209,6 +209,14 @@ fn filter_can_match_land(f: &SelectionRequirement) -> bool {
 }
 
 impl GameState {
+    /// `R::IsPreparedSpell` — `card`'s definition is a permanent's own
+    /// prepare spell (the `Arc` `cast_prepare_spell` shares into the copy).
+    fn is_prepared_spell(&self, card: &crate::card::CardInstance) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.definition.prepare_spell.as_ref().is_some_and(|d| std::sync::Arc::ptr_eq(d, &card.definition))
+        })
+    }
+
     /// CR 613.4 — a card's base power and toughness: a battlefield
     /// permanent's after layers 7a/7b (`ComputedPermanent::base_pt`, exact
     /// for the small N every reader asks about), anything else's printed pair.
@@ -6244,6 +6252,7 @@ impl GameState {
                     R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
                     R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
                     R::WasCastFromExile => !card.is_token && card.cast_from_exile,
+                    R::IsPreparedSpell => self.is_prepared_spell(card),
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
                     // CR 613 — **every** P/T leaf below reads the *computed*
@@ -7498,6 +7507,7 @@ impl GameState {
             R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
             R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
             R::WasCastFromExile => !card.is_token && card.cast_from_exile,
+            R::IsPreparedSpell => self.is_prepared_spell(card),
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,

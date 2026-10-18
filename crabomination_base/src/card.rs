@@ -3158,6 +3158,10 @@ pub enum SelectionRequirement {
     /// The exile sibling: a permanent cast from exile on its way to the
     /// battlefield (Extraordinary Journey's "or was cast from exile").
     WasCastFromExile,
+    /// A spell cast as a creature's prepare spell (SOS prepare): its
+    /// definition is the very `prepare_spell` a permanent carries, shared
+    /// into the copy by `cast_prepare_spell` (Codie, Ravenous Codex).
+    IsPreparedSpell,
     /// The card shares a card type with a card exiled by the evaluating
     /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
     SharesCardTypeWithExiledBySource,
