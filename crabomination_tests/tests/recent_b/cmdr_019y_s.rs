@@ -212,3 +212,26 @@ fn kitesail_skirmisher_lifts_a_same_defender_attacker() {
     assert!(flies(&g, bear), "same defender");
     assert!(!flies(&g, giant), "another defender");
 }
+
+/// CR 712 — Conqueror's Galleon attacks crewed, and at end of combat comes
+/// back transformed as Conqueror's Foothold.
+#[test]
+fn conquerors_galleon_lands_as_a_foothold() {
+    let mut g = pod(2);
+    let ship = ready(&mut g, 0, catalog::conquerors_galleon());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::BeginCombat;
+    g.perform_action(GameAction::Crew { vehicle: ship, crew_creatures: vec![giant, bear] }).expect("crew 4");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ship, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+        drain_stack(&mut g);
+    }
+    let foothold = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Conqueror's Foothold");
+    assert!(foothold.is_some(), "CR 712 — the Galleon returns transformed as Conqueror's Foothold");
+}

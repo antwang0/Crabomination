@@ -227,3 +227,56 @@ pub fn kitesail_skirmisher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Conqueror's Galleon // Conqueror's Foothold — {4} 2/10 Vehicle, crew 4.
+/// When it attacks, exile it at end of combat, then return it to the
+/// battlefield transformed under your control. Back: a land — {T}: {C};
+/// {2},{T}: draw, then discard; {4},{T}: draw; {6},{T}: return target card
+/// from your graveyard to your hand.
+pub fn conquerors_galleon() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement as R, Value};
+    use crate::effect::{ManaPayload, PlayerRef, Selector, ZoneDest};
+    let draw = || Effect::Draw { who: Selector::You, amount: Value::ONE };
+    let tap = |mana: u32, effect: Effect| ActivatedAbility {
+        mana_cost: cost(&[generic(mana)]),
+        tap_cost: true,
+        effect,
+        ..Default::default()
+    };
+    let foothold = CardDefinition {
+        name: "Conqueror's Foothold",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            tap(2, Effect::Seq(vec![draw(), Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }])),
+            tap(4, draw()),
+            tap(
+                6,
+                Effect::Move {
+                    what: crate::effect::shortcut::target_filtered(R::InGraveyard.and(R::OwnedByYou)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ),
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Conqueror's Galleon",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 2,
+        toughness: 10,
+        keywords: vec![Keyword::Crew(4)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat { body: Box::new(Effect::ExileSelfReturnTransformed) },
+        }],
+        back_face: Some(Box::new(foothold)),
+        ..Default::default()
+    }
+}
