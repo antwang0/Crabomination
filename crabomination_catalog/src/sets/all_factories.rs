@@ -17575,6 +17575,10 @@ static DECKS: &[Factory] = &[
     super::decks::arc_spitter,
     super::decks::goblin_javelineer,
     super::decks::tormentors_helm,
+    super::decks::pack_guardian,
+    super::decks::witchstalker,
+    super::decks::primal_adversary,
+    super::decks::somberwald_alpha,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

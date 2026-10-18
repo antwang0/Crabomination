@@ -2240,3 +2240,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Tetsuo, Imperial Champion | N reads every permanent attached to Tetsuo (an Aura's mana value counts, not only Equipment) | `HighestManaValueAmong(AttachedToMe(This))` |
 | 🟡 Wicked Slumber | with two targets the two stun counters go one each; "both on either" isn't offered | `ApplyToTargets` + `If(count(AllTargets) <= 1)` |
 | 🟡 Arc Spitter | the granted ping may also aim at a creature the wearer is blocking, not only one blocking it | `R::BlockingOrBlockedBySource` |
+| 🟡 Primal Adversary | each payment animates its land at once (not "up to that many target lands" after all payments) | `MayPayRepeatedly` + `ChooseSomeAmong` + `BecomeCreature` |

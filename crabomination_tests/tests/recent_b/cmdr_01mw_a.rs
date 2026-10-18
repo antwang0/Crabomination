@@ -845,3 +845,32 @@ fn becomes_blocked_triggers_find_the_blocker_and_defender() {
     assert_eq!(g.battlefield_find(wall).unwrap().damage, 1, "Javelineer's ping");
     assert_eq!([g.players[1].life, g.players[2].life], [lives[0], lives[1] - 1], "the Helm hits the defender");
 }
+
+/// Primal Adversary paid twice: two +1/+1 counters and two Forests standing
+/// up as 3/3 haste Wolves that are still lands.
+#[test]
+fn primal_adversary_wakes_lands_per_payment() {
+    use crabomination::card::CardType;
+    let mut g = pod(2);
+    let lands: Vec<_> = (0..3).map(|_| ready(&mut g, 0, catalog::forest())).collect();
+    let pa = g.add_card_to_hand(0, catalog::primal_adversary());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![lands[0]]),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![lands[1]]),
+        DecisionAnswer::Bool(false),
+    ]));
+    cast(&mut g, pa);
+    assert_eq!(g.battlefield_find(pa).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    let wolves = lands
+        .iter()
+        .filter(|&&l| {
+            let cp = g.computed_permanent(l).unwrap();
+            cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Land) && cp.power == 3
+        })
+        .count();
+    assert_eq!(wolves, 2);
+}

@@ -1780,3 +1780,140 @@ pub fn tormentors_helm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn wolf_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        colors: vec![crate::mana::Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Pack Guardian — {2}{G}{G} 4/3 flash Wolf Spirit. When it enters, you may
+/// discard a land card; if you do, a 2/2 green Wolf.
+pub fn pack_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Pack Guardian",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf, CreatureType::Spirit], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::MayDiscardMatching {
+            description: "Discard a land card to create a 2/2 Wolf?".into(),
+            count: Value::ONE,
+            filter: R::Land,
+            then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(wolf_token()) }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Witchstalker — {1}{G}{G} 3/3 hexproof Wolf. Whenever an opponent casts a
+/// blue or black spell during your turn, a +1/+1 counter on it.
+pub fn witchstalker() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Witchstalker",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasColor(Color::Blue).or(R::HasColor(Color::Black)),
+                },
+            ])),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Primal Adversary — {2}{G} 4/3 trample Wolf. When it enters, you may pay
+/// {1}{G} any number of times; each payment puts a +1/+1 counter on it and
+/// makes a land you control a 3/3 haste Wolf creature that's still a land.
+pub fn primal_adversary() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::{choose_some_then, chosen_one};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Primal Adversary",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::MayPayRepeatedly {
+            who: PlayerRef::You,
+            description: "Pay {1}{G} for a +1/+1 counter and a 3/3 Wolf land?".into(),
+            mana_cost: cost(&[generic(1), g()]),
+            body: Box::new(Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                choose_some_then(
+                    Selector::EachPermanent(R::Land.and(R::Not(Box::new(R::Creature))).and(R::ControlledByYou)),
+                    PlayerRef::You,
+                    Value::ONE,
+                    true,
+                    Effect::BecomeCreature {
+                        what: chosen_one(),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Wolf],
+                        keywords: vec![Keyword::Haste],
+                        duration: Duration::Permanent,
+                    },
+                ),
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Somberwald Alpha — {3}{G} 3/2 Wolf. A creature you control becoming
+/// blocked gets +1/+1 until end of turn. {1}{G}: target creature you control
+/// gains trample until end of turn.
+pub fn somberwald_alpha() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Somberwald Alpha",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
