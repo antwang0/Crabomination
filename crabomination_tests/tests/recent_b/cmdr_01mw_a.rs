@@ -733,3 +733,49 @@ fn master_the_way_counts_the_hand_after_drawing() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "two Forests plus the draw");
 }
+
+/// Divine Congregation counts the target player's creatures (2 life each).
+#[test]
+fn divine_congregation_counts_the_target_players_creatures() {
+    let mut g = pod(3);
+    for _ in 0..3 {
+        ready(&mut g, 2, catalog::grizzly_bears());
+    }
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let dc = g.add_card_to_hand(0, catalog::divine_congregation());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: dc, target: Some(Target::Player(2)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 6);
+}
+
+/// Pardic Dragon: an opponent's spell while it's suspended lets that player
+/// add a time counter.
+#[test]
+fn pardic_dragon_opponents_may_delay_it() {
+    let mut g = pod(2);
+    let pd = g.add_card_to_hand(0, catalog::pardic_dragon());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.perform_action(GameAction::Suspend { card_id: pd }).expect("suspend");
+    let time = |g: &GameState| g.exile.iter().find(|c| c.id == pd).map(|c| c.counter_count(CounterType::Time));
+    assert_eq!(time(&g), Some(2));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::shock());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("shock");
+    let pardic_triggers = g
+        .stack
+        .iter()
+        .filter(|si| matches!(si, crabomination::game::types::StackItem::Trigger { source, .. } if *source == pd))
+        .count();
+    assert_eq!(pardic_triggers, 1, "one trigger per opponent spell");
+    drain_stack(&mut g);
+    assert_eq!(time(&g), Some(3));
+}

@@ -17563,6 +17563,9 @@ static DECKS: &[Factory] = &[
     super::decks::glacial_wall,
     super::decks::wall_of_mist,
     super::decks::biolume_egg,
+    super::decks::divine_congregation,
+    super::decks::ivory_giant,
+    super::decks::pardic_dragon,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

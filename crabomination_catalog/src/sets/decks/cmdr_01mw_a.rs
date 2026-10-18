@@ -1500,3 +1500,71 @@ pub fn biolume_egg() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Divine Congregation — {3}{W} sorcery. You gain 2 life for each creature
+/// target player controls. Suspend 5—{1}{W}.
+pub fn divine_congregation() -> CardDefinition {
+    CardDefinition {
+        name: "Divine Congregation",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Suspend(5, cost(&[generic(1), w()]))],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Sum(vec![
+                Value::count(Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature }),
+                Value::count(Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature }),
+            ]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ivory Giant — {5}{W}{W} 3/4 Giant. When it enters, tap all nonwhite
+/// creatures. Suspend 5—{W}.
+pub fn ivory_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Ivory Giant",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Suspend(5, cost(&[w()]))],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::HasColor(crate::mana::Color::White))))),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pardic Dragon — {4}{R}{R} 4/4 flying Dragon; {R}: +1/+0 until end of turn.
+/// Suspend 2—{R}{R}. Whenever an opponent casts a spell while it's suspended,
+/// that player may put a time counter on it.
+pub fn pardic_dragon() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Pardic Dragon",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Suspend(2, cost(&[r(), r()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).while_suspended(),
+            effect: Effect::MayDoBy {
+                who: PlayerRef::Triggerer,
+                description: "Put a time counter on the suspended Pardic Dragon?".into(),
+                body: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::Time, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
