@@ -25146,6 +25146,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WYLL_COMMANDERS,
             main: decks::WYLL_MAIN,
         },
+        // Seat 4116: Obeka, Brute Chronologist's EDHREC average deck. `--pod-decks 4116`.
+        PodDeck {
+            name: "Obeka, Brute Chronologist (UBR)",
+            commanders: decks::OBEKA_2_COMMANDERS,
+            main: decks::OBEKA_2_MAIN,
+        },
+        // Seat 4117: Araumi of the Dead Tide's EDHREC average deck. `--pod-decks 4117`.
+        PodDeck {
+            name: "Araumi of the Dead Tide (UB)",
+            commanders: decks::ARAUMI_OF_THE_DEAD_TIDE_COMMANDERS,
+            main: decks::ARAUMI_OF_THE_DEAD_TIDE_MAIN,
+        },
+        // Seat 4118: Gandalf of the Secret Fire's EDHREC average deck. `--pod-decks 4118`.
+        PodDeck {
+            name: "Gandalf of the Secret Fire (WUR)",
+            commanders: decks::GANDALF_OF_THE_SECRET_FIRE_COMMANDERS,
+            main: decks::GANDALF_OF_THE_SECRET_FIRE_MAIN,
+        },
+        // Seat 4119: Giott, King of the Dwarves's EDHREC average deck. `--pod-decks 4119`.
+        PodDeck {
+            name: "Giott, King of the Dwarves (WR)",
+            commanders: decks::GIOTT_COMMANDERS,
+            main: decks::GIOTT_MAIN,
+        },
     ]
 }
 
@@ -31156,6 +31180,10 @@ mod tests {
             ("Sivriss, Nightmare Speaker and Haunted One", &[0x1A27]),
             ("The Eighth Doctor and Adric, Mathematical Genius", &[0x1A28]),
             ("Wyll, Blade of Frontiers and Haunted One", &[0x1A29]),
+            ("Obeka, Brute Chronologist", &[0x1A2A]),
+            ("Araumi of the Dead Tide", &[0x1A2B]),
+            ("Gandalf of the Secret Fire", &[0x1A2C]),
+            ("Giott, King of the Dwarves", &[0x1A2D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

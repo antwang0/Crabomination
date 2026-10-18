@@ -115429,3 +115429,118 @@ pub const WYLL_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const OBEKA_2_COMMANDERS: &[CardFactory] = &[obeka_brute_chronologist];
+
+/// **Obeka, Brute Chronologist**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 5 Islands + 7 Mountains + 4 Swamps = 99.
+/// Obeka, Brute Chronologist (EDHREC, fetched 2026-10-18).
+pub const OBEKA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, izzet_signet, lightning_greaves, mimic_vat, rakdos_signet,
+    sol_ring, sundial_of_the_infinite, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, blood_crypt, bloodstained_mire,
+    command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    izzet_boilerworks, luxury_suite, morphic_pool, polluted_delta, rakdos_carnarium,
+    scalding_tarn, shivan_reef, steam_vents, sulfur_falls, sunken_hollow, training_center,
+    watery_grave, xanders_lounge, apprentice_necromancer, araumi_of_the_dead_tide,
+    avaricious_dragon, etali_primal_storm, feldon_of_the_third_path, firbolg_flutist,
+    hellkite_courser, identity_thief, ilharg_the_raze_boar, jaxis_the_troublemaker,
+    kiki_jiki_mirror_breaker, mulldrifter, nightscape_familiar, orthion_hero_of_lavabrink,
+    puppeteer_clique, purphoros_bronze_blooded, rionya_fire_dancer, saheeli_the_suns_brilliance,
+    sedris_the_traitor_king, solemn_simulacrum, starwinder, the_master_multiplied,
+    zara_renegade_recruiter, fable_of_the_mirror_breaker, flameshadow_conjuring, mirror_march,
+    psychic_vortex, sneak_attack, an_offer_you_cant_refuse, arcane_denial, cauldron_dance,
+    chaos_warp, counterspell, discontinuity, fact_or_fiction, final_fortune, frantic_search,
+    glorious_end, negate, terminate, alchemists_gambit, blasphemous_act, come_back_wrong,
+    faithless_looting, hate_mirage, ideas_unbound, last_chance, reanimate, red_suns_twilight,
+    warriors_oath, windfall,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp,
+];
+
+pub const ARAUMI_OF_THE_DEAD_TIDE_COMMANDERS: &[CardFactory] = &[araumi_of_the_dead_tide];
+
+/// **Araumi of the Dead Tide**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Islands + 12 Swamps = 99.
+/// Araumi of the Dead Tide (EDHREC, fetched 2026-10-18).
+pub const ARAUMI_OF_THE_DEAD_TIDE_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, dimir_signet, lightning_greaves, mind_stone,
+    perpetual_timepiece, sol_ring, swiftfoot_boots, talisman_of_dominance, bojuka_bog,
+    choked_estuary, command_tower, darkwater_catacombs, dimir_aqueduct, drowned_catacomb,
+    evolving_wilds, morphic_pool, nephalia_drownyard, polluted_delta, shipwreck_marsh,
+    sunken_hollow, tainted_isle, underground_river, watery_grave, accursed_marauder,
+    agent_of_treachery, archaeomancer, archon_of_cruelty, baleful_strix, cloud_of_faeries,
+    demons_disciple, deranged_assistant, fallaji_archaeologist, fleshbag_marauder,
+    floating_dream_zubera, grave_titan, gray_merchant_of_asphodel, gyruda_doom_of_depths,
+    hedron_crab, junji_the_midnight_sky, massacre_wurm, millikin, mire_triton, mulldrifter,
+    peregrine_drake, plaguecrafter, ravenous_chupacabra, reef_worm, sepulchral_primordial,
+    solemn_simulacrum, stitchers_supplier, syr_konrad_the_grim, undead_butler, vile_entomber,
+    vindictive_lich, vizier_of_tumbling_sands, vohar_vodalian_desecrator, cemetery_tampering,
+    ripples_of_undeath, teferis_veil, an_offer_you_cant_refuse, arcane_denial, counterspell,
+    entomb, fact_or_fiction, forbidden_alchemy, frantic_search, negate, songs_of_the_damned,
+    thought_scour, buried_alive, dread_return, feed_the_swarm, living_death, reanimate,
+    victimize, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GANDALF_OF_THE_SECRET_FIRE_COMMANDERS: &[CardFactory] = &[gandalf_of_the_secret_fire];
+
+/// **Gandalf of the Secret Fire**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Islands + 5 Mountains + 4 Plains = 99.
+/// Gandalf of the Secret Fire (EDHREC, fetched 2026-10-18).
+pub const GANDALF_OF_THE_SECRET_FIRE_MAIN: &[CardFactory] = &[
+    arcane_signet, glamdring_foe_hammer, izzet_signet, sol_ring, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, thought_vessel, battlefield_forge,
+    clifftop_retreat, command_tower, deserted_beach, exotic_orchard, glacial_fortress,
+    hallowed_fountain, mystic_monastery, prairie_stream, raugrin_triome, reliquary_tower,
+    sacred_foundry, sea_of_clouds, shivan_reef, spectator_seating, steam_vents,
+    stormcarved_coast, sulfur_falls, training_center, archmage_emeritus, archmage_of_runes,
+    gandalf_the_grey, gandalf_friend_of_the_shire, gandalf_goblins_bane, goblin_electromancer,
+    guttersnipe, jhoiras_timebug, kykar_winds_fury, monastery_mentor, storm_kiln_artist,
+    stormcatch_mentor, talrand_sky_summoner, time_beetle, vega_the_watcher, wizards_of_thay,
+    young_pyromancer, as_foretold, fiery_inscription, leyline_of_anticipation,
+    rite_of_the_dragoncaller, thousand_year_storm, whirlwind_of_thought, archmages_charm,
+    borne_upon_a_wind, boros_charm, brainstorm, chaos_warp, clockspinning, consider,
+    counterspell, courageous_resolve, delayed_blast_fireball, display_of_power, dust_of_moments,
+    flame_of_anor, frantic_search, fury_charm, generous_gift, lightning_bolt, mystic_confluence,
+    olorins_searing_light, opt, path_to_exile, press_the_enemy, prismari_command,
+    swords_to_plowshares, teferi_time_raveler, all_of_history_all_at_once, blasphemous_act,
+    call_forth_the_tempest, fell_beasts_shriek, gandalfs_sanction, ponder, preordain,
+    sorcerous_squall, wibbly_wobbly_timey_wimey,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains,
+];
+
+pub const GIOTT_COMMANDERS: &[CardFactory] = &[giott_king_of_the_dwarves];
+
+/// **Giott, King of the Dwarves**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Mountains + 11 Plains = 99.
+/// Giott, King of the Dwarves (EDHREC, fetched 2026-10-18).
+pub const GIOTT_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, beamtown_beatstick, bearded_axe, bloodforged_battle_axe,
+    boros_signet, colossus_hammer, diamond_pick_axe, dwarven_hammer, dwarven_mattock,
+    dwarven_shortsword, goldvein_pick, hammer_of_nazahn, loxodon_warhammer,
+    masterwork_of_ingenuity, monument_to_endurance, orcrist_goblin_cleaver, sol_ring,
+    swiftfoot_boots, sword_of_the_animist, talisman_of_conviction, the_reaver_cleaver,
+    axgard_armory, battlefield_forge, clifftop_retreat, command_tower, dwarven_mine,
+    furycalm_snarl, iron_hills, mines_of_moria, path_of_ancestry, rogues_passage,
+    rugged_prairie, sacred_foundry, sundown_pass, the_lonely_mountain, balin_loremaster,
+    bifur_melodic_rider, bofur_reliable_guardian, bruenor_battlehammer, duergar_hedge_mage,
+    dwalin_weaponmaster, dwarven_recruiter, dain_ironfoot, dains_company,
+    dain_lord_of_the_iron_hills, fili_and_kili_joyous, fili_the_pathfinder,
+    gimli_of_the_glittering_caves, gloin_the_mighty, gloin_dwarf_emissary, koll_the_forgemaster,
+    kili_the_resourceful, magda_brazen_outlaw, plundering_barbarian, puresteel_paladin,
+    reyav_master_smith, sram_senior_edificer, thorin_oakenshield, thorin_king_of_durins_folk,
+    thorin_mountain_king, an_unexpected_party, fighter_class, forge_anew, sigardas_aid,
+    armed_and_armored, boros_charm, chaos_warp, dispatch, inventory_management, path_to_exile,
+    swords_to_plowshares, blasphemous_act, open_the_armory, reckless_crew, sevinnes_reclamation,
+    steelshapers_gift,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
