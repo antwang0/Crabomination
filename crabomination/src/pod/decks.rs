@@ -116808,3 +116808,61 @@ pub const LAEZEL_6_MAIN: &[CardFactory] = &[
     island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const HULK_5_COMMANDERS: &[CardFactory] = &[hulk_gamma_goliath];
+
+/// **Hulk, Gamma Goliath**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 10 Mountains = 99.
+/// Hulk, Gamma Goliath (EDHREC, fetched 2026-10-18).
+pub const HULK_5_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, lightning_greaves, sol_ring, swiftfoot_boots,
+    the_earth_crystal, the_fire_crystal, avengers_tower, cinder_glade, command_tower,
+    exotic_orchard, game_trail, los_diablos_missile_base, rockfall_vale, rogues_passage,
+    rootbound_crag, spire_garden, stomping_ground, training_compound,
+    abomination_irradiated_brute, abomination_terrifying_titan, doc_samson_super_psychiatrist,
+    gamma_grotesque, goblin_anarchomancer, goliath_mass_manipulator, hercules_prince_of_power,
+    hulk_always_angry, hulk_brutal_brawler, hulk_strongest_there_is, human_torch_johnny_storm,
+    iron_fist_hero_for_hire, jack_of_hearts_volatile_hero, loki_laufeyson,
+    mister_hyde_monster_within, molly_hayes_runaway, pet_avengers, quicksilver_brash_blur,
+    quinjet_technician, red_hulk, serpent_specialist, shang_chi_martial_mentor,
+    she_hulk_jade_defender, she_hulk_wallbreaker, the_thing_ben_grimm, ultron_drone,
+    viv_vision_teen_synthezoid, volcanic_villain, white_tiger_ava_ayala,
+    wonder_man_hollywood_hero, advancing_the_spirit, branching_evolution, garruks_uprising,
+    hardened_scales, rhythm_of_the_wild, super_strength, training_regimen, world_war_hulk,
+    beast_within, chaos_warp, hulk_smash, heroic_intervention, inspiring_call, punishing_punch,
+    return_of_the_wildspeaker, snakeskin_veil, team_tactics, blasphemous_act, cultivate,
+    epic_fight, farseek, hulks_thunderclap, kodamas_reach, natures_lore, rampant_growth,
+    restorative_technique, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const ABOMINATION_3_COMMANDERS: &[CardFactory] = &[abomination_terrifying_titan];
+
+/// **Abomination, Terrifying Titan**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Mountains = 99.
+/// Abomination, Terrifying Titan (EDHREC, fetched 2026-10-18).
+pub const ABOMINATION_3_MAIN: &[CardFactory] = &[
+    arcane_signet, boxing_ring, power_fist, sol_ring, swiftfoot_boots, talisman_of_impulse,
+    the_great_henge, the_ozolith, boseiju_who_endures, cinder_glade, command_tower,
+    fabled_passage, grove_of_the_burnwillows, gruul_turf, reliquary_tower, rockfall_vale,
+    rogues_passage, rootbound_crag, rugged_highlands, skarrg_the_rage_pits, spire_garden,
+    stomping_ground, abomination_irradiated_brute, abomination_world_ravager, duskshell_crawler,
+    elvish_piper, etali_primal_storm, forgotten_ancient, gamma_grotesque, goblin_anarchomancer,
+    goreclaw_terror_of_qal_sisma, halana_and_alena, hulk_always_angry, hulk_brutal_brawler,
+    hulk_gamma_goliath, hulk_strongest_there_is, kogla_the_titan_ape, llanowar_elves,
+    llanowar_tribe, neyith_of_the_dire_hunt, ojer_kaslem_deepest_growth, quartzwood_crasher,
+    red_hulk, rhino_terrible_trampler, ruby_daring_tracker, she_hulk_jade_defender,
+    she_hulk_wallbreaker, vigor, xenagos_god_of_revels, claim_the_kingdom, fight_rigging,
+    garruks_uprising, hardened_scales, level_up, rhythm_of_the_wild, unnatural_growth,
+    beast_within, deflecting_swat, giant_growth, hulk_smash, natures_claim, ram_through,
+    snakeskin_veil, strength_of_will, temur_battle_rage, blasphemous_act, chandras_ignition,
+    cultivate, epic_fight, farseek, jeskas_will, natures_lore, overwhelming_stampede,
+    rampant_growth, rishkars_expertise, three_visits, turntimber_symbiosis,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

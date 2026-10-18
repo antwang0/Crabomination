@@ -25440,6 +25440,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LAEZEL_6_COMMANDERS,
             main: decks::LAEZEL_6_MAIN,
         },
+        // Seat 4165: Hulk, Gamma Goliath's EDHREC average deck. `--pod-decks 4165`.
+        PodDeck {
+            name: "Hulk, Gamma Goliath (RG)",
+            commanders: decks::HULK_5_COMMANDERS,
+            main: decks::HULK_5_MAIN,
+        },
+        // Seat 4166: Abomination, Terrifying Titan's EDHREC average deck. `--pod-decks 4166`.
+        PodDeck {
+            name: "Abomination, Terrifying Titan (RG)",
+            commanders: decks::ABOMINATION_3_COMMANDERS,
+            main: decks::ABOMINATION_3_MAIN,
+        },
     ]
 }
 
@@ -31499,6 +31511,8 @@ mod tests {
             ("The Thirteenth Doctor and Jamie McCrimmon", &[0x1A58]),
             ("Lae'zel, Vlaakith's Champion and Scion of Halaster", &[0x1A59]),
             ("Lae'zel, Vlaakith's Champion and Sword Coast Sailor", &[0x1A5A]),
+            ("Hulk, Gamma Goliath", &[0x1A5B]),
+            ("Abomination, Terrifying Titan", &[0x1A5C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
