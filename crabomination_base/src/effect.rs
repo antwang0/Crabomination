@@ -7966,6 +7966,9 @@ pub enum Effect {
     /// `granted_activated_eot`, so it activates through the normal
     /// graveyard-ability path and is cleared at cleanup.
     GrantEmbalmThisTurn { what: Selector },
+    /// CR 702.141 — "[card] gains encore until end of turn. The encore cost
+    /// is equal to its mana cost" (Araumi of the Dead Tide).
+    GrantEncoreThisTurn { what: Selector },
     /// "Target instant/sorcery card in your graveyard gains harmonize until
     /// end of turn; its harmonize cost equals its mana cost" (Songcrafter
     /// Mage). Stamps an until-end-of-turn `granted_harmonize_eot` (= the

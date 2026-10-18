@@ -22791,6 +22791,9 @@ impl GameState {
             // "Exile X cards from your graveyard:" costs read the activation's X.
             let count = if ability.exile_other_x {
                 x_value.unwrap_or(0) as usize
+            } else if let Some(v) = &ability.exile_other_count {
+                let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
+                self.evaluate_value(v, &ctx).max(0) as usize
             } else {
                 *count as usize
             };
@@ -22803,11 +22806,17 @@ impl GameState {
             } else {
                 filter
             };
+            // CR 601.2c — targets are chosen before costs are paid: a cost
+            // never eats its own ability's target (Araumi's graveyard card).
+            let targeted = |id: CardId| {
+                matches!(target, Some(Target::Permanent(t)) if t == id)
+                    || additional_targets.iter().any(|t| matches!(t, Target::Permanent(t) if *t == id))
+            };
             let matches_in = |seat: usize| -> Vec<CardId> {
                 self.players[seat]
                     .graveyard
                     .iter()
-                    .filter(|c| c.id != card_id)
+                    .filter(|c| c.id != card_id && !targeted(c.id))
                     .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                     .map(|c| c.id)
                     .collect()

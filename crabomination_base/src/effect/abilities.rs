@@ -4635,6 +4635,11 @@ pub struct ActivatedAbility {
     /// costs — Necropolis Fiend's "-X/-X".
     #[serde(default)]
     pub exile_other_x: bool,
+    /// `exile_other_filter`'s count is this value, read as the ability is
+    /// activated ("Exile cards from your graveyard equal to the number of
+    /// opponents you have" — Araumi of the Dead Tide, `Value::OpponentCount`).
+    #[serde(default)]
+    pub exile_other_count: Option<Value>,
     /// When true, `exile_other_filter` names the *top* matching card of the
     /// graveyard rather than any of them ("Exile the top creature card of your
     /// graveyard:" — Necratog, Zombie Scavengers). The graveyard is ordered,

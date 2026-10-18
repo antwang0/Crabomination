@@ -2019,6 +2019,7 @@ impl Effect {
             | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
+            | Effect::GrantEncoreThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::GrantMiracleReduced { what, .. }
@@ -2907,6 +2908,7 @@ impl Effect {
             | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
             | Effect::GrantEmbalmThisTurn { what }
+            | Effect::GrantEncoreThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::GrantMiracleReduced { what, .. }
@@ -3952,6 +3954,7 @@ impl Effect {
             | Effect::GrantEscapeThisTurn { .. }
             | Effect::GrantEscapeWithCostThisTurn { .. }
             | Effect::GrantEmbalmThisTurn { .. }
+            | Effect::GrantEncoreThisTurn { .. }
             | Effect::GrantHarmonizeThisTurn { .. } => true,
             // "Return target Aura card from your graveyard" — the pick only
             // ever lives in a graveyard (Hakim, Iridescent Drake).
@@ -5557,6 +5560,7 @@ impl Effect {
                 | Effect::GrantEscapeThisTurn { what, .. }
             | Effect::GrantEscapeWithCostThisTurn { what, .. }
                 | Effect::GrantEmbalmThisTurn { what }
+                | Effect::GrantEncoreThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::GrantMiracleReduced { what, .. }
                 | Effect::Exile { what }

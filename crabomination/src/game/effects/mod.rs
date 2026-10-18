@@ -15583,6 +15583,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantEncoreThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_card_id()
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        let ability = crate::effect::shortcut::encore(card.definition.cost.clone());
+                        card.granted_activated_eot.push(ability);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantEmbalmThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_card_id()
