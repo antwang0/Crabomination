@@ -2502,6 +2502,8 @@ impl GameState {
             let cid = c.id;
             self.exile.push(c);
             events.push(GameEvent::PermanentExiled { card_id: cid });
+            // Chainable: Kotose's "you may play one of the exiled cards".
+            self.scratch.last_moved_cards.push(cid);
         }
         for cid in from_gy {
             self.note_exiled_from_graveyard(owner, cid, events);
