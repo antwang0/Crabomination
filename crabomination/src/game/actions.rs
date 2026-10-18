@@ -23736,13 +23736,16 @@ impl GameState {
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
         if let Some((kinds, count, filter)) = counter_drain_cost(ability) {
-            let have: u32 = self
+            let mut have: u32 = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
                 .filter(|c| self.evaluate_requirement_static_on(&filter, c, p, Some(card_id)))
                 .map(|c| drainable_counters(c, kinds.as_deref()))
                 .sum();
+            if ability.remove_counter_among_or_suspended {
+                have += self.suspended_drainable_counters(p, kinds.as_deref());
+            }
             if have < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -25125,6 +25128,9 @@ impl GameState {
             // for a guaranteed no-op.
             picks.sort_by_key(|(cid, pw)| (*cid == card_id, *pw));
             let mut left = count;
+            if ability.remove_counter_among_or_suspended {
+                left -= self.drain_suspended_counters(p, kinds.as_deref(), left, events);
+            }
             for (cid, _) in picks {
                 if left == 0 { break; }
                 if let Some(c) = self.battlefield.find_by_id_mut(cid) {

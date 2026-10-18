@@ -4988,6 +4988,12 @@ pub struct ActivatedAbility {
     #[serde(default)]
     pub remove_counter_among_kinds:
         Option<(Vec<crate::card::CounterType>, u32, SelectionRequirement)>,
+    /// With `remove_counter_among_filter`: "… from a permanent you control
+    /// **or suspended card you own**" (Rift Elemental) — time counters on the
+    /// activator's suspended cards in exile count and pay too, drained first
+    /// (`game/suspended_counter_cost.rs`; the last one casts the card).
+    #[serde(default)]
+    pub remove_counter_among_or_suspended: bool,
     /// True if activating this ability returns the source permanent to its
     /// owner's hand as part of the cost (CR 602.5b "Return this … to its
     /// owner's hand:" cost lines). The bounce happens after tap/mana/life
