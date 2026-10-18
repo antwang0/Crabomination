@@ -935,6 +935,7 @@ impl Effect {
             | Effect::LockOpponentsManaValueUntilYourNextTurn { .. }
             | Effect::DamageToPlayersAndBattlesPlusThisTurn { .. }
             | Effect::ClearLastMoved
+            | Effect::NoteSpentManaTypeOnSource
             | Effect::LicidDetach
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SearchAnyNumber { .. }

@@ -12491,6 +12491,11 @@ pub enum Effect {
     /// `WhenTargetDealsCombatDamageToPlayerThisTurn`, firing once (Optimus
     /// Prime, Autobot Leader's bolstered creature, bound by a `ForEach`).
     WhenObjectDealsCombatDamageToPlayerThisTurn { what: Selector, body: Box<Effect> },
+    /// "Note the type of mana spent to pay this activation cost" (Jeweled
+    /// Amulet): stamps the source's `chosen_color` with the color the
+    /// activation spent, or clears it when the mana was colorless, so a
+    /// `ManaPayload::ChosenColorOfSource` ability adds that type back.
+    NoteSpentManaTypeOnSource,
 
     /// "Until end of turn, whenever a creature you control dies, [body]."
     /// Registers a turn-scoped delayed trigger (CR 603.4) that fires once per

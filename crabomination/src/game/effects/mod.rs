@@ -35682,6 +35682,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NoteSpentManaTypeOnSource => {
+                let color = ctx.mana_spent_by_color.iter().filter(|(_, n)| *n > 0).max_by_key(|(_, n)| *n).map(|(c, _)| *c);
+                if let Some(src) = ctx.source
+                    && let Some(c) = self.battlefield_find_mut(src)
+                {
+                    c.chosen_color = color;
+                }
+                Ok(())
+            }
+
             Effect::WhenObjectDealsCombatDamageToPlayerThisTurn { what, body } => {
                 let watched: Vec<crate::card::CardId> =
                     self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
