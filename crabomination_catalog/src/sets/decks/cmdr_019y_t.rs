@@ -552,3 +552,64 @@ pub fn synthesis_pod() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wizard's Spellbook — {5}{U}{U} artifact — Book. {T}: exile target instant
+/// or sorcery card from a graveyard, then roll a d20 (sorcery speed). 1–9:
+/// copy it, you may cast the copy; 10–19: you may cast the copy by paying {1}
+/// rather than its mana cost; 20: copy each card exiled with this and cast any
+/// number of the copies without paying their mana costs (CR 707.12).
+pub fn wizards_spellbook() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, Zone};
+    use crate::effect::ZoneRef;
+    let it = || Selector::Target(0);
+    CardDefinition {
+        name: "Wizard's Spellbook",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Book], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::ExileWithSource {
+                    what: crate::effect::shortcut::target_filtered(
+                        R::InGraveyard.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                    ),
+                },
+                Effect::RollDie {
+                    sides: 20,
+                    count: Value::ONE,
+                    modifier: Value::ZERO,
+                    reroll_at_most: 0,
+                    ignore_lowest: 0,
+                    on_doubles: None,
+                    results: vec![
+                        (
+                            1,
+                            9,
+                            Effect::CastWithoutPayingImmediate {
+                                what: it(),
+                                source_zone: Zone::Exile,
+                                exile_after: false,
+                                copy: true,
+                                reduce_generic: 0,
+                                pay_own_cost: true,
+                            },
+                        ),
+                        (10, 19, Effect::CastCopyForCost { what: it(), source_zone: Zone::Exile, cost: cost(&[generic(1)]) }),
+                        (
+                            20,
+                            20,
+                            Effect::CopyCardsAndCastFreeUpTo {
+                                what: Selector::EachMatching { zone: ZoneRef::Exile, filter: R::ExiledWithSource },
+                                max: u32::MAX,
+                            },
+                        ),
+                    ],
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -584,3 +584,24 @@ fn synthesis_pod_turns_a_spell_into_the_next_mana_value() {
     assert_eq!(b.controller, 0);
     assert_eq!(g.players[1].library.len(), 2, "the forest shuffled back with the giant");
 }
+
+/// CR 706 / 707.12 — Wizard's Spellbook exiles the Lightning Bolt in my
+/// graveyard and rolls 15: the copy is cast for {1}, dealing 3; the card
+/// stays exiled with the Book.
+#[test]
+fn wizards_spellbook_casts_a_copy_for_one() {
+    let mut g = pod(2);
+    let book = ready(&mut g, 0, catalog::wizards_spellbook());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(15), DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: book, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap the Book");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(book)), "exiled with the Book");
+    assert_eq!(g.players[1].life, life - 3, "the copy resolved");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{1}} paid");
+}

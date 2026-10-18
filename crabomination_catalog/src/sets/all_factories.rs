@@ -1552,6 +1552,7 @@ static DECKS: &[Factory] = &[
     super::decks::brine_comber,
     super::decks::scientist_supreme_of_a_i_m,
     super::decks::synthesis_pod,
+    super::decks::wizards_spellbook,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
