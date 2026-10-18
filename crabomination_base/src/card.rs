@@ -1107,6 +1107,8 @@ pub enum CounterType {
     Music,
     /// Evelyn, the Covetous's collection counters, on the cards she exiles.
     Collection,
+    /// Flamewar, Streetwise Operative's intel counters, on its face-down exiles.
+    Intel,
     /// The Dragon-Kami Reborn's hatching counters on its face-down exiles
     /// (Dragon-Kami's Egg casts creature spells from among them).
     Hatching,
