@@ -949,3 +949,19 @@ fn infinite_coursework_shuts_a_creature_down() {
     g.do_untap();
     assert!(g.battlefield_find(angel).unwrap().tapped, "doesn't untap");
 }
+
+/// Jetfire turns two +1/+1 counters into two artifact-only {C} and converts.
+#[test]
+fn jetfire_cashes_counters_into_mana_and_converts() {
+    let mut g = pod(2);
+    let jf = ready(&mut g, 0, catalog::jetfire_ingenious_scientist());
+    g.battlefield_find_mut(jf).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: jf, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2), mode: None })
+        .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "spend-restricted colorless");
+    let c = g.battlefield_find(jf).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(c.definition.name, "Jetfire, Air Guardian");
+}

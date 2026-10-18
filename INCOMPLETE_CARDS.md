@@ -2242,3 +2242,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Arc Spitter | the granted ping may also aim at a creature the wearer is blocking, not only one blocking it | `R::BlockingOrBlockedBySource` |
 | 🟡 Primal Adversary | each payment animates its land at once (not "up to that many target lands" after all payments) | `MayPayRepeatedly` + `ChooseSomeAmong` + `BecomeCreature` |
 | 🟡 Alhammarret, High Arbiter | the name is any nonland card, not one revealed from the opponents' hands (no reveal step) | `NameCard { restrict_to: Nonland }` + `OpponentsCantCastNamed` |
+| 🟡 Jetfire, Ingenious Scientist | the {C} goes to Jetfire's controller (no "target player"), and is artifact-only for abilities too (`ArtifactOnly`), where the card only bars nonartifact spells | `remove_counter_among_x` + `ManaPayload::Restricted` |

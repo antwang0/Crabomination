@@ -2233,3 +2233,60 @@ pub fn madame_web_clairvoyant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Jetfire, Ingenious Scientist // Jetfire, Air Guardian — {4}{U} legendary
+/// 3/4 flying Robot; More Than Meets the Eye {3}{U}. Remove X ≥ 1 +1/+1
+/// counters from among your artifacts: add X {C} that can't cast nonartifact
+/// spells, then convert. Back: 3/4 flying living-metal Vehicle; {U}{U}{U}:
+/// convert, then adapt 3.
+pub fn jetfire_ingenious_scientist() -> CardDefinition {
+    use crate::card::{ActivatedAbility, AlternativeCost, ArtifactSubtype, CounterType};
+    use crate::effect::ManaPayload;
+    let guardian = CardDefinition {
+        name: "Jetfire, Air Guardian",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        color_indicator: vec![crate::mana::Color::Blue],
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::LivingMetal, Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u(), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Transform { what: Selector::This },
+                crate::effect::shortcut::adapt(3),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Jetfire, Ingenious Scientist",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(AlternativeCost { mana_cost: cost(&[generic(3), u()]), converted: true, ..Default::default() }),
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_among_x: Some((Some(CounterType::PlusOnePlusOne), R::Artifact.and(R::ControlledByYou))),
+            x_nonzero: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colorless(Value::XFromCost)),
+                        crate::mana::SpendRestriction::ArtifactOnly,
+                    ),
+                },
+                Effect::Transform { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(guardian)),
+        ..Default::default()
+    }
+}
