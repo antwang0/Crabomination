@@ -25278,6 +25278,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MICHELANGELO_6_COMMANDERS,
             main: decks::MICHELANGELO_6_MAIN,
         },
+        // Seat 4138: Hurkyl, Master Wizard's EDHREC average deck. `--pod-decks 4138`.
+        PodDeck {
+            name: "Hurkyl, Master Wizard (U)",
+            commanders: decks::HURKYL_COMMANDERS,
+            main: decks::HURKYL_MAIN,
+        },
+        // Seat 4139: The Fourth Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 4139`.
+        PodDeck {
+            name: "The Fourth Doctor and Adric, Mathematical Genius (UG)",
+            commanders: decks::THE_FOURTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_FOURTH_DOCTOR_7_MAIN,
+        },
+        // Seat 4140: Cloak and Dagger, Entwined's EDHREC average deck. `--pod-decks 4140`.
+        PodDeck {
+            name: "Cloak and Dagger, Entwined (WB)",
+            commanders: decks::CLOAK_AND_DAGGER_COMMANDERS,
+            main: decks::CLOAK_AND_DAGGER_MAIN,
+        },
+        // Seat 4141: Akroma, Vision of Ixidor and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4141`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Miara, Thorn of the Glade (WB)",
+            commanders: decks::AKROMA_18_COMMANDERS,
+            main: decks::AKROMA_18_MAIN,
+        },
+        // Seat 4142: Rasaad yn Bashir and Tavern Brawler's EDHREC average deck. `--pod-decks 4142`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Tavern Brawler (WR)",
+            commanders: decks::RASAAD_YN_BASHIR_20_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_20_MAIN,
+        },
+        // Seat 4143: Renari, Merchant of Marvels and Flaming Fist's EDHREC average deck. `--pod-decks 4143`.
+        PodDeck {
+            name: "Renari, Merchant of Marvels and Flaming Fist (WU)",
+            commanders: decks::RENARI_7_COMMANDERS,
+            main: decks::RENARI_7_MAIN,
+        },
+        // Seat 4144: Ardenn, Intrepid Archaeologist and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4144`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Ludevic, Necro-Alchemist (WUR)",
+            commanders: decks::ARDENN_18_COMMANDERS,
+            main: decks::ARDENN_18_MAIN,
+        },
+        // Seat 4145: Esior, Wardwing Familiar and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4145`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Tormod, the Desecrator (UB)",
+            commanders: decks::ESIOR_14_COMMANDERS,
+            main: decks::ESIOR_14_MAIN,
+        },
     ]
 }
 
@@ -31310,6 +31358,14 @@ mod tests {
             ("Bifur, Melodic Rider", &[0x1A3D]),
             ("Nori, Teller of Tales", &[0x1A3E]),
             ("Michelangelo, Game Master", &[0x1A3F]),
+            ("Hurkyl, Master Wizard", &[0x1A40]),
+            ("The Fourth Doctor and Adric, Mathematical Genius", &[0x1A41]),
+            ("Cloak and Dagger, Entwined", &[0x1A42]),
+            ("Akroma, Vision of Ixidor and Miara, Thorn of the Glade", &[0x1A43]),
+            ("Rasaad yn Bashir and Tavern Brawler", &[0x1A44]),
+            ("Renari, Merchant of Marvels and Flaming Fist", &[0x1A45]),
+            ("Ardenn, Intrepid Archaeologist and Ludevic, Necro-Alchemist", &[0x1A46]),
+            ("Esior, Wardwing Familiar and Tormod, the Desecrator", &[0x1A47]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
