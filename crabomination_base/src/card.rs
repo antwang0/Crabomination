@@ -10470,6 +10470,10 @@ pub struct CardData {
     /// it with one counter of this kind instead of routing it to the
     /// graveyard. Not serialized; consumed as the spell resolves.
     pub exile_on_resolve_counter: Option<CounterType>,
+    /// Gandalf of the Secret Fire — when non-zero on a stacked spell, the
+    /// resolver exiles it with this many time counters and suspend
+    /// (CR 702.62a). Not serialized; consumed as the spell resolves.
+    pub suspend_on_resolve: u8,
     /// Quintorius, Loremaster — "if that spell would be put into a graveyard,
     /// put it on the bottom of its owner's library instead": set by a cast
     /// through a `MayPlayPermission::bottom_after` grant, read wherever the
@@ -11538,6 +11542,7 @@ impl CardInstance {
             feather_exile_return: false,
             plot_on_resolve: false,
             exile_on_resolve_counter: None,
+            suspend_on_resolve: 0,
             bottom_on_leave_stack: false,
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,

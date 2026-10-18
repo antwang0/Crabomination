@@ -6061,6 +6061,11 @@ pub enum Effect {
     /// counter). Stamps the spell `what` names on the stack; a spell that
     /// doesn't resolve isn't exiled.
     ExileSpellOnResolveWithCounter { what: Selector, counter: crate::card::CounterType },
+    /// CR 702.62a — "exile that card with `time_counters` time counters on it
+    /// instead of putting it into your graveyard as it resolves. Then if the
+    /// exiled card doesn't have suspend, it gains suspend" (Gandalf of the
+    /// Secret Fire). Stamps the spell `what` names on the stack.
+    SuspendSpellOnResolve { what: Selector, time_counters: u8 },
     /// "You may cast a spell from among [filter] cards in exile without paying
     /// its mana cost" — during the resolution, timing ignored (Goliath
     /// Daydreamer: cards you own in exile with dream counters on them).

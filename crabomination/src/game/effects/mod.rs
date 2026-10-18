@@ -6728,6 +6728,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SuspendSpellOnResolve { what, time_counters } => {
+                for cid in
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id())
+                {
+                    if let Some(StackItem::Spell { card, .. }) = self
+                        .stack
+                        .iter_mut()
+                        .find(|si| matches!(si, StackItem::Spell { card, .. } if card.id == cid))
+                    {
+                        card.suspend_on_resolve = *time_counters;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSpellOnResolveWithCounter { what, counter } => {
                 for cid in
                     self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id())

@@ -32134,6 +32134,24 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
+        // Gandalf of the Secret Fire — exile it suspended (CR 702.62a).
+        if card.suspend_on_resolve > 0 && !card.is_token {
+            let mut card = card;
+            let (cid, n) = (card.id, u32::from(card.suspend_on_resolve));
+            card.suspend_on_resolve = 0;
+            card.granted_suspend = true;
+            card.add_counters(crate::card::CounterType::Time, n);
+            self.players[caster].cards_exiled_this_turn =
+                self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            self.exile.push(card);
+            events.push(GameEvent::CounterAdded {
+                card_id: cid,
+                counter_type: crate::card::CounterType::Time,
+                count: n,
+                placer: Some(caster),
+            });
+            return Ok(events);
+        }
         // Goliath Daydreamer — exile the resolving spell with a dream counter.
         if let Some(kind) = card.exile_on_resolve_counter
             && !card.is_token

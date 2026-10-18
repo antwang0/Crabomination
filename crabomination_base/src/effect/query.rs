@@ -940,6 +940,7 @@ impl Effect {
             | Effect::YourNoncombatDamageBonusThisTurn { .. }
             | Effect::PlotSpellOnResolve { .. }
             | Effect::ExileSpellOnResolveWithCounter { .. }
+            | Effect::SuspendSpellOnResolve { .. }
             | Effect::MayCastFromExileFree { .. }
             | Effect::CastUpToFreeFromHandAndGraveyard { .. }
             | Effect::CastOneFreeFromHandGraveyardOrExile { .. }
