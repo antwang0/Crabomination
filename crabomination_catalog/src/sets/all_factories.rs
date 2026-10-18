@@ -1485,7 +1485,7 @@ static DECKS: &[Factory] = &[
     super::decks::infinite_hourglass,
     // cmdr_019y_m (session 019Y6J4R)
     super::decks::metalhead,
-    super::decks::us_agent_john_walker,
+    super::decks::u_s_agent_john_walker,
     super::decks::bladed_battle_fan,
     super::decks::arnim_zola_bio_fanatic,
     super::decks::liliana_death_mage,

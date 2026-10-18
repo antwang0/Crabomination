@@ -24480,6 +24480,138 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VICONIA_15_COMMANDERS,
             main: decks::VICONIA_15_MAIN,
         },
+        // Seat 4005: Akroma, Vision of Ixidor and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 4005`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Keskit, the Flesh Sculptor (WB)",
+            commanders: decks::AKROMA_16_COMMANDERS,
+            main: decks::AKROMA_16_MAIN,
+        },
+        // Seat 4006: Alharu, Solemn Ritualist and Ardenn, Intrepid Archaeologist's EDHREC average deck. `--pod-decks 4006`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Ardenn, Intrepid Archaeologist (W)",
+            commanders: decks::ALHARU_12_COMMANDERS,
+            main: decks::ALHARU_12_MAIN,
+        },
+        // Seat 4007: Amber Gristle O'Maul and Candlekeep Sage's EDHREC average deck. `--pod-decks 4007`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Candlekeep Sage (UR)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_7_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_7_MAIN,
+        },
+        // Seat 4008: Eligeth, Crossroads Augur and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 4008`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Toggo, Goblin Weaponsmith (UR)",
+            commanders: decks::ELIGETH_24_COMMANDERS,
+            main: decks::ELIGETH_24_MAIN,
+        },
+        // Seat 4009: Erinis, Gloom Stalker and Dungeon Delver's EDHREC average deck. `--pod-decks 4009`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Dungeon Delver (UG)",
+            commanders: decks::ERINIS_14_COMMANDERS,
+            main: decks::ERINIS_14_MAIN,
+        },
+        // Seat 4010: Falthis, Shadowcat Familiar and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4010`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Siani, Eye of the Storm (UB)",
+            commanders: decks::FALTHIS_14_COMMANDERS,
+            main: decks::FALTHIS_14_MAIN,
+        },
+        // Seat 4011: Ghost of Ramirez DePietro and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4011`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Nadier, Agent of the Duskenel (UB)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_20_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_20_MAIN,
+        },
+        // Seat 4012: Metalhead's EDHREC average deck. `--pod-decks 4012`.
+        PodDeck {
+            name: "Metalhead (UR)",
+            commanders: decks::METALHEAD_COMMANDERS,
+            main: decks::METALHEAD_MAIN,
+        },
+        // Seat 4013: Radiant, Serra Archangel and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 4013`.
+        PodDeck {
+            name: "Radiant, Serra Archangel and Silas Renn, Seeker Adept (WUB)",
+            commanders: decks::RADIANT_6_COMMANDERS,
+            main: decks::RADIANT_6_MAIN,
+        },
+        // Seat 4014: Rebbec, Architect of Ascension and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 4014`.
+        PodDeck {
+            name: "Rebbec, Architect of Ascension and Tana, the Bloodsower (WRG)",
+            commanders: decks::REBBEC_6_COMMANDERS,
+            main: decks::REBBEC_6_MAIN,
+        },
+        // Seat 4015: Ronin, Shadow Stalker's EDHREC average deck. `--pod-decks 4015`.
+        PodDeck {
+            name: "Ronin, Shadow Stalker (B)",
+            commanders: decks::RONIN_COMMANDERS,
+            main: decks::RONIN_MAIN,
+        },
+        // Seat 4016: Safana, Calimport Cutthroat and Veteran Soldier's EDHREC average deck. `--pod-decks 4016`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Veteran Soldier (WB)",
+            commanders: decks::SAFANA_17_COMMANDERS,
+            main: decks::SAFANA_17_MAIN,
+        },
+        // Seat 4017: Sarevok, Deathbringer and Hardy Outlander's EDHREC average deck. `--pod-decks 4017`.
+        PodDeck {
+            name: "Sarevok, Deathbringer and Hardy Outlander (BG)",
+            commanders: decks::SAREVOK_14_COMMANDERS,
+            main: decks::SAREVOK_14_MAIN,
+        },
+        // Seat 4018: Sengir, the Dark Baron and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 4018`.
+        PodDeck {
+            name: "Sengir, the Dark Baron and Toggo, Goblin Weaponsmith (BR)",
+            commanders: decks::SENGIR_5_COMMANDERS,
+            main: decks::SENGIR_5_MAIN,
+        },
+        // Seat 4019: Shadowheart, Dark Justiciar and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 4019`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Agent of the Shadow Thieves (B)",
+            commanders: decks::SHADOWHEART_11_COMMANDERS,
+            main: decks::SHADOWHEART_11_MAIN,
+        },
+        // Seat 4020: Siani, Eye of the Storm and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4020`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::SIANI_7_COMMANDERS,
+            main: decks::SIANI_7_MAIN,
+        },
+        // Seat 4021: Skanos Dragonheart and Dungeon Delver's EDHREC average deck. `--pod-decks 4021`.
+        PodDeck {
+            name: "Skanos Dragonheart and Dungeon Delver (UG)",
+            commanders: decks::SKANOS_DRAGONHEART_15_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_15_MAIN,
+        },
+        // Seat 4022: The Ninth Doctor and Dan Lewis's EDHREC average deck. `--pod-decks 4022`.
+        PodDeck {
+            name: "The Ninth Doctor and Dan Lewis (UR)",
+            commanders: decks::THE_NINTH_DOCTOR_16_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_16_MAIN,
+        },
+        // Seat 4023: The Tenth Doctor and Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 4023`.
+        PodDeck {
+            name: "The Tenth Doctor and Nardole, Resourceful Cyborg (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_4_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_4_MAIN,
+        },
+        // Seat 4024: The Thirteenth Doctor and Tegan Jovanka's EDHREC average deck. `--pod-decks 4024`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Tegan Jovanka (WUG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_7_MAIN,
+        },
+        // Seat 4025: U.S.Agent, John Walker's EDHREC average deck. `--pod-decks 4025`.
+        PodDeck {
+            name: "U.S.Agent, John Walker (WB)",
+            commanders: decks::U_S_AGENT_COMMANDERS,
+            main: decks::U_S_AGENT_MAIN,
+        },
+        // Seat 4026: Viconia, Drow Apostate and Dungeon Delver's EDHREC average deck. `--pod-decks 4026`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Dungeon Delver (UB)",
+            commanders: decks::VICONIA_16_COMMANDERS,
+            main: decks::VICONIA_16_MAIN,
+        },
     ]
 }
 
@@ -30368,6 +30500,28 @@ mod tests {
             ("The Fugitive Doctor and Rose Noble", &[0x19B8]),
             ("The Second Doctor and Ian Chesterton", &[0x19B9]),
             ("Viconia, Drow Apostate and Popular Entertainer", &[0x19BA]),
+            ("Akroma, Vision of Ixidor and Keskit, the Flesh Sculptor", &[0x19BB]),
+            ("Alharu, Solemn Ritualist and Ardenn, Intrepid Archaeologist", &[0x19BC]),
+            ("Amber Gristle O'Maul and Candlekeep Sage", &[0x19BD]),
+            ("Eligeth, Crossroads Augur and Toggo, Goblin Weaponsmith", &[0x19BE]),
+            ("Erinis, Gloom Stalker and Dungeon Delver", &[0x19BF]),
+            ("Falthis, Shadowcat Familiar and Siani, Eye of the Storm", &[0x19C0]),
+            ("Ghost of Ramirez DePietro and Nadier, Agent of the Duskenel", &[0x19C1]),
+            ("Metalhead", &[0x19C2]),
+            ("Radiant, Serra Archangel and Silas Renn, Seeker Adept", &[0x19C3]),
+            ("Rebbec, Architect of Ascension and Tana, the Bloodsower", &[0x19C4]),
+            ("Ronin, Shadow Stalker", &[0x19C5]),
+            ("Safana, Calimport Cutthroat and Veteran Soldier", &[0x19C6]),
+            ("Sarevok, Deathbringer and Hardy Outlander", &[0x19C7]),
+            ("Sengir, the Dark Baron and Toggo, Goblin Weaponsmith", &[0x19C8]),
+            ("Shadowheart, Dark Justiciar and Agent of the Shadow Thieves", &[0x19C9]),
+            ("Siani, Eye of the Storm and Sidar Kondo of Jamuraa", &[0x19CA]),
+            ("Skanos Dragonheart and Dungeon Delver", &[0x19CB]),
+            ("The Ninth Doctor and Dan Lewis", &[0x19CC]),
+            ("The Tenth Doctor and Nardole, Resourceful Cyborg", &[0x19CD]),
+            ("The Thirteenth Doctor and Tegan Jovanka", &[0x19CE]),
+            ("U.S.Agent, John Walker", &[0x19CF]),
+            ("Viconia, Drow Apostate and Dungeon Delver", &[0x19D0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

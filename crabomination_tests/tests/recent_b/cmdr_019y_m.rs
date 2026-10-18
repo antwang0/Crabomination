@@ -88,7 +88,7 @@ fn metalhead_bounces_and_eats_artifacts() {
 #[test]
 fn us_agent_comes_with_a_shield() {
     let mut g = pod(2);
-    let us = g.add_card_to_hand(0, catalog::us_agent_john_walker());
+    let us = g.add_card_to_hand(0, catalog::u_s_agent_john_walker());
     flood(&mut g, 0);
     cast(&mut g, us, None).expect("cast");
     let cp = g.computed_permanent(us).unwrap();

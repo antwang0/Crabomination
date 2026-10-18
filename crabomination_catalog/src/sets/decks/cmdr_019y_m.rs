@@ -73,7 +73,7 @@ pub fn metalhead() -> CardDefinition {
 /// U.S.Agent, John Walker — {3}{W/B} legendary 3/2 Human Soldier Hero. ETB:
 /// create a colorless Equipment token named Sturdy Shield ("Equipped creature
 /// gets +1/+2", equip {2}) attached to it.
-pub fn us_agent_john_walker() -> CardDefinition {
+pub fn u_s_agent_john_walker() -> CardDefinition {
     let shield = TokenDefinition {
         name: "Sturdy Shield".into(),
         card_types: vec![CardType::Artifact],
