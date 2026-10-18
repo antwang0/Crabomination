@@ -25770,6 +25770,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FANTASTICAR_COMMANDERS,
             main: decks::THE_FANTASTICAR_MAIN,
         },
+        // Seat 4220: Tazri, Stalwart Survivor's EDHREC average deck. `--pod-decks 4220`.
+        PodDeck {
+            name: "Tazri, Stalwart Survivor (WUBRG)",
+            commanders: decks::TAZRI_COMMANDERS,
+            main: decks::TAZRI_MAIN,
+        },
+        // Seat 4221: Sensational Spider-Man's EDHREC average deck. `--pod-decks 4221`.
+        PodDeck {
+            name: "Sensational Spider-Man (WU)",
+            commanders: decks::SENSATIONAL_SPIDER_MAN_COMMANDERS,
+            main: decks::SENSATIONAL_SPIDER_MAN_MAIN,
+        },
+        // Seat 4222: Fblthp, Lost on the Range's EDHREC average deck. `--pod-decks 4222`.
+        PodDeck {
+            name: "Fblthp, Lost on the Range (U)",
+            commanders: decks::FBLTHP_3_COMMANDERS,
+            main: decks::FBLTHP_3_MAIN,
+        },
+        // Seat 4223: Merieke Ri Berit's EDHREC average deck. `--pod-decks 4223`.
+        PodDeck {
+            name: "Merieke Ri Berit (WUB)",
+            commanders: decks::MERIEKE_RI_BERIT_COMMANDERS,
+            main: decks::MERIEKE_RI_BERIT_MAIN,
+        },
     ]
 }
 
@@ -31890,6 +31914,10 @@ mod tests {
             ("Doctor Doom", &[0x1A8F]),
             ("Ultron, Unlimited", &[0x1A90]),
             ("The Fantasticar", &[0x1A91]),
+            ("Tazri, Stalwart Survivor", &[0x1A92]),
+            ("Sensational Spider-Man", &[0x1A93]),
+            ("Fblthp, Lost on the Range", &[0x1A94]),
+            ("Merieke Ri Berit", &[0x1A95]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

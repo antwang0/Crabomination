@@ -118369,3 +118369,117 @@ pub const THE_FANTASTICAR_MAIN: &[CardFactory] = &[
     // Basics
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
 ];
+
+pub const TAZRI_COMMANDERS: &[CardFactory] = &[tazri_stalwart_survivor];
+
+/// **Tazri, Stalwart Survivor**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 3 Forests + 2 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Tazri, Stalwart Survivor (EDHREC, fetched 2026-10-18).
+pub const TAZRI_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, arcane_signet, chromatic_lantern, fellwar_stone, lightning_greaves,
+    sol_ring, the_enigma_jewel, thousand_year_elixir, arid_mesa, breeding_pool, command_tower,
+    exotic_orchard, flooded_strand, godless_shrine, hallowed_fountain, ketria_triome,
+    marsh_flats, misty_rainforest, overgrown_tomb, path_of_ancestry, polluted_delta,
+    sacred_foundry, scalding_tarn, sparas_headquarters, steam_vents, stomping_ground,
+    temple_garden, the_world_tree, verdant_catacombs, watery_grave, windswept_heath,
+    wooded_foothills, agatha_of_the_vile_cauldron, biomancers_familiar, birds_of_paradise,
+    bloom_tender, chainer_nightmare_adept, deathrite_shaman, dynaheir_invoker_adept,
+    elrond_moon_reader, faeburrow_elder, fauna_shaman, gretchen_titchwillow, ignoble_hierarch,
+    incubation_druid, ioreth_of_the_healing_house, jegantha_the_wellspring,
+    kenrith_the_returned_king, kinnan_bonder_prodigy, kioras_follower, knacksaw_clique,
+    marvin_murderous_mimic, omen_hawker, order_of_whiteclay, patrol_signaler,
+    redshift_rocketeer_chief, sakura_tribe_elder, samut_voice_of_dissent,
+    saryth_the_vipers_fang, selfless_spirit, selvala_eager_trailblazer, shalai_voice_of_plenty,
+    shang_chi_master_of_kung_fu, spectral_sailor, svella_ice_shaper, tam_mindful_first_year,
+    thrasios_triton_hero, triskaidekaphile, zacama_primal_calamity, zimone_quandrix_prodigy,
+    zirda_the_dawnwaker, freed_from_the_real, leyline_of_abundance, quest_for_renewal,
+    training_grounds, assassins_trophy, beast_within, dramatic_reversal, generous_gift,
+    heroic_intervention, path_to_exile, swords_to_plowshares, tyvar_jubilant_brawler, cultivate,
+    farseek, natures_lore, sevinnes_reclamation, three_visits,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp, swamp,
+];
+
+pub const SENSATIONAL_SPIDER_MAN_COMMANDERS: &[CardFactory] = &[sensational_spider_man];
+
+/// **Sensational Spider-Man**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 12 Islands + 8 Plains = 99.
+/// Sensational Spider-Man (EDHREC, fetched 2026-10-18).
+pub const SENSATIONAL_SPIDER_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, hyldas_crown_of_winter, lightning_greaves,
+    mjolnir_storm_hammer, peter_parkers_camera, sol_ring, swiftfoot_boots,
+    sword_of_truth_and_justice, talisman_of_progress, thought_vessel, web_shooters,
+    adarkar_wastes, azorius_chancery, command_tower, deserted_beach, flooded_strand,
+    floodfarm_verge, glacial_fortress, hallowed_fountain, karns_bastion, port_town,
+    prairie_stream, reliquary_tower, rogues_passage, sea_of_clouds, skycloud_expanse,
+    ambling_stormshell, dreamtide_whale, fear_of_sleep_paralysis, floodpits_drowner,
+    flux_channeler, grappling_kraken, grateful_apparition, hylda_of_the_icy_crown,
+    lulu_stern_guardian, metastatic_evangel, monstrosity_of_the_lake, norns_choirmaster,
+    sanctuary_wall, shackle_slinger, sharae_of_numbing_depths, sleep_cursed_faerie,
+    spider_woman_stunning_savior, summon_shiva, tekuthal_inquiry_dominus,
+    the_watcher_in_the_water, thrummingbird, zygon_infiltrator, authority_of_the_consuls,
+    ghostly_prison, inexorable_tide, kitnap, lost_in_the_maze, propaganda, scroll_of_isildur,
+    solitary_sanctuary, verity_circle, amazing_acrobatics, counterspell, dovins_veto,
+    experimental_augury, generous_gift, out_cold, path_to_exile, spider_sense,
+    succumb_to_the_cold, swords_to_plowshares, trap_the_trespassers, wicked_slumber,
+    tamiyo_the_moon_sage, borrowing_100_000_arrows, contentious_plan, freeze_in_place,
+    impede_momentum, involuntary_cooldown, split_up, stall_out, tranquilize,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const FBLTHP_3_COMMANDERS: &[CardFactory] = &[fblthp_lost_on_the_range];
+
+/// **Fblthp, Lost on the Range**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Islands = 99.
+/// Fblthp, Lost on the Range (EDHREC, fetched 2026-10-18).
+pub const FBLTHP_3_MAIN: &[CardFactory] = &[
+    accorders_shield, aetherflux_reservoir, arcane_signet, bone_saw, cathars_shield,
+    claws_of_gix, codex_shredder, dark_sphere, darksteel_relic, delifs_cone,
+    everflowing_chalice, fountain_of_youth, herbal_poultice, jeweled_amulet, kite_shield,
+    lotus_petal, mishras_bauble, mox_amber, paradise_mantle, senseis_divining_top, sol_ring,
+    spellbook, spidersilk_net, thought_vessel, tormods_crypt, urzas_bauble, welding_jar,
+    zuran_orb, academy_ruins, archway_of_innovation, halimar_depths, mystic_sanctuary,
+    reliquary_tower, urzas_saga, artificers_assistant, forensic_gadgeteer,
+    geralf_the_fleshwright, hangarback_walker, hullbreaker_horror, kappa_cannoneer,
+    laboratory_maniac, memnite, ornithopter, phyrexian_walker, riddlesmith,
+    sai_master_thopterist, shield_sphere, shifting_wall, stonecoil_serpent, the_reality_chip,
+    urza_lord_high_artificer, amphibian_downpour, mirrodin_besieged, propaganda,
+    an_offer_you_cant_refuse, brain_freeze, brainstorm, consider, counterspell, frantic_search,
+    high_tide, mystical_tutor, opt, pongify, rapid_hybridization, snap, surge_of_brilliance,
+    jace_reawakened, ancestral_vision, gitaxian_probe, mana_severance, minds_desire, ponder,
+    preordain, serum_visions,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const MERIEKE_RI_BERIT_COMMANDERS: &[CardFactory] = &[merieke_ri_berit];
+
+/// **Merieke Ri Berit**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Islands + 6 Plains + 4 Swamps = 99.
+/// Merieke Ri Berit (EDHREC, fetched 2026-10-18).
+pub const MERIEKE_RI_BERIT_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, dimir_signet, fellwar_stone, illusionists_bracers,
+    lightning_greaves, magewrights_stone, patriars_seal, sol_ring, swiftfoot_boots,
+    talisman_of_dominance, thousand_year_elixir, unbender_tine, adarkar_wastes, arcane_sanctum,
+    command_tower, drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress,
+    godless_shrine, hallowed_fountain, isolated_chapel, marsh_flats,
+    minamo_school_at_waters_edge, polluted_delta, prairie_stream, raffines_tower,
+    reliquary_tower, sea_of_clouds, sunken_hollow, watery_grave, adarkar_valkyrie,
+    agent_of_treachery, aphetto_alchemist, arcanis_the_omnipotent, baleful_strix, coffin_queen,
+    drumbellower, empress_galina, esper_sentinel, fatestitcher, forensic_researcher,
+    hostage_taker, ioreth_of_the_healing_house, kelpie_guide, marvin_murderous_mimic,
+    mother_of_runes, pippin_guard_of_the_citadel, puppeteer, robaran_mercenaries,
+    the_ever_changing_dane, vizier_of_tumbling_sands, freed_from_the_real, ghostly_prison,
+    intruder_alarm, mystic_remora, pemmins_aura, propaganda, rhystic_study, smothering_tithe,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, cloudshift, counterspell,
+    cyclonic_rift, dovins_veto, dramatic_reversal, energy_arc, mana_drain, negate,
+    path_to_exile, swords_to_plowshares, void_rend, teferi_who_slows_the_sunset, bribery,
+    demonic_tutor, ponder, reanimate, supreme_verdict, vindicate,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
