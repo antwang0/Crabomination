@@ -35724,6 +35724,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameCardThenNamedCreatureCombatDamageThisTurn { body } => {
+                self.resolve_name_card_then_named_combat_damage(body, ctx, events)
+            }
+
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {

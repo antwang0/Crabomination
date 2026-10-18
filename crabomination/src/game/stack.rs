@@ -5815,6 +5815,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)
                         | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
                         | crate::game::types::DelayedKind::MatchingCreaturesDealCombatDamageBatchThisTurn(_)
+                        | crate::game::types::DelayedKind::NamedCreatureDealsCombatDamageToPlayerThisTurn(_)
                         | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
                         | crate::game::types::DelayedKind::YourNextAttackThisTurn
                         | crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn

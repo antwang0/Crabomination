@@ -1359,6 +1359,10 @@ pub enum DelayedKind {
     /// per combat-damage step, the first matching dealer the trigger source,
     /// the damaged seat the trigger player. Aphelia, Viper Whisperer.
     MatchingCreaturesDealCombatDamageBatchThisTurn(crate::card::SelectionRequirement),
+    /// "Whenever a creature with the chosen name deals combat damage to a
+    /// player this turn, …" (The Clone Saga III) — any controller's creature,
+    /// once per creature per combat-damage event. Swept at cleanup.
+    NamedCreatureDealsCombatDamageToPlayerThisTurn(String),
     /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
@@ -2492,6 +2496,10 @@ pub enum PendingEffectState {
     /// (Academic Probation). The chooser names a card and the engine records
     /// it in `players[caster].opponents_cant_cast_named`.
     OpponentNameLockPending { caster: usize },
+    /// Suspended on the `NameCard` decision of
+    /// `Effect::NameCardThenNamedCreatureCombatDamageThisTurn`; the answer arms
+    /// a `NamedCreatureDealsCombatDamageToPlayerThisTurn` watcher running `body`.
+    NamedCreatureCombatDamagePending { controller: usize, source: CardId, body: Box<Effect> },
     /// Suspended on a `ChooseModes` for a resolution-time "choose N" /
     /// Escalate effect. The apply step validates the answer shape, drops
     /// out-of-range indices, and stashes it in

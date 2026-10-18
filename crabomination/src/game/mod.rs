@@ -136,6 +136,7 @@ mod damage_dealers;
 mod goad;
 mod ascend;
 mod storied;
+mod named_combat_damage;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -31211,6 +31212,9 @@ impl GameState {
                     self.scratch.named_card_this_resolution = Some(name.clone());
                 }
                 Ok(Vec::new())
+            }
+            PendingEffectState::NamedCreatureCombatDamagePending { controller, source, body } => {
+                self.apply_named_creature_combat_damage(controller, source, *body, answer)
             }
             PendingEffectState::OpponentNameLockPending { caster } => {
                 let DecisionAnswer::NamedCard(name) = answer else {

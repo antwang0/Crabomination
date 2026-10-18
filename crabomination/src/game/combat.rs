@@ -7253,6 +7253,7 @@ impl GameState {
                 );
             }
         }
+        self.fire_named_creature_combat_damage_watchers(source, damaged_player, damage_amount);
         self.fire_source_dealt_damage_watchers(source, damage_amount);
         self.fire_source_combat_damage_to_player_watchers(source, damage_amount);
         self.fire_combat_damage_watchers(source, damage_amount, true);

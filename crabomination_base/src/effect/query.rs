@@ -522,6 +522,7 @@ impl Effect {
             | Effect::WheneverCreatureEntersUntilYourNextTurn { body, .. }
             | Effect::CreaturesYouControlDealingCombatDamageThisTurn { body, .. }
             | Effect::MatchingCreaturesDealingCombatDamageBatchThisTurn { body, .. }
+            | Effect::NameCardThenNamedCreatureCombatDamageThisTurn { body }
             | Effect::WheneverYouGainLifeThisTurn { body, .. }
             | Effect::WheneverCombatDamageToYouPreventedThisTurn { body, .. }
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
@@ -2405,6 +2406,7 @@ impl Effect {
             | Effect::EachOpponentSacrificesSharingTypeWith { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
             Effect::MatchingCreaturesDealingCombatDamageBatchThisTurn { .. } => false,
+            Effect::NameCardThenNamedCreatureCombatDamageThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCombatDamageToYouPreventedThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,

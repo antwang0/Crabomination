@@ -12428,6 +12428,15 @@ pub enum Effect {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
+    /// "Choose a card name. Whenever a creature with the chosen name deals
+    /// combat damage to a player this turn, [body]" (The Clone Saga III). The
+    /// controller names a card (a `NameCard` decision; the bot names its own
+    /// strongest creature) and a turn-scoped delayed trigger (CR 603.7) fires
+    /// once per such creature per combat-damage event, whoever controls it;
+    /// the dealer is `Selector::TriggerSource`. Expires at cleanup.
+    NameCardThenNamedCreatureCombatDamageThisTurn {
+        body: Box<Effect>,
+    },
 
     /// "Until end of turn, whenever you gain life, [body]." Registers a
     /// turn-scoped delayed trigger (CR 603.4) firing per `LifeGained` event for
