@@ -965,6 +965,7 @@ impl Effect {
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
             | Effect::CopyForChosenOtherTargetableCreature
+            | Effect::LookTopExileOneFaceDownWithCounter { .. }
             | Effect::MayPayToCopyOntoOtherCreatures { .. }
             | Effect::SearchRevealPunishSameNameCasters { .. }
             | Effect::ExileTopGreatestManaValueTakesExtraTurn

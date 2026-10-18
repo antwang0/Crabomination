@@ -67,6 +67,7 @@ mod threats_undetected;
 mod music;
 mod reblock;
 mod spell_copy_others;
+mod hatching;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -38195,6 +38196,9 @@ impl GameState {
 
             Effect::CopyForEachOtherTargetableCreature => self.copy_spell_for_other_creatures(ctx, events, effect, false),
             Effect::CopyForChosenOtherTargetableCreature => self.copy_spell_for_other_creatures(ctx, events, effect, true),
+            Effect::LookTopExileOneFaceDownWithCounter { count, kind } => {
+                self.look_top_exile_one_face_down_with_counter(count, *kind, ctx, events, effect)
+            }
 
             Effect::Demonstrate => {
                 // CR 702.144 — copy this spell for its caster, then an

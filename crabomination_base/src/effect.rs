@@ -6384,6 +6384,11 @@ pub enum Effect {
     /// copy, aimed at the other creature its caster chooses
     /// (`game/effects/spell_copy_others.rs`).
     CopyForChosenOtherTargetableCreature,
+    /// "Look at the top `count` cards of your library. Exile one of them face
+    /// down with a `kind` counter on it, then put the rest on the bottom of
+    /// your library in any order" (The Dragon-Kami Reborn;
+    /// `game/effects/hatching.rs`).
+    LookTopExileOneFaceDownWithCounter { count: Value, kind: crate::card::CounterType },
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`

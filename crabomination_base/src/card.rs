@@ -1107,6 +1107,9 @@ pub enum CounterType {
     Music,
     /// Evelyn, the Covetous's collection counters, on the cards she exiles.
     Collection,
+    /// The Dragon-Kami Reborn's hatching counters on its face-down exiles
+    /// (Dragon-Kami's Egg casts creature spells from among them).
+    Hatching,
 }
 
 /// Every zone a card can occupy.
