@@ -25452,6 +25452,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABOMINATION_3_COMMANDERS,
             main: decks::ABOMINATION_3_MAIN,
         },
+        // Seat 4167: Alhammarret, High Arbiter's EDHREC average deck. `--pod-decks 4167`.
+        PodDeck {
+            name: "Alhammarret, High Arbiter (U)",
+            commanders: decks::ALHAMMARRET_COMMANDERS,
+            main: decks::ALHAMMARRET_MAIN,
+        },
+        // Seat 4168: Madame Web, Clairvoyant's EDHREC average deck. `--pod-decks 4168`.
+        PodDeck {
+            name: "Madame Web, Clairvoyant (U)",
+            commanders: decks::MADAME_WEB_COMMANDERS,
+            main: decks::MADAME_WEB_MAIN,
+        },
     ]
 }
 
@@ -31513,6 +31525,8 @@ mod tests {
             ("Lae'zel, Vlaakith's Champion and Sword Coast Sailor", &[0x1A5A]),
             ("Hulk, Gamma Goliath", &[0x1A5B]),
             ("Abomination, Terrifying Titan", &[0x1A5C]),
+            ("Alhammarret, High Arbiter", &[0x1A5D]),
+            ("Madame Web, Clairvoyant", &[0x1A5E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

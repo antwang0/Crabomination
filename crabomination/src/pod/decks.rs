@@ -116866,3 +116866,56 @@ pub const ABOMINATION_3_MAIN: &[CardFactory] = &[
     forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const ALHAMMARRET_COMMANDERS: &[CardFactory] = &[alhammarret_high_arbiter];
+
+/// **Alhammarret, High Arbiter**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Alhammarret, High Arbiter (EDHREC, fetched 2026-10-18).
+pub const ALHAMMARRET_MAIN: &[CardFactory] = &[
+    arcane_signet, hedron_archive, kefnets_monument, lantern_of_insight, midnight_clock,
+    mind_stone, mirror_box, sapphire_medallion, sky_diamond, sol_ring, thought_vessel,
+    thran_dynamo, castle_vantress, mystic_sanctuary, reliquary_tower, temple_of_the_false_god,
+    theorists_sanctum, archaeomancer, atemsis_all_seeing, burnished_hart, clever_impersonator,
+    clone_card, defiler_of_dreams, fblthp_impossibly_lost, geist_of_saint_thalia, mirror_image,
+    ormos_archive_keeper, prognostic_sphinx, solemn_simulacrum, spark_double,
+    sphinx_of_foresight, sphinx_of_uthuun, surveillance_phantasm, thryx_the_sudden_storm,
+    triskaidekaphile, unesh_criosphinx_sovereign, wall_of_stolen_identity,
+    extravagant_replication, imprisoned_in_the_moon, propaganda, telepathy,
+    way_of_the_mind_sculptor, witness_protection, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, archmages_charm, brainstorm, countersculpt, counterspell, cyclonic_rift,
+    fact_or_fiction, high_tide, jaces_machinations, mana_drain, negate, opt, pongify, rewind,
+    snap, jace_reality_sculptor, jace_wielder_of_mysteries, curse_of_the_swine, fabricate,
+    ponder, preordain, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const MADAME_WEB_COMMANDERS: &[CardFactory] = &[madame_web_clairvoyant];
+
+/// **Madame Web, Clairvoyant**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Madame Web, Clairvoyant (EDHREC, fetched 2026-10-18).
+pub const MADAME_WEB_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, cloud_key, commanders_sphere, everflowing_chalice,
+    midnight_clock, mind_stone, sapphire_medallion, senseis_divining_top, sky_diamond, sol_ring,
+    thought_vessel, wayfarers_bauble, academy_ruins, buried_ruin, myriad_landscape,
+    mystic_sanctuary, reliquary_tower, theorists_sanctum, archmage_emeritus, archmage_of_runes,
+    baral_chief_of_compliance, emry_lurker_of_the_loch, etherium_sculptor,
+    fblthp_impossibly_lost, glaring_fleshraker, iron_spider_stark_upgrade, laboratory_maniac,
+    murmuring_mystic, ruric_thar_biomagus, spider_bot, spider_byte_web_warden,
+    spider_man_2099_miguel_ohara, surveillance_phantasm, talrand_sky_summoner, thassas_oracle,
+    thran_spider, enchanted_rivers_grasp, fortune_tellers_talent, infinite_coursework,
+    plan_for_all_outcomes, propaganda, rhystic_study, shark_typhoon, spider_man_no_more,
+    aetherize, amazing_acrobatics, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    consider, countersculpt, counterspell, frantic_search, hide_on_the_ceiling, high_tide,
+    negate, opt, pongify, sphinxs_approach, swan_song, uneasy_partings,
+    jace_wielder_of_mysteries, clear_the_mind, fabricate, gitaxian_probe, ponder, preordain,
+    relms_sketching, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
