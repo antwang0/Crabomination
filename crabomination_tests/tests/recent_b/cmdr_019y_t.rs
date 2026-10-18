@@ -140,3 +140,46 @@ fn absorbing_man_copies_an_artifact_with_his_exceptions() {
     assert_eq!((cp.power, cp.toughness), (4, 4));
     assert!(cp.card_types().contains(&CardType::Creature));
 }
+
+/// Hurkyl — one card per type among noncreature spells cast this turn: an
+/// instant and an artifact cast take one Instant and one Artifact card from
+/// the top five (not a second instant, not the creature); the rest go to the
+/// bottom.
+#[test]
+fn hurkyl_takes_one_card_per_cast_type() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hurkyl_master_wizard());
+    g.players[0].library.clear();
+    for def in [catalog::grizzly_bears(), catalog::lightning_bolt(), catalog::sol_ring(), catalog::shock(), catalog::forest()] {
+        g.add_card_to_library(0, def);
+    }
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("ring");
+    drain_stack(&mut g);
+    let hand_before = g.players[0].hand.len();
+    g.step = TurnStep::PostCombatMain;
+    while g.step != TurnStep::End && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let names: Vec<&str> = g.players[0].hand.iter().skip(hand_before).map(|c| c.definition.name).collect();
+    assert_eq!(names.len(), 2, "one instant and one artifact: {names:?}");
+    assert!(names.contains(&"Sol Ring"));
+    assert!(names.contains(&"Lightning Bolt") || names.contains(&"Shock"));
+    assert_eq!(g.players[0].library.len(), 8);
+    assert_eq!(g.players[0].library[0].definition.name, "Island", "the other three went to the bottom");
+}

@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef, Selector, StaticEffect, Value};
+use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef, Predicate, Selector, StaticEffect, Value};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, u};
 
@@ -106,6 +106,33 @@ pub fn absorbing_man() -> CardDefinition {
                     },
                 ])),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hurkyl, Master Wizard — {1}{U}{U} legendary 2/4 Human Wizard Advisor. At
+/// the beginning of your end step, if you've cast a noncreature spell this
+/// turn, reveal the top five cards of your library; for each card type among
+/// noncreature spells you've cast this turn, you may put a card of that type
+/// from among them into your hand. The rest go on the bottom in a random order.
+pub fn hurkyl_master_wizard() -> CardDefinition {
+    CardDefinition {
+        name: "Hurkyl, Master Wizard",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                Predicate::NoncreatureSpellsCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE },
+            ),
+            effect: Effect::RevealTopTakeOnePerCastType { who: PlayerRef::You, count: Value::Const(5) },
         }],
         ..Default::default()
     }
