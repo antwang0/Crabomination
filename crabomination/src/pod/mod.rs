@@ -24780,6 +24780,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIFTH_DOCTOR_7_COMMANDERS,
             main: decks::THE_FIFTH_DOCTOR_7_MAIN,
         },
+        // Seat 4055: Akroma, Vision of Ixidor and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 4055`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Glacian, Powerstone Engineer (WU)",
+            commanders: decks::AKROMA_17_COMMANDERS,
+            main: decks::AKROMA_17_MAIN,
+        },
+        // Seat 4056: Alena, Kessig Trapper and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 4056`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Ghost of Ramirez DePietro (UR)",
+            commanders: decks::ALENA_17_COMMANDERS,
+            main: decks::ALENA_17_MAIN,
+        },
+        // Seat 4057: Amy Pond and Rory Williams's EDHREC average deck. `--pod-decks 4057`.
+        PodDeck {
+            name: "Amy Pond and Rory Williams (WUR)",
+            commanders: decks::AMY_POND_COMMANDERS,
+            main: decks::AMY_POND_MAIN,
+        },
+        // Seat 4058: Glacian, Powerstone Engineer and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4058`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Kydele, Chosen of Kruphix (UG)",
+            commanders: decks::GLACIAN_23_COMMANDERS,
+            main: decks::GLACIAN_23_MAIN,
+        },
+        // Seat 4059: Halsin, Emerald Archdruid and Far Traveler's EDHREC average deck. `--pod-decks 4059`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Far Traveler (WG)",
+            commanders: decks::HALSIN_10_COMMANDERS,
+            main: decks::HALSIN_10_MAIN,
+        },
+        // Seat 4060: Jhoira of the Ghitu's EDHREC average deck. `--pod-decks 4060`.
+        PodDeck {
+            name: "Jhoira of the Ghitu (UR)",
+            commanders: decks::JHOIRA_OF_THE_GHITU_COMMANDERS,
+            main: decks::JHOIRA_OF_THE_GHITU_MAIN,
+        },
+        // Seat 4061: Miara, Thorn of the Glade and The Prismatic Piper's EDHREC average deck. `--pod-decks 4061`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and The Prismatic Piper (B)",
+            commanders: decks::MIARA_6_COMMANDERS,
+            main: decks::MIARA_6_MAIN,
+        },
+        // Seat 4062: The Eleventh Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4062`.
+        PodDeck {
+            name: "The Eleventh Doctor and Amy Pond (WUR)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_10_MAIN,
+        },
+        // Seat 4063: The Tenth Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 4063`.
+        PodDeck {
+            name: "The Tenth Doctor and Adric, Mathematical Genius (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_5_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_5_MAIN,
+        },
+        // Seat 4064: The Tenth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4064`.
+        PodDeck {
+            name: "The Tenth Doctor and Amy Pond (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_6_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_6_MAIN,
+        },
+        // Seat 4065: The Tenth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 4065`.
+        PodDeck {
+            name: "The Tenth Doctor and Donna Noble (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_7_MAIN,
+        },
+        // Seat 4066: The Tenth Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 4066`.
+        PodDeck {
+            name: "The Tenth Doctor and Graham O'Brien (URG)",
+            commanders: decks::THE_TENTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_8_MAIN,
+        },
+        // Seat 4067: The Tenth Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 4067`.
+        PodDeck {
+            name: "The Tenth Doctor and Jamie McCrimmon (URG)",
+            commanders: decks::THE_TENTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_9_MAIN,
+        },
+        // Seat 4068: The Tenth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 4068`.
+        PodDeck {
+            name: "The Tenth Doctor and K-9, Mark I (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_10_MAIN,
+        },
+        // Seat 4069: The Tenth Doctor and Romana II's EDHREC average deck. `--pod-decks 4069`.
+        PodDeck {
+            name: "The Tenth Doctor and Romana II (WUR)",
+            commanders: decks::THE_TENTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_11_MAIN,
+        },
+        // Seat 4070: The Tenth Doctor and Tegan Jovanka's EDHREC average deck. `--pod-decks 4070`.
+        PodDeck {
+            name: "The Tenth Doctor and Tegan Jovanka (WUR)",
+            commanders: decks::THE_TENTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_12_MAIN,
+        },
     ]
 }
 
@@ -30729,6 +30825,22 @@ mod tests {
             ("Safana, Calimport Cutthroat and Scion of Halaster", &[0x19EA]),
             ("The Eighth Doctor and Nardole, Resourceful Cyborg", &[0x19EB]),
             ("The Fifth Doctor and Barbara Wright", &[0x19EC]),
+            ("Akroma, Vision of Ixidor and Glacian, Powerstone Engineer", &[0x19ED]),
+            ("Alena, Kessig Trapper and Ghost of Ramirez DePietro", &[0x19EE]),
+            ("Amy Pond and Rory Williams", &[0x19EF]),
+            ("Glacian, Powerstone Engineer and Kydele, Chosen of Kruphix", &[0x19F0]),
+            ("Halsin, Emerald Archdruid and Far Traveler", &[0x19F1]),
+            ("Jhoira of the Ghitu", &[0x19F2]),
+            ("Miara, Thorn of the Glade and The Prismatic Piper", &[0x19F3]),
+            ("The Eleventh Doctor and Amy Pond", &[0x19F4]),
+            ("The Tenth Doctor and Adric, Mathematical Genius", &[0x19F5]),
+            ("The Tenth Doctor and Amy Pond", &[0x19F6]),
+            ("The Tenth Doctor and Donna Noble", &[0x19F7]),
+            ("The Tenth Doctor and Graham O'Brien", &[0x19F8]),
+            ("The Tenth Doctor and Jamie McCrimmon", &[0x19F9]),
+            ("The Tenth Doctor and K-9, Mark I", &[0x19FA]),
+            ("The Tenth Doctor and Romana II", &[0x19FB]),
+            ("The Tenth Doctor and Tegan Jovanka", &[0x19FC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
