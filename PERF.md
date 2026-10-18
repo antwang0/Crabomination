@@ -3152,6 +3152,7 @@ pods (release)   4 / 6 / 8 seats x 600 (seeds 41674/6/8): 1,800/1,800 decided
 pods (audit)     seeds 9208-9214 (4/6/8 seats, every deck) + 9211-9213 on seats 4093-4151:
                  ~11,500 games; 3 aborts, all fixed (two bugs); undecided 0.22-0.27 % (CR 104.4
                  draws, two board caps, the Naru Meha + Ghostly Flicker optional loop)
+suite            27,844 / 0 / 6 (pod seat test excluded); workspace clippy 0
 ```
 
 ### 2026-10-18 (Commander run, `01HPYxiB`) — guardrail; rules/bot fixes, no cards
