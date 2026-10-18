@@ -116637,3 +116637,174 @@ pub const WHIRLWIND_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const DURNAN_OF_THE_YAWNING_PORTAL_12_COMMANDERS: &[CardFactory] = &[durnan_of_the_yawning_portal, hardy_outlander];
+
+/// **Durnan of the Yawning Portal and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 31 Forests = 98.
+/// Durnan of the Yawning Portal and Hardy Outlander (EDHREC, fetched 2026-10-18).
+pub const DURNAN_OF_THE_YAWNING_PORTAL_12_MAIN: &[CardFactory] = &[
+    larval_scoutlander, lifecrafters_bestiary, soul_guide_lantern, tormods_crypt,
+    trailblazers_torch, conduit_pylons, hidden_grotto, lair_of_the_hydra, terramorphic_expanse,
+    annoyed_altisaur, arbor_elf, artisan_of_kozilek, avenger_of_zendikar, bane_of_bala_ged,
+    blight_herder, burnished_hart, chittering_dispatcher, elvish_aberration, enduring_vitality,
+    farhaven_elf, forgotten_ancient, fyndhorn_elves, gamekeeper, ghalta_primal_hunger,
+    goreclaw_terror_of_qal_sisma, ilysian_caryatid, llanowar_elves, ornithopter_of_paradise,
+    outcaster_trailblazer, priest_of_titania, rampaging_baloths, reclamation_sage,
+    roaming_throne, sakura_tribe_elder, tangled_florahedron, territory_culler, tlincalli_hunter,
+    ulamogs_crusher, ulamog_the_ceaseless_hunger, woodfall_primus, world_shaper,
+    yeva_natures_herald, zopandrel_hunger_dominus, colossification, exploration,
+    garruks_uprising, hunters_talent, point_the_way, archdruids_charm, broken_wings, fog,
+    gaeas_gift, might_of_the_masses, ram_through, return_of_the_wildspeaker, sarkhans_resolve,
+    summoning_trap, commune_with_dinosaurs, cultivate, earth_rumble, epic_confrontation,
+    green_suns_twilight, harmonize, kodamas_reach, rampant_growth, threats_undetected, wear_down,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const SAKASHIMA_OF_A_THOUSAND_FACES_3_COMMANDERS: &[CardFactory] = &[sakashima_of_a_thousand_faces, siani_eye_of_the_storm];
+
+/// **Sakashima of a Thousand Faces and Siani, Eye of the Storm**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 21 Islands = 98.
+/// Sakashima of a Thousand Faces and Siani, Eye of the Storm (EDHREC, fetched 2026-10-18).
+pub const SAKASHIMA_OF_A_THOUSAND_FACES_3_MAIN: &[CardFactory] = &[
+    caged_sun, helm_of_the_host, mirage_mirror, mirror_box, mirror_gallery, sapphire_medallion,
+    sculpting_steel, senseis_divining_top, sol_ring, thought_vessel, throne_of_eldraine,
+    tricksters_talisman, academy_ruins, castle_vantress, halimar_depths,
+    minamo_school_at_waters_edge, mirrorpool, mystic_sanctuary, otawara_soaring_city,
+    seat_of_the_synod, the_mycosynth_gardens, vesuva, body_double, body_of_knowledge,
+    chameleon_master_of_disguise, clever_impersonator, clone_card, cryptoplasm,
+    deadeye_navigator, deceptive_frostkite, faerie_artisans, glasspool_mimic, naga_fleshcrafter,
+    orvar_the_all_form, phantasmal_image, phyrexian_metamorph, roil_elemental,
+    sakashima_the_impostor, sakashimas_protege, sakashimas_student, shadow_kin,
+    solemn_simulacrum, spark_double, stunt_double, thassa_deep_dwelling, undercover_operative,
+    wall_of_stolen_identity, corrupted_conscience, extravagant_replication, followed_footsteps,
+    imprisoned_in_the_moon, infinite_reflection, mirror_mockery, mirrormade,
+    reflections_of_littjara, rhystic_study, vesuvan_duplimancy, brainstorm,
+    cackling_counterpart, counterspell, displace, fated_infatuation, frantic_search, high_tide,
+    mystic_reflection, negate, see_double, split_decision, twincast, flood_of_tears,
+    irenicuss_vile_duplication, ponder, preordain, rite_of_replication, sakashimas_will,
+    season_of_weaving, stolen_identity,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const THE_FOURTH_DOCTOR_8_COMMANDERS: &[CardFactory] = &[the_fourth_doctor, amy_pond];
+
+/// **The Fourth Doctor and Amy Pond**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 4 Forests + 5 Islands + 3 Mountains = 98.
+/// The Fourth Doctor and Amy Pond (EDHREC, fetched 2026-10-18).
+pub const THE_FOURTH_DOCTOR_8_MAIN: &[CardFactory] = &[
+    conformer_shuriken, heroes_podium, sol_ring, sol_talisman, sword_of_the_chosen,
+    the_dominion_bracelet, the_irencrag, blighted_woodland, bountiful_landscape, cinder_glade,
+    command_tower, exotic_orchard, ferrous_lake, gods_eye_gate_to_the_reikai, highland_forest,
+    karplusan_forest, molten_tributary, mossfire_valley, mountain_valley, myriad_landscape,
+    overflowing_basin, rain_slicked_copse, raths_edge, rimewood_falls, rootbound_crag,
+    sheltered_thicket, shivan_gorge, shivan_reef, sulfur_falls, tangled_islet, the_grey_havens,
+    trenzalore_clocktower, volatile_fjord, wooded_ridgeline, yavimaya_coast,
+    agatha_of_the_vile_cauldron, bugenhagen_wise_elder, cirdan_the_shipwright,
+    etali_primal_storm, fang_rokus_companion, gandalf_westward_voyager, gladiolus_amicitia,
+    hajar_loyal_bodyguard, imoti_celebrant_of_bounty, jhoira_of_the_ghitu, neera_wild_mage,
+    piper_wright_publick_reporter, radha_heir_to_keld, red_death_shipwrecker,
+    ruby_daring_tracker, sakiko_mother_of_summer, shaun_father_of_synths, susan_foreman,
+    syr_faren_the_hengehammer, tanazir_quandrix, targ_nar_demon_fang_gnoll,
+    the_emperor_of_palamecia, the_sixth_doctor, the_tenth_doctor, the_thirteenth_doctor,
+    the_twelfth_doctor, thryx_the_sudden_storm, torgal_a_fine_hound, umaro_raging_yeti,
+    an_unearthly_child, arni_slays_the_troll, azusas_many_journeys, enigmatic_incarnation,
+    fall_of_gil_galad, fugitive_of_the_judoon, heaven_sent, medomais_prophecy, raised_by_giants,
+    song_of_freyalise, tamiyo_meets_the_story_circle, the_eleventh_hour,
+    the_parting_of_the_ways, vault_21_house_gambit, vault_87_forced_evolution,
+    welcome_to_sweettooth, clockspinning, fury_charm, signal_the_clans, suspend,
+    ecstatic_beauty, threats_undetected,
+    // Basics
+    forest, forest, forest, forest, island, island, island, island, island, mountain, mountain,
+    mountain,
+];
+
+pub const THE_THIRTEENTH_DOCTOR_9_COMMANDERS: &[CardFactory] = &[the_thirteenth_doctor, jamie_mccrimmon];
+
+/// **The Thirteenth Doctor and Jamie McCrimmon**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Forests + 12 Islands = 98.
+/// The Thirteenth Doctor and Jamie McCrimmon (EDHREC, fetched 2026-10-18).
+pub const THE_THIRTEENTH_DOCTOR_9_MAIN: &[CardFactory] = &[
+    agility_bobblehead, anduril_flame_of_the_west, animation_module, basilisk_collar,
+    bilbos_ring, bitterthorn_nissas_animus, bone_sabres, charisma_bobblehead, commanders_plate,
+    endurance_bobblehead, fractal_harness, intelligence_bobblehead, kusari_gama, lost_jitte,
+    luck_bobblehead, mask_of_the_schemer, moonsnare_prototype, multiclass_baldric, nettlecyst,
+    perception_bobblehead, pip_boy_3000, robe_of_the_archmagi, scepter_of_celebration,
+    shadowspear, skullclamp, sol_ring, strength_bobblehead, sword_of_truth_and_justice,
+    tarrians_soulcleaver, tricksters_talisman, wayfarers_bauble, alchemists_refuge,
+    bonders_enclave, breeding_pool, command_tower, dreamroot_cascade, rejuvenating_springs,
+    seat_of_the_synod, simic_growth_chamber, tanglepool_bridge, temple_of_mystery,
+    tree_of_tales, war_room, acquisition_octopus, arboreal_grazer, armory_automaton,
+    birds_of_paradise, boreal_druid, brass_squire, cold_eyed_selkie, delighted_halfling,
+    elvish_mystic, fblthp_lost_on_the_range, fyndhorn_elves, hurkyl_master_wizard,
+    kodama_of_the_west_tree, llanowar_elves, nyxbloom_ancient, old_gnawbone, omen_hawker,
+    thought_monitor, an_offer_you_cant_refuse, artificers_epiphany, beast_within, filter_out,
+    inspiring_call, pongify, rapid_hybridization, silkguard, trash_the_town, barals_expertise,
+    make_your_own_luck, oversimplify, reverse_engineer, thoughtcast, universal_surveillance,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const LAEZEL_5_COMMANDERS: &[CardFactory] = &[laezel_vlaakiths_champion, scion_of_halaster];
+
+/// **Lae'zel, Vlaakith's Champion and Scion of Halaster**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Plains + 9 Swamps = 98.
+/// Lae'zel, Vlaakith's Champion and Scion of Halaster (EDHREC, fetched 2026-10-18).
+pub const LAEZEL_5_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, gatewatch_beacon, mind_stone, orzhov_signet, sol_ring,
+    staff_of_compleation, talisman_of_hierarchy, the_chain_veil, wayfarers_bauble, bojuka_bog,
+    brightclimb_pathway, caves_of_koilos, command_tower, desolate_mire, fetid_heath,
+    godless_shrine, isolated_chapel, karns_bastion, nesting_grounds, orzhov_basilica,
+    shattered_sanctum, shineshadow_snarl, tainted_field, vault_of_champions, arena_rector,
+    boggart_trawler, enduring_innocence, grateful_apparition, keeper_of_the_accord,
+    liliana_the_faultless, mangara_the_diplomat, metastatic_evangel, onakke_oathkeeper,
+    patrolling_peacemaker, sanctum_lurker, scholar_of_new_horizons, teyo_lightshield_expert,
+    tomik_orzhov_lawmage, tomik_wielder_of_law, witch_enchanter, elspeth_conquers_death,
+    oath_of_gideon, oath_of_liliana, resourceful_defense, urza_assembles_the_titans,
+    way_of_the_mentor, way_of_the_necromancer, anguished_unmaking, fell_the_profane,
+    loyal_tutor, semesters_end, swords_to_plowshares, unbounded_potential, whisper_of_the_dross,
+    ajani_steadfast, ajani_adversary_of_tyrants, ajani_caller_of_the_pride, basri_ket,
+    elspeth_knight_errant, elspeth_storm_slayer, elspeth_suns_champion, kaya_the_inexorable,
+    liliana_dreadhorde_general, ob_nixilis_reignited, ral_zarek_guest_lecturer,
+    sorin_lord_of_innistrad, sorin_solemn_visitor, the_eternal_wanderer, vraska_betrayals_sting,
+    damn, deploy_the_gatewatch, drown_in_ichor, primevals_glorious_rebirth, promise_of_loyalty,
+    settle_the_score, triumphant_reckoning, yawgmoths_vile_offering,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LAEZEL_6_COMMANDERS: &[CardFactory] = &[laezel_vlaakiths_champion, sword_coast_sailor];
+
+/// **Lae'zel, Vlaakith's Champion and Sword Coast Sailor**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Islands + 11 Plains = 98.
+/// Lae'zel, Vlaakith's Champion and Sword Coast Sailor (EDHREC, fetched 2026-10-18).
+pub const LAEZEL_6_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, azorius_signet, everflowing_chalice, fellwar_stone,
+    gatewatch_beacon, ichormoon_gauntlet, sol_ring, swiftfoot_boots, sword_of_truth_and_justice,
+    talisman_of_progress, thought_vessel, adarkar_wastes, azorius_chancery, command_tower,
+    deserted_beach, glacial_fortress, hallowed_fountain, karns_bastion, nesting_grounds,
+    port_town, prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse, deepglow_skate,
+    dreamtide_whale, esper_sentinel, flux_channeler, geist_of_saint_thalia, grateful_apparition,
+    guildpact_informant, luminarch_aspirant, metastatic_evangel, mikaeus_the_lunarch,
+    norns_choirmaster, onakke_oathkeeper, patrolling_peacemaker, spark_double,
+    tekuthal_inquiry_dominus, thrummingbird, inexorable_tide, noble_heritage, oath_of_gideon,
+    oath_of_teferi, resourceful_defense, teferis_talent, urza_assembles_the_titans,
+    counterspell, experimental_augury, generous_gift, jaces_machinations, loyal_tutor,
+    path_to_exile, ripples_of_potential, stroke_of_midnight, swords_to_plowshares,
+    ajani_steadfast, ajani_adversary_of_tyrants, ajani_caller_of_the_pride, archangel_elspeth,
+    basri_ket, elspeth_resplendent, elspeth_suns_champion, jace_reality_sculptor,
+    teferi_hero_of_dominaria, teferi_master_of_time, teferi_temporal_pilgrim,
+    teferi_who_slows_the_sunset, the_eternal_wanderer, the_wandering_emperor, contentious_plan,
+    farewell, supreme_verdict, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];

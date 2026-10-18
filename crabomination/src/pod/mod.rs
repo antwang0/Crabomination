@@ -25404,6 +25404,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WHIRLWIND_COMMANDERS,
             main: decks::WHIRLWIND_MAIN,
         },
+        // Seat 4159: Durnan of the Yawning Portal and Hardy Outlander's EDHREC average deck. `--pod-decks 4159`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Hardy Outlander (G)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_12_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_12_MAIN,
+        },
+        // Seat 4160: Sakashima of a Thousand Faces and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4160`.
+        PodDeck {
+            name: "Sakashima of a Thousand Faces and Siani, Eye of the Storm (U)",
+            commanders: decks::SAKASHIMA_OF_A_THOUSAND_FACES_3_COMMANDERS,
+            main: decks::SAKASHIMA_OF_A_THOUSAND_FACES_3_MAIN,
+        },
+        // Seat 4161: The Fourth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4161`.
+        PodDeck {
+            name: "The Fourth Doctor and Amy Pond (URG)",
+            commanders: decks::THE_FOURTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_FOURTH_DOCTOR_8_MAIN,
+        },
+        // Seat 4162: The Thirteenth Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 4162`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Jamie McCrimmon (UG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_9_MAIN,
+        },
+        // Seat 4163: Lae'zel, Vlaakith's Champion and Scion of Halaster's EDHREC average deck. `--pod-decks 4163`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Scion of Halaster (WB)",
+            commanders: decks::LAEZEL_5_COMMANDERS,
+            main: decks::LAEZEL_5_MAIN,
+        },
+        // Seat 4164: Lae'zel, Vlaakith's Champion and Sword Coast Sailor's EDHREC average deck. `--pod-decks 4164`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Sword Coast Sailor (WU)",
+            commanders: decks::LAEZEL_6_COMMANDERS,
+            main: decks::LAEZEL_6_MAIN,
+        },
     ]
 }
 
@@ -31457,6 +31493,12 @@ mod tests {
             ("Tolsimir, Midnight's Light", &[0x1A52]),
             ("Beetle, Legacy Criminal", &[0x1A53]),
             ("Whirlwind, Killer Cyclone", &[0x1A54]),
+            ("Durnan of the Yawning Portal and Hardy Outlander", &[0x1A55]),
+            ("Sakashima of a Thousand Faces and Siani, Eye of the Storm", &[0x1A56]),
+            ("The Fourth Doctor and Amy Pond", &[0x1A57]),
+            ("The Thirteenth Doctor and Jamie McCrimmon", &[0x1A58]),
+            ("Lae'zel, Vlaakith's Champion and Scion of Halaster", &[0x1A59]),
+            ("Lae'zel, Vlaakith's Champion and Sword Coast Sailor", &[0x1A5A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
