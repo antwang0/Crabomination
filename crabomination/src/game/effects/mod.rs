@@ -65,6 +65,7 @@ mod sculpted_sunburst;
 mod fumble;
 mod threats_undetected;
 mod music;
+mod reblock;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -33360,6 +33361,7 @@ impl GameState {
             Effect::SearchDistinctPowersOpponentReturnsTwo { max, back } => {
                 self.search_distinct_powers_opponent_returns_two(*max, *back, ctx, events, effect)
             }
+            Effect::RemoveBlockerThenReblock { what } => self.remove_blocker_then_reblock(what, ctx, effect),
             Effect::AddMusicCounterGrantUpkeepToll { what } => self.add_music_counter_grant_upkeep_toll(what, ctx, events),
             Effect::BounceStealAttachmentsReattach { what } => {
                 self.bounce_steal_attachments_reattach(what, ctx, events, effect)

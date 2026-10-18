@@ -6371,6 +6371,11 @@ pub enum Effect {
     /// Musician's "{T}: Put a music counter on target creature. If it doesn't
     /// have [the upkeep toll], it gains that ability" (`game/effects/music.rs`).
     AddMusicCounterGrantUpkeepToll { what: Selector },
+    /// "Remove target blocking creature from combat. Creatures it was
+    /// blocking that hadn't become blocked by another creature this combat
+    /// become unblocked, then it blocks an attacking creature of your choice"
+    /// (Balduvian Warlord; `game/effects/reblock.rs`).
+    RemoveBlockerThenReblock { what: Selector },
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`

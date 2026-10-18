@@ -1425,6 +1425,7 @@ impl Effect {
             | Effect::MillAddManaForColoredSymbols { who } => player_has_target(who),
             Effect::GainControlAndReattachAura { what } => sel_has_target(what),
             Effect::AddMusicCounterGrantUpkeepToll { what } => sel_has_target(what),
+            Effect::RemoveBlockerThenReblock { what } => sel_has_target(what),
             Effect::BounceStealAttachmentsReattach { what } => sel_has_target(what),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
@@ -2988,7 +2989,8 @@ impl Effect {
             | Effect::WeldArtifacts { what }
             | Effect::GainControlAndReattachAura { what }
             | Effect::BounceStealAttachmentsReattach { what }
-            | Effect::AddMusicCounterGrantUpkeepToll { what } => sel_filter(what),
+            | Effect::AddMusicCounterGrantUpkeepToll { what }
+            | Effect::RemoveBlockerThenReblock { what } => sel_filter(what),
             Effect::LookExileAnyNumberRestBack { who, .. }
             | Effect::PutTopOnBottom { who }
             | Effect::LookAtHandCastFree { who, .. } => sel_filter(who),
@@ -5648,7 +5650,8 @@ impl Effect {
                 | Effect::SearchOpponentLibraryForSameName { what }
                 | Effect::GainControlAndReattachAura { what }
                 | Effect::BounceStealAttachmentsReattach { what }
-                | Effect::AddMusicCounterGrantUpkeepToll { what } => sel_find(what, slot),
+                | Effect::AddMusicCounterGrantUpkeepToll { what }
+                | Effect::RemoveBlockerThenReblock { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::BecomeCopyOfExiledCard { what, .. }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
