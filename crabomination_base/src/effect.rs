@@ -2929,6 +2929,10 @@ pub enum Predicate {
     /// "If this spell was cast from exile" (Lifestream's Blessing, the
     /// Ultimate Magic cycle) — the resolving spell's own cast zone.
     SpellWasCastFromExile,
+    /// "If you do" after a resolve-now "you may cast" (`CastWithoutPayingImmediate`
+    /// and its siblings): a spell was cast that way earlier in this resolution
+    /// (Soundwave, Sonic Spy).
+    CastImmediatelyThisResolution,
     /// CR 701.67 — true iff this spell's optional "you may waterbend {N}"
     /// additional cost was paid. Reads `EffectContext.cast_via_waterbend`,
     /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional

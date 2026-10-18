@@ -2555,6 +2555,10 @@ pub struct ResolutionScratch {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// An immediate "you may cast" (`cast_immediate`) cast a spell during
+    /// this resolution — "If you do" (Soundwave, Sonic Spy's convert).
+    #[serde(skip)]
+    pub(crate) cast_immediately_this_resolution: bool,
     /// Transient: set when a `wants_ui` caster answers an optional extra-
     /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
     /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,

@@ -257,6 +257,7 @@ impl GameState {
             }
         }
         events.extend(cast_events);
+        self.scratch.cast_immediately_this_resolution = true;
         Ok(())
     }
 

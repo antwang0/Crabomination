@@ -3448,6 +3448,9 @@ impl GameState {
                 self.scratch.nonland_cards_discarded_per_player_this_resolution = Default::default();
             }
             clear_scratch!(self.discarded_card_ids_this_resolution);
+            if self.scratch.cast_immediately_this_resolution {
+                self.scratch.cast_immediately_this_resolution = false;
+            }
             clear_scratch!(self.exiled_card_ids_this_resolution);
             self.permanents_destroyed_this_resolution = 0;
             clear_scratch!(self.destroyed_this_resolution);

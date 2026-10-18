@@ -4199,6 +4199,7 @@ impl GameState {
             }
             Predicate::SpellWasMadness => ctx.cast_via_madness,
             Predicate::SpellWasCastFromExile => ctx.spell_cast_from_exile,
+            Predicate::CastImmediatelyThisResolution => self.scratch.cast_immediately_this_resolution,
             Predicate::SpellWasMayhem => {
                 // CR 702.187 — true iff this spell was cast from the graveyard
                 // for its Mayhem cost.
