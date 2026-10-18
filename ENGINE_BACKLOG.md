@@ -199,6 +199,10 @@ the handoff.
   only the bot's own face (Black Panther behind Shalai, seed 923534 — a CR 104.4b draw).
 - **FIXED (invariant):** the CR 302.6 turn-start check flagged a land gained in that turn's own cumulative
   upkeep (Herald of Leshrac's cost, seed 921312) — it now reads the previous action's controllers.
+- **FIXED (CR 101.2 / 608.2):** `CastWithoutPayingImmediate` (hideaway lands, discounted / pay-own-cost casts)
+  propagated a cast lock's `Err` out of a resolution — the pod seat test's uncheckpointed-mutation guard
+  (Windbrisk Heights, `SpellNameLocked`); it is now a no-op like `cast_card_for_free`. The seat test takes
+  `CRAB_SEAT_SHARD=i/n` (it no longer fits two hours on four cores).
 - **Closed with a reason:** `019Y6J4R`'s Brothers' War III "slot 1 at its own controller" is the baseline
   profile's caster-first default in a two-seat test with `hostile_player_targets` off; pods (>2 seats or the
   production profile) are hostile. Two of the seed-921412/924036 draws were Repay in Kind (fixed above).
