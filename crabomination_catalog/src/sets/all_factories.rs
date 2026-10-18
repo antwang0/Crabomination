@@ -17630,6 +17630,7 @@ static DECKS: &[Factory] = &[
     super::decks::rootpath_purifier,
     super::decks::boiling_rock_rioter,
     super::decks::nahiris_wrath,
+    super::decks::nathan_drake_treasure_hunter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

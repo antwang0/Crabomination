@@ -563,3 +563,18 @@ fn nahiris_wrath_deals_the_discarded_total() {
     assert!(g.battlefield_find(wurm).is_none(), "6 damage kills the 6/4");
     assert!(g.battlefield_find(other).is_none(), "and the 4/4");
 }
+
+/// Nathan Drake exiles each top card as he attacks and casts the one he
+/// doesn't own, paying with mana of the wrong color.
+#[test]
+fn nathan_drake_casts_an_opponents_exiled_spell() {
+    let mut g = pod(2);
+    let drake = ready(&mut g, 0, catalog::nathan_drake_treasure_hunter());
+    let ox = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.players[1].library.rotate_right(1);
+    let mine = g.players[0].library[0].id;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    attack(&mut g, &[drake]);
+    assert!(g.exile.iter().any(|c| c.id == mine), "my top card is exiled too");
+    assert_eq!(g.battlefield_find(ox).map(|c| c.controller), Some(0), "their bear, cast with blue");
+}

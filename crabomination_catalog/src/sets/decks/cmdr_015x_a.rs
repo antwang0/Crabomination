@@ -818,3 +818,51 @@ pub fn nahiris_wrath() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nathan Drake, Treasure Hunter — {U}{B}{R} legendary 3/2 first strike
+/// Human Rogue. Whenever it attacks, exile the top card of each player's
+/// library; you may cast a spell from among them — one you don't own with
+/// mana spent as though any color (its static), else your own.
+pub fn nathan_drake_treasure_hunter() -> CardDefinition {
+    let exiled = |filter: R| Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter };
+    legend(CardDefinition {
+        name: "Nathan Drake, Treasure Hunter",
+        cost: cost(&[u(), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Rogue], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ClearLastMoved,
+                Effect::ExileTopOfLibrary {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::ONE,
+                    link_to_source: false,
+                    face_down: false,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountOf(Box::new(exiled(R::Nonland.and(R::OwnedByYou.negate())))),
+                        Value::ONE,
+                    ),
+                    then: Box::new(Effect::CastImmediateAnyManaType {
+                        what: exiled(R::Nonland.and(R::OwnedByYou.negate())),
+                        source_zone: crate::card::Zone::Exile,
+                    }),
+                    else_: Box::new(Effect::CastWithoutPayingImmediate {
+                        what: exiled(R::Nonland.and(R::OwnedByYou)),
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: true,
+                    }),
+                },
+            ]),
+        }],
+        ..Default::default()
+    })
+}
