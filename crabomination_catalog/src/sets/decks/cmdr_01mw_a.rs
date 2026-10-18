@@ -2168,3 +2168,32 @@ pub fn alhammarret_high_arbiter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Infinite Coursework — {2}{U} Aura. When it enters, tap the enchanted
+/// creature; it becomes unprepared. The enchanted creature loses all
+/// abilities and doesn't untap during its controller's untap step.
+pub fn infinite_coursework() -> CardDefinition {
+    use crate::card::{CounterType, EquipBonus, StaticAbility, StaticEffect};
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Infinite Coursework",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: crate::effect::shortcut::target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { remove_abilities: true, ..Default::default() }),
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntapGlobal { applies_to: host(), condition: None },
+        }],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: host() },
+            Effect::RemoveCounter {
+                what: host(),
+                kind: CounterType::Prepared,
+                amount: Value::CountersOn { what: Box::new(host()), kind: CounterType::Prepared },
+            },
+        ]))],
+        ..Default::default()
+    }
+}

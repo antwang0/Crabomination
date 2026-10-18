@@ -928,3 +928,24 @@ fn alhammarret_locks_the_name_for_opponents() {
         .perform_action(GameAction::CastSpell { card_id: theirs, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
         .is_err());
 }
+
+/// Infinite Coursework taps its host, strips its abilities and keeps it
+/// tapped through its controller's untap step.
+#[test]
+fn infinite_coursework_shuts_a_creature_down() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let ic = g.add_card_to_hand(0, catalog::infinite_coursework());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: ic, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).unwrap().tapped);
+    assert!(!g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::Flying));
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    g.do_untap();
+    assert!(g.battlefield_find(angel).unwrap().tapped, "doesn't untap");
+}
