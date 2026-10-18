@@ -677,3 +677,20 @@ fn warbeast_of_gorgoroth_amasses_on_big_deaths() {
     assert_eq!(run(catalog::craw_wurm()), 2);
     assert_eq!(run(catalog::grizzly_bears()), 0);
 }
+
+/// Surtland Flinger flings a sacrificed Giant for twice its power: Hill Giant
+/// (3) is 6 to the defending player.
+#[test]
+fn surtland_flinger_doubles_a_flung_giant() {
+    let mut g = pod(2);
+    let flinger = ready(&mut g, 0, catalog::surtland_flinger());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: flinger, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "sacrificed");
+    assert_eq!(g.players[1].life, life - 6);
+}

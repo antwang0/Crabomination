@@ -17554,6 +17554,9 @@ static DECKS: &[Factory] = &[
     super::decks::misty_mountains_raider,
     super::decks::tidings_of_war,
     super::decks::warbeast_of_gorgoroth,
+    super::decks::giants_ire,
+    super::decks::squash,
+    super::decks::surtland_flinger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

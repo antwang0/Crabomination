@@ -1286,3 +1286,90 @@ pub fn warbeast_of_gorgoroth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Giant's Ire — {3}{R} Kindred sorcery — Giant. 4 damage to target player or
+/// planeswalker; if you control a Giant, draw a card.
+pub fn giants_ire() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Giant's Ire",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: crate::effect::shortcut::target_filtered(R::Player.or(R::Planeswalker)),
+                amount: Value::Const(4),
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::HasCreatureType(CreatureType::Giant),
+                }),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Squash — {4}{R} instant; {3} less if you control a Giant. 6 damage to
+/// target creature or planeswalker.
+pub fn squash() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Squash",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {3} less to cast if you control a Giant.",
+            effect: StaticEffect::SelfCostReducedIfControlEach {
+                filters: vec![R::HasCreatureType(CreatureType::Giant)],
+                amount: 3,
+            },
+        }],
+        effect: Effect::DealDamage {
+            to: crate::effect::shortcut::target_filtered(R::Creature.or(R::Planeswalker)),
+            amount: Value::Const(6),
+        },
+        ..Default::default()
+    }
+}
+
+/// Surtland Flinger — {3}{R}{R} 4/6 Giant Berserker. Attacking, you may
+/// sacrifice another creature; when you do, it deals damage equal to that
+/// creature's power to any target — twice that if it was a Giant.
+pub fn surtland_flinger() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::shortcut::target_any;
+    let fling = |amount: Value| Effect::DealDamage { to: target_any(), amount };
+    CardDefinition {
+        name: "Surtland Flinger",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant, CreatureType::Berserker], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice another creature to fling it?".into(),
+                filter: R::Creature.and(R::OtherThanSource).and(R::ControlledByYou),
+                count: Value::ONE,
+                then: Box::new(Effect::Reflexive {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::SacrificedCard,
+                            filter: R::HasCreatureType(CreatureType::Giant),
+                        },
+                        then: Box::new(fling(Value::Sum(vec![Value::SacrificedPower, Value::SacrificedPower]))),
+                        else_: Box::new(fling(Value::SacrificedPower)),
+                    }),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
