@@ -1514,6 +1514,13 @@ static DECKS: &[Factory] = &[
     super::decks::blood_on_the_snow,
     super::decks::we_say_thee_nay,
     super::decks::hulk_smash,
+    // cmdr_019y_q (session 019Y6J4R)
+    super::decks::invasion_of_xerex,
+    super::decks::driven_despair,
+    super::decks::sunder_the_gateway,
+    super::decks::seize_the_storm,
+    super::decks::telemin_performance,
+    super::decks::rift_elemental,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
