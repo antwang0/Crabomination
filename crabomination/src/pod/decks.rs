@@ -117285,3 +117285,32 @@ pub const DOROTHEA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const THE_LADY_OF_OTARIA_COMMANDERS: &[CardFactory] = &[the_lady_of_otaria];
+
+/// **The Lady of Otaria**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Forests + 10 Mountains = 99.
+/// The Lady of Otaria (EDHREC, fetched 2026-10-18).
+pub const THE_LADY_OF_OTARIA_MAIN: &[CardFactory] = &[
+    arcane_signet, bearded_axe, chronicle_of_victory, conduit_of_worlds, crucible_of_worlds,
+    doors_of_durin, sol_ring, vanquishers_banner, zuran_orb, blighted_woodland,
+    cabaretti_courtyard, cinder_glade, command_tower, demolition_field, dwarven_mine,
+    dwarven_ruins, escape_tunnel, evolving_wilds, fabled_passage, field_of_ruin, lotus_field,
+    mines_of_moria, myriad_landscape, riveteers_overlook, rootbound_crag, stomping_ground,
+    terramorphic_expanse, wooded_foothills, axgard_cavalry, balin_loremaster,
+    druid_of_the_emerald_grove, dwarven_blastminer, dwarven_bloodboiler, dwarven_grunt,
+    dwarven_miner, dwarven_recruiter, fearless_liberator, fili_and_kili_joyous,
+    gimli_of_the_glittering_caves, gimli_counter_of_kills, gimli_mournful_avenger,
+    gloin_the_mighty, gloin_dwarf_emissary, insufferable_balladeer, magda_brazen_outlaw,
+    magda_the_hoardmaster, plundering_barbarian, ramunap_excavator, realmwalker, seven_dwarves,
+    seven_dwarves, seven_dwarves, seven_dwarves, seven_dwarves, seven_dwarves, taurean_mauler,
+    titania_protector_of_argoth, torbran_thane_of_red_fell, vault_robber, oin_the_brave,
+    exploration, rhythm_of_the_wild, shared_animosity, the_mending_of_dominaria,
+    undergrowth_recon, beast_within, chaos_warp, constant_mists, crop_rotation,
+    entish_restoration, harrow, mine_collapse, roiling_regrowth, blasphemous_act, cultivate,
+    decimate, dwarven_reinforcements, highway_robbery, nahiris_lithoforming, rampant_growth,
+    splendid_reclamation, worldsouls_rage,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

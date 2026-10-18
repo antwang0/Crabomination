@@ -25542,6 +25542,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DOROTHEA_COMMANDERS,
             main: decks::DOROTHEA_MAIN,
         },
+        // Seat 4182: The Lady of Otaria's EDHREC average deck. `--pod-decks 4182`.
+        PodDeck {
+            name: "The Lady of Otaria (RG)",
+            commanders: decks::THE_LADY_OF_OTARIA_COMMANDERS,
+            main: decks::THE_LADY_OF_OTARIA_MAIN,
+        },
     ]
 }
 
@@ -31618,6 +31624,7 @@ mod tests {
             ("Gilanra, Caller of Wirewood and Keleth, Sunmane Familiar", &[0x1A69]),
             ("Alharu, Solemn Ritualist and Siani, Eye of the Storm", &[0x1A6A]),
             ("Dorothea, Vengeful Victim", &[0x1A6B]),
+            ("The Lady of Otaria", &[0x1A6C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
