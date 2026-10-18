@@ -28700,8 +28700,13 @@ impl GameState {
             let opp_targets = opps.iter().map(|&q| Target::Player(q));
             // An optional hostile slot ("and up to two other targets" —
             // Drakuseth) never falls back onto the caster's own face or board:
-            // at a two-player endgame it aimed 3 damage at itself and drew.
-            let hostile_optional = hostile && (slot >= optional_from || eff.target_slot_optional(slot, None));
+            // at a two-player endgame it aimed 3 damage at itself and drew. A
+            // slot only your own objects can fill ("to target creature you
+            // control" — Swordsman, Sharp Scoundrel's attach) isn't aimed at
+            // anyone else, so it keeps its own board.
+            let hostile_optional = hostile
+                && !req.mentions_controlled_by_you()
+                && (slot >= optional_from || eff.target_slot_optional(slot, None));
             let order: Vec<Target> = if hostile {
                 opp_targets.chain((!hostile_optional).then_some(Target::Player(controller))).collect()
             } else {

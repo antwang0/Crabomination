@@ -4752,6 +4752,18 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when every match must be controlled by the filter's controller
+    /// ("target creature you control") — the `ControlledByYou` sibling of
+    /// [`Self::mentions_controlled_by_opponent`].
+    pub fn mentions_controlled_by_you(&self) -> bool {
+        match self {
+            Self::ControlledByYou => true,
+            Self::And(a, b) => a.mentions_controlled_by_you() || b.mentions_controlled_by_you(),
+            Self::Or(a, b) => a.mentions_controlled_by_you() && b.mentions_controlled_by_you(),
+            _ => false,
+        }
+    }
+
     /// True when the filter holds an atom answered against the ability's
     /// source (its chosen color, its exiled card, its host) — the atoms the
     /// source-less card walker answers `false`. Recurses through And/Or/Not.
