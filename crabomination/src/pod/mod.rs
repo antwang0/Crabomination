@@ -25722,6 +25722,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NATHAN_DRAKE_COMMANDERS,
             main: decks::NATHAN_DRAKE_MAIN,
         },
+        // Seat 4212: Kotose, the Silent Spider's EDHREC average deck. `--pod-decks 4212`.
+        PodDeck {
+            name: "Kotose, the Silent Spider (UB)",
+            commanders: decks::KOTOSE_COMMANDERS,
+            main: decks::KOTOSE_MAIN,
+        },
     ]
 }
 
@@ -31828,6 +31834,7 @@ mod tests {
             ("Durnan of the Yawning Portal and Acolyte of Bahamut", &[0x1A87]),
             ("Rielle, the Everwise", &[0x1A88]),
             ("Nathan Drake, Treasure Hunter", &[0x1A89]),
+            ("Kotose, the Silent Spider", &[0x1A8A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

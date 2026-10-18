@@ -118141,3 +118141,30 @@ pub const NATHAN_DRAKE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const KOTOSE_COMMANDERS: &[CardFactory] = &[kotose_the_silent_spider];
+
+/// **Kotose, the Silent Spider**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Swamps = 99.
+/// Kotose, the Silent Spider (EDHREC, fetched 2026-10-18).
+pub const KOTOSE_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, conjurers_closet, dimir_signet, fellwar_stone,
+    mind_stone, mindcrank, panharmonicon, realmbreaker_the_invasion_tree, sol_ring,
+    talisman_of_dominance, thought_vessel, choked_estuary, command_tower, darkwater_catacombs,
+    dimir_aqueduct, drowned_catacomb, exotic_orchard, morphic_pool, otawara_soaring_city,
+    polluted_delta, shipwreck_marsh, sunken_hollow, tainted_isle, temple_of_deceit,
+    underground_river, watery_grave, archaeomancer, baleful_strix, consuming_aberration,
+    deadeye_navigator, displacer_kitten, fallen_shinobi, gonti_lord_of_luxury, hostage_taker,
+    moon_circuit_hacker, moonsnare_specialist, nashi_moon_sages_scion, notion_thief,
+    phyrexian_metamorph, prosperous_thief, ruin_crab, silver_fur_master, solemn_simulacrum,
+    thassa_deep_dwelling, thief_of_sanity, thousand_faced_shadow, yshtola_rhul,
+    court_of_cunning, mystic_remora, propaganda, psychic_corrosion, rhystic_study,
+    arcane_denial, blur, counterspell, dark_ritual, drown_in_the_loch, essence_flux,
+    ghostly_flicker, memory_plunder, negate, planar_incision, sink_into_stupor, siphon_insight,
+    teferis_time_twist, withering_torment, tasha_the_witch_queen, breach_the_multiverse,
+    bribery, demonic_tutor, feed_the_swarm, fractured_sanity, lifes_finale, maddening_cacophony,
+    praetors_grasp, reanimate, toxic_deluge, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
