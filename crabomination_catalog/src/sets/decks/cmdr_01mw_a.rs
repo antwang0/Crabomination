@@ -636,3 +636,48 @@ pub fn araumi_of_the_dead_tide() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Cloning of Shredder — {4}{B}{B} Saga. I: exile target creature card
+/// from your graveyard and create a token copy of it. II, III: create a token
+/// copy of a card exiled with this Saga. Each copy isn't legendary and is a
+/// Mutant in addition to its other types.
+pub fn the_cloning_of_shredder() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    let copy = |source: Selector| Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source,
+        extra_creature_types: vec![CreatureType::Mutant],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: true,
+        legendary: false,
+        extra_keywords: vec![],
+        no_mana_cost: false,
+        enters_with_counters: None,
+        remove_keywords: vec![],
+    };
+    CardDefinition {
+        name: "The Cloning of Shredder",
+        cost: cost(&[generic(4), crate::mana::b(), crate::mana::b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: crate::effect::shortcut::target_filtered(R::Creature.from_your_graveyard()),
+                        to: ZoneDest::ExileWithSourceStamp,
+                    },
+                    copy(Selector::LastMoved),
+                ]),
+            ),
+            (2, copy(Selector::CardExiledWithSource)),
+            (3, copy(Selector::CardExiledWithSource)),
+        ],
+        ..Default::default()
+    }
+}

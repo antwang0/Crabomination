@@ -398,3 +398,30 @@ fn cr_702_141_araumi_grants_encore_at_the_cards_cost() {
     let copies = g.battlefield.iter().filter(|c| c.definition.name == "Hill Giant" && c.controller == 0).count();
     assert_eq!(copies, 2, "one per opponent");
 }
+
+/// The Cloning of Shredder: chapter I exiles a legendary creature card and
+/// mints a non-legendary Mutant copy; chapter II mints another off the same
+/// exiled card, and the two copies coexist (no legend rule).
+#[test]
+fn the_cloning_of_shredder_mints_mutant_copies() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::the_cloning_of_shredder());
+    let bombur = g.add_card_to_graveyard(0, catalog::bombur_gentle_dreamer());
+    let i = catalog::the_cloning_of_shredder().saga_chapters[0].1.clone();
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(saga);
+    ctx.targets = vec![Target::Permanent(bombur)];
+    let evs = g.resolve_effect(&i, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bombur));
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 1);
+    lore(&mut g, saga);
+    let copies: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Bombur, Gentle Dreamer").collect();
+    assert_eq!(copies.len(), 2);
+    for c in copies {
+        assert!(c.is_token);
+        assert!(!c.definition.supertypes.contains(&crabomination::card::Supertype::Legendary));
+        assert!(c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Mutant));
+    }
+}

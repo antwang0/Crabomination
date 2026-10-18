@@ -1536,6 +1536,8 @@ static DECKS: &[Factory] = &[
     super::decks::kitesail_skirmisher,
     super::decks::conquerors_galleon,
     super::decks::dawnhand_dissident,
+    super::decks::cryptic_spires,
+    super::decks::absorbing_man,
     // cmdr_01mw_a (session 01MWhJbe)
     super::decks::ixallis_diviner,
     super::decks::origin_of_iron_man,
@@ -1555,8 +1557,7 @@ static DECKS: &[Factory] = &[
     super::decks::thorin_king_of_durins_folk,
     super::decks::gandalf_of_the_secret_fire,
     super::decks::araumi_of_the_dead_tide,
-    super::decks::cryptic_spires,
-    super::decks::absorbing_man,
+    super::decks::the_cloning_of_shredder,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
