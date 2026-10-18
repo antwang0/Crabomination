@@ -772,7 +772,7 @@ ratchet; this is the engineering view of it.
 | Card | Gap | What it needs |
 |---|---|---|
 | Balduvian Fallen | the "+1/+0 for each {R} spent to pay cumulative upkeep" payoff is dropped | a per-color read of what paid a cumulative upkeep; no primitive |
-| Maraxus of Keld, Bounty Hunter | not card gaps — the Scryfall cache resolves the name to a different card (one Vanguard avatar, one creature) than the catalog holds | nothing; the rows document the collision |
+| Bounty Hunter | not a card gap — the Scryfall cache resolves the name to a different card (a Vanguard avatar) than the catalog's creature | nothing; the row documents the collision (Maraxus of Keld's computes since the creature landed in `cmdr_015x_a`) |
 
 ## The INVENTED-ability columns (2026-09-19) — residuals only
 

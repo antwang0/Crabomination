@@ -3815,7 +3815,6 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
     // A printed face the catalog has not implemented at all.
     // No primitive for "pay {W}{U}{B}{R}{G} rather than the mana cost".
     // Scryfall resolves the name to a different card than the catalog's.
-    ("Maraxus of Keld", "the catalog card is the Vanguard avatar; the cache holds the creature"),
     ("Bounty Hunter", "the cache entry is the Vanguard avatar; the catalog holds the creature"),
 ];
 
@@ -3823,7 +3822,8 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
 /// Marvel modal DFC whose front can turn itself over (Scryfall `modal_dfc`)
 /// prints a castable back face AND a transform ability. Each row is checked
 /// against the printing, not exempted.
-const MODAL_DFCS_THAT_TRANSFORM: &[&str] = &["Magik, Illyana Rasputin", "Gwen Stacy"];
+const MODAL_DFCS_THAT_TRANSFORM: &[&str] =
+    &["Magik, Illyana Rasputin", "Gwen Stacy", "Bruce Banner", "Peter Parker", "Miles Morales"];
 
 /// CR 712.1 — the catalog's transforming DFCs (`is_transforming_dfc`: an
 /// ability on either face turns the card over) and its modal DFCs must not
