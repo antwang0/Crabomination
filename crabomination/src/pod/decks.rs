@@ -116583,3 +116583,57 @@ pub const TOLSIMIR_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const BEETLE_COMMANDERS: &[CardFactory] = &[beetle_legacy_criminal];
+
+/// **Beetle, Legacy Criminal**'s EDHREC average deck, card for card:
+/// 63 nonbasic cards + 36 Islands = 99.
+/// Beetle, Legacy Criminal (EDHREC, fetched 2026-10-18).
+pub const BEETLE_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, ecologists_terrarium, goggles_of_night, goldvein_pick,
+    lightning_greaves, mind_stone, navigation_orb, sapphire_medallion, sol_ring,
+    myriad_landscape, mystic_sanctuary, seat_of_the_synod, terramorphic_expanse, aerial_doombot,
+    agent_of_kotis, blighted_agent, buzz_bots, core_prowler, corpse_cur, crosstown_courier,
+    donatello_gadget_master, dreamscape_artist, flying_drone, goliath_sphinx,
+    graviton_fundamental_force, guildpact_informant, ichorclaw_myr, jhessian_thief, kid_loki,
+    leader_super_genius, loki_god_of_mischief, loki_lord_of_misrule, myr_scrapling,
+    phyrexian_digester, razzle_dazzler, super_adaptoid, thrummingbird, ulamogs_crusher,
+    vulture_feathered_fiend, aqueous_form, case_of_the_shifting_visage, cloak_of_mists,
+    imprisoned_in_the_moon, rhystic_study, aetherize, an_offer_you_cant_refuse, arcane_denial,
+    counterspell, disdainful_stroke, frantic_search, mana_drain, negate, opt,
+    phantom_interference, snap, syncopate, enter_the_enigma, ghostform, ponder, preordain,
+    ravenform, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
+
+pub const WHIRLWIND_COMMANDERS: &[CardFactory] = &[whirlwind_killer_cyclone];
+
+/// **Whirlwind, Killer Cyclone**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Whirlwind, Killer Cyclone (EDHREC, fetched 2026-10-18).
+pub const WHIRLWIND_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, fire_diamond, hazorets_monument, mind_stone, ruby_medallion,
+    sol_ring, the_fire_crystal, castle_embereth, myriad_landscape, ramunap_ruins,
+    shinka_the_bloodsoaked_keep, anger, archwing_dragon, ardoz_cobbler_of_war, bomat_courier,
+    captain_lannery_storm, combat_celebrant, death_greeters_champion, detectives_phoenix,
+    flamerush_rider, fleeting_effigy, gingerbrute, glitterfang, goblin_heelcutter,
+    goblin_rabblemaster, howlsquad_heavy, jaxis_the_troublemaker, kolaghan_forerunners,
+    laelia_the_blade_reforged, legion_warboss, lightning_berserker, loyal_apprentice,
+    mardu_scout, port_razer, professional_face_breaker, ragavan_nimble_pilferer, rakka_mar,
+    raphael_the_nightwatcher, reinforced_ronin, squee_dubious_monarch,
+    subira_tulzidi_caravanner, tersa_lightshatter, urabrask_heretic_praetor, vaultbreaker,
+    viashino_sandsprinter, warbringer, zurgo_bellstriker, connecting_the_dots, daring_piracy,
+    elemental_mastery, goblin_bombardment, impact_tremors, warstorm_surge, abrade,
+    cathartic_pyre, chaos_warp, demand_answers, lightning_bolt, untimely_malfunction,
+    chandra_flamecaller, burn_down_the_house, electroduplicate, hate_mirage, hex_magic,
+    seize_the_spoils, snort, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];

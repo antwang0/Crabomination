@@ -25392,6 +25392,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOLSIMIR_2_COMMANDERS,
             main: decks::TOLSIMIR_2_MAIN,
         },
+        // Seat 4157: Beetle, Legacy Criminal's EDHREC average deck. `--pod-decks 4157`.
+        PodDeck {
+            name: "Beetle, Legacy Criminal (U)",
+            commanders: decks::BEETLE_COMMANDERS,
+            main: decks::BEETLE_MAIN,
+        },
+        // Seat 4158: Whirlwind, Killer Cyclone's EDHREC average deck. `--pod-decks 4158`.
+        PodDeck {
+            name: "Whirlwind, Killer Cyclone (R)",
+            commanders: decks::WHIRLWIND_COMMANDERS,
+            main: decks::WHIRLWIND_MAIN,
+        },
     ]
 }
 
@@ -31443,6 +31455,8 @@ mod tests {
             ("The Thing, Ben Grimm", &[0x1A50]),
             ("Tolsimir, Friend to Wolves", &[0x1A51]),
             ("Tolsimir, Midnight's Light", &[0x1A52]),
+            ("Beetle, Legacy Criminal", &[0x1A53]),
+            ("Whirlwind, Killer Cyclone", &[0x1A54]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
