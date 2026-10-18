@@ -3193,6 +3193,19 @@ precon pod test  one game a seat over 4,181 seats, alone under --cargo-profile o
                  pass, 350 s
 ```
 
+Re-gated at the run's close (seven more cards, three more primitives — Zur's Weirding's draw
+dig, the hatching exile, `RevealUntilFind`'s X atoms; 4,209 seats), same box and profile:
+
+```
+--bench          196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 games_per_s 224.4 (box noise); peak_rss_mib 39.5
+random pods      seed 92001, same shape: 489 / 490 decided, 0 panics; the one undecided game
+                 is a CR 104.4a draw (4-seat, decks 3240/2525/61/3227, seed 516550), stall rate 0
+clippy           0 warnings (client excluded)
+suite            27,872 / 27,872 (6 skipped)
+precon pod test  4,209 seats, overflow profile: pass, 335 s
+```
+
 ### 2026-10-18 (Commander run, `019Y6J4R`) — guardrail; 188 seats, 144 cards, two engine fixes
 
 Hot-path touches: `ally_trigger_extra_fires`' presence gate peels each static through
