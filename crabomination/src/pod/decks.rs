@@ -118196,3 +118196,32 @@ pub const FLAMEWAR_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SOUNDWAVE_COMMANDERS: &[CardFactory] = &[soundwave_sonic_spy];
+
+/// **Soundwave, Sonic Spy**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 6 Islands + 5 Plains + 5 Swamps = 99.
+/// Soundwave, Sonic Spy (EDHREC, fetched 2026-10-18).
+pub const SOUNDWAVE_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, azorius_signet, dimir_signet, fellwar_stone,
+    idol_of_oblivion, mindcrank, orzhov_signet, skullclamp, sol_ring, talisman_of_dominance,
+    talisman_of_hierarchy, talisman_of_progress, adarkar_wastes, arcane_sanctum,
+    caves_of_koilos, command_tower, drowned_catacomb, evolving_wilds, exotic_orchard,
+    glacial_fortress, godless_shrine, hallowed_fountain, isolated_chapel, morphic_pool,
+    prairie_stream, raffines_tower, reliquary_tower, sea_of_clouds, sunken_hollow,
+    vault_of_champions, watery_grave, adeline_resplendent_cathar, aven_wind_guide,
+    blitzwing_cruel_tormentor, company_commander, consuming_aberration, curiosity_crafter,
+    cyclonus_the_saboteur, elas_il_kor_sadistic_pilgrim, kambal_profiteering_mayor,
+    marneus_calgar, mirkwood_bats, monastery_mentor, mondrak_glory_dominus, murmuring_mystic,
+    ruin_crab, securitron_squadron, solemn_simulacrum, starscream_power_hungry,
+    talrand_sky_summoner, thalisse_reverent_medium, the_cyber_controller, urza_chief_artificer,
+    whirler_rogue, anointed_procession, bitterblossom, caretakers_talent, court_of_cunning,
+    intangible_virtue, shark_typhoon, thopter_spy_network, anguished_unmaking, brainstorm,
+    counterspell, deny_the_witch, despark, dovins_veto, generous_gift, inkshield, negate,
+    path_to_exile, swords_to_plowshares, void_rend, kaya_geist_hunter, breach_the_multiverse,
+    damn, fractured_sanity, hour_of_reckoning, maddening_cacophony, martial_coup,
+    singularity_rupture, windfall,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp,
+];

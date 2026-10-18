@@ -25734,6 +25734,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FLAMEWAR_COMMANDERS,
             main: decks::FLAMEWAR_MAIN,
         },
+        // Seat 4214: Soundwave, Sonic Spy's EDHREC average deck. `--pod-decks 4214`.
+        PodDeck {
+            name: "Soundwave, Sonic Spy (WUB)",
+            commanders: decks::SOUNDWAVE_COMMANDERS,
+            main: decks::SOUNDWAVE_MAIN,
+        },
     ]
 }
 
@@ -31842,6 +31848,7 @@ mod tests {
             ("Nathan Drake, Treasure Hunter", &[0x1A89]),
             ("Kotose, the Silent Spider", &[0x1A8A]),
             ("Flamewar, Brash Veteran", &[0x1A8B]),
+            ("Soundwave, Sonic Spy", &[0x1A8C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
