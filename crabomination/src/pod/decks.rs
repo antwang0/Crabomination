@@ -118003,3 +118003,85 @@ pub const MAI_AND_ZUKO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, mountain, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp,
 ];
+
+pub const GHOST_OF_RAMIREZ_DEPIETRO_21_COMMANDERS: &[CardFactory] = &[ghost_of_ramirez_depietro, prava_of_the_steel_legion];
+
+/// **Ghost of Ramirez DePietro and Prava of the Steel Legion**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Islands + 8 Plains = 98.
+/// Ghost of Ramirez DePietro and Prava of the Steel Legion (EDHREC, fetched 2026-10-18).
+pub const GHOST_OF_RAMIREZ_DEPIETRO_21_MAIN: &[CardFactory] = &[
+    arcane_signet, expedition_map, ghoulcallers_bell, key_to_the_city, lost_jitte, manifold_key,
+    pyxis_of_pandemonium, riverchurn_monument, sol_ring, talisman_of_progress,
+    throne_of_eldraine, torpor_orb, azorius_chancery, celestial_colonnade, deserted_temple,
+    fountainport, glacial_fortress, hall_of_storm_giants, hengegate_pathway, homeward_path,
+    irrigated_farmland, lotus_field, misty_rainforest, mystic_sanctuary, restless_anchorage,
+    scalding_tarn, sea_of_clouds, seachrome_coast, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_plains,
+    thespians_stage, urzas_cave, baird_steward_of_argive, bishops_soldier, clever_conjurer,
+    fatestitcher, forensic_researcher, ghostly_pilferer, kelpie_guide, lavinia_azorius_renegade,
+    north_pole_patrol, perplexing_chimera, prince_imrahil_the_fair, quantum_riddler,
+    selfless_squire, skystrike_officer, strict_proctor, trap_runner, vizier_of_tumbling_sands,
+    waxen_shapethief, wizened_snitches, copy_land, ghostly_touch, pucas_mischief, rest_in_peace,
+    rhystic_study, sanctuary_lockdown, zurs_weirding, blue_suns_zenith, consign_to_memory,
+    consult_the_star_charts, counterspell, flusterstorm, force_of_negation, force_of_will,
+    frantic_search, gifts_ungiven, sink_into_stupor, spell_pierce, sphinxs_revelation,
+    tales_end, whir_of_invention, chart_a_course, hidden_strings, lorien_revealed,
+    sea_gate_restoration, sevinnes_reclamation, split_up, stock_up, supreme_verdict,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const TOMORROW_COMMANDERS: &[CardFactory] = &[tomorrow_azamis_familiar];
+
+/// **Tomorrow, Azami's Familiar**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Tomorrow, Azami's Familiar (EDHREC, fetched 2026-10-18).
+pub const TOMORROW_MAIN: &[CardFactory] = &[
+    arcane_signet, decanter_of_endless_water, gilded_lotus, howling_mine, lightning_greaves,
+    midnight_clock, mind_stone, possessed_portal, sapphire_medallion, sky_diamond, sol_ring,
+    teferis_puzzle_box, thought_vessel, lonely_sandbar, mikokoro_center_of_the_sea,
+    myriad_landscape, mystic_sanctuary, otawara_soaring_city, reliquary_tower, war_room,
+    arcanis_the_omnipotent, archaeomancer, archmage_emeritus, baral_chief_of_compliance,
+    body_of_knowledge, consecrated_sphinx, defiler_of_dreams, faerie_mastermind,
+    jaces_archivist, kami_of_the_crescent_moon, laboratory_maniac, nezahal_primal_tide,
+    solemn_simulacrum, talrand_sky_summoner, thassas_oracle, triskaidekaphile, mystic_remora,
+    omniscience, propaganda, rhystic_study, teferis_ageless_insight, zurs_weirding, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, blue_suns_zenith, brainstorm, consider,
+    counterspell, cyclonic_rift, flow_of_knowledge, frantic_search, high_tide, long_term_plans,
+    mana_drain, negate, opt, pongify, rapid_hybridization, reality_shift, swan_song,
+    jace_wielder_of_mysteries, fabricate, gitaxian_probe, ponder, preordain,
+    sea_gate_restoration, serum_visions, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const DURNAN_OF_THE_YAWNING_PORTAL_13_COMMANDERS: &[CardFactory] = &[durnan_of_the_yawning_portal, acolyte_of_bahamut];
+
+/// **Durnan of the Yawning Portal and Acolyte of Bahamut**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 28 Forests = 98.
+/// Durnan of the Yawning Portal and Acolyte of Bahamut (EDHREC, fetched 2026-10-18).
+pub const DURNAN_OF_THE_YAWNING_PORTAL_13_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_hoard, dragonstorm_globe, emerald_medallion, heralds_horn,
+    jade_orb_of_dragonkind, lifecrafters_bestiary, rhonass_monument, sol_ring,
+    boseiju_who_endures, castle_garenbrig, haven_of_the_spirit_dragon,
+    maelstrom_of_the_spirit_dragon, mosswort_bridge, oran_rief_the_vastwood, rogues_passage,
+    ambitious_dragonborn, ancient_bronze_dragon, avenging_hunter, beast_whisperer,
+    bloomvine_regent, boulderborn_dragon, broodcaller_scourge, canopy_gargantuan,
+    defiler_of_vigor, destructor_dragon, draconic_muralists, dread_linnorm, earthquake_dragon,
+    elvish_mystic, emerald_dragon, foe_razer_regent, green_dragon, herdchaser_dragon,
+    jugan_the_rising_star, kura_the_boundless_sky, llanowar_elves, lurking_green_dragon,
+    old_gnawbone, realmwalker, sagu_wildling, scaled_nurturer, skanos_dragonheart,
+    steel_hellkite, summon_bahamut, teekas_dragon, wandering_troubadour,
+    encroaching_dragonstorm, frontier_siege, garruks_uprising, jugan_defends_the_temple,
+    sylvan_anthem, the_dragon_kami_reborn, unnatural_growth, wild_growth, beast_within,
+    heroic_intervention, khalni_ambush, piercing_exhale, ram_through, return_of_the_wildspeaker,
+    tamiyos_safekeeping, bala_ged_recovery, cultivate, kodamas_reach, natures_lore,
+    rampant_growth, rishkars_expertise, shamanic_revelation, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];

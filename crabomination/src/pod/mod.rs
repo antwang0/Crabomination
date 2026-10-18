@@ -25692,6 +25692,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MAI_AND_ZUKO_COMMANDERS,
             main: decks::MAI_AND_ZUKO_MAIN,
         },
+        // Seat 4207: Ghost of Ramirez DePietro and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4207`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Prava of the Steel Legion (WU)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_21_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_21_MAIN,
+        },
+        // Seat 4208: Tomorrow, Azami's Familiar's EDHREC average deck. `--pod-decks 4208`.
+        PodDeck {
+            name: "Tomorrow, Azami's Familiar (U)",
+            commanders: decks::TOMORROW_COMMANDERS,
+            main: decks::TOMORROW_MAIN,
+        },
+        // Seat 4209: Durnan of the Yawning Portal and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4209`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Acolyte of Bahamut (G)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_13_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_13_MAIN,
+        },
     ]
 }
 
@@ -31793,6 +31811,9 @@ mod tests {
             ("Gale, Waterdeep Prodigy and Sword Coast Sailor", &[0x1A82]),
             ("Fblthp, Knows the Way", &[0x1A83]),
             ("Mai and Zuko", &[0x1A84]),
+            ("Ghost of Ramirez DePietro and Prava of the Steel Legion", &[0x1A85]),
+            ("Tomorrow, Azami's Familiar", &[0x1A86]),
+            ("Durnan of the Yawning Portal and Acolyte of Bahamut", &[0x1A87]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
