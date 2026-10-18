@@ -947,6 +947,9 @@ pub enum Value {
     /// names (Sudden Salvation's "for each opponent who controls one or more
     /// of those permanents").
     OpponentsControllingAnyOf(Box<Selector>),
+    /// The just-cast spell's distinct targets matching the filter (a
+    /// `SpellCast` trigger) — "put that many +1/+1 counters" (Arcee).
+    CastSpellTargetsMatching(crate::card::SelectionRequirement),
     /// Cards `who` has discarded this turn (max over resolved players).
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),

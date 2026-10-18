@@ -140,6 +140,7 @@ mod named_combat_damage;
 mod suspended_counter_cost;
 mod exile_reveal_shared;
 mod target_type_slots;
+mod cast_spell_targets;
 mod noncreature_affinity;
 mod jace_instant_loyalty;
 mod explore;

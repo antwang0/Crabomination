@@ -1825,6 +1825,7 @@ impl GameState {
             Value::CardTypesAmong(sel) => self.card_types_among(sel, ctx),
             Value::PlayersIn(who) => self.resolve_players(who, ctx).len() as i32,
             Value::OpponentsControllingAnyOf(sel) => self.opponents_controlling_any_of(sel, ctx),
+            Value::CastSpellTargetsMatching(filter) => self.cast_spell_targets_matching(filter, ctx) as i32,
             Value::GreatestSameStoredResult => ctx
                 .source
                 .and_then(|id| self.battlefield_find(id))
@@ -3565,23 +3566,9 @@ impl GameState {
                     .map(|p| self.players[p].noncreature_spells_cast_this_game_turn >= n)
                     .unwrap_or(false)
             }
-            Predicate::CastSpellTargetsMatch(filter) => {
-                // Find the cast spell on the stack via the trigger source.
-                // `fire_spell_cast_triggers` sets `ctx.trigger_source` to
-                // `EntityRef::Card(cast_card_id)` so we can locate the
-                // `StackItem::Spell` that just got pushed.
-                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
-                    return false;
-                };
-                let target = self.stack.iter().find_map(|si| match si {
-                    StackItem::Spell { card, target, .. } if card.id == cid => Some(target.clone()),
-                    _ => None,
-                });
-                match target {
-                    Some(Some(t)) => self.evaluate_requirement_static(filter, &t, ctx.controller, ctx.source),
-                    _ => false,
-                }
-            }
+            // "A spell that targets [filter]": any of its targets, not only
+            // slot 0 (a two-target spell whose second target is yours).
+            Predicate::CastSpellTargetsMatch(filter) => self.cast_spell_targets_matching(filter, ctx) > 0,
             Predicate::CastSpellTargetsOnlyOneMatching(filter) => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
