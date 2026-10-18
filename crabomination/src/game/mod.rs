@@ -141,6 +141,7 @@ mod suspended_counter_cost;
 mod exile_reveal_shared;
 mod target_type_slots;
 mod noncreature_affinity;
+mod jace_instant_loyalty;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -28837,6 +28838,7 @@ impl GameState {
         let flash_loyalty_window = (self.battlefield[pos].definition.flash_loyalty
             && self.battlefield[pos].entered_turn == Some(self.turn_number))
             || self.loyalty_at_instant_speed(p)
+            || self.jace_loyalty_at_instant_speed(p, pos)
             // Teferi, Master of Time — the same permission on its own card.
             || self.battlefield[pos].definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::LoyaltyAbilitiesAtInstantSpeed)

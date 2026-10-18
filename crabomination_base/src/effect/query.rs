@@ -870,6 +870,7 @@ impl Effect {
             | Effect::PutCommandersFromCommandZonesOntoBattlefield
             | Effect::NextSpellHasAffinityForArtifacts
             | Effect::NextNoncreatureSpellHasAffinityForArtifacts
+            | Effect::JaceLoyaltyAtInstantSpeedThisTurn
             | Effect::EachPlayerPaysLifeForTokens { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),

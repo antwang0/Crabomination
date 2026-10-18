@@ -23985,6 +23985,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::JaceLoyaltyAtInstantSpeedThisTurn => {
+                self.grant_jace_loyalty_at_instant_speed(ctx.controller);
+                Ok(())
+            }
+
             Effect::EmpowerJace { who, count } => {
                 use crate::card::{CardType, CounterType, PlaneswalkerSubtype};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

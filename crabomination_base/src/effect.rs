@@ -9710,6 +9710,11 @@ pub enum Effect {
     /// token with "[−1]: Surveil 1" and "[−3]: Draw a card" if they control
     /// none. The Amass shape (CR 701.43a) on a planeswalker token.
     EmpowerJace { who: PlayerRef, count: Value },
+    /// CR 606.3 override for this turn only — "until end of turn, you may
+    /// activate loyalty abilities of Jace planeswalkers you control on any
+    /// player's turn any time you could cast an instant" (Jace's
+    /// Machinations; `game/jace_instant_loyalty.rs`).
+    JaceLoyaltyAtInstantSpeedThisTurn,
     /// Create `count` tokens already tapped and attacking (CR 508.3a). The
     /// new tokens join the current combat attacking the same defender the
     /// effect's source is attacking (falling back to the controller's first

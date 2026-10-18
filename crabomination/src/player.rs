@@ -326,6 +326,11 @@ pub struct PlayerCold {
     /// for snapshot back-compat.
     #[serde(default)]
     pub emblems: Vec<Emblem>,
+    /// Jace's Machinations: the turn number its "Jace loyalty abilities at
+    /// instant speed until end of turn" was granted (`None` = never). Valid
+    /// only while it equals the game's turn number, so no cleanup clears it.
+    #[serde(default)]
+    pub jace_instant_loyalty_turn: Option<u32>,
     /// Colors this player (and their permanents) have hexproof from for the
     /// rest of the turn (Veil of Summer's "you and permanents you control
     /// gain hexproof from blue and from black until end of turn"). Set by
