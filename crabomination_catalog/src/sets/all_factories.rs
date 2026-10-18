@@ -1551,6 +1551,7 @@ static DECKS: &[Factory] = &[
     super::decks::tetsuo_imperial_champion,
     super::decks::unscythe_killer_of_kings,
     super::decks::conquerors_galleon,
+    super::decks::dawnhand_dissident,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
