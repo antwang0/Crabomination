@@ -116947,3 +116947,86 @@ pub const JETFIRE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island,
 ];
+
+pub const SPIDER_MAN_6_COMMANDERS: &[CardFactory] = &[spider_man_web_slinger];
+
+/// **Spider-Man, Web-Slinger**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Plains = 99.
+/// Spider-Man, Web-Slinger (EDHREC, fetched 2026-10-18).
+pub const SPIDER_MAN_6_MAIN: &[CardFactory] = &[
+    arcane_signet, bagel_and_schmear, commanders_sphere, costume_closet, marble_diamond,
+    mind_stone, oketras_monument, panharmonicon, pearl_medallion, sol_ring, springleaf_drum,
+    swiftfoot_boots, thought_vessel, web_shooters, emeria_the_sky_ruin, myriad_landscape,
+    reliquary_tower, survivors_encampment, war_room, ambrosia_whiteheart,
+    arachne_psionic_weaver, aunt_may, defiler_of_faith, fateshaper_aspirant,
+    flash_thompson_spider_fan, gold_myr, graft_surgeon, helpful_hunter, hero_in_training,
+    hinterland_sanctifier, inspiring_overseer, knight_of_the_white_orchid, kor_cartographer,
+    kor_skyfisher, loran_of_the_third_path, lunarch_veteran, mentor_of_the_meek,
+    novice_inspector, priest_of_ancient_lore, rumor_gatherer, soul_warden, souls_attendant,
+    spider_uk, spirited_companion, suture_priest, thraben_inspector, whitemane_lion,
+    witch_enchanter, ajanis_welcome, authority_of_the_consuls, cathars_crusade, ghostly_prison,
+    rent_is_due, tocasias_welcome, web_up, cloudshift, ephemerate, generous_gift, path_to_exile,
+    reprieve, spectacular_tactics, swords_to_plowshares, thwip, your_temple_is_under_attack,
+    austere_command, borough_backup, predictive_preparations,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ALEX_WILDER_COMMANDERS: &[CardFactory] = &[alex_wilder_runaway];
+
+/// **Alex Wilder, Runaway**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Alex Wilder, Runaway (EDHREC, fetched 2026-10-18).
+pub const ALEX_WILDER_MAIN: &[CardFactory] = &[
+    arcane_signet, long_range_sensor, mind_stone, portal_to_phyrexia, relic_of_legends,
+    ruby_medallion, sol_ring, unstable_amulet, arena_of_glory, demolition_field,
+    myriad_landscape, shinka_the_bloodsoaked_keep, spinerock_knoll, war_room,
+    invasion_of_karsus, aurora_phoenix, boarding_party, bonecrusher_giant, bonehoard_dracosaur,
+    chase_stein_runaway, combat_celebrant, dragonhawk_fates_tempest, etali_primal_storm,
+    flaming_tyrannosaurus, inti_seneschal_of_the_sun, irascible_wolverine,
+    iraxxa_empress_of_mars, jessica_jones_private_eye, keeper_of_secrets,
+    laelia_the_blade_reforged, molly_hayes_runaway, nalfeshnee, nico_minoru_runaway,
+    ox_of_agonas, party_thrasher, plargg_and_nassari, professional_face_breaker,
+    sabin_master_monk, squee_the_immortal, stingerback_terror, tectonic_giant,
+    trumpeting_carnosaur, urabrask_heretic_praetor, victor_mancha_runaway, weftstalker_ardent,
+    whirlwind_killer_cyclone, wild_magic_sorcerer, blood_moon, passionate_archaeologist,
+    tavern_brawler, underworld_breach, wandas_vision, abrade, blazing_crescendo, chaos_warp,
+    delayed_blast_fireball, lightning_bolt, untimely_malfunction, chandra_torch_of_defiance,
+    blasphemous_act, daring_discovery, hex_magic, ignite_the_future, into_the_time_vortex,
+    jeskas_will, light_up_the_stage, reckless_impulse, vandalblast, wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const HULKLING_2_COMMANDERS: &[CardFactory] = &[hulkling_burgeoning_bruiser];
+
+/// **Hulkling, Burgeoning Bruiser**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Forests = 99.
+/// Hulkling, Burgeoning Bruiser (EDHREC, fetched 2026-10-18).
+pub const HULKLING_2_MAIN: &[CardFactory] = &[
+    arcane_signet, lifecrafters_bestiary, monster_manual, necklace_of_girion, team_pennant,
+    forge_of_heroes, hidden_nursery, oran_rief_the_vastwood, slippery_karst, tranquil_thicket,
+    urzas_tower, adaptive_snapjaw, ainok_survivalist, ant_mans_army, armorcraft_judge,
+    ascendant_acolyte, bane_of_progress, bayou_groff, challenger_troll, champion_of_dusan,
+    crowned_ceratok, elvish_mystic, fairgrounds_trumpeter, flora_colossus, garruks_harbinger,
+    hercules_prince_of_power, ilysian_caryatid, ivy_lane_denizen, knight_of_wundagore,
+    lizard_connorss_curse, llanowar_elves, loyal_guardian, mister_hyde_monster_within,
+    mowu_loyal_companion, park_heights_maverick, phantom_centaur, raucous_audience,
+    rhino_terrible_trampler, ridgescale_tusker, scavenging_ooze, scrounging_bandar,
+    surrak_the_hunt_caller, undercover_skrull, viv_vision_teen_synthezoid, wakandan_royal_guard,
+    wickerbough_elder, wildwood_scourge, garruks_uprising, hardened_scales, hardy_outlander,
+    season_of_growth, super_strength, wild_growth, ancient_animus, arbor_armament,
+    inscription_of_abundance, lifecrafters_gift, mutants_prey, natural_connection, plummet,
+    rangers_guile, snakeskin_veil, titanic_brawl, jiang_yanggu_wildcrafter, bridgeworks_battle,
+    go_nuts, hunt_the_weak, kodamas_reach, oracles_restoration, savage_punch, scale_the_heights,
+    souls_might,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest,
+];

@@ -25470,6 +25470,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JETFIRE_COMMANDERS,
             main: decks::JETFIRE_MAIN,
         },
+        // Seat 4170: Spider-Man, Web-Slinger's EDHREC average deck. `--pod-decks 4170`.
+        PodDeck {
+            name: "Spider-Man, Web-Slinger (W)",
+            commanders: decks::SPIDER_MAN_6_COMMANDERS,
+            main: decks::SPIDER_MAN_6_MAIN,
+        },
+        // Seat 4171: Alex Wilder, Runaway's EDHREC average deck. `--pod-decks 4171`.
+        PodDeck {
+            name: "Alex Wilder, Runaway (R)",
+            commanders: decks::ALEX_WILDER_COMMANDERS,
+            main: decks::ALEX_WILDER_MAIN,
+        },
+        // Seat 4172: Hulkling, Burgeoning Bruiser's EDHREC average deck. `--pod-decks 4172`.
+        PodDeck {
+            name: "Hulkling, Burgeoning Bruiser (G)",
+            commanders: decks::HULKLING_2_COMMANDERS,
+            main: decks::HULKLING_2_MAIN,
+        },
     ]
 }
 
@@ -31534,6 +31552,9 @@ mod tests {
             ("Alhammarret, High Arbiter", &[0x1A5D]),
             ("Madame Web, Clairvoyant", &[0x1A5E]),
             ("Jetfire, Ingenious Scientist", &[0x1A5F]),
+            ("Spider-Man, Web-Slinger", &[0x1A60]),
+            ("Alex Wilder, Runaway", &[0x1A61]),
+            ("Hulkling, Burgeoning Bruiser", &[0x1A62]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
