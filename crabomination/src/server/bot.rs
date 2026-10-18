@@ -7612,7 +7612,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         {
             m |= spec::SAC_EXTRA;
         }
-        if facts.grants_conspire && (def.is_instant() || def.is_sorcery()) {
+        // A grant's filter may reach past instants and sorceries ("noncreature
+        // spells" — an artifact too); the block asks `spell_has_conspire`.
+        if facts.grants_conspire && !def.is_land() {
             m |= spec::CONSPIRE;
         }
         if state.players[seat].next_spell_convoke_this_turn || state.players[seat].next_spell_improvise_this_turn {
@@ -25654,6 +25656,33 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never conspired");
+    }
+
+    /// CR 702.78 — Raiding Schemes grants conspire to noncreature spells, an
+    /// enchantment too: the candidate gate keyed the grant to instants and
+    /// sorceries only and its audit aborted a pod game (seed 921492). With a
+    /// granted-conspire Goblin Bombardment in hand the walk finds the cast.
+    #[test]
+    fn a_granted_conspire_reaches_a_noncreature_permanent_spell() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::raiding_schemes());
+        let id = g.add_card_to_hand(0, catalog::goblin_bombardment());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.add_card_to_battlefield(0, catalog::goblin_guide());
+        g.add_card_to_battlefield(0, catalog::goblin_guide());
+        g.step = TurnStep::PostCombatMain;
+        let mut bot = HeuristicBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastSpellConspire { card_id, .. } = action {
+                assert_eq!(card_id, id);
+                return;
+            }
+            if g.perform_action(action).is_err() {
+                break;
+            }
+        }
     }
 
     /// When forced to chump (life threatened, no clean kill), the bot
