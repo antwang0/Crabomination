@@ -533,6 +533,10 @@ pub struct PlayerData {
     /// as the spell is cast, not as it's granted.
     #[serde(default)]
     pub pending_affinity_next_spell: crate::oftenempty::OftenEmpty<u32>,
+    /// As `pending_affinity_next_spell`, for the next *noncreature* spell (Don
+    /// & Raph, Hard Science): `noncreature_spells_cast_this_game_turn` at grant.
+    #[serde(default)]
+    pub pending_affinity_next_noncreature: crate::oftenempty::OftenEmpty<u32>,
     /// CR 500.4 exception — mana added by an effect that says "you don't lose
     /// this mana as steps and phases end" (Savage Ventmaw's attack trigger).
     /// Re-seeded into the pool by `empty_mana_pools` on every step/phase empty
@@ -1949,6 +1953,7 @@ impl Player {
             pending_is_discounts: Default::default(),
             pending_spell_discounts: Default::default(),
             pending_affinity_next_spell: Default::default(),
+            pending_affinity_next_noncreature: Default::default(),
             face_down_discount_this_turn: 0,
             next_face_down_discount_this_turn: 0,
             face_down_spells_cast_this_turn: 0,

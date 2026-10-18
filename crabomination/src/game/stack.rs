@@ -5422,6 +5422,7 @@ impl GameState {
                 || !pl.pending_is_discounts.is_empty()
                 || !pl.pending_spell_discounts.is_empty()
                 || !pl.pending_affinity_next_spell.is_empty()
+                || !pl.pending_affinity_next_noncreature.is_empty()
             {
                 let pl = &mut **pl;
                 pl.instants_or_sorceries_cast_this_turn = 0;
@@ -5431,6 +5432,7 @@ impl GameState {
                 pl.pending_is_discounts.clear();
                 pl.pending_spell_discounts.clear();
                 pl.pending_affinity_next_spell.clear();
+                pl.pending_affinity_next_noncreature.clear();
             }
         }
         if self.players[p].last_drawn_card.is_some() {

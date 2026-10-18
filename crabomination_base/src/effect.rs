@@ -7776,6 +7776,10 @@ pub enum Effect {
     /// (Saheeli, the Gifted's +1): it costs {1} less for each artifact you
     /// control *as you cast it* (CR 702.41a). Lapses with the next spell.
     NextSpellHasAffinityForArtifacts,
+    /// "The next **noncreature** spell you cast this turn has affinity for
+    /// artifacts" (Don & Raph, Hard Science): as above, but creature spells
+    /// cast in between leave it armed (`game/noncreature_affinity.rs`).
+    NextNoncreatureSpellHasAffinityForArtifacts,
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },

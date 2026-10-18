@@ -2640,6 +2640,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 .count() as u32;
             reduction = reduction.saturating_add(artifacts);
         }
+        reduction = reduction.saturating_add(state.noncreature_affinity_reduction(caster, card));
     }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
     // grants (Urza, Planeswalker's +2). Cleared at cleanup.

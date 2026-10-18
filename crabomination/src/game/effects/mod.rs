@@ -14315,6 +14315,10 @@ impl GameState {
                 self.grant_next_spell_affinity(ctx.controller);
                 Ok(())
             }
+            Effect::NextNoncreatureSpellHasAffinityForArtifacts => {
+                self.grant_next_noncreature_spell_affinity(ctx.controller);
+                Ok(())
+            }
             Effect::ExileTopPushingLuck { stop_at, limit, then } => {
                 let source = ctx.source.unwrap_or(CardId(0));
                 if self.exile_top_pushing_luck(ctx.controller, *stop_at, *limit, source, effect, events) == Some(true) {
