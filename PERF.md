@@ -3166,6 +3166,10 @@ casts build one probe each (already built for the cost walk). `profiling-fast` b
                  (all pairs split); games_per_s 254.7 (box noise)
 2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 52001): 0 undecided, 0 panics
 pods (audit)     seeds 9201-9207, every deck, 4/6/8 seats: 13,000+ games, 0 panics after the fixes
+closing tip      after all sixteen fixes (counter sums saturate, Commander-only hostile slots):
+                 --bench 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 cube/sos/sealed seed 52002 0 undecided; pods seeds 9201-9219, 2-8 seats and the
+                 dflt pilot, 47,000+ games, 0 panics
 ```
 
 ### 2026-10-18 late (Commander run, `019Y6J4R`, batches Q-T) — guardrail; 263 seats, 178 cards
