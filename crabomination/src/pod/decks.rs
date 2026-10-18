@@ -118483,3 +118483,110 @@ pub const MERIEKE_RI_BERIT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, plains, plains, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const ISPERIA_THE_INSCRUTABLE_COMMANDERS: &[CardFactory] = &[isperia_the_inscrutable];
+
+/// **Isperia the Inscrutable**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Islands + 10 Plains = 99.
+/// Isperia the Inscrutable (EDHREC, fetched 2026-10-18).
+pub const ISPERIA_THE_INSCRUTABLE_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, fellwar_stone, glasses_of_urza,
+    lightning_greaves, sol_ring, swiftfoot_boots, talisman_of_progress, thought_vessel,
+    adarkar_wastes, azorius_chancery, command_tower, deserted_beach, glacial_fortress,
+    hallowed_fountain, irrigated_farmland, moonring_island, port_town, prairie_stream,
+    reliquary_tower, sea_of_clouds, skycloud_expanse, temple_of_enlightenment, aven_mindcensor,
+    cartographers_hawk, defiler_of_dreams, dream_trawler, empyrean_eagle, errant_and_giada,
+    isperia_supreme_judge, jackdaw_savior, jubilant_skybonder, kangee_sky_warden, karmic_guide,
+    kira_great_glass_spinner, magus_of_the_moat, medomai_the_ageless, momo_friendly_flier,
+    mulldrifter, ornithopter_of_paradise, remorseful_cleric, selfless_spirit,
+    sephara_skys_blade, skycat_sovereign, thieving_skydiver, thunderclap_wyvern,
+    vendilion_clique, wandering_eye, warden_of_evos_isle, watcher_of_the_spheres, windborn_muse,
+    windreader_sphinx, wispmare, duelists_heritage, favorable_winds, gravitational_shift,
+    reconnaissance_mission, telepathy, zurs_weirding, aetherize, clairvoyance, counterspell,
+    dovins_veto, generous_gift, lofty_denial, negate, path_to_exile, peek, render_silent,
+    spy_network, swords_to_plowshares, gitaxian_probe, sorcerous_sight, supreme_verdict,
+    time_wipe, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RAGNAR_COMMANDERS: &[CardFactory] = &[ragnar];
+
+/// **Ragnar**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 8 Forests + 5 Islands + 6 Plains = 99.
+/// Ragnar (EDHREC, fetched 2026-10-18).
+pub const RAGNAR_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, infiltration_lens, nemesis_mask, simic_signet, sol_ring,
+    swiftfoot_boots, bountiful_promenade, breeding_pool, command_tower, exotic_orchard,
+    flooded_strand, glacial_fortress, hallowed_fountain, hinterland_harbor, misty_rainforest,
+    rejuvenating_springs, reliquary_tower, sea_of_clouds, seaside_citadel, sparas_headquarters,
+    sunpetal_grove, temple_garden, windswept_heath, yavimaya_coast, avacyns_pilgrim,
+    birds_of_paradise, bloom_tender, cockatrice, elven_warhounds, engulfing_slagwurm,
+    esper_sentinel, eternal_witness, kioras_follower, kjeldoran_warrior, llanowar_elves,
+    mother_of_runes, noble_hierarch, noble_quarry, ohran_frostfang, phytohydra,
+    sakura_tribe_elder, saprazzan_heir, seedborn_muse, shinen_of_lifes_roar, sun_titan,
+    sylvan_basilisk, tangle_asp, taunting_elf, tempting_licid, tolarian_entrancer,
+    toski_bearer_of_secrets, asceticism, bear_umbra, guardian_project, indrik_umbra, lure,
+    miraris_wake, rhystic_study, sylvan_library, venom, wild_growth, arcane_denial,
+    beast_within, counterspell, dovins_veto, eladamris_call, generous_gift, growth_spiral,
+    heroic_intervention, path_to_exile, swords_to_plowshares, austere_command, cultivate,
+    farseek, kodamas_reach, natures_lore, rampant_growth, supreme_verdict, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains,
+];
+
+pub const URGOROS_COMMANDERS: &[CardFactory] = &[urgoros_the_empty_one];
+
+/// **Urgoros, the Empty One**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Urgoros, the Empty One (EDHREC, fetched 2026-10-18).
+pub const URGOROS_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, geths_grimoire, heraldic_banner, jet_medallion, mind_stone,
+    sol_ring, specters_shroud, swiftfoot_boots, thought_vessel, bojuka_bog, cabal_coffers,
+    cabal_stronghold, geier_reach_sanitarium, rogues_passage, witchs_cottage, abyssal_specter,
+    burglar_rat, elderfang_disciple, entropic_specter, fell_specter, gray_merchant_of_asphodel,
+    guul_draz_specter, headless_specter, hollow_marauder, hollow_specter, hypnotic_specter,
+    lilianas_specter, necrogoyf, needle_specter, reaper_of_night, sangromancer, scythe_specter,
+    shimian_specter, silent_specter, specter_of_mortality, the_haunt_of_hightower,
+    the_raven_man, virus_beetle, whispering_specter, bandits_talent, lilianas_caress, megrim,
+    painful_quandary, raiders_wake, shrieking_affliction, the_eldest_reborn, waste_not,
+    consuming_corruption, dark_ritual, defile, doom_blade, go_for_the_throat, infernal_grasp,
+    murder, village_rites, davriel_rogue_shadowmage, bad_deal, dark_deal, delirium_skeins,
+    duress, feed_the_swarm, mind_rake, mind_rot, rankles_prank, sign_in_blood, syphon_mind,
+    unnerve, vicious_rumors,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const RAPHAEL_7_COMMANDERS: &[CardFactory] = &[raphael_tag_team_tough];
+
+/// **Raphael, Tag Team Tough**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Raphael, Tag Team Tough (EDHREC, fetched 2026-10-18).
+pub const RAPHAEL_7_MAIN: &[CardFactory] = &[
+    arcane_signet, embercleave, fellwar_stone, hard_won_jitte, hazorets_monument,
+    lightning_greaves, ruby_medallion, sol_ring, spicy_oatmeal_pizza, swiftfoot_boots,
+    the_fire_crystal, the_reaver_cleaver, turtle_van, wayfarers_bauble, fire_nation_palace,
+    flamekin_village, mirrex, myriad_landscape, rogues_passage, turtle_lair,
+    valakut_the_molten_pinnacle, anger, casey_and_raph_hotheads, casey_jones_asphalt_hooligan,
+    casey_jones_back_alley_brute, combat_celebrant, etali_primal_storm,
+    kediss_emberclaw_familiar, lizard_blades, moraug_fury_of_akoum, mutant_town_musicians,
+    neheb_the_eternal, ornithopter_of_paradise, port_razer, professional_face_breaker,
+    raphael_most_attitude, raphael_ninja_destroyer, raphael_tough_turtle, raphael_the_muscle,
+    raphael_the_nightwatcher, scourge_of_the_throne, slash_reptile_rampager,
+    sunset_strikemaster, urabrask_the_hidden, wingnut_bat_on_the_belfry,
+    zog_triceraton_castaway, aggravated_assault, bedlam, cool_but_rude, fiery_emancipation,
+    big_score, chaos_warp, jennikas_technique, lightning_bolt, manhole_missile,
+    raphaels_technique, seething_song, thrill_of_possibility, untimely_malfunction,
+    blasphemous_act, bot_bashing_time, faithless_looting, fast_forward, full_throttle,
+    jeskas_will, mana_geyser, relentless_assault, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];

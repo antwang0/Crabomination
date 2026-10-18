@@ -25794,6 +25794,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MERIEKE_RI_BERIT_COMMANDERS,
             main: decks::MERIEKE_RI_BERIT_MAIN,
         },
+        // Seat 4224: Isperia the Inscrutable's EDHREC average deck. `--pod-decks 4224`.
+        PodDeck {
+            name: "Isperia the Inscrutable (WU)",
+            commanders: decks::ISPERIA_THE_INSCRUTABLE_COMMANDERS,
+            main: decks::ISPERIA_THE_INSCRUTABLE_MAIN,
+        },
+        // Seat 4225: Ragnar's EDHREC average deck. `--pod-decks 4225`.
+        PodDeck {
+            name: "Ragnar (WUG)",
+            commanders: decks::RAGNAR_COMMANDERS,
+            main: decks::RAGNAR_MAIN,
+        },
+        // Seat 4226: Urgoros, the Empty One's EDHREC average deck. `--pod-decks 4226`.
+        PodDeck {
+            name: "Urgoros, the Empty One (B)",
+            commanders: decks::URGOROS_COMMANDERS,
+            main: decks::URGOROS_MAIN,
+        },
+        // Seat 4227: Raphael, Tag Team Tough's EDHREC average deck. `--pod-decks 4227`.
+        PodDeck {
+            name: "Raphael, Tag Team Tough (R)",
+            commanders: decks::RAPHAEL_7_COMMANDERS,
+            main: decks::RAPHAEL_7_MAIN,
+        },
     ]
 }
 
@@ -31918,6 +31942,10 @@ mod tests {
             ("Sensational Spider-Man", &[0x1A93]),
             ("Fblthp, Lost on the Range", &[0x1A94]),
             ("Merieke Ri Berit", &[0x1A95]),
+            ("Isperia the Inscrutable", &[0x1A96]),
+            ("Ragnar", &[0x1A97]),
+            ("Urgoros, the Empty One", &[0x1A98]),
+            ("Raphael, Tag Team Tough", &[0x1A99]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
