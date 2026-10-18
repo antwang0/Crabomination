@@ -552,3 +552,35 @@ fn scientist_supreme_copies_an_artifact_trigger() {
         "not an artifact source"
     );
 }
+
+/// Synthesis Pod — exiling my Lightning Bolt (mana value 1) off the stack as
+/// the cost digs the opponent's library to its first mana-value-2 card, which
+/// I cast for free; the bolt never resolves (CR 602.5b, 118.9).
+#[test]
+fn synthesis_pod_turns_a_spell_into_the_next_mana_value() {
+    let mut g = pod(2);
+    let podc = ready(&mut g, 0, catalog::synthesis_pod());
+    g.players[1].library.clear();
+    g.add_card_to_library(1, catalog::forest());
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: podc, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("pod the bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "the bolt was exiled, not resolved");
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+    let b = g.battlefield_find(bear).expect("cast for free");
+    assert_eq!(b.controller, 0);
+    assert_eq!(g.players[1].library.len(), 2, "the forest shuffled back with the giant");
+}

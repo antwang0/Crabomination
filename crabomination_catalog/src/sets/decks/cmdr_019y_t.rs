@@ -507,3 +507,48 @@ pub fn scientist_supreme_of_a_i_m() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Synthesis Pod — {3}{U/P} artifact. {1}{U/P}, {T}, exile a spell you
+/// control: target opponent reveals cards from the top of their library
+/// until a card with mana value 1 plus the exiled spell's; exile it, they
+/// shuffle, and you may cast it without paying its mana cost.
+pub fn synthesis_pod() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::{RevealMissDest, ZoneDest};
+    use crate::mana::{Color, phyrexian};
+    CardDefinition {
+        name: "Synthesis Pod",
+        cost: cost(&[generic(3), phyrexian(Color::Blue)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), phyrexian(Color::Blue)]),
+            tap_cost: true,
+            exile_spell_cost: Some(R::Any),
+            effect: Effect::WithX {
+                x: Value::Sum(vec![Value::ExiledForCostManaValue, Value::ONE]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::RevealUntilFind {
+                        who: PlayerRef::ControllerOf(Box::new(crate::effect::shortcut::target_filtered(
+                            R::OpponentPlayer,
+                        ))),
+                        find: R::ManaValueExactlyXFromCost,
+                        to: ZoneDest::Exile,
+                        cap: Value::LibrarySizeOf(PlayerRef::Target(0)),
+                        life_per_revealed: 0,
+                        miss_dest: RevealMissDest::ShuffleIntoLibrary,
+                    },
+                    Effect::CastWithoutPayingImmediate {
+                        what: Selector::LastMoved,
+                        source_zone: Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    },
+                ])),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
