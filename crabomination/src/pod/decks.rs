@@ -114920,3 +114920,197 @@ pub const ODRIC_3_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const YEDORA_COMMANDERS: &[CardFactory] = &[yedora_grave_gardener];
+
+/// **Yedora, Grave Gardener**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Yedora, Grave Gardener (EDHREC, fetched 2026-10-18).
+pub const YEDORA_MAIN: &[CardFactory] = &[
+    altar_of_dementia, ashnods_altar, blasting_station, lightning_greaves, skullclamp, sol_ring,
+    zuran_orb, dryad_arbor, guildless_commons, high_market, jungle_basin, myriad_landscape,
+    roiling_canopy, yavimaya_cradle_of_growth, ainok_survivalist, ambush_commander,
+    ashaya_soul_of_the_wild, avenger_of_zendikar, beast_whisperer, cankerbloom, dawntreader_elk,
+    den_protector, elvish_mystic, embodiment_of_insight, eternal_witness, flourishing_bloom_kin,
+    fyndhorn_elves, hauntwoods_shrieker, hooded_hydra, llanowar_elves, lotus_cobra,
+    magus_of_the_order, multani_yavimayas_avatar, nantuko_vigilante, nervous_gardener,
+    printlifter_ooze, proteus_machine, quirion_ranger, rampaging_baloths, sakura_tribe_elder,
+    scryb_ranger, scute_swarm, spore_frog, sylvan_safekeeper, temur_charger,
+    tireless_provisioner, tireless_tracker, evolutionary_leap, fecundity,
+    kenriths_transformation, life_and_limb, living_lands, natures_revolt, sapling_nursery,
+    threats_around_every_corner, zendikars_roil, beast_within, harrow, heroic_intervention,
+    kamahls_will, natural_affinity, return_of_the_wildspeaker, nissa_who_shakes_the_world,
+    cultivate, harmonize, kodamas_reach, natures_lore, rampant_growth, shamanic_revelation,
+    sylvan_awakening,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const DWALIN_COMMANDERS: &[CardFactory] = &[dwalin_weaponmaster];
+
+/// **Dwalin, Weaponmaster**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Mountains + 12 Plains = 99.
+/// Dwalin, Weaponmaster (EDHREC, fetched 2026-10-18).
+pub const DWALIN_MAIN: &[CardFactory] = &[
+    arcane_signet, barrow_blade, basilisk_collar, beamtown_beatstick, bearded_axe,
+    bloodforged_battle_axe, colossus_hammer, diamond_pick_axe, dwarven_mattock,
+    gavel_of_the_righteous, hammer_of_nazahn, lavaspur_boots, lightning_greaves,
+    long_lost_lances, mask_of_memory, masterwork_of_ingenuity, mithril_coat,
+    orcrist_goblin_cleaver, shadowspear, sol_ring, sting_bilbos_sword, swiftfoot_boots,
+    sword_of_the_animist, swordsmans_steel, talisman_of_conviction, the_reaver_cleaver,
+    trailblazers_boots, battlefield_forge, clifftop_retreat, command_tower, furycalm_snarl,
+    iron_hills, path_of_ancestry, radiant_summit, rogues_passage, rugged_prairie,
+    sacred_foundry, spectator_seating, sunbillow_verge, sundown_pass, the_lonely_mountain,
+    akiri_fearless_voyager, bifur_melodic_rider, bofur_reliable_guardian, bruenor_battlehammer,
+    dwarven_mauler, dain_ironfoot, dains_company, dain_lord_of_the_iron_hills,
+    fili_and_kili_joyous, fili_the_pathfinder, giott_king_of_the_dwarves, gloin_the_mighty,
+    iron_hills_blacksmith, koll_the_forgemaster, kili_the_resourceful, magda_brazen_outlaw,
+    puresteel_paladin, reyav_master_smith, sram_senior_edificer, surge_conductor,
+    thorin_oakenshield, thorin_mountain_king, blacksmiths_talent, fighter_class, forge_anew,
+    sigardas_aid, boros_charm, dispatch, inventory_management, legion_leadership, path_to_exile,
+    swords_to_plowshares, vow_to_erebor, blasphemous_act, open_the_armory, steelshapers_gift,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const THORIN_COMMANDERS: &[CardFactory] = &[thorin_mountain_king];
+
+/// **Thorin, Mountain-king**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Thorin, Mountain-king (EDHREC, fetched 2026-10-18).
+pub const THORIN_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, basilisk_collar, bearded_axe, blackblade_reforged,
+    bloodforged_battle_axe, buster_sword, colossus_hammer, commanders_plate, diamond_pick_axe,
+    excalibur_sword_of_eden, golem_skin_gauntlets, hammer_of_nazahn, helm_of_the_host,
+    lightning_greaves, loxodon_warhammer, masterwork_of_ingenuity, mithril_coat,
+    mjolnir_hammer_of_thor, nettlecyst, ruby_medallion, shadowspear, sol_ring, swiftfoot_boots,
+    sword_of_feast_and_famine, sword_of_hearth_and_home, sword_of_vengeance,
+    sword_of_the_animist, swordsmans_steel, the_reaver_cleaver, thran_power_suit,
+    arena_of_glory, buried_ruin, great_furnace, inventors_fair, mines_of_moria, rogues_passage,
+    the_lonely_mountain, war_room, brash_taunter, brass_squire, dwarven_mauler, dain_ironfoot,
+    firion_wild_rose_warrior, foundry_inspector, freya_crescent, fili_and_kili_joyous,
+    gilgamesh_master_at_arms, gimli_of_the_glittering_caves, gloin_the_mighty,
+    gloin_dwarf_emissary, kediss_emberclaw_familiar, lizard_blades, magda_brazen_outlaw,
+    professional_face_breaker, torbran_thane_of_red_fell, blacksmiths_talent, pain_for_all,
+    the_misty_mountains_cold, abrade, big_score, chaos_warp, deflecting_swat, magnetic_theft,
+    unexpected_windfall, untimely_malfunction, blasphemous_act, chandras_ignition,
+    faithless_looting, jeskas_will, seize_the_spoils, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const CYCLONUS_COMMANDERS: &[CardFactory] = &[cyclonus_the_saboteur];
+
+/// **Cyclonus, the Saboteur**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Swamps = 99.
+/// Cyclonus, the Saboteur (EDHREC, fetched 2026-10-18).
+pub const CYCLONUS_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, energy_chamber, fellwar_stone, fireshrieker,
+    gavel_of_the_righteous, leyline_axe, lightning_greaves, mask_of_the_schemer, midnight_clock,
+    mind_stone, replicating_ring, sol_ring, strionic_resonator, swiftfoot_boots,
+    talisman_of_dominance, thought_vessel, bojuka_bog, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, morphic_pool, reliquary_tower,
+    rogues_passage, shipwreck_marsh, sunken_hollow, tainted_isle, temple_of_deceit,
+    underground_river, watery_grave, baleful_strix, containment_construct, creeping_bloodsucker,
+    duskmantle_seer, etherium_sculptor, foundry_inspector, indulgent_tormentor, keen_duelist,
+    oskar_rubbish_reclaimer, padeem_consul_of_innovation, psychosis_crawler, rilsa_rael_kingpin,
+    sheoldred_whispering_one, solemn_simulacrum, sphinx_of_the_second_sun,
+    starscream_power_hungry, tomb_of_horrors_adventurer, triskaidekaphile, twilight_prophet,
+    xanathar_guild_kingpin, as_foretold, court_of_ambition, court_of_vantress,
+    extravagant_replication, mechanized_production, palace_siege, paradox_haze, phyrexian_arena,
+    shadow_of_the_second_sun, thopter_spy_network, an_offer_you_cant_refuse, arcane_denial,
+    counterspell, dark_ritual, go_for_the_throat, infernal_grasp, negate, pongify,
+    reality_shift, slip_out_the_back, damnation, feed_the_swarm, inspiring_refrain,
+    profane_tutor, reanimate, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const DAIN_IRONFOOT_COMMANDERS: &[CardFactory] = &[dain_ironfoot];
+
+/// **Dáin Ironfoot**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Dáin Ironfoot (EDHREC, fetched 2026-10-18).
+pub const DAIN_IRONFOOT_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, beamtown_beatstick, bearded_axe, blackblade_reforged,
+    bloodforged_battle_axe, champions_helm, colossus_hammer, conformer_shuriken,
+    diamond_pick_axe, dwarven_hammer, dwarven_mattock, fire_diamond, forebears_blade,
+    gimlis_axe, goldvein_pick, hammer_of_nazahn, heraldic_banner, lightning_greaves,
+    mask_of_memory, masterwork_of_ingenuity, mind_stone, orcrist_goblin_cleaver, sol_ring,
+    swiftfoot_boots, sword_of_the_animist, the_reaver_cleaver, arena_of_glory, buried_ruin,
+    forgotten_cave, mines_of_moria, rogues_passage, the_lonely_mountain, war_room,
+    balin_loremaster, bladegraft_aspirant, brass_squire, champion_of_the_flame,
+    dori_bearer_of_friends, dwarven_mauler, firion_wild_rose_warrior, foundry_inspector,
+    freya_crescent, fili_and_kili_joyous, gimli_of_the_glittering_caves, gloin_the_mighty,
+    gloin_dwarf_emissary, goblin_gaveleer, iron_hills_stalwart, kazuuls_toll_collector,
+    magda_brazen_outlaw, raubahn_bull_of_ala_mhigo, thorin_mountain_king,
+    valduk_keeper_of_the_flame, oin_the_brave, aggravated_assault, blacksmiths_talent,
+    burn_burn_tree_and_fern, big_score, chaos_warp, lightning_bolt, magnetic_theft, rebel_salvo,
+    thrill_of_possibility, unleash_fury, blasphemous_act, faithless_looting, mizzium_mortars,
+    reckless_crew, seize_the_spoils,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const THORIN_2_COMMANDERS: &[CardFactory] = &[thorin_companys_leader];
+
+/// **Thorin, Company's Leader**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Mountains = 99.
+/// Thorin, Company's Leader (EDHREC, fetched 2026-10-18).
+pub const THORIN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bearded_axe, bloodforged_battle_axe, chronicle_of_victory, diamond_pick_axe,
+    gimlis_axe, goldvein_pick, hammer_of_nazahn, lightning_greaves, orcrist_goblin_cleaver,
+    ruby_medallion, shadowspear, sol_ring, sword_of_the_animist, the_fire_crystal, the_one_ring,
+    the_reaver_cleaver, arena_of_glory, dragon_cursed_halls, dwarven_mine, mines_of_moria,
+    nykthos_shrine_to_nyx, rogues_passage, the_lonely_mountain, treasure_vault, war_room,
+    academy_manufactor, axgard_cavalry, balin_loremaster, blazing_firesinger,
+    dori_bearer_of_friends, dwarven_grunt, dwarven_mauler, dwarven_recruiter, dain_ironfoot,
+    fearless_liberator, fili_and_kili_joyous, gimli_of_the_glittering_caves,
+    gimli_counter_of_kills, gloin_the_mighty, gloin_dwarf_emissary, goldspan_dragon,
+    hellkite_tyrant, iron_hills_stalwart, magda_brazen_outlaw, magda_the_hoardmaster,
+    plundering_barbarian, professional_face_breaker, roaming_throne, smaug_the_magnificent,
+    storm_kiln_artist, taurean_mauler, thorin_mountain_king, torbran_thane_of_red_fell,
+    vault_robber, oin_the_brave, aggravated_assault, alchemists_talent, gimlis_reckless_might,
+    the_misty_mountains_cold, there_and_back_again, big_score, chaos_warp, deflecting_swat,
+    great_train_heist, lightning_bolt, redirect_lightning, unexpected_windfall, blasphemous_act,
+    dwarven_reinforcements, full_throttle, haze_of_rage, jeskas_will, seize_the_spoils,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BOMBUR_COMMANDERS: &[CardFactory] = &[bombur_gentle_dreamer];
+
+/// **Bombur, Gentle Dreamer**'s EDHREC average deck, card for card:
+/// 56 nonbasic cards + 43 Mountains = 99.
+/// Bombur, Gentle Dreamer (EDHREC, fetched 2026-10-18).
+pub const BOMBUR_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, bearded_axe, diamond_pick_axe, dwarven_hammer,
+    fire_diamond, golden_egg, krark_clan_ironworks, lightning_greaves, mithril_coat,
+    radiant_lotus, ruby_medallion, sol_ring, swiftfoot_boots, team_pennant, thought_vessel,
+    mines_of_moria, reliquary_tower, spinerock_knoll, treasure_vault, anger, axgard_cavalry,
+    crime_novelist, dori_bearer_of_friends, dain_ironfoot, fili_and_kili_joyous,
+    gimli_counter_of_kills, gloin_the_mighty, junk_diver, kuldotha_forgemaster, lizard_blades,
+    magda_brazen_outlaw, solemn_simulacrum, thorin_companys_leader, thorin_mountain_king,
+    torbran_thane_of_red_fell, blacksmiths_talent, smoke, there_and_back_again, abrade,
+    big_score, bolt_bend, chaos_warp, expedite, lightning_bolt, thrill_of_possibility,
+    unexpected_windfall, blasphemous_act, cathartic_reunion, faithless_looting, full_throttle,
+    reckless_handling, seize_the_spoils, take_for_a_ride, trash_for_treasure, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

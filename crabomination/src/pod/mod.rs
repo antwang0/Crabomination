@@ -25038,6 +25038,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ODRIC_3_COMMANDERS,
             main: decks::ODRIC_3_MAIN,
         },
+        // Seat 4098: Yedora, Grave Gardener's EDHREC average deck. `--pod-decks 4098`.
+        PodDeck {
+            name: "Yedora, Grave Gardener (G)",
+            commanders: decks::YEDORA_COMMANDERS,
+            main: decks::YEDORA_MAIN,
+        },
+        // Seat 4099: Dwalin, Weaponmaster's EDHREC average deck. `--pod-decks 4099`.
+        PodDeck {
+            name: "Dwalin, Weaponmaster (WR)",
+            commanders: decks::DWALIN_COMMANDERS,
+            main: decks::DWALIN_MAIN,
+        },
+        // Seat 4100: Thorin, Mountain-king's EDHREC average deck. `--pod-decks 4100`.
+        PodDeck {
+            name: "Thorin, Mountain-king (R)",
+            commanders: decks::THORIN_COMMANDERS,
+            main: decks::THORIN_MAIN,
+        },
+        // Seat 4101: Cyclonus, the Saboteur's EDHREC average deck. `--pod-decks 4101`.
+        PodDeck {
+            name: "Cyclonus, the Saboteur (UB)",
+            commanders: decks::CYCLONUS_COMMANDERS,
+            main: decks::CYCLONUS_MAIN,
+        },
+        // Seat 4102: Dáin Ironfoot's EDHREC average deck. `--pod-decks 4102`.
+        PodDeck {
+            name: "Dáin Ironfoot (R)",
+            commanders: decks::DAIN_IRONFOOT_COMMANDERS,
+            main: decks::DAIN_IRONFOOT_MAIN,
+        },
+        // Seat 4103: Thorin, Company's Leader's EDHREC average deck. `--pod-decks 4103`.
+        PodDeck {
+            name: "Thorin, Company's Leader (R)",
+            commanders: decks::THORIN_2_COMMANDERS,
+            main: decks::THORIN_2_MAIN,
+        },
+        // Seat 4104: Bombur, Gentle Dreamer's EDHREC average deck. `--pod-decks 4104`.
+        PodDeck {
+            name: "Bombur, Gentle Dreamer (R)",
+            commanders: decks::BOMBUR_COMMANDERS,
+            main: decks::BOMBUR_MAIN,
+        },
     ]
 }
 
@@ -31030,6 +31072,13 @@ mod tests {
             ("Rankle and Torbran", &[0x1A15]),
             ("Kellan, Daring Traveler", &[0x1A16]),
             ("Odric, Blood-Cursed", &[0x1A17]),
+            ("Yedora, Grave Gardener", &[0x1A18]),
+            ("Dwalin, Weaponmaster", &[0x1A19]),
+            ("Thorin, Mountain-king", &[0x1A1A]),
+            ("Cyclonus, the Saboteur", &[0x1A1B]),
+            ("Dáin Ironfoot", &[0x1A1C]),
+            ("Thorin, Company's Leader", &[0x1A1D]),
+            ("Bombur, Gentle Dreamer", &[0x1A1E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
