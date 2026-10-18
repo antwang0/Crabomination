@@ -148,3 +148,45 @@ fn way_of_the_warlord_arms_jace() {
     assert_eq!(g.players[1].life, 18);
     let _ = bear;
 }
+
+/// CR 701.44 / 614.1a — Twists and Turns' entry explores, through its own
+/// scry-1 replacement: the explore still happens (a land on top goes to hand).
+#[test]
+fn twists_and_turns_scries_then_explores() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let tt = g.add_card_to_hand(0, catalog::twists_and_turns());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: tt,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    // Cast one, explored a Forest into hand.
+    assert_eq!(g.players[0].hand.len(), hand);
+    let _ = bear;
+}
+
+/// Twists and Turns transforms into Mycoid Maze once a land enters with
+/// seven or more out.
+#[test]
+fn twists_and_turns_transforms_at_seven_lands() {
+    let mut g = pod(2);
+    let tt = ready(&mut g, 0, catalog::twists_and_turns());
+    for _ in 0..6 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tt).unwrap().definition.name, "Mycoid Maze");
+}

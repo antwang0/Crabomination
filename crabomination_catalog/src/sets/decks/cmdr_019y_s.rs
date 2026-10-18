@@ -138,3 +138,63 @@ pub fn way_of_the_warlord() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Twists and Turns // Mycoid Maze — {G} enchantment. If a creature you
+/// control would explore, instead you scry 1, then that creature explores. ETB:
+/// target creature you control explores. When a land you control enters, if
+/// you control seven or more lands, transform it. Back: Mycoid Maze, a Cave
+/// land — {T}: add {G}; {3}{G}, {T}: look at the top four, you may reveal a
+/// creature card from among them into your hand, the rest on the bottom.
+pub fn twists_and_turns() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType, Predicate, SelectionRequirement as R, StaticAbility, Value};
+    use crate::effect::{LookPick, ManaPayload, PlayerRef, Selector, StaticEffect};
+    let maze = CardDefinition {
+        name: "Mycoid Maze",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), crate::mana::g()]),
+                tap_cost: true,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    pick_filter: Some(R::Creature),
+                    optional: true,
+                    ..Default::default()
+                })),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let lands = Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou)));
+    CardDefinition {
+        name: "Twists and Turns",
+        cost: cost(&[crate::mana::g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If a creature you control would explore, instead you scry 1, then that creature explores.",
+            effect: StaticEffect::ScryBeforeExploring,
+        }],
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::Explore {
+                who: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land },
+                    Predicate::ValueAtLeast(lands, Value::Const(7)),
+                ])),
+                effect: Effect::Transform { what: Selector::This },
+            },
+        ],
+        back_face: Some(Box::new(maze)),
+        ..Default::default()
+    }
+}
