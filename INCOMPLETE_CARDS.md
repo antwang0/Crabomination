@@ -2234,3 +2234,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Planar Atlas | the look keeps any one of the four on top (not only a land) and isn't optional | `LookTopKeepOneRestToGraveyard { rest_bottom_random }` |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
 | 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |
+| 🟡 Thorin, Mountain-king | the Equipment aren't targeted (ward/hexproof on one is ignored), and the bite's "up to one target creature" is chosen with the ETB, not as a reflexive trigger after the attach (CR 603.7d) | `AttachAnyNumberTo` + `If(count(LastMoved))` + `DealDamageEqualToPower` |
