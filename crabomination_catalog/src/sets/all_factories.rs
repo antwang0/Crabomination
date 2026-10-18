@@ -1528,6 +1528,7 @@ static DECKS: &[Factory] = &[
     super::decks::fishing_pole,
     // cmdr_019y_s (session 019Y6J4R)
     super::decks::don_raph_hard_science,
+    super::decks::mosswood_dreadknight,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

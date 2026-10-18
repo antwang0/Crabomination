@@ -32,3 +32,30 @@ pub fn don_raph_hard_science() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mosswood Dreadknight // Dread Whispers — {1}{G} 3/2 trample Human Knight.
+/// When it dies, you may cast it from your graveyard as an Adventure until the
+/// end of your next turn. Dread Whispers ({1}{B} sorcery — Adventure): you
+/// draw a card and you lose 1 life.
+pub fn mosswood_dreadknight() -> CardDefinition {
+    CardDefinition {
+        name: "Mosswood Dreadknight",
+        cost: cost(&[generic(1), crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::GrantAdventureFromGraveyard)],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Dread Whispers",
+            cost: cost(&[generic(1), crate::mana::b()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: crate::effect::Selector::You, amount: crate::card::Value::ONE },
+                Effect::LoseLife { who: crate::effect::Selector::You, amount: crate::card::Value::ONE },
+            ]),
+        })),
+        ..Default::default()
+    }
+}

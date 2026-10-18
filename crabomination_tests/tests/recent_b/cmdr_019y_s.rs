@@ -57,3 +57,28 @@ fn don_and_raph_give_the_next_noncreature_spell_affinity() {
 
 #[allow(dead_code)]
 fn _unused(_: CounterType) {}
+
+/// CR 715.3 — Mosswood Dreadknight dies, and its Adventure may be cast from
+/// the graveyard: Dread Whispers draws and costs a life, then the Knight can
+/// be cast from exile.
+#[test]
+fn mosswood_dreadknight_casts_its_adventure_from_the_graveyard() {
+    let mut g = pod(2);
+    let md = ready(&mut g, 0, catalog::mosswood_dreadknight());
+    let destroy = crabomination::effect::Effect::Destroy {
+        what: crabomination::effect::Selector::ExactObjects(vec![md]),
+    };
+    let evs = g.resolve_effect(&destroy, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == md));
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastAdventure { card_id: md, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Dread Whispers from the graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].life, 19);
+    assert!(g.exile.iter().any(|c| c.id == md), "on an adventure");
+}
