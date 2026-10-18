@@ -425,3 +425,51 @@ fn the_cloning_of_shredder_mints_mutant_copies() {
         assert!(c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Mutant));
     }
 }
+
+/// Detritivore counts nonbasic land cards in every opponent's graveyard at
+/// three seats — not basics, not its controller's own.
+#[test]
+fn detritivore_counts_nonbasics_across_opponents_graveyards() {
+    let mut g = pod(3);
+    let d = ready(&mut g, 0, catalog::detritivore());
+    g.add_card_to_graveyard(1, catalog::command_tower());
+    g.add_card_to_graveyard(1, catalog::forest());
+    g.add_card_to_graveyard(2, catalog::evolving_wilds());
+    g.add_card_to_graveyard(0, catalog::command_tower());
+    let cp = g.computed_permanent(d).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}
+
+/// Mind Carver: +1/+0, or +3/+1 once an opponent has eight cards in their
+/// graveyard.
+#[test]
+fn mind_carver_grows_on_a_deep_opponent_graveyard() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mc = ready(&mut g, 0, catalog::mind_carver());
+    g.battlefield_find_mut(mc).unwrap().attached_to = Some(bear);
+    let pt = |g: &GameState| {
+        let cp = g.computed_permanent(bear).unwrap();
+        (cp.power, cp.toughness)
+    };
+    assert_eq!(pt(&g), (3, 2));
+    for _ in 0..8 {
+        g.add_card_to_graveyard(2, catalog::forest());
+    }
+    assert_eq!(pt(&g), (5, 3));
+}
+
+/// Ajani Vengeant's −7 destroys only the target player's lands.
+#[test]
+fn ajani_vengeant_ultimate_razes_one_player() {
+    let mut g = pod(3);
+    let ajani = ready(&mut g, 0, catalog::ajani_vengeant());
+    let lands: Vec<_> = (0..3).map(|s| ready(&mut g, s, catalog::forest())).collect();
+    let ult = catalog::ajani_vengeant().loyalty_abilities[2].effect.clone();
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(ajani);
+    ctx.targets = vec![Target::Player(2)];
+    g.resolve_effect(&ult, &ctx).unwrap();
+    assert!(g.battlefield_find(lands[2]).is_none());
+    assert!(g.battlefield_find(lands[1]).is_some() && g.battlefield_find(lands[0]).is_some());
+}

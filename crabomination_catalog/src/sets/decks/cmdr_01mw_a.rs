@@ -681,3 +681,127 @@ pub fn the_cloning_of_shredder() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mind Carver — {B} Equipment; ETB attach it to target creature you control.
+/// +1/+0, or +3/+1 instead while an opponent has eight or more cards in their
+/// graveyard. Equip {2}{B}.
+pub fn mind_carver() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, Predicate};
+    CardDefinition {
+        name: "Mind Carver",
+        cost: cost(&[crate::mana::b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2), crate::mana::b()]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            conditional_pt: Some((
+                2,
+                1,
+                Predicate::ValueAtLeast(Value::GreatestGraveyardSizeAmong(PlayerRef::EachOpponent), Value::Const(8)),
+            )),
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Voltaic Whip — {2}{B} Equipment: +2/+0 and "whenever this creature
+/// attacks alone, you draw a card and lose 1 life." Equip {2}.
+pub fn voltaic_whip() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, Predicate};
+    CardDefinition {
+        name: "Voltaic Whip",
+        cost: cost(&[generic(2), crate::mana::b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::AttackingAlone),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                ]),
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Ajani Vengeant — {2}{R}{W} planeswalker, loyalty 3. +1: target permanent
+/// doesn't untap during its controller's next untap step. −2: 3 damage to any
+/// target and you gain 3 life. −7: destroy all lands target player controls.
+pub fn ajani_vengeant() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    use crate::effect::shortcut::{target_any, target_filtered};
+    CardDefinition {
+        name: "Ajani Vengeant",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::SkipNextUntap { what: target_filtered(R::Permanent) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Destroy { what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Land } },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Detritivore — {2}{R}{R} */* Lhurgoyf: power and toughness each equal the
+/// nonbasic land cards in your opponents' graveyards. Suspend X—{X}{3}{R},
+/// X can't be 0. Whenever a time counter is removed from it while it's
+/// exiled, destroy target nonbasic land.
+pub fn detritivore() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::ZoneRef;
+    let nonbasic = R::Land.and(R::Not(Box::new(R::IsBasicLand)));
+    CardDefinition {
+        name: "Detritivore",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lhurgoyf], ..Default::default() },
+        keywords: vec![Keyword::Suspend(0, cost(&[crate::mana::x(), generic(3), r()]))],
+        static_abilities: vec![StaticAbility {
+            description: "Detritivore's power and toughness are each equal to the number of nonbasic land cards in your opponents' graveyards.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::count(Selector::EachMatching {
+                    zone: ZoneRef::Graveyard(PlayerRef::EachOpponent),
+                    filter: nonbasic.clone(),
+                }),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterRemoved(crate::card::CounterType::Time), EventScope::SelfSource)
+                .while_suspended(),
+            effect: Effect::Destroy { what: crate::effect::shortcut::target_filtered(nonbasic) },
+        }],
+        ..Default::default()
+    }
+}

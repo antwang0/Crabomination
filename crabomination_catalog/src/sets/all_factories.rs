@@ -1558,6 +1558,10 @@ static DECKS: &[Factory] = &[
     super::decks::gandalf_of_the_secret_fire,
     super::decks::araumi_of_the_dead_tide,
     super::decks::the_cloning_of_shredder,
+    super::decks::mind_carver,
+    super::decks::voltaic_whip,
+    super::decks::ajani_vengeant,
+    super::decks::detritivore,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
