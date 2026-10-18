@@ -25518,6 +25518,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TWELFTH_DOCTOR_18_COMMANDERS,
             main: decks::THE_TWELFTH_DOCTOR_18_MAIN,
         },
+        // Seat 4178: Esior, Wardwing Familiar and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 4178`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Gilanra, Caller of Wirewood (UG)",
+            commanders: decks::ESIOR_15_COMMANDERS,
+            main: decks::ESIOR_15_MAIN,
+        },
+        // Seat 4179: Gilanra, Caller of Wirewood and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 4179`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Keleth, Sunmane Familiar (WG)",
+            commanders: decks::GILANRA_18_COMMANDERS,
+            main: decks::GILANRA_18_MAIN,
+        },
+        // Seat 4180: Alharu, Solemn Ritualist and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4180`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Siani, Eye of the Storm (WU)",
+            commanders: decks::ALHARU_13_COMMANDERS,
+            main: decks::ALHARU_13_MAIN,
+        },
+        // Seat 4181: Dorothea, Vengeful Victim's EDHREC average deck. `--pod-decks 4181`.
+        PodDeck {
+            name: "Dorothea, Vengeful Victim (WU)",
+            commanders: decks::DOROTHEA_COMMANDERS,
+            main: decks::DOROTHEA_MAIN,
+        },
     ]
 }
 
@@ -31590,6 +31614,10 @@ mod tests {
             ("Karlach, Fury of Avernus and Haunted One", &[0x1A65]),
             ("The Sixth Doctor and Bill Potts", &[0x1A66]),
             ("The Twelfth Doctor and Bill Potts", &[0x1A67]),
+            ("Esior, Wardwing Familiar and Gilanra, Caller of Wirewood", &[0x1A68]),
+            ("Gilanra, Caller of Wirewood and Keleth, Sunmane Familiar", &[0x1A69]),
+            ("Alharu, Solemn Ritualist and Siani, Eye of the Storm", &[0x1A6A]),
+            ("Dorothea, Vengeful Victim", &[0x1A6B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

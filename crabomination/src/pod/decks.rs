@@ -117171,3 +117171,117 @@ pub const THE_TWELFTH_DOCTOR_18_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const ESIOR_15_COMMANDERS: &[CardFactory] = &[esior_wardwing_familiar, gilanra_caller_of_wirewood];
+
+/// **Esior, Wardwing Familiar and Gilanra, Caller of Wirewood**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 14 Forests + 10 Islands = 98.
+/// Esior, Wardwing Familiar and Gilanra, Caller of Wirewood (EDHREC, fetched 2026-10-18).
+pub const ESIOR_15_MAIN: &[CardFactory] = &[
+    arcane_signet, expedition_map, mask_of_memory, sol_ring, thran_dynamo, botanical_sanctum,
+    command_tower, dreamroot_cascade, exotic_orchard, flooded_grove, forgotten_monument,
+    hinterland_harbor, overflowing_basin, pit_of_offerings, simic_growth_chamber, sunken_palace,
+    vineglimmer_snarl, waterlogged_grove, yavimaya_coast, annoyed_altisaur, birds_of_paradise,
+    bonny_pall_clearcutter, coliseum_behemoth, disciple_of_freyalise, drowner_of_truth,
+    elvish_mystic, end_raze_forerunners, fyndhorn_elves, hullbreaker_horror, hydroid_krasis,
+    kogla_the_titan_ape, koma_cosmos_serpent, koma_world_eater, llanowar_elves, meteor_golem,
+    nulldrifter, rampaging_baloths, sakashimas_protege, soul_of_the_harvest,
+    sphinx_of_the_second_sun, sweet_gum_recluse, terastodon, thorn_mammoth, thunderfoot_baloth,
+    titan_of_industry, world_breaker, combat_research, curiosity, curious_obsession,
+    garruks_uprising, keen_sense, raised_by_giants, snake_umbra, wild_growth, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, collective_resistance, counterspell, crop_rotation,
+    dig_through_time, muddle_the_mixture, negate, sokkas_haiku, spider_sense,
+    cosmium_confluence, ezuris_predation, polymorph, rishkars_expertise, stolen_identity,
+    sylvan_scrying, treasure_cruise, urban_evolution, vastwood_surge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const GILANRA_18_COMMANDERS: &[CardFactory] = &[gilanra_caller_of_wirewood, keleth_sunmane_familiar];
+
+/// **Gilanra, Caller of Wirewood and Keleth, Sunmane Familiar**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 10 Forests + 2 Plains = 98.
+/// Gilanra, Caller of Wirewood and Keleth, Sunmane Familiar (EDHREC, fetched 2026-10-18).
+pub const GILANRA_18_MAIN: &[CardFactory] = &[
+    aetherflux_conduit, god_pharaohs_statue, arctic_treeline, blighted_woodland,
+    bonders_enclave, brushland, canopy_vista, citadel_gate, command_tower, conduit_pylons,
+    creosote_heath, echoing_deeps, exotic_orchard, forgotten_monument, fortified_village,
+    grasping_dunes, hashep_oasis, hidden_nursery, mosswort_bridge, pit_of_offerings,
+    radiant_grove, sandstorm_verge, scattered_groves, scavenger_grounds, selesnya_guildgate,
+    shefet_dunes, sungrass_prairie, sunpetal_grove, thran_portal, volatile_fault,
+    angel_of_serenity, angel_of_the_ruins, arbor_adherent, baldin_century_herdmaster,
+    bane_of_progress, brutalizer_exarch, champions_of_minas_tirith, chancellor_of_the_annex,
+    dawnglade_regent, decimator_of_the_provinces, duplicant, eagles_of_the_north,
+    end_raze_forerunners, garruks_horde, generous_ent, glacier_godmaw, goring_ceratops,
+    hamza_guardian_of_arashin, jubilation, kodama_of_the_east_tree, luminate_primordial,
+    myojin_of_lifes_web, primeval_herald, regal_behemoth, sakiko_mother_of_summer,
+    salvation_colossus, selvala_eager_trailblazer, shriekwood_devourer, steel_hellkite,
+    tanuki_transplanter, terastodon, the_earth_king, thorn_mammoth, thunderfoot_baloth,
+    victorys_herald, indrik_umbra, legion_loyalty, mana_reflection, martyrs_bond,
+    omenpath_journey, raised_by_giants, the_world_spell, web_of_life_and_destiny, wild_pair,
+    jaheiras_respite, summoning_trap, approach_of_the_second_sun, cosmium_confluence,
+    disorienting_choice, explore_the_underdark, see_the_unwritten, selvalas_stampede,
+    tempt_with_discovery, thunderous_debut, traverse_the_outlands, viewpoint_synchronization,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
+    plains,
+];
+
+pub const ALHARU_13_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, siani_eye_of_the_storm];
+
+/// **Alharu, Solemn Ritualist and Siani, Eye of the Storm**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 12 Islands + 14 Plains = 98.
+/// Alharu, Solemn Ritualist and Siani, Eye of the Storm (EDHREC, fetched 2026-10-18).
+pub const ALHARU_13_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, cauldron_of_souls, everflowing_chalice, mind_stone,
+    seashell_cameo, sol_ring, talisman_of_progress, thiefs_knife, white_auracite,
+    captivating_cave, command_tower, glacial_fortress, hidden_courtyard, north_pole_gates,
+    path_of_ancestry, skybridge_towers, skycloud_expanse, tranquil_cove, acquisition_octopus,
+    brine_comber, drogskol_captain, dust_animus, eagle_of_the_great_shelf, empyrean_eagle,
+    falcon_abomination, jackdaw_savior, kangees_lieutenant, kangee_sky_warden, loyal_drake,
+    most_decrepit_old_bird, ornithopter_of_paradise, pupu_ufo, rook_turret,
+    rosa_resolute_white_mage, sojourners_companion, spectral_sailor, sphinx_of_magosi,
+    starry_eyed_skyrider, supreme_phantom, thassa_deep_dwelling, thrummingbird,
+    thunderclap_wyvern, tidus_blitzball_star, valkyrie_aerial_unit, wingspan_mentor, zack_fair,
+    air_nomad_legacy, coastal_piracy, fall_from_favor, favorable_winds, felidar_retreat,
+    grasp_of_fate, military_intelligence, reconnaissance_mission, summoners_sending,
+    azorius_charm, desculpting_blast, disenchant, duty_beyond_death, essence_capture,
+    fact_or_fiction, farm_market, hithlain_knots, kellans_lightblades, reality_shift,
+    topple_the_statue, austere_command, combat_tutorial, requisition_raid,
+    secrets_of_the_golden_city, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const DOROTHEA_COMMANDERS: &[CardFactory] = &[dorothea_vengeful_victim];
+
+/// **Dorothea, Vengeful Victim**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 11 Islands + 13 Plains = 99.
+/// Dorothea, Vengeful Victim (EDHREC, fetched 2026-10-18).
+pub const DOROTHEA_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, patchwork_banner, sol_ring,
+    staff_of_the_storyteller, seance_board, talisman_of_progress, adarkar_wastes,
+    azorius_chancery, command_tower, deserted_beach, glacial_fortress, hallowed_fountain,
+    moorland_haunt, port_town, prairie_stream, sea_of_clouds, skycloud_expanse,
+    temple_of_enlightenment, brine_comber, cemetery_illuminator, chaplain_of_alms,
+    dennick_pious_apprentice, drogskol_captain, drogskol_reinforcements, empyrean_eagle,
+    enduring_curiosity, faithbound_judge, geist_of_saint_traft, ghostly_pilferer,
+    guardian_of_faith, invisible_stalker, katilda_dawnhart_martyr, lantern_bearer,
+    lunarch_veteran, malevolent_hermit, mausoleum_wanderer, millicent_restless_revenant,
+    mirrorhall_mimic, mischievous_catgeist, nebelgast_herald, patrician_geist, rattlechains,
+    selfless_spirit, spectral_sailor, supreme_phantom, twinblade_geist, vega_the_watcher,
+    breath_of_the_sleepless, curiosity, ghostly_prison, hallowed_haunting, haunted_library,
+    invocation_of_saint_traft, mirrormade, muster_the_departed, reconnaissance_mission,
+    secrets_of_the_dead, staggering_insight, counterspell, dovins_veto, faithful_mending,
+    geistlight_snare, geistwave, generous_gift, negate, path_to_exile, stroke_of_midnight,
+    swords_to_plowshares, hallowed_respite, sevinnes_reclamation, storm_of_souls,
+    supreme_verdict, winds_of_rath,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
