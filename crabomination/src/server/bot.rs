@@ -18074,6 +18074,8 @@ fn no_cost_reduction_possible(
         // {N} less" turn grant: both reduce off the board, and the gate used
         // to reject a spell they made affordable.
         && p.pending_affinity_next_spell.is_empty()
+        // Don & Raph's next-noncreature-spell affinity (fresh-seed sweep 9208).
+        && p.pending_affinity_next_noncreature.is_empty()
         && !state.turn_scoped_spell_taxes.iter().any(|t| t.discount_for == Some(seat))
         // Last of the eight: the only one that can force the source gather.
         && have.cost_sources().is_empty()
@@ -28146,6 +28148,22 @@ mod tests {
         let d = g.add_card_to_hand(0, catalog::divination());
         g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
         g.players[0].pending_affinity_next_spell.push(0);
+        let card = g.players[0].hand.iter().find(|c| c.id == d).unwrap().clone();
+        assert!(can_afford_in_state(&g, 0, &card, &EvalWeights::default()));
+    }
+
+    /// Don & Raph's next-noncreature-spell affinity is the same kind of
+    /// off-board reduction (fresh-seed pod sweep 9208: Inspiring Statuary and
+    /// Mouser Foundry rejected while affordable).
+    #[test]
+    fn mana_value_gate_sees_next_noncreature_affinity() {
+        let mut g = two_player_game();
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, catalog::ornithopter());
+        }
+        let d = g.add_card_to_hand(0, catalog::divination());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.grant_next_noncreature_spell_affinity(0);
         let card = g.players[0].hand.iter().find(|c| c.id == d).unwrap().clone();
         assert!(can_afford_in_state(&g, 0, &card, &EvalWeights::default()));
     }
