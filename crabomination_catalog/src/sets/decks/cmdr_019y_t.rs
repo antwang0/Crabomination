@@ -188,3 +188,16 @@ pub fn cloak_and_dagger_entwined() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sculpted Sunburst — {3}{W}{W} sorcery. Choose a creature you control, then
+/// each opponent chooses a creature they control with equal or lesser power;
+/// if you chose one, exile each creature not chosen this way.
+pub fn sculpted_sunburst() -> CardDefinition {
+    CardDefinition {
+        name: "Sculpted Sunburst",
+        cost: cost(&[generic(3), crate::mana::w(), crate::mana::w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseCreaturesByPowerExileRest,
+        ..Default::default()
+    }
+}

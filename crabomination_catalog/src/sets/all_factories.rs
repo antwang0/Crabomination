@@ -1540,6 +1540,7 @@ static DECKS: &[Factory] = &[
     super::decks::absorbing_man,
     super::decks::hurkyl_master_wizard,
     super::decks::cloak_and_dagger_entwined,
+    super::decks::sculpted_sunburst,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

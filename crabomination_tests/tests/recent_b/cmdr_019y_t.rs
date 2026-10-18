@@ -221,3 +221,26 @@ fn cloak_and_dagger_exile_until_they_leave() {
         assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 1), "the bear is back");
     }
 }
+
+/// Sculpted Sunburst (CR 101.4 order): I keep my 3/3; each opponent keeps one
+/// creature with power 3 or less — the 5/5 can't be kept, so the one
+/// opponent keeps the bear and the other, with only a 5/5, keeps nothing.
+#[test]
+fn sculpted_sunburst_keeps_one_creature_each() {
+    let mut g = pod(3);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let my_bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let opp_bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let opp_elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let big = ready(&mut g, 2, catalog::craw_wurm());
+    let sun = g.add_card_to_hand(0, catalog::sculpted_sunburst());
+    g.players[0].mana_pool.add(Color::White, 5);
+    g.perform_action(GameAction::CastSpell { card_id: sun, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "my chosen creature");
+    assert!(g.battlefield_find(my_bear).is_none());
+    assert!(g.battlefield_find(opp_bear).is_some(), "their strongest within power 3");
+    assert!(g.battlefield_find(opp_elf).is_none());
+    assert!(g.battlefield_find(big).is_none(), "power 6 can't be chosen");
+}
