@@ -290,3 +290,24 @@ fn braingeyser_draws_x() {
     g.resolve_effect(&catalog::braingeyser().effect, &ctx).unwrap();
     assert_eq!(g.players[0].hand.len(), 3);
 }
+
+/// CR 400.7 — Glimpse of Tomorrow's shuffled permanents are new objects in
+/// the library: untapped, no loyalty activation remembered (pod seeds 925538
+/// and 7042 left a tapped Path of Ancestry and a used Quintorius Kand there).
+#[test]
+fn glimpse_of_tomorrow_sheds_tap_and_loyalty_uses() {
+    let mut g = two_player_game();
+    let path = g.add_card_to_battlefield(0, catalog::path_of_ancestry());
+    let walker = g.add_card_to_battlefield(0, catalog::quintorius_kand());
+    g.battlefield_find_mut(path).unwrap().tapped = true;
+    g.battlefield_find_mut(walker).unwrap().loyalty_uses_this_turn = 1;
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&Effect::GlimpseOfTomorrow, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    for c in &g.players[0].library {
+        assert!(!c.tapped && c.loyalty_uses_this_turn == 0, "{} kept battlefield state", c.definition.name);
+    }
+}

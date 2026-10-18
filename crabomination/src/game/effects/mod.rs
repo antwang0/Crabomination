@@ -6493,27 +6493,16 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 let n = owned.len();
+                // CR 400.7 — each goes through the ordinary move, which sheds
+                // every battlefield-only field (a shuffled Quintorius Kand kept
+                // its loyalty activation, pod seed 7042); tokens cease to exist
+                // (CR 111.7) and a commander may go home (CR 903.9b) there.
+                let to_library = crate::effect::ZoneDest::Library {
+                    who: crate::effect::PlayerRef::Seat(p),
+                    pos: crate::effect::LibraryPosition::Top,
+                };
                 for cid in owned {
-                    let stripped = self.lost_all_abilities(cid);
-                    if let Some(mut card) = self.battlefield.take_by_id(cid) {
-                        self.remove_effects_from_source(cid);
-                        self.remove_from_combat(cid);
-                        self.note_left_without_dying(&card, stripped, events);
-                        self.on_left_battlefield(cid, events);
-                        if card.is_token {
-                            continue; // tokens cease to exist (CR 111.7)
-                        }
-                        // CR 400.7 — a new object in the library: untapped,
-                        // no counters, nothing battlefield-only.
-                        let lib = crate::card::Zone::Library;
-                        card.tapped = false;
-                        card.leave_battlefield_state();
-                        card.drop_counters_for_zone_change(lib);
-                        // CR 903.9b — a commander may go home instead.
-                        if let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Battlefield, lib) {
-                            self.players[p].library.push(card);
-                        }
-                    }
+                    self.move_card_to(cid, &to_library, ctx, events);
                 }
                 self.shuffle_library(p, events);
                 // Reveal that many; permanents enter (non-Aura first), rest
