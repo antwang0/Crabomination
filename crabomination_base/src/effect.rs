@@ -11861,10 +11861,14 @@ pub enum Effect {
     /// A headless seat names the highest-mana-value one it doesn't control.
     EachPlayerChoosesOpponentPermanentExile { filter: SelectionRequirement },
     /// "Wish" — put a card you own matching `filter` from your sideboard
-    /// ("outside the game") or from exile into your hand (Karn, the Great
-    /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`
-    /// controller; auto-picks the first sideboard match otherwise.
+    /// ("outside the game") into your hand (Burning Wish, Ring of Ma'rûf).
+    /// Chosen via `Decision::ChooseCards` for a `wants_ui` controller;
+    /// auto-picks the first sideboard match otherwise. A Commander game has
+    /// no sideboard, so it finds nothing there.
     WishToHand { filter: SelectionRequirement },
+    /// `WishToHand`, "or choose a face-up [filter] card you own in exile"
+    /// (Karn, the Great Creator's −2) — only that card reaches into exile.
+    WishToHandOrFaceUpExile { filter: SelectionRequirement },
     /// "Shuffle up to `max` cards you own matching `filter` from outside the
     /// game into your library" (Research // Development's left half).
     WishToLibrary { filter: SelectionRequirement, max: Value },

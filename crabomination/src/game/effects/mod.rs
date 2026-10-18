@@ -27045,7 +27045,8 @@ impl GameState {
                 self.each_player_chooses_opponent_permanent_exile(filter, ctx, events, effect)
             }
 
-            Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx),
+            Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, false),
+            Effect::WishToHandOrFaceUpExile { filter } => self.resolve_wish_to_hand(filter, ctx, true),
 
             Effect::ExileThenBranchByController { what, theirs } => {
                 let Some(id) =
@@ -47372,9 +47373,11 @@ impl GameState {
         &mut self,
         filter: &crate::card::SelectionRequirement,
         ctx: &EffectContext,
+        face_up_exile_too: bool,
     ) -> Result<(), GameError> {
-                // Sideboard first ("outside the game"), then own exiled
-                // cards; a wants_ui controller picks via ChooseCards.
+                // Sideboard first ("outside the game"), then — Karn, the
+                // Great Creator only — own face-up exiled cards; a wants_ui
+                // controller picks via ChooseCards.
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
                 let mut candidates: Vec<(CardId, bool)> = self.players[p]
@@ -47388,7 +47391,10 @@ impl GameState {
                         .iter()
                         // "a face-up … card you own in exile" (Karn, the Great Creator).
                         .filter(|c| {
-                            c.owner == p && !c.face_down && self.evaluate_requirement_on_card(filter, c, p)
+                            face_up_exile_too
+                                && c.owner == p
+                                && !c.face_down
+                                && self.evaluate_requirement_on_card(filter, c, p)
                         })
                         .map(|c| (c.id, false)),
                 );

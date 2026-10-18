@@ -1451,6 +1451,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::WishToHand { .. } => false,
+            Effect::WishToHandOrFaceUpExile { .. } => false,
             Effect::SacrificeAllButOnePerType { who, .. }
             | Effect::SacrificeAllButOnePerTypeYouChoose { who } => sel_has_target(who),
             // The Oath cycle picks its own opponent at resolution.

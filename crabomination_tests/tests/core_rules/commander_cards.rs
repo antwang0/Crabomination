@@ -2406,3 +2406,30 @@ fn repay_in_kind_ignores_a_departed_players_life() {
     g.resolve_effect(&eff, &ctx).expect("repay");
     assert_eq!((g.players[0].life, g.players[1].life), (7, 7));
 }
+
+/// CR 400.11 / 903 — a wish reaches outside the game, which a Commander game
+/// doesn't have: Mastermind's Acquisition's second mode (and Burning Wish)
+/// finds nothing, and never a card of the caster's in exile (exile is in the
+/// game). Only Karn, the Great Creator prints "or a face-up … card you own in
+/// exile".
+#[test]
+fn cr_400_11_a_wish_does_not_reach_into_exile() {
+    let mut g = commander_game();
+    let exiled = g.add_card_to_exile(0, catalog::lightning_bolt());
+    let ma = g.add_card_to_hand(0, catalog::masterminds_acquisition());
+    for c in [Color::Black, Color::Black] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ma,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("cast the wish mode");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == exiled), "the exiled Bolt stays in exile");
+    assert!(g.players[0].hand.is_empty());
+}

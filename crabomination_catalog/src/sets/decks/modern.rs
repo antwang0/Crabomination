@@ -55391,7 +55391,7 @@ pub fn karn_the_great_creator() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2, // -2 (shipped as +2: a free artifact tutor every turn)
-                effect: Effect::WishToHand {
+                effect: Effect::WishToHandOrFaceUpExile {
                     filter: SelectionRequirement::Artifact,
                 },
                 ..Default::default()
