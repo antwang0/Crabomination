@@ -1533,6 +1533,7 @@ static DECKS: &[Factory] = &[
     super::decks::overwrite_the_multiverse,
     super::decks::way_of_the_warlord,
     super::decks::twists_and_turns,
+    super::decks::kitesail_skirmisher,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

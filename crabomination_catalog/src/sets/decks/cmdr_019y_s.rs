@@ -198,3 +198,32 @@ pub fn twists_and_turns() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kitesail Skirmisher — {3}{U} 3/1 flying Human Pirate. Whenever it attacks,
+/// another target creature attacking the same player or planeswalker gains
+/// flying until end of turn. Encore {4}{U}.
+pub fn kitesail_skirmisher() -> CardDefinition {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Kitesail Skirmisher",
+        cost: cost(&[generic(3), crate::mana::u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Pirate], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(
+                    R::Creature.and(R::OtherThanSource).and(R::IsAttackingSameAsSource),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![crate::effect::shortcut::encore(cost(&[generic(4), crate::mana::u()]))],
+        ..Default::default()
+    }
+}

@@ -190,3 +190,25 @@ fn twists_and_turns_transforms_at_seven_lands() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(tt).unwrap().definition.name, "Mycoid Maze");
 }
+
+/// CR 506.2 — Kitesail Skirmisher lends flying only to a creature attacking
+/// the same player: at three seats, the bear attacking seat 1 beside it flies,
+/// the giant attacking seat 2 doesn't qualify.
+#[test]
+fn kitesail_skirmisher_lifts_a_same_defender_attacker() {
+    let mut g = pod(3);
+    let ks = ready(&mut g, 0, catalog::kitesail_skirmisher());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: ks, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+        Attack { attacker: giant, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let flies = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&crabomination::card::Keyword::Flying);
+    assert!(flies(&g, bear), "same defender");
+    assert!(!flies(&g, giant), "another defender");
+}
