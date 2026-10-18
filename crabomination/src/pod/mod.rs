@@ -25464,6 +25464,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MADAME_WEB_COMMANDERS,
             main: decks::MADAME_WEB_MAIN,
         },
+        // Seat 4169: Jetfire, Ingenious Scientist's EDHREC average deck. `--pod-decks 4169`.
+        PodDeck {
+            name: "Jetfire, Ingenious Scientist (U)",
+            commanders: decks::JETFIRE_COMMANDERS,
+            main: decks::JETFIRE_MAIN,
+        },
     ]
 }
 
@@ -31527,6 +31533,7 @@ mod tests {
             ("Abomination, Terrifying Titan", &[0x1A5C]),
             ("Alhammarret, High Arbiter", &[0x1A5D]),
             ("Madame Web, Clairvoyant", &[0x1A5E]),
+            ("Jetfire, Ingenious Scientist", &[0x1A5F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

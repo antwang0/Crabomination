@@ -116919,3 +116919,31 @@ pub const MADAME_WEB_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const JETFIRE_COMMANDERS: &[CardFactory] = &[jetfire_ingenious_scientist];
+
+/// **Jetfire, Ingenious Scientist**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Islands = 99.
+/// Jetfire, Ingenious Scientist (EDHREC, fetched 2026-10-18).
+pub const JETFIRE_MAIN: &[CardFactory] = &[
+    animation_module, arcane_signet, astral_cornucopia, contagion_clasp, contagion_engine,
+    energy_chamber, everflowing_chalice, levitating_statue, midnight_clock, mind_stone,
+    mystic_forge, sapphire_medallion, sculpting_steel, sol_ring, the_ozolith, thought_vessel,
+    throne_of_geth, unwinding_clock, uthros_research_craft, academy_ruins,
+    archway_of_innovation, buried_ruin, darksteel_citadel, inventors_fair, karns_bastion,
+    power_depot, reliquary_tower, seat_of_the_synod, uthros_titanic_godcore, arcbound_crusher,
+    arcbound_ravager, arcbound_reclaimer, big_mother_mouser, chrome_host_seedshark,
+    emry_lurker_of_the_loch, etherium_sculptor, flux_channeler, forensic_gadgeteer,
+    foundry_inspector, hangarback_walker, iron_spider_stark_upgrade, kappa_cannoneer,
+    katsumasa_the_animator, liberator_urzas_battlethopter, padeem_consul_of_innovation,
+    patchwork_automaton, sai_master_thopterist, shimmer_myr, silver_myr, solemn_simulacrum,
+    steel_overseer, stonecoil_serpent, surge_conductor, thought_monitor, threefold_thunderhulk,
+    vedalken_archmage, walking_ballista, artificer_class, inexorable_tide, thopter_spy_network,
+    counterspell, desynchronization, experimental_augury, negate, pongify, rapid_hybridization,
+    reality_shift, serum_snare, whir_of_invention, tezzeret_cruel_captain, contentious_plan,
+    fabricate, tezzerets_gambit, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
