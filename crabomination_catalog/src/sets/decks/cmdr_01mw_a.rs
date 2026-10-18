@@ -2442,3 +2442,84 @@ pub fn invasion_of_karsus() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Druid of the Emerald Grove — {3}{G} 2/2 Dwarf Druid. When it enters, search
+/// for up to two basic lands, then roll a d20: 1-9 both to hand; 10-19 one onto
+/// the battlefield tapped, the other to hand; 20 both onto the battlefield
+/// tapped.
+pub fn druid_of_the_emerald_grove() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    let basic = || R::Land.and(R::IsBasicLand);
+    let to_hand = || Effect::Search { who: PlayerRef::You, filter: basic(), to: ZoneDest::Hand(PlayerRef::You) };
+    let to_bf = || Effect::Search {
+        who: PlayerRef::You,
+        filter: basic(),
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+    };
+    CardDefinition {
+        name: "Druid of the Emerald Grove",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Druid], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::RollDie {
+            sides: 20,
+            count: Value::ONE,
+            modifier: Value::ZERO,
+            reroll_at_most: 0,
+            ignore_lowest: 0,
+            results: vec![
+                (1, 9, Effect::Seq(vec![to_hand(), to_hand()])),
+                (10, 19, Effect::Seq(vec![to_bf(), to_hand()])),
+                (20, 20, Effect::Seq(vec![to_bf(), to_bf()])),
+            ],
+            on_doubles: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// The Lady of Otaria — {3}{R}{G} legendary 5/5 Avatar; you may tap three
+/// untapped Dwarves you control instead of paying its mana cost. At the
+/// beginning of each end step, if a land you controlled went to a graveyard
+/// from the battlefield this turn, reveal the top four and take any number of
+/// Dwarf cards; the rest go to the bottom in a random order.
+pub fn the_lady_of_otaria() -> CardDefinition {
+    use crate::card::{AlternativeCost, Predicate};
+    use crate::effect::{LookPick, ZoneRef};
+    use crate::game::TurnStep;
+    let dwarf = || R::HasCreatureType(CreatureType::Dwarf);
+    CardDefinition {
+        name: "The Lady of Otaria",
+        cost: cost(&[generic(3), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: crate::mana::ManaCost::default(),
+            tap_creatures: Some((R::Creature.and(dwarf()), 3)),
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                Predicate::SelectorExists(Selector::EachMatching {
+                    zone: ZoneRef::Graveyard(PlayerRef::You),
+                    filter: R::Land.and(R::PutIntoGraveyardFromBattlefieldThisTurn),
+                }),
+            ),
+            effect: Effect::LookPickToHand(Box::new(LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                pick_filter: Some(dwarf()),
+                take: Some(Value::Const(4)),
+                optional: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            })),
+        }],
+        ..Default::default()
+    }
+}

@@ -17605,6 +17605,8 @@ static DECKS: &[Factory] = &[
     super::decks::predictive_preparations,
     super::decks::alex_wilder_runaway,
     super::decks::invasion_of_karsus,
+    super::decks::druid_of_the_emerald_grove,
+    super::decks::the_lady_of_otaria,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

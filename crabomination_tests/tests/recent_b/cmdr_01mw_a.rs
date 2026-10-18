@@ -991,3 +991,26 @@ fn graft_surgeon_passes_counters_and_trumpeter_notices() {
     drain_stack(&mut g);
     assert_eq!(total(&g), 2, "the Trumpeter's own end-step counter");
 }
+
+/// The Lady of Otaria comes down free by tapping three Dwarves.
+#[test]
+fn the_lady_of_otaria_taps_three_dwarves() {
+    let mut g = pod(2);
+    let dwarves: Vec<_> = [catalog::nori_teller_of_tales(), catalog::bombur_gentle_dreamer(), catalog::dain_of_the_ancient_halls()]
+        .into_iter()
+        .map(|d| ready(&mut g, 0, d))
+        .collect();
+    let lady = g.add_card_to_hand(0, catalog::the_lady_of_otaria());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: lady,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lady).is_some());
+    assert!(dwarves.iter().all(|&d| g.battlefield_find(d).unwrap().tapped));
+}
