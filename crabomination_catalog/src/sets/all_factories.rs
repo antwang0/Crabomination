@@ -1507,6 +1507,8 @@ static DECKS: &[Factory] = &[
     // cmdr_019y_o (session 019Y6J4R)
     super::decks::teferis_talent,
     super::decks::the_clone_saga,
+    super::decks::scarlet_spider_kaine,
+    super::decks::shriek_treblemaker,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

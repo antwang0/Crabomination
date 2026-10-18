@@ -106,3 +106,46 @@ fn the_clone_saga_copies_then_draws_on_the_named_creature() {
     assert_eq!(g.players[1].life, 18);
     assert_eq!(g.players[0].hand.len(), hand + 1, "the named Bear connected");
 }
+
+/// Scarlet Spider discards on entry for a counter — only if you choose to.
+#[test]
+fn scarlet_spider_discards_for_a_counter() {
+    let mut g = pod(2);
+    let ss = g.add_card_to_hand(0, catalog::scarlet_spider_kaine());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    flood(&mut g, 0);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    cast(&mut g, ss, None).expect("cast");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == land));
+    assert_eq!(g.battlefield_find(ss).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Sonic Blast: an opposing creature dying costs its controller 1 life.
+#[test]
+fn shriek_blasts_the_owner_of_a_dead_creature() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::shriek_treblemaker());
+    let bear = ready(&mut g, 2, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("bolt");
+    assert_eq!((g.players[1].life, g.players[2].life), (20, 19));
+}
+
+/// Shriek's first-main discard: when you do, a creature can't block.
+#[test]
+fn shriek_discards_so_a_creature_cant_block() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::shriek_treblemaker());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty());
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::CantBlock));
+}
