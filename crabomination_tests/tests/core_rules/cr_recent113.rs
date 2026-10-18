@@ -196,3 +196,22 @@ fn cr_104_4b_a_finite_life_drain_is_not_a_loop() {
     let g = vito_blood_drain(1_000, false);
     assert_eq!(g.game_over, Some(Some(0)), "the drain wins");
 }
+
+/// CR 704.3 / 704.5n — Grip of Phyresis takes Konda's Banner and attaches it
+/// to a 0/0 Germ the Banner may not equip. The sweep unattaches it (the
+/// Banner's +1/+1s go with it) and must then repeat, so the Germ dies before
+/// anyone gets priority rather than at the next sweep (pod seed 924092).
+#[test]
+fn cr_704_3_an_illegal_attachment_removed_by_the_sweep_repeats_it() {
+    use crabomination::game::types::Target;
+    let mut g = main_phase();
+    let banner = g.add_card_to_battlefield(1, catalog::kondas_banner());
+    let grip = catalog::grip_of_phyresis();
+    let src = g.add_card_to_battlefield(0, catalog::forest());
+    g.resolve_effect(&grip.effect, &EffectContext::for_ability(src, 0, Some(Target::Permanent(banner))))
+        .expect("resolves");
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Phyrexian Germ"), "the 0/0 Germ died");
+    let b = g.battlefield_find(banner).expect("the Banner stays");
+    assert_eq!((b.controller, b.attached_to), (0, None));
+}

@@ -8816,6 +8816,10 @@ impl GameState {
             {
                 let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
                 self.note_unattached(id, &def, ctrl, host);
+                // Announced, so the sweep repeats (CR 704.3): the host the
+                // link pumped may now be a 0/0 (Grip of Phyresis's Germ under
+                // Konda's Banner, pod seed 924092).
+                events.push(GameEvent::AttachmentMoved { attachment: id, attached_to: None });
             }
         }
 
