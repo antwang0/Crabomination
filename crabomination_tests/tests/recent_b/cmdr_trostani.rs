@@ -488,3 +488,31 @@ fn bot_holds_storm_herd_past_the_board_bound() {
     assert!(casts_herd(30), "an ordinary Storm Herd is cast");
     assert!(!casts_herd(3_672), "one that would overflow the board is held");
 }
+
+/// Doppelgang's X² token copies compound when one target is a token doubler
+/// (CR 614.13): each Adrix and Nev copy doubles every later target's copies.
+/// The cast gate prices the cast as chosen, so whatever the bot casts fits the
+/// board (3-seat sweep seed 927222 minted thousands of Lotus Cobras).
+#[test]
+fn bot_doppelgang_never_overflows_the_board() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    g.step = TurnStep::PostCombatMain;
+    let dg = g.add_card_to_hand(0, catalog::doppelgang());
+    g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::lotus_cobra());
+    }
+    for i in 0..18 {
+        g.add_card_to_battlefield(0, if i % 2 == 0 { catalog::forest() } else { catalog::island() });
+    }
+    let a = HeuristicBot::new().next_action(&g, 0);
+    if let Some(a @ GameAction::CastSpell { card_id, .. }) = a
+        && card_id == dg
+    {
+        g.perform_action(a).expect("cast");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield.len() <= crabomination::recommend::BOARD_GATE, "{}", g.battlefield.len());
+}

@@ -368,6 +368,37 @@ impl GameState {
                 let n = self.resolve_selector(selector, ctx).len() as i64;
                 if n == 0 { 0 } else { n * self.effect_token_estimate(body, ctx) }
             }
+            Effect::TargetsExactlyX { body } => self.effect_token_estimate(body, ctx),
+            // Once per chosen target. A token copy of a doubler (CR 614.13)
+            // doubles every later target's copies: Doppelgang at X 5 copying
+            // Adrix and Nev minted thousands of Lotus Cobras (3-seat sweep
+            // seed 927222) while the gate priced it at 0.
+            Effect::ApplyToTargets { effect: body, .. } => {
+                let cap = crate::recommend::MAX_BATTLEFIELD as i64 + 1;
+                let (mut total, mut extra) = (0i64, 0u32);
+                for t in &ctx.targets {
+                    let mut tctx = ctx.clone();
+                    tctx.targets = vec![t.clone()];
+                    let mut made = self.effect_token_estimate(body, &tctx);
+                    for _ in 0..extra {
+                        if made >= cap {
+                            break;
+                        }
+                        made *= 2;
+                    }
+                    total = (total + made).min(cap);
+                    let doubles = matches!(t, crate::game::types::Target::Permanent(id) if self
+                        .battlefield_find(*id)
+                        .is_some_and(|c| c.definition.static_abilities.iter().any(|sa| matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::DoubleTokens | crate::effect::StaticEffect::DoubleTokensEveryone
+                        ))));
+                    if doubles && body.any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. })) {
+                        extra = extra.saturating_add(made.min(64) as u32);
+                    }
+                }
+                total
+            }
             _ => 0,
         }
     }
@@ -397,7 +428,14 @@ impl GameState {
     /// uses it to skip a cast that would carry the battlefield past the
     /// simulator's bound (Storm Herd at thousands of life).
     pub(crate) fn spell_token_estimate(&self, id: CardId, caster: usize) -> i64 {
-        let mut ctx = EffectContext::for_spell(caster, None, 0, 0);
+        self.spell_token_estimate_cast(id, caster, &[], 0)
+    }
+
+    /// [`Self::spell_token_estimate`] for a cast with its `targets` and `x`
+    /// chosen: a per-target or X-scaled token spell is priced as cast.
+    pub(crate) fn spell_token_estimate_cast(&self, id: CardId, caster: usize, targets: &[Target], x: u32) -> i64 {
+        let mut ctx = EffectContext::for_spell(caster, None, 0, x);
+        ctx.targets = targets.to_vec();
         let own = match self.find_card_anywhere(id) {
             Some(card)
                 // "For each token you control, create a token that's a copy"
@@ -412,6 +450,8 @@ impl GameState {
                         | crate::effect::Effect::ForEach { .. }
                         | crate::effect::Effect::Investigate { .. }
                         | crate::effect::Effect::Seq(_)
+                        | crate::effect::Effect::TargetsExactlyX { .. }
+                        | crate::effect::Effect::ApplyToTargets { .. }
                 ) =>
             {
                 ctx.source = Some(id);

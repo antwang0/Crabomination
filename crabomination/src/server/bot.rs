@@ -9821,8 +9821,14 @@ pub(super) fn cast_candidates<'a>(
         _ => None,
     }) {
         Some(card_id) => {
-            state.battlefield.len() as i64 + state.spell_token_estimate(card_id, seat)
-                <= crate::recommend::BOARD_GATE as i64
+            let made = match a {
+                GameAction::CastSpell { target, additional_targets, x_value, .. } => {
+                    let targets: Vec<_> = target.iter().chain(additional_targets).cloned().collect();
+                    state.spell_token_estimate_cast(card_id, seat, &targets, x_value.unwrap_or(0))
+                }
+                _ => state.spell_token_estimate(card_id, seat),
+            };
+            state.battlefield.len() as i64 + made <= crate::recommend::BOARD_GATE as i64
         }
         None => true,
     });
