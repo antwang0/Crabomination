@@ -509,6 +509,7 @@ pub fn volrath_the_shapestealer() -> CardDefinition {
                     legendary: false,
                     keywords: vec![],
                     card_types: vec![],
+                    creature_types: vec![],
                 },
             ]),
             ..Default::default()

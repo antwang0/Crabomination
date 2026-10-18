@@ -10394,6 +10394,10 @@ pub enum Effect {
         /// Sublime Artificer).
         #[serde(default)]
         card_types: Vec<crate::card::CardType>,
+        /// "it's a … Human Villain creature in addition to its other types"
+        /// (Absorbing Man) — creature types added to the copied ones.
+        #[serde(default)]
+        creature_types: Vec<crate::card::CreatureType>,
     },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },

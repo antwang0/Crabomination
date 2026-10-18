@@ -452,6 +452,7 @@ pub fn crystalline_resonance() -> CardDefinition {
                     legendary: false,
                     keywords: vec![],
                     card_types: vec![],
+                    creature_types: vec![],
                 },
             ])),
         })],

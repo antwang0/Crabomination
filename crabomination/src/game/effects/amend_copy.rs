@@ -75,6 +75,34 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::AmendCopy`'s "Human Villain … in addition to its other
+    /// types" — append creature types to each `what`'s copied ones.
+    pub(super) fn amend_copy_creature_types(
+        &mut self,
+        what: &Selector,
+        creature_types: &[crate::card::CreatureType],
+        ctx: &EffectContext,
+    ) {
+        if creature_types.is_empty() {
+            return;
+        }
+        let ids: Vec<CardId> =
+            self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
+        for cid in ids {
+            let Some(c) = self.battlefield.find_by_id_mut(cid) else { continue };
+            if c.face_down {
+                continue;
+            }
+            let mut def = (*c.copiable_definition()).clone();
+            for t in creature_types {
+                if !def.subtypes.creature_types.contains(t) {
+                    def.subtypes.creature_types.push(t.clone());
+                }
+            }
+            c.set_copiable_definition(std::sync::Arc::new(def));
+        }
+    }
+
     /// `Effect::SetCopyTypeLine` — each `what`'s copied type line becomes
     /// exactly "creature — `creature_types`" (CR 707.9b, 205.1a).
     pub(super) fn set_copy_type_line(

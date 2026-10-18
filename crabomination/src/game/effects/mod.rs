@@ -37557,9 +37557,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::AmendCopy { what, keep_activated, keep_triggered, pt, keep_name, legendary, keywords, card_types } => {
+            Effect::AmendCopy {
+                what,
+                keep_activated,
+                keep_triggered,
+                pt,
+                keep_name,
+                legendary,
+                keywords,
+                card_types,
+                creature_types,
+            } => {
                 let (pt, name, legend) = (*pt, *keep_name, *legendary);
-                self.amend_copy(what, keep_activated, keep_triggered, pt, name, legend, keywords, card_types, ctx)
+                self.amend_copy(what, keep_activated, keep_triggered, pt, name, legend, keywords, card_types, ctx)?;
+                self.amend_copy_creature_types(what, creature_types, ctx);
+                Ok(())
             }
 
             Effect::CombatDamageToPlayersBecomesDrawsThisTurn { what } => {

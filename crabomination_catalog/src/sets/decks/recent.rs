@@ -7097,6 +7097,7 @@ pub fn sarkhan_soul_aflame() -> CardDefinition {
                         legendary: true,
                         keywords: vec![],
                         card_types: vec![],
+                        creature_types: vec![],
                     },
                 ])),
             },

@@ -574,6 +574,7 @@ pub fn hulkling_young_avenger() -> CardDefinition {
                     legendary: false,
                     keywords: vec![Keyword::Flying],
                     card_types: vec![],
+                    creature_types: vec![],
                 },
             ])),
         })],

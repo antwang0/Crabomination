@@ -218,6 +218,7 @@ pub fn saheeli_sublime_artificer() -> CardDefinition {
                     legendary: false,
                     keywords: vec![],
                     card_types: vec![CardType::Artifact],
+                    creature_types: vec![],
                 },
             ]),
             ..Default::default()

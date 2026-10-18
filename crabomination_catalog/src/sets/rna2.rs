@@ -343,6 +343,7 @@ pub fn lazav_dimir_mastermind() -> CardDefinition {
                         legendary: true,
                         keywords: vec![Keyword::Hexproof],
                         card_types: vec![],
+                        creature_types: vec![],
                     },
                 ])),
             },

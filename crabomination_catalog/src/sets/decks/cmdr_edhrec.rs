@@ -2209,6 +2209,7 @@ pub fn likeness_looter() -> CardDefinition {
                         legendary: false,
                         keywords: vec![Keyword::Flying],
                         card_types: vec![],
+                        creature_types: vec![],
                     },
                 ]),
                 ..Default::default()

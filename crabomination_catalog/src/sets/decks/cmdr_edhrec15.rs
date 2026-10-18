@@ -4036,6 +4036,7 @@ pub fn taskmaster_mercenary_mimic() -> CardDefinition {
                         legendary: true,
                         keywords: vec![],
                         card_types: vec![],
+                        creature_types: vec![],
                     },
                     Effect::SetCopyTypeLine {
                         what: Selector::This,
