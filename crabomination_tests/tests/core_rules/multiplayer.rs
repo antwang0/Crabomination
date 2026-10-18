@@ -9755,3 +9755,48 @@ fn cr_101_4_controlled_by_each_opponent_reaches_every_opponent() {
     assert!(g.battlefield_find(bears[0]).is_some(), "yours stays");
     assert!(bears[1..].iter().all(|b| g.battlefield_find(*b).is_none()), "every opponent's dies");
 }
+
+/// CR 506.4 / 506.4c / 509.1a — an attacked planeswalker that changes
+/// control leaves combat: its attacker attacks nothing, only the player it
+/// attacked (CR 508.5) may block it, and unblocked it deals no damage. The
+/// walker's new controller blocked it in a six-seat pod (seed 924760).
+#[test]
+fn cr_506_4_an_attacked_planeswalker_that_changes_control_leaves_combat() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let mut g = multi_player_game(3);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let walker = g.add_card_to_battlefield(1, catalog::xenagos_the_reveler());
+    let thief_blocker = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let owner_blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Planeswalker(walker) }]))
+        .expect("attack the walker");
+    drain_stack(&mut g);
+    let steal = Effect::GainControl { what: Selector::ExactObjects(vec![walker]), to: None, duration: Duration::Permanent };
+    g.resolve_effect(&steal, &EffectContext::for_spell(2, None, 0, 0)).expect("steal");
+    assert!(g.attacking.iter().any(|a| a.attacker == bear), "still attacking (CR 506.4c)");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 2;
+    assert!(
+        g.clone().perform_action(GameAction::DeclareBlockers(vec![(thief_blocker, bear)])).is_err(),
+        "the walker's new controller isn't the defending player"
+    );
+    let mut owner = g.clone();
+    owner.priority.player_with_priority = 1;
+    assert!(owner.perform_action(GameAction::DeclareBlockers(vec![(owner_blocker, bear)])).is_ok(), "the attacked player may");
+    let loyalty = g.battlefield_find(walker).unwrap().counter_count(crabomination::card::CounterType::Loyalty);
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(
+        g.battlefield_find(walker).unwrap().counter_count(crabomination::card::CounterType::Loyalty),
+        loyalty,
+        "an unblocked attacker on a walker out of combat deals no damage"
+    );
+    assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), lives);
+}

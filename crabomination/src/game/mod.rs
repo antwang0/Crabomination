@@ -32829,6 +32829,20 @@ impl GameState {
         // CR 506.4 — a permanent is removed from combat when its controller
         // changes, so a mid-combat steal stops it attacking or blocking.
         self.remove_from_combat(id);
+        // So is an attacked planeswalker: its attackers attack nothing (CR
+        // 506.4c — blockable by the player they attacked, no damage if
+        // unblocked). They are re-aimed at a fresh id that is never on the
+        // battlefield — the shape a planeswalker that left already has — and
+        // keep their defending player (CR 508.5). Inniaz's exchange handed an
+        // attacked walker to another seat, who then blocked (pod seed 924760).
+        if self.attacking.iter().any(|a| a.target == AttackTarget::Planeswalker(id)) {
+            let defender = self.recorded_attack_defender(id).unwrap_or(prev);
+            let ghost = self.next_id();
+            self.attacked_permanent_defenders.push((ghost, defender));
+            for a in self.attacking.iter_mut().filter(|a| a.target == AttackTarget::Planeswalker(id)) {
+                a.target = AttackTarget::Planeswalker(ghost);
+            }
+        }
         Some(prev)
     }
 
