@@ -2540,6 +2540,7 @@ impl Effect {
             | Effect::EachPlayerKeepsPartySacrificesRest
             | Effect::LookTopTakeParty { .. }
             | Effect::RevealTopTakeOnePerCastType { .. }
+            | Effect::ChooseCreaturesByPowerExileRest
             | Effect::StampTokenCopyExceptions { .. }
             | Effect::EachPushesTrigger { .. }
             | Effect::EachOpponentChooses { .. }

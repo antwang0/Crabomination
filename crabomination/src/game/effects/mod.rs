@@ -61,6 +61,7 @@ mod blast_from_the_past;
 mod voyage;
 mod amend_copy;
 mod reveal_cast_types;
+mod sculpted_sunburst;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -33344,6 +33345,7 @@ impl GameState {
             Effect::EachPushesTrigger { what, body } => self.each_pushes_trigger(what, body, ctx, events),
             Effect::EachPlayerKeepsPartySacrificesRest => self.each_player_keeps_party_sacrifices_rest(ctx, events, effect),
             Effect::LookTopTakeParty { who, count } => self.look_top_take_party(who, count, ctx, effect),
+            Effect::ChooseCreaturesByPowerExileRest => self.choose_creatures_by_power_exile_rest(ctx, events, effect),
             Effect::RevealTopTakeOnePerCastType { who, count } => {
                 self.reveal_top_take_one_per_cast_type(who, count, ctx, effect)
             }

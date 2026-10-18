@@ -6354,6 +6354,11 @@ pub enum Effect {
     /// on the bottom of your library in a random order" (Hurkyl, Master
     /// Wizard; `game/effects/reveal_cast_types.rs`).
     RevealTopTakeOnePerCastType { who: PlayerRef, count: Value },
+    /// "Choose a creature you control, then each opponent chooses a creature
+    /// they control with equal or lesser power. If you chose a creature this
+    /// way, exile each creature not chosen by any player this way" (Sculpted
+    /// Sunburst; `game/effects/sculpted_sunburst.rs`).
+    ChooseCreaturesByPowerExileRest,
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
