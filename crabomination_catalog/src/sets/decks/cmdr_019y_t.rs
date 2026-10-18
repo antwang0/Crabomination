@@ -377,3 +377,48 @@ pub fn beamsplitter_mage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cosmium Confluence — {4}{G} sorcery. Choose three (repeats allowed):
+/// search for a Cave card and put it onto the battlefield tapped; put three
+/// +1/+1 counters on a Cave you control, which becomes a 0/0 Elemental
+/// creature with haste that's still a land; destroy target enchantment.
+pub fn cosmium_confluence() -> CardDefinition {
+    use crate::card::{CounterType, LandType};
+    use crate::effect::ZoneDest;
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
+    let cave = || R::HasLandType(LandType::Cave);
+    CardDefinition {
+        name: "Cosmium Confluence",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            min: 3,
+            max: 3,
+            allow_repeats: true,
+            modes: vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: cave(),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                choose_one_then(
+                    Selector::EachPermanent(cave().and(R::ControlledByYou)),
+                    PlayerRef::You,
+                    Effect::Seq(vec![
+                        Effect::AddCounter { what: chosen_one(), kind: CounterType::PlusOnePlusOne, amount: Value::Const(3) },
+                        Effect::BecomeCreature {
+                            what: chosen_one(),
+                            power: Value::Const(0),
+                            toughness: Value::Const(0),
+                            creature_types: vec![CreatureType::Elemental],
+                            keywords: vec![Keyword::Haste],
+                            duration: Duration::Permanent,
+                        },
+                    ]),
+                ),
+                Effect::Destroy { what: crate::effect::shortcut::target_filtered(R::Enchantment) },
+            ],
+        },
+        ..Default::default()
+    }
+}

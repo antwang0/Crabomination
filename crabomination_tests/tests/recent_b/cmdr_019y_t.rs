@@ -437,3 +437,31 @@ fn beamsplitter_mage_copies_once_onto_a_chosen_creature() {
     let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
     assert_eq!((p(&g, mage), p(&g, giant), p(&g, bear)), (5, 6, 2));
 }
+
+/// Cosmium Confluence, modes 1 + 2 + 2: fetch a Cave tapped, then twice
+/// animate a Cave I control with three +1/+1 counters — a 0/0 Elemental
+/// creature with haste that's still a land (CR 205.1b, 702.10).
+#[test]
+fn cosmium_confluence_animates_a_cave() {
+    let mut g = pod(2);
+    let cave = ready(&mut g, 0, catalog::captivating_cave());
+    g.add_card_to_library(0, catalog::captivating_cave());
+    let cc = g.add_card_to_hand(0, catalog::cosmium_confluence());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: cc, spree_modes: vec![0, 1, 1], target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let caves: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Captivating Cave" && c.controller == 0).map(|c| c.id).collect();
+    assert_eq!(caves.len(), 2, "one fetched");
+    let animated: Vec<_> = caves.iter().filter(|&&id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne) > 0).collect();
+    assert!(!animated.is_empty());
+    let total: u32 = caves.iter().map(|&id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne)).sum();
+    assert_eq!(total, 6, "three counters, twice");
+    let a = *animated[0];
+    let cp = g.computed_permanent(a).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
+    let _ = cave;
+}
