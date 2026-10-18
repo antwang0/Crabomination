@@ -6783,6 +6783,10 @@ pub enum AdditionalCastCost {
     /// payment from the caster's side; the counters come off the creatures
     /// carrying the most first. Always payable (zero is a legal choice).
     RemoveCountersAmong { kind: CounterType, count: crate::effect::Value },
+    /// "Removing `count` counters from among creatures you control" (any
+    /// kinds, CR 122.1) — Falco Spara's library-top casts. Payable while
+    /// creatures you control carry that many.
+    RemoveCountersFromCreatures { count: u32 },
     /// CR 601.2b — "sacrifice a creature, discard a card, or pay 4 life"
     /// (Dusk Mangler): the caster pays exactly one of the options. Payable
     /// when any option is; the cast pipeline concretizes it to one option

@@ -624,6 +624,7 @@ fn known_library_top(
                 | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
                 | StaticEffect::PlayFromLibraryTopPayLife { .. }
                 | StaticEffect::PlayFromLibraryTopBySacrificing { .. }
+                | StaticEffect::PlayFromLibraryTopByRemovingCounter { .. }
                 | StaticEffect::MayLookAtOwnLibraryTop))
             || state.players[player_seat].play_from_top_this_turn);
     // Xanathar — "you may look at the top card of their library any time".

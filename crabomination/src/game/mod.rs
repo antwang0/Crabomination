@@ -35228,6 +35228,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
             | StaticEffect::PlayFromLibraryTopPayLife { .. }
             | StaticEffect::PlayFromLibraryTopBySacrificing { .. }
+            | StaticEffect::PlayFromLibraryTopByRemovingCounter { .. }
             | StaticEffect::TopOfLibraryRevealed
             | StaticEffect::MayLookAtOwnLibraryTop
             | StaticEffect::AllLibraryTopsRevealed

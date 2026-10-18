@@ -2269,6 +2269,11 @@ pub enum StaticEffect {
         filter: crate::card::SelectionRequirement,
         sacrifice: crate::card::SelectionRequirement,
     },
+    /// "You may cast [filter] spells from the top of your library by
+    /// removing a counter from a creature you control in addition to paying
+    /// their other costs" (Falco Spara, Pactweaver). Spells only. Read by the
+    /// cast-from-top path (`library_top_counter_grant`).
+    PlayFromLibraryTopByRemovingCounter { filter: crate::card::SelectionRequirement },
     /// "Creatures you control with +1/+1 counters on them have all
     /// activated abilities of all creature cards exiled with [the
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of

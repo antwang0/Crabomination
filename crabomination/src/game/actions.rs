@@ -7682,6 +7682,13 @@ impl GameState {
                                     )
                             })
                     }
+                    // Falco Spara — spells only, and only while a creature
+                    // of yours has a counter to remove.
+                    StaticEffect::PlayFromLibraryTopByRemovingCounter { filter } => {
+                        !card.definition.is_land()
+                            && self.evaluate_requirement_on_card(filter, card, p)
+                            && self.creature_counters_controlled(p) > 0
+                    }
                     // Johann — the once-per-turn grant lapses after the first
                     // top-of-library cast this turn.
                     StaticEffect::PlayFromLibraryTopOncePerTurn { filter } => {
@@ -7796,6 +7803,37 @@ impl GameState {
             }
         }
         sac
+    }
+
+    /// Falco Spara — when no free grant covers `card` (the top card, mid-cast)
+    /// but a `PlayFromLibraryTopByRemovingCounter` does, the cast also removes
+    /// a counter from a creature `p` controls.
+    fn library_top_counter_grant(&self, p: usize, card: &crate::card::CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        if self.players[p].play_from_top_this_turn {
+            return false;
+        }
+        let mut found = false;
+        for c in self.battlefield.iter().filter(|c| c.controller == p) {
+            for sa in &c.definition.static_abilities {
+                let Some(eff) = self.active_static(&sa.effect, c) else { continue };
+                match eff {
+                    StaticEffect::PlayFromLibraryTop { filter }
+                    | StaticEffect::PlayFromLibraryTopOncePerTurn { filter }
+                        if self.library_top_grant_covers(filter, c, card, p) =>
+                    {
+                        return false;
+                    }
+                    StaticEffect::PlayFromLibraryTopByRemovingCounter { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        found = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        found
     }
 
     /// Bolas's Citadel — if `card_id` is the top card of `p`'s library, covered
@@ -11460,6 +11498,13 @@ impl GameState {
                 count: 1,
             });
         }
+        // Falco Spara: a counter off a creature of yours, with the other costs.
+        if self.casting_hop == Some((card.id, crate::game::HopFrom::LibraryTop))
+            && self.library_top_sacrifice_grant_for(p, &card).is_none()
+            && self.library_top_counter_grant(p, &card)
+        {
+            additional_costs.push(crate::card::AdditionalCastCost::RemoveCountersFromCreatures { count: 1 });
+        }
         // CR 601.2b — Tegwyll's Scouring cast at instant speed taps its fliers.
         if let Some(fc) = self.flash_additional_cost_for(p, &card) {
             additional_costs.push(fc.clone());
@@ -12451,6 +12496,7 @@ impl GameState {
             A::OpponentGainsLife { .. } => true,
             // Removing "any number" of counters — zero is legal.
             A::RemoveCountersAmong { .. } => true,
+            A::RemoveCountersFromCreatures { count } => self.creature_counters_controlled(p) >= *count,
             // CR 701.68b — no creature, no blight.
             A::Blight { .. } | A::BlightX => {
                 self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
@@ -13144,6 +13190,9 @@ impl GameState {
                             events.append(&mut evs);
                         }
                     }
+                }
+                A::RemoveCountersFromCreatures { count } => {
+                    self.drain_creature_counters(p, *count, &mut events);
                 }
                 A::BlightX => {
                     // X is the greatest toughness among your creatures; the
