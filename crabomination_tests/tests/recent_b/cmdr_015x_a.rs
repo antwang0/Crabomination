@@ -951,3 +951,98 @@ fn robaran_mercenaries_borrows_legendary_abilities() {
     activate(&mut g, merc, 0, Some(1));
     assert_eq!(g.players[0].hand.len(), 1, "Bruce Banner's draw-X ability, as its own");
 }
+
+/// Mutant Town Musicians' alliance pump, once per creature entering.
+#[test]
+fn mutant_town_musicians_grow_with_allies() {
+    let mut g = pod(2);
+    let band = ready(&mut g, 0, catalog::mutant_town_musicians());
+    flood(&mut g);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    assert_eq!(g.computed_permanent(band).unwrap().power, 3);
+}
+
+/// Clairvoyance and Sorcerous Sight look at a hand and draw (the former at
+/// the next upkeep).
+#[test]
+fn clairvoyance_and_sorcerous_sight_draw() {
+    let mut g = pod(2);
+    flood(&mut g);
+    let sight = g.add_card_to_hand(0, catalog::sorcerous_sight());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, sight, Some(Target::Player(1)));
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+    let clair = g.add_card_to_hand(0, catalog::clairvoyance());
+    cast(&mut g, clair, Some(Target::Player(1)));
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::End;
+    while g.step != TurnStep::Upkeep && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the upkeep draw");
+}
+
+/// Sylvan Basilisk destroys every creature that blocks it.
+#[test]
+fn sylvan_basilisk_destroys_its_blockers() {
+    let mut g = pod(2);
+    let basilisk = ready(&mut g, 0, catalog::sylvan_basilisk());
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    attack(&mut g, &[basilisk]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, basilisk)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none());
+    assert!(g.battlefield_find(basilisk).is_some());
+}
+
+/// Definitely Not a Turtle finds a land as it dies.
+#[test]
+fn definitely_not_a_turtle_digs_a_land() {
+    let mut g = pod(2);
+    let turtle = ready(&mut g, 0, catalog::definitely_not_a_turtle());
+    g.players[0].library.clear();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let land = g.add_card_to_library(0, catalog::forest());
+    let kill = Effect::Destroy { what: Selector::ExactObjects(vec![turtle]) };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land));
+}
+
+/// Shimian Specter strips every copy of the priciest nonland card in the
+/// damaged player's hand; Needle Specter's 1 combat damage discards one.
+#[test]
+fn the_specters_strip_hands() {
+    let mut g = pod(2);
+    let shimian = ready(&mut g, 0, catalog::shimian_specter());
+    g.players[1].hand.clear();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let giant = g.add_card_to_hand(1, catalog::hill_giant());
+    let giant2 = g.add_card_to_library(1, catalog::hill_giant());
+    attack(&mut g, &[shimian]);
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    for id in [giant, giant2] {
+        assert!(g.exile.iter().any(|c| c.id == id), "both Hill Giants exiled");
+    }
+    let mut g2 = pod(2);
+    let needle = ready(&mut g2, 0, catalog::needle_specter());
+    g2.players[1].hand.clear();
+    let card = g2.add_card_to_hand(1, catalog::lightning_bolt());
+    attack(&mut g2, &[needle]);
+    g2.step = TurnStep::CombatDamage;
+    let evs = g2.resolve_combat().expect("damage");
+    g2.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g2);
+    assert!(g2.players[1].graveyard.iter().any(|c| c.id == card), "discarded one");
+
+}

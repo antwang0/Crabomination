@@ -17647,6 +17647,14 @@ static DECKS: &[Factory] = &[
     super::decks::delifs_cone,
     super::decks::energy_arc,
     super::decks::robaran_mercenaries,
+    super::decks::mutant_town_musicians,
+    super::decks::clairvoyance,
+    super::decks::sorcerous_sight,
+    super::decks::sylvan_basilisk,
+    super::decks::kjeldoran_warrior,
+    super::decks::definitely_not_a_turtle,
+    super::decks::needle_specter,
+    super::decks::shimian_specter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1517,3 +1517,182 @@ pub fn robaran_mercenaries() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mutant Town Musicians — {2}{R} 2/4 trample Mutant Bard Performer.
+/// Alliance — another creature of yours entering gives it +1/+0 until end of
+/// turn.
+pub fn mutant_town_musicians() -> CardDefinition {
+    CardDefinition {
+        name: "Mutant Town Musicians",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mutant, CreatureType::Bard, CreatureType::Performer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Clairvoyance — {U} instant. Look at target player's hand; draw a card at
+/// the beginning of the next turn's upkeep.
+pub fn clairvoyance() -> CardDefinition {
+    CardDefinition {
+        name: "Clairvoyance",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LookAtHand { who: target_filtered(R::Player) },
+            Effect::AtNextTurnsUpkeep {
+                body: Box::new(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sorcerous Sight — {U} sorcery. Look at target opponent's hand; draw a
+/// card.
+pub fn sorcerous_sight() -> CardDefinition {
+    CardDefinition {
+        name: "Sorcerous Sight",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LookAtHand { who: target_filtered(R::OpponentPlayer) },
+            Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sylvan Basilisk — {3}{G}{G} 2/4 Basilisk. Whenever it becomes blocked by
+/// a creature, destroy that creature (each blocker).
+pub fn sylvan_basilisk() -> CardDefinition {
+    CardDefinition {
+        name: "Sylvan Basilisk",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Basilisk], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: Selector::EachPermanent(R::Creature.and(R::InCombatWithSource).and(R::OtherThanSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kjeldoran Warrior — {W} 1/1 Human Warrior with banding.
+pub fn kjeldoran_warrior() -> CardDefinition {
+    CardDefinition {
+        name: "Kjeldoran Warrior",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Warrior], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Banding],
+        ..Default::default()
+    }
+}
+
+/// Definitely Not a Turtle — {3} 3/2 Mutant Ninja Turtle. Dying, it looks at
+/// your top six and may put a land or legendary Turtle card from among them
+/// into your hand; the rest go to the bottom in a random order.
+pub fn definitely_not_a_turtle() -> CardDefinition {
+    CardDefinition {
+        name: "Definitely Not a Turtle",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::LookPickToHand(Box::new(
+            crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(6),
+                pick_filter: Some(
+                    R::Land.or(R::HasCreatureType(CreatureType::Turtle).and(R::HasSupertype(Supertype::Legendary))),
+                ),
+                optional: true,
+                ..Default::default()
+            },
+        )))],
+        ..Default::default()
+    }
+}
+
+/// Needle Specter — {1}{B}{B} 1/1 flying, wither Specter; its combat damage
+/// to a player makes them discard that many cards.
+pub fn needle_specter() -> CardDefinition {
+    CardDefinition {
+        name: "Needle Specter",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Wither],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                amount: Value::TriggerEventAmount,
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shimian Specter — {2}{B}{B} 2/2 flying Specter. Its combat damage to a
+/// player reveals their hand; you pick a nonland card (the priciest, headless)
+/// and every card of that name leaves their graveyard, hand, and library.
+pub fn shimian_specter() -> CardDefinition {
+    CardDefinition {
+        name: "Shimian Specter",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::RevealHand { who: PlayerRef::TriggerEventPlayer },
+                Effect::ExileSameNameAsTarget {
+                    what: Selector::TakeGreatestManaValue {
+                        inner: Box::new(Selector::CardsInZone {
+                            who: PlayerRef::TriggerEventPlayer,
+                            zone: crate::card::Zone::Hand,
+                            filter: R::Nonland,
+                        }),
+                        count: Box::new(Value::ONE),
+                    },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
