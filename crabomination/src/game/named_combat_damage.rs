@@ -27,7 +27,7 @@ impl GameState {
         let mut own: Vec<(&'static str, i32)> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == controller && c.definition.is_creature())
+            .filter(|c| c.controller == controller && self.permanent_is_creature(c.id))
             .map(|c| (c.definition.name, self.computed_permanent(c.id).map(|cp| cp.power).unwrap_or(0)))
             .collect();
         own.sort_by_key(|&(_, p)| std::cmp::Reverse(p));
