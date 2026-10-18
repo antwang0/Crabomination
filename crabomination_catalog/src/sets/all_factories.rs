@@ -1502,6 +1502,8 @@ static DECKS: &[Factory] = &[
     super::decks::pyrrhic_strike,
     super::decks::valkyries_sword,
     super::decks::bifur_melodic_rider,
+    // cmdr_019y_woe (session 019Y6J4R)
+    super::decks::gadwicks_first_duel,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

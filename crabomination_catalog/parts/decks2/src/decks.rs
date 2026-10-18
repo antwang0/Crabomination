@@ -428,3 +428,6 @@ mod recent2;
 pub use recent2::*;
 #[path = "../../../src/sets/decks/woe_roles.rs"]
 mod woe_roles;
+#[path = "../../../src/sets/decks/cmdr_019y_woe.rs"]
+mod cmdr_019y_woe;
+pub use cmdr_019y_woe::*;

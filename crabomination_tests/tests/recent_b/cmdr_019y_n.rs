@@ -178,3 +178,24 @@ fn bifur_doubles_dwarf_triggers_with_an_enduring_story() {
     cast(&mut g, bf, Some(Target::Permanent(bear))).expect("cast");
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// Gadwick's First Duel: I curses an opposing creature to 1/1 (a Role, CR
+/// 303.7), III copies the next cheap instant (CR 707.10).
+#[test]
+fn gadwicks_first_duel_curses_then_copies() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let saga = ready(&mut g, 0, catalog::gadwicks_first_duel());
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(giant).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    assert_eq!(g.players[1].life, 14, "the bolt and its copy");
+}
