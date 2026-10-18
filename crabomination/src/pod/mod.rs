@@ -25644,6 +25644,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SILAS_RENN_2_COMMANDERS,
             main: decks::SILAS_RENN_2_MAIN,
         },
+        // Seat 4199: Optimus Prime, Hero's EDHREC average deck. `--pod-decks 4199`.
+        PodDeck {
+            name: "Optimus Prime, Hero (WUR)",
+            commanders: decks::OPTIMUS_PRIME_COMMANDERS,
+            main: decks::OPTIMUS_PRIME_MAIN,
+        },
+        // Seat 4200: Ultra Magnus, Tactician's EDHREC average deck. `--pod-decks 4200`.
+        PodDeck {
+            name: "Ultra Magnus, Tactician (WRG)",
+            commanders: decks::ULTRA_MAGNUS_COMMANDERS,
+            main: decks::ULTRA_MAGNUS_MAIN,
+        },
     ]
 }
 
@@ -31737,6 +31749,8 @@ mod tests {
             ("Garza Zol, Plague Queen", &[0x1A7A]),
             ("Scientist Supreme of A.I.M.", &[0x1A7B]),
             ("Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools", &[0x1A7C]),
+            ("Optimus Prime, Hero", &[0x1A7D]),
+            ("Ultra Magnus, Tactician", &[0x1A7E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

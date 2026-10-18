@@ -117775,3 +117775,61 @@ pub const SILAS_RENN_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const OPTIMUS_PRIME_COMMANDERS: &[CardFactory] = &[optimus_prime_hero];
+
+/// **Optimus Prime, Hero**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 5 Islands + 4 Mountains + 6 Plains = 99.
+/// Optimus Prime, Hero (EDHREC, fetched 2026-10-18).
+pub const OPTIMUS_PRIME_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, fellwar_stone, inspirit_flagship_vessel,
+    izzet_signet, lux_artillery, sol_ring, solar_array, swiftfoot_boots, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, the_ozolith, unwinding_clock, ancient_den,
+    battlefield_forge, clifftop_retreat, command_tower, exotic_orchard, glacial_fortress,
+    great_furnace, hallowed_fountain, karns_bastion, mystic_monastery, prairie_stream,
+    raugrin_triome, razortide_bridge, rustvale_bridge, sacred_foundry, seat_of_the_synod,
+    shivan_reef, silverbluff_bridge, steam_vents, sulfur_falls, abzan_battle_priest,
+    abzan_falconer, alibou_ancient_witness, arcbound_shikari, arcee_sharpshooter,
+    bronze_guardian, cayth_famed_mechanist, cyberdrive_awakener, enthusiastic_mechanaut,
+    esper_sentinel, etherium_sculptor, foundry_inspector, goldbug_humanitys_ally,
+    herald_of_secret_streams, iron_spider_stark_upgrade, jetfire_ingenious_scientist,
+    jhoira_weatherlight_captain, kilo_apogee_mind, laezel_vlaakiths_champion,
+    losheel_clockwork_scholar, padeem_consul_of_innovation, patrolling_peacemaker,
+    prowl_stoic_strategist, ratchet_field_medic, slicer_hired_muscle, solemn_simulacrum,
+    steel_overseer, surge_conductor, resourceful_defense, tempered_steel, thopter_spy_network,
+    together_forever, uncivil_unrest, boros_charm, chaos_warp, counterspell, dispatch,
+    experimental_augury, generous_gift, path_to_exile, swords_to_plowshares,
+    unbreakable_formation, saheeli_filigree_master, damning_verdict, fabricate,
+    organic_extinction, tezzerets_gambit, thoughtcast, wake_the_past,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const ULTRA_MAGNUS_COMMANDERS: &[CardFactory] = &[ultra_magnus_tactician];
+
+/// **Ultra Magnus, Tactician**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 6 Forests + 5 Mountains + 5 Plains = 99.
+/// Ultra Magnus, Tactician (EDHREC, fetched 2026-10-18).
+pub const ULTRA_MAGNUS_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, doors_of_durin, lightning_greaves, sculpting_steel,
+    sol_ring, swiftfoot_boots, talisman_of_conviction, talisman_of_impulse, talisman_of_unity,
+    unwinding_clock, ancient_den, battlefield_forge, bountiful_promenade, buried_ruin,
+    canopy_vista, cinder_glade, clifftop_retreat, command_tower, exotic_orchard, great_furnace,
+    jetmirs_garden, jungle_shrine, rogues_passage, rootbound_crag, sacred_foundry, spire_garden,
+    stomping_ground, temple_garden, tree_of_tales, alibou_ancient_witness, ancient_stone_idol,
+    angel_of_the_ruins, blaster_combat_dj, blightsteel_colossus, bronze_guardian,
+    canoptek_spyder, combustible_gearhulk, cryptothrall, cybermen_squadron, darksteel_colossus,
+    foundry_inspector, jhoiras_familiar, krang_utrom_warlord, losheel_clockwork_scholar,
+    memnarch_the_warden, metalwork_colossus, meteor_golem, myr_battlesphere,
+    phyrexian_triniform, prowl_stoic_strategist, pyrewood_gearhulk, rust_goliath,
+    salvation_colossus, solemn_simulacrum, steel_hellkite, steel_overseer, steel_seraph,
+    triplicate_titan, verdurous_gearhulk, wurmcoil_engine, annie_joins_up, garruks_uprising,
+    pias_revolution, rhythm_of_the_wild, tempered_steel, beast_within, boros_charm, dispatch,
+    generous_gift, heroic_intervention, path_to_exile, return_of_the_wildspeaker,
+    swords_to_plowshares, daretti_scrap_savant, blasphemous_act, cultivate, farseek,
+    kodamas_reach, natures_lore, organic_extinction, rampant_growth, wake_the_past,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains,
+];
