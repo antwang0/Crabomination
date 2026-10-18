@@ -726,3 +726,41 @@ fn casey_and_raph_split_the_modes_between_players() {
     let card = g.exile.iter().find(|c| c.id == tops[exiled[0]]).unwrap();
     assert!(card.may_play_until.is_some(), "and may play it");
 }
+
+/// Doom Reigns Supreme drains as each Villain enters (Doctor Doom brings two
+/// Doombots) and, at the fifth plan counter, is sacrificed: an opponent exiles
+/// five and you cast up to two of them free.
+#[test]
+fn doom_reigns_supreme_cashes_in_at_five() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let doom = ready(&mut g, 0, catalog::doom_reigns_supreme());
+    g.players[1].library.clear();
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    flood(&mut g);
+    let villain = g.add_card_to_hand(0, catalog::doctor_doom());
+    cast(&mut g, villain, None);
+    assert_eq!(g.players[1].life, 17, "Doom and two Doombots: three Villains, three drains");
+    assert_eq!(g.battlefield_find(doom).unwrap().counter_count(CounterType::Plan), 3);
+    let v2 = g.add_card_to_hand(0, catalog::doctor_doom());
+    flood(&mut g);
+    cast(&mut g, v2, None);
+    assert!(g.battlefield_find(doom).is_none(), "sacrificed at the fifth");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count(), 2);
+}
+
+/// Construct a Cosmic Cube makes a Villain on your second draw each turn.
+#[test]
+fn construct_a_cosmic_cube_makes_villains_on_the_second_draw() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let cube = ready(&mut g, 0, catalog::construct_a_cosmic_cube());
+    let draw = Effect::Draw { who: Selector::Player(crabomination::effect::PlayerRef::Seat(0)), amount: Value::Const(2) };
+    let evs = g.resolve_effect(&draw, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Villain").count(), 1);
+    assert_eq!(g.battlefield_find(cube).unwrap().counter_count(CounterType::Plan), 1);
+}

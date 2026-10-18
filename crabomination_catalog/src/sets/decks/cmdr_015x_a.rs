@@ -1152,3 +1152,125 @@ pub fn casey_and_raph_hotheads() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// "When the `n`th plan counter is put on this, sacrifice it. When you do,
+/// `then`." — the Plan cycle's payoff (CR 603.12: `then` runs only when the
+/// sacrifice happened).
+fn plan_payoff(n: u32, then: Effect) -> TriggeredAbility {
+    use crate::card::CounterType;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CounterAdded(CounterType::Plan), EventScope::SelfSource)
+            .with_filter(Predicate::SourceHasCountersAtLeast { counter: CounterType::Plan, n }),
+        effect: Effect::Seq(vec![
+            Effect::SacrificeSource,
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(then),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    }
+}
+
+fn plan(name: &'static str, c: crate::mana::ManaCost, triggers: Vec<TriggeredAbility>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Plan], ..Default::default() },
+        triggered_abilities: triggers,
+        ..Default::default()
+    }
+}
+
+fn plan_counter() -> Effect {
+    Effect::AddCounter { what: Selector::This, kind: crate::card::CounterType::Plan, amount: Value::ONE }
+}
+
+/// Doom Reigns Supreme — {1}{B} enchantment — Plan. A Villain of yours
+/// entering drains each opponent for 1 and adds a plan counter. At the fifth,
+/// sacrifice it: target opponent exiles their top five and you may cast up to
+/// two spells from among them free.
+pub fn doom_reigns_supreme() -> CardDefinition {
+    plan(
+        "Doom Reigns Supreme",
+        cost(&[generic(1), b()]),
+        vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Villain),
+                    },
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::Drain {
+                        from: Selector::Player(PlayerRef::EachOpponent),
+                        to: Selector::Player(PlayerRef::You),
+                        amount: Value::ONE,
+                    },
+                    plan_counter(),
+                ]),
+            },
+            plan_payoff(
+                5,
+                Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::ExileTopOfLibrary {
+                        who: target_filtered(R::OpponentPlayer),
+                        amount: Value::Const(5),
+                        link_to_source: false,
+                        face_down: false,
+                    },
+                    Effect::CastAnyOrderWithoutPaying {
+                        what: Selector::LastMoved,
+                        source_zone: crate::card::Zone::Exile,
+                        filter: None,
+                        cap: Some(Value::Const(2)),
+                        total_mana_value: None,
+                    },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// Construct a Cosmic Cube — {2}{B} enchantment — Plan. Drawing your second
+/// card each turn makes a 2/1 black menace Villain and adds a plan counter.
+/// At the seventh, sacrifice it: you control target opponent during their
+/// next turn (CR 723.1).
+pub fn construct_a_cosmic_cube() -> CardDefinition {
+    plan(
+        "Construct a Cosmic Cube",
+        cost(&[generic(2), b()]),
+        vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: Arc::new(TokenDefinition {
+                            name: "Villain".into(),
+                            power: 2,
+                            toughness: 1,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Black],
+                            subtypes: Subtypes { creature_types: vec![CreatureType::Villain], ..Default::default() },
+                            keywords: vec![Keyword::Menace],
+                            ..Default::default()
+                        }),
+                    },
+                    plan_counter(),
+                ]),
+            },
+            plan_payoff(
+                7,
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::ControlPlayerNextTurn { who: PlayerRef::Target(0) }),
+                },
+            ),
+        ],
+    )
+}
