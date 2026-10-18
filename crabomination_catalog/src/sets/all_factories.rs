@@ -1545,6 +1545,7 @@ static DECKS: &[Factory] = &[
     super::decks::threats_undetected,
     super::decks::tricksters_talisman,
     super::decks::urza_assembles_the_titans,
+    super::decks::musician,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

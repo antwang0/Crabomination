@@ -354,3 +354,32 @@ fn urza_assembles_the_titans_doubles_loyalty_activations() {
     assert!(loyal(&mut g), "second activation this turn (chapter III)");
     assert!(!loyal(&mut g), "no third");
 }
+
+/// Musician — two activations put two music counters on the bear but grant
+/// the upkeep toll once; at its controller's upkeep, unable to pay {2}, it's
+/// destroyed (CR 701.7).
+#[test]
+fn musician_grants_one_toll_that_grows() {
+    let mut g = pod(2);
+    let mus = ready(&mut g, 0, catalog::musician());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.battlefield_find_mut(mus).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: mus, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("tap: music counter");
+        drain_stack(&mut g);
+    }
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(CounterType::Music), 2);
+    assert_eq!(b.definition.triggered_abilities.len(), 1, "the toll is granted once");
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Draw && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "destroyed: no {{2}} to pay");
+}

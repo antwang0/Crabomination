@@ -308,3 +308,27 @@ pub fn urza_assembles_the_titans() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Musician — {2}{U} 1/3 Human Wizard. Cumulative upkeep {1}. {T}: put a
+/// music counter on target creature; if it doesn't have "At the beginning of
+/// your upkeep, destroy this creature unless you pay {1} for each music
+/// counter on it," it gains that ability.
+pub fn musician() -> CardDefinition {
+    CardDefinition {
+        name: "Musician",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::CumulativeUpkeep(crate::card::CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMusicCounterGrantUpkeepToll {
+                what: crate::effect::shortcut::target_filtered(R::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
