@@ -25614,6 +25614,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MILES_MORALES_COMMANDERS,
             main: decks::MILES_MORALES_MAIN,
         },
+        // Seat 4194: Falco Spara, Pactweaver's EDHREC average deck. `--pod-decks 4194`.
+        PodDeck {
+            name: "Falco Spara, Pactweaver (WUG)",
+            commanders: decks::FALCO_SPARA_COMMANDERS,
+            main: decks::FALCO_SPARA_MAIN,
+        },
     ]
 }
 
@@ -31702,6 +31708,7 @@ mod tests {
             ("Codie, Ravenous Codex", &[0x1A75]),
             ("Nick Fury, Agent of S.H.I.E.L.D.", &[0x1A76]),
             ("Miles Morales", &[0x1A77]),
+            ("Falco Spara, Pactweaver", &[0x1A78]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

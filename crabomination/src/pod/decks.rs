@@ -117630,3 +117630,33 @@ pub const MILES_MORALES_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
     mountain, mountain, plains, plains, plains, plains, plains,
 ];
+
+pub const FALCO_SPARA_COMMANDERS: &[CardFactory] = &[falco_spara_pactweaver];
+
+/// **Falco Spara, Pactweaver**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 6 Forests + 4 Islands + 4 Plains = 99.
+/// Falco Spara, Pactweaver (EDHREC, fetched 2026-10-18).
+pub const FALCO_SPARA_MAIN: &[CardFactory] = &[
+    agents_toolkit, arcane_signet, ozolith_the_shattered_spire, senseis_divining_top, sol_ring,
+    swiftfoot_boots, the_ozolith, bountiful_promenade, breeding_pool, canopy_vista,
+    command_tower, exotic_orchard, flooded_strand, gavony_township, glacial_fortress,
+    hallowed_fountain, hinterland_harbor, karns_bastion, misty_rainforest, nesting_grounds,
+    prairie_stream, rejuvenating_springs, seaside_citadel, sparas_headquarters, sunpetal_grove,
+    temple_garden, windswept_heath, birds_of_paradise, champion_of_lambholt, conclave_mentor,
+    denry_klin_editor_in_chief, devoted_druid, dreamtide_whale, evolution_sage,
+    evolution_witness, fathom_mage, forgotten_ancient, glen_elendra_archmage,
+    grateful_apparition, gyre_sage, herald_of_secret_streams, incubation_druid,
+    kami_of_whispered_hopes, kellan_the_kid, kodama_of_the_west_tree, kutzil_malamet_exemplar,
+    laezel_vlaakiths_champion, luminous_broodmoth, managorger_hydra, master_biomancer,
+    metastatic_evangel, mikaeus_the_lunarch, noble_hierarch, rishkar_peema_renegade,
+    scavenging_ooze, thrummingbird, vega_the_watcher, branching_evolution, brokers_ascendancy,
+    felidar_retreat, hardened_scales, inexorable_tide, innkeepers_talent, resourceful_defense,
+    simic_ascendancy, an_offer_you_cant_refuse, beast_within, brokers_confluence,
+    contractual_safeguard, counterspell, generous_gift, heroic_intervention, inspiring_call,
+    path_to_exile, ripples_of_potential, swords_to_plowshares, elspeth_resplendent, cultivate,
+    damning_verdict, farseek, natures_lore, rampant_growth, requisition_raid, tezzerets_gambit,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, plains,
+    plains, plains, plains,
+];
