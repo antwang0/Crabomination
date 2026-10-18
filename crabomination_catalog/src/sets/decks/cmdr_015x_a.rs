@@ -736,3 +736,21 @@ pub fn ultra_magnus_tactician() -> CardDefinition {
     }];
     tactician
 }
+
+/// Rootpath Purifier — {3}{G} 3/4 Elf Druid. Lands you control and land
+/// cards in your library are basic (no basic land type comes with it).
+pub fn rootpath_purifier() -> CardDefinition {
+    CardDefinition {
+        name: "Rootpath Purifier",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Druid], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control and land cards in your library are basic.",
+            effect: StaticEffect::LandsAndLibraryLandsAreBasic,
+        }],
+        ..Default::default()
+    }
+}

@@ -491,3 +491,24 @@ fn ultra_magnus_deploys_then_converts() {
     assert!(g.computed_permanent(big).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
     assert_eq!(g.battlefield_find(magnus).unwrap().definition.name, "Ultra Magnus, Tactician", "4 + 6 power converts it");
 }
+
+/// Rootpath Purifier — a search for a basic land card finds Command Tower in
+/// your library (its ruling), and a nonbasic land you control stops being
+/// nonbasic; an opponent's library and lands are untouched.
+#[test]
+fn rootpath_purifier_makes_your_lands_basic() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{PlayerRef, ZoneDest};
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rootpath_purifier());
+    let tower = g.add_card_to_battlefield(0, catalog::command_tower());
+    let theirs = g.add_card_to_battlefield(1, catalog::command_tower());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert!(!g.evaluate_requirement_static(&R::IsNonbasicLand, &Target::Permanent(tower), 0, None));
+    assert!(g.evaluate_requirement_static(&R::IsNonbasicLand, &Target::Permanent(theirs), 0, None));
+    g.players[0].library.clear();
+    let card = g.add_card_to_library(0, catalog::command_tower());
+    let search = Effect::Search { who: PlayerRef::You, filter: R::IsBasicLand, to: ZoneDest::Hand(PlayerRef::You) };
+    g.resolve_effect(&search, &ctx).expect("search");
+    assert!(g.players[0].hand.iter().any(|c| c.id == card), "Command Tower counts as basic");
+}

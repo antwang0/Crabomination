@@ -17625,6 +17625,7 @@ static DECKS: &[Factory] = &[
     super::decks::garza_zol_plague_queen,
     super::decks::optimus_prime_hero,
     super::decks::ultra_magnus_tactician,
+    super::decks::rootpath_purifier,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
