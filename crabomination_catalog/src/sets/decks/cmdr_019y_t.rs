@@ -258,3 +258,53 @@ pub fn tricksters_talisman() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Urza Assembles the Titans — {3}{W}{W} Saga, read ahead. I: scry 4, then
+/// you may reveal the top card; a planeswalker card goes to your hand.
+/// II: you may put a planeswalker card with mana value 6 or less from your
+/// hand onto the battlefield. III: loyalty abilities twice this turn.
+pub fn urza_assembles_the_titans() -> CardDefinition {
+    let walker = || R::HasCardType(CardType::Planeswalker);
+    CardDefinition {
+        name: "Urza Assembles the Titans",
+        cost: cost(&[generic(3), crate::mana::w(), crate::mana::w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        read_ahead: true,
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
+                    Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        pick_filter: Some(walker()),
+                        optional: true,
+                        rest_on_top: true,
+                        ..Default::default()
+                    })),
+                ]),
+            ),
+            (
+                2,
+                Effect::MayDo {
+                    description: "Put a planeswalker card with mana value 6 or less from your hand onto the battlefield?"
+                        .into(),
+                    body: Box::new(Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: walker().and(R::ManaValueAtMost(6)),
+                        count: Value::ONE,
+                        tapped: false,
+                        haste: false,
+                        sacrifice_eot: false,
+                        return_eot: false,
+                        then: None,
+                    }),
+                },
+            ),
+            (3, Effect::LoyaltyAbilitiesTwiceThisTurn),
+        ],
+        ..Default::default()
+    }
+}

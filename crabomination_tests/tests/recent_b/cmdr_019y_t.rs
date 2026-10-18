@@ -327,3 +327,30 @@ fn tricksters_talisman_copies_on_combat_damage() {
     let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count();
     assert_eq!(bears, 2, "a token copy");
 }
+
+/// CR 714.3b / 606.3 — Urza Assembles the Titans' chapter III (its third lore
+/// counter, added after the draw step) lets Jace Beleren's loyalty abilities
+/// be activated twice this turn, and no more.
+#[test]
+fn urza_assembles_the_titans_doubles_loyalty_activations() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::urza_assembles_the_titans());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    let jace = ready(&mut g, 0, catalog::jace_beleren());
+    g.battlefield_find_mut(jace).unwrap().add_counters(CounterType::Loyalty, 5);
+    g.step = TurnStep::Draw;
+    while g.step != TurnStep::PreCombatMain && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let loyal = |g: &mut GameState| {
+        let ok = g
+            .perform_action(GameAction::ActivateLoyaltyAbility { card_id: jace, ability_index: 0, target: None, x_value: None })
+            .is_ok();
+        drain_stack(g);
+        ok
+    };
+    assert!(loyal(&mut g), "first activation");
+    assert!(loyal(&mut g), "second activation this turn (chapter III)");
+    assert!(!loyal(&mut g), "no third");
+}
