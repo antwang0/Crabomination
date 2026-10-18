@@ -1542,6 +1542,8 @@ static DECKS: &[Factory] = &[
     super::decks::cloak_and_dagger_entwined,
     super::decks::sculpted_sunburst,
     super::decks::fumble,
+    super::decks::threats_undetected,
+    super::decks::tricksters_talisman,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

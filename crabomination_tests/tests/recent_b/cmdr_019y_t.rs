@@ -272,3 +272,58 @@ fn fumble_steals_the_attachments() {
         assert_eq!(c.attached_to, Some(mine));
     }
 }
+
+/// Threats Undetected — up to four creature cards with different powers are
+/// found (two 2-power cards can't both be); the opponent sends back two, the
+/// rest reach your hand and the library is shuffled.
+#[test]
+fn threats_undetected_finds_distinct_powers() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for def in [
+        catalog::grizzly_bears(),
+        catalog::grizzly_bears(),
+        catalog::hill_giant(),
+        catalog::llanowar_elves(),
+        catalog::craw_wurm(),
+        catalog::forest(),
+    ] {
+        g.add_card_to_library(0, def);
+    }
+    let t = g.add_card_to_hand(0, catalog::threats_undetected());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    let hand_before = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell { card_id: t, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let got: Vec<&str> = g.players[0].hand.iter().skip(hand_before).map(|c| c.definition.name).collect();
+    assert_eq!(got.len(), 2, "four found, two sent back: {got:?}");
+    assert_eq!(g.players[0].library.len(), 4);
+    assert!(g.players[0].searched_library_this_turn);
+}
+
+/// Trickster's Talisman — +1/+1; on combat damage to a player, sacrificing
+/// it makes a token copy of the equipped creature (CR 707.2).
+#[test]
+fn tricksters_talisman_copies_on_combat_damage() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let tal = ready(&mut g, 0, catalog::tricksters_talisman());
+    g.battlefield_find_mut(tal).unwrap().attached_to = Some(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(tal).is_none(), "sacrificed");
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count();
+    assert_eq!(bears, 2, "a token copy");
+}

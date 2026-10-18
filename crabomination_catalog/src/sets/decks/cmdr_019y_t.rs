@@ -214,3 +214,47 @@ pub fn fumble() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Threats Undetected — {2}{G} sorcery. Search for up to four creature cards
+/// with different powers and reveal them; an opponent chooses two to shuffle
+/// back, the rest go to your hand.
+pub fn threats_undetected() -> CardDefinition {
+    CardDefinition {
+        name: "Threats Undetected",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SearchDistinctPowersOpponentReturnsTwo { max: 4, back: 2 },
+        ..Default::default()
+    }
+}
+
+/// Trickster's Talisman — {U} Equipment. Equipped creature gets +1/+1 and has
+/// "Whenever this creature deals combat damage to a player, you may sacrifice
+/// Trickster's Talisman. If you do, create a token that's a copy of this
+/// creature." Equip {2}.
+pub fn tricksters_talisman() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Trickster's Talisman",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Sacrifice Trickster's Talisman to create a token copy of this creature?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::SacrificeSelected { what: Selector::AttachmentGranting },
+                        crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::This),
+                    ])),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
