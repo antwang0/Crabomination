@@ -25764,6 +25764,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ULTRON_3_COMMANDERS,
             main: decks::ULTRON_3_MAIN,
         },
+        // Seat 4219: The Fantasticar's EDHREC average deck. `--pod-decks 4219`.
+        PodDeck {
+            name: "The Fantasticar (C)",
+            commanders: decks::THE_FANTASTICAR_COMMANDERS,
+            main: decks::THE_FANTASTICAR_MAIN,
+        },
     ]
 }
 
@@ -31883,6 +31889,7 @@ mod tests {
             ("Raphael, Most Attitude", &[0x1A8E]),
             ("Doctor Doom", &[0x1A8F]),
             ("Ultron, Unlimited", &[0x1A90]),
+            ("The Fantasticar", &[0x1A91]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

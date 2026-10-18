@@ -118341,3 +118341,31 @@ pub const ULTRON_3_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_FANTASTICAR_COMMANDERS: &[CardFactory] = &[the_fantasticar];
+
+/// **The Fantasticar**'s EDHREC average deck, card for card:
+/// 91 nonbasic cards + 8 Wastes = 99.
+/// The Fantasticar (EDHREC, fetched 2026-10-18).
+pub const THE_FANTASTICAR_MAIN: &[CardFactory] = &[
+    accorders_shield, arc_reactor, astral_cornucopia, basalt_monolith, bone_saw, campfire,
+    candy_trail, cathars_shield, chromatic_sphere, chromatic_star, claws_of_gix, cloud_key,
+    clown_car, conjurers_bauble, dark_sphere, everflowing_chalice, expedition_map,
+    fellwar_stone, forsaken_monument, fountain_of_youth, ichor_wellspring, jeweled_amulet,
+    krark_clan_ironworks, liquimetal_torque, lodestone_bauble, lotus_petal, mana_vault,
+    manifold_key, mind_stone, mishras_bauble, moonsilver_key, mox_opal, mystic_forge,
+    paradise_mantle, relic_of_progenitus, semblance_anvil, senseis_divining_top, sol_ring,
+    soul_guide_lantern, spellbook, the_one_ring, thought_vessel, thran_dynamo, tormods_crypt,
+    urzas_bauble, voltaic_key, welding_jar, world_map, zuran_orb, ancient_tomb, blast_zone,
+    bonders_enclave, buried_ruin, command_beacon, crystal_vein, darksteel_citadel,
+    deserted_temple, fomori_vault, gemstone_caverns, inventors_fair, mishras_workshop,
+    muraganda_raceway, planar_nexus, scavenger_grounds, shrine_of_the_forsaken_gods,
+    talon_gates_of_madara, the_mycosynth_gardens, thespians_stage, urzas_cave, urzas_mine,
+    urzas_power_plant, urzas_saga, urzas_tower, urzas_workshop, war_room, zhalfirin_void,
+    foundry_inspector, glaring_fleshraker, jhoiras_familiar, liberator_urzas_battlethopter,
+    metalworker, myr_retriever, palladium_myr, scrap_trawler, ultima_origin_of_oblivion,
+    kozileks_command, null_elemental_blast, warping_wail, tezzeret_cruel_captain,
+    ugin_the_ineffable, all_is_dust,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+];
