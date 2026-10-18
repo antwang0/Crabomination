@@ -25338,6 +25338,7 @@ fn play_pod_game(
                 }
                 census.bump(key);
                 census.note_triggers(&g);
+                #[cfg(debug_assertions)]
                 check_commanders(&g, seed, actions, &mut commanders_seen);
                 // CR 514.1 — the turn that just ended left its active player at
                 // or under their maximum hand size. Debug-only.
