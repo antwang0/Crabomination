@@ -1000,6 +1000,7 @@ impl Effect {
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
+            | Effect::DestroySourceUnlessPayValue { .. }
             | Effect::AddAttackTaxThisTurn { .. }
             | Effect::AddBlockTaxThisTurn { .. }
             | Effect::ShuffleAnyNumberFromHandThenDraw { .. }
@@ -1423,6 +1424,7 @@ impl Effect {
             | Effect::RevealTopChooseToGraveyard { who, .. }
             | Effect::MillAddManaForColoredSymbols { who } => player_has_target(who),
             Effect::GainControlAndReattachAura { what } => sel_has_target(what),
+            Effect::AddMusicCounterGrantUpkeepToll { what } => sel_has_target(what),
             Effect::BounceStealAttachmentsReattach { what } => sel_has_target(what),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
@@ -2985,7 +2987,8 @@ impl Effect {
             | Effect::CounterAbilityAndStripSource { what }
             | Effect::WeldArtifacts { what }
             | Effect::GainControlAndReattachAura { what }
-            | Effect::BounceStealAttachmentsReattach { what } => sel_filter(what),
+            | Effect::BounceStealAttachmentsReattach { what }
+            | Effect::AddMusicCounterGrantUpkeepToll { what } => sel_filter(what),
             Effect::LookExileAnyNumberRestBack { who, .. }
             | Effect::PutTopOnBottom { who }
             | Effect::LookAtHandCastFree { who, .. } => sel_filter(who),
@@ -5644,7 +5647,8 @@ impl Effect {
                 | Effect::EyeOfTheStorm { what }
                 | Effect::SearchOpponentLibraryForSameName { what }
                 | Effect::GainControlAndReattachAura { what }
-                | Effect::BounceStealAttachmentsReattach { what } => sel_find(what, slot),
+                | Effect::BounceStealAttachmentsReattach { what }
+                | Effect::AddMusicCounterGrantUpkeepToll { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::BecomeCopyOfExiledCard { what, .. }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),

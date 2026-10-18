@@ -1103,6 +1103,8 @@ pub enum CounterType {
     Skewer,
     /// Olinda the Oblivious's odor counters.
     Odor,
+    /// Musician's music counters (the granted upkeep toll reads them).
+    Music,
 }
 
 /// Every zone a card can occupy.

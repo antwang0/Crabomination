@@ -6368,6 +6368,9 @@ pub enum Effect {
     /// Shuffle the chosen cards into your library and put the rest into your
     /// hand" (Threats Undetected; `game/effects/threats_undetected.rs`).
     SearchDistinctPowersOpponentReturnsTwo { max: u32, back: u32 },
+    /// Musician's "{T}: Put a music counter on target creature. If it doesn't
+    /// have [the upkeep toll], it gains that ability" (`game/effects/music.rs`).
+    AddMusicCounterGrantUpkeepToll { what: Selector },
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
@@ -13486,6 +13489,10 @@ pub enum Effect {
     /// sibling of `SacrificeSourceUnlessPay`, where the generic amount is a
     /// `Value` read at resolution (Megatherium, Extravagant Spirit).
     SacrificeSourceUnlessPayValue { generic: Value },
+    /// "Destroy this creature unless you pay {1} for each [thing]" — the
+    /// destroy sibling (regeneration and indestructible apply): Musician's
+    /// granted upkeep toll.
+    DestroySourceUnlessPayValue { generic: Value },
     /// "Sacrifice this unless you pay `per` for each `kind` counter on it. If
     /// you pay, `then`." Cyclone's escalating upkeep.
     PayPerCounterOrSacrifice {

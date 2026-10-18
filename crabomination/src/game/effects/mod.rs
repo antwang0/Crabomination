@@ -64,6 +64,7 @@ mod reveal_cast_types;
 mod sculpted_sunburst;
 mod fumble;
 mod threats_undetected;
+mod music;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -33359,6 +33360,7 @@ impl GameState {
             Effect::SearchDistinctPowersOpponentReturnsTwo { max, back } => {
                 self.search_distinct_powers_opponent_returns_two(*max, *back, ctx, events, effect)
             }
+            Effect::AddMusicCounterGrantUpkeepToll { what } => self.add_music_counter_grant_upkeep_toll(what, ctx, events),
             Effect::BounceStealAttachmentsReattach { what } => {
                 self.bounce_steal_attachments_reattach(what, ctx, events, effect)
             }
@@ -39641,6 +39643,21 @@ impl GameState {
                     &sub,
                     events,
                 )
+            }
+
+            Effect::DestroySourceUnlessPayValue { generic } => {
+                let Some(id) = ctx.source else { return Ok(()) };
+                let Some(card) = self.battlefield_find(id) else { return Ok(()) };
+                let p = card.controller;
+                let n = self.evaluate_value(generic, ctx).max(0) as u32;
+                let cost = crate::mana::ManaCost::new(vec![crate::mana::generic(n)]);
+                match self.try_pay_with_auto_tap(p, &cost) {
+                    Ok(receipt) => events.extend(receipt.auto_events),
+                    Err(_) => {
+                        self.destroy_permanent(id, false, events);
+                    }
+                }
+                Ok(())
             }
 
             Effect::SacrificeSourceUnlessPayValue { generic } => {
