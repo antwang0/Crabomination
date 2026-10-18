@@ -1524,6 +1524,7 @@ static DECKS: &[Factory] = &[
     // cmdr_019y_r (session 019Y6J4R)
     super::decks::veiling_oddity,
     super::decks::jhessian_zombies,
+    super::decks::chaotic_transformation,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

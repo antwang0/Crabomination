@@ -60,3 +60,27 @@ pub fn jhessian_zombies() -> CardDefinition {
         ..creature("Jhessian Zombies", cost(&[generic(4), u(), b()]), vec![CreatureType::Zombie], 2, 4)
     }
 }
+
+/// Chaotic Transformation — {5}{R} sorcery. Exile up to one target artifact,
+/// creature, enchantment, planeswalker and/or land. For each permanent exiled
+/// this way, its controller reveals cards from the top of their library until
+/// one shares a card type with it, puts that card onto the battlefield, then
+/// shuffles. The five "up to one" slots are one target group whose targets
+/// take distinct types (`R::TargetsTakeDistinctTypeSlots`); each is exiled and
+/// replaced in turn.
+pub fn chaotic_transformation() -> CardDefinition {
+    let types = vec![CardType::Artifact, CardType::Creature, CardType::Enchantment, CardType::Planeswalker, CardType::Land];
+    let any_of = types.iter().map(|t| R::HasCardType(t.clone())).reduce(|a, b| a.or(b)).unwrap_or(R::Any);
+    CardDefinition {
+        name: "Chaotic Transformation",
+        cost: cost(&[generic(5), crate::mana::r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 5,
+            min_targets: 0,
+            filter: any_of.and(R::TargetsTakeDistinctTypeSlots(types)),
+            effect: Box::new(Effect::ExileThenRevealUntilSharedType { what: Selector::Target(0) }),
+        },
+        ..Default::default()
+    }
+}

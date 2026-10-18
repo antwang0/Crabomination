@@ -87,3 +87,63 @@ fn jhessian_zombies_landcycles() {
 
 #[allow(dead_code)]
 fn _unused(_: CounterType, _: TurnStep) {}
+
+/// CR 701.20 — Chaotic Transformation exiles an opposing creature; its
+/// controller reveals to their first creature card and puts it onto the
+/// battlefield, the misses shuffled back.
+#[test]
+fn chaotic_transformation_swaps_a_creature() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[1].library.clear();
+    g.add_card_to_library(1, catalog::forest());
+    let giant = g.add_card_to_library(1, catalog::hill_giant());
+    let ct = g.add_card_to_hand(0, catalog::chaotic_transformation());
+    for c in [crabomination::mana::Color::Red] {
+        g.players[0].mana_pool.add(c, 6);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: ct,
+        target: Some(crabomination::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "the Bear was exiled");
+    assert_eq!(g.battlefield_find(giant).expect("the Giant came in").controller, 1);
+    assert_eq!(g.players[1].library.len(), 1, "the Forest went back");
+}
+
+/// CR 115.3 / 601.2c — Chaotic Transformation's targets take distinct types:
+/// two creatures can't both be named (no second creature slot), but a creature
+/// and a land can.
+#[test]
+fn chaotic_transformation_takes_one_of_each_type() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::hill_giant());
+    let land = ready(&mut g, 1, catalog::forest());
+    let ct = g.add_card_to_hand(0, catalog::chaotic_transformation());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 12);
+    let two_creatures = g.perform_action(GameAction::CastSpell {
+        card_id: ct,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    });
+    assert!(two_creatures.is_err(), "only one creature slot");
+    g.perform_action(GameAction::CastSpell {
+        card_id: ct,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(land)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a creature and a land");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == land));
+}
