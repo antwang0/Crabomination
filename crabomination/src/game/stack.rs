@@ -2378,8 +2378,19 @@ impl GameState {
         // and never repeat a board (four-seat audit pod seed 196001 ran to
         // the action cap). Read only for a trigger — the watch ignores the
         // rest.
+        // So is life lost by a seat that is still in at 0 or less: it cannot
+        // lose (Platinum Angel), so the drain is a number running away, not
+        // progress — Vito and Exquisite Blood against such a seat never
+        // repeat a life total (CR 104.4b; pod seed 924354).
         let grew = self.battlefield.len() > board_before
-            || (was_trigger && events.iter().any(|e| matches!(e, GameEvent::CounterAdded { .. })));
+            || (was_trigger
+                && events.iter().any(|e| match *e {
+                    GameEvent::CounterAdded { .. } => true,
+                    GameEvent::LifeLost { player, .. } => {
+                        self.players.get(player).is_some_and(|p| p.is_alive() && p.life <= 0)
+                    }
+                    _ => false,
+                }));
         let grow = self.note_growth_loop(was_trigger, depth_before, grew, (w2 >> 16, w1 >> 16), &mut events);
         if was_trigger && self.game_over.is_none() {
             // The watch holds an *anchor* fingerprint and counts the trigger

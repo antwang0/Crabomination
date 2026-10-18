@@ -150,3 +150,49 @@ fn cr_104_4b_a_counter_growing_mandatory_loop_is_a_draw() {
     assert_eq!(g.game_over, Some(None), "a mandatory loop is a draw");
     assert_eq!(g.players[1].life, 20, "Pariah took every point");
 }
+
+/// Vito and Exquisite Blood against `opp_life` with `angel` on the other side.
+fn vito_blood_drain(opp_life: i32, angel: bool) -> GameState {
+    use crabomination::game::types::GameAction;
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::vito_thorn_of_the_dusk_rose());
+    let blood = g.add_card_to_battlefield(0, catalog::exquisite_blood());
+    if angel {
+        g.add_card_to_battlefield(1, catalog::platinum_angel());
+    }
+    g.players[1].life = opp_life;
+    let events = g
+        .resolve_effect(
+            &Effect::LoseLife { who: Selector::Player(PlayerRef::Seat(1)), amount: Value::Const(1) },
+            &EffectContext::for_ability(blood, 0, None),
+        )
+        .expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    for _ in 0..20_000 {
+        if g.is_game_over() || g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    g
+}
+
+/// CR 104.4b — Vito and Exquisite Blood against a seat Platinum Angel keeps
+/// in the game: every lap drains it further below 0 and gains the same, all
+/// mandatory, so no life total ever repeats. Life lost by a seat still in at
+/// 0 or less is growth to the loop watch, and the game is a draw rather than
+/// an action cap (pod seed 924354).
+#[test]
+fn cr_104_4b_a_life_drain_loop_against_a_seat_that_cannot_lose_is_a_draw() {
+    let g = vito_blood_drain(0, true);
+    assert_eq!(g.game_over, Some(None), "a mandatory loop is a draw");
+    assert!(g.players[1].life < -300, "the drain ran laps first");
+}
+
+/// The negative control: the same drain against a seat that can lose ends
+/// with that seat out, however long it runs above 0 (CR 104.3b).
+#[test]
+fn cr_104_4b_a_finite_life_drain_is_not_a_loop() {
+    let g = vito_blood_drain(1_000, false);
+    assert_eq!(g.game_over, Some(Some(0)), "the drain wins");
+}

@@ -35,7 +35,8 @@ impl GameState {
     /// step whose pre-resolution depth never drops below its first (the
     /// successor may be pushed after this returns); only those that grew the
     /// battlefield count, a non-growing rider between them is carried. A chain
-    /// that only moves life totals is the exact watch's.
+    /// that only moves life totals is the exact watch's, unless the life lost
+    /// is a seat's that is still in at 0 or less (the caller counts that).
     pub(crate) fn note_growth_loop(
         &mut self,
         was_trigger: bool,
