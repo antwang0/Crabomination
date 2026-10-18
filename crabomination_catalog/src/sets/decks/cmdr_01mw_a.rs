@@ -407,3 +407,146 @@ pub fn cyclonus_the_saboteur() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Graviton, Fundamental Force — {2}{U} legendary 3/3 Human Villain. Whenever
+/// you draw your second card each turn, choose one: target creature gains
+/// flying until end of turn; or tap target creature.
+pub fn graviton_fundamental_force() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Graviton, Fundamental Force",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Villain], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                .once_per_turn(),
+            effect: Effect::ChooseMode(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Tap { what: target_filtered(R::Creature) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wicked Slumber — {3}{U} instant, convoke. Tap up to two target creatures
+/// and put two stun counters among them (one each, or both on a lone target).
+pub fn wicked_slumber() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
+    let stun = |what: Selector| Effect::AddCounter { what, kind: CounterType::Stun, amount: Value::ONE };
+    CardDefinition {
+        name: "Wicked Slumber",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::Seq(vec![Effect::Tap { what: Selector::Target(0) }, stun(Selector::Target(0))])),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtMost(Value::count(Selector::AllTargets), Value::ONE),
+                then: Box::new(stun(Selector::AllTargets)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tetsuo, Imperial Champion — {U}{B}{R} legendary 3/3 Human Samurai. When it
+/// attacks equipped, choose one, N = the greatest mana value among what's
+/// attached to it: N damage to any target; or cast an instant or sorcery with
+/// mana value N or less from your hand free.
+pub fn tetsuo_imperial_champion() -> CardDefinition {
+    use crate::card::Predicate;
+    let n = || Value::HighestManaValueAmong(Box::new(Selector::AttachedToMe(Box::new(Selector::This))));
+    CardDefinition {
+        name: "Tetsuo, Imperial Champion",
+        cost: cost(&[u(), crate::mana::b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Samurai], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsEquipped }),
+            effect: Effect::ChooseMode(vec![
+                Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: n() },
+                Effect::MayCastFromHandFreeMatching {
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    max_mv: n(),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unscythe, Killer of Kings — {U}{B}{B}{R} legendary Equipment: +3/+3 and
+/// first strike; equip {2}. Whenever a creature dealt damage by the equipped
+/// creature this turn dies, you may exile it; if you do, a 2/2 black Zombie.
+pub fn unscythe_killer_of_kings() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, Predicate, TokenDefinition};
+    use crate::effect::ZoneDest;
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        colors: vec![crate::mana::Color::Black],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Unscythe, Killer of Kings",
+        cost: cost(&[u(), crate::mana::b(), crate::mana::b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::FirstStrike],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::DamagedThisTurnByMatching(Box::new(R::IsHostOfSource)),
+            }),
+            effect: Effect::MayDo {
+                description: "Exile that card to create a 2/2 Zombie?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(Value::count(Selector::LastMoved), Value::ONE),
+                        then: Box::new(Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: Arc::new(zombie),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}

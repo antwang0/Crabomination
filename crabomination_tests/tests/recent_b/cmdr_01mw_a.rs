@@ -247,3 +247,67 @@ fn cr_500_8_cyclonus_adds_a_beginning_phase_after_combat() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "the extra draw step");
     assert_eq!(g.battlefield_find(cy).unwrap().definition.name, "Cyclonus, the Saboteur", "converted");
 }
+
+/// Wicked Slumber's two stun counters: one on each of two targets, both on a
+/// lone target.
+#[test]
+fn wicked_slumber_splits_two_stun_counters() {
+    let stuns = |targets: usize| {
+        let mut g = pod(2);
+        let a = ready(&mut g, 1, catalog::grizzly_bears());
+        let b = ready(&mut g, 1, catalog::hill_giant());
+        let eff = catalog::wicked_slumber().effect.clone();
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.targets = [Target::Permanent(a), Target::Permanent(b)][..targets].to_vec();
+        let evs = g.resolve_effect(&eff, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        let n = |id| g.battlefield_find(id).map(|c| (c.tapped, c.counter_count(CounterType::Stun))).unwrap();
+        (n(a), n(b))
+    };
+    assert_eq!(stuns(1), ((true, 2), (false, 0)));
+    assert_eq!(stuns(2), ((true, 1), (true, 1)));
+}
+
+/// Tetsuo's burn mode deals the greatest mana value among its Equipment:
+/// Bonesplitter (1) and Lightning Greaves (2) make 2.
+#[test]
+fn tetsuo_burns_for_its_greatest_equipment_mana_value() {
+    let mut g = pod(2);
+    let t = ready(&mut g, 0, catalog::tetsuo_imperial_champion());
+    for def in [catalog::bonesplitter(), catalog::lightning_greaves()] {
+        let e = ready(&mut g, 0, def);
+        g.battlefield_find_mut(e).unwrap().attached_to = Some(t);
+    }
+    let life = g.players[1].life;
+    let crabomination::effect::Effect::ChooseMode(modes) = catalog::tetsuo_imperial_champion().triggered_abilities[0].effect.clone()
+    else {
+        panic!("modal")
+    };
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(t);
+    ctx.targets = vec![Target::Player(1)];
+    let evs = g.resolve_effect(&modes[0], &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// Unscythe: a creature its wearer damaged dies, is exiled, and a Zombie
+/// takes its place.
+#[test]
+fn unscythe_exiles_its_victims_for_zombies() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let scythe = ready(&mut g, 0, catalog::unscythe_killer_of_kings());
+    g.battlefield_find_mut(scythe).unwrap().attached_to = Some(bear);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bite = crabomination::effect::Effect::DealDamageEqualToPower {
+        source: crabomination::effect::Selector::ExactObjects(vec![bear]),
+        target: crabomination::effect::Selector::ExactObjects(vec![giant]),
+    };
+    let evs = g.resolve_effect(&bite, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == giant), "exiled");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie" && c.controller == 0));
+}
