@@ -12638,6 +12638,17 @@ impl CardInstance {
         }
     }
 
+    /// Its ordinary counters (no keyword counters), saturating.
+    pub fn counter_sum(&self) -> u32 {
+        self.counters.values().fold(0u32, |a, &n| a.saturating_add(n))
+    }
+
+    /// Every counter on it, keyword counters included (CR 122.1), saturating:
+    /// a doubling loop can stack more than a `u32` holds.
+    pub fn total_counters(&self) -> u32 {
+        self.counters.values().chain(self.keyword_counters.values()).fold(0u32, |a, &n| a.saturating_add(n))
+    }
+
     pub fn leave_battlefield_state(&mut self) {
         self.forget_spell_choices();
         if self.perm_power_bonus != 0 || self.perm_toughness_bonus != 0 {

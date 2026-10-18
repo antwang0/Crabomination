@@ -2592,7 +2592,7 @@ impl GameState {
             // permanents uniquely: the extra word is *distinguishable* from
             // the next permanent's, which is what keeps two boards from ever
             // sharing a stream (PERF `(-179)`).
-            let counters = c.counters.values().sum::<u32>();
+            let counters = c.counter_sum();
             let head = u64::from(c.id.0) | ((u64::from(c.tapped) & tap_bit) << 32);
             // Damage past the printed toughness is not progress: a creature
             // still here with that much marked survives it (indestructible,

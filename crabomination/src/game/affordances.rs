@@ -688,7 +688,7 @@ impl GameState {
                         .iter()
                         .any(|p| p.controller == seat && self.evaluate_requirement_on_card(req, p, seat)),
                     Keyword::CantAttackOrBlockUnlessEvenCounters => {
-                        c.counters.values().sum::<u32>() % 2 == 0
+                        c.counter_sum() % 2 == 0
                     }
                     Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
                         self.players[seat].hand.len() as u32 <= *n

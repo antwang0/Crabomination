@@ -30,7 +30,7 @@ pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWei
                     .filter(|c| state.evaluate_requirement_static_on(filter, c, seat, Some(card.id)))
                     .map(|c| match kind {
                         Some(k) => c.counter_count(*k),
-                        None => c.counters.values().sum(),
+                        None => c.counter_sum(),
                     });
                 let n: u32 = if ab.remove_counter_among_x_one { counts.max().unwrap_or(0) } else { counts.sum() };
                 n.min(12)

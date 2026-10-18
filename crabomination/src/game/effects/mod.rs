@@ -28691,7 +28691,7 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(cid) {
-                        removed += c.counters.values().sum::<u32>();
+                        removed += c.counter_sum();
                         removed += c.keyword_counters.len() as u32;
                         c.counters.clear();
                         c.keyword_counters.clear();

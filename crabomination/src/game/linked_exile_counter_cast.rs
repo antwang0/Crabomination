@@ -34,7 +34,7 @@ impl GameState {
         self.battlefield
             .iter()
             .filter(|c| c.controller == p && self.computed_is_creature(c))
-            .map(|c| c.counters.values().sum::<u32>() + c.keyword_counters.values().sum::<u32>())
+            .map(|c| c.total_counters())
             .sum()
     }
 

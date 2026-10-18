@@ -265,8 +265,8 @@ impl GameState {
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
-            .map(|c| c.counters.values().sum::<u32>() + c.keyword_counters.values().sum::<u32>())
-            .sum()
+            .map(|c| c.total_counters())
+            .fold(0u32, u32::saturating_add)
     }
 
     /// One of the five board/resource tallies the EXO Keeper and Oath cycles
@@ -1433,13 +1433,9 @@ impl GameState {
                                 .find_map(|p| p.graveyard.iter().find(|c| c.id == cid))
                         })
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
-                        .map(|inst| {
-                            (inst.counters.values().sum::<u32>()
-                                + inst.keyword_counters.values().sum::<u32>())
-                                as i32
-                        })
+                        .map(|inst| i32::try_from(inst.total_counters()).unwrap_or(i32::MAX))
                 })
-                .sum(),
+                .fold(0i32, i32::saturating_add),
             Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
             Value::DamageDealtThisResolution => self.damage_dealt_this_resolution as i32,
             Value::FaceDownCreatures => self
@@ -8208,5 +8204,23 @@ mod tests {
         assert_eq!(g.evaluate_value(&Value::Sum(vec![Value::Const(i32::MAX), Value::Const(5)]), &ctx), i32::MAX);
         assert_eq!(g.evaluate_value(&Value::Times(big(), Box::new(Value::Const(3))), &ctx), i32::MAX);
         assert_eq!(g.evaluate_value(&Value::Diff(Box::new(Value::Const(i32::MIN)), big()), &ctx), i32::MIN);
+    }
+
+    /// Counter totals saturate too: two permanents near `u32::MAX` +1/+1
+    /// counters summed by `TotalCountersOn` overflowed and aborted an
+    /// eight-seat pod (sweep seed 922076, overflow-checked build).
+    #[test]
+    fn counter_totals_saturate() {
+        use crate::card::{CounterType, SelectionRequirement as R};
+        use crate::effect::Selector;
+        let mut g = crate::game::two_player_game();
+        for _ in 0..2 {
+            let id = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+            g.battlefield_find_mut(id).unwrap().counters.insert(CounterType::PlusOnePlusOne, u32::MAX - 1);
+        }
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let total = Value::TotalCountersOn { what: Box::new(Selector::EachPermanent(R::Creature)) };
+        assert_eq!(g.evaluate_value(&total, &ctx), i32::MAX);
+        assert_eq!(g.counters_among_permanents_of(0), u32::MAX);
     }
 }

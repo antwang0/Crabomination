@@ -873,7 +873,7 @@ fn counter_drain_cost_slow(
 fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType]>) -> u32 {
     match kinds {
         Some(ks) => ks.iter().map(|k| c.counter_count(*k)).sum(),
-        None => c.counters.values().sum::<u32>() + c.keyword_counters.values().sum::<u32>(),
+        None => c.total_counters(),
     }
 }
 
@@ -23881,7 +23881,7 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_static_on(filter, c, p, Some(card_id)))
                 .map(|c| match kind {
                     Some(k) => c.counter_count(*k),
-                    None => c.counters.values().sum(),
+                    None => c.counter_sum(),
                 });
             let have: u32 = if ability.remove_counter_among_x_one { counts.max().unwrap_or(0) } else { counts.sum() };
             if want == 0 || have < want {
@@ -25319,7 +25319,7 @@ impl GameState {
                 let total = |g: &Self, cid: CardId| {
                     g.battlefield.find_by_id(cid).map_or(0, |c| match kind {
                         Some(k) => c.counter_count(k),
-                        None => c.counters.values().sum(),
+                        None => c.counter_sum(),
                     })
                 };
                 picks.retain(|(cid, _)| total(self, *cid) >= left);

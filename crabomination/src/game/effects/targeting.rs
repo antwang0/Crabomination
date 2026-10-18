@@ -467,7 +467,7 @@ impl GameState {
                 if !doubles_target_counters(eff) {
                     return 0;
                 }
-                self.battlefield.find_by_id(cid).map_or(0, |c| c.counters.values().sum())
+                self.battlefield.find_by_id(cid).map_or(0, |c| c.counter_sum())
             };
             // An untap wants something tapped (Garruk Wildspeaker's lands).
             let untaps = eff.any_nested(&|e| matches!(e, Effect::Untap { .. }));

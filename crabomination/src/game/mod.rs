@@ -14711,7 +14711,7 @@ impl GameState {
                 let n = if scale.count_host_counters {
                     // "+1/+1 for each counter on it" (Luxior) — every kind.
                     self.battlefield.find_by_id(target).map_or(0, |h| {
-                        (h.counters.values().sum::<u32>() + h.keyword_counters.values().sum::<u32>()) as i32
+                        i32::try_from(h.total_counters()).unwrap_or(i32::MAX)
                     })
                 } else if let Some(att_filter) = &scale.count_host_attachments {
                     // "+1/+0 for each Equipment attached to it" (Golem-Skin

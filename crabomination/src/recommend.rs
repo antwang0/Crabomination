@@ -2334,7 +2334,7 @@ fn progress_watch_line(g: &GameState) -> String {
         g.battlefield.len(),
         g.battlefield.iter().filter(|c| !c.tapped).count(),
         g.battlefield.iter().map(|c| u64::from(c.damage)).sum::<u64>(),
-        g.battlefield.iter().map(|c| c.counters.values().sum::<u32>()).sum::<u32>(),
+        g.battlefield.iter().map(|c| c.counter_sum()).fold(0u32, u32::saturating_add),
     );
     s
 }

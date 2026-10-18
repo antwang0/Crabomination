@@ -93,7 +93,7 @@ impl GameState {
         duplicates
             .iter()
             .map(|(id, _)| {
-                let counters: u32 = self.battlefield_find(*id).map(|c| c.counters.values().sum()).unwrap_or(0);
+                let counters: u32 = self.battlefield_find(*id).map(|c| c.counter_sum()).unwrap_or(0);
                 let attached = self.battlefield.iter().filter(|c| c.attached_to == Some(*id)).count() as u32;
                 (counters + attached, id.0, *id)
             })
