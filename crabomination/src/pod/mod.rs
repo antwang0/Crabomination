@@ -25716,6 +25716,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RIELLE_COMMANDERS,
             main: decks::RIELLE_MAIN,
         },
+        // Seat 4211: Nathan Drake, Treasure Hunter's EDHREC average deck. `--pod-decks 4211`.
+        PodDeck {
+            name: "Nathan Drake, Treasure Hunter (UBR)",
+            commanders: decks::NATHAN_DRAKE_COMMANDERS,
+            main: decks::NATHAN_DRAKE_MAIN,
+        },
     ]
 }
 
@@ -31821,6 +31827,7 @@ mod tests {
             ("Tomorrow, Azami's Familiar", &[0x1A86]),
             ("Durnan of the Yawning Portal and Acolyte of Bahamut", &[0x1A87]),
             ("Rielle, the Everwise", &[0x1A88]),
+            ("Nathan Drake, Treasure Hunter", &[0x1A89]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

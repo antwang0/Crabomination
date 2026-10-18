@@ -118112,3 +118112,32 @@ pub const RIELLE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const NATHAN_DRAKE_COMMANDERS: &[CardFactory] = &[nathan_drake_treasure_hunter];
+
+/// **Nathan Drake, Treasure Hunter**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 5 Islands + 6 Mountains + 6 Swamps = 99.
+/// Nathan Drake, Treasure Hunter (EDHREC, fetched 2026-10-18).
+pub const NATHAN_DRAKE_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, fellwar_stone, lightning_greaves, midnight_clock,
+    sol_ring, staff_of_eden_vaults_key, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, whip_of_erebos, whispersilk_cloak,
+    blood_crypt, bloodstained_mire, command_tower, crumbling_necropolis, dragonskull_summit,
+    drowned_catacomb, exotic_orchard, luxury_suite, morphic_pool, rogues_passage, shivan_reef,
+    smoldering_marsh, steam_vents, stormcarved_coast, sulfur_falls, sunken_hollow,
+    training_center, watery_grave, xanders_lounge, agent_of_treachery, black_cat_cunning_thief,
+    brainstealer_dragon, dauthi_voidwalker, don_andres_the_renegade, etali_primal_storm,
+    gonti_lord_of_luxury, gonti_night_minister, grenzo_havoc_raiser, grima_sarumans_footman,
+    hostage_taker, laughing_jasper_flint, locke_treasure_hunter, nightscape_familiar,
+    plargg_and_nassari, professional_face_breaker, prosper_tome_bound, ragavan_nimble_pilferer,
+    rev_tithe_extractor, thief_of_sanity, thieving_varmint, tinybones_the_pickpocket,
+    vaan_street_thief, wild_magic_sorcerer, aqueous_form, black_market_connections,
+    cunning_rhetoric, minds_dilation, passionate_archaeologist, rogue_class, stolen_strategy,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, dark_ritual,
+    deadly_rollick, hurl_through_hell, siphon_insight, terminate, you_find_some_prisoners,
+    tasha_the_witch_queen, blasphemous_act, bribery, chain_reaction, ensnared_by_the_mara,
+    feed_the_swarm, praetors_grasp, reanimate, vandalblast,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+];
