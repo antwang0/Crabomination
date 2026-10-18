@@ -3571,6 +3571,7 @@ impl GameState {
         {
             self.players[owner].greatest_hit_this_turn = hit;
         }
+        self.drop_self_scoped_effects(id);
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).
         // `continuous_effects` is a `CowBox`, so `iter_mut` unshares and deep-

@@ -713,3 +713,30 @@ fn a_spell_copy_fizzles_on_protection_gained_in_response() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "both Murders fizzled");
 }
+
+/// CR 400.7 / 611.2c — a crewed Vehicle is an artifact creature "until end of
+/// turn" by its own effect; flickered, it returns as a new object and that
+/// effect doesn't follow it (the returned Copter isn't a creature).
+#[test]
+fn cr_611_2c_a_flickered_crewed_vehicle_is_no_creature() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let copter = g.add_card_to_battlefield(0, catalog::smugglers_copter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: copter, crew_creatures: vec![bear] }).expect("crew 1");
+    let is_creature = |g: &GameState, id| {
+        g.computed_permanent(id).is_some_and(|c| c.card_types().contains(&crabomination::card::CardType::Creature))
+    };
+    assert!(is_creature(&g, copter));
+    let shift = g.add_card_to_hand(0, catalog::cloudshift());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shift, target: Some(Target::Permanent(copter)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Cloudshift");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Smuggler's Copter").map(|c| c.id).expect("returned");
+    assert!(!is_creature(&g, back), "the crew animation ended with the old object");
+}
