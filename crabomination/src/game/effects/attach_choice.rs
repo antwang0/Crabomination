@@ -53,6 +53,9 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
+        if !self.scratch.last_moved_cards.is_empty() {
+            self.scratch.last_moved_cards.clear();
+        }
         let Some(host) = self.resolve_selector(to, ctx).iter().find_map(|e| match e {
             super::EntityRef::Player(p) => Some(Target::Player(*p)),
             e => e.as_permanent_id().map(Target::Permanent),
@@ -105,6 +108,11 @@ impl GameState {
             Target::Permanent(h) => (Some(h), None),
             Target::Player(p) => (None, Some(p)),
         };
+        // The attached ones are `LastMoved` — "when one or more … become
+        // attached this way" (Thorin, Mountain-king). Guarded: a CoW group.
+        if !picked.is_empty() {
+            self.scratch.last_moved_cards = picked.clone();
+        }
         for id in picked {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.attached_to = on_card;
