@@ -1509,6 +1509,11 @@ static DECKS: &[Factory] = &[
     super::decks::the_clone_saga,
     super::decks::scarlet_spider_kaine,
     super::decks::shriek_treblemaker,
+    // cmdr_019y_p (session 019Y6J4R)
+    super::decks::the_ravens_warning,
+    super::decks::blood_on_the_snow,
+    super::decks::we_say_thee_nay,
+    super::decks::hulk_smash,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
