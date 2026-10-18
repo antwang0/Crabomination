@@ -605,3 +605,22 @@ fn wizards_spellbook_casts_a_copy_for_one() {
     assert_eq!(g.players[1].life, life - 3, "the copy resolved");
     assert_eq!(g.players[0].mana_pool.total(), 0, "{{1}} paid");
 }
+
+/// CR 121.2a / 119.4 — under Zur's Weirding my draw is revealed; when the
+/// opponent pays 2 life it goes to my graveyard instead, and when they
+/// decline I draw it.
+#[test]
+fn zurs_weirding_lets_others_bin_a_draw() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::zurs_weirding());
+    let (hand, gy, life) = (g.players[0].hand.len(), g.players[0].graveyard.len(), g.players[1].life);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), hand, "not drawn");
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "binned");
+    assert_eq!(g.players[1].life, life - 2, "the opponent paid");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "declined: drawn");
+}

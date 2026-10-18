@@ -613,3 +613,26 @@ pub fn wizards_spellbook() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zur's Weirding — {3}{U} enchantment. Players play with their hands
+/// revealed. If a player would draw a card, they reveal it instead; any other
+/// player may pay 2 life to put it into its owner's graveyard, otherwise that
+/// player draws it (CR 121.2a).
+pub fn zurs_weirding() -> CardDefinition {
+    CardDefinition {
+        name: "Zur's Weirding",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Players play with their hands revealed.",
+                effect: StaticEffect::OpponentsPlayWithHandsRevealed,
+            },
+            StaticAbility {
+                description: "If a player would draw a card, they reveal it instead. Then any other player may pay 2 life. If a player does, put that card into its owner's graveyard. Otherwise, that player draws a card.",
+                effect: StaticEffect::DrawsRevealedOthersMayPayLifeToBin { life: 2 },
+            },
+        ],
+        ..Default::default()
+    }
+}

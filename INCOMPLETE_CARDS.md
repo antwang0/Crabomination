@@ -1980,6 +1980,7 @@ library-exile event.
 | 🟡 Cryptic Spires | the two colors are circled as the deck is built | no deck-building choice: `ManaPayload::CircledColors` reads the controller's commander identity — exact for a one- or two-color identity, its first two colors (WUBRG order) in a 3+ color deck, white and blue with no commander |
 | 🟡 Dawnhand Dissident | the blight player picks the creature; the caster picks which three counters to remove | both picks are automatic: blight goes on a creature that survives it (weakest first), the counter drain takes -1/-1 counters first, weakest creature first (as Ward—Blight's payer already does) |
 | 🟡 Brine Comber // Brinebound Gift | the Gift's "enchanted creature becomes the target of an Aura spell" Spirit is the Aura controller's | the trigger rides the enchanted creature (`EquipBonus.triggered_abilities`), so on an opponent's creature its controller gets the Spirit |
+| 🟡 Zur's Weirding | "players play with their hands revealed" covers its controller too; each other player decides whether to pay | the reveal is `OpponentsPlayWithHandsRevealed` (the controller's hand stays hidden); the pay-2-life question is asked inside the draw replacement, which has no stack item to suspend on, so a prompting seat gets the headless answer |
 
 ### EDHREC average-deck seats (`decks::cmdr_edhrec3`, 2026-10-11 Commander run) — open residuals
 
