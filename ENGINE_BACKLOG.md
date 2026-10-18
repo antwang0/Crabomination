@@ -247,6 +247,14 @@ the handoff.
   (Raiding Schemes, 921492). Legitimate draws, left alone: Descent into Avernus killing the last players at
   once (921404, 921684, 922694, 922412), Polyraptor + Marauding Raptor (a mandatory loop, 921624). Open board
   caps: Mondrak, Glory Dominus token doubling (921276 six seats, 921472 eight seats).
+- **Rounds three and four (seeds 9212-9216, 4/6/8 then 2/3/5/7 seats, 16,780 games; two fixes):** counter
+  totals overflowed `u32`/`i32` on a doubling board (`CardInstance::total_counters` / `counter_sum`, 14 sites,
+  seed 922076); a two-seat Commander game kept the duel control's caster-first player slots (Jaya's
+  Immolating Inferno at X = 25 on its own face, 924898) — `hostile_player_slot` is hostile wherever commanders
+  are seated. Legitimate draws: Themberchaud / Descent killing the last players at once, Exquisite Blood +
+  Sanguine Bond against a can't-lose opponent (925154). Board caps (~0.07 % of pod games, each its own loop):
+  Mondrak (921276, 921472, 925104), Soul Warden lifegain chains (921372, 924734), Beledros (921988), Mentor of
+  the Meek (924028), Ondu Spiritdancer (924508), Cadric (924550), Mycoloth / RMS Titanic (923744).
 - **Closed with a reason:** `019Y6J4R`'s Brothers' War III "slot 1 at its own controller" is the baseline
   profile's caster-first default in a two-seat test with `hostile_player_targets` off; pods (>2 seats or the
   production profile) are hostile. Two of the seed-921412/924036 draws were Repay in Kind (fixed above).
