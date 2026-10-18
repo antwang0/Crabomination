@@ -25235,6 +25235,9 @@ fn play_pod_game(
     let mut repeats = RepeatGuard::default();
     #[cfg(debug_assertions)]
     let mut last_turn: Option<(u32, usize, Option<usize>)> = None;
+    // Each permanent's controller as the last action left it (CR 302.6's check).
+    #[cfg(debug_assertions)]
+    let mut last_controllers: Vec<(crate::card::CardId, usize)> = Vec::new();
     #[cfg(debug_assertions)]
     let mut commanders_seen: Vec<(crate::card::CardId, &'static str, u32)> = Vec::new();
     let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
@@ -25335,7 +25338,6 @@ fn play_pod_game(
                 }
                 census.bump(key);
                 census.note_triggers(&g);
-                #[cfg(debug_assertions)]
                 check_commanders(&g, seed, actions, &mut commanders_seen);
                 // CR 514.1 — the turn that just ended left its active player at
                 // or under their maximum hand size. Debug-only.
@@ -25395,8 +25397,14 @@ fn play_pod_game(
                         }
                         // CR 302.6 — the new active player has controlled
                         // each of their permanents since their turn began.
+                        // One that changed hands in this turn's own upkeep
+                        // (a cumulative upkeep's "gain control of a land")
+                        // was not theirs then: only permanents the last turn
+                        // already left under their control are checked.
                         let ap = g.active_player_idx;
-                        if let Some(c) = g.battlefield.iter().find(|c| c.controller == ap && c.summoning_sick) {
+                        if let Some(c) = g.battlefield.iter().find(|c| {
+                            c.controller == ap && c.summoning_sick && last_controllers.contains(&(c.id, ap))
+                        }) {
                             panic!(
                                 "seed {seed}: p{ap}'s {} {:?} is still summoning sick in turn {} (after {actions} actions, {:?})",
                                 c.definition.name, c.id, g.turn_number, g.step,
@@ -25459,6 +25467,8 @@ fn play_pod_game(
                     }
                     last_turn =
                         Some((g.turn_number, g.active_player_idx, g.effective_max_hand_size(g.active_player_idx)));
+                    last_controllers.clear();
+                    last_controllers.extend(g.battlefield.iter().map(|c| (c.id, c.controller)));
                 }
                 any = true;
                 actions += 1;
