@@ -25326,6 +25326,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ESIOR_14_COMMANDERS,
             main: decks::ESIOR_14_MAIN,
         },
+        // Seat 4146: Lilah, Undefeated Slickshot's EDHREC average deck. `--pod-decks 4146`.
+        PodDeck {
+            name: "Lilah, Undefeated Slickshot (UR)",
+            commanders: decks::LILAH_COMMANDERS,
+            main: decks::LILAH_MAIN,
+        },
+        // Seat 4147: Geralf, Visionary Stitcher's EDHREC average deck. `--pod-decks 4147`.
+        PodDeck {
+            name: "Geralf, Visionary Stitcher (U)",
+            commanders: decks::GERALF_2_COMMANDERS,
+            main: decks::GERALF_2_MAIN,
+        },
+        // Seat 4148: The Face of Boe's EDHREC average deck. `--pod-decks 4148`.
+        PodDeck {
+            name: "The Face of Boe (WUR)",
+            commanders: decks::THE_FACE_OF_BOE_COMMANDERS,
+            main: decks::THE_FACE_OF_BOE_MAIN,
+        },
+        // Seat 4149: Feldon, Ronom Excavator's EDHREC average deck. `--pod-decks 4149`.
+        PodDeck {
+            name: "Feldon, Ronom Excavator (R)",
+            commanders: decks::FELDON_COMMANDERS,
+            main: decks::FELDON_MAIN,
+        },
+        // Seat 4150: Bartel Runeaxe's EDHREC average deck. `--pod-decks 4150`.
+        PodDeck {
+            name: "Bartel Runeaxe (BRG)",
+            commanders: decks::BARTEL_RUNEAXE_COMMANDERS,
+            main: decks::BARTEL_RUNEAXE_MAIN,
+        },
+        // Seat 4151: Grishnákh, Brash Instigator's EDHREC average deck. `--pod-decks 4151`.
+        PodDeck {
+            name: "Grishnákh, Brash Instigator (R)",
+            commanders: decks::GRISHNAKH_COMMANDERS,
+            main: decks::GRISHNAKH_MAIN,
+        },
     ]
 }
 
@@ -31366,6 +31402,12 @@ mod tests {
             ("Renari, Merchant of Marvels and Flaming Fist", &[0x1A45]),
             ("Ardenn, Intrepid Archaeologist and Ludevic, Necro-Alchemist", &[0x1A46]),
             ("Esior, Wardwing Familiar and Tormod, the Desecrator", &[0x1A47]),
+            ("Lilah, Undefeated Slickshot", &[0x1A48]),
+            ("Geralf, Visionary Stitcher", &[0x1A49]),
+            ("The Face of Boe", &[0x1A4A]),
+            ("Feldon, Ronom Excavator", &[0x1A4B]),
+            ("Bartel Runeaxe", &[0x1A4C]),
+            ("Grishnákh, Brash Instigator", &[0x1A4D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

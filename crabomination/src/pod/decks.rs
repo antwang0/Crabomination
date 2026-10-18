@@ -116279,3 +116279,170 @@ pub const ESIOR_14_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LILAH_COMMANDERS: &[CardFactory] = &[lilah_undefeated_slickshot];
+
+/// **Lilah, Undefeated Slickshot**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Mountains = 99.
+/// Lilah, Undefeated Slickshot (EDHREC, fetched 2026-10-18).
+pub const LILAH_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, resonating_lute, sol_ring,
+    talisman_of_creativity, thought_vessel, tome_of_the_guildpact, cascade_bluffs,
+    command_tower, ferrous_lake, frostboil_snarl, izzet_boilerworks, mystic_sanctuary,
+    reliquary_tower, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    temple_of_epiphany, training_center, abstract_paintmage, archmage_emeritus,
+    archmage_of_runes, balmor_battlemage_captain, baral_and_kari_zev, coruscation_mage,
+    goblin_electromancer, guttersnipe, niv_mizzet_parun, prismari_the_inspiration,
+    storm_kiln_artist, stormcatch_mentor, talrand_sky_summoner, third_path_iconoclast,
+    thunderclap_drake, veyran_voice_of_duality, young_pyromancer, case_of_the_ransacked_lab,
+    fiery_inscription, sorcerer_class, thousand_year_storm, abandon_attachments,
+    arcane_infusion, ashlings_command, broadside_barrage, creative_outburst, electrolyze,
+    flame_of_anor, galvanic_iteration, hypothesizzle, invert_invent, izzet_charm, magma_opus,
+    practical_research, prismari_charm, prismari_command, prophetic_bolt, rals_outburst,
+    slick_sequence, steam_augury, teach_by_example, traumatic_critique, twinned_vision,
+    vibrant_outburst, ral_crackling_wit, beacon_bolt, expressive_iteration, gandalfs_sanction,
+    glacial_dragonhunt, ill_timed_explosion, master_the_way, rapturous_moment, role_reversal,
+    splatter_technique, stitch_in_time, teleportal, truth_or_consequences,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const GERALF_2_COMMANDERS: &[CardFactory] = &[geralf_visionary_stitcher];
+
+/// **Geralf, Visionary Stitcher**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Geralf, Visionary Stitcher (EDHREC, fetched 2026-10-18).
+pub const GERALF_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, lightning_greaves, mind_stone, patriars_seal,
+    sapphire_medallion, sky_diamond, slagwurm_armor, sol_ring, swiftfoot_boots, thought_vessel,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, riptide_laboratory, rogues_passage,
+    aegis_turtle, biolume_egg, caelorna_coral_tyrant, charix_the_raging_isle, cleaver_skaab,
+    corridor_monitor, corrupted_shapeshifter, crashing_drawbridge, crenellated_wall,
+    curiosity_crafter, dragons_eye_savants, fatestitcher, floodgate, glacial_wall,
+    gleaming_barrier, havengul_runebinder, hover_barrier, ioreth_of_the_healing_house,
+    murmuring_phantasm, phyrexian_soulgorger, profaner_of_the_dead, riptide_turtle,
+    shield_sphere, solemn_simulacrum, steel_wall, walls_of_ba_sing_se, vizier_of_tumbling_sands,
+    wall_of_frost, wall_of_junk, wall_of_mist, wall_of_runes, coastal_piracy, favorable_winds,
+    freed_from_the_real, kindred_discovery, reconnaissance_mission, aetherize, arcane_denial,
+    counterspell, flow_of_knowledge, high_tide, lazotep_plating, negate, perplexing_test,
+    pongify, rapid_hybridization, reality_shift, shore_up, curse_of_the_swine, distant_melody,
+    of_one_mind, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const THE_FACE_OF_BOE_COMMANDERS: &[CardFactory] = &[the_face_of_boe];
+
+/// **The Face of Boe**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 7 Islands + 6 Mountains + 5 Plains = 99.
+/// The Face of Boe (EDHREC, fetched 2026-10-18).
+pub const THE_FACE_OF_BOE_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, lotus_bloom, mox_tantalite, rotating_fireplace, sol_ring,
+    sol_talisman, swiftfoot_boots, talisman_of_conviction, talisman_of_creativity,
+    thousand_year_elixir, clifftop_retreat, command_tower, deserted_beach, exotic_orchard,
+    glacial_fortress, hallowed_fountain, mystic_monastery, prairie_stream, raugrin_triome,
+    reliquary_tower, sacred_foundry, sea_of_clouds, steam_vents, stormcarved_coast,
+    sulfur_falls, sundown_pass, training_center, trenzalore_clocktower, aphetto_alchemist,
+    atraxi_warden, chakram_retriever, deep_sea_kraken, dinosaurs_on_a_spaceship,
+    errant_ephemeron, gargadon, greater_gargadon, ioreth_of_the_healing_house,
+    ith_high_arcanist, ivory_giant, jhoiras_timebug, judoon_enforcers, kelpie_guide,
+    pardic_dragon, rift_elemental, riftwing_cloudskate, rose_tyler, shivan_sand_mage,
+    star_whale, the_tenth_doctor, time_beetle, vizier_of_tumbling_sands, watcher_of_hours,
+    as_foretold, freed_from_the_real, propaganda, the_parting_of_the_ways, whirlwind_of_thought,
+    clockspinning, counterspell, delay, dust_of_moments, fury_charm, path_to_exile, suspend,
+    swords_to_plowshares, timecrafting, ancestral_vision, arc_blade, chronomantic_escape,
+    divine_congregation, ecstatic_beauty, heroes_remembered, inevitable_betrayal,
+    inspiring_refrain, reality_strobe, restore_balance, rousing_refrain, shivan_meteor,
+    wheel_of_fate, wibbly_wobbly_timey_wimey,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains,
+];
+
+pub const FELDON_COMMANDERS: &[CardFactory] = &[feldon_ronom_excavator];
+
+/// **Feldon, Ronom Excavator**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 15 Mountains = 99.
+/// Feldon, Ronom Excavator (EDHREC, fetched 2026-10-18).
+pub const FELDON_MAIN: &[CardFactory] = &[
+    arcane_signet, darksteel_plate, fiendlash, hammer_of_nazahn, mithril_coat, ruby_medallion,
+    sol_ring, arid_mesa, barbarian_ring, den_of_the_bugbear, desert, mishras_factory,
+    ramunap_ruins, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    sokenzan_crucible_of_defiance, war_room, ball_lightning, bomat_courier, bonecrusher_giant,
+    broadside_bombardiers, defiler_of_instinct, dragons_rage_channeler, embereth_veteran,
+    falkenrath_pit_fighter, fury, goblin_guide, grim_lavamancer, laelia_the_blade_reforged,
+    loyal_apprentice, magus_of_the_moon, monastery_swiftspear, party_thrasher,
+    rampaging_ferocidon, runaway_steam_kin, screaming_nemesis, slickshot_show_off,
+    soul_scar_mage, zurgo_bellstriker, blood_moon, kumano_faces_kakkazan, pain_for_all,
+    seal_of_fire, sulfuric_vortex, abrade, burst_lightning, fireblast, flare_of_duplication,
+    force_of_rage, galvanic_blast, ghostfire_slice, incinerate, lightning_bolt,
+    lightning_strike, play_with_fire, pyrokinesis, searing_blaze, searing_spear, shock,
+    skullcrack, wild_slash, chandra_torch_of_defiance, arc_trail, blasphemous_act,
+    chain_lightning, exquisite_firecraft, fiery_confluence, flame_slash, forked_bolt,
+    incendiary_flow, lava_spike, light_up_the_stage, lithomantic_barrage, rift_bolt,
+    skewer_the_critics,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BARTEL_RUNEAXE_COMMANDERS: &[CardFactory] = &[bartel_runeaxe];
+
+/// **Bartel Runeaxe**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Forests + 7 Mountains + 5 Swamps = 99.
+/// Bartel Runeaxe (EDHREC, fetched 2026-10-18).
+pub const BARTEL_RUNEAXE_MAIN: &[CardFactory] = &[
+    arcane_signet, bloodforged_battle_axe, fellwar_stone, golgari_signet, gruul_signet,
+    heralds_horn, obsidian_battle_axe, rakdos_signet, sol_ring, the_reaver_cleaver,
+    two_handed_axe, blood_crypt, bloodstained_mire, cinder_glade, command_tower,
+    dragonskull_summit, exotic_orchard, karplusan_forest, luxury_suite, overgrown_tomb,
+    path_of_ancestry, rootbound_crag, savage_lands, smoldering_marsh, stomping_ground,
+    undergrowth_stadium, verdant_catacombs, wooded_foothills, ziatoras_proving_ground,
+    aurora_awakener, basalt_ravager, beanstalk_giant, birds_of_paradise, boldwyr_aggressor,
+    bonecrusher_giant, borderland_behemoth, calamity_bearer, earthshaker_giant, giant_harbinger,
+    grave_titan, hamletback_goliath, ignoble_hierarch, inferno_titan, ondu_giant,
+    outland_colossus, pummeler_for_hire, quakebringer, stinkdrinker_daredevil, sunder_shaman,
+    sunrise_sovereign, surtland_flinger, tectonic_giant, thundercloud_shaman,
+    undermountain_adventurer, vogar_necropolis_tyrant, ajanis_anguish, collective_inferno,
+    garruks_uprising, phyrexian_arena, rhythm_of_the_wild, up_the_beanstalk, assassins_trophy,
+    beast_within, chaos_warp, crush_underfoot, heroic_intervention, return_of_the_wildspeaker,
+    squash, terminate, garruk_unleashed, blasphemous_act, cultivate, farseek, fire_giants_fury,
+    giants_ire, kodamas_reach, natures_lore, rampant_growth, skyshroud_claim, three_visits,
+    toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GRISHNAKH_COMMANDERS: &[CardFactory] = &[grishnakh_brash_instigator];
+
+/// **Grishnákh, Brash Instigator**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Grishnákh, Brash Instigator (EDHREC, fetched 2026-10-18).
+pub const GRISHNAKH_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, blood_clock, conjurers_closet, cursed_mirror, erratic_portal,
+    fire_diamond, hazorets_monument, helm_of_the_host, mind_stone, panharmonicon,
+    ruby_medallion, sol_ring, the_fire_crystal, umbilicus, command_beacon, high_market,
+    rogues_passage, sanctum_of_eternity, war_room, bothersome_noisemaker, captivating_crew,
+    dark_dweller_oracle, delina_wild_mage, dreadhorde_twins, firbolg_flutist,
+    goblin_town_flunkies, grim_initiate, hideous_taskmaster, invading_manticore,
+    jaxis_the_troublemaker, mirage_phalanx, misty_mountains_raider, molten_primordial,
+    moria_marauder, orcish_siegemaster, orthion_hero_of_lavabrink, solemn_simulacrum,
+    warbeast_of_gorgoroth, zealous_conscripts, book_of_mazarbul, fall_of_cair_andros,
+    flameshadow_conjuring, goblin_bombardment, splinter_twin, way_of_the_pyromancer, abrade,
+    chaos_warp, demand_answers, fling, improvised_club, kazuuls_fury, thrill_of_possibility,
+    tibalts_trickery, act_of_treason, assault_on_osgiliath, blasphemous_act, electroduplicate,
+    foray_of_orcs, honor_the_god_pharaoh, infernal_plunge, insurrection, jeskas_will,
+    song_mad_treachery, swarming_of_moria, thud, tidings_of_war, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
