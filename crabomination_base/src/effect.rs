@@ -6359,6 +6359,10 @@ pub enum Effect {
     /// way, exile each creature not chosen by any player this way" (Sculpted
     /// Sunburst; `game/effects/sculpted_sunburst.rs`).
     ChooseCreaturesByPowerExileRest,
+    /// "Return target creature to its owner's hand. Gain control of all Auras
+    /// and Equipment that were attached to it, then attach them to another
+    /// creature" (Fumble; `game/effects/fumble.rs`).
+    BounceStealAttachmentsReattach { what: Selector },
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
