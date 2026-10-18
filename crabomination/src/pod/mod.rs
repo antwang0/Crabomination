@@ -24960,6 +24960,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIFTEENTH_DOCTOR_12_COMMANDERS,
             main: decks::THE_FIFTEENTH_DOCTOR_12_MAIN,
         },
+        // Seat 4085: Akiri, Line-Slinger and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4085`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Slurrk, All-Ingesting (WRG)",
+            commanders: decks::AKIRI_14_COMMANDERS,
+            main: decks::AKIRI_14_MAIN,
+        },
+        // Seat 4086: Durnan of the Yawning Portal and Haunted One's EDHREC average deck. `--pod-decks 4086`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Haunted One (BG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_11_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_11_MAIN,
+        },
+        // Seat 4087: Francisco, Fowl Marauder and Kodama of the East Tree's EDHREC average deck. `--pod-decks 4087`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Kodama of the East Tree (BG)",
+            commanders: decks::FRANCISCO_10_COMMANDERS,
+            main: decks::FRANCISCO_10_MAIN,
+        },
+        // Seat 4088: Francisco, Fowl Marauder and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4088`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Kydele, Chosen of Kruphix (UBG)",
+            commanders: decks::FRANCISCO_11_COMMANDERS,
+            main: decks::FRANCISCO_11_MAIN,
+        },
+        // Seat 4089: Francisco, Fowl Marauder and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 4089`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Reyhan, Last of the Abzan (BG)",
+            commanders: decks::FRANCISCO_12_COMMANDERS,
+            main: decks::FRANCISCO_12_MAIN,
+        },
+        // Seat 4090: Kraum, Ludevic's Opus and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 4090`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Silas Renn, Seeker Adept (UBR)",
+            commanders: decks::KRAUM_7_COMMANDERS,
+            main: decks::KRAUM_7_MAIN,
+        },
+        // Seat 4091: The Fourteenth Doctor and Peri Brown's EDHREC average deck. `--pod-decks 4091`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Peri Brown (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_7_MAIN,
+        },
+        // Seat 4092: The Sixth Doctor and Vislor Turlough's EDHREC average deck. `--pod-decks 4092`.
+        PodDeck {
+            name: "The Sixth Doctor and Vislor Turlough (UBG)",
+            commanders: decks::THE_SIXTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_8_MAIN,
+        },
     ]
 }
 
@@ -30939,6 +30987,14 @@ mod tests {
             ("Don & Raph, Hard Science", &[0x1A08]),
             ("Donatello, the Brains and Raphael, the Muscle", &[0x1A09]),
             ("The Fifteenth Doctor and Donna Noble", &[0x1A0A]),
+            ("Akiri, Line-Slinger and Slurrk, All-Ingesting", &[0x1A0B]),
+            ("Durnan of the Yawning Portal and Haunted One", &[0x1A0C]),
+            ("Francisco, Fowl Marauder and Kodama of the East Tree", &[0x1A0D]),
+            ("Francisco, Fowl Marauder and Kydele, Chosen of Kruphix", &[0x1A0E]),
+            ("Francisco, Fowl Marauder and Reyhan, Last of the Abzan", &[0x1A0F]),
+            ("Kraum, Ludevic's Opus and Silas Renn, Seeker Adept", &[0x1A10]),
+            ("The Fourteenth Doctor and Peri Brown", &[0x1A11]),
+            ("The Sixth Doctor and Vislor Turlough", &[0x1A12]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
