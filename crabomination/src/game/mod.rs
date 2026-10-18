@@ -35144,6 +35144,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsMustAttackWithAtLeastOne
             | StaticEffect::OpponentsMustAttackYouWithAtLeastOne
             | StaticEffect::AllCreaturesAttackEnchantedController
+            | StaticEffect::LandsAndLibraryLandsAreBasic
             | StaticEffect::YourPlaneswalkersAttackerCap { .. }
             // Both cast-lock statics — read by `action_lock_rejection` /
             // `cast_from_zone_blocked`; no layer effect.

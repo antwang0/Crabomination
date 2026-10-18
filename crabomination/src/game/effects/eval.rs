@@ -211,6 +211,26 @@ fn filter_can_match_land(f: &SelectionRequirement) -> bool {
 impl GameState {
     /// `R::IsPreparedSpell` — `card`'s definition is a permanent's own
     /// prepare spell (the `Arc` `cast_prepare_spell` shares into the copy).
+    /// CR 205.4a — `card` is basic: printed so, or a land Rootpath Purifier
+    /// makes basic (one its controller controls, or in that player's library).
+    fn is_basic_card(&self, card: &crate::card::CardInstance) -> bool {
+        card.definition.supertypes.contains(&Supertype::Basic) || self.rootpath_basic(card)
+    }
+
+    pub(crate) fn rootpath_basic(&self, card: &crate::card::CardInstance) -> bool {
+        card.definition.is_land()
+            && self.battlefield.iter().any(|s| {
+                s.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::LandsAndLibraryLandsAreBasic))
+                    && match self.battlefield_find(card.id) {
+                        Some(c) => c.controller == s.controller,
+                        None => self.players.get(s.controller).is_some_and(|pl| pl.library.iter().any(|c| c.id == card.id)),
+                    }
+            })
+    }
+
     fn is_prepared_spell(&self, card: &crate::card::CardInstance) -> bool {
         self.battlefield.iter().any(|c| {
             c.definition.prepare_spell.as_ref().is_some_and(|d| std::sync::Arc::ptr_eq(d, &card.definition))
@@ -6402,9 +6422,9 @@ impl GameState {
                     R::SameNameAsAPermanent => {
                         self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
                     }
-                    R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+                    R::IsBasicLand => card.definition.is_land() && self.is_basic_card(card),
                     R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
-                    R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
+                    R::IsNonbasicLand => card.definition.is_land() && !self.is_basic_card(card),
                     R::ProducesColorless => card.definition.produces_colorless(),
                     // CR 613.1d — a battlefield permanent's snow is its layered
                     // supertype (Thermal Flux toggles it).
@@ -7591,8 +7611,8 @@ impl GameState {
                 self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
             }
             R::HasPhyrexianManaInCost => card.definition.cost.has_phyrexian(),
-            R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
-            R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
+            R::IsBasicLand => card.definition.is_land() && self.is_basic_card(card),
+            R::IsNonbasicLand => card.definition.is_land() && !self.is_basic_card(card),
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,

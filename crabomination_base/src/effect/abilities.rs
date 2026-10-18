@@ -3589,6 +3589,10 @@ pub enum StaticEffect {
     /// controller each combat if able" (Public Enemy). Read by
     /// `GameState::public_enemies`.
     AllCreaturesAttackEnchantedController,
+    /// "Lands you control and land cards in your library are basic" (Rootpath
+    /// Purifier). Read by the `IsBasicLand` / `IsNonbasicLand` walkers through
+    /// `GameState::rootpath_basic`.
+    LandsAndLibraryLandsAreBasic,
     /// CR 508.1 — "Planeswalkers you control have 'No more than `n`
     /// creatures can attack this planeswalker each combat'" (Tomik, Orzhov
     /// Lawmage): the per-planeswalker sibling of `AttackerCapAgainstController`.
