@@ -871,6 +871,7 @@ impl Effect {
             | Effect::NextSpellHasAffinityForArtifacts
             | Effect::NextNoncreatureSpellHasAffinityForArtifacts
             | Effect::JaceLoyaltyAtInstantSpeedThisTurn
+            | Effect::LoyaltyAbilitiesTwiceThisTurn
             | Effect::EachPlayerPaysLifeForTokens { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),

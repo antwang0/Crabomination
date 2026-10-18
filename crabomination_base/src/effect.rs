@@ -9757,6 +9757,11 @@ pub enum Effect {
     /// player's turn any time you could cast an instant" (Jace's
     /// Machinations; `game/jace_instant_loyalty.rs`).
     JaceLoyaltyAtInstantSpeedThisTurn,
+    /// "You may activate the loyalty abilities of planeswalkers you control
+    /// twice this turn rather than only once" (Urza Assembles the Titans III;
+    /// CR 606.3 override, `game/loyalty_twice_turn.rs`). Covers planeswalkers
+    /// that arrive later in the turn too.
+    LoyaltyAbilitiesTwiceThisTurn,
     /// Create `count` tokens already tapped and attacking (CR 508.3a). The
     /// new tokens join the current combat attacking the same defender the
     /// effect's source is attacking (falling back to the controller's first

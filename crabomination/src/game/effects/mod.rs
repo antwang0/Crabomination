@@ -23975,6 +23975,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LoyaltyAbilitiesTwiceThisTurn => {
+                self.grant_loyalty_twice_this_turn(ctx.controller);
+                Ok(())
+            }
             Effect::JaceLoyaltyAtInstantSpeedThisTurn => {
                 self.grant_jace_loyalty_at_instant_speed(ctx.controller);
                 Ok(())

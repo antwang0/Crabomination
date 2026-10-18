@@ -14,7 +14,7 @@ impl GameState {
     /// CR 606.3 — Oath of Teferi: `p` controls a permanent letting its
     /// planeswalkers activate loyalty abilities twice each turn.
     pub(crate) fn loyalty_twice_each_turn_for(&self, p: usize) -> bool {
-        self.battlefield.iter().any(|c| {
+        self.loyalty_twice_granted_this_turn(p) || self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition
                     .static_abilities

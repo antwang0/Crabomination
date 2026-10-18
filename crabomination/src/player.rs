@@ -331,6 +331,11 @@ pub struct PlayerCold {
     /// only while it equals the game's turn number, so no cleanup clears it.
     #[serde(default)]
     pub jace_instant_loyalty_turn: Option<u32>,
+    /// Urza Assembles the Titans III: the turn "you may activate the loyalty
+    /// abilities of planeswalkers you control twice this turn" was granted.
+    /// Valid only while it equals the turn number (`game/loyalty_twice_turn.rs`).
+    #[serde(default)]
+    pub loyalty_twice_turn: Option<u32>,
     /// Colors this player (and their permanents) have hexproof from for the
     /// rest of the turn (Veil of Summer's "you and permanents you control
     /// gain hexproof from blue and from black until end of turn"). Set by
