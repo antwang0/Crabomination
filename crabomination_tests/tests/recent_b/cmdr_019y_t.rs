@@ -417,3 +417,23 @@ fn balduvian_warlord_moves_a_blocker() {
     assert!(g.attacker_is_blocked(wurm), "now blocked");
     assert_eq!(g.blockers_of(wurm).as_slice(), &[mine]);
 }
+
+/// CR 707.10 — Giant Growth on Beamsplitter Mage alone is copied once, onto
+/// the creature chosen (the stronger of my other two): the Mage and the
+/// giant get +3/+3, the bear doesn't.
+#[test]
+fn beamsplitter_mage_copies_once_onto_a_chosen_creature() {
+    let mut g = pod(2);
+    let mage = ready(&mut g, 0, catalog::beamsplitter_mage());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let gg = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gg, target: Some(Target::Permanent(mage)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let p = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+    assert_eq!((p(&g, mage), p(&g, giant), p(&g, bear)), (5, 6, 2));
+}

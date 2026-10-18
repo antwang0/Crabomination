@@ -356,3 +356,24 @@ pub fn balduvian_warlord() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Beamsplitter Mage — {U}{R} 2/2 Vedalken Wizard. Whenever you cast an
+/// instant or sorcery spell that targets only this creature, if you control
+/// another creature it could target, choose one; copy the spell, the copy
+/// targeting the chosen creature (CR 707.10).
+pub fn beamsplitter_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Beamsplitter Mage",
+        cost: cost(&[u(), crate::mana::r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_instant_or_sorcery()),
+            effect: Effect::CopyForChosenOtherTargetableCreature,
+        }],
+        ..Default::default()
+    }
+}

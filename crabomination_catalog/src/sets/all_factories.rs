@@ -1547,6 +1547,7 @@ static DECKS: &[Factory] = &[
     super::decks::urza_assembles_the_titans,
     super::decks::musician,
     super::decks::balduvian_warlord,
+    super::decks::beamsplitter_mage,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
