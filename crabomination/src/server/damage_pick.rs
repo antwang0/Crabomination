@@ -47,7 +47,14 @@ pub(super) fn trim_unhurt(state: &GameState, seat: usize, legal: &[Target]) -> O
         _ => false,
     };
     let kept: Vec<Target> = legal.iter().filter(|t| !drop(t)).cloned().collect();
-    (kept.len() < legal.len() && !kept.is_empty()).then_some(kept)
+    // Never trimmed down to our own face or board: an unhurt opposing
+    // permanent ends the chain, our own Pariah-shielded face feeds it
+    // (Black Panther behind an opponent's Shalai, seed 923534).
+    let hostile_left = kept.iter().any(|t| match t {
+        Target::Player(p) => *p != seat,
+        Target::Permanent(id) => state.battlefield_find(*id).is_some_and(|c| c.controller != seat),
+    });
+    (kept.len() < legal.len() && hostile_left).then_some(kept)
 }
 
 #[cfg(test)]
@@ -91,5 +98,40 @@ mod tests {
             !matches!(answer, DecisionAnswer::Target(Target::Permanent(id)) if id == zetalpa),
             "not the indestructible Zetalpa: {answer:?}"
         );
+    }
+
+    /// CR 104.4b — with the opponent's face out of reach (hexproof)
+    /// the indestructible Zetalpa stays a candidate: trimming it would leave
+    /// only the redirector's own controller, whose damage feeds the chain
+    /// (Black Panther behind an opponent's Shalai, seed 923534).
+    #[test]
+    fn the_trim_never_leaves_only_our_own_side() {
+        let mut g = crate::game::multi_player_game(2);
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        let vindicator = g.add_card_to_battlefield(0, crate::catalog::phyrexian_vindicator());
+        let zetalpa = g.add_card_to_battlefield(1, crate::catalog::zetalpa_primal_dawn());
+        g.players[0].wants_ui = true;
+        let bolt = g.add_card_to_hand(1, crate::catalog::lightning_bolt());
+        g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(vindicator)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+        for _ in 0..4 {
+            if g.pending_decision.is_some() {
+                break;
+            }
+            let _ = g.perform_action(GameAction::PassPriority);
+        }
+        assert!(g.pending_decision.is_some(), "the redirect asks for a target");
+        // The opponent's face out of reach: only our own face and Zetalpa.
+        let legal = [Target::Player(0), Target::Permanent(zetalpa)];
+        assert_eq!(super::trim_unhurt(&g, 0, &legal), None);
     }
 }
