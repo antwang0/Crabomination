@@ -25008,6 +25008,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_SIXTH_DOCTOR_8_COMMANDERS,
             main: decks::THE_SIXTH_DOCTOR_8_MAIN,
         },
+        // Seat 4093: Tony Stark's EDHREC average deck. `--pod-decks 4093`.
+        PodDeck {
+            name: "Tony Stark (UR)",
+            commanders: decks::TONY_STARK_COMMANDERS,
+            main: decks::TONY_STARK_MAIN,
+        },
+        // Seat 4094: Nicanzil, Current Conductor's EDHREC average deck. `--pod-decks 4094`.
+        PodDeck {
+            name: "Nicanzil, Current Conductor (UG)",
+            commanders: decks::NICANZIL_COMMANDERS,
+            main: decks::NICANZIL_MAIN,
+        },
+        // Seat 4095: Rankle and Torbran's EDHREC average deck. `--pod-decks 4095`.
+        PodDeck {
+            name: "Rankle and Torbran (BR)",
+            commanders: decks::RANKLE_AND_TORBRAN_COMMANDERS,
+            main: decks::RANKLE_AND_TORBRAN_MAIN,
+        },
+        // Seat 4096: Kellan, Daring Traveler's EDHREC average deck. `--pod-decks 4096`.
+        PodDeck {
+            name: "Kellan, Daring Traveler (WG)",
+            commanders: decks::KELLAN_5_COMMANDERS,
+            main: decks::KELLAN_5_MAIN,
+        },
+        // Seat 4097: Odric, Blood-Cursed's EDHREC average deck. `--pod-decks 4097`.
+        PodDeck {
+            name: "Odric, Blood-Cursed (WR)",
+            commanders: decks::ODRIC_3_COMMANDERS,
+            main: decks::ODRIC_3_MAIN,
+        },
     ]
 }
 
@@ -30995,6 +31025,11 @@ mod tests {
             ("Kraum, Ludevic's Opus and Silas Renn, Seeker Adept", &[0x1A10]),
             ("The Fourteenth Doctor and Peri Brown", &[0x1A11]),
             ("The Sixth Doctor and Vislor Turlough", &[0x1A12]),
+            ("Tony Stark", &[0x1A13]),
+            ("Nicanzil, Current Conductor", &[0x1A14]),
+            ("Rankle and Torbran", &[0x1A15]),
+            ("Kellan, Daring Traveler", &[0x1A16]),
+            ("Odric, Blood-Cursed", &[0x1A17]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

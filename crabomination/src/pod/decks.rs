@@ -114776,3 +114776,147 @@ pub const THE_SIXTH_DOCTOR_8_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, island, island,
     island, swamp, swamp, swamp, swamp,
 ];
+
+pub const TONY_STARK_COMMANDERS: &[CardFactory] = &[tony_stark];
+
+/// **Tony Stark**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 11 Islands + 7 Mountains = 99.
+/// Tony Stark (EDHREC, fetched 2026-10-18).
+pub const TONY_STARK_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, aettir_and_priwen, arc_reactor, arcane_signet, buster_sword,
+    commanders_plate, cosmic_cube, darksteel_forge, excalibur_sword_of_eden, fellwar_stone,
+    genji_glove, hulkbuster_armor, iron_man_armor, izzet_signet, lightning_greaves,
+    mjolnir_hammer_of_thor, portal_to_phyrexia, sculpting_steel, simulacrum_synthesizer,
+    sol_ring, swiftfoot_boots, talisman_of_creativity, the_reaver_cleaver, the_ten_rings,
+    thought_vessel, thran_dynamo, academy_ruins, archway_of_innovation, cascade_bluffs,
+    command_tower, darksteel_citadel, frostboil_snarl, great_furnace, inventors_fair,
+    reliquary_tower, seat_of_the_synod, shivan_reef, silverbluff_bridge, steam_vents,
+    stormcarved_coast, sulfur_falls, training_center, uthros_titanic_godcore,
+    cyberdrive_awakener, emry_lurker_of_the_loch, enthusiastic_mechanaut, etherium_sculptor,
+    foundry_inspector, iron_lad_diverging_destiny, iron_lad_young_avenger,
+    iron_man_armored_avenger, iron_man_bleeding_edge, iron_man_master_of_machines,
+    iron_man_modern_marvel, iron_man_titan_of_innovation, iron_spider_stark_upgrade,
+    ironheart_clever_champion, jhoira_weatherlight_captain, krang_utrom_warlord,
+    padeem_consul_of_innovation, phyrexian_metamorph, shuri_wakandan_inventor,
+    ultron_artificial_malevolence, urza_lord_high_artificer, armor_wars, mechanized_production,
+    origin_of_iron_man, an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell,
+    cyclonic_rift, deflecting_swat, i_am_iron_man, negate, swan_song, blasphemous_act,
+    fabricate, one_with_the_machine, thoughtcast, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const NICANZIL_COMMANDERS: &[CardFactory] = &[nicanzil_current_conductor];
+
+/// **Nicanzil, Current Conductor**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Forests + 11 Islands = 99.
+/// Nicanzil, Current Conductor (EDHREC, fetched 2026-10-18).
+pub const NICANZIL_MAIN: &[CardFactory] = &[
+    arcane_signet, glowcap_lantern, lodestone_needle, shadowed_caravel, simic_signet, sol_ring,
+    subterranean_schooner, breeding_pool, command_tower, dreamroot_cascade, flooded_grove,
+    hinterland_harbor, path_of_ancestry, rejuvenating_springs, reliquary_tower, rogues_passage,
+    simic_growth_chamber, temple_of_mystery, vineglimmer_snarl, yavimaya_coast, cenote_scout,
+    deepfathom_echo, deeproot_elite, emperor_mihail_ii, evolution_sage,
+    forerunner_of_the_heralds, hakbal_of_the_surging_soul, herald_of_secret_streams,
+    ixallis_diviner, jadelight_ranger, jadelight_spelunker, kopala_warden_of_waves,
+    kumena_tyrant_of_orazca, master_of_the_pearl_trident, merfolk_branchwalker,
+    merfolk_cave_diver, merfolk_sovereign, merrow_reejerey, river_herald_guide,
+    river_herald_scout, seeker_of_sunlight, sentinel_of_the_nameless_city, spyglass_siren,
+    storm_fleet_negotiator, svyelun_of_sea_and_sky, tatyova_benthic_druid, tishanas_wayfinder,
+    topography_tracker, waterwind_scout, wildgrowth_walker, zegana_utopian_speaker,
+    branching_evolution, deeproot_pilgrimage, deeproot_waters, hardened_scales,
+    path_of_discovery, simic_ascendancy, spelunking, twists_and_turns, aetherize, beast_within,
+    brackish_blunder, counterspell, growth_spiral, inspiring_call, negate, rapid_hybridization,
+    ripples_of_potential, cultivate, enter_the_unknown, explore, kodamas_reach, over_the_edge,
+    rampant_growth, wave_goodbye,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const RANKLE_AND_TORBRAN_COMMANDERS: &[CardFactory] = &[rankle_and_torbran];
+
+/// **Rankle and Torbran**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Mountains + 10 Swamps = 99.
+/// Rankle and Torbran (EDHREC, fetched 2026-10-18).
+pub const RANKLE_AND_TORBRAN_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, mind_stone, oni_cult_anvil, rakdos_signet, skullclamp,
+    sol_ring, swiftfoot_boots, talisman_of_indulgence, urabrasks_forge, blood_crypt, bojuka_bog,
+    command_tower, dragonskull_summit, foreboding_ruins, graven_cairns, haunted_ridge,
+    luxury_suite, rakdos_carnarium, rogues_passage, shadowblood_ridge, smoldering_marsh,
+    sulfurous_springs, tainted_peak, invasion_of_regatha, blood_artist, braids_arisen_nightmare,
+    garna_bloodfist_of_keld, goldspan_dragon, grim_hireling, impulsive_pilferer,
+    ingenious_artillerist, jadar_ghoulcaller_of_nephalia, juri_master_of_the_revue,
+    lagomos_hand_of_hatred, loyal_apprentice, magda_brazen_outlaw, mahadi_emporium_master,
+    mayhem_devil, mirkwood_bats, morbid_opportunist, ophiomancer, pain_distributor,
+    pitiless_plunderer, professional_face_breaker, rankle_master_of_pranks,
+    reassembling_skeleton, reckless_fireweaver, smaug_wicked_worm, solemn_simulacrum,
+    syr_konrad_the_grim, torbran_thane_of_red_fell, xorn, bitterblossom,
+    black_market_connections, descent_into_avernus, goblin_bombardment, impact_tremors,
+    phyrexian_arena, abrade, bedevil, big_score, chaos_warp, dark_ritual, deadly_dispute,
+    lightning_bolt, rakdos_charm, terminate, zariel_archduke_of_avernus, blasphemous_act,
+    faithless_looting, feed_the_swarm, fiery_confluence, jeskas_will, nights_whisper,
+    sign_in_blood, vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KELLAN_5_COMMANDERS: &[CardFactory] = &[kellan_daring_traveler];
+
+/// **Kellan, Daring Traveler**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Forests + 11 Plains = 99.
+/// Kellan, Daring Traveler (EDHREC, fetched 2026-10-18).
+pub const KELLAN_5_MAIN: &[CardFactory] = &[
+    arcane_signet, glowcap_lantern, sol_ring, talisman_of_unity, the_seriema,
+    bountiful_promenade, brushland, canopy_vista, command_tower, fortified_village,
+    horizon_canopy, hushwood_verge, lush_portico, overgrown_farmland, razorverge_thicket,
+    sungrass_prairie, sunpetal_grove, temple_garden, windswept_heath, augur_of_autumn,
+    avacyns_pilgrim, aven_mindcensor, beast_whisperer, birds_of_paradise, brigid_clachans_heart,
+    bruna_the_fading_light, champion_of_lambholt, eladamri_korvecdal, elesh_norn_grand_cenobite,
+    esper_sentinel, eternal_witness, fierce_empath, formidable_speaker, gaddock_teeg,
+    gisela_the_broken_blade, giver_of_runes, guardian_of_faith, insidious_fungus,
+    kami_of_false_hope, karmic_guide, kudo_king_among_bears, kutzil_malamet_exemplar,
+    llanowar_elves, loran_of_the_third_path, mentor_of_the_meek, mother_of_runes,
+    phelia_exuberant_shepherd, recruiter_of_the_guard, sakura_tribe_elder, selfless_spirit, six,
+    skyclave_apparition, spirit_of_the_labyrinth, thalias_lancers, voice_of_victory,
+    werefox_bodyguard, witch_enchanter, wood_elves, birthing_ritual, growing_rites_of_itlimoc,
+    hardened_scales, path_of_discovery, twists_and_turns, chord_of_calling,
+    congregation_at_dawn, ephemerate, flare_of_fortitude, parting_gust, razorgrass_ambush,
+    swords_to_plowshares, thraben_charm, analyze_the_pollen, austere_command, farseek,
+    natures_lore, sevinnes_reclamation, three_visits, winds_of_abandon,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ODRIC_3_COMMANDERS: &[CardFactory] = &[odric_blood_cursed];
+
+/// **Odric, Blood-Cursed**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Mountains + 12 Plains = 99.
+/// Odric, Blood-Cursed (EDHREC, fetched 2026-10-18).
+pub const ODRIC_3_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, boros_signet, conjurers_closet, eater_of_virtue,
+    inspiring_statuary, monument_to_endurance, nettlecyst, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, ancient_den, battlefield_forge, boros_garrison, clifftop_retreat,
+    command_tower, furycalm_snarl, great_furnace, rugged_prairie, sacred_foundry,
+    slayers_stronghold, spectator_seating, sundown_pass, sunhome_fortress_of_the_legion,
+    temple_of_triumph, aerial_responder, akiri_line_slinger, akroma_vision_of_ixidor, anger,
+    aurelia_the_law_above, bronze_guardian, crime_novelist, crystalline_giant, danitha_capashen,
+    depthshaker_titan, draconic_visitor, goldhound, healers_hawk, hedron_detonator,
+    ingenious_artillerist, ivora_insatiable_heir, knight_of_the_white_orchid, loyal_warhound,
+    odric_lunarch_marshal, olivias_attendants, ornithopter_of_paradise, reckless_fireweaver,
+    rograkh_son_of_rohgahh, ruin_lurker_bat, shrike_force, stonecoil_serpent, sun_titan,
+    swiftblade_vindicator, venerable_warsinger, weathered_sentinels, weftstalker_ardent,
+    zetalpa_primal_dawn, airbender_ascension, all_that_glitters, arterial_alchemy,
+    ghirapur_aether_grid, nahiris_resolve, teleportation_circle, boros_charm, chaos_warp,
+    cloudshift, demand_answers, dispatch, ephemerate, generous_gift, path_to_exile,
+    swords_to_plowshares, angelfire_ignition, blasphemous_act, faithless_looting, rip_apart,
+    sevinnes_reclamation, vanquish_the_horde,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
