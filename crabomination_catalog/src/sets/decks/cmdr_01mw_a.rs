@@ -581,3 +581,31 @@ pub fn thorin_king_of_durins_folk() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gandalf of the Secret Fire — {1}{U}{R}{W} legendary 3/4 Avatar Wizard. An
+/// instant or sorcery you cast from your hand during an opponent's turn is
+/// exiled with three time counters as it resolves, and gains suspend.
+pub fn gandalf_of_the_secret_fire() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Gandalf of the Secret Fire",
+        cost: cost(&[generic(1), u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar, CreatureType::Wizard], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastFromHand,
+                Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                },
+            ])),
+            effect: Effect::SuspendSpellOnResolve { what: Selector::TriggerSource, time_counters: 3 },
+        }],
+        ..Default::default()
+    }
+}

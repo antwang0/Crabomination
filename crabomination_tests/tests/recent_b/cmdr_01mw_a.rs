@@ -329,3 +329,32 @@ fn thorin_king_of_durins_folk_mints_and_pumps() {
     assert_eq!(p(&g, thorin), 4);
     assert_eq!(p(&g, bear), 2);
 }
+
+/// CR 702.62a — Gandalf of the Secret Fire: Shock cast from hand on an
+/// opponent's turn resolves and lands in exile with three time counters and
+/// suspend; on your own turn it goes to the graveyard.
+#[test]
+fn cr_702_62a_gandalf_suspends_off_turn_spells() {
+    let run = |active: usize| {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::gandalf_of_the_secret_fire());
+        g.active_player_idx = active;
+        g.priority.player_with_priority = 0;
+        let d = g.add_card_to_hand(0, catalog::shock());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+        let life = g.players[1].life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: d,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, life - 2, "resolved");
+        g.exile.iter().find(|c| c.id == d).map(|c| (c.counter_count(CounterType::Time), c.granted_suspend))
+    };
+    assert_eq!(run(1), Some((3, true)), "opponent's turn");
+    assert_eq!(run(0), None, "your own turn");
+}
