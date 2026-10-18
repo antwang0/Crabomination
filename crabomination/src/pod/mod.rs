@@ -25092,6 +25092,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRAVITON_COMMANDERS,
             main: decks::GRAVITON_MAIN,
         },
+        // Seat 4107: Breeches, Brazen Plunderer and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 4107`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Halana, Kessig Ranger (RG)",
+            commanders: decks::BREECHES_22_COMMANDERS,
+            main: decks::BREECHES_22_MAIN,
+        },
+        // Seat 4108: Keskit, the Flesh Sculptor and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 4108`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Malcolm, Keen-Eyed Navigator (UB)",
+            commanders: decks::KESKIT_9_COMMANDERS,
+            main: decks::KESKIT_9_MAIN,
+        },
+        // Seat 4109: Livio, Oathsworn Sentinel and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4109`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Miara, Thorn of the Glade (WB)",
+            commanders: decks::LIVIO_4_COMMANDERS,
+            main: decks::LIVIO_4_MAIN,
+        },
+        // Seat 4110: Mabel, Bitter Recluse's EDHREC average deck. `--pod-decks 4110`.
+        PodDeck {
+            name: "Mabel, Bitter Recluse (B)",
+            commanders: decks::MABEL_3_COMMANDERS,
+            main: decks::MABEL_3_MAIN,
+        },
+        // Seat 4111: Malcolm, Keen-Eyed Navigator and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4111`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Slurrk, All-Ingesting (UG)",
+            commanders: decks::MALCOLM_12_COMMANDERS,
+            main: decks::MALCOLM_12_MAIN,
+        },
+        // Seat 4112: Miara, Thorn of the Glade and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4112`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Nadier, Agent of the Duskenel (B)",
+            commanders: decks::MIARA_7_COMMANDERS,
+            main: decks::MIARA_7_MAIN,
+        },
+        // Seat 4113: Sivriss, Nightmare Speaker and Haunted One's EDHREC average deck. `--pod-decks 4113`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Haunted One (B)",
+            commanders: decks::SIVRISS_11_COMMANDERS,
+            main: decks::SIVRISS_11_MAIN,
+        },
+        // Seat 4114: The Eighth Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 4114`.
+        PodDeck {
+            name: "The Eighth Doctor and Adric, Mathematical Genius (WU)",
+            commanders: decks::THE_EIGHTH_DOCTOR_13_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_13_MAIN,
+        },
+        // Seat 4115: Wyll, Blade of Frontiers and Haunted One's EDHREC average deck. `--pod-decks 4115`.
+        PodDeck {
+            name: "Wyll, Blade of Frontiers and Haunted One (BR)",
+            commanders: decks::WYLL_COMMANDERS,
+            main: decks::WYLL_MAIN,
+        },
     ]
 }
 
@@ -31093,6 +31147,15 @@ mod tests {
             ("Bombur, Gentle Dreamer", &[0x1A1E]),
             ("Tetsuo, Imperial Champion", &[0x1A1F]),
             ("Graviton, Fundamental Force", &[0x1A20]),
+            ("Breeches, Brazen Plunderer and Halana, Kessig Ranger", &[0x1A21]),
+            ("Keskit, the Flesh Sculptor and Malcolm, Keen-Eyed Navigator", &[0x1A22]),
+            ("Livio, Oathsworn Sentinel and Miara, Thorn of the Glade", &[0x1A23]),
+            ("Mabel, Bitter Recluse", &[0x1A24]),
+            ("Malcolm, Keen-Eyed Navigator and Slurrk, All-Ingesting", &[0x1A25]),
+            ("Miara, Thorn of the Glade and Nadier, Agent of the Duskenel", &[0x1A26]),
+            ("Sivriss, Nightmare Speaker and Haunted One", &[0x1A27]),
+            ("The Eighth Doctor and Adric, Mathematical Genius", &[0x1A28]),
+            ("Wyll, Blade of Frontiers and Haunted One", &[0x1A29]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
