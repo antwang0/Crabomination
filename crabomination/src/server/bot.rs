@@ -9545,6 +9545,17 @@ pub(super) fn cast_candidates<'a>(
             GameAction::CastForetold {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             }
+        } else if c.exiled_with.is_some() && state.linked_exile_counter_cast(seat, c).is_some() {
+            // Dawnhand Dissident's linked exiles: paid casts plus counters
+            // (`would_accept` checks the counters and the mana).
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
+            } else {
+                (None, vec![])
+            };
+            GameAction::CastFromZoneWithoutPaying {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            }
         } else {
             continue;
         };

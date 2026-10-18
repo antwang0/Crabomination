@@ -2706,6 +2706,12 @@ pub enum StaticEffect {
     /// `cast_from_zone_without_paying`; land plays through the grant share the
     /// engine-wide may-play land gap.
     PlayExiledWithSourceForLife,
+    /// "During your turn, you may cast creature spells from among cards you
+    /// own exiled with this creature by removing `counters` counters from
+    /// among creatures you control in addition to paying their other costs"
+    /// (Dawnhand Dissident). Read by `cast_from_zone_without_paying`
+    /// (`game/linked_exile_counter_cast.rs`).
+    CastLinkedExiledCreaturesForCounters { counters: u32 },
     /// "You may play lands and cast noncreature spells from among cards you
     /// exiled that have fetch counters on them, and you may spend mana as
     /// though it were mana of any color to cast those spells" (Haldan, Avid
@@ -5106,6 +5112,11 @@ pub struct ActivatedAbility {
     /// `Value::CountersOn { This, kind }` sees the new total.
     #[serde(default)]
     pub add_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// CR 701.68 — "Blight N" as an activation cost: put N -1/-1 counters
+    /// on a creature you control (Dawnhand Dissident). 0 = none. Paid with
+    /// the other non-mana costs (`game/blight_cost.rs`).
+    #[serde(default)]
+    pub blight_cost: u32,
     /// CR 602.5b — "Exile the top N cards of your library:" as an activation
     /// cost (Arc-Slogger). Gated on the library holding that many; paid after
     /// tap/mana but before the effect resolves.

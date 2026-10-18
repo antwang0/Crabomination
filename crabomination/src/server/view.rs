@@ -2665,6 +2665,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some((kind, n)) = ability.add_counter_cost.as_ref() {
         parts.push(format!("Put {n} {} counter(s) on this", counter_kind_label(kind)));
     }
+    if ability.blight_cost > 0 {
+        parts.push(format!("Blight {}", ability.blight_cost));
+    }
     if let Some(n) = ability.process_cost {
         parts.push(format!("Put {n} card(s) an opponent owns from exile into their graveyard"));
     }

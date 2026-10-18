@@ -1037,7 +1037,10 @@ impl GameState {
             .exile
             .iter()
             .chain(self.players.iter().flat_map(|p| p.graveyard.iter()))
-            .filter(|c| c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == caster)))
+            .filter(|c| {
+                c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == caster))
+                    || (c.exiled_with.is_some() && self.linked_exile_counter_cast(caster, c).is_some())
+            })
             .map(|c| {
                 let eff = &c.definition.effect;
                 (c.id, eff.requires_target().then(|| eff.clone()))

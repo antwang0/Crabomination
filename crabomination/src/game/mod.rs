@@ -145,6 +145,8 @@ mod jace_instant_loyalty;
 mod explore;
 mod same_defender;
 mod source_scoped_effects;
+mod blight_cost;
+mod linked_exile_counter_cast;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -35370,6 +35372,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayPlayCardsMilledThisTurn
             | StaticEffect::MayPlayOwnMilledPermanentOncePerTurn
             | StaticEffect::PlayExiledWithSourceForLife
+            | StaticEffect::CastLinkedExiledCreaturesForCounters { .. }
             | StaticEffect::PlayFetchCounteredExiles
             | StaticEffect::CommanderChoosesColorBeforeGame
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }

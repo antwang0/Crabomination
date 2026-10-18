@@ -15135,6 +15135,17 @@ impl GameState {
         // isn't free — the controller pays this cost instead of the card's
         // full mana cost.
         let mut alt_cast_cost = card_ref.granted_alt_cast_cost_eot.clone();
+        // Dawnhand Dissident — the card's own cost (taxed below like any paid
+        // cast) plus counters removed from among your creatures
+        // (`game/linked_exile_counter_cast.rs`).
+        let mut counter_toll = if zone == crate::card::Zone::Exile && card_ref.may_play_until.is_none() {
+            self.linked_exile_counter_cast(p, card_ref)
+        } else {
+            None
+        };
+        if counter_toll.is_some() && alt_cast_cost.is_none() {
+            alt_cast_cost = Some(card_ref.definition.cost.clone());
+        }
         // CR 601.2f — a grant that bills a real cost (an impulse `pay_own_cost`,
         // a miracle cost) is a paid cast: the caster's taxes and discounts
         // apply, as on `CastWithoutPayingImmediate`'s paid arm. Urianger's
@@ -15232,6 +15243,10 @@ impl GameState {
                     evidence_toll = Some(n);
                 } else if valgavoth_toll.is_some() {
                     // The life toll below stands in for the mana cost.
+                } else if let Some(n) = counter_toll {
+                    if self.creature_counters_controlled(p) < n {
+                        return Err(GameError::SelectionRequirementViolated);
+                    }
                 } else {
                     return Err(GameError::CardNotInHand(card_id));
                 }
@@ -15307,6 +15322,9 @@ impl GameState {
             Some(n) => self.collect_evidence_from_graveyard(p, n),
             None => Vec::new(),
         };
+        if let Some(n) = counter_toll.take() {
+            self.drain_creature_counters(p, n, &mut events);
+        }
         events.extend(self.cast_card_from_zone_spending(
             p,
             card_id,
@@ -23735,6 +23753,11 @@ impl GameState {
             }
         }
 
+        // CR 701.68 — a blight cost needs a creature to put the counters on.
+        if ability.blight_cost > 0 && !self.can_pay_blight(p) {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
         if let Some((kinds, count, filter)) = counter_drain_cost(ability) {
@@ -25088,6 +25111,11 @@ impl GameState {
                     count: scaled, placer: self.resolution_causer,
                 });
             }
+        }
+
+        // CR 701.68 — Blight N (`game/blight_cost.rs`), pre-flight checked.
+        if ability.blight_cost > 0 {
+            self.pay_blight(p, ability.blight_cost, events);
         }
 
         // Exile-top-of-library-as-cost (CR 602.5b — Arc-Slogger). Paid after
