@@ -529,3 +529,34 @@ fn bring_to_life_animates_an_artifact() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
     assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
 }
+
+/// Arcee, Acrobatic Coupe: a spell whose SECOND target is a creature you
+/// control still counts ("a spell that targets one or more creatures you
+/// control"), and the counters are "that many" — one here — before Arcee
+/// converts back.
+#[test]
+fn arcee_coupe_counts_every_target_slot() {
+    let mut g = pod(2);
+    let arcee = ready(&mut g, 0, catalog::arcee_sharpshooter());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(arcee);
+    let flip = crabomination::effect::Effect::Transform { what: crabomination::effect::Selector::This };
+    g.resolve_effect(&flip, &ctx).unwrap();
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let ws = g.add_card_to_hand(0, catalog::wicked_slumber());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ws,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![Target::Permanent(mine)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let a = g.battlefield_find(arcee).unwrap();
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(a.definition.name, "Arcee, Sharpshooter", "converted back");
+}

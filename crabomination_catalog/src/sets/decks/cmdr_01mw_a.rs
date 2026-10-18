@@ -937,3 +937,62 @@ pub fn built_to_last() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Arcee, Sharpshooter // Arcee, Acrobatic Coupe — {1}{R}{W} legendary 2/2
+/// first-strike Robot; More Than Meets the Eye {R}{W}. {1}, remove X ≥ 1
+/// +1/+1 counters: X damage to target creature, then convert. Back: 2/2
+/// living-metal Vehicle; a spell you cast targeting creatures or Vehicles you
+/// control puts that many +1/+1 counters on it, then converts it.
+pub fn arcee_sharpshooter() -> CardDefinition {
+    use crate::card::{ActivatedAbility, AlternativeCost, ArtifactSubtype, CounterType, Predicate};
+    let yours = || R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)).and(R::ControlledByYou);
+    let coupe = CardDefinition {
+        name: "Arcee, Acrobatic Coupe",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        color_indicator: vec![crate::mana::Color::Red, crate::mana::Color::White],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::LivingMetal],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellTargetsMatch(yours())),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CastSpellTargetsMatching(yours()),
+                },
+                Effect::Transform { what: Selector::This },
+            ]),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Arcee, Sharpshooter",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        alternative_cost: Some(AlternativeCost { mana_cost: cost(&[r(), w()]), converted: true, ..Default::default() }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            remove_counter_x: Some(CounterType::PlusOnePlusOne),
+            x_nonzero: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: crate::effect::shortcut::target_filtered(R::Creature),
+                    amount: Value::XFromCost,
+                },
+                Effect::Transform { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(coupe)),
+        ..Default::default()
+    }
+}

@@ -1567,6 +1567,7 @@ static DECKS: &[Factory] = &[
     super::decks::animating_faerie,
     super::decks::blinding_spray,
     super::decks::built_to_last,
+    super::decks::arcee_sharpshooter,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
