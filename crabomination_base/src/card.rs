@@ -3835,6 +3835,13 @@ pub enum SelectionRequirement {
     /// value X or less". `resolve_x` concretizes it; unresolved, it reads the
     /// source permanent's cast X.
     SlotsTotalManaValueAtMostX,
+    /// CR 601.2c / 115.3 — "up to one target artifact, up to one target
+    /// creature, … and/or up to one target land" (Chaotic Transformation),
+    /// written as one target group: the chosen targets must take distinct
+    /// types from the list, each a type it has (a matching). The positional
+    /// target list can't leave an earlier typed slot empty, so separate
+    /// optional slots couldn't name only a later one.
+    TargetsTakeDistinctTypeSlots(Vec<CardType>),
     /// Mana value == the X paid into the resolving spell/ability's cost.
     /// Resolved to a concrete `ManaValueExactly(x)` by `resolve_x` (Hearth
     /// Kami's "destroy target artifact with mana value X"); unresolved
@@ -4852,7 +4859,8 @@ impl SelectionRequirement {
             | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
-            | Self::SlotsTotalManaValueAtMostX => true,
+            | Self::SlotsTotalManaValueAtMostX
+            | Self::TargetsTakeDistinctTypeSlots(_) => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_cross_slot() || b.mentions_cross_slot()
             }
@@ -4876,7 +4884,8 @@ impl SelectionRequirement {
             | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
-            | Self::SlotsTotalManaValueAtMostX => Self::Any,
+            | Self::SlotsTotalManaValueAtMostX
+            | Self::TargetsTakeDistinctTypeSlots(_) => Self::Any,
             Self::And(a, b) => Self::And(Box::new(a.without_cross_slot()), Box::new(b.without_cross_slot())),
             Self::Or(a, b) => Self::Or(Box::new(a.without_cross_slot()), Box::new(b.without_cross_slot())),
             // "Not" of a cross atom: leave it to the slot-aware check.

@@ -138,6 +138,8 @@ mod ascend;
 mod storied;
 mod named_combat_damage;
 mod suspended_counter_cost;
+mod exile_reveal_shared;
+mod target_type_slots;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.

@@ -9612,6 +9612,12 @@ pub enum Effect {
     /// card type with it turns up, puts that card onto the battlefield, and
     /// shuffles.
     SacrificeThenRevealUntilSharedType { what: Selector },
+    /// The exile twin of `SacrificeThenRevealUntilSharedType` (Chaotic
+    /// Transformation): exile the permanent `what` resolves to; its controller
+    /// reveals from the top of their library until a card sharing a card type
+    /// with it, puts that card onto the battlefield, then shuffles
+    /// (`game/exile_reveal_shared.rs`).
+    ExileThenRevealUntilSharedType { what: Selector },
     /// Struggle for Sanity — the resolved opponent reveals their hand, then
     /// they and the controller alternate exiling one card each (they go first)
     /// until the hand is empty. Their picks return to hand; the controller's

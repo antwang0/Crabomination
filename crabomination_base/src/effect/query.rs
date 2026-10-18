@@ -2145,7 +2145,8 @@ impl Effect {
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
-            | Effect::SacrificeThenRevealUntilSharedType { what } => sel_has_target(what),
+            | Effect::SacrificeThenRevealUntilSharedType { what }
+            | Effect::ExileThenRevealUntilSharedType { what } => sel_has_target(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_has_target(who),
             Effect::ExileHandThenReclaimLinked => false,
@@ -2965,6 +2966,7 @@ impl Effect {
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
+            | Effect::ExileThenRevealUntilSharedType { what }
             | Effect::ExileFromGraveyardBecomeCopy { what }
             | Effect::BecomeCopyOfExiledCard { what, .. }
             | Effect::ReturnSameNameFromAllGraveyards { what }
@@ -5600,6 +5602,7 @@ impl Effect {
                 | Effect::GainKeywordsYourCreaturesHave { what, .. }
                     | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
+                | Effect::ExileThenRevealUntilSharedType { what }
                 | Effect::CounterAbilityAndDestroySource { what }
                 | Effect::CounterAbilityAndStripSource { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),

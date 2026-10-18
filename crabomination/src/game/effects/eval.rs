@@ -4709,6 +4709,7 @@ impl GameState {
                     && self.cross_slot_targets_ok(b, target, slots)
             }
             R::SlotsTotalManaValueAtMost(cap) => self.slots_total_mana_value_ok(*cap, target, slots),
+            R::TargetsTakeDistinctTypeSlots(types) => self.targets_take_distinct_type_slots(types, target, slots),
             // No source here: the X form is concretized by every caller
             // that has one (`resolve_x`); unresolved, only its own MV counts.
             R::SlotsTotalManaValueAtMostX => true,
@@ -5600,6 +5601,9 @@ impl GameState {
             // CR 601.2c — the slots chosen so far, stamped by the validator.
             R::SlotsTotalManaValueAtMost(cap) => {
                 self.slots_total_mana_value_ok(*cap, target, &self.target_slots_scratch)
+            }
+            R::TargetsTakeDistinctTypeSlots(types) => {
+                self.targets_take_distinct_type_slots(types, target, &self.target_slots_scratch)
             }
             R::SlotsTotalManaValueAtMostX => {
                 let cap = source.and_then(|s| self.find_card_anywhere(s)).map_or(0, |c| c.cast_x_value);
@@ -7386,6 +7390,8 @@ impl GameState {
             // No slots in scope: the candidate's own mana value is the floor.
             R::SlotsTotalManaValueAtMost(cap) => card.definition.cost.cmc() <= *cap,
             R::SlotsTotalManaValueAtMostX => false,
+            // No slots in scope: the card alone takes a type it has.
+            R::TargetsTakeDistinctTypeSlots(types) => types.iter().any(|t| card.definition.card_types.contains(t)),
             R::ManaValueEqualsTriggerAmount => {
                 card.definition.cost.cmc() == self.trigger_event_amount_scratch
             }

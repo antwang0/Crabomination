@@ -23107,6 +23107,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileThenRevealUntilSharedType { what } => {
+                self.resolve_exile_then_reveal_until_shared_type(what, ctx, events)
+            }
+
             Effect::SacrificeThenRevealUntilSharedType { what } => {
                 // Reweave. The shared-card-type filter is built from the
                 // sacrificed permanent's computed types, so an animated land
