@@ -3306,6 +3306,9 @@ pub enum StaticEffect {
     /// CR 702.173 — "[filter] spells you cast have freerunning [cost]" (Ezio
     /// Auditore da Firenze). Read by `granted_alternative_cost_in`.
     GrantFreerunningToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// CR 702.188 — "[filter] spells you cast have web-slinging [cost]"
+    /// (Amazing Spider-Man). Read by `granted_alternative_cost_in`.
+    GrantWebSlingingToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// CR 118.9 — "You may pay `energy` {E} rather than pay the mana cost for
     /// [filter] spells you cast" (Nissa, Worldsoul Speaker). Read by
     /// `effective_alternative_cost`.
@@ -3577,6 +3580,10 @@ pub enum StaticEffect {
     /// A declaration that leaves this controller unattacked is rejected while
     /// an able creature is idle or aimed at a seat no such static names.
     OpponentsMustAttackYouWithAtLeastOne,
+    /// CR 508.1d — on an Aura: "All creatures attack enchanted creature's
+    /// controller each combat if able" (Public Enemy). Read by
+    /// `GameState::public_enemies`.
+    AllCreaturesAttackEnchantedController,
     /// CR 508.1 — "Planeswalkers you control have 'No more than `n`
     /// creatures can attack this planeswalker each combat'" (Tomik, Orzhov
     /// Lawmage): the per-planeswalker sibling of `AttackerCapAgainstController`.

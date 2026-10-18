@@ -41,8 +41,32 @@ impl GameState {
     /// Rowan Kenrith's +2: every creature `p` controls attacks this turn if
     /// able — `p`'s first turn after it was set.
     pub(crate) fn side_attacks_if_able(&self, p: usize) -> bool {
-        self.active_player_idx == p
-            && self.players.get(p).and_then(|pl| pl.attacks_if_able_next_turn).is_some_and(|t| self.turn_number > t)
+        (self.active_player_idx == p
+            && self.players.get(p).and_then(|pl| pl.attacks_if_able_next_turn).is_some_and(|t| self.turn_number > t))
+            || !self.public_enemies(p).is_empty()
+    }
+
+    /// CR 508.1d — the players `p`'s creatures must attack because a Public
+    /// Enemy enchants a creature each controls: live opponents of `p` only
+    /// (a requirement that can't be met isn't one), one entry per Aura.
+    pub(crate) fn public_enemies(&self, p: usize) -> smallvec::SmallVec<[usize; 2]> {
+        let mut out = smallvec::SmallVec::new();
+        for c in self.battlefield.iter() {
+            let Some(host) = c.attached_to else { continue };
+            if !c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::AllCreaturesAttackEnchantedController)
+            }) {
+                continue;
+            }
+            if let Some(q) = self.battlefield_find(host).map(|h| h.controller)
+                && q != p
+                && !self.same_team(p, q)
+                && self.players.get(q).is_some_and(|pl| pl.is_alive())
+            {
+                out.push(q);
+            }
+        }
+        out
     }
 
     /// Whether any one-creature lure binds a creature of `p`'s this turn.

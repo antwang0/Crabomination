@@ -1444,6 +1444,9 @@ pub enum Value {
     /// The number of colors among permanents the controller controls and
     /// spells they've cast this turn (First Family).
     ColorsAmongYoursAndSpellsCastThisTurn,
+    /// The number of card types among spells the controller has cast this
+    /// turn (April O'Neil, Hacktivist), off `Player::spell_casts_this_turn`.
+    CardTypesAmongSpellsCastThisTurn,
     /// Converge value: the number of distinct colors of mana spent on the
     /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
     /// from `EffectContext.converged_value` here. Used by Prismatic

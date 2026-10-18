@@ -23,6 +23,7 @@ impl GameState {
                 score += 1;
             }
             score += self.attack_player_requirements.iter().filter(|&&(c, r)| c == id && r == q).count() as u32;
+            score += self.public_enemies(p).iter().filter(|&&r| r == q).count() as u32;
         }
         if let AttackTarget::Planeswalker(pw) = target {
             score += u32::from(self.attack_lure_of(p) == Some(pw));
@@ -56,6 +57,7 @@ impl GameState {
             || self.chosen_attack_player(p, id).is_some()
             || self.attack_lure_of(p).is_some()
             || self.creature_lure_of(p, id).is_some()
+            || !self.public_enemies(p).is_empty()
     }
 
     /// Every defender `id` can attack without breaking a restriction or

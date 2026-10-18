@@ -35143,6 +35143,7 @@ fn static_effect_to_effects(
             // declaration (`opponent_forces_an_attack`); no layer effect.
             | StaticEffect::OpponentsMustAttackWithAtLeastOne
             | StaticEffect::OpponentsMustAttackYouWithAtLeastOne
+            | StaticEffect::AllCreaturesAttackEnchantedController
             | StaticEffect::YourPlaneswalkersAttackerCap { .. }
             // Both cast-lock statics — read by `action_lock_rejection` /
             // `cast_from_zone_blocked`; no layer effect.
@@ -35747,6 +35748,7 @@ fn static_effect_to_effects(
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::GrantWarpToHandCards { .. }
             | StaticEffect::GrantFreerunningToSpells { .. }
+            | StaticEffect::GrantWebSlingingToSpells { .. }
             | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
             | StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(_)

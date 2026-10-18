@@ -2111,6 +2111,15 @@ impl GameState {
                 }
                 set.len() as i32
             }
+            Value::CardTypesAmongSpellsCastThisTurn => {
+                let mut set = crate::card::CardTypeSet::empty();
+                for cast in self.players.get(ctx.controller).into_iter().flat_map(|p| p.spell_casts_this_turn.iter()) {
+                    for t in cast.card_types.iter() {
+                        set.insert(&t);
+                    }
+                }
+                set.iter().count() as i32
+            }
             Value::DistinctColorsAmong(s) => {
                 let mut seen: crate::fxhash::HashSet<crate::mana::Color> =
                     crate::fxhash::HashSet::default();

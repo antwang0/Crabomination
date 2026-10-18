@@ -128,6 +128,15 @@ pub fn freerunning(mana_cost: crate::mana::ManaCost) -> crate::card::Alternative
         ..Default::default()
     }
 }
+/// Web-slinging (CR 702.188): cast for `mana_cost` and return a tapped
+/// creature you control to its owner's hand.
+pub fn web_slinging(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        return_to_hand: Some((crate::card::SelectionRequirement::Creature.and(crate::card::SelectionRequirement::Tapped), 1)),
+        ..Default::default()
+    }
+}
 pub fn dash(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, dash: true, ..Default::default() }
 }

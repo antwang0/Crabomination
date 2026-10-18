@@ -640,6 +640,22 @@ impl GameState {
         {
             return Some(crate::effect::shortcut::freerunning(cost));
         }
+        // CR 702.188 — Amazing Spider-Man: "each legendary spell you cast
+        // that's one or more colors has web-slinging {G}{W}{U}".
+        if let Some(card) = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id)
+            && let Some(cost) = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::GrantWebSlingingToSpells { filter, cost }
+                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        Some(crate::effect::shortcut::web_slinging(cost.clone()))
+                    }
+                    _ => None,
+                })
+            })
+        {
+            return Some(cost);
+        }
         // CR 702.74 — Ashling: "Elemental permanent spells you cast from
         // your hand gain evoke {4}".
         if let Some(granted) = self.granted_evoke(p, zone, card_id) {
