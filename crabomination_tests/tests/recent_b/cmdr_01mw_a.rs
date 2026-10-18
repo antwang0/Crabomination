@@ -560,3 +560,25 @@ fn arcee_coupe_counts_every_target_slot() {
     assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(a.definition.name, "Arcee, Sharpshooter", "converted back");
 }
+
+/// CR 608.2c / 101.2 — a free cast a lock forbids is skipped, not an error:
+/// under Codie, Vociferous Codex ("you can't cast permanent spells"),
+/// Improvisation Capstone resolves, casts the Shock it exiled and leaves the
+/// Hill Giant in exile (fresh-seed pod sweep 9209 aborted on this).
+#[test]
+fn cr_101_2_a_locked_free_cast_is_skipped() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::codie_vociferous_codex());
+    for def in [catalog::hill_giant(), catalog::shock()] {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, def);
+    }
+    let cap = g.add_card_to_hand(0, catalog::improvisation_capstone());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    let life = g.players[1].life;
+    cast(&mut g, cap);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Hill Giant"), "the permanent stays exiled");
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Hill Giant"));
+    assert_eq!(g.players[1].life, life - 2, "the Shock was cast");
+}

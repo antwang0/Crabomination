@@ -14927,6 +14927,14 @@ impl GameState {
                 return Ok(Vec::new());
             }
         }
+        // The same reading for the CR 101.2 locks that bind every zone — Codie's
+        // "you can't cast permanent spells" refused Improvisation Capstone's
+        // free permanent (fresh-seed pod sweep 9209, seed 922934).
+        if let Some(card) = self.find_card_anywhere(card_id)
+            && (self.cast_lock_for(p, card, u32::MAX).is_some() || self.spell_name_locked(p, card.definition.name))
+        {
+            return Ok(Vec::new());
+        }
         self.cast_card_from_zone_spending(
             p, card_id, source_zone, target, additional_targets, mode, x_value, exile_after, 0,
         )
