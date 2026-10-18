@@ -3149,6 +3149,29 @@ casts build one probe each (already built for the cost walk). `profiling-fast` b
 pods (audit)     seeds 9201-9207, every deck, 4/6/8 seats: 13,000+ games, 0 panics after the fixes
 ```
 
+### 2026-10-18 (Commander run, `019Y6J4R`) — guardrail; 188 seats, 144 cards, two engine fixes
+
+Hot-path touches: `ally_trigger_extra_fires`' presence gate peels each static through
+`active_static` (one match for an ungated static); a resolving permanent spell asks
+`apply_permanent_ascend` once more (two flag reads off a storied/ascend seat); each combat
+damage to a player asks `fire_named_creature_combat_damage_watchers` (one `any()` over the
+delayed triggers). `profiling-fast` bot_ladder, 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the 3chree
+                 tip; determinism ok (all pairs split); games_per_s 294.7 (box noise)
+pods (new seats) 3959-4054 in 4-seat pods (16 games each, seeds 39591-40481): every game
+                 decided, 0 panics
+random pods      all 4,054 seats, release: 4-seat 400 (seed 41001), 6-seat 120 (41101),
+                 8-seat 60 (41201) — 580 / 580 decided, 0 panics, stall rate 0
+clippy           workspace (client excluded) 0 warnings
+core_rules       2,776 / 2,776 incl. golden traces
+suite            27,761 run, 27,760 passed: the one red (Swordsman's own-creature attach
+                 slot, a pod-targeting regression from 59f063ed9) fixed and green
+precon pod test  cr_903_5a_the_official_precon_seats_play_pod_games, one game a seat over
+                 4,054 seats, alone under --cargo-profile overflow: pass, 316 s
+```
+
 ### 2026-10-17 (Commander run, `3chree`) — guardrail; ~105 seats, 135 cards
 
 Hot-path touches: `damage_scaling_in_scope` also asks each player's

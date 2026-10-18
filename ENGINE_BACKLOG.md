@@ -205,17 +205,35 @@ the handoff.
 - **Guardrails:** `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, determinism ok;
   cube/sos/sealed 2,400/1,500/3,600 two-player games (seed 52001) 0 undecided.
 
-## FIXED/OPEN 2026-10-17 (Commander run, `019Y6J4R`) — 60 closer cards, the cast-lock class
+## FIXED/OPEN 2026-10-17/18 (Commander run, `019Y6J4R`) — 144 closer cards, 188 seats, the cast-lock and wish classes
 
-- **Cards** in `decks::cmdr_019y_a`..`_e` (tests `recent_b/cmdr_019y_{a..e}.rs`), picked off a fresh 70-page
-  EDHREC scan plus the exact pair scan. **Closed from `3chree`'s open list:** Eater of Virtue, Gilt-Leaf Winnower.
+- **Cards** in `decks::cmdr_019y_a`..`_p` (decks4 part) and `cmdr_019y_woe` (Gadwick's First Duel — decks2, beside
+  `woe_roles`); tests `recent_b/cmdr_019y_{a..p}.rs`. Picked off a fresh 70-page EDHREC scan plus the exact pair
+  scan, then (batches K-P) every legal unseated deck whose **one** missing card was buildable from existing
+  primitives. **Closed from `3chree`'s open list:** Eater of Virtue, Gilt-Leaf Winnower.
 - **Seats** 3846-3847 (Hama Pashar and Moon-Boy — zero-gap singles nobody had seated), 3858-3879, 3888-3898,
-  3902-3925 and the batch-D seats: each after `cr_903_5a_target_decks_are_legal` and a 4-seat pod smoke.
+  3902-3958 (less the other sessions'), 3959-4054: each after `cr_903_5a_target_decks_are_legal` and 4-seat pod
+  smokes (every game decided). **Faceless One** pairs (Burakos, Dungeon Delver, Zellix) stay unseated: its
+  CR 903.4b color choice *is* modelled, but EDHREC's average mixes decks that chose different colors, so no one
+  choice makes the 100 cards legal (two seat commit messages say "not modelled" — they're wrong).
 - **Primitives:** `R::PowerToughnessUnequal`; `Effect::{LockOpponentsManaValueUntilYourNextTurn,
   DamageToPlayersAndBattlesPlusThisTurn (a `ColdState` field — `GameState` is at its 1,680-byte cap), ExileTopUntilNonlandWithSource, CopyCardsAndCastFreeTotalMv}`;
   `R::{mentions,resolve}_exiled_by_source_types` + `actions.rs::library_top_grant_covers` (the four library-top
   checks read a grant's filter source-blind); `PlayerCold.opponents_cant_cast_mv`;
-  `GameState.damage_to_players_bonus_this_turn`.
+  `GameState.damage_to_players_bonus_this_turn`; `Effect::NameCardThenNamedCreatureCombatDamageThisTurn` +
+  `DelayedKind::NamedCreatureDealsCombatDamageToPlayerThisTurn` (`game/named_combat_damage.rs`, The Clone Saga III);
+  `Effect::WishToHandOrFaceUpExile`.
+- **FIXED (CR 400.11):** `Effect::WishToHand` also took the caster's face-up exiled cards (Karn, the Great Creator's
+  clause) for every wish — Burning Wish and the Judgment wishes, Death Wish, Ring of Ma'rûf, Mastermind's
+  Acquisition. Karn alone keeps it now (`WishToHandOrFaceUpExile`).
+- **FIXED (engine):** a trigger doubler behind a `WhileCondition` gate never counted (`ally_trigger_extra_fires` read
+  raw static effects; it peels gates through `active_static` now — Bifur); and a permanent spell latched
+  storied/ascend only when its entry events dispatched, after its own ETB multiplier was read (the latch runs as it
+  lands now).
+- **FIXED (build):** `5a3c1b1ed` (another session's pod-invariant edit) dropped the `#[cfg(debug_assertions)]` on
+  the `check_commanders` call, so every optimized build failed (E0425) — and a smoke script that ignores the build's
+  exit status then runs the stale binary. `98e8922b5` restores the gate (its message misnames `9137a8592`). Guard
+  smoke scripts with `test target/release/bot_ladder -nt <a changed source>`.
 - **FIXED (bug class, CR 101.2):** the cast locks lived inline in the hand path only. A commander cast from the
   command zone, an alternative-cost cast (pitch spells; a commander's alt cost), flashback / escape / foretell /
   retrace / harmonize / flashback-tap and the may-play / free-cast path asked none of Cease-Fire, Ranger-Captain,
@@ -235,10 +253,17 @@ the handoff.
   revealed outside-game cards — a no-op in Commander, CR 903.11); combat damage to a **battle** has no
   `EventKind` (Rankle and Torbran joins Beamtown Beatstick's INCOMPLETE_CARDS row). Veiling Oddity (no "last time counter removed while exiled" event). Not attempted: Invasion of
   New Phyrexia, Teferi's Talent, Wizard's Spellbook, Beamsplitter Mage, Cryptic Spires.
-- **OPEN (bot):** a two-slot "any target and any other target" trigger (The Brothers' War III) had the
-  auto-picker aim slot 1 at its own controller in a 2-seat test once slot 0 took the opponent — the
-  "a hostile slot never falls back onto the caster's own face" guard in `auto_targets_for_effect_all_slots_x`
-  didn't hold on the saga-chapter path. The card test resolves III with named targets.
+- **Closed by `01HPYxiB` (bot):** The Brothers' War III's "slot 1 at its own controller" is the two-seat baseline
+  profile's caster-first default with `hostile_player_targets` off; pods are hostile (its section has the reason).
+- **FIXED (bot, regression):** `59f063ed9`'s optional-hostile-slot rule also starved slots only your own objects can
+  fill (Attach classes hostile — Swordsman, Sharp Scoundrel's "to target creature you control" attached nothing in
+  pods). `R::mentions_controlled_by_you` exempts them.
+- **Released claims (each needs a primitive):** Cryptic Spires (a deck-construction "circle two colors" choice — a
+  mana payload the planner would have to know); Grub, Storied Matriarch // Grub's Command (Notorious Auntie's
+  "blight 1; copy the blighted creature" needs the blighted creature exposed). Still open from the batch-J+ scan,
+  each 2-3 decks: Brine Comber ("becomes the target of an Aura spell" — `BecameTarget` doesn't see the spell's
+  types), Musician (a permanently granted upkeep trigger keyed on music counters), Invasion of New Phyrexia,
+  Wizard's Spellbook, Beamsplitter Mage, Synthesis Pod, Threats Undetected, Balduvian Warlord, Zur's Weirding.
 - ⚠ **Myra's Marvels partners (Nocturno, Ignacio, Hardy, Fluros) are not Commander-legal** — the pair scan's
   biggest "blockers" (61 pair decks) can never seat. Several other one-gap commanders are Unfinity / acorn too
   (Sahir, Claire D'Loon, D00-DL, Brad Boimler, Devil K. Nevil, Truss, Solaflora, Tolabow, Rusko, Itazura) —
