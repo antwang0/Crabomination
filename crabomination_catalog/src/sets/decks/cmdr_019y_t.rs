@@ -475,3 +475,35 @@ pub fn brine_comber() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Scientist Supreme of A.I.M. — {U}{B} legendary 2/2 Human Scientist Villain.
+/// Pay 2 life: copy target activated or triggered ability you control from an
+/// artifact source; you may choose new targets for the copy (CR 707.10).
+/// Activate only during your turn and only once each turn.
+pub fn scientist_supreme_of_a_i_m() -> CardDefinition {
+    CardDefinition {
+        name: "Scientist Supreme of A.I.M.",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scientist, CreatureType::Villain],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 2,
+            once_per_turn: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::CopyAbility {
+                what: crate::effect::shortcut::target_filtered(
+                    R::HasAbilityOnStack.and(R::Artifact).and(R::ControlledByYou),
+                ),
+                times: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

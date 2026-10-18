@@ -507,3 +507,48 @@ fn brine_comber_makes_spirits_from_aura_spells() {
     drain_stack(&mut g);
     assert_eq!(spirits(&g), 2, "enchanted creature targeted by an Aura spell");
 }
+
+/// CR 707.10 — Scientist Supreme copies Ichor Wellspring's enters trigger
+/// (an artifact source): two cards drawn instead of one, for 2 life.
+#[test]
+fn scientist_supreme_copies_an_artifact_trigger() {
+    let mut g = pod(2);
+    let sci = ready(&mut g, 0, catalog::scientist_supreme_of_a_i_m());
+    let well = g.add_card_to_hand(0, catalog::ichor_wellspring());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell { card_id: well, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    // Resolve the artifact spell; its enters trigger waits on the stack.
+    g.perform_action(GameAction::PassPriority).ok();
+    g.perform_action(GameAction::PassPriority).ok();
+    let well_id = g.battlefield.iter().find(|c| c.definition.name == "Ichor Wellspring").map(|c| c.id).expect("entered");
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sci, ability_index: 0, target: Some(Target::Permanent(g.top_ability_of(well_id).expect("its trigger"))),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("copy the trigger");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the trigger and its copy");
+
+    // An enchantment's trigger (Elemental Bond) isn't from an artifact source.
+    let mut g = pod(2);
+    let sci = ready(&mut g, 0, catalog::scientist_supreme_of_a_i_m());
+    let bond = ready(&mut g, 0, catalog::elemental_bond());
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.perform_action(GameAction::CastSpell { card_id: giant, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.perform_action(GameAction::PassPriority).ok();
+    g.perform_action(GameAction::PassPriority).ok();
+    let ability = g.top_ability_of(bond).expect("Bond's trigger");
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sci, ability_index: 0, target: Some(Target::Permanent(ability)), additional_targets: vec![], x_value: None, mode: None,
+        })
+        .is_err(),
+        "not an artifact source"
+    );
+}
