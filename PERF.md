@@ -3136,6 +3136,24 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-18 (Commander run, `01MWhJbe`) — guardrail; 52 seats, 84 cards, seven engine primitives
+
+Hot-path touches: `scale_damage_to` reads one more static arm behind the presence gate; `AddCounter`
+on a Permanent ref asks one more `exile` probe only when the battlefield lookup missed; the step
+machine reads two more `ColdState` words at End of Combat / Draw; `cast_card_for_free` asks the
+cast-lock walk once per free cast; `CastSpellTargetsMatch` walks every target slot. `release`
+bot_ladder (thin LTO, cgu 1), 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+                 (all pairs split); games_per_s 266.6 (release, box noise)
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 52101): 0 undecided, 0 panics
+pods (release)   4 / 6 / 8 seats x 600 (seeds 41674/6/8): 1,800/1,800 decided
+pods (audit)     seeds 9208-9214 (4/6/8 seats, every deck) + 9211-9213 on seats 4093-4151:
+                 ~11,500 games; 3 aborts, all fixed (two bugs); undecided 0.22-0.27 % (CR 104.4
+                 draws, two board caps, the Naru Meha + Ghostly Flicker optional loop)
+```
+
 ### 2026-10-18 (Commander run, `01HPYxiB`) — guardrail; rules/bot fixes, no cards
 
 Hot-path touches: `fire_combat_damage_triggers`' kind match reads one more `EventSpec` bool on a battle
