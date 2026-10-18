@@ -6500,10 +6500,13 @@ impl GameState {
                         if card.is_token {
                             continue; // tokens cease to exist (CR 111.7)
                         }
-                        card.counters.clear();
-                        card.attached_to = None;
-                        // CR 903.9b — a commander may go home instead.
+                        // CR 400.7 — a new object in the library: untapped,
+                        // no counters, nothing battlefield-only.
                         let lib = crate::card::Zone::Library;
+                        card.tapped = false;
+                        card.leave_battlefield_state();
+                        card.drop_counters_for_zone_change(lib);
+                        // CR 903.9b — a commander may go home instead.
                         if let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Battlefield, lib) {
                             self.players[p].library.push(card);
                         }

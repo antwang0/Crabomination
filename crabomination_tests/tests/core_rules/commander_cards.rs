@@ -2459,3 +2459,26 @@ fn a_locked_hideaway_cast_does_nothing() {
     g.resolve_effect(&eff, &ctx).expect("a lock is a no-op, not an error");
     assert!(g.exile.iter().any(|c| c.id == bolt), "the Bolt stays hidden");
 }
+
+/// CR 400.7 — Glimpse of Tomorrow's shuffled-in permanents are new objects:
+/// a tapped commander waiting in the library on its owner's CR 903.9b answer
+/// is untapped there (a pod game found a tapped Vega, the Watcher in
+/// a library, seed 922200).
+#[test]
+fn glimpse_of_tomorrow_shuffles_in_new_objects() {
+    use crabomination::effect::Effect;
+    let mut g = commander_game();
+    let cmd = commander_on_the_battlefield(&mut g);
+    g.battlefield_find_mut(cmd).unwrap().tapped = true;
+    for _ in 0..60 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    // A prompting owner is asked after the move, so the card waits in the library.
+    g.players[0].wants_ui = true;
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(&Effect::GlimpseOfTomorrow, &ctx).expect("glimpse");
+    let c = g.players[0].library.iter().chain(g.battlefield.iter()).find(|c| c.id == cmd);
+    assert!(c.is_some(), "the commander waits in the library or re-entered");
+    assert!(c.is_none_or(|c| !c.tapped), "the commander kept its tapped state");
+}
