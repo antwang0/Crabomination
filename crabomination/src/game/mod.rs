@@ -25288,6 +25288,33 @@ impl GameState {
                 self.push_stack(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).target(dt.target.clone()).build());
             }
         }
+        // Delif's Cone — "when [it] attacks and isn't blocked" this turn: once.
+        if batch_bits & const { crate::effect::EventKind::AttacksAndIsntBlocked.bit() } != 0
+            && self
+                .delayed_triggers
+                .iter()
+                .any(|dt| matches!(dt.kind, DelayedKind::WhenCardAttacksUnblockedThisTurn(_)))
+        {
+            let unblocked = |cid: CardId| {
+                events.iter().any(|e| matches!(e, GameEvent::AttackerWentUnblocked { attacker } if *attacker == cid))
+            };
+            let fired: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, DelayedKind::WhenCardAttacksUnblockedThisTurn(cid) if unblocked(cid)))
+                .cloned()
+                .collect();
+            self.delayed_triggers
+                .retain(|dt| !matches!(dt.kind, DelayedKind::WhenCardAttacksUnblockedThisTurn(cid) if unblocked(cid)));
+            for dt in fired {
+                let DelayedKind::WhenCardAttacksUnblockedThisTurn(cid) = dt.kind else { continue };
+                self.push_stack(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(cid)))
+                        .build(),
+                );
+            }
+        }
         // "Until end of turn, whenever a [filter] creature blocks, …"
         // (Benefactor's Draught). `Blocks` is reached by `BlockerDeclared`
         // alone, so its bit is the scan; one trigger per declared blocker.
@@ -35438,6 +35465,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfYourGraveyardArtifacts
             | StaticEffect::HasActivatedAbilitiesOfYourGraveyardMatching { .. }
             | StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
+            | StaticEffect::HasActivatedAbilitiesOfControlledLegendaryCreatures
             | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfBattlefieldLands

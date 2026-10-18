@@ -513,6 +513,7 @@ impl Effect {
             | Effect::WhenSourceDiesThisTurn { body }
             | Effect::WhenTargetDies { body, .. }
             | Effect::WhenTargetAttacksOpponentThisTurn { body, .. }
+            | Effect::WhenTargetAttacksUnblockedThisTurn { body, .. }
             | Effect::DamageCantBePrevented { body }
             | Effect::CreaturesYouControlEnteringThisTurn { body, .. }
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { body, .. }
@@ -935,6 +936,7 @@ impl Effect {
             | Effect::LockOpponentsManaValueUntilYourNextTurn { .. }
             | Effect::DamageToPlayersAndBattlesPlusThisTurn { .. }
             | Effect::ClearLastMoved
+            | Effect::RemoveCountersOfKindAmongUpTo { .. }
             | Effect::NoteSpentManaTypeOnSource
             | Effect::LicidDetach
             | Effect::SearchEachBasicLandType { .. }
@@ -2404,7 +2406,8 @@ impl Effect {
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. }
             | Effect::WhenTargetDies { .. }
-            | Effect::WhenTargetAttacksOpponentThisTurn { .. } => true,
+            | Effect::WhenTargetAttacksOpponentThisTurn { .. }
+            | Effect::WhenTargetAttacksUnblockedThisTurn { .. } => true,
             Effect::WhenSourceDiesThisTurn { .. } => false,
             // Needs a creature to watch for damage (Paladin's Forecast).
             Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }
@@ -3309,7 +3312,9 @@ impl Effect {
             Effect::WhenTargetDiesThisTurn { filter, .. } => {
                 filter.as_ref().or(Some(&SelectionRequirement::Creature))
             }
-            Effect::WhenTargetDies { .. } | Effect::WhenTargetAttacksOpponentThisTurn { .. } => {
+            Effect::WhenTargetDies { .. }
+            | Effect::WhenTargetAttacksOpponentThisTurn { .. }
+            | Effect::WhenTargetAttacksUnblockedThisTurn { .. } => {
                 Some(&SelectionRequirement::Creature)
             }
             Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }

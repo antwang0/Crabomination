@@ -9340,6 +9340,11 @@ pub enum Effect {
     /// (CR 122.6 — Price of Betrayal's "artifact, creature, planeswalker, or
     /// opponent"). Fewer than `amount` present removes all of them.
     RemoveCountersUpTo { what: Selector, amount: Value },
+    /// "You may remove up to `max` `kind` counters from among all permanents
+    /// [matching `filter`]" (Sensational Spider-Man's stun counters): the
+    /// headless pick takes them off the controller's own permanents first,
+    /// then anyone's; the count lands on `Value::CountersRemovedThisEffect`.
+    RemoveCountersOfKindAmongUpTo { kind: crate::card::CounterType, max: Value, filter: SelectionRequirement },
     /// Set the loyalty (CR 606) of `what` to `value` — a loyalty-set effect
     /// ("its loyalty becomes …" / "reset to its starting loyalty"). Overwrites
     /// the `Loyalty` counter count outright rather than adding/removing.
@@ -12439,6 +12444,10 @@ pub enum Effect {
     /// "Whenever [target creature] attacks one of your opponents this turn,
     /// [body]" (Maeve, Insidious Singer): watches `ctx.targets[slot]`.
     WhenTargetAttacksOpponentThisTurn { body: Box<Effect>, slot: usize },
+    /// "This turn, when [the creature in target slot `slot`] attacks and
+    /// isn't blocked, [body]" (Delif's Cone): fires once, on its
+    /// `AttackerWentUnblocked`; the creature is `Selector::TriggerSource`.
+    WhenTargetAttacksUnblockedThisTurn { body: Box<Effect>, slot: usize },
     /// "When that creature dies, [body]" with no "this turn" — the
     /// untimed `WhenTargetDiesThisTurn` (Xira, the Golden Sting's egg). The
     /// watch outlives cleanup; the dead creature is the body's trigger source.

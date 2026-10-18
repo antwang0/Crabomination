@@ -21115,6 +21115,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveCountersOfKindAmongUpTo { kind, max, filter } => {
+                let mut left = self.evaluate_value(max, ctx).max(0) as u32;
+                let mut holders: Vec<(bool, CardId)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.counter_count(*kind) > 0)
+                    .filter(|c| self.evaluate_requirement_static(filter, &crate::game::Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .map(|c| (c.controller != ctx.controller, c.id))
+                    .collect();
+                holders.sort();
+                for (_, cid) in holders {
+                    if left == 0 {
+                        break;
+                    }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        let taken = c.remove_counters(*kind, left);
+                        if taken > 0 {
+                            left -= taken;
+                            self.counters_removed_this_effect += taken;
+                            events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: *kind, count: taken });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RemoveAllCounters { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
@@ -35572,6 +35598,23 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: false,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::WhenTargetAttacksUnblockedThisTurn { body, slot } => {
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned() {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        kind: crate::game::types::DelayedKind::WhenCardAttacksUnblockedThisTurn(cid),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
                         expires_after_turn: None,
                     });
                 }

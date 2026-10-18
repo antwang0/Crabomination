@@ -1315,6 +1315,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::HasActivatedAbilitiesOfYourGraveyardArtifacts
             | SE::HasActivatedAbilitiesOfYourGraveyardMatching { .. }
             | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
+            | SE::HasActivatedAbilitiesOfControlledLegendaryCreatures
             | SE::HasActivatedAbilitiesOfOpponentCreatures
             | SE::HasActivatedAbilitiesOfCounteredCreatures
             | SE::HasActivatedAbilitiesOfGraveyardLands
@@ -20910,7 +20911,7 @@ impl GameState {
         // one pass per block below.
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
-        let (mut drana, mut refractor, mut trazyn) = (false, false, false);
+        let (mut drana, mut refractor, mut trazyn, mut robaran) = (false, false, false, false);
         let mut gy_filters: Vec<&crate::card::SelectionRequirement> = Vec::new();
         let mut caged: Option<crate::card::CounterType> = None;
         let mut brained: Option<crate::card::CounterType> = None;
@@ -20932,6 +20933,7 @@ impl GameState {
                 StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures => {
                     marvin = true
                 }
+                StaticEffect::HasActivatedAbilitiesOfControlledLegendaryCreatures => robaran = true,
                 StaticEffect::HasActivatedAbilitiesOfCounteredCreatures => kraj = true,
                 StaticEffect::HasActivatedAbilitiesOfOpponentCreatures => drana = true,
                 StaticEffect::HasActivatedAbilitiesOfGraveyardLands => safehouse = true,
@@ -21103,6 +21105,21 @@ impl GameState {
             for other in &self.battlefield {
                 if other.controller != seat
                     || other.definition.name == name
+                    || !self.computed_is_creature(other)
+                {
+                    continue;
+                }
+                out.extend(other.definition.activated_abilities.iter());
+            }
+        }
+        // Robaran Mercenaries — every activated ability of each legendary
+        // creature its controller controls.
+        if robaran {
+            let seat = me.controller;
+            for other in &self.battlefield {
+                if other.controller != seat
+                    || other.id == card_id
+                    || !other.definition.supertypes.contains(&crate::card::Supertype::Legendary)
                     || !self.computed_is_creature(other)
                 {
                     continue;

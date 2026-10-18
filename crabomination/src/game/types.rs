@@ -1404,6 +1404,8 @@ pub enum DelayedKind {
     /// creature attacks a player who is an opponent of the watcher. Swept at
     /// cleanup with the other "this turn" kinds.
     WhenCardAttacksOpponentThisTurn(crate::card::CardId),
+    /// Delif's Cone — "when [it] attacks and isn't blocked" this turn.
+    WhenCardAttacksUnblockedThisTurn(crate::card::CardId),
     /// `Effect::OnMatchingBlocksThisTurn` — fires per declared blocker that
     /// matches; the blocker is the trigger source. Expires at cleanup.
     MatchingCreatureBlocksThisTurn(crate::card::SelectionRequirement),

@@ -3469,6 +3469,9 @@ pub enum StaticEffect {
     /// battlefield sibling of `HasActivatedAbilitiesOfGraveyardCreatures`;
     /// also surfaced by `granted_abilities_for`.
     HasActivatedAbilitiesOfOtherNamedControlledCreatures,
+    /// Robaran Mercenaries — "has all activated abilities of all legendary
+    /// creatures you control"; Marvin's sibling over a supertype.
+    HasActivatedAbilitiesOfControlledLegendaryCreatures,
     /// Drana and Linvala — "has all activated abilities of all creatures your
     /// opponents control." The opponents' sibling of
     /// `HasActivatedAbilitiesOfOtherNamedControlledCreatures`; also surfaced
