@@ -44492,7 +44492,17 @@ impl GameState {
 
             Effect::AdditionalBeginningPhase { count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
-                self.additional_beginning_phases = self.additional_beginning_phases.saturating_add(n);
+                if n == 0 {
+                    return Ok(());
+                }
+                // CR 500.8 — "after this phase": created during combat, the
+                // extra beginning phase follows the combat phase.
+                if self.step.is_combat_phase() {
+                    self.additional_beginning_phases_after_combat =
+                        self.additional_beginning_phases_after_combat.saturating_add(n);
+                } else {
+                    self.additional_beginning_phases = self.additional_beginning_phases.saturating_add(n);
+                }
                 Ok(())
             }
 

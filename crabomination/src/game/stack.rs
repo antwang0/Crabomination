@@ -629,9 +629,22 @@ impl GameState {
             self.in_additional_beginning_phase = true;
             next = TurnStep::Untap;
         }
+        if next == TurnStep::PostCombatMain
+            && self.step == TurnStep::EndCombat
+            && self.additional_beginning_phases_after_combat > 0
+        {
+            self.additional_beginning_phases_after_combat -= 1;
+            self.in_additional_beginning_phase = true;
+            self.additional_beginning_returns_to_main = true;
+            next = TurnStep::Untap;
+        }
         if self.step == TurnStep::Draw && self.in_additional_beginning_phase {
             self.in_additional_beginning_phase = false;
-            next = TurnStep::End;
+            next = if std::mem::take(&mut self.additional_beginning_returns_to_main) {
+                TurnStep::PostCombatMain
+            } else {
+                TurnStep::End
+            };
         }
 
         // CR 500.7 — additional end step. When the active player leaves the
@@ -5731,9 +5744,15 @@ impl GameState {
         self.upkeep_steps_this_turn = 0;
         // Cold state: only written when set, so an ordinary turn doesn't
         // unshare it.
-        if self.additional_beginning_phases != 0 || self.in_additional_beginning_phase {
+        if self.additional_beginning_phases != 0
+            || self.in_additional_beginning_phase
+            || self.additional_beginning_phases_after_combat != 0
+            || self.additional_beginning_returns_to_main
+        {
             self.additional_beginning_phases = 0;
             self.in_additional_beginning_phase = false;
+            self.additional_beginning_phases_after_combat = 0;
+            self.additional_beginning_returns_to_main = false;
         }
         if !self.deaths.graveyard_from_battlefield_this_turn.is_empty() {
             self.deaths.graveyard_from_battlefield_this_turn.clear();

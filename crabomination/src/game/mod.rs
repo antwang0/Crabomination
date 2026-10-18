@@ -1723,6 +1723,15 @@ pub struct ColdState {
     /// True between an additional beginning phase's untap and draw steps.
     #[serde(default)]
     pub in_additional_beginning_phase: bool,
+    /// CR 500.8 — additional beginning phases banked during combat ("after
+    /// this phase", Cyclonus): run when combat ends, then the turn resumes at
+    /// the postcombat main. Reset at cleanup.
+    #[serde(default)]
+    pub additional_beginning_phases_after_combat: u32,
+    /// The running additional beginning phase came out of combat, so its draw
+    /// step leads into the postcombat main rather than the end phase.
+    #[serde(default)]
+    pub additional_beginning_returns_to_main: bool,
     /// The permanent the last activation exiled for its
     /// `exile_permanent_cost` — `Selector::ExiledForCost` (Curie).
     #[serde(default)]
