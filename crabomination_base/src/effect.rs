@@ -1276,7 +1276,8 @@ pub enum Value {
     SacrificedManaValue,
     /// Mana value of the permanent exiled to pay this activation's
     /// `ActivatedAbility::exile_permanent_cost` (Food Chain), or of the
-    /// Equipment its `unattach_equipment_cost` detached (Captain America).
+    /// Equipment its `unattach_equipment_cost` detached (Captain America), or
+    /// of the spell its `exile_spell_cost` took off the stack (Synthesis Pod).
     ExiledForCostManaValue,
     /// Number of cards in *every* graveyard sharing the resolving source's
     /// name (Accumulated Knowledge).

@@ -37240,7 +37240,11 @@ impl GameState {
                     };
                     Some(find.resolve_target_card_types(&types))
                 } else {
-                    None
+                    // "Mana value equal to 1 plus …" read through `WithX`
+                    // (Synthesis Pod): the X atoms are concretized here, as the
+                    // cast-time filters are, or they never match.
+                    let x = find.resolve_x(ctx.x_value);
+                    (x != *find).then_some(x)
                 };
                 let find: &SelectionRequirement = dynamic_find.as_ref().unwrap_or(find);
                 // Concretize source-power-relative gates (Velomachus

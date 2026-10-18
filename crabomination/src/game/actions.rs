@@ -25443,7 +25443,10 @@ impl GameState {
             && let StackItem::Spell { card, .. } = self.stack.remove(pos)
         {
             // The spell leaves the stack without resolving; it isn't
-            // "countered" (no counter-a-spell payoff should fire).
+            // "countered" (no counter-a-spell payoff should fire). Its mana
+            // value rides `Value::ExiledForCostManaValue` (Synthesis Pod's
+            // "1 plus the exiled spell's mana value").
+            self.exiled_for_cost_mana_value = Some(card.definition.cost.cmc() as i32);
             self.exile.push(*card);
             self.players[p].cards_exiled_this_turn =
                 self.players[p].cards_exiled_this_turn.saturating_add(1);
