@@ -2387,3 +2387,22 @@ fn cone_of_flame_spreads_over_the_pods_opponents() {
     all.sort_by_key(|t| format!("{t:?}"));
     assert_eq!(all, vec![Target::Player(1), Target::Player(2), Target::Player(3)]);
 }
+
+/// CR 800.4a — a player who left the game is not "among all players": Repay
+/// in Kind sets the remaining players to the lowest *remaining* life total.
+/// It read the departed seat's negative total, and in two pod games (seeds
+/// 921412, 924036) set every remaining player to it, drawing the game.
+#[test]
+fn repay_in_kind_ignores_a_departed_players_life() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = multi_player_game(3);
+    g.players[2].life = -5;
+    g.concede(2);
+    g.players[0].life = 20;
+    g.players[1].life = 7;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    let eff = Effect::SetLifeTotal { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::LowestLifeTotal };
+    g.resolve_effect(&eff, &ctx).expect("repay");
+    assert_eq!((g.players[0].life, g.players[1].life), (7, 7));
+}

@@ -2447,9 +2447,11 @@ impl GameState {
             Value::LifeAtTurnStart(p) => {
                 self.resolve_player(p, ctx).map(|p| self.players[p].life_at_turn_start).unwrap_or(0)
             }
+            // CR 800.4a — a player who left the game isn't "among all players".
             Value::LowestLifeTotal => self
                 .players
                 .iter()
+                .filter(|p| p.is_alive())
                 .map(|p| p.life)
                 .min()
                 .unwrap_or(0),
