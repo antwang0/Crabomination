@@ -1104,6 +1104,19 @@ impl GameState {
                 };
                 if is_legal(&player_first) && !taken(&player_first) {
                     found = Some(player_first);
+                } else if let Some(t) = hostile
+                    .then(|| {
+                        // CR 102.2 — at N seats a hostile slot the first
+                        // opponent can't take ("any other target") names the
+                        // next opponent, not the caster's own face.
+                        self.opponents_of(controller)
+                            .into_iter()
+                            .map(Target::Player)
+                            .find(|t| *t != player_first && is_legal(t) && !taken(t))
+                    })
+                    .flatten()
+                {
+                    found = Some(t);
                 } else if is_legal(&player_second)
                     && !taken(&player_second)
                     && (second == controller || !gift())

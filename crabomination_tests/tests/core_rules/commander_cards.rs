@@ -2371,3 +2371,19 @@ fn drakuseths_optional_slots_never_aim_at_its_controller() {
     assert_eq!(g.players[1].life, life.1 - 4, "4 to the opponent");
     assert!(g.battlefield_find(bear).is_some(), "nor to its own board");
 }
+
+/// CR 102.2 / 601.2c — at four seats Cone of Flame's "another target" and "a
+/// third target" name the other opponents, not nobody (the picker only ever
+/// tried the first opponent and the caster, so with empty boards the bot had
+/// no legal cast) and never the caster's own face.
+#[test]
+fn cone_of_flame_spreads_over_the_pods_opponents() {
+    let mut g = multi_player_game(4);
+    g.players[0].hostile_player_targets = true;
+    let cone = g.add_card_to_hand(0, catalog::cone_of_flame());
+    let eff = g.players[0].hand.iter().find(|c| c.id == cone).unwrap().definition.effect.clone();
+    let (first, rest) = g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, Some(cone), None);
+    let mut all: Vec<Target> = first.into_iter().chain(rest).collect();
+    all.sort_by_key(|t| format!("{t:?}"));
+    assert_eq!(all, vec![Target::Player(1), Target::Player(2), Target::Player(3)]);
+}
