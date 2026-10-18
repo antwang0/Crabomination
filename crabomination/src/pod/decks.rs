@@ -117717,3 +117717,61 @@ pub const GARZA_ZOL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SCIENTIST_SUPREME_OF_A_I_M_COMMANDERS: &[CardFactory] = &[scientist_supreme_of_a_i_m];
+
+/// **Scientist Supreme of A.I.M.**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 10 Islands + 8 Swamps = 99.
+/// Scientist Supreme of A.I.M. (EDHREC, fetched 2026-10-18).
+pub const SCIENTIST_SUPREME_OF_A_I_M_MAIN: &[CardFactory] = &[
+    arcane_signet, chimil_the_inner_sun, cryogen_relic, demonic_junker, dimir_signet,
+    fellwar_stone, insight_engine, lichs_relic, liquimetal_torque, mind_stone, mystic_forge,
+    peter_parkers_camera, portal_to_phyrexia, repurposing_bay, sculpting_steel,
+    simulacrum_synthesizer, sol_ring, talisman_of_dominance, the_millennium_calendar,
+    the_one_ring, time_sieve, tithing_blade, uthros_research_craft, wayfarers_bauble,
+    wishclaw_talisman, academy_ruins, archway_of_innovation, command_tower, darksteel_citadel,
+    drowned_catacomb, inventors_fair, mistvault_bridge, morphic_pool, polluted_delta,
+    seat_of_the_synod, shipwreck_marsh, sunken_hollow, tainted_isle, underground_river,
+    urzas_saga, vault_of_whispers, watery_grave, auton_soldier, baleful_strix, burnished_hart,
+    chrome_dome, emry_lurker_of_the_loch, etherium_sculptor, forensic_gadgeteer,
+    foundry_inspector, iron_man_bleeding_edge, kappa_cannoneer, marvin_murderous_mimic,
+    master_transmuter, noxious_gearhulk, pactdoll_terror, phyrexian_metamorph,
+    sai_master_thopterist, scrap_trawler, shuri_wakandan_inventor, solemn_simulacrum,
+    thought_monitor, ultron_artificial_malevolence, urza_lord_high_artificer, mystic_remora,
+    rhystic_study, an_offer_you_cant_refuse, arcane_denial, counterspell, dark_ritual,
+    deadly_rollick, fell_the_profane, scour_for_scrap, sink_into_stupor, swan_song,
+    whir_of_invention, tezzeret_cruel_captain, fabricate, feed_the_swarm, thoughtcast,
+    toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SILAS_RENN_2_COMMANDERS: &[CardFactory] = &[silas_renn_seeker_adept, tevesh_szat_doom_of_fools];
+
+/// **Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 7 Islands + 7 Swamps = 98.
+/// Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools (EDHREC, fetched 2026-10-18).
+pub const SILAS_RENN_2_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, basalt_monolith, bolass_citadel, dimir_signet,
+    fellwar_stone, krark_clan_ironworks, manifold_key, mind_stone, mox_opal,
+    senseis_divining_top, skullclamp, sol_ring, talisman_of_dominance, the_one_ring,
+    thought_vessel, time_sieve, voltaic_key, wishclaw_talisman, bojuka_bog, buried_ruin,
+    command_tower, darkslick_shores, darkwater_catacombs, drowned_catacomb, mistvault_bridge,
+    morphic_pool, polluted_delta, reliquary_tower, seat_of_the_synod, shipwreck_marsh,
+    sunken_hollow, tainted_isle, the_mycosynth_gardens, underground_river,
+    urborg_tomb_of_yawgmoth, vault_of_whispers, watery_grave, baleful_strix,
+    disciple_of_the_vault, emry_lurker_of_the_loch, etherium_sculptor, forensic_gadgeteer,
+    foundry_inspector, hydraulic_helper, jhoiras_familiar, marionette_apprentice,
+    padeem_consul_of_innovation, phyrexian_metamorph, riddlesmith, sai_master_thopterist,
+    scientist_supreme_of_a_i_m, scrap_trawler, shimmer_myr, solemn_simulacrum, surge_conductor,
+    thought_monitor, wurmcoil_engine, black_market_connections, mirrodin_besieged,
+    mystic_remora, rhystic_study, brainstorm, counterspell, cyclonic_rift, dark_ritual,
+    deadly_rollick, dramatic_reversal, mana_drain, negate, sink_into_stupor, vampiric_tutor,
+    whir_of_invention, tezzeret_the_seeker, tezzeret_agent_of_bolas, tezzeret_artifice_master,
+    tezzeret_master_of_the_bridge, damnation, demonic_tutor, fabricate, reanimate, reshape,
+    thoughtcast, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

@@ -25632,6 +25632,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GARZA_ZOL_COMMANDERS,
             main: decks::GARZA_ZOL_MAIN,
         },
+        // Seat 4197: Scientist Supreme of A.I.M.'s EDHREC average deck. `--pod-decks 4197`.
+        PodDeck {
+            name: "Scientist Supreme of A.I.M. (UB)",
+            commanders: decks::SCIENTIST_SUPREME_OF_A_I_M_COMMANDERS,
+            main: decks::SCIENTIST_SUPREME_OF_A_I_M_MAIN,
+        },
+        // Seat 4198: Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4198`.
+        PodDeck {
+            name: "Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools (UB)",
+            commanders: decks::SILAS_RENN_2_COMMANDERS,
+            main: decks::SILAS_RENN_2_MAIN,
+        },
     ]
 }
 
@@ -31723,6 +31735,8 @@ mod tests {
             ("Falco Spara, Pactweaver", &[0x1A78]),
             ("Evelyn, the Covetous", &[0x1A79]),
             ("Garza Zol, Plague Queen", &[0x1A7A]),
+            ("Scientist Supreme of A.I.M.", &[0x1A7B]),
+            ("Silas Renn, Seeker Adept and Tevesh Szat, Doom of Fools", &[0x1A7C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
