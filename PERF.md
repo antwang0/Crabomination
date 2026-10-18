@@ -3136,6 +3136,19 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-18 (Commander run, `01HPYxiB`) — guardrail; rules/bot fixes, no cards
+
+Hot-path touches: `fire_combat_damage_triggers`' kind match reads one more `EventSpec` bool on a battle
+delivery only; planeswalker / battle combat damage now walk the agnostic kinds (two more slots); half-card
+casts build one probe each (already built for the cost walk). `profiling-fast` bot_ladder, 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+                 (all pairs split); games_per_s 254.7 (box noise)
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 52001): 0 undecided, 0 panics
+pods (audit)     seeds 9201-9207, every deck, 4/6/8 seats: 13,000+ games, 0 panics after the fixes
+```
+
 ### 2026-10-17 (Commander run, `3chree`) — guardrail; ~105 seats, 135 cards
 
 Hot-path touches: `damage_scaling_in_scope` also asks each player's

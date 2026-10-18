@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required](#fixedopen-2026-10-10-sixteenth-commander-run-01s495n5--up-to-one-target-modelled-as-required) | 27 |
 | Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 63 |
 | Bugs & robustness | [FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls](#fixed-2026-10-09-twelfth-commander-run-01g4zua3--per-slot-6082b-for-spells-four-more-invariants-two-bot-stalls) | 40 |
@@ -177,6 +178,32 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes
+
+- **Sweeps (audit build, `scripts/pod_sweep.py`, one game a block over every deck):** seeds 9201 (4,6 seats),
+  9202-9204 (4,6,8), 9205-9206 (4,6) and 9207 (4,6, `CRAB_POD_CONCEDE=20`) — **13,000+ pod games**; every
+  finding below fixed and re-run decided. Left open: board caps at 4-seat seed 920948 (Marvel Boy / Enduring
+  Courage / Mabel triggers) and 6-seat seed 924390 (Growing Ranks populate + Sevinne's Reclamation).
+- **FIXED (bug class, CR 101.2):** adventure / omen / split / aftermath / disturb casts asked only the
+  Ranger-Captain flag — now `cast_locks::face_cast_lock` on the face's probe (`disturb_probe`, CR 712.8c).
+- **FIXED (CR 310.6 / 510.2):** combat damage to a battle fired no damage trigger, to a planeswalker only
+  `DealsCombatDamageToPlaneswalker`; both now fire `DealsCombatDamage`/`DealsDamage`, and a battle hit fires
+  `DealsCombatDamageToPlayer` triggers marked `EventSpec::or_battle` (8 cards; no new `EventKind`).
+- **FIXED (CR 903.9b class):** Vendilion Clique's bottom, Painful Memories' top, the Brainstorm-shaped put-back,
+  the hand-to-bottom effect and a put-on-top cost skipped `commander_zone_redirect` (seed 922176's invariant).
+- **FIXED (CR 800.4a):** `Value::LowestLifeTotal` read eliminated seats (Repay in Kind drew two pods).
+- **FIXED (bot):** an optional hostile slot of `auto_extra_distinct_slot_targets` fell back onto the caster's
+  face/board (Drakuseth, seed 922860); a hostile player slot of `auto_targets_for_effect_all_slots_x` tried only
+  the first opponent (Cone of Flame had no legal cast at four seats); `damage_pick::trim_unhurt` could leave
+  only the bot's own face (Black Panther behind Shalai, seed 923534 — a CR 104.4b draw).
+- **FIXED (invariant):** the CR 302.6 turn-start check flagged a land gained in that turn's own cumulative
+  upkeep (Herald of Leshrac's cost, seed 921312) — it now reads the previous action's controllers.
+- **Closed with a reason:** `019Y6J4R`'s Brothers' War III "slot 1 at its own controller" is the baseline
+  profile's caster-first default in a two-seat test with `hostile_player_targets` off; pods (>2 seats or the
+  production profile) are hostile. Two of the seed-921412/924036 draws were Repay in Kind (fixed above).
+- **Guardrails:** `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, determinism ok;
+  cube/sos/sealed 2,400/1,500/3,600 two-player games (seed 52001) 0 undecided.
 
 ## FIXED/OPEN 2026-10-17 (Commander run, `019Y6J4R`) — 60 closer cards, the cast-lock class
 
