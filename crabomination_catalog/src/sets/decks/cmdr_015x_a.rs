@@ -754,3 +754,42 @@ pub fn rootpath_purifier() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Boiling Rock Rioter — {2}{B} 3/3 Human Rogue Ally; firebending 1. Tap an
+/// untapped Ally you control: exile target card from a graveyard (linked to
+/// it). Whenever it attacks, you may cast an Ally spell from among cards you
+/// own exiled with it, paying its cost.
+pub fn boiling_rock_rioter() -> CardDefinition {
+    CardDefinition {
+        name: "Boiling Rock Rioter",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Firebending(1)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_others_cost: Some((R::HasCreatureType(CreatureType::Ally), 1)),
+            effect: Effect::ExileWithSource { what: target_filtered(R::InGraveyard) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::MatchingAmong {
+                    inner: Box::new(Selector::CardExiledWithSource),
+                    filter: R::HasCreatureType(CreatureType::Ally).and(R::OwnedByYou),
+                },
+                source_zone: crate::card::Zone::Exile,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: true,
+            },
+        }],
+        ..Default::default()
+    }
+}

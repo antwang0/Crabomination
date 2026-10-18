@@ -512,3 +512,28 @@ fn rootpath_purifier_makes_your_lands_basic() {
     g.resolve_effect(&search, &ctx).expect("search");
     assert!(g.players[0].hand.iter().any(|c| c.id == card), "Command Tower counts as basic");
 }
+
+/// Boiling Rock Rioter taps itself (an Ally) to exile an Ally card from your
+/// graveyard, then casts it from exile as it attacks, paying its cost.
+#[test]
+fn boiling_rock_rioter_recasts_an_exiled_ally() {
+    let mut g = pod(2);
+    let rioter = ready(&mut g, 0, catalog::boiling_rock_rioter());
+    let ally = g.add_card_to_graveyard(0, catalog::boiling_rock_rioter());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rioter,
+        ability_index: 0,
+        target: Some(Target::Permanent(ally)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap an Ally: exile");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == ally && c.exiled_with == Some(rioter)));
+    g.battlefield_find_mut(rioter).unwrap().tapped = false;
+    flood(&mut g);
+    attack(&mut g, &[rioter]);
+    assert!(g.battlefield_find(ally).is_some(), "cast from exile as it attacked");
+}
