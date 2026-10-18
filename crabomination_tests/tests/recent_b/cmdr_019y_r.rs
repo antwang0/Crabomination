@@ -99,9 +99,7 @@ fn chaotic_transformation_swaps_a_creature() {
     g.add_card_to_library(1, catalog::forest());
     let giant = g.add_card_to_library(1, catalog::hill_giant());
     let ct = g.add_card_to_hand(0, catalog::chaotic_transformation());
-    for c in [crabomination::mana::Color::Red] {
-        g.players[0].mana_pool.add(c, 6);
-    }
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 6);
     g.perform_action(GameAction::CastSpell {
         card_id: ct,
         target: Some(crabomination::game::types::Target::Permanent(bear)),

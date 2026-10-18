@@ -96,7 +96,7 @@ impl GameState {
             let mut def = (*c.copiable_definition()).clone();
             for t in creature_types {
                 if !def.subtypes.creature_types.contains(t) {
-                    def.subtypes.creature_types.push(t.clone());
+                    def.subtypes.creature_types.push(*t);
                 }
             }
             c.set_copiable_definition(std::sync::Arc::new(def));
