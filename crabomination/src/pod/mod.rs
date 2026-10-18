@@ -25680,6 +25680,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALE_17_COMMANDERS,
             main: decks::GALE_17_MAIN,
         },
+        // Seat 4205: Fblthp, Knows the Way's EDHREC average deck. `--pod-decks 4205`.
+        PodDeck {
+            name: "Fblthp, Knows the Way (G)",
+            commanders: decks::FBLTHP_2_COMMANDERS,
+            main: decks::FBLTHP_2_MAIN,
+        },
     ]
 }
 
@@ -31779,6 +31785,7 @@ mod tests {
             ("The Twelfth Doctor and Nyssa of Traken", &[0x1A80]),
             ("Gale, Waterdeep Prodigy and Candlekeep Sage", &[0x1A81]),
             ("Gale, Waterdeep Prodigy and Sword Coast Sailor", &[0x1A82]),
+            ("Fblthp, Knows the Way", &[0x1A83]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -117944,3 +117944,32 @@ pub const GALE_17_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const FBLTHP_2_COMMANDERS: &[CardFactory] = &[fblthp_knows_the_way];
+
+/// **Fblthp, Knows the Way**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 16 Forests + 3 Wastes = 99.
+/// Fblthp, Knows the Way (EDHREC, fetched 2026-10-18).
+pub const FBLTHP_2_MAIN: &[CardFactory] = &[
+    blackblade_reforged, crucible_of_worlds, emerald_medallion, exploration_broodship, sol_ring,
+    staff_of_titania, zuran_orb, boseiju_who_endures, castle_garenbrig, fabled_passage,
+    nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, roiling_canopy, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_wastes, snow_covered_wastes,
+    snow_covered_wastes, thran_portal, urborg_tomb_of_yawgmoth, vesuva, war_room,
+    yavimaya_cradle_of_growth, ancient_greenwarden, ashaya_soul_of_the_wild,
+    avenger_of_zendikar, azusa_lost_but_seeking, bristly_bill_spine_sower, courser_of_kruphix,
+    craterhoof_behemoth, cultivator_colossus, dryad_of_the_ilysian_grove, eternal_witness,
+    ghalta_the_unstoppable, greensleeves_maro_sorcerer, hexhaven_invigorator, horizon_explorer,
+    icetill_explorer, loot_exuberant_explorer, lotus_cobra, lumra_bellow_of_the_woods,
+    mole_man_moloid_master, oracle_of_mul_daya, pia_aether_ascetic, rampaging_baloths,
+    rootpath_purifier, scute_swarm, six, tireless_provisioner, wayward_swordtooth, burgeoning,
+    dancing_from_dark_to_dawn, druid_class, exploration, garruks_uprising, prismatic_omen,
+    sapling_nursery, spelunking, archdruids_charm, beast_within, crop_rotation,
+    entish_restoration, harrow, heroic_intervention, nissa_who_shakes_the_world,
+    awaken_the_woods, cultivate, explore, kodamas_reach, natures_lore, rampant_growth,
+    scapeshift, three_visits, through_the_forest_gate,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, wastes, wastes, wastes,
+];
