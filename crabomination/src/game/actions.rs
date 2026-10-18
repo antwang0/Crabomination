@@ -3489,7 +3489,9 @@ pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -
 /// `DoubleControllerTriggersOfType` (Harmonic Prodigy — Shaman / another
 /// Wizard), `DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up) or
 /// the unconditional `DoubleControllerPermanentTriggers` (Fractured Realm).
-/// 0 unless the source is a matching permanent `controller` controls.
+/// 0 unless the source is a matching permanent `controller` controls. A gated
+/// doubler (`WhileCondition` — Bifur's "as long as you have an enduring
+/// story") counts only while `active_static` finds its gate open.
 pub(crate) fn ally_trigger_extra_fires(
     state: &crate::game::GameState,
     controller: usize,
@@ -3507,12 +3509,12 @@ pub(crate) fn ally_trigger_extra_fires(
         c.controller == controller
             && c.definition.static_abilities.iter().any(|sa| {
                 matches!(
-                    sa.effect,
-                    StaticEffect::DoubleControllerAllyTriggers
+                    state.active_static(&sa.effect, c),
+                    Some(StaticEffect::DoubleControllerAllyTriggers
                         | StaticEffect::DoubleControllerTriggersOfType { .. }
                         | StaticEffect::DoubleControllerTriggersMatching { .. }
                         | StaticEffect::DoubleControllerLegendaryCreatureTriggers
-                        | StaticEffect::DoubleControllerPermanentTriggers
+                        | StaticEffect::DoubleControllerPermanentTriggers)
                 )
             })
     }) {
@@ -3538,8 +3540,10 @@ pub(crate) fn ally_trigger_extra_fires(
             .battlefield
             .iter()
             .filter(|c| c.controller == controller)
-            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
-            .filter(|(id, sa)| match &sa.effect {
+            .flat_map(|c| {
+                c.definition.static_abilities.iter().filter_map(move |sa| state.active_static(&sa.effect, c).map(|e| (c.id, e)))
+            })
+            .filter(|(id, effect)| match effect {
                 StaticEffect::DoubleControllerTriggersMatching { filter, include_spells } => match lki {
                     Some(snapshot) if !cast_by_controller => {
                         state.evaluate_requirement_on_card(filter, snapshot, controller)
@@ -3576,7 +3580,8 @@ pub(crate) fn ally_trigger_extra_fires(
             c.definition
                 .static_abilities
                 .iter()
-                .filter(|sa| match &sa.effect {
+                .filter_map(|sa| state.active_static(&sa.effect, c))
+                .filter(|effect| match effect {
                     StaticEffect::DoubleControllerAllyTriggers => is_ally,
                     StaticEffect::DoubleControllerTriggersOfType { types, exclude_source } => {
                         (!*exclude_source || c.id != source)

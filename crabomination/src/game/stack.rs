@@ -3399,6 +3399,13 @@ impl GameState {
                         self.grant_keyword_eot(card_id, Keyword::Haste);
                     }
 
+                    // Storied (and ascend) latch the moment the permanent is
+                    // on the battlefield, so its own entry triggers already
+                    // see the enduring story — Bifur's gated Dwarf doubler.
+                    // The entry-event funnel asks again later; both latches
+                    // are idempotent.
+                    self.apply_permanent_ascend(card_id);
+
                     // Push ETB triggers onto the stack — Elesh Norn
                     // replacement adjusts the trigger count (0 = suppressed
                     // by opponent's Norn, 1+N = each of your Norns adds an
