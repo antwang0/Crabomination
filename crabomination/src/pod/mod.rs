@@ -25080,6 +25080,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BOMBUR_COMMANDERS,
             main: decks::BOMBUR_MAIN,
         },
+        // Seat 4105: Tetsuo, Imperial Champion's EDHREC average deck. `--pod-decks 4105`.
+        PodDeck {
+            name: "Tetsuo, Imperial Champion (UBR)",
+            commanders: decks::TETSUO_COMMANDERS,
+            main: decks::TETSUO_MAIN,
+        },
+        // Seat 4106: Graviton, Fundamental Force's EDHREC average deck. `--pod-decks 4106`.
+        PodDeck {
+            name: "Graviton, Fundamental Force (U)",
+            commanders: decks::GRAVITON_COMMANDERS,
+            main: decks::GRAVITON_MAIN,
+        },
     ]
 }
 
@@ -31079,6 +31091,8 @@ mod tests {
             ("Dáin Ironfoot", &[0x1A1C]),
             ("Thorin, Company's Leader", &[0x1A1D]),
             ("Bombur, Gentle Dreamer", &[0x1A1E]),
+            ("Tetsuo, Imperial Champion", &[0x1A1F]),
+            ("Graviton, Fundamental Force", &[0x1A20]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

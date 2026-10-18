@@ -115114,3 +115114,62 @@ pub const BOMBUR_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const TETSUO_COMMANDERS: &[CardFactory] = &[tetsuo_imperial_champion];
+
+/// **Tetsuo, Imperial Champion**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Islands + 5 Mountains + 4 Swamps = 99.
+/// Tetsuo, Imperial Champion (EDHREC, fetched 2026-10-18).
+pub const TETSUO_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, basilisk_collar, blackblade_reforged, buster_sword,
+    conquerors_flail, drachnyen, embercleave, excalibur_sword_of_eden, genji_glove,
+    hammer_of_nazahn, kaldra_compleat, mithril_coat, oathkeeper_takenos_daisho, pact_weapon,
+    sol_ring, swiftfoot_boots, sword_of_feast_and_famine, sword_of_the_animist,
+    talisman_of_creativity, talisman_of_dominance, the_reaver_cleaver, unscythe_killer_of_kings,
+    winged_boots, academy_ruins, blood_crypt, bloodstained_mire, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard, luxury_suite,
+    morphic_pool, rogues_passage, scalding_tarn, shivan_reef, smoldering_marsh, steam_vents,
+    sulfur_falls, sunken_hollow, training_center, watery_grave, xanders_lounge,
+    akki_battle_squad, brass_squire, dalakos_crafter_of_wonders, enthusiastic_mechanaut,
+    etherium_sculptor, gilgamesh_master_at_arms, godo_bandit_warlord,
+    heiko_yamazaki_the_general, jhoira_ageless_innovator, jhoira_weatherlight_captain,
+    kediss_emberclaw_familiar, komainu_battle_armor, lizard_blades, padeem_consul_of_innovation,
+    the_reality_chip, blacksmiths_talent, rhystic_study, an_offer_you_cant_refuse, bedevil,
+    brainstorm, chaos_warp, counterspell, frantic_search, magnetic_theft, negate, rakdos_charm,
+    slip_out_the_back, tainted_strike, terminate, ancestral_vision, anchor_to_reality,
+    blasphemous_act, chandras_ignition, fabricate, feed_the_swarm, inevitable_betrayal,
+    profane_tutor, relentless_assault, seize_the_day, wheel_of_fate,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp,
+];
+
+pub const GRAVITON_COMMANDERS: &[CardFactory] = &[graviton_fundamental_force];
+
+/// **Graviton, Fundamental Force**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 17 Islands = 99.
+/// Graviton, Fundamental Force (EDHREC, fetched 2026-10-18).
+pub const GRAVITON_MAIN: &[CardFactory] = &[
+    arcane_signet, dowsing_dagger, expedition_map, fellwar_stone, hyldas_crown_of_winter,
+    kefnets_monument, mjolnir_storm_hammer, sapphire_medallion, sky_diamond, sol_ring,
+    thought_vessel, wayfarers_bauble, lazotep_quarry, lonely_sandbar, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, scavenger_grounds, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    tolaria_west, aboshan_cephalid_emperor, archetype_of_imagination, breaching_leviathan,
+    burnished_hart, chasm_skulker, daughter_of_the_deep, dreamtide_whale, drift_of_phantasms,
+    emrakuls_messenger, ethereal_usher, homunculus_horde, iron_man_armored_avenger,
+    krang_the_all_powerful, lulu_stern_guardian, minn_wily_illusionist, mischievous_mystic,
+    nadir_kraken, psychosis_crawler, shackle_slinger, summon_shiva, summon_valefor,
+    the_watcher_in_the_water, ultimecia_temporal_threat, walking_atlas, behold_the_unspeakable,
+    coastal_piracy, lost_in_the_maze, old_fat_spider_cant_see_me, ominous_seas,
+    profts_eidetic_memory, reconnaissance_mission, rhystic_study, the_phasing_of_zhalfir,
+    verity_circle, wizard_class, an_offer_you_cant_refuse, arcane_denial, blustersquall,
+    brainstorm, change_of_plans, counterspell, cryptic_command, cyclonic_rift, deluge,
+    saw_it_coming, trap_the_trespassers, wicked_slumber, borrowing_100_000_arrows, cone_of_cold,
+    crashing_wave,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
