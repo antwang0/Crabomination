@@ -2246,3 +2246,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Jetfire, Ingenious Scientist | the {C} goes to Jetfire's controller (no "target player"), and is artifact-only for abilities too (`ArtifactOnly`), where the card only bars nonartifact spells | `remove_counter_among_x` + `ManaPayload::Restricted` |
 | 🟡 Alex Wilder, Runaway | "cast from anywhere other than your hand" reads library / graveyard / exile casts; a command-zone cast isn't counted | `R::WasCastFrom{Library,Graveyard,Exile}` |
 | 🟡 The Lady of Otaria | "a land you controlled" reads a land card in your graveyard that left the battlefield this turn (a stolen land of yours / your land an opponent owns are misread) | `EachMatching { Graveyard(You), PutIntoGraveyardFromBattlefieldThisTurn }` |
+| 🟡 Nick Fury, Agent of S.H.I.E.L.D. | "if it's a double-faced card, you may transform it" is never offered: the card enters front face up | `LookTopPutMatchingOntoBattlefield { max: 1 }` |

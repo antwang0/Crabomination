@@ -247,3 +247,89 @@ fn prowl_exiles_a_tapped_creature_and_converts_when_it_is_played() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
     assert_eq!(g.battlefield_find(prowl).unwrap().definition.name, "Prowl, Pursuit Vehicle");
 }
+
+/// Nick Fury's power-up: two counters, then a Hero off the top seven onto
+/// the battlefield; the rest go to the bottom. Only once (CR 702.193).
+#[test]
+fn nick_fury_powers_up_into_a_hero() {
+    let mut g = pod(2);
+    let fury = ready(&mut g, 0, catalog::nick_fury_agent_of_shield());
+    g.players[0].library.clear();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hero = g.add_card_to_library(0, catalog::peter_parker());
+    flood(&mut g);
+    activate(&mut g, fury, 0, None);
+    assert_eq!(g.battlefield_find(fury).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.battlefield_find(hero).is_some(), "Peter Parker is a Hero");
+    assert_eq!(g.players[0].library.len(), 6);
+    flood(&mut g);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: fury,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "a power-up activates once"
+    );
+}
+
+/// Miles Morales counters two creatures as he enters; as Ultimate
+/// Spider-Man, attacking doubles the counters on Spiders and legends (not
+/// on the plain bear), and Camouflage leaves him colorless and hexproof.
+#[test]
+fn miles_morales_counters_then_doubles_them_on_attack() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let isamaru = ready(&mut g, 0, catalog::isamaru_hound_of_konda());
+    flood(&mut g);
+    let miles = g.add_card_to_hand(0, catalog::miles_morales());
+    g.perform_action(GameAction::CastSpell { card_id: miles, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let plus = |g: &GameState, id: CardId| g.battlefield_find(id).map_or(0, |c| c.counter_count(CounterType::PlusOnePlusOne));
+    assert_eq!(plus(&g, bear) + plus(&g, isamaru), 2, "two counters on up to two creatures");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(isamaru).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let (b0, i0) = (plus(&g, bear), plus(&g, isamaru));
+    flood(&mut g);
+    activate(&mut g, miles, 0, None);
+    assert_eq!(g.battlefield_find(miles).unwrap().definition.name, "Ultimate Spider-Man");
+    activate(&mut g, miles, 0, None);
+    let cp = g.computed_permanent(miles).unwrap();
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Hexproof));
+    assert!(cp.colors.is_empty(), "colorless until end of turn");
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: miles, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, isamaru), 2 * i0, "a legend's counters double");
+    assert_eq!(plus(&g, bear), b0, "a plain bear's don't");
+    assert_eq!(plus(&g, miles), 2, "nor do his own fail to");
+}
+
+/// Multiversal Passage enters as the chosen basic type and taps for it.
+#[test]
+fn multiversal_passage_is_the_chosen_type() {
+    let mut g = pod(2);
+    let land = g.add_card_to_hand(0, catalog::multiversal_passage());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    assert_eq!(g.computed_permanent(land).unwrap().subtypes().land_types.len(), 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}

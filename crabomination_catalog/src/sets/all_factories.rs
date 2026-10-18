@@ -17614,6 +17614,9 @@ static DECKS: &[Factory] = &[
     super::decks::maraxus_of_keld,
     super::decks::prowl_stoic_strategist,
     super::decks::codie_ravenous_codex,
+    super::decks::nick_fury_agent_of_shield,
+    super::decks::miles_morales,
+    super::decks::multiversal_passage,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

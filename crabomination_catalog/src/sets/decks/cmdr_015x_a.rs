@@ -343,3 +343,147 @@ pub fn codie_ravenous_codex() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// Nick Fury, Agent of S.H.I.E.L.D. — {W} legendary 2/1 Human Spy Hero.
+/// Power-up — {W}{U}{B}{R}{G}: two +1/+1 counters, then look at the top
+/// seven and put a Hero, Equipment, or Vehicle card from among them onto the
+/// battlefield; the rest go to the bottom in a random order (CR 702.193).
+pub fn nick_fury_agent_of_shield() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Nick Fury, Agent of S.H.I.E.L.D.",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Spy, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            power_up: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                Effect::LookTopPutMatchingOntoBattlefield {
+                    count: Value::Const(7),
+                    filter: R::HasCreatureType(CreatureType::Hero)
+                        .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                        .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                    then: None,
+                    max: Some(1),
+                    tapped: false,
+                    exile_rest: false,
+                    rest_to_graveyard: false,
+                    mandatory: false,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    })
+}
+
+/// Ultimate Spider-Man — Miles Morales's back face, a 4/3 first strike,
+/// haste Spider Human Hero. Camouflage — {2}: a +1/+1 counter, hexproof and
+/// colorless until end of turn. Whenever you attack, double each kind of
+/// counter on each Spider and legendary creature you control.
+fn ultimate_spider_man() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Ultimate Spider-Man",
+        cost: cost(&[generic(3), r(), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Hexproof,
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                Effect::BecomeColor {
+                    what: Selector::This,
+                    colors: vec![],
+                    duration: crate::effect::Duration::EndOfTurn,
+                    additive: false,
+                },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::DoubleAllCountersOn {
+                what: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::HasCreatureType(CreatureType::Spider).or(R::HasSupertype(Supertype::Legendary))),
+                ),
+            },
+        }],
+        ..Default::default()
+    })
+}
+
+/// Miles Morales // Ultimate Spider-Man — {1}{G} legendary 1/2 Human Citizen
+/// Hero. Enters: a +1/+1 counter on each of up to two target creatures.
+/// {3}{R}{G}{W}: transform (sorcery speed). A modal DFC.
+pub fn miles_morales() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Miles Morales",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+        })],
+        activated_abilities: vec![transform_self(cost(&[generic(3), r(), g(), w()]))],
+        back_face: Some(Box::new(ultimate_spider_man())),
+        ..Default::default()
+    })
+}
+
+/// Multiversal Passage — land. As it enters, choose a basic land type, then
+/// pay 2 life or it enters tapped (CR 614.12). It is the chosen type, and so
+/// taps for that type's mana (CR 305.6).
+pub fn multiversal_passage() -> CardDefinition {
+    CardDefinition {
+        name: "Multiversal Passage",
+        card_types: vec![CardType::Land],
+        as_enters_effect: Some(Effect::Seq(vec![
+            Effect::ChooseBasicLandTypeForSource,
+            crate::sets::shockland_pay_two_or_tap(),
+        ])),
+        static_abilities: vec![StaticAbility {
+            description: "This land is the chosen type.",
+            effect: StaticEffect::SelfIsChosenLandType,
+        }],
+        ..Default::default()
+    }
+}
