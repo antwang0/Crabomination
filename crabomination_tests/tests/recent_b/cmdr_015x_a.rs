@@ -764,3 +764,55 @@ fn construct_a_cosmic_cube_makes_villains_on_the_second_draw() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Villain").count(), 1);
     assert_eq!(g.battlefield_find(cube).unwrap().counter_count(CounterType::Plan), 1);
 }
+
+/// Jeweled Amulet stores the green it was charged with and gives green back;
+/// it can't be charged again while it holds a counter.
+#[test]
+fn jeweled_amulet_returns_the_noted_mana_type() {
+    let mut g = pod(2);
+    let amulet = ready(&mut g, 0, catalog::jeweled_amulet());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, amulet, 0, None);
+    assert_eq!(g.battlefield_find(amulet).unwrap().counter_count(CounterType::Charge), 1);
+    g.battlefield_find_mut(amulet).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: amulet,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "only with no charge counter"
+    );
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, amulet, 1, None);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "green, as noted");
+}
+
+/// Lodestone Bauble stacks two basic lands from a graveyard on its owner's
+/// library.
+#[test]
+fn lodestone_bauble_restacks_basic_lands() {
+    let mut g = pod(2);
+    let bauble = ready(&mut g, 0, catalog::lodestone_bauble());
+    let a = g.add_card_to_graveyard(1, catalog::forest());
+    let b = g.add_card_to_graveyard(1, catalog::forest());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bauble,
+        ability_index: 0,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let top: Vec<CardId> = g.players[1].library.iter().take(2).map(|c| c.id).collect();
+    assert!(top.contains(&a) && top.contains(&b), "both on top");
+}

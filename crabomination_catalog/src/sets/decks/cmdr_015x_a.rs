@@ -1274,3 +1274,73 @@ pub fn construct_a_cosmic_cube() -> CardDefinition {
         ],
     )
 }
+
+/// Jeweled Amulet — {0} artifact. {1}, {T}: a charge counter, noting the
+/// type of mana spent (only with no charge counter on it). {T}, remove a
+/// charge counter: add one mana of the last noted type ({C} for colorless).
+pub fn jeweled_amulet() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Jeweled Amulet",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                condition: Some(Predicate::Not(Box::new(Predicate::SourceHasCountersAtLeast {
+                    counter: CounterType::Charge,
+                    n: 1,
+                }))),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+                    Effect::NoteSpentManaTypeOnSource,
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                remove_counter_cost: Some((CounterType::Charge, 1)),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::ChosenColorOfSource },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lodestone Bauble — {0} artifact. {1}, {T}, sacrifice it: put up to four
+/// target basic land cards from a player's graveyard on top of their library;
+/// that player draws a card at the beginning of the next turn's upkeep.
+pub fn lodestone_bauble() -> CardDefinition {
+    CardDefinition {
+        name: "Lodestone Bauble",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 4,
+                    min_targets: 0,
+                    filter: R::IsBasicLand.and(R::InGraveyard).and(R::SameGraveyardAsTargetSlot(0)),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: crate::effect::ZoneDest::Library {
+                            who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            pos: crate::effect::LibraryPosition::Top,
+                        },
+                    }),
+                },
+                Effect::AsPlayer {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    body: Box::new(Effect::AtNextTurnsUpkeep {
+                        body: Box::new(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE }),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

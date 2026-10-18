@@ -17639,6 +17639,8 @@ static DECKS: &[Factory] = &[
     super::decks::casey_and_raph_hotheads,
     super::decks::doom_reigns_supreme,
     super::decks::construct_a_cosmic_cube,
+    super::decks::jeweled_amulet,
+    super::decks::lodestone_bauble,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
