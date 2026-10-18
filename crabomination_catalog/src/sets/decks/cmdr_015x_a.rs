@@ -793,3 +793,28 @@ pub fn boiling_rock_rioter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nahiri's Wrath — {2}{R} sorcery. As an additional cost, discard X cards.
+/// It deals damage equal to the discarded cards' total mana value to each of
+/// up to X target creatures and/or planeswalkers (CR 107.3d — X is the
+/// cast's choice; no `{X}` in the cost).
+pub fn nahiris_wrath() -> CardDefinition {
+    CardDefinition {
+        name: "Nahiri's Wrath",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
+        effect: Effect::CapTargetsAtX {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Creature.or(R::Planeswalker),
+                effect: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::CastDiscardedManaValue,
+                }),
+            }),
+        },
+        ..Default::default()
+    }
+}

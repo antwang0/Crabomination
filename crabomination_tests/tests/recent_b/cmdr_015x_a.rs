@@ -537,3 +537,29 @@ fn boiling_rock_rioter_recasts_an_exiled_ally() {
     attack(&mut g, &[rioter]);
     assert!(g.battlefield_find(ally).is_some(), "cast from exile as it attacked");
 }
+
+/// Nahiri's Wrath: discard X = 2 (Hill Giant and Grizzly Bears, total mana
+/// value 6) to deal 6 to each of two targets.
+#[test]
+fn nahiris_wrath_deals_the_discarded_total() {
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let other = ready(&mut g, 1, catalog::serra_angel());
+    g.add_card_to_hand(0, catalog::hill_giant());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::nahiris_wrath());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath,
+        target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![Target::Permanent(other)],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 3, "both discards and the Wrath");
+    assert!(g.battlefield_find(wurm).is_none(), "6 damage kills the 6/4");
+    assert!(g.battlefield_find(other).is_none(), "and the 4/4");
+}
