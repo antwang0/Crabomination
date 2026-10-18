@@ -5325,7 +5325,10 @@ impl GameState {
                 // The order the picks came back in is the order they go back
                 // on top (a UI seat's `ChooseCards` answer is ordered).
                 for card in stashed.into_iter().rev() {
-                    self.players[p].library.insert(0, card);
+                    // CR 903.9b — a commander put back may go home instead.
+                    if let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library) {
+                        self.players[p].library.insert(0, card);
+                    }
                 }
                 Ok(())
             }
@@ -39452,7 +39455,9 @@ impl GameState {
                 };
                 let n = picks.len() as i32;
                 for id in picks {
-                    if let Some(card) = self.players[p].remove_from_hand(id) {
+                    if let Some(card) = self.players[p].remove_from_hand(id)
+                        && let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
+                    {
                         self.players[p].library.push(card);
                     }
                 }

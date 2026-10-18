@@ -510,3 +510,33 @@ fn cr_903_9b_a_commander_put_back_from_hand_goes_home() {
         assert!(g.players[0].library.iter().all(|c| c.id != cmd), "{eff:?}");
     }
 }
+
+/// CR 903.9b — the opponent-chosen put-backs too: Vendilion Clique's bottom
+/// (and its draw) and Painful Memories' top. A pod game (seed 922176) tripped
+/// the commander-in-library invariant when Clique bottomed Myojin of Seeing
+/// Winds out of its owner's hand.
+#[test]
+fn cr_903_9b_an_opponent_chosen_put_back_sends_the_commander_home() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let from = Selector::Player(PlayerRef::EachOpponent);
+    let put_backs = [
+        Effect::BottomChosenFromHandAndDraw { from: from.clone(), count: Value::ONE, filter: R::Nonland },
+        Effect::TopChosenFromHand { from, count: Value::ONE, filter: R::Nonland },
+    ];
+    for eff in &put_backs {
+        let mut g = main_phase();
+        let cmd = g.seat_commanders(1, vec![catalog::grizzly_bears()])[0];
+        let pos = g.players[1].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[1].command.remove(pos);
+        g.players[1].hand.clear();
+        g.players[1].hand.push(card);
+        g.add_card_to_library(1, catalog::forest());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![cmd])]));
+        let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+        g.resolve_effect(eff, &ctx).expect("put back");
+        assert!(g.players[1].command.iter().any(|c| c.id == cmd), "{eff:?}: home");
+        assert!(g.players[1].library.iter().all(|c| c.id != cmd), "{eff:?}");
+    }
+}

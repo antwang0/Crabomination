@@ -30894,9 +30894,12 @@ impl GameState {
                     // Move the chosen card from hand to the bottom of its
                     // owner's library, then draw a replacement (Vendilion
                     // Clique). Library index 0 = top, so `push` = bottom.
+                    // CR 903.9b — a commander bottomed this way may go home.
                     if let Some(card) = Self::take_card(&mut self.players[target_player].hand, *cid)
                     {
-                        self.players[target_player].library.push(card);
+                        if let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library) {
+                            self.players[target_player].library.push(card);
+                        }
                         self.draw_one_or_deck(target_player, &mut events);
                     }
                 }
@@ -30910,6 +30913,7 @@ impl GameState {
                 // Library index 0 is the top.
                 for cid in card_ids {
                     if let Some(card) = Self::take_card(&mut self.players[target_player].hand, *cid)
+                        && let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
                     {
                         self.players[target_player].library.insert(0, card);
                     }

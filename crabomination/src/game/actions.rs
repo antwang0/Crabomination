@@ -25494,6 +25494,7 @@ impl GameState {
         // the rest of the cost is paid.
         if let Some(cid) = library_top_pick
             && let Some(card) = Self::take_card(&mut self.players[p].hand, cid)
+            && let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
         {
             self.players[p].library.insert(0, card);
         }
