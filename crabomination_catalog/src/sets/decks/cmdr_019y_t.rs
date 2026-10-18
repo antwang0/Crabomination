@@ -636,3 +636,71 @@ pub fn zurs_weirding() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Dragon-Kami Reborn // Dragon-Kami's Egg — {2}{G} Saga. I, II: gain 2
+/// life; look at the top three, exile one face down with a hatching counter,
+/// the rest on the bottom. III: exile this Saga, then return it transformed.
+/// Back: a 0/1 Egg — whenever it or a Dragon you control dies, you may cast a
+/// creature spell from among cards you own in exile with hatching counters
+/// without paying its mana cost.
+pub fn the_dragon_kami_reborn() -> CardDefinition {
+    use crate::card::{CounterType, Zone};
+    use crate::effect::ZoneRef;
+    use crate::effect::shortcut::{choose_one_then, chosen_one, on_dies};
+    use crate::mana::Color;
+    let hatch = || {
+        Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::LookTopExileOneFaceDownWithCounter { count: Value::Const(3), kind: CounterType::Hatching },
+        ])
+    };
+    let cast_one = || {
+        choose_one_then(
+            Selector::EachMatching {
+                zone: ZoneRef::Exile,
+                filter: R::HasCardType(CardType::Creature)
+                    .and(R::OwnedByYou)
+                    .and(R::WithCounter(CounterType::Hatching)),
+            },
+            PlayerRef::You,
+            Effect::CastWithoutPayingImmediate {
+                what: chosen_one(),
+                source_zone: Zone::Exile,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+        )
+    };
+    let egg = CardDefinition {
+        name: "Dragon-Kami's Egg",
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Egg], ..Default::default() },
+        color_indicator: vec![Color::Green],
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![
+            on_dies(cast_one()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Dragon),
+                    },
+                ),
+                effect: cast_one(),
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Dragon-Kami Reborn",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![(1, hatch()), (2, hatch()), (3, Effect::ExileSelfReturnTransformed)],
+        back_face: Some(Box::new(egg)),
+        ..Default::default()
+    }
+}

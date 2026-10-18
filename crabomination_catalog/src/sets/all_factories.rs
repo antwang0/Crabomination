@@ -1554,6 +1554,7 @@ static DECKS: &[Factory] = &[
     super::decks::synthesis_pod,
     super::decks::wizards_spellbook,
     super::decks::zurs_weirding,
+    super::decks::the_dragon_kami_reborn,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

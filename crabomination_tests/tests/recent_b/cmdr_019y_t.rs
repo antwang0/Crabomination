@@ -624,3 +624,41 @@ fn zurs_weirding_lets_others_bin_a_draw() {
     g.draw_one(0, &mut events);
     assert_eq!(g.players[0].hand.len(), hand + 1, "declined: drawn");
 }
+
+/// CR 714 / 712 — The Dragon-Kami Reborn I exiles the Hill Giant face down
+/// with a hatching counter; III returns it as Dragon-Kami's Egg, and when the
+/// Egg dies the giant is cast for free (CR 118.9).
+#[test]
+fn the_dragon_kami_reborn_hatches_its_exile() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for def in [catalog::forest(), catalog::hill_giant(), catalog::forest(), catalog::forest(), catalog::forest()] {
+        g.add_card_to_library(0, def);
+    }
+    let saga = g.add_card_to_hand(0, catalog::the_dragon_kami_reborn());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: saga, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+    let giant = g.exile.iter().find(|c| c.definition.name == "Hill Giant").expect("exiled");
+    assert!(giant.face_down && giant.counter_count(CounterType::Hatching) == 1);
+    let giant = giant.id;
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 1);
+    g.step = TurnStep::Draw;
+    while g.step != TurnStep::PreCombatMain && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let egg = g.battlefield.iter().find(|c| c.definition.name == "Dragon-Kami's Egg").map(|c| c.id).expect("transformed");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![giant]), DecisionAnswer::Bool(true)]));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder, target: Some(Target::Permanent(egg)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("murder the Egg");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some_and(|c| c.controller == 0), "hatched for free");
+}
