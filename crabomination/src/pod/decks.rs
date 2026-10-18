@@ -118255,3 +118255,32 @@ pub const COSMIC_SPIDER_MAN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, mountain, mountain, plains,
     plains, plains, swamp, swamp,
 ];
+
+pub const RAPHAEL_6_COMMANDERS: &[CardFactory] = &[raphael_most_attitude];
+
+/// **Raphael, Most Attitude**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Raphael, Most Attitude (EDHREC, fetched 2026-10-18).
+pub const RAPHAEL_6_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_plate, fire_diamond, hazorets_monument, lightning_greaves,
+    mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal, fire_nation_palace,
+    myriad_landscape, turtle_lair, valakut_the_molten_pinnacle, war_room, anger,
+    casey_and_raph_hotheads, casey_jones_back_alley_brute, etali_primal_storm,
+    inti_seneschal_of_the_sun, iraxxa_empress_of_mars, iron_myr, kami_of_celebration,
+    keeper_of_secrets, koth_the_geomancer, laelia_the_blade_reforged, memory_worm,
+    party_thrasher, professional_face_breaker, pyre_rhymer, raphael_ninja_destroyer,
+    raphael_tag_team_tough, raphael_tough_turtle, raphael_the_muscle, raphael_the_nightwatcher,
+    runaway_steam_kin, samut_hazorets_champion, slash_reptile_rampager, terror_of_the_peaks,
+    wild_magic_sorcerer, wingnut_bat_on_the_belfry, zog_triceraton_castaway,
+    advanced_reconstruction, charred_foyer_warped_space, cool_but_rude, impact_tremors,
+    passionate_archaeologist, abrade, chaos_warp, delayed_blast_fireball, lightning_bolt,
+    lightning_strike, manhole_missile, mouser_attack, raphaels_technique, seething_song,
+    special_move, thrill_of_possibility, untimely_malfunction, blasphemous_act, chain_reaction,
+    dragon_fodder, faithless_looting, fast_forward, gamble, jeskas_will, mana_geyser,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
