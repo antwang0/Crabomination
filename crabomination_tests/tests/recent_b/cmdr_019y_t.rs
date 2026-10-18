@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -182,4 +183,41 @@ fn hurkyl_takes_one_card_per_cast_type() {
     assert!(names.contains(&"Lightning Bolt") || names.contains(&"Shock"));
     assert_eq!(g.players[0].library.len(), 8);
     assert_eq!(g.players[0].library[0].definition.name, "Island", "the other three went to the bottom");
+}
+
+/// CR 610.3 — Cloak and Dagger's ETB targets an opponent (slot 0) and up to
+/// one creature that player controls (slot 1, SameControllerAsTargetSlot);
+/// you exile a nonland card from their hand or, declining that, the chosen
+/// creature, and it comes back when Cloak and Dagger leave.
+#[test]
+fn cloak_and_dagger_exile_until_they_leave() {
+    for take_hand in [true, false] {
+        let mut g = pod(2);
+        let opp_bear = ready(&mut g, 1, catalog::grizzly_bears());
+        let mine = ready(&mut g, 0, catalog::grizzly_bears());
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.add_card_to_hand(1, catalog::forest());
+        let cd = g.add_card_to_hand(0, catalog::cloak_and_dagger_entwined());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.perform_action(GameAction::CastSpell { card_id: cd, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        let script = if take_hand { vec![DecisionAnswer::Bool(true)] } else { vec![DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)] };
+        g.decider = Box::new(ScriptedDecider::new(script));
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(mine).is_some(), "never its own side");
+        assert_eq!(g.exile.iter().any(|c| c.id == bolt), take_hand, "the hand card");
+        assert_eq!(g.battlefield_find(opp_bear).is_none(), !take_hand, "or the chosen creature");
+        let cd_id = g.battlefield.iter().find(|c| c.definition.name == "Cloak and Dagger, Entwined").map(|c| c.id).unwrap();
+        let murder = g.add_card_to_hand(0, catalog::murder());
+        g.players[0].mana_pool.add(Color::Black, 3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: murder, target: Some(Target::Permanent(cd_id)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("murder");
+        drain_stack(&mut g);
+        assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "the card is in hand");
+        assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 1), "the bear is back");
+    }
 }

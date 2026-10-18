@@ -137,3 +137,54 @@ pub fn hurkyl_master_wizard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cloak and Dagger, Entwined — {1}{W}{B} legendary 2/2 deathtouch lifelink
+/// Human Hero. When they enter, choose target opponent and up to one target
+/// creature they control. That player reveals their hand. You may exile a
+/// nonland card from their hand or the chosen creature until Cloak and
+/// Dagger leave the battlefield (CR 610.3).
+pub fn cloak_and_dagger_entwined() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    let creature = || Effect::MayDo {
+        description: "Exile the chosen creature until Cloak and Dagger leave the battlefield?".into(),
+        body: Box::new(Effect::ExileUntilSourceLeaves {
+            what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::SameControllerAsTargetSlot(0)) },
+            return_to: ExileReturnZone::Battlefield,
+        }),
+    };
+    CardDefinition {
+        name: "Cloak and Dagger, Entwined",
+        cost: cost(&[generic(1), crate::mana::w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Hero], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::RevealHand { who: PlayerRef::Target(0) },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CardsInHandMatching { who: PlayerRef::Target(0), filter: R::Nonland },
+                        Value::ONE,
+                    ),
+                    then: Box::new(Effect::MayDoElse {
+                        description: "Exile a nonland card from their hand until Cloak and Dagger leave the battlefield?"
+                            .into(),
+                        body: Box::new(Effect::ExileChosenUntilSourceLeaves {
+                            from: crate::effect::shortcut::target_filtered(R::OpponentPlayer),
+                            count: Value::ONE,
+                            filter: R::Nonland,
+                            return_to: ExileReturnZone::Hand,
+                        }),
+                        else_: Box::new(creature()),
+                    }),
+                    else_: Box::new(creature()),
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
