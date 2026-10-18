@@ -82,3 +82,69 @@ fn mosswood_dreadknight_casts_its_adventure_from_the_graveyard() {
     assert_eq!(g.players[0].life, 19);
     assert!(g.exile.iter().any(|c| c.id == md), "on an adventure");
 }
+
+fn jace(g: &GameState, seat: usize) -> Option<CardId> {
+    g.battlefield.iter().find(|c| c.controller == seat && c.definition.name == "Jace").map(|c| c.id)
+}
+
+fn loyalty(g: &mut GameState, id: CardId, idx: usize, target: Option<crabomination::game::types::Target>) -> Result<(), GameError> {
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: id, ability_index: idx, target, x_value: None })?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 606.3 — Jace's Machinations: Empower Jace 8, and that Jace's loyalty
+/// abilities work on an opponent's turn this turn.
+#[test]
+fn jaces_machinations_empowers_and_unlocks_instant_speed() {
+    let mut g = pod(2);
+    let jm = g.add_card_to_hand(0, catalog::jaces_machinations());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 3);
+    g.active_player_idx = 1;
+    g.perform_action(GameAction::CastSpell { card_id: jm, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("instant on their turn");
+    drain_stack(&mut g);
+    let j = jace(&g, 0).expect("a Jace token");
+    assert_eq!(g.battlefield_find(j).unwrap().counter_count(CounterType::Loyalty), 8);
+    g.priority.player_with_priority = 0;
+    loyalty(&mut g, j, 1, None).expect("−3 on the opponent's turn");
+    assert_eq!(g.battlefield_find(j).unwrap().counter_count(CounterType::Loyalty), 5);
+}
+
+/// Overwrite the Multiverse exiles every creature and empowers Jace that many.
+#[test]
+fn overwrite_the_multiverse_empowers_per_exiled_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::hill_giant());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let ow = g.add_card_to_hand(0, catalog::overwrite_the_multiverse());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 6);
+    g.perform_action(GameAction::CastSpell { card_id: ow, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name != "Jace" && c.definition.is_creature()));
+    let j = jace(&g, 0).expect("a Jace token");
+    assert_eq!(g.battlefield_find(j).unwrap().counter_count(CounterType::Loyalty), 3);
+}
+
+/// Way of the Warlord: Empower Jace 5, and its granted −4 burns a player and
+/// a creature.
+#[test]
+fn way_of_the_warlord_arms_jace() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let ww = g.add_card_to_hand(0, catalog::way_of_the_warlord());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 3);
+    g.perform_action(GameAction::CastSpell { card_id: ww, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let j = jace(&g, 0).expect("a Jace token");
+    assert_eq!(g.battlefield_find(j).unwrap().counter_count(CounterType::Loyalty), 5);
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: j, ability_index: 2, target: Some(Target::Player(1)), x_value: None })
+        .expect("the granted −4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+    let _ = bear;
+}
