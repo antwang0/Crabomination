@@ -961,3 +961,90 @@ pub fn flamewar_brash_veteran() -> CardDefinition {
     ];
     veteran
 }
+
+/// A legendary Robot artifact creature token (Ravage, Laserbeak).
+fn robot_token(name: &str, color: Color, pt: (i32, i32), keywords: Vec<Keyword>) -> Arc<TokenDefinition> {
+    Arc::new(TokenDefinition {
+        name: name.into(),
+        power: pt.0,
+        toughness: pt.1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![color],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        keywords,
+        ..Default::default()
+    })
+}
+
+/// Soundwave, Sonic Spy // Soundwave, Superior Captain — {1}{W}{U}{B} 5/4
+/// legendary artifact creature Robot; More Than Meets the Eye {2}{W}{U}{B}.
+/// When creature tokens you control deal combat damage to a player, exile an
+/// instant or sorcery card with that mana value from their graveyard and you
+/// may cast a copy free — if you do, it converts. The Captain (an artifact)
+/// converts on each spell you cast, making Ravage (odd mana value) or
+/// Laserbeak (even).
+pub fn soundwave_sonic_spy() -> CardDefinition {
+    let mut captain = legend(CardDefinition {
+        name: "Soundwave, Superior Captain",
+        card_types: vec![CardType::Artifact],
+        color_indicator: vec![Color::White, Color::Blue, Color::Black],
+        ..Default::default()
+    });
+    for (odd, token) in [
+        (true, robot_token("Ravage", Color::Black, (3, 3), vec![Keyword::Menace, Keyword::Deathtouch])),
+        (false, robot_token("Laserbeak", Color::Blue, (2, 2), vec![Keyword::Flying, Keyword::Hexproof])),
+    ] {
+        captain.triggered_abilities.push(TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::ManaValueParity { odd },
+            }),
+            effect: Effect::Seq(vec![
+                Effect::Transform { what: Selector::This },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: token },
+            ]),
+        });
+    }
+    let mut spy = robot_front(
+        "Soundwave, Sonic Spy",
+        cost(&[generic(1), w(), u(), b()]),
+        cost(&[generic(2), w(), u(), b()]),
+        (5, 4),
+        captain,
+    );
+    spy.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::IsToken) })
+            .once_per_batch_summing_damage(),
+        effect: Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::MoveChosen {
+                from: Selector::CardsInZone {
+                    who: PlayerRef::TriggerEventPlayer,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: (R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))
+                        .and(R::ManaValueEqualsTriggerAmount),
+                },
+                filter: None,
+                count: Value::ONE,
+                up_to: false,
+                to: crate::effect::ZoneDest::Exile,
+            },
+            Effect::CastWithoutPayingImmediate {
+                what: Selector::LastMoved,
+                source_zone: crate::card::Zone::Exile,
+                exile_after: false,
+                copy: true,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+            Effect::If {
+                cond: Predicate::CastImmediatelyThisResolution,
+                then: Box::new(Effect::Transform { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    }];
+    spy
+}

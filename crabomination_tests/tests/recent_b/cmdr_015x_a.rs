@@ -645,3 +645,29 @@ fn flamewar_banks_intel_and_cashes_it_in() {
     activate(&mut g, flamewar, 1, None);
     assert_eq!(g.players[0].hand.len(), power, "the hand went, the intel came home");
 }
+
+/// Soundwave: a token's 2 combat damage exiles a mana value 2 instant from
+/// the damaged player's graveyard and casts a copy (Raise the Alarm), which
+/// converts it; the Captain converts back on an odd spell and makes Ravage.
+#[test]
+fn soundwave_copies_a_graveyard_spell_then_makes_ravage() {
+    let mut g = pod(2);
+    let wave = ready(&mut g, 0, catalog::soundwave_sonic_spy());
+    let token = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let alarm = g.add_card_to_graveyard(1, catalog::raise_the_alarm());
+    attack(&mut g, &[token]);
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == alarm), "exiled from their graveyard");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier" && c.controller == 0).count(), 2);
+    assert_eq!(g.battlefield_find(wave).unwrap().definition.name, "Soundwave, Superior Captain");
+    g.step = TurnStep::PostCombatMain;
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.battlefield_find(wave).unwrap().definition.name, "Soundwave, Sonic Spy");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Ravage" && c.controller == 0));
+}
