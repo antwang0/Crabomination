@@ -487,3 +487,31 @@ pub fn multiversal_passage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Falco Spara, Pactweaver — {1}{G}{W}{U} legendary 3/3 flying, trample Bird
+/// Demon; enters with a shield counter. You may look at the top card of your
+/// library any time, and cast spells from there by removing a counter from a
+/// creature you control in addition to their other costs.
+pub fn falco_spara_pactweaver() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Falco Spara, Pactweaver",
+        cost: cost(&[generic(1), g(), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird, CreatureType::Demon], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        enters_with_counters: Some((crate::card::CounterType::Shield, Value::ONE)),
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                description: "You may cast spells from the top of your library by removing a counter from a creature you control in addition to paying their other costs.",
+                effect: StaticEffect::PlayFromLibraryTopByRemovingCounter { filter: R::Any },
+            },
+        ],
+        ..Default::default()
+    })
+}

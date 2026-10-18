@@ -333,3 +333,28 @@ fn multiversal_passage_is_the_chosen_type() {
     .expect("tap");
     assert_eq!(g.players[0].mana_pool.total(), 1);
 }
+
+/// Falco Spara casts the library top by removing a counter from a creature
+/// you control (its own shield counter here); with no counter left, it can't.
+#[test]
+fn falco_spara_casts_from_the_top_for_a_counter() {
+    let mut g = pod(2);
+    let falco = ready(&mut g, 0, catalog::falco_spara_pactweaver());
+    g.battlefield_find_mut(falco).unwrap().add_counters(CounterType::Shield, 1);
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].library.rotate_right(1);
+    assert_eq!(g.players[0].library[0].id, bear);
+    flood(&mut g);
+    cast(&mut g, bear, None);
+    assert!(g.battlefield_find(bear).is_some(), "cast off the top");
+    assert_eq!(g.battlefield_find(falco).unwrap().counter_count(CounterType::Shield), 0, "the counter paid for it");
+    let next = g.players[0].library[0].id;
+    let bear2 = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].library.rotate_right(1);
+    assert_ne!(next, bear2);
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: bear2, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "no counter, no cast"
+    );
+}
