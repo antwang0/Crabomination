@@ -2033,3 +2033,69 @@ pub fn whirlwind_killer_cyclone() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hulk, Gamma Goliath — {3}{R}{G} legendary 6/5 reach, trample Gamma
+/// Berserker Hero. Power-up abilities of your other creatures cost {3} less.
+/// Power-up {6}{R}{G}: five +1/+1 counters (CR 702.193).
+pub fn hulk_gamma_goliath() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Hulk, Gamma Goliath",
+        cost: cost(&[generic(3), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gamma, CreatureType::Berserker, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Power-up abilities of other creatures you control cost {3} less to activate.",
+            effect: StaticEffect::OtherPowerUpsCostLess { amount: 3 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), r(), g()]),
+            power_up: true,
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(5) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abomination, Terrifying Titan — {3}{R/G} legendary 4/4 trample Gamma
+/// Villain. Power-up {5}{R/G}{R/G}: a +1/+1 counter, then it fights up to one
+/// target creature an opponent controls.
+pub fn abomination_terrifying_titan() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::mana::{hybrid, Color};
+    let rg = || hybrid(Color::Red, Color::Green);
+    CardDefinition {
+        name: "Abomination, Terrifying Titan",
+        cost: cost(&[generic(3), rg()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gamma, CreatureType::Villain], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), rg(), rg()]),
+            power_up: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Fight {
+                        attacker: Selector::This,
+                        defender: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

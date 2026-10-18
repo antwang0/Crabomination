@@ -894,3 +894,18 @@ fn whirlwind_locks_a_blocker_of_the_attacked_player() {
     assert!(cant(theirs));
     assert!(!cant(other));
 }
+
+/// CR 702.193 — beside Hulk, Gamma Goliath, Abomination's power-up costs {3}
+/// less ({2}{R/G}{R/G}); it adds a counter and fights the opposing bear.
+#[test]
+fn cr_702_193_hulk_discounts_abominations_power_up() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hulk_gamma_goliath());
+    let abom = ready(&mut g, 0, catalog::abomination_terrifying_titan());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, abom, 0, Some(Target::Permanent(bear))).expect("four mana with Hulk out");
+    assert_eq!(g.battlefield_find(abom).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.battlefield_find(bear).is_none(), "fought");
+}
