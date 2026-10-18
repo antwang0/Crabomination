@@ -24684,6 +24684,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_THIRD_DOCTOR_12_COMMANDERS,
             main: decks::THE_THIRD_DOCTOR_12_MAIN,
         },
+        // Seat 4039: Carnage, Crimson Chaos's EDHREC average deck. `--pod-decks 4039`.
+        PodDeck {
+            name: "Carnage, Crimson Chaos (BR)",
+            commanders: decks::CARNAGE_COMMANDERS,
+            main: decks::CARNAGE_MAIN,
+        },
+        // Seat 4040: Esior, Wardwing Familiar and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4040`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Tevesh Szat, Doom of Fools (UB)",
+            commanders: decks::ESIOR_13_COMMANDERS,
+            main: decks::ESIOR_13_MAIN,
+        },
+        // Seat 4041: Falthis, Shadowcat Familiar and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 4041`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Malcolm, Keen-Eyed Navigator (UB)",
+            commanders: decks::FALTHIS_15_COMMANDERS,
+            main: decks::FALTHIS_15_MAIN,
+        },
+        // Seat 4042: Ganax, Astral Hunter and Shameless Charlatan's EDHREC average deck. `--pod-decks 4042`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Shameless Charlatan (UR)",
+            commanders: decks::GANAX_9_COMMANDERS,
+            main: decks::GANAX_9_MAIN,
+        },
+        // Seat 4043: Green Goblin, Revenant's EDHREC average deck. `--pod-decks 4043`.
+        PodDeck {
+            name: "Green Goblin, Revenant (BR)",
+            commanders: decks::GREEN_GOBLIN_3_COMMANDERS,
+            main: decks::GREEN_GOBLIN_3_MAIN,
+        },
+        // Seat 4044: Lae'zel, Vlaakith's Champion and Shameless Charlatan's EDHREC average deck. `--pod-decks 4044`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Shameless Charlatan (WU)",
+            commanders: decks::LAEZEL_4_COMMANDERS,
+            main: decks::LAEZEL_4_MAIN,
+        },
+        // Seat 4045: Lulu, Loyal Hollyphant and Shameless Charlatan's EDHREC average deck. `--pod-decks 4045`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Shameless Charlatan (WU)",
+            commanders: decks::LULU_12_COMMANDERS,
+            main: decks::LULU_12_MAIN,
+        },
+        // Seat 4046: Rowan Kenrith and Will Kenrith's EDHREC average deck. `--pod-decks 4046`.
+        PodDeck {
+            name: "Rowan Kenrith and Will Kenrith (UR)",
+            commanders: decks::ROWAN_KENRITH_COMMANDERS,
+            main: decks::ROWAN_KENRITH_MAIN,
+        },
+        // Seat 4047: The Twelfth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 4047`.
+        PodDeck {
+            name: "The Twelfth Doctor and Ian Chesterton (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_16_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_16_MAIN,
+        },
     ]
 }
 
@@ -30606,6 +30660,15 @@ mod tests {
             ("The Ninth Doctor and Ian Chesterton", &[0x19DA]),
             ("The Second Doctor and Barbara Wright", &[0x19DB]),
             ("The Third Doctor and Ian Chesterton", &[0x19DC]),
+            ("Carnage, Crimson Chaos", &[0x19DD]),
+            ("Esior, Wardwing Familiar and Tevesh Szat, Doom of Fools", &[0x19DE]),
+            ("Falthis, Shadowcat Familiar and Malcolm, Keen-Eyed Navigator", &[0x19DF]),
+            ("Ganax, Astral Hunter and Shameless Charlatan", &[0x19E0]),
+            ("Green Goblin, Revenant", &[0x19E1]),
+            ("Lae'zel, Vlaakith's Champion and Shameless Charlatan", &[0x19E2]),
+            ("Lulu, Loyal Hollyphant and Shameless Charlatan", &[0x19E3]),
+            ("Rowan Kenrith and Will Kenrith", &[0x19E4]),
+            ("The Twelfth Doctor and Ian Chesterton", &[0x19E5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
