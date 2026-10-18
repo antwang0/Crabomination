@@ -118168,3 +118168,31 @@ pub const KOTOSE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const FLAMEWAR_COMMANDERS: &[CardFactory] = &[flamewar_brash_veteran];
+
+/// **Flamewar, Brash Veteran**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 9 Mountains + 8 Swamps = 99.
+/// Flamewar, Brash Veteran (EDHREC, fetched 2026-10-18).
+pub const FLAMEWAR_MAIN: &[CardFactory] = &[
+    arcane_signet, cranial_plating, cranial_ram, diamond_pick_axe, dowsing_device,
+    fellwar_stone, ichor_wellspring, key_to_the_city, mephitic_draught, mind_stone,
+    mycosynth_wellspring, nettlecyst, nimblewright_schematic, oni_cult_anvil, prized_statue,
+    rakdos_signet, servo_schematic, sol_ring, swiftfoot_boots, talisman_of_indulgence,
+    tarrians_soulcleaver, thought_vessel, welding_jar, blood_crypt, bloodstained_mire,
+    buried_ruin, command_tower, darksteel_citadel, dragonskull_summit, drossforge_bridge,
+    foreboding_ruins, great_furnace, haunted_ridge, luxury_suite, reliquary_tower,
+    rogues_passage, shadowblood_ridge, smoldering_marsh, sulfurous_springs, vault_of_whispers,
+    crime_novelist, foundry_inspector, goblin_engineer, goblin_welder, grim_hireling,
+    junk_diver, lizard_blades, loyal_apprentice, marionette_apprentice, marionette_master,
+    mayhem_devil, mishra_tamer_of_mak_fawa, myr_retriever, professional_face_breaker,
+    ravenous_robots, reckless_fireweaver, scrap_trawler, slobad_goblin_tinkerer,
+    solemn_simulacrum, workshop_assistant, curse_of_opulence, guild_artisan, obsessive_pursuit,
+    weapons_manufacturing, abrade, bedevil, built_to_smash, chaos_warp, dark_ritual,
+    deadly_dispute, deflecting_swat, rakdos_charm, terminate, untimely_malfunction,
+    daretti_scrap_savant, blasphemous_act, faithless_looting, feed_the_swarm, jeskas_will,
+    reanimate, trash_for_treasure, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
