@@ -194,8 +194,8 @@ the handoff.
   retrace / harmonize / flashback-tap and the may-play / free-cast path asked none of Cease-Fire, Ranger-Captain,
   Grid Monitor, Meddling Mage, Llawan, Codie, Gaddock Teeg, Nikya, Hymn, Hand to Hand, City in a Bottle, the name
   locks. `game/cast_locks.rs` (`spell_name_locked`, `cast_lock_for`, `zone_cast_lock`) is now asked by all of
-  them. **Open:** half-card casts (adventure, omen, split, aftermath) and disturb cast another face and still
-  check only their own Ranger-Captain lock.
+  them. **FIXED (`modern_decks` 2026-10-18):** half-card casts (adventure, omen, split, aftermath) and disturb
+  now ask `face_cast_lock` against the face's probe (CR 715.3 / 712.8c).
 - **OPEN, researched (each a missing primitive):** Aegar (no excess-damage event for combat damage or
   planeswalkers, no "a Giant, Wizard, or spell you controlled dealt damage to it" history); Dawnhand Dissident
   (blight-N as an *activation* cost; a cast from linked exile paying "remove three counters from among

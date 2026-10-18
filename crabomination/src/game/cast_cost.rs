@@ -40,6 +40,17 @@ pub(crate) fn half_spell_probe(
     probe
 }
 
+/// A card cast transformed (disturb): CR 712.8c — the spell has its back
+/// face's characteristics, its mana value from the front face's mana cost.
+pub(crate) fn disturb_probe(card: &CardInstance) -> CardInstance {
+    let Some(back) = card.definition.back_face.as_ref() else { return card.clone() };
+    let mut def = (**back).clone();
+    def.cost = card.definition.cost.clone();
+    let mut probe = CardInstance::new(card.id, def, card.owner);
+    probe.controller = card.controller;
+    probe
+}
+
 impl GameState {
     /// CR 601.2f for a half-card cast: the taxes, then the generic and
     /// colored reductions, read against [`half_spell_probe`].

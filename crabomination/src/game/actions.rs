@@ -9445,6 +9445,8 @@ impl GameState {
         // CR 601.2f / 715.3 — the Adventure spell's taxes and discounts.
         if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
             let probe = super::cast_cost::half_spell_probe(card, Some(adv.name), &adv.cost, &adv.card_types);
+            // CR 101.2 — the locks read the face being cast.
+            self.face_cast_lock(p, &probe)?;
             self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), false, &mut cost);
         }
         apply_spell_cost_floor(self, &mut cost);
@@ -9523,6 +9525,8 @@ impl GameState {
         };
         if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
             let probe = super::cast_cost::half_spell_probe(card, Some(omen.name), &omen.cost, &omen.card_types);
+            // CR 101.2 — the locks read the face being cast.
+            self.face_cast_lock(p, &probe)?;
             self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), false, &mut cost);
         }
         apply_spell_cost_floor(self, &mut cost);
@@ -9730,6 +9734,8 @@ impl GameState {
             }
             let printed = cost.clone();
             let probe = super::cast_cost::half_spell_probe(card, None, &printed, &types);
+            // CR 101.2 — the locks read the face being cast.
+            self.face_cast_lock(p, &probe)?;
             self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), false, &mut cost);
         }
         apply_spell_cost_floor(self, &mut cost);
@@ -9807,6 +9813,8 @@ impl GameState {
         };
         if let Some(card) = self.players[p].graveyard.iter().find(|c| c.id == card_id) {
             let probe = super::cast_cost::half_spell_probe(card, None, &split.right.cost, &split.right.card_types);
+            // CR 101.2 — the locks read the face being cast.
+            self.face_cast_lock(p, &probe)?;
             self.apply_half_cast_cost_modifiers(p, &probe, target.as_ref(), true, &mut cost);
         }
         apply_spell_cost_floor(self, &mut cost);
@@ -14072,6 +14080,8 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // CR 101.2 / 712.8c — the locks read the back face being cast.
+        self.face_cast_lock(p, &super::cast_cost::disturb_probe(&card))?;
         let mut cost = disturb_cost;
         self.add_spell_taxes(p, &card, None, &mut cost);
         let reduction = cost_reduction_for_spell_zoned(self, p, &card, None, true);

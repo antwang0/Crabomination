@@ -165,14 +165,20 @@ impl GameState {
 
     /// Both checks for a cast that doesn't route through the hand path —
     /// flashback, escape, foretell, retrace, harmonize, an alternative cost, a
-    /// may-play grant. Half-card casts (adventure, omen, split, aftermath) and
-    /// disturb cast another face and keep their own type checks.
+    /// may-play grant.
     pub(crate) fn zone_cast_lock(&self, p: usize, card_id: CardId) -> Result<(), GameError> {
         let Some(card) = self.find_card_anywhere(card_id) else { return Ok(()) };
-        if self.spell_name_locked(p, card.definition.name) {
+        self.face_cast_lock(p, card)
+    }
+
+    /// Both checks against the spell as it will be cast: a half-card cast
+    /// (adventure, omen, split, aftermath) or disturb passes the face's
+    /// probe (`cast_cost::half_spell_probe`), whose name and types the locks read.
+    pub(crate) fn face_cast_lock(&self, p: usize, spell: &CardInstance) -> Result<(), GameError> {
+        if self.spell_name_locked(p, spell.definition.name) {
             return Err(GameError::SpellNameLocked);
         }
-        match self.cast_lock_for(p, card, u32::MAX) {
+        match self.cast_lock_for(p, spell, u32::MAX) {
             Some(e) => Err(e),
             None => Ok(()),
         }

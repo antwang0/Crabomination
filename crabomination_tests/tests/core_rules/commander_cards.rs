@@ -2303,3 +2303,46 @@ fn cr_101_2_flashback_meets_the_mana_value_lock() {
     g.players[1].opponents_cant_cast_mv.clear();
     g.perform_action(flashback).expect("unlocked");
 }
+
+/// CR 101.2 / 715.3 — an Adventure is cast as its own face: Stomp (mana value
+/// 2) meets a mana-value-2 lock and Meddling Mage naming "Stomp"; a lock on 3
+/// (Bonecrusher Giant's own value) doesn't stop it.
+#[test]
+fn cr_101_2_an_adventure_cast_meets_the_locks_on_its_face() {
+    let mut g = commander_game();
+    let giant = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let stomp = GameAction::CastAdventure {
+        card_id: giant,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    g.players[1].opponents_cant_cast_mv.push(2);
+    assert_eq!(g.perform_action(stomp.clone()).unwrap_err(), GameError::SpellNameLocked);
+    g.players[1].opponents_cant_cast_mv = vec![3];
+    let mage = g.add_card_to_battlefield(1, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Stomp".into());
+    assert_eq!(g.perform_action(stomp.clone()).unwrap_err(), GameError::SpellNameLocked);
+    g.remove_from_battlefield_to_graveyard_raw(mage);
+    g.perform_action(stomp).expect("the creature's mana value doesn't lock the Adventure");
+}
+
+/// CR 101.2 / 712.8c — a disturb cast is the back face: Meddling Mage naming
+/// Generous Soul stops Beloved Beggar's disturb cast from the graveyard.
+#[test]
+fn cr_101_2_a_disturb_cast_meets_the_name_lock_on_its_back_face() {
+    let mut g = commander_game();
+    let beggar = g.add_card_to_graveyard(0, catalog::beloved_beggar());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let mage = g.add_card_to_battlefield(1, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Generous Soul".into());
+    let disturb = GameAction::CastDisturb { card_id: beggar, target: None, additional_targets: vec![] };
+    assert_eq!(g.perform_action(disturb.clone()).unwrap_err(), GameError::SpellNameLocked);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == beggar), "it stays in the graveyard");
+    g.remove_from_battlefield_to_graveyard_raw(mage);
+    g.perform_action(disturb).expect("unlocked");
+}
