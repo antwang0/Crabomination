@@ -25200,6 +25200,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIFTH_DOCTOR_8_COMMANDERS,
             main: decks::THE_FIFTH_DOCTOR_8_MAIN,
         },
+        // Seat 4125: Numot, the Devastator's EDHREC average deck. `--pod-decks 4125`.
+        PodDeck {
+            name: "Numot, the Devastator (WUR)",
+            commanders: decks::NUMOT_COMMANDERS,
+            main: decks::NUMOT_MAIN,
+        },
+        // Seat 4126: Whiplash, Vengeful Engineer's EDHREC average deck. `--pod-decks 4126`.
+        PodDeck {
+            name: "Whiplash, Vengeful Engineer (B)",
+            commanders: decks::WHIPLASH_COMMANDERS,
+            main: decks::WHIPLASH_MAIN,
+        },
+        // Seat 4127: Krang & Shredder's EDHREC average deck. `--pod-decks 4127`.
+        PodDeck {
+            name: "Krang & Shredder (UB)",
+            commanders: decks::KRANG_SHREDDER_COMMANDERS,
+            main: decks::KRANG_SHREDDER_MAIN,
+        },
+        // Seat 4128: Arcee, Sharpshooter's EDHREC average deck. `--pod-decks 4128`.
+        PodDeck {
+            name: "Arcee, Sharpshooter (WR)",
+            commanders: decks::ARCEE_COMMANDERS,
+            main: decks::ARCEE_MAIN,
+        },
+        // Seat 4129: The Prima Vista's EDHREC average deck. `--pod-decks 4129`.
+        PodDeck {
+            name: "The Prima Vista (U)",
+            commanders: decks::THE_PRIMA_VISTA_COMMANDERS,
+            main: decks::THE_PRIMA_VISTA_MAIN,
+        },
+        // Seat 4130: Donald Blake, Guise of Thor's EDHREC average deck. `--pod-decks 4130`.
+        PodDeck {
+            name: "Donald Blake, Guise of Thor (W)",
+            commanders: decks::DONALD_BLAKE_COMMANDERS,
+            main: decks::DONALD_BLAKE_MAIN,
+        },
     ]
 }
 
@@ -31219,6 +31255,12 @@ mod tests {
             ("The First Doctor and Jamie McCrimmon", &[0x1A30]),
             ("Siani, Eye of the Storm and Yoshimaru, Ever Faithful", &[0x1A31]),
             ("The Fifth Doctor and Rose Noble", &[0x1A32]),
+            ("Numot, the Devastator", &[0x1A33]),
+            ("Whiplash, Vengeful Engineer", &[0x1A34]),
+            ("Krang & Shredder", &[0x1A35]),
+            ("Arcee, Sharpshooter", &[0x1A36]),
+            ("The Prima Vista", &[0x1A37]),
+            ("Donald Blake, Guise of Thor", &[0x1A38]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
