@@ -515,3 +515,88 @@ pub fn falco_spara_pactweaver() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// Evelyn, the Covetous — {2}{U/B}{B}{B/R} legendary 2/5 flash Vampire Rogue.
+/// Whenever a Vampire you control enters (Evelyn included), exile the top
+/// card of each player's library with a collection counter on it. Once each
+/// turn you may play one of them, spending mana as though it were any color.
+pub fn evelyn_the_covetous() -> CardDefinition {
+    use crate::mana::{Color, hybrid};
+    legend(CardDefinition {
+        name: "Evelyn, the Covetous",
+        cost: cost(&[generic(2), hybrid(Color::Blue, Color::Black), b(), hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire, CreatureType::Rogue], ..Default::default() },
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Vampire),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopOfLibrary {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::ONE,
+                    link_to_source: true,
+                    face_down: false,
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: crate::card::CounterType::Collection,
+                    amount: Value::ONE,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: MayPlayDuration::WhileSourceOnBattlefield {
+                        source: crate::card::CardId(0),
+                        one_spell_a_turn: true,
+                    },
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: true,
+                },
+            ]),
+        }],
+        ..Default::default()
+    })
+}
+
+/// Garza Zol, Plague Queen — {4}{U}{B}{R} legendary 5/5 flying, haste Vampire
+/// Noble. A creature it dealt damage to this turn dying puts a +1/+1 counter
+/// on it; its combat damage to a player may draw a card.
+pub fn garza_zol_plague_queen() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Garza Zol, Plague Queen",
+        cost: cost(&[generic(4), u(), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire, CreatureType::Noble], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::DamagedBySourceThisTurn },
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE }),
+                },
+            },
+        ],
+        ..Default::default()
+    })
+}

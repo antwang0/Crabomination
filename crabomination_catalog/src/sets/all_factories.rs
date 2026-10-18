@@ -17618,6 +17618,8 @@ static DECKS: &[Factory] = &[
     super::decks::miles_morales,
     super::decks::multiversal_passage,
     super::decks::falco_spara_pactweaver,
+    super::decks::evelyn_the_covetous,
+    super::decks::garza_zol_plague_queen,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

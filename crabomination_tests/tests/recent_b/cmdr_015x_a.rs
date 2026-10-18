@@ -358,3 +358,65 @@ fn falco_spara_casts_from_the_top_for_a_counter() {
         "no counter, no cast"
     );
 }
+
+/// Evelyn exiles each player's top card with a collection counter; her
+/// controller may cast one of them a turn, with mana of any color.
+#[test]
+fn evelyn_collects_each_top_card_and_casts_one_a_turn() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        let bear = g.add_card_to_library(seat, catalog::grizzly_bears());
+        g.players[seat].library.rotate_right(1);
+        assert_eq!(g.players[seat].library[0].id, bear);
+    }
+    let theirs = g.players[1].library[0].id;
+    let mine = g.players[0].library[0].id;
+    flood(&mut g);
+    let evelyn = g.add_card_to_hand(0, catalog::evelyn_the_covetous());
+    cast(&mut g, evelyn, None);
+    for id in [theirs, mine] {
+        let c = g.exile.iter().find(|c| c.id == id).expect("exiled");
+        assert_eq!(c.counter_count(CounterType::Collection), 1);
+    }
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: theirs,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("an opponent's bear, paid with blue");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0));
+    assert!(
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: mine,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "once each turn"
+    );
+}
+
+/// Garza Zol grows when a creature it damaged this turn dies.
+#[test]
+fn garza_zol_grows_off_its_kills() {
+    let mut g = pod(2);
+    let garza = ready(&mut g, 0, catalog::garza_zol_plague_queen());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let hit = Effect::DealDamage { to: Selector::ExactObjects(vec![bear]), amount: Value::Const(5) };
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(garza);
+    let evs = g.resolve_effect(&hit, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.battlefield_find(garza).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
