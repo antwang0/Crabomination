@@ -203,6 +203,13 @@ the handoff.
   propagated a cast lock's `Err` out of a resolution — the pod seat test's uncheckpointed-mutation guard
   (Windbrisk Heights, `SpellNameLocked`); it is now a no-op like `cast_card_for_free`. The seat test takes
   `CRAB_SEAT_SHARD=i/n` (it no longer fits two hours on four cores).
+- **Second sweep round (seeds 9208-9211, 8,575 games; four fixes):** CR 727 / 903.6 — a Karn Liberated
+  restart let an eliminated seat rejoin, shuffled commanders into libraries and dropped the 903.9b redirects
+  and the table settings (`restart_game`, seed 924892); CR 400.7 — Glimpse of Tomorrow left a waiting
+  commander tapped in its library (922200, 921096); the bot's conspire gate missed noncreature grants
+  (Raiding Schemes, 921492). Legitimate draws, left alone: Descent into Avernus killing the last players at
+  once (921404, 921684, 922694, 922412), Polyraptor + Marauding Raptor (a mandatory loop, 921624). Open board
+  caps: Mondrak, Glory Dominus token doubling (921276 six seats, 921472 eight seats).
 - **Closed with a reason:** `019Y6J4R`'s Brothers' War III "slot 1 at its own controller" is the baseline
   profile's caster-first default in a two-seat test with `hostile_player_targets` off; pods (>2 seats or the
   production profile) are hostile. Two of the seed-921412/924036 draws were Repay in Kind (fixed above).
