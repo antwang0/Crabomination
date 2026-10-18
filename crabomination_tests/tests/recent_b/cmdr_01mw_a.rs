@@ -205,3 +205,45 @@ fn vow_to_erebor_equips_only_a_dwarf() {
     assert!(run(catalog::bombur_gentle_dreamer()), "a Dwarf");
     assert!(!run(catalog::grizzly_bears()), "not a Dwarf");
 }
+
+/// CR 500.8 — Cyclonus's back face connects: it converts, and the extra
+/// beginning phase it makes comes right after this combat, so the turn then
+/// resumes at the postcombat main (not the end step).
+#[test]
+fn cr_500_8_cyclonus_adds_a_beginning_phase_after_combat() {
+    let mut g = pod(2);
+    let cy = ready(&mut g, 0, catalog::cyclonus_the_saboteur());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(cy);
+    let flip = crabomination::effect::Effect::Transform { what: crabomination::effect::Selector::This };
+    g.resolve_effect(&flip, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(cy).unwrap().definition.name, "Cyclonus, Cybertronian Fighter");
+    let land = ready(&mut g, 0, catalog::island());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.turn_number = 3;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: cy, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    let turn = g.turn_number;
+    let hand = g.players[0].hand.len();
+    let mut seen = Vec::new();
+    for _ in 0..60 {
+        if g.step == TurnStep::End || g.is_game_over() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        if seen.last() != Some(&g.step) {
+            seen.push(g.step);
+        }
+    }
+    let at = seen.iter().position(|s| *s == TurnStep::EndCombat).expect("combat ended");
+    assert_eq!(
+        &seen[at + 1..],
+        &[TurnStep::Upkeep, TurnStep::Draw, TurnStep::PostCombatMain, TurnStep::End],
+        "untap, upkeep, draw, then the postcombat main"
+    );
+    assert_eq!(g.turn_number, turn);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "the extra untap step");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the extra draw step");
+    assert_eq!(g.battlefield_find(cy).unwrap().definition.name, "Cyclonus, the Saboteur", "converted");
+}

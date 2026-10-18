@@ -354,3 +354,56 @@ pub fn vow_to_erebor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cyclonus, the Saboteur // Cyclonus, Cybertronian Fighter — {2}{U}{B}
+/// legendary 2/5 flying Robot; More Than Meets the Eye {5}{U}{B}. Combat
+/// damage to a player: it connives, then converts at power 5 or more. Back:
+/// 5/5 flying living-metal Vehicle; combat damage to a player converts it and
+/// adds a beginning phase after this combat (CR 500.8).
+pub fn cyclonus_the_saboteur() -> CardDefinition {
+    use crate::card::{AlternativeCost, ArtifactSubtype, Predicate};
+    let hit = |effect: Effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect,
+    };
+    let fighter = CardDefinition {
+        name: "Cyclonus, Cybertronian Fighter",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        color_indicator: vec![crate::mana::Color::Blue, crate::mana::Color::Black],
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::LivingMetal, Keyword::Flying],
+        triggered_abilities: vec![hit(Effect::Seq(vec![
+            Effect::Transform { what: Selector::This },
+            Effect::AdditionalBeginningPhase { count: Value::ONE },
+        ]))],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cyclonus, the Saboteur",
+        cost: cost(&[generic(2), u(), crate::mana::b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(5), u(), crate::mana::b()]),
+            converted: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![hit(Effect::Seq(vec![
+            Effect::Connive { what: Selector::This, amount: Value::ONE },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::This)), Value::Const(5)),
+                then: Box::new(Effect::Transform { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        back_face: Some(Box::new(fighter)),
+        ..Default::default()
+    }
+}
