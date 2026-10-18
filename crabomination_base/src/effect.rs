@@ -975,6 +975,10 @@ pub enum Value {
     /// discarded to pay the resolving ability's cost (Slumbering Tora's X).
     /// 0 when nothing has been discarded.
     LastDiscardedManaValue,
+    /// CR 601.2h — the total mana value of the cards discarded to pay the
+    /// resolving spell's cost, stamped on it at cast (`cast_discarded_mana_value`;
+    /// copies carry it, CR 707.10). Nahiri's Wrath.
+    CastDiscardedManaValue,
     /// Mana value of the card most recently revealed at random from a hand by
     /// `Effect::RevealRandomFromHand` (the Planeswalker's cycle's X). 0 when
     /// nothing was revealed this resolution.

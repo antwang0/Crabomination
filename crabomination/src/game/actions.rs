@@ -12053,6 +12053,7 @@ impl GameState {
                 card.cast_collected_evidence = true;
             }
             let nonland_before = self.nonland_discarded_this_resolution(p);
+            let discards_before = self.scratch.discarded_card_ids_this_resolution.len();
             let (mut cost_events, power) =
                 self.pay_additional_costs(p, &additional_costs, chosen_sacrifices, chosen_discards);
             auto_events.append(&mut cost_events);
@@ -12097,11 +12098,20 @@ impl GameState {
                     c,
                     crate::card::AdditionalCastCost::Discard { .. }
                         | crate::card::AdditionalCastCost::DiscardRandom { .. }
+                        | crate::card::AdditionalCastCost::DiscardXFromCost
+                        | crate::card::AdditionalCastCost::DiscardXRandomFromCost
                 )
             }) {
                 let nonland =
                     self.nonland_discarded_this_resolution(p).saturating_sub(nonland_before);
-                card.cast_discarded_mana_value = self.last_discarded_mana_value;
+                // The total over every card the cost discarded (Nahiri's
+                // Wrath); one card's own mana value for a one-card cost.
+                let discarded = self.scratch.discarded_card_ids_this_resolution.get(discards_before..).unwrap_or(&[]);
+                card.cast_discarded_mana_value = if discarded.is_empty() {
+                    self.last_discarded_mana_value
+                } else {
+                    Some(discarded.iter().filter_map(|&id| self.find_card_anywhere(id)).map(|c| c.definition.cost.cmc()).sum())
+                };
                 let def = card.definition_make_mut();
                 def.effect = Effect::WithCastDiscards {
                     nonland,

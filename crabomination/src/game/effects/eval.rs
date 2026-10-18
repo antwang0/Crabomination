@@ -1895,6 +1895,15 @@ impl GameState {
             Value::LastRevealedManaValue => {
                 self.last_revealed_from_hand.map(|(_, mv)| mv).unwrap_or(0) as i32
             }
+            Value::CastDiscardedManaValue => ctx
+                .source
+                .and_then(|s| {
+                    // A resolving spell is out of every zone: its snapshot.
+                    self.resolving_spell(s)
+                        .and_then(|r| r.cast_choices.discarded_mana_value())
+                        .or_else(|| self.find_card_anywhere(s).and_then(|c| c.cast_discarded_mana_value))
+                })
+                .unwrap_or(0) as i32,
             Value::LastDiscardedManaValue => self
                 .last_discarded_mana_value
                 .or(self.cost_discarded_mana_value)

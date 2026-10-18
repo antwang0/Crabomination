@@ -10352,10 +10352,11 @@ pub struct CardData {
     /// the stack (`Value::XFromCost`, `ManaValueAtMostXFromCost` — Dune
     /// Drifter's "return an artifact/creature card with MV ≤ X"). Defaults to 0.
     pub cast_x_value: u32,
-    /// CR 601.2h — mana value of the card discarded to pay this spell's
-    /// discard cost (a "Kicker—discard a creature card" included), stamped
-    /// at cast so the permanent's ETB reads it after the spell left the
-    /// stack (Dralnu's Pet's "X is the discarded card's mana value").
+    /// CR 601.2h — total mana value of the cards discarded to pay this
+    /// spell's discard cost (a "Kicker—discard a creature card" included; one
+    /// card's own value for a one-card cost), stamped at cast so the permanent's
+    /// ETB reads it after the spell left the stack (Dralnu's Pet's "X is the
+    /// discarded card's mana value"; Nahiri's Wrath's total).
     pub cast_discarded_mana_value: Option<u32>,
     /// CR 702.176 — true if this spell was cast paying its optional Bargain
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution

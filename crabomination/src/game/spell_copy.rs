@@ -27,6 +27,12 @@ pub(crate) struct CastChoices {
 }
 
 impl CastChoices {
+    /// The cost's discarded mana value, read while the spell resolves out of
+    /// every zone (`Value::CastDiscardedManaValue`).
+    pub(crate) fn discarded_mana_value(&self) -> Option<u32> {
+        self.cast_discarded_mana_value
+    }
+
     pub(crate) fn of(c: &CardInstance) -> Self {
         Self {
             kicked: c.kicked,
