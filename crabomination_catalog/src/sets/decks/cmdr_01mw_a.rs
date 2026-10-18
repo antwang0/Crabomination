@@ -2197,3 +2197,39 @@ pub fn infinite_coursework() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Madame Web, Clairvoyant — {4}{U}{U} legendary 4/4 Mutant Advisor. Look at
+/// your top card any time; cast Spider spells and noncreature spells from it.
+/// Whenever you attack, you may mill a card.
+pub fn madame_web_clairvoyant() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Madame Web, Clairvoyant",
+        cost: cost(&[generic(4), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mutant, CreatureType::Advisor], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                description: "You may cast Spider spells and noncreature spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: R::HasCreatureType(CreatureType::Spider).or(R::Not(Box::new(R::Creature))).and(R::Nonland),
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Mill a card?".into(),
+                body: Box::new(Effect::Mill { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
