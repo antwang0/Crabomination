@@ -2,13 +2,14 @@
 //! `tests/recent_b/cmdr_015x_a.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword,
+    AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
+use crate::card::MayPlayDuration;
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{ActivatedAbility, Effect, Predicate, PlayerRef, Selector, StaticEffect, Value};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, cost, g, generic, r, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 use std::sync::Arc;
 
 fn legend(def: CardDefinition) -> CardDefinition {
@@ -211,6 +212,133 @@ pub fn maraxus_of_keld() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Maraxus's power and toughness are each equal to the number of untapped artifacts, creatures, and lands you control.",
             effect: StaticEffect::SelfBasePtFromValue { power: untapped(), toughness: untapped() },
+        }],
+        ..Default::default()
+    })
+}
+
+/// Prowl, Pursuit Vehicle — Prowl's converted face, a 2/3 living metal
+/// Vehicle. Another creature or Vehicle of yours entering puts a +1/+1
+/// counter on it; the second resolution in a turn also converts it.
+fn prowl_pursuit_vehicle() -> CardDefinition {
+    let counter = || Effect::AddCounter {
+        what: Selector::This,
+        kind: crate::card::CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    legend(CardDefinition {
+        name: "Prowl, Pursuit Vehicle",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        color_indicator: vec![Color::White],
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::LivingMetal],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                },
+            ),
+            effect: Effect::EscalatingThisTurn {
+                modes: vec![
+                    counter(),
+                    Effect::Seq(vec![counter(), Effect::Transform { what: Selector::This }]),
+                    counter(),
+                ],
+            },
+        }],
+        ..Default::default()
+    })
+}
+
+/// Prowl, Stoic Strategist // Prowl, Pursuit Vehicle — {3}{W} legendary 3/3
+/// artifact creature Robot; More Than Meets the Eye {2}{W}. Attacking, it
+/// exiles up to one other tapped creature or Vehicle, whose owner may play it
+/// while it stays exiled; a card played from among those draws you a card
+/// and converts Prowl (CR 701.28).
+pub fn prowl_stoic_strategist() -> CardDefinition {
+    let played = |kind: EventKind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::AnyPlayer).with_filter(Predicate::TriggerCardExiledWithSource),
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+            Effect::Transform { what: Selector::This },
+        ]),
+    };
+    legend(CardDefinition {
+        name: "Prowl, Stoic Strategist",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), w()]),
+            converted: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::ExileWithSource {
+                            what: target_filtered(
+                                R::Creature
+                                    .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                                    .and(R::Tapped)
+                                    .and(R::OtherThanSource),
+                            ),
+                        },
+                        Effect::GrantMayPlay {
+                            what: Selector::CardExiledWithSource,
+                            duration: MayPlayDuration::WhileExiled,
+                            to_owner: true,
+                            exile_after: false,
+                            pay_own_cost: true,
+                            any_color: false,
+                        },
+                    ])),
+                },
+            },
+            played(EventKind::SpellCast),
+            played(EventKind::LandPlayed),
+        ],
+        back_face: Some(Box::new(prowl_pursuit_vehicle())),
+        ..Default::default()
+    })
+}
+
+/// Codie, Ravenous Codex — {3} legendary 1/4 artifact creature Book
+/// Construct. Casting a prepared spell copies it (new targets allowed).
+/// {W}{U}{B}{R}{G}, {T}: each creature you control with a prepare spell
+/// becomes prepared.
+pub fn codie_ravenous_codex() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Codie, Ravenous Codex",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Book, CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::IsPreparedSpell,
+            }),
+            effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::HasPrepareSpell)),
+                kind: crate::card::CounterType::Prepared,
+                amount: Value::ONE,
+            },
+            ..Default::default()
         }],
         ..Default::default()
     })

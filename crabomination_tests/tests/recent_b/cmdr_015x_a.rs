@@ -186,3 +186,64 @@ fn maraxus_of_keld_counts_untapped_artifacts_creatures_and_lands() {
     g.battlefield_find_mut(land).unwrap().tapped = true;
     assert_eq!(pt(&g), Some((2, 2)));
 }
+
+/// Codie copies a prepared spell (Peer Review: two Cadets, not one) and
+/// re-prepares an unprepared Fateseer for five colors and a tap.
+#[test]
+fn codie_copies_prepared_spells_and_prepares_the_team() {
+    let mut g = pod(2);
+    let codie = ready(&mut g, 0, catalog::codie_ravenous_codex());
+    let seer = ready(&mut g, 0, catalog::prudent_fateseer());
+    g.battlefield_find_mut(seer).unwrap().add_counters(CounterType::Prepared, 1);
+    flood(&mut g);
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: seer,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Peer Review");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Cadet").count(), 2);
+    assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Prepared), 0);
+    activate(&mut g, codie, 0, None);
+    assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Prepared), 1);
+    // An ordinary spell is no prepared spell.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 17, "one Bolt, no copy");
+}
+
+/// Prowl exiles a tapped creature as it attacks; that card's owner plays it
+/// from exile, and Prowl's controller draws while Prowl converts.
+#[test]
+fn prowl_exiles_a_tapped_creature_and_converts_when_it_is_played() {
+    let mut g = pod(2);
+    let prowl = ready(&mut g, 0, catalog::prowl_stoic_strategist());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: prowl, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "the tapped bear is exiled");
+    g.step = TurnStep::PostCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("its owner casts it from exile");
+    assert_eq!(g.players[1].mana_pool.total(), 0, "paying its own cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.battlefield_find(prowl).unwrap().definition.name, "Prowl, Pursuit Vehicle");
+}
