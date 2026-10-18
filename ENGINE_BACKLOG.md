@@ -255,6 +255,9 @@ the handoff.
   Sanguine Bond against a can't-lose opponent (925154). Board caps (~0.07 % of pod games, each its own loop):
   Mondrak (921276, 921472, 925104), Soul Warden lifegain chains (921372, 924734), Beledros (921988), Mentor of
   the Meek (924028), Ondu Spiritdancer (924508), Cadric (924550), Mycoloth / RMS Titanic (923744).
+- **Clean rounds (no new bugs):** seeds 9217-9218 at 2/3 seats (7,046 games; only symmetric Descent draws),
+  9219 four seats under the production `dflt` pilot (1,057), and 9220-9221 at 4/6/8 seats with
+  `CRAB_POD_CONCEDE=100` — a concession on ~1 % of actions (4,582 games, 0 bad).
 - **Closed with a reason:** `019Y6J4R`'s Brothers' War III "slot 1 at its own controller" is the baseline
   profile's caster-first default in a two-seat test with `hostile_player_targets` off; pods (>2 seats or the
   production profile) are hostile. Two of the seed-921412/924036 draws were Repay in Kind (fixed above).
