@@ -2433,3 +2433,29 @@ fn cr_400_11_a_wish_does_not_reach_into_exile() {
     assert!(g.exile.iter().any(|c| c.id == exiled), "the exiled Bolt stays in exile");
     assert!(g.players[0].hand.is_empty());
 }
+
+/// CR 101.2 / 608.2 — a hideaway "you may play the exiled card" under a cast
+/// lock does nothing: Meddling Mage naming the hidden Lightning Bolt left the
+/// Bolt in exile and the resolution came back `Err` with the ability already
+/// popped (the pod seat test, Windbrisk Heights).
+#[test]
+fn a_locked_hideaway_cast_does_nothing() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = commander_game();
+    let land = g.add_card_to_battlefield(0, catalog::windbrisk_heights());
+    let bolt = g.add_card_to_exile(0, catalog::lightning_bolt());
+    g.exile.iter_mut().find(|c| c.id == bolt).unwrap().exiled_with = Some(land);
+    let mage = g.add_card_to_battlefield(1, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Lightning Bolt".into());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(land, 0, None);
+    let eff = Effect::CastWithoutPayingImmediate {
+        reduce_generic: 0,
+        pay_own_cost: false,
+        what: Selector::CardExiledWithSource,
+        source_zone: crabomination::card::Zone::Exile,
+        exile_after: false,
+        copy: false,
+    };
+    g.resolve_effect(&eff, &ctx).expect("a lock is a no-op, not an error");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the Bolt stays hidden");
+}

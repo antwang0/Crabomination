@@ -66,6 +66,16 @@ impl GameState {
                 return Ok(());
             }
         }
+        // The CR 101.2 player and name locks, read the same way (CR 608.2: a
+        // cast that can't happen does nothing) — `cast_card_for_free` asks them
+        // too. A Windbrisk Heights hideaway cast under a lock came back `Err`
+        // with the ability already popped (pod seat test, 2026-10-18).
+        if let Some(card) = self.find_card_anywhere(card_id)
+            && (self.cast_lock_for(ctx.controller, card, u32::MAX).is_some()
+                || self.spell_name_locked(ctx.controller, card.definition.name))
+        {
+            return Ok(());
+        }
         // Lands are played, not cast — skip them silently. This
         // makes `ForEach LastMoved → CastWithoutPayingImmediate`
         // safe to use over a mixed top-of-library exile (e.g.
