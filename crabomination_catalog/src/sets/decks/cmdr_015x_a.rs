@@ -899,3 +899,65 @@ pub fn kotose_the_silent_spider() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// Flamewar, Brash Veteran // Flamewar, Streetwise Operative — {1}{B}{R} 3/2
+/// legendary artifact creature Robot; More Than Meets the Eye {B}{R}.
+/// Sacrifice another artifact: a +1/+1 counter and convert (sorcery speed).
+/// {1}, discard your hand: your exiled cards with intel counters go to your
+/// hand. The 2/1 menace, deathtouch Vehicle's combat damage to a player
+/// exiles that many of your top cards face down with intel counters, then
+/// converts it.
+pub fn flamewar_brash_veteran() -> CardDefinition {
+    let mut operative =
+        converted_vehicle("Flamewar, Streetwise Operative", vec![Color::Black, Color::Red], 2, 1);
+    operative.keywords.extend([Keyword::Menace, Keyword::Deathtouch]);
+    operative.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::ExileTopOfLibrary {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::TriggerEventAmount,
+                link_to_source: false,
+                face_down: true,
+            },
+            Effect::AddCounter { what: Selector::LastMoved, kind: crate::card::CounterType::Intel, amount: Value::ONE },
+            Effect::Transform { what: Selector::This },
+        ]),
+    });
+    let mut veteran = robot_front(
+        "Flamewar, Brash Veteran",
+        cost(&[generic(1), b(), r()]),
+        cost(&[b(), r()]),
+        (3, 2),
+        operative,
+    );
+    veteran.activated_abilities = vec![
+        ActivatedAbility {
+            sac_other_filter: Some((R::Artifact.and(R::OtherThanSource), 1)),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::Transform { what: Selector::This },
+            ]),
+            ..Default::default()
+        },
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            discard_hand_cost: true,
+            effect: Effect::Move {
+                what: Selector::EachMatching {
+                    zone: crate::effect::ZoneRef::Exile,
+                    filter: R::WithCounter(crate::card::CounterType::Intel).and(R::OwnedByYou),
+                },
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        },
+    ];
+    veteran
+}

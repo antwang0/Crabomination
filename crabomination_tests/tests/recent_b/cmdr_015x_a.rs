@@ -607,3 +607,41 @@ fn kotose_steals_a_name_and_plays_one() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(in_hand).map(|c| c.controller), Some(0));
 }
+
+/// Flamewar converts off a sacrificed artifact; the Operative's combat damage
+/// banks that many face-down intel cards and converts it back; the Veteran
+/// trades its hand for them.
+#[test]
+fn flamewar_banks_intel_and_cashes_it_in() {
+    let mut g = pod(2);
+    let flamewar = ready(&mut g, 0, catalog::flamewar_brash_veteran());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: flamewar,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice an artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none());
+    assert_eq!(g.battlefield_find(flamewar).unwrap().definition.name, "Flamewar, Streetwise Operative");
+    let library = g.players[0].library.len();
+    attack(&mut g, &[flamewar]);
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let power = 3; // 2/1 plus the +1/+1 counter
+    assert_eq!(g.players[0].library.len(), library - power);
+    let intel = g.exile.iter().filter(|c| c.counter_count(CounterType::Intel) == 1 && c.face_down).count();
+    assert_eq!(intel, power);
+    assert_eq!(g.battlefield_find(flamewar).unwrap().definition.name, "Flamewar, Brash Veteran");
+    g.step = TurnStep::PostCombatMain;
+    flood(&mut g);
+    activate(&mut g, flamewar, 1, None);
+    assert_eq!(g.players[0].hand.len(), power, "the hand went, the intel came home");
+}
