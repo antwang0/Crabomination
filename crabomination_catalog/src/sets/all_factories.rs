@@ -17566,6 +17566,12 @@ static DECKS: &[Factory] = &[
     super::decks::divine_congregation,
     super::decks::ivory_giant,
     super::decks::pardic_dragon,
+    super::decks::hitchclaw_recluse,
+    super::decks::sporecap_spider,
+    super::decks::tadeas_juniper_ascendant,
+    super::decks::super_strength,
+    super::decks::thing_swing,
+    super::decks::wakandan_royal_guard,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

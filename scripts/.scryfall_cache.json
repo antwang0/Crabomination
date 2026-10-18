@@ -844458,5 +844458,415 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891599&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/152663?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Super Strength": {
+    "object": "card",
+    "id": "1d24d200-63d4-44cf-8d3a-6c6ece5e16ff",
+    "oracle_id": "e1b577ad-1488-43b5-83d9-e40bd60c74be",
+    "multiverse_ids": [],
+    "resource_id": "EC9D159C08041DC433AEBFA21A6755D2D56C8A690F2921B1995FBB9F5ABF54DD",
+    "mtgo_id": 152565,
+    "arena_id": 105084,
+    "tcgplayer_id": 697061,
+    "cardmarket_id": 891586,
+    "name": "Super Strength",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff",
+    "scryfall_uri": "https://scryfall.com/card/msh/189/super-strength?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:35:11Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.jpg?1783902911",
+      "normal": "https://cards.scryfall.io/normal/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.jpg?1783902911",
+      "large": "https://cards.scryfall.io/large/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.jpg?1783902911",
+      "png": "https://cards.scryfall.io/png/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.png?1783902911",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.jpg?1783902911",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.jpg?1783902911",
+      "thumb": "https://cards.scryfall.io/thumb/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.webp?1783902911",
+      "grid": "https://cards.scryfall.io/grid/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.webp?1783902911",
+      "display": "https://cards.scryfall.io/display/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.webp?1783902911",
+      "art": "https://cards.scryfall.io/art/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.webp?1783902911",
+      "crop": "https://cards.scryfall.io/crop/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.webp?1783902911",
+      "jpeg": "https://cards.scryfall.io/normal/front/1/d/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff.jpg?1783902911"
+    },
+    "mana_cost": "{4}{G}",
+    "cmc": 5.0,
+    "type_line": "Enchantment — Aura",
+    "oracle_text": "Enchant creature\nEnchanted creature gets +4/+4 and has trample and ward {1}. (Whenever enchanted creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Enchant"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "ba9bf625-681c-4a4e-ab48-399b2fecac6b",
+    "set": "msh",
+    "set_name": "Marvel Super Heroes",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/ba9bf625-681c-4a4e-ab48-399b2fecac6b",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsh&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msh?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/1d24d200-63d4-44cf-8d3a-6c6ece5e16ff/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ae1b577ad-1488-43b5-83d9-e40bd60c74be&unique=prints",
+    "collector_number": "189",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"SEE! HULK STRONG . . . STRONGEST THERE IS!\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Tyler Walpole",
+    "artist_ids": [
+      "70c4c8c7-61a8-44e7-8fb1-161b7f943e7e"
+    ],
+    "illustration_id": "ab624f6f-a625-4d8b-8c0d-56c17557b7ff",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 15383,
+    "prices": {
+      "usd": "0.14",
+      "usd_foil": "0.19",
+      "usd_etched": null,
+      "eur": "0.05",
+      "eur_foil": "0.02",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DSuper%2BStrength",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DSuper%2BStrength",
+      "edhrec": "https://edhrec.com/route/?cc=Super+Strength"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697061%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891586&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/152565?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Thing Swing": {
+    "object": "card",
+    "id": "6db37ee7-4669-4eac-8365-5b20c021691d",
+    "oracle_id": "b8306385-ec89-49f5-ac83-7522e4f0546c",
+    "multiverse_ids": [],
+    "resource_id": "9931931BC9FB43C84C6ACE59C3FBD9C4D8FAFA178B5F1296B401469FE0F15FFF",
+    "mtgo_id": 151153,
+    "arena_id": 105581,
+    "tcgplayer_id": 697373,
+    "cardmarket_id": 892172,
+    "name": "Thing Swing",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/6db37ee7-4669-4eac-8365-5b20c021691d",
+    "scryfall_uri": "https://scryfall.com/card/msc/564/thing-swing?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:38:15Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.jpg?1783903095",
+      "normal": "https://cards.scryfall.io/normal/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.jpg?1783903095",
+      "large": "https://cards.scryfall.io/large/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.jpg?1783903095",
+      "png": "https://cards.scryfall.io/png/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.png?1783903095",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.jpg?1783903095",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.jpg?1783903095",
+      "thumb": "https://cards.scryfall.io/thumb/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.webp?1783903095",
+      "grid": "https://cards.scryfall.io/grid/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.webp?1783903095",
+      "display": "https://cards.scryfall.io/display/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.webp?1783903095",
+      "art": "https://cards.scryfall.io/art/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.webp?1783903095",
+      "crop": "https://cards.scryfall.io/crop/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.webp?1783903095",
+      "jpeg": "https://cards.scryfall.io/normal/front/6/d/6db37ee7-4669-4eac-8365-5b20c021691d.jpg?1783903095"
+    },
+    "mana_cost": "{3}{G}",
+    "cmc": 4.0,
+    "type_line": "Instant",
+    "oracle_text": "This spell costs {2} less to cast if it targets a Hero you control.\nTarget creature you control deals damage equal to twice its power to target creature an opponent controls.",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/6db37ee7-4669-4eac-8365-5b20c021691d/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ab8306385-ec89-49f5-ac83-7522e4f0546c&unique=prints",
+    "collector_number": "564",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"Nobody's catchin' me without a fight!\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Alex Horley-Orlandelli",
+    "artist_ids": [
+      "1631a2ad-bf03-4ab9-b86c-60da982d58a1"
+    ],
+    "illustration_id": "e7ff8d0a-903c-4e94-956c-82fddbeb3dad",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 23217,
+    "prices": {
+      "usd": "0.21",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "0.29",
+      "eur_foil": null,
+      "tix": "0.28"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DThing%2BSwing",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DThing%2BSwing",
+      "edhrec": "https://edhrec.com/route/?cc=Thing+Swing"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697373%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892172&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151153?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Wakandan Royal Guard": {
+    "object": "card",
+    "id": "9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d",
+    "oracle_id": "4ae15bd1-e0ea-4c1a-a311-dae421381ebc",
+    "multiverse_ids": [],
+    "resource_id": "1460C4C967D94191E8A1BB75157FB697EFAB5EA3D6E8FA6F8A223C32E5922C45",
+    "mtgo_id": 152577,
+    "arena_id": 105090,
+    "tcgplayer_id": 697064,
+    "cardmarket_id": 891590,
+    "name": "Wakandan Royal Guard",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d",
+    "scryfall_uri": "https://scryfall.com/card/msh/195/wakandan-royal-guard?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:35:08Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.jpg?1783902908",
+      "normal": "https://cards.scryfall.io/normal/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.jpg?1783902908",
+      "large": "https://cards.scryfall.io/large/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.jpg?1783902908",
+      "png": "https://cards.scryfall.io/png/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.png?1783902908",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.jpg?1783902908",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.jpg?1783902908",
+      "thumb": "https://cards.scryfall.io/thumb/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.webp?1783902908",
+      "grid": "https://cards.scryfall.io/grid/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.webp?1783902908",
+      "display": "https://cards.scryfall.io/display/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.webp?1783902908",
+      "art": "https://cards.scryfall.io/art/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.webp?1783902908",
+      "crop": "https://cards.scryfall.io/crop/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.webp?1783902908",
+      "jpeg": "https://cards.scryfall.io/normal/front/9/b/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d.jpg?1783902908"
+    },
+    "mana_cost": "{4}{G}",
+    "cmc": 5.0,
+    "type_line": "Creature — Human Soldier Hero",
+    "oracle_text": "Vigilance\nWhen this creature enters, put a +1/+1 counter on target creature. If that creature is another Hero, put two +1/+1 counters on it instead.",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Vigilance"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "ba9bf625-681c-4a4e-ab48-399b2fecac6b",
+    "set": "msh",
+    "set_name": "Marvel Super Heroes",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/ba9bf625-681c-4a4e-ab48-399b2fecac6b",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsh&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msh?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/9bf0b1e9-32b5-4591-8dd2-6b5f9768c72d/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A4ae15bd1-e0ea-4c1a-a311-dae421381ebc&unique=prints",
+    "collector_number": "195",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "The shields and spears of Wakanda are forever united in defense of their king.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Randy Gallegos",
+    "artist_ids": [
+      "a5048cc7-438a-4378-98e4-da99b78e1db0"
+    ],
+    "illustration_id": "7b2d61bb-471c-478b-a3f6-7e8985347096",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 22812,
+    "prices": {
+      "usd": "0.14",
+      "usd_foil": "0.20",
+      "usd_etched": null,
+      "eur": "0.07",
+      "eur_foil": "0.03",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DWakandan%2BRoyal%2BGuard",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DWakandan%2BRoyal%2BGuard",
+      "edhrec": "https://edhrec.com/route/?cc=Wakandan+Royal+Guard"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697064%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891590&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/152577?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

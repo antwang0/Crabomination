@@ -1568,3 +1568,145 @@ pub fn pardic_dragon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn reach_spider(name: &'static str, toughness: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 1,
+        toughness,
+        keywords: vec![Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Hitchclaw Recluse — {2}{G} 1/4 reach Spider.
+pub fn hitchclaw_recluse() -> CardDefinition {
+    reach_spider("Hitchclaw Recluse", 4)
+}
+
+/// Sporecap Spider — {2}{G} 1/5 reach Spider.
+pub fn sporecap_spider() -> CardDefinition {
+    reach_spider("Sporecap Spider", 5)
+}
+
+/// Tadeas, Juniper Ascendant — {2}{G}{W} legendary 1/3 reach Human Monk;
+/// hexproof unless attacking. A reach creature of yours attacking untaps and
+/// gains skulk this combat. One or more of your creatures dealing combat
+/// damage to a player draws a card.
+pub fn tadeas_juniper_ascendant() -> CardDefinition {
+    use crate::card::{Predicate, StaticAbility, StaticEffect};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Tadeas, Juniper Ascendant",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Monk], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Tadeas has hexproof unless it's attacking.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsAttacking,
+                })),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Hexproof],
+            },
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasKeyword(Keyword::Reach),
+                }),
+                effect: Effect::Seq(vec![
+                    Effect::Untap { what: Selector::TriggerSource, up_to: None },
+                    Effect::GrantKeyword { what: Selector::TriggerSource, keyword: Keyword::Skulk, duration: Duration::EndOfCombat },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).once_per_batch(),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Super Strength — {4}{G} Aura: enchanted creature gets +4/+4 and has
+/// trample and ward {1}.
+pub fn super_strength() -> CardDefinition {
+    use crate::card::{EquipBonus, WardCost};
+    CardDefinition {
+        name: "Super Strength",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: crate::effect::shortcut::target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            power: 4,
+            toughness: 4,
+            keywords: vec![Keyword::Trample, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Thing Swing — {3}{G} instant; {2} less if it targets a Hero you control.
+/// Target creature you control deals damage equal to twice its power to
+/// target creature an opponent controls.
+pub fn thing_swing() -> CardDefinition {
+    let power = || Value::PowerOf(Box::new(Selector::Target(0)));
+    CardDefinition {
+        name: "Thing Swing",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((R::HasCreatureType(CreatureType::Hero).and(R::ControlledByYou), 2)),
+        effect: Effect::DealDamageFrom {
+            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            amount: Value::Sum(vec![power(), power()]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wakandan Royal Guard — {4}{G} 4/4 vigilance Human Soldier Hero. When it
+/// enters, a +1/+1 counter on target creature — two if it's another Hero.
+pub fn wakandan_royal_guard() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
+    let counters = |n: i32| Effect::AddCounter {
+        what: crate::effect::shortcut::target_filtered(R::Creature),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Wakandan Royal Guard",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: R::HasCreatureType(CreatureType::Hero).and(R::OtherThanSource),
+            },
+            then: Box::new(counters(2)),
+            else_: Box::new(counters(1)),
+        })],
+        ..Default::default()
+    }
+}

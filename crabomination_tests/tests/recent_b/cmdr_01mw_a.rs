@@ -779,3 +779,42 @@ fn pardic_dragon_opponents_may_delay_it() {
     drain_stack(&mut g);
     assert_eq!(time(&g), Some(3));
 }
+
+/// Tadeas: a reach attacker untaps and gains skulk for the combat; Tadeas
+/// itself has hexproof only while not attacking.
+#[test]
+fn tadeas_untaps_reach_attackers_with_skulk() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let tadeas = ready(&mut g, 0, catalog::tadeas_juniper_ascendant());
+    let spider = ready(&mut g, 0, catalog::sporecap_spider());
+    let kw = |g: &GameState, id, k: Keyword| g.computed_permanent(id).unwrap().keywords().contains(&k);
+    assert!(kw(&g, tadeas, Keyword::Hexproof));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: spider, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(spider).unwrap().tapped, "untapped");
+    assert!(kw(&g, spider, Keyword::Skulk));
+}
+
+/// Thing Swing: twice the power, and {2} cheaper aimed from a Hero.
+#[test]
+fn thing_swing_hits_for_double_power() {
+    let mut g = pod(2);
+    let hero = ready(&mut g, 0, catalog::wakandan_royal_guard());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let ts = g.add_card_to_hand(0, catalog::thing_swing());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ts,
+        target: Some(Target::Permanent(hero)),
+        additional_targets: vec![Target::Permanent(wurm)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{1}{G} with a Hero");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "8 damage kills the 6/4");
+}
