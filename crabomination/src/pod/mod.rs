@@ -25590,6 +25590,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAMSES_OVERDARK_COMMANDERS,
             main: decks::RAMSES_OVERDARK_MAIN,
         },
+        // Seat 4190: Prowl, Stoic Strategist's EDHREC average deck. `--pod-decks 4190`.
+        PodDeck {
+            name: "Prowl, Stoic Strategist (W)",
+            commanders: decks::PROWL_COMMANDERS,
+            main: decks::PROWL_MAIN,
+        },
+        // Seat 4191: Codie, Ravenous Codex's EDHREC average deck. `--pod-decks 4191`.
+        PodDeck {
+            name: "Codie, Ravenous Codex (WUBRG)",
+            commanders: decks::CODIE_2_COMMANDERS,
+            main: decks::CODIE_2_MAIN,
+        },
     ]
 }
 
@@ -31674,6 +31686,8 @@ mod tests {
             ("Bruce Banner", &[0x1A71]),
             ("Peter Parker", &[0x1A72]),
             ("Ramses Overdark", &[0x1A73]),
+            ("Prowl, Stoic Strategist", &[0x1A74]),
+            ("Codie, Ravenous Codex", &[0x1A75]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

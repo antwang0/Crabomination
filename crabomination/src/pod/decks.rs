@@ -117512,3 +117512,62 @@ pub const RAMSES_OVERDARK_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const PROWL_COMMANDERS: &[CardFactory] = &[prowl_stoic_strategist];
+
+/// **Prowl, Stoic Strategist**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Prowl, Stoic Strategist (EDHREC, fetched 2026-10-18).
+pub const PROWL_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, lightning_greaves, mind_stone, oketras_monument,
+    panharmonicon, pearl_medallion, reckoner_bankbuster, sol_ring, springleaf_drum,
+    swiftfoot_boots, the_mind_stone, thought_vessel, thunderhawk_gunship,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith, myriad_landscape,
+    nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, war_room, aerial_extortionist,
+    aven_interrupter, blade_splicer, charming_prince, circuit_mender, claim_jumper,
+    elesh_norn_mother_of_machines, enduring_innocence, esper_sentinel, felidar_guardian,
+    flickering_hound, flickerwisp, helpful_hunter, inspiring_overseer, karmic_guide,
+    knight_of_the_white_orchid, loran_of_the_third_path, loyal_warhound, mages_attendant,
+    phelia_exuberant_shepherd, priest_of_ancient_lore, recruiter_of_the_guard,
+    resolute_reinforcements, restoration_angel, rumor_gatherer, skyclave_apparition,
+    solemn_simulacrum, spirited_companion, sun_titan, wall_of_omens, welcoming_vampire,
+    witch_enchanter, blind_obedience, cathars_crusade, far_traveler, teleportation_circle,
+    tocasias_welcome, cloudshift, eerie_interlude, ephemerate, generous_gift,
+    laezels_acrobatics, path_to_exile, reprieve, swords_to_plowshares, teferis_protection,
+    the_eternal_wanderer, austere_command, cut_a_deal, ravnica_at_war, sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const CODIE_2_COMMANDERS: &[CardFactory] = &[codie_ravenous_codex];
+
+/// **Codie, Ravenous Codex**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 3 Forests + 4 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Codie, Ravenous Codex (EDHREC, fetched 2026-10-18).
+pub const CODIE_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, resonating_lute, sol_ring, timeless_lotus,
+    twinning_staff, blood_crypt, breeding_pool, cascading_cataracts, city_of_brass,
+    command_tower, exotic_orchard, flooded_strand, godless_shrine, hallowed_fountain,
+    hexhaven_dueling_arena, ketria_triome, misty_rainforest, overgrown_tomb, path_of_ancestry,
+    reflecting_pool, reliquary_tower, sacred_foundry, skycoach_waypoint, steam_vents,
+    stomping_ground, temple_garden, the_world_tree, watery_grave, wooded_foothills,
+    archmage_emeritus, blazing_firesinger, bloodline_recollector, bloom_tender,
+    cheerful_osteomancer, defacing_duskmage, dirgur_focusmage, diviner_of_victory,
+    eccentric_pestfinder, elite_interceptor, emeritus_of_abundance, emeritus_of_conflict,
+    emeritus_of_ideation, emeritus_of_truce, emeritus_of_woe, goblin_glasswright,
+    grave_researcher, harmonized_trio, heartwood_crafter, inspired_skypainter,
+    jadzi_steward_of_fate, joined_researchers, kellan_the_kid, konstrari_improviser,
+    leech_collector, naktamun_lorespinner, pigment_wrangler, sanar_unfinished_genius,
+    scheming_silvertongue, skycoach_conductor, stensian_sanguinist, storm_kiln_artist,
+    striding_shotcaller, studious_first_year, tam_observant_sequencer, variable_chaser,
+    vastlands_scavenger, vega_the_watcher, veyran_voice_of_duality, woodwork_prodigy,
+    yavimaya_bloomsage, annie_joins_up, cryptolith_rite, leyline_of_the_guildpact,
+    thousand_year_storm, an_offer_you_cant_refuse, arcane_denial, counterspell,
+    heroic_intervention, path_to_exile, swords_to_plowshares, cultivate, echocasting_symposium,
+    farseek, natures_lore,
+    // Basics
+    forest, forest, forest, island, island, island, island, mountain, mountain, plains, plains,
+    swamp, swamp,
+];
