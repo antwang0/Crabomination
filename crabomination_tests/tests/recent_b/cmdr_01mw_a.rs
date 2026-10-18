@@ -358,3 +358,43 @@ fn cr_702_62a_gandalf_suspends_off_turn_spells() {
     assert_eq!(run(1), Some((3, true)), "opponent's turn");
     assert_eq!(run(0), None, "your own turn");
 }
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .map(|_| ())
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 702.141 — Araumi of the Dead Tide at three seats: the cost exiles two
+/// graveyard cards (one per opponent) but never the target; the Hill Giant
+/// gains encore at its own {3}{R} and makes one hasty copy per opponent.
+#[test]
+fn cr_702_141_araumi_grants_encore_at_the_cards_cost() {
+    let mut g = pod(3);
+    let araumi = ready(&mut g, 0, catalog::araumi_of_the_dead_tide());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let one = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    assert!(activate(&mut g, araumi, 0, Some(Target::Permanent(giant))).is_err(), "one other card can't pay for two opponents");
+    let two = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    activate(&mut g, araumi, 0, Some(Target::Permanent(giant))).expect("Araumi");
+    for id in [one, two] {
+        assert!(g.exile.iter().any(|c| c.id == id), "cost card exiled");
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == giant), "the target stays");
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let idx = catalog::hill_giant().activated_abilities.len();
+    activate(&mut g, giant, idx, None).expect("encore");
+    let copies = g.battlefield.iter().filter(|c| c.definition.name == "Hill Giant" && c.controller == 0).count();
+    assert_eq!(copies, 2, "one per opponent");
+}

@@ -609,3 +609,30 @@ pub fn gandalf_of_the_secret_fire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Araumi of the Dead Tide — {1}{U}{B} legendary 1/4 Merfolk Wizard. {T},
+/// exile cards from your graveyard equal to your opponent count: target
+/// creature card in your graveyard gains encore until end of turn, its encore
+/// cost equal to its mana cost (CR 702.141).
+pub fn araumi_of_the_dead_tide() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Araumi of the Dead Tide",
+        cost: cost(&[generic(1), u(), crate::mana::b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_other_filter: Some((R::Any, 1)),
+            exile_other_count: Some(Value::OpponentCount),
+            effect: Effect::GrantEncoreThisTurn {
+                what: crate::effect::shortcut::target_filtered(R::Creature.from_your_graveyard()),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

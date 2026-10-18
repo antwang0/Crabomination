@@ -1554,6 +1554,7 @@ static DECKS: &[Factory] = &[
     super::decks::unscythe_killer_of_kings,
     super::decks::thorin_king_of_durins_folk,
     super::decks::gandalf_of_the_secret_fire,
+    super::decks::araumi_of_the_dead_tide,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
