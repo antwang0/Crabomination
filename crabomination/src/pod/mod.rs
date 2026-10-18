@@ -25710,6 +25710,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_13_COMMANDERS,
             main: decks::DURNAN_OF_THE_YAWNING_PORTAL_13_MAIN,
         },
+        // Seat 4210: Rielle, the Everwise's EDHREC average deck. `--pod-decks 4210`.
+        PodDeck {
+            name: "Rielle, the Everwise (UR)",
+            commanders: decks::RIELLE_COMMANDERS,
+            main: decks::RIELLE_MAIN,
+        },
     ]
 }
 
@@ -31814,6 +31820,7 @@ mod tests {
             ("Ghost of Ramirez DePietro and Prava of the Steel Legion", &[0x1A85]),
             ("Tomorrow, Azami's Familiar", &[0x1A86]),
             ("Durnan of the Yawning Portal and Acolyte of Bahamut", &[0x1A87]),
+            ("Rielle, the Everwise", &[0x1A88]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -118085,3 +118085,30 @@ pub const DURNAN_OF_THE_YAWNING_PORTAL_13_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest,
 ];
+
+pub const RIELLE_COMMANDERS: &[CardFactory] = &[rielle_the_everwise];
+
+/// **Rielle, the Everwise**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Mountains = 99.
+/// Rielle, the Everwise (EDHREC, fetched 2026-10-18).
+pub const RIELLE_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, key_to_the_city, monument_to_endurance,
+    sol_ring, swiftfoot_boots, talisman_of_creativity, thought_vessel, cascade_bluffs,
+    cephalid_coliseum, command_tower, forgotten_cave, frostboil_snarl, lonely_sandbar,
+    mystic_sanctuary, reliquary_tower, rogues_passage, scalding_tarn, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, training_center, baral_chief_of_compliance,
+    brallin_skyshark_rider, glint_horn_buccaneer, goblin_electromancer, harmonic_prodigy,
+    haughty_djinn, laboratory_maniac, magmakin_artillerist, magus_of_the_bazaar,
+    niv_mizzet_parun, psychosis_crawler, storm_kiln_artist, surly_badgersaur, the_locust_god,
+    wonder, ominous_seas, profts_eidetic_memory, teferis_ageless_insight, underworld_breach,
+    an_offer_you_cant_refuse, arcane_denial, cathartic_pyre, channeled_force, chaos_warp,
+    counterspell, dangerous_wager, decaying_time_loop, fateful_showdown, firestorm, foil,
+    forbid, frantic_search, izzet_charm, negate, prismari_command, rites_of_refusal, swan_song,
+    temur_battle_rage, thrill_of_possibility, tolarian_winds, teferi_master_of_time,
+    artful_dodge, blasphemous_act, breakthrough, burning_inquiry, careful_study,
+    cathartic_reunion, chandras_ignition, change_of_fortune, faithless_looting, nahiris_wrath,
+    path_of_the_pyromancer, shattered_perception, steal_the_show, turbulent_dreams, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
