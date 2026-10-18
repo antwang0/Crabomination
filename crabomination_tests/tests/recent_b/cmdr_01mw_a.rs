@@ -137,3 +137,28 @@ fn invasion_of_regatha_burns_and_its_back_adds_two() {
     assert_eq!(g.scale_damage_to(Some(rock), EntityRef::Player(0), 1), 1, "not to you");
     assert_eq!(g.scale_damage_to(Some(disciples), EntityRef::Player(1), 4), 4, "a creature source");
 }
+
+/// Thorin, Mountain-king: Bonesplitter moves onto the bear, which then bites
+/// the giant for 4; with nothing to attach, the bite never happens.
+#[test]
+fn thorin_mountain_king_equips_then_bites() {
+    let run = |with_equipment: bool| {
+        let mut g = pod(2);
+        let thorin = ready(&mut g, 0, catalog::thorin_mountain_king());
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        if with_equipment {
+            ready(&mut g, 0, catalog::bonesplitter());
+        }
+        let giant = ready(&mut g, 1, catalog::hill_giant());
+        let etb = catalog::thorin_mountain_king().triggered_abilities[0].effect.clone();
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(thorin);
+        ctx.targets = vec![Target::Permanent(bear), Target::Permanent(giant)];
+        let evs = g.resolve_effect(&etb, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        g.battlefield_find(giant).is_none()
+    };
+    assert!(run(true), "a 4-power bite kills the giant");
+    assert!(!run(false), "nothing attached, no bite");
+}

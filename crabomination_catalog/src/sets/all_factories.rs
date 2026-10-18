@@ -1540,6 +1540,7 @@ static DECKS: &[Factory] = &[
     super::decks::odric_blood_cursed,
     super::decks::kellan_daring_traveler,
     super::decks::invasion_of_regatha,
+    super::decks::thorin_mountain_king,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,
