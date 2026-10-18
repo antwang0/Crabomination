@@ -26346,6 +26346,12 @@ fn play_pod_game(
                 }
                 census.bump(key);
                 census.note_triggers(&g);
+                // CR 727 — a restart (Karn Liberated) begins a new game: its
+                // commander tax starts over, so the history does too.
+                #[cfg(debug_assertions)]
+                if last_turn.is_some_and(|(t, ..)| g.turn_number < t) {
+                    commanders_seen.clear();
+                }
                 #[cfg(debug_assertions)]
                 check_commanders(&g, seed, actions, &mut commanders_seen);
                 // CR 514.1 — the turn that just ended left its active player at

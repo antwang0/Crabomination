@@ -7375,23 +7375,24 @@ impl GameState {
                 self.players[seat].commander_identity.union(identity);
             self.offboard_keyword_grants = true;
 
-            // CR 903.9b replacement — hand / library from anywhere →
-            // command zone. `from: None` matches any origin.
-            self.register_replacement(crate::replacement::ReplacementEffect {
-                id: crate::replacement::ReplacementId(0), // overwritten
-                source: crate::replacement::ReplacementSource::Card(id),
-                from: None,
-                to_zones: vec![
-                    crate::card::Zone::Hand,
-                    crate::card::Zone::Library,
-                ],
-                redirect_to: crate::card::Zone::Command,
-                optional: true,
-            });
+            self.register_commander_redirect(id);
             ids.push(id);
         }
         self.choose_commander_colors(seat, &ids);
         ids
+    }
+
+    /// CR 903.9b replacement — hand / library from anywhere → command zone.
+    /// `from: None` matches any origin.
+    fn register_commander_redirect(&mut self, id: crate::card::CardId) {
+        self.register_replacement(crate::replacement::ReplacementEffect {
+            id: crate::replacement::ReplacementId(0), // overwritten
+            source: crate::replacement::ReplacementSource::Card(id),
+            from: None,
+            to_zones: vec![crate::card::Zone::Hand, crate::card::Zone::Library],
+            redirect_to: crate::card::Zone::Command,
+            optional: true,
+        });
     }
 
     /// Clara Oswald's Impossible Girl: a commander with
@@ -20209,12 +20210,18 @@ impl GameState {
                 pl.commanders = old.commanders.clone();
                 pl.commander_identity = old.commander_identity;
                 pl.sideboard = old.sideboard.clone();
+                // CR 727.1 — only the players still in the game start the new one.
+                pl.eliminated = old.eliminated;
                 pl
             })
             .collect();
         let next_id = self.next_id;
         let attack_option = self.attack_option;
         let teams = self.teams.clone();
+        // The format's table settings (`apply_format`, CR 801 / 805) are not
+        // game state either: the new game is played under the same options.
+        let (skip_first_draw, shared_team_turns, range) =
+            (self.skip_first_draw, self.shared_team_turns, self.range_of_influence);
         // The stream's *position*, so the restart's own shuffles continue it
         // rather than starting a new one — the same contract `Clone` states.
         let rng = self.rng.clone();
@@ -20228,6 +20235,12 @@ impl GameState {
         self.teams = teams;
         self.rng = rng;
         self.decider = decider;
+        self.skip_first_draw = skip_first_draw;
+        self.shared_team_turns = shared_team_turns;
+        if range.is_some() {
+            self.range_of_influence = range;
+            self.refresh_range_matrix();
+        }
         for (i, (smart_tap, wants_ui, converge_rarest, hostile_player_targets)) in
             carried.into_iter().enumerate()
         {
@@ -20242,11 +20255,27 @@ impl GameState {
         // Every collected card returns as a brand-new object in its owner's
         // library; the deck is then shuffled (CR 103.2).
         for (p, cards) in owned.into_iter().enumerate() {
+            if !self.players[p].is_alive() {
+                continue;
+            }
             for c in cards {
                 let def = c.definition.arc();
-                self.players[p].library.push(CardInstance::new(c.id, def, p));
+                let card = CardInstance::new(c.id, def, p);
+                // CR 903.6 / 727.5a — a commander begins the new game in the
+                // command zone, and stays its deck's commander (903.9b's
+                // redirect is re-armed below).
+                if self.players[p].commanders.contains(&c.id) {
+                    self.players[p].command.push(card);
+                } else {
+                    self.players[p].library.push(card);
+                }
             }
             self.shuffle_library(p, events);
+        }
+        let commanders: Vec<crate::card::CardId> =
+            self.players.iter().flat_map(|pl| pl.commanders.iter().copied()).collect();
+        for id in commanders {
+            self.register_commander_redirect(id);
         }
 
         self.active_player_idx = starter;
@@ -20258,7 +20287,9 @@ impl GameState {
         // way — every one a card that says "draw a card" — so CR 104.3c applied
         // to the draw STEP and to `Effect::Draw` and to nothing else.
         for p in 0..self.players.len() {
-            self.draw_n(p, self.starting_hand_size(p) as usize, events);
+            if self.players[p].is_alive() {
+                self.draw_n(p, self.starting_hand_size(p) as usize, events);
+            }
         }
 
         // 727.5 — the exempt cards never joined a deck; Karn deploys them.

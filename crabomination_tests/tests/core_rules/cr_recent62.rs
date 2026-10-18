@@ -194,3 +194,36 @@ fn cr_601_2f_colored_tax_survives_a_cost_reduction() {
         "the surcharge is a coloured pip, not generic"
     );
 }
+
+/// CR 727.1 / 903.6 / 727.5a — a Commander restart: the seat that already
+/// left stays out of the new game, each commander starts it in the command
+/// zone (not shuffled into the library) and is still a commander there (a
+/// bounce offers the 903.9b redirect), and the pod's first-turn draw rule
+/// carries over. A pod sweep's Karn Liberated restart (seed 924892) let an
+/// eliminated seat back in and shuffled the commanders into the libraries.
+#[test]
+fn cr_727_1_a_commander_restart_keeps_the_pod_and_the_command_zone() {
+    use crabomination::format::Format;
+    let mut g = game_with_format(Format::Commander, 3);
+    let cmds = g.seat_commanders(0, vec![catalog::grizzly_bears()]);
+    for p in 0..3 {
+        for _ in 0..10 {
+            g.add_card_to_library(p, catalog::forest());
+        }
+    }
+    g.concede(2);
+    let pos = g.players[0].command.iter().position(|c| c.id == cmds[0]).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.players[0].graveyard.push(card);
+    let skip = g.skip_first_draw;
+    let mut events = Vec::new();
+    g.restart_game(1, Vec::new(), &mut events);
+    assert!(!g.players[2].is_alive(), "the departed seat stays out");
+    assert!(g.players[2].hand.is_empty() && g.players[2].library.is_empty());
+    assert!(g.players[0].command.iter().any(|c| c.id == cmds[0]), "the commander starts in the command zone");
+    assert!(g.players[0].library.iter().all(|c| c.id != cmds[0]));
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.skip_first_draw, skip);
+    assert_eq!(g.resolve_zone_change(cmds[0], crabomination::card::Zone::Battlefield, crabomination::card::Zone::Hand),
+        crabomination::card::Zone::Command, "still a commander: the 903.9b redirect is armed");
+}
