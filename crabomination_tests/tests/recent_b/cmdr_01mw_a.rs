@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
 use crabomination::game::*;
 
@@ -161,4 +162,46 @@ fn thorin_mountain_king_equips_then_bites() {
     };
     assert!(run(true), "a 4-power bite kills the giant");
     assert!(!run(false), "nothing attached, no bite");
+}
+
+/// Dwarven Hammer's ETB payment mints a Dwarf Berserker wearing the Hammer.
+#[test]
+fn dwarven_hammer_arrives_on_a_berserker() {
+    let mut g = pod(2);
+    let hammer = g.add_card_to_hand(0, catalog::dwarven_hammer());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, hammer);
+    let host = g.battlefield_find(hammer).and_then(|c| c.attached_to).expect("attached");
+    let berserker = g.battlefield_find(host).unwrap();
+    assert_eq!(berserker.definition.name, "Dwarf Berserker");
+    assert_eq!(g.computed_permanent(host).unwrap().power, 5);
+}
+
+/// Vow to Erebor untaps and pumps; only a Dwarf picks up an Equipment.
+#[test]
+fn vow_to_erebor_equips_only_a_dwarf() {
+    let run = |def: crabomination::card::CardDefinition| {
+        let mut g = pod(2);
+        let who = ready(&mut g, 0, def);
+        g.battlefield_find_mut(who).unwrap().tapped = true;
+        let axe = ready(&mut g, 0, catalog::bonesplitter());
+        let vow = g.add_card_to_hand(0, catalog::vow_to_erebor());
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: vow,
+            target: Some(Target::Permanent(who)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert!(!g.battlefield_find(who).unwrap().tapped);
+        g.battlefield_find(axe).unwrap().attached_to == Some(who)
+    };
+    assert!(run(catalog::bombur_gentle_dreamer()), "a Dwarf");
+    assert!(!run(catalog::grizzly_bears()), "not a Dwarf");
 }

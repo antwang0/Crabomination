@@ -237,3 +237,120 @@ pub fn thorin_mountain_king() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dwarven Hammer — {2}{R} Equipment: +3/+0 and trample; equip {3}. When it
+/// enters, you may pay {2}: a 2/1 red Dwarf Berserker, then attach it to that.
+pub fn dwarven_hammer() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, TokenDefinition};
+    let berserker = TokenDefinition {
+        name: "Dwarf Berserker".into(),
+        power: 2,
+        toughness: 1,
+        colors: vec![crate::mana::Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Berserker], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dwarven Hammer",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus { power: 3, keywords: vec![Keyword::Trample], ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::MayPay {
+            description: "Pay {2} to create a 2/1 Dwarf Berserker and attach Dwarven Hammer to it?".into(),
+            mana_cost: cost(&[generic(2)]),
+            body: Box::new(Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(berserker) },
+                Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            ])),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bombur, Gentle Dreamer — {2}{R} legendary 5/3 Dwarf Bard; storied; it
+/// doesn't untap during your untap step unless you have an enduring story.
+pub fn bombur_gentle_dreamer() -> CardDefinition {
+    use crate::card::{Predicate, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Bombur, Gentle Dreamer",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Bard], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Storied (If you control three or more artifacts, legendaries, and/or Sagas, you have an enduring story for the rest of the game.)",
+                effect: StaticEffect::Storied,
+            },
+            StaticAbility {
+                description: "Bombur doesn't untap during your untap step unless you have an enduring story.",
+                effect: StaticEffect::PreventUntapGlobal {
+                    applies_to: Selector::This,
+                    condition: Some(Predicate::Not(Box::new(Predicate::HasEnduringStory { who: PlayerRef::You }))),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Iron Hills — land, enters tapped; {T}: add {R} or {W}. {2}{R}{W}, {T},
+/// sacrifice it: two +1/+1 counters on target Dwarf you control; sorcery speed.
+pub fn iron_hills() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::mana::Color;
+    let mut d = crate::sets::dual_land_untyped("Iron Hills", Color::Red, Color::White, vec![]);
+    d.static_abilities.push(crate::sets::enters_tapped());
+    d.activated_abilities.push(ActivatedAbility {
+        mana_cost: cost(&[generic(2), r(), w()]),
+        tap_cost: true,
+        sac_cost: true,
+        sorcery_speed: true,
+        effect: Effect::AddCounter {
+            what: crate::effect::shortcut::target_filtered(
+                R::Creature.and(R::HasCreatureType(CreatureType::Dwarf)).and(R::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    });
+    d
+}
+
+/// Vow to Erebor — {1}{W} instant. Untap target creature you control; it gets
+/// +2/+2 until end of turn; if it's a Dwarf, you may attach an Equipment you
+/// control to it.
+pub fn vow_to_erebor() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, Predicate};
+    use crate::effect::shortcut::{choose_some_then, chosen_one};
+    use crate::effect::Duration;
+    let it = || Selector::Target(0);
+    CardDefinition {
+        name: "Vow to Erebor",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Untap { what: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)), up_to: None },
+            Effect::PumpPT { what: it(), power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: it(), filter: R::HasCreatureType(CreatureType::Dwarf) },
+                then: Box::new(choose_some_then(
+                    Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou)),
+                    PlayerRef::You,
+                    Value::ONE,
+                    true,
+                    Effect::Attach { what: chosen_one(), to: it() },
+                )),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
