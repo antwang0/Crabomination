@@ -2346,3 +2346,28 @@ fn cr_101_2_a_disturb_cast_meets_the_name_lock_on_its_back_face() {
     g.remove_from_battlefield_to_graveyard_raw(mage);
     g.perform_action(disturb).expect("unlocked");
 }
+
+/// CR 601.2c / 115.3 — an optional hostile slot stays empty rather than name
+/// its own controller: Drakuseth's "and 3 damage to each of up to two other
+/// targets" with only one opponent left (a pod seat conceded) hit its own
+/// face, and both last players died at once (a pod draw, seed 922860).
+#[test]
+fn drakuseths_optional_slots_never_aim_at_its_controller() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.concede(2);
+    let drak = g.add_card_to_battlefield(0, catalog::drakuseth_maw_of_flames());
+    g.clear_sickness(drak);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let life = (g.players[0].life, g.players[1].life);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: drak, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life.0, "no damage to its own face");
+    assert_eq!(g.players[1].life, life.1 - 4, "4 to the opponent");
+    assert!(g.battlefield_find(bear).is_some(), "nor to its own board");
+}

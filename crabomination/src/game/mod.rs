@@ -28421,9 +28421,15 @@ impl GameState {
         // CR 601.2c — set by `ForEachOpponentTarget`: no two picks may share a
         // controller, and the cap is the picker's own opponent count.
         let mut distinct_controllers = false;
+        // `OptionalTargets`' minimum: the slots from it on may stay empty.
+        let mut optional_from = u8::MAX;
         loop {
             eff = match eff {
-                Effect::MayDo { body, .. } | Effect::OptionalTargets { body, .. } => body,
+                Effect::OptionalTargets { min, body } => {
+                    optional_from = optional_from.min(*min);
+                    body
+                }
+                Effect::MayDo { body, .. } => body,
                 Effect::TargetsExactlyX { body } => body,
                 Effect::ForEachOpponentTarget { body } => {
                     distinct_controllers = true;
@@ -28470,7 +28476,7 @@ impl GameState {
             // Outfitter's ETB `Attach { what: target Equipment, to: target
             // creature }`) can't be filled by the same-filter loop below —
             // they walk each slot's own filter instead.
-            _ => return self.auto_extra_distinct_slot_targets(eff, source, controller, primary),
+            _ => return self.auto_extra_distinct_slot_targets(eff, source, controller, primary, optional_from),
         };
         if max <= 1 || primary.is_none() {
             return vec![];
@@ -28617,6 +28623,7 @@ impl GameState {
         source: CardId,
         controller: usize,
         primary: Option<Target>,
+        optional_from: u8,
     ) -> Vec<Target> {
         let slot1 = match eff.target_filter_for_slot_in_mode_kicked(1, None, false) {
             Some(f) => f,
@@ -28691,8 +28698,12 @@ impl GameState {
             // in `auto_targets_for_effect_all_slots_kicked`.
             let hostile = self.hostile_player_slot(controller, eff, slot, None);
             let opp_targets = opps.iter().map(|&q| Target::Player(q));
+            // An optional hostile slot ("and up to two other targets" —
+            // Drakuseth) never falls back onto the caster's own face or board:
+            // at a two-player endgame it aimed 3 damage at itself and drew.
+            let hostile_optional = hostile && (slot >= optional_from || eff.target_slot_optional(slot, None));
             let order: Vec<Target> = if hostile {
-                opp_targets.chain(std::iter::once(Target::Player(controller))).collect()
+                opp_targets.chain((!hostile_optional).then_some(Target::Player(controller))).collect()
             } else {
                 std::iter::once(Target::Player(controller)).chain(opp_targets).collect()
             };
@@ -28720,7 +28731,19 @@ impl GameState {
                             || matches!(e, Effect::DoubleCountersOnEach { .. } | Effect::DoubleAllCountersOn { .. })
                     })
                 });
-            if pick.is_none() {
+            if pick.is_none() && hostile {
+                // A hostile slot looks at the other side first, its own only
+                // when the slot is mandatory.
+                pick = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| !avoid.contains(&c.id) && c.controller != controller)
+                    .chain(self.battlefield.iter().filter(|c| {
+                        !hostile_optional && !avoid.contains(&c.id) && c.controller == controller
+                    }))
+                    .map(|c| Target::Permanent(c.id))
+                    .find(|t| is_legal(t));
+            } else if pick.is_none() {
                 pick = self
                     .battlefield
                     .iter()
