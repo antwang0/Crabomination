@@ -147,3 +147,33 @@ fn chaotic_transformation_takes_one_of_each_type() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == land));
 }
+
+/// Fishing Pole: the granted ability taps creature and Pole for a bait
+/// counter; the creature untapping spends it on a Fish.
+#[test]
+fn fishing_pole_catches_a_fish() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let pole = ready(&mut g, 0, catalog::fishing_pole());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::Equip { equipment: pole, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("bait");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped && g.battlefield_find(pole).unwrap().tapped);
+    assert_eq!(g.battlefield_find(pole).unwrap().counter_count(CounterType::Bait), 1);
+    let untap = crabomination::effect::Effect::Untap { what: Selector::ExactObjects(vec![bear]), up_to: None };
+    let evs = g.resolve_effect(&untap, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pole).unwrap().counter_count(CounterType::Bait), 0);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Fish"));
+}

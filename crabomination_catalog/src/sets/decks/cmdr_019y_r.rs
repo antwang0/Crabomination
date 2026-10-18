@@ -5,8 +5,8 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
     Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
-use crate::effect::{Duration, Effect, Selector};
-use crate::mana::{ManaCost, b, cost, generic, u};
+use crate::effect::{Duration, Effect, PlayerRef, Selector};
+use crate::mana::{Color, ManaCost, b, cost, generic, u};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -81,6 +81,61 @@ pub fn chaotic_transformation() -> CardDefinition {
             filter: any_of.and(R::TargetsTakeDistinctTypeSlots(types)),
             effect: Box::new(Effect::ExileThenRevealUntilSharedType { what: Selector::Target(0) }),
         },
+        ..Default::default()
+    }
+}
+
+/// Fishing Pole — {1} Equipment. Equipped creature has "{1}, {T}, Tap Fishing
+/// Pole: Put a bait counter on Fishing Pole." Whenever equipped creature
+/// becomes untapped, remove a bait counter from this Equipment; if you do,
+/// create a 1/1 blue Fish creature token. Equip {2}.
+pub fn fishing_pole() -> CardDefinition {
+    let this_pole = || R::HasName("Fishing Pole".into()).and(R::AttachedToThisSource);
+    let fish = crate::card::TokenDefinition {
+        name: "Fish".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Fishing Pole",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            activated_abilities: vec![crate::effect::ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                tap_others_cost: Some((this_pole(), 1)),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(this_pole()),
+                    kind: CounterType::Bait,
+                    amount: crate::card::Value::ONE,
+                },
+                ..Default::default()
+            }],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::This, filter: R::WithCounter(CounterType::Bait) },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter { what: Selector::This, kind: CounterType::Bait, amount: crate::card::Value::ONE },
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: crate::card::Value::ONE,
+                            definition: std::sync::Arc::new(fish),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            }],
+            triggers_on_equipment: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
