@@ -10651,6 +10651,24 @@ impl GameState {
                                 amount = amount.saturating_add(*bonus);
                             }
                         }
+                        StaticEffect::NoncreatureSourceDamageBonus { amount: bonus }
+                            if source_info.as_ref().is_some_and(|(s, _)| *s == c.controller)
+                                && match ent {
+                                    EntityRef::Player(q) => !self.same_team(c.controller, q),
+                                    EntityRef::Permanent(id) => self
+                                        .battlefield_find(id)
+                                        .is_some_and(|t| self.computed_is_creature(t) || t.definition.is_battle()),
+                                    EntityRef::Card(_) => false,
+                                }
+                                && source_cp.as_ref().map_or_else(
+                                    || !matches!(&self.scratch.resolving_source,
+                                        Some((id, _, _, types)) if Some(*id) == source
+                                            && types.contains(&crate::card::CardType::Creature)),
+                                    |cp| !cp.card_types().contains(&crate::card::CardType::Creature),
+                                ) =>
+                        {
+                            amount = amount.saturating_add(*bonus);
+                        }
                         StaticEffect::AddDamageToOpponentsPerCounter { kind }
                             if !self.same_team(c.controller, p) =>
                         {
@@ -34003,6 +34021,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::ReduceSpellDamageBy { .. }
         | SE::SpellDamageToOpponentsBonus { .. }
         | SE::AddDamageToOpponents { .. }
+        | SE::NoncreatureSourceDamageBonus { .. }
         | SE::AddDamageToOpponentsPerCounter { .. }
         | SE::AddDamageFromColorToPlayers { .. }
         | SE::YourColorSpellDamageDoubled { .. }
@@ -35052,6 +35071,7 @@ fn static_effect_to_effects(
             | StaticEffect::ReduceDamageToYourMatchingCreaturesBy { .. }
             | StaticEffect::CapDamageToYourOtherMatchingCreatures { .. }
             | StaticEffect::AddDamageToOpponents { .. }
+            | StaticEffect::NoncreatureSourceDamageBonus { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
             | StaticEffect::YourColorSourcesDealExtraDamage { .. }

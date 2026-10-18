@@ -1999,6 +1999,10 @@ pub enum StaticEffect {
         #[serde(default)]
         or_artifact: bool,
     },
+    /// CR 614.5 — "If a noncreature source you control would deal damage to a
+    /// creature, battle, or opponent, it deals that much damage plus `amount`
+    /// instead." (Disciples of the Inferno.) Any creature counts, yours too.
+    NoncreatureSourceDamageBonus { amount: u32 },
     /// CR 614.5 — like `AddDamageToOpponents` but the bonus equals the number of
     /// `kind` counters on this static's own source permanent, read live at
     /// damage time (Fated Firepower — "+ the number of fire counters on this").
