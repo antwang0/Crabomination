@@ -25620,6 +25620,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FALCO_SPARA_COMMANDERS,
             main: decks::FALCO_SPARA_MAIN,
         },
+        // Seat 4195: Evelyn, the Covetous's EDHREC average deck. `--pod-decks 4195`.
+        PodDeck {
+            name: "Evelyn, the Covetous (UBR)",
+            commanders: decks::EVELYN_COMMANDERS,
+            main: decks::EVELYN_MAIN,
+        },
+        // Seat 4196: Garza Zol, Plague Queen's EDHREC average deck. `--pod-decks 4196`.
+        PodDeck {
+            name: "Garza Zol, Plague Queen (UBR)",
+            commanders: decks::GARZA_ZOL_COMMANDERS,
+            main: decks::GARZA_ZOL_MAIN,
+        },
     ]
 }
 
@@ -31709,6 +31721,8 @@ mod tests {
             ("Nick Fury, Agent of S.H.I.E.L.D.", &[0x1A76]),
             ("Miles Morales", &[0x1A77]),
             ("Falco Spara, Pactweaver", &[0x1A78]),
+            ("Evelyn, the Covetous", &[0x1A79]),
+            ("Garza Zol, Plague Queen", &[0x1A7A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

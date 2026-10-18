@@ -117660,3 +117660,60 @@ pub const FALCO_SPARA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, island, island, island, island, plains,
     plains, plains, plains,
 ];
+
+pub const EVELYN_COMMANDERS: &[CardFactory] = &[evelyn_the_covetous];
+
+/// **Evelyn, the Covetous**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 4 Islands + 4 Mountains + 8 Swamps = 99.
+/// Evelyn, the Covetous (EDHREC, fetched 2026-10-18).
+pub const EVELYN_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, glass_cast_heart, izzet_signet, panharmonicon,
+    rakdos_signet, sol_ring, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, blood_crypt, bloodstained_mire, bojuka_bog, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard, luxury_suite,
+    morphic_pool, path_of_ancestry, polluted_delta, smoldering_marsh, steam_vents,
+    sunken_hollow, voldaren_estate, watery_grave, xanders_lounge, blood_artist,
+    bloodline_keeper, bloodline_necromancer, captivating_vampire, champion_of_dusk,
+    cordial_vampire, cormela_glamour_thief, crossway_troublemakers, don_andres_the_renegade,
+    drana_liberator_of_malakir, dusk_legion_zealot, florian_voldaren_scion,
+    indulgent_aristocrat, malakir_bloodwitch, markov_baron, nighthawk_scavenger,
+    olivia_crimson_bride, patron_of_the_vein, preacher_of_the_schism, sanctum_seeker,
+    scion_of_opulence, stromkirk_captain, twilight_prophet, vampire_nighthawk,
+    vampire_socialite, vampire_of_the_dire_moon, viscera_seer, voldaren_epicure,
+    black_market_connections, call_the_bloodline, leyline_of_anticipation, molten_echoes,
+    reflections_of_littjara, rhystic_study, an_offer_you_cant_refuse, arcane_denial, bedevil,
+    chaos_warp, counterspell, dark_ritual, ghostly_flicker, negate, rakdos_charm, terminate,
+    vampiric_tutor, tasha_the_witch_queen, blasphemous_act, demonic_tutor, feed_the_swarm,
+    new_blood, olivias_wrath, reanimate, toxic_deluge, vandalblast,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GARZA_ZOL_COMMANDERS: &[CardFactory] = &[garza_zol_plague_queen];
+
+/// **Garza Zol, Plague Queen**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 5 Islands + 4 Mountains + 7 Swamps = 99.
+/// Garza Zol, Plague Queen (EDHREC, fetched 2026-10-18).
+pub const GARZA_ZOL_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, blade_of_the_bloodchief, dimir_signet, fellwar_stone,
+    izzet_signet, rakdos_signet, sol_ring, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, unscythe_killer_of_kings, blood_crypt,
+    bloodstained_mire, bojuka_bog, command_tower, crumbling_necropolis, dragonskull_summit,
+    drowned_catacomb, exotic_orchard, luxury_suite, path_of_ancestry, polluted_delta,
+    scalding_tarn, smoldering_marsh, steam_vents, sulfur_falls, sulfurous_springs,
+    sunken_hollow, watery_grave, xanders_lounge, anowon_the_ruin_sage, blood_artist,
+    blood_tyrant, bloodline_keeper, bloodlord_of_vaasgoth, captivating_vampire,
+    champion_of_dusk, cordial_vampire, crossway_troublemakers, drana_liberator_of_malakir,
+    evelyn_the_covetous, malakir_bloodwitch, necropolis_regent, nightscape_familiar,
+    olivia_voldaren, olivia_crimson_bride, patron_of_the_vein, rakish_heir, soul_collector,
+    stromkirk_captain, vampire_nighthawk, vampire_socialite, collective_inferno,
+    combat_research, curiosity, mystic_remora, phyrexian_arena, rhystic_study,
+    stensia_masquerade, an_offer_you_cant_refuse, arcane_denial, bedevil, brainstorm,
+    chaos_warp, counterspell, crosiss_charm, dark_ritual, fall_of_the_hammer, negate, terminate,
+    sorin_imperious_bloodlord, blasphemous_act, blood_tribute, chandras_ignition, demonic_tutor,
+    feed_the_swarm, nibelheim_aflame, nova_flame, reanimate, vandalblast, waltz_of_rage,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
