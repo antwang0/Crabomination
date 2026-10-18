@@ -2542,6 +2542,7 @@ impl Effect {
             | Effect::LookTopTakeParty { .. }
             | Effect::RevealTopTakeOnePerCastType { .. }
             | Effect::ChooseCreaturesByPowerExileRest
+            | Effect::SearchDistinctPowersOpponentReturnsTwo { .. }
             | Effect::StampTokenCopyExceptions { .. }
             | Effect::EachPushesTrigger { .. }
             | Effect::EachOpponentChooses { .. }

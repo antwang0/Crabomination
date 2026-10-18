@@ -46,6 +46,13 @@ impl GameState {
                 .source
                 .and_then(|id| self.battlefield_find(id))
                 .is_none_or(|c| c.controller != p),
+            // "Sacrifice [the granting Equipment]. If you do, …" (Trickster's
+            // Talisman): nothing it names is a permanent you control.
+            Effect::SacrificeSelected { what: what @ Selector::AttachmentGranting } => !self
+                .resolve_selector(what, ctx)
+                .iter()
+                .filter_map(|e| e.as_permanent_id())
+                .any(|id| self.battlefield_find(id).is_some_and(|c| c.controller == p)),
             // "Exile this [from your graveyard]" — it's gone, or already exiled.
             Effect::Exile { what: Selector::This } => ctx
                 .source

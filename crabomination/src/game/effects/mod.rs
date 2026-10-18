@@ -63,6 +63,7 @@ mod amend_copy;
 mod reveal_cast_types;
 mod sculpted_sunburst;
 mod fumble;
+mod threats_undetected;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -33351,6 +33352,9 @@ impl GameState {
             Effect::EachPlayerKeepsPartySacrificesRest => self.each_player_keeps_party_sacrifices_rest(ctx, events, effect),
             Effect::LookTopTakeParty { who, count } => self.look_top_take_party(who, count, ctx, effect),
             Effect::ChooseCreaturesByPowerExileRest => self.choose_creatures_by_power_exile_rest(ctx, events, effect),
+            Effect::SearchDistinctPowersOpponentReturnsTwo { max, back } => {
+                self.search_distinct_powers_opponent_returns_two(*max, *back, ctx, events, effect)
+            }
             Effect::BounceStealAttachmentsReattach { what } => {
                 self.bounce_steal_attachments_reattach(what, ctx, events, effect)
             }

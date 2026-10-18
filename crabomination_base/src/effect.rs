@@ -6363,6 +6363,11 @@ pub enum Effect {
     /// and Equipment that were attached to it, then attach them to another
     /// creature" (Fumble; `game/effects/fumble.rs`).
     BounceStealAttachmentsReattach { what: Selector },
+    /// "Search your library for up to `max` creature cards with different
+    /// powers and reveal them. An opponent chooses `back` of those cards.
+    /// Shuffle the chosen cards into your library and put the rest into your
+    /// hand" (Threats Undetected; `game/effects/threats_undetected.rs`).
+    SearchDistinctPowersOpponentReturnsTwo { max: u32, back: u32 },
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
