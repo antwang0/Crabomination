@@ -2157,6 +2157,13 @@ pub(crate) fn requirement_matches_card_typed(
         R::IsToken => card.is_token,
         R::NotToken => !card.is_token,
         R::HasManaAbility => def.activated_abilities.iter().any(|a| crate::game::actions::is_mana_ability(&a.effect)),
+        // A milled or revealed card's printed abilities (Tazri, Stalwart
+        // Survivor's "creature cards with activated abilities that aren't mana
+        // abilities"): this walker answered false for both leaves.
+        R::HasActivatedAbility => def.has_activated_ability(),
+        R::HasNonManaActivatedAbility => {
+            def.activated_abilities.iter().any(|a| !crate::game::actions::is_mana_ability(&a.effect))
+        }
         R::Tapped => card.tapped,
         R::FaceDown => card.face_down,
         R::Untapped => !card.tapped,
