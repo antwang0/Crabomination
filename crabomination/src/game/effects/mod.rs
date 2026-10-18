@@ -38129,6 +38129,13 @@ impl GameState {
                         .collect(),
                 };
                 for cid in candidate_ids {
+                    // CR 732.2a — a copier blinking itself with the copy stops
+                    // the loop (`game/copy_loop.rs`).
+                    if let Some(copier) = ctx.source
+                        && !self.admit_copier_repeat(copier, cid)
+                    {
+                        continue;
+                    }
                     // CR 707.10c — the copy is the copier's (Narset's Reversal
                     // on an opponent's spell), not the original caster's.
                     self.copy_stack_spell_controlled(cid, n, true, Some(ctx.controller), None, events);

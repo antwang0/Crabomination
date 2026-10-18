@@ -204,6 +204,7 @@ mod move_spell;
 mod quest_copy;
 mod discard_pick;
 mod growth_loop;
+mod copy_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
 mod stack_ability;
@@ -1742,6 +1743,11 @@ pub struct ColdState {
     /// `exile_permanent_cost` — `Selector::ExiledForCost` (Curie).
     #[serde(default)]
     pub exiled_for_cost_card: Option<CardId>,
+    /// `(turn, copier, original spell, copies)`: the last trigger source to
+    /// copy a spell with new targets, for the CR 732.2a guard in
+    /// `copy_loop.rs`. Turn-stamped; written only by such a copy.
+    #[serde(default)]
+    pub copier_repeat: Option<(u32, CardId, CardId, u32)>,
     /// `(turn, seat mask)`: who put a counter on a creature this turn (CR
     /// 122.6) — read by `Predicate::CounterPutOnCreatureThisTurn` (Lasting
     /// Tarfire, Lord Jyscal Guado). Turn-stamped, so no cleanup write: written

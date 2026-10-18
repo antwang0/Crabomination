@@ -1617,3 +1617,34 @@ fn cr_903_9b_a_commander_shuffled_in_instead_of_dying_goes_home() {
     assert!(g.players[0].command.iter().any(|c| c.id == id), "home");
     assert!(g.players[0].library.iter().all(|c| c.id != id));
 }
+
+/// CR 732.2a / 400.7 — Naru Meha copying a Ghostly Flicker that is still on
+/// the stack blinks itself, and its new ETB copies the original again. The
+/// copier stops the optional loop (a blink keeps its `CardId` here, so the
+/// kept targets never go illegal): the stack drains, the game is live, and
+/// the original resolves. (Pod seed 924424; 77002 game 2 ran Naru + Displace
+/// to the action cap.)
+#[test]
+fn cr_732_2a_a_copier_blinking_itself_stops_the_loop() {
+    let mut g = main_phase();
+    let naru = g.add_card_to_battlefield(0, catalog::naru_meha_master_wizard());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    for _ in 0..2 {
+        let id = g.add_card_to_hand(0, catalog::ghostly_flicker());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(naru)),
+            additional_targets: vec![Target::Permanent(island)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast Ghostly Flicker");
+    }
+    drain_stack(&mut g);
+    assert!(g.game_over.is_none(), "an optional loop is no CR 104.4b draw");
+    assert!(g.stack.is_empty());
+    assert!(g.battlefield_find(naru).is_some() && g.battlefield_find(island).is_some());
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Ghostly Flicker").count(), 2);
+}
