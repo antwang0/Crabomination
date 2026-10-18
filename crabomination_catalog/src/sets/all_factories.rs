@@ -1556,6 +1556,7 @@ static DECKS: &[Factory] = &[
     super::decks::gandalf_of_the_secret_fire,
     super::decks::araumi_of_the_dead_tide,
     super::decks::cryptic_spires,
+    super::decks::absorbing_man,
     // cmdr_rank5k_f (session 01KXJ5zX)
     super::decks::lu_su_wu_advisor,
     super::decks::council_of_advisors,

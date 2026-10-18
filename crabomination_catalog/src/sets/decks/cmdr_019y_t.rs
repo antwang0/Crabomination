@@ -1,10 +1,14 @@
 //! Commander: 2026-10-18 (`019Y6J4R`) closers, twentieth batch. Tests in
 //! `tests/recent_b/cmdr_019y_t.rs`.
 
-use crate::card::{CardDefinition, CardType, CreatureType, SelectionRequirement as R, StaticAbility, Subtypes};
+use crate::card::{
+    CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword,
+    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility,
+};
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{ActivatedAbility, Effect, PlayerRef, StaticEffect, Value};
-use crate::mana::{b, cost};
+use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef, Selector, StaticEffect, Value};
+use crate::game::types::TurnStep;
+use crate::mana::{b, cost, g, generic, u};
 
 /// Dawnhand Dissident — {B} 1/2 Elf Warlock. {T}, Blight 1: surveil 1.
 /// {T}, Blight 2: exile target card from a graveyard (linked to this). During
@@ -54,6 +58,55 @@ pub fn cryptic_spires() -> CardDefinition {
             ..Default::default()
         }],
         static_abilities: vec![crate::sets::enters_tapped()],
+        ..Default::default()
+    }
+}
+
+/// Absorbing Man — {1}{G}{U} legendary 4/4 vigilance Human Villain. At the
+/// beginning of your first main phase, until your next turn, he becomes a
+/// copy of up to one target artifact, non-Aura enchantment, or land, except
+/// his name is Absorbing Man, he's a legendary 4/4 Human Villain creature in
+/// addition to his other types, and he has vigilance (CR 707.9b).
+pub fn absorbing_man() -> CardDefinition {
+    CardDefinition {
+        name: "Absorbing Man",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Villain], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Artifact
+                    .or(R::Enchantment.and(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura).negate()))
+                    .or(R::Land)
+                    .and(R::OtherThanSource),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: Selector::Target(0),
+                        duration: Duration::UntilNextTurn,
+                        non_legendary: false,
+                    },
+                    Effect::AmendCopy {
+                        what: Selector::This,
+                        keep_activated: vec![],
+                        keep_triggered: vec![],
+                        pt: Some((4, 4)),
+                        keep_name: true,
+                        legendary: true,
+                        keywords: vec![Keyword::Vigilance],
+                        card_types: vec![CardType::Creature],
+                        creature_types: vec![CreatureType::Human, CreatureType::Villain],
+                    },
+                ])),
+            },
+        }],
         ..Default::default()
     }
 }

@@ -114,3 +114,29 @@ fn cryptic_spires_taps_for_the_circled_colors() {
     assert_eq!(pool.total(), 1);
     assert_eq!(pool.amount(Color::White) + pool.amount(Color::Blue), 1, "white or blue only");
 }
+
+/// CR 707.9b — Absorbing Man's first-main-phase copy keeps his exceptions:
+/// copying Sol Ring he's named Absorbing Man, a legendary 4/4 Human Villain
+/// artifact creature with vigilance and Sol Ring's mana ability.
+#[test]
+fn absorbing_man_copies_an_artifact_with_his_exceptions() {
+    use crabomination::card::{CardType, CreatureType, Keyword, Supertype};
+    let mut g = pod(2);
+    let man = ready(&mut g, 0, catalog::absorbing_man());
+    ready(&mut g, 0, catalog::sol_ring());
+    g.step = TurnStep::Draw;
+    while g.step != TurnStep::PreCombatMain && g.game_over.is_none() {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let c = g.battlefield_find(man).expect("still here");
+    assert_eq!(c.definition.name, "Absorbing Man");
+    assert!(c.definition.supertypes.contains(&Supertype::Legendary));
+    assert!(c.definition.card_types.contains(&CardType::Artifact), "a copy of Sol Ring");
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Villain));
+    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
+    assert!(!c.definition.activated_abilities.is_empty(), "Sol Ring's mana ability");
+    let cp = g.computed_permanent(man).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.card_types().contains(&CardType::Creature));
+}
