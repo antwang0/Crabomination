@@ -644,3 +644,36 @@ fn vision_quest_fetches_with_counters_and_haste() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 4);
     assert!(g.computed_permanent(golem).unwrap().keywords().contains(&Keyword::Haste));
 }
+
+/// Lithomantic Barrage: 5 to a blue creature, 1 to a green one.
+#[test]
+fn lithomantic_barrage_punishes_white_and_blue() {
+    let hit = |def: crabomination::card::CardDefinition| {
+        let mut g = pod(2);
+        let c = ready(&mut g, 1, def);
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.targets = vec![Target::Permanent(c)];
+        g.resolve_effect(&catalog::lithomantic_barrage().effect, &ctx).unwrap();
+        g.battlefield_find(c).map(|c| c.damage)
+    };
+    assert_eq!(hit(catalog::craw_wurm()), Some(1));
+    assert_eq!(hit(catalog::serra_angel()), None, "5 kills the 4/4 Angel");
+}
+
+/// Warbeast of Gorgoroth: a power-4 creature of yours dying amasses Orcs 2;
+/// a bear dying doesn't.
+#[test]
+fn warbeast_of_gorgoroth_amasses_on_big_deaths() {
+    let run = |def: crabomination::card::CardDefinition| {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::warbeast_of_gorgoroth());
+        let c = ready(&mut g, 0, def);
+        let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![c]) };
+        let evs = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        g.battlefield.iter().filter(|c| c.definition.name.contains("Army")).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).sum::<u32>()
+    };
+    assert_eq!(run(catalog::craw_wurm()), 2);
+    assert_eq!(run(catalog::grizzly_bears()), 0);
+}

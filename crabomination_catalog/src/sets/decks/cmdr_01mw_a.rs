@@ -1160,3 +1160,129 @@ pub fn vision_quest() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Force of Rage — {1}{R}{R} instant; if it's not your turn, you may exile a
+/// red card from your hand instead of paying. Two 3/1 red trample, haste
+/// Elementals, sacrificed at the beginning of your next upkeep.
+pub fn force_of_rage() -> CardDefinition {
+    use crate::card::{AlternativeCost, TokenDefinition};
+    use crate::mana::Color;
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 3,
+        toughness: 1,
+        colors: vec![Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Force of Rage",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: Arc::new(elemental) },
+            Effect::SacrificeAtNextUpkeep { what: Selector::LastCreatedTokens },
+        ]),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: crate::mana::ManaCost::default(),
+            exile_filter: Some(R::HasColor(Color::Red)),
+            not_your_turn_only: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Incendiary Flow — {1}{R} sorcery. 3 damage to any target; a creature dealt
+/// damage this way that would die this turn is exiled instead.
+pub fn incendiary_flow() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Incendiary Flow",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_any() },
+            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lithomantic Barrage — {R} sorcery; can't be countered. 1 damage to target
+/// creature or planeswalker, 5 instead if it's white and/or blue.
+pub fn lithomantic_barrage() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::mana::Color;
+    let target = || crate::effect::shortcut::target_filtered(R::Creature.or(R::Planeswalker));
+    CardDefinition {
+        name: "Lithomantic Barrage",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: R::HasColor(Color::White).or(R::HasColor(Color::Blue)),
+            },
+            then: Box::new(Effect::DealDamage { to: target(), amount: Value::Const(5) }),
+            else_: Box::new(Effect::DealDamage { to: target(), amount: Value::ONE }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Misty Mountains Raider — {4}{R} 4/4 Goblin Soldier. Whenever you attack,
+/// amass Goblins 2.
+pub fn misty_mountains_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Misty Mountains Raider",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Soldier], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Goblin) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tidings of War — {R} sorcery. Amass Goblins 1, or 3 if cast from a
+/// graveyard. Flashback {3}{R}.
+pub fn tidings_of_war() -> CardDefinition {
+    use crate::card::Predicate;
+    let amass = |n: i32| Effect::Amass { who: PlayerRef::You, count: Value::Const(n), extra_type: Some(CreatureType::Goblin) };
+    CardDefinition {
+        name: "Tidings of War",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
+        effect: Effect::If { cond: Predicate::CastFromGraveyard, then: Box::new(amass(3)), else_: Box::new(amass(1)) },
+        ..Default::default()
+    }
+}
+
+/// Warbeast of Gorgoroth — {4}{R} 5/4 Beast. Whenever it or another creature
+/// you control with power 4 or greater dies, amass Orcs 2.
+pub fn warbeast_of_gorgoroth() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Warbeast of Gorgoroth",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::PowerAtLeast(4) }),
+            effect: Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Orc) },
+        }],
+        ..Default::default()
+    }
+}

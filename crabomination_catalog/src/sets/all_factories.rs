@@ -17548,6 +17548,12 @@ static DECKS: &[Factory] = &[
     super::decks::zoo_escapees,
     super::decks::super_suit,
     super::decks::vision_quest,
+    super::decks::force_of_rage,
+    super::decks::incendiary_flow,
+    super::decks::lithomantic_barrage,
+    super::decks::misty_mountains_raider,
+    super::decks::tidings_of_war,
+    super::decks::warbeast_of_gorgoroth,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
