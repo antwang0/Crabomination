@@ -90,3 +90,27 @@ fn dawnhand_dissident_blights_itself_to_surveil() {
     assert!(activate(&mut g, dd, 0, None), "{{T}}, Blight 1");
     assert_eq!(minus(&g, dd), 1);
 }
+
+/// CR 903.4 / 106.1 — Cryptic Spires makes only its circled colors, which
+/// for a two-color Commander deck are its commander's identity (Siani and
+/// Yoshimaru: white and blue); it enters tapped, and it is colorless for
+/// identity (no colored symbol in its text).
+#[test]
+fn cryptic_spires_taps_for_the_circled_colors() {
+    use crabomination::mana::Color;
+    let mut g = pod(2);
+    let cmdr = g.add_card_to_battlefield(0, catalog::hanna_ships_navigator());
+    g.players[0].commanders.push(cmdr);
+    g.players[0].commander_identity = [Color::White, Color::Blue].into_iter().collect();
+    let spires = g.add_card_to_battlefield(0, catalog::cryptic_spires());
+    let identity = crabomination::color_identity::color_identity(&catalog::cryptic_spires());
+    assert!(identity.is_empty(), "colorless identity");
+    g.battlefield_find_mut(spires).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spires, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap for mana");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total(), 1);
+    assert_eq!(pool.amount(Color::White) + pool.amount(Color::Blue), 1, "white or blue only");
+}

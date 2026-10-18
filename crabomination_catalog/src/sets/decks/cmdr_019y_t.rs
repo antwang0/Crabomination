@@ -40,3 +40,20 @@ pub fn dawnhand_dissident() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cryptic Spires — Land. As you create your deck, circle two colors. Enters
+/// tapped; {T}: add one mana of either circled color
+/// (`ManaPayload::CircledColors` — read off the commander identity).
+pub fn cryptic_spires() -> CardDefinition {
+    CardDefinition {
+        name: "Cryptic Spires",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::CircledColors },
+            ..Default::default()
+        }],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        ..Default::default()
+    }
+}

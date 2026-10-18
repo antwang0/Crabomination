@@ -1977,6 +1977,8 @@ library-exile event.
 | Psychic Purge | "when a spell or ability an opponent controls causes you to discard this, that player loses 5 life" is absent | `GameEvent::OpponentCausedYouToDiscard` doesn't carry the causing seat, and no `PlayerRef` names it |
 | Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |
 | The Raven's Warning | III "you may put a card you own from outside the game on top of your library" does nothing | no wish-to-library-top effect (`WishToLibrary` shuffles in); a Commander game has no sideboard, so the gap only shows in sideboarded play |
+| 🟡 Cryptic Spires | the two colors are circled as the deck is built | no deck-building choice: `ManaPayload::CircledColors` reads the controller's commander identity — exact for a one- or two-color identity, its first two colors (WUBRG order) in a 3+ color deck, white and blue with no commander |
+| 🟡 Dawnhand Dissident | the blight player picks the creature; the caster picks which three counters to remove | both picks are automatic: blight goes on a creature that survives it (weakest first), the counter drain takes -1/-1 counters first, weakest creature first (as Ward—Blight's payer already does) |
 
 ### EDHREC average-deck seats (`decks::cmdr_edhrec3`, 2026-10-11 Commander run) — open residuals
 
