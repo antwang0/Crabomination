@@ -25686,6 +25686,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FBLTHP_2_COMMANDERS,
             main: decks::FBLTHP_2_MAIN,
         },
+        // Seat 4206: Mai and Zuko's EDHREC average deck. `--pod-decks 4206`.
+        PodDeck {
+            name: "Mai and Zuko (UBR)",
+            commanders: decks::MAI_AND_ZUKO_COMMANDERS,
+            main: decks::MAI_AND_ZUKO_MAIN,
+        },
     ]
 }
 
@@ -31786,6 +31792,7 @@ mod tests {
             ("Gale, Waterdeep Prodigy and Candlekeep Sage", &[0x1A81]),
             ("Gale, Waterdeep Prodigy and Sword Coast Sailor", &[0x1A82]),
             ("Fblthp, Knows the Way", &[0x1A83]),
+            ("Mai and Zuko", &[0x1A84]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -117973,3 +117973,33 @@ pub const FBLTHP_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, wastes, wastes, wastes,
 ];
+
+pub const MAI_AND_ZUKO_COMMANDERS: &[CardFactory] = &[mai_and_zuko];
+
+/// **Mai and Zuko**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 6 Islands + 6 Mountains + 4 Swamps = 99.
+/// Mai and Zuko (EDHREC, fetched 2026-10-18).
+pub const MAI_AND_ZUKO_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, dimir_signet, fellwar_stone, fire_nation_turret,
+    izzet_signet, lightning_greaves, mystic_forge, rakdos_signet, senseis_divining_top,
+    sol_ring, swiftfoot_boots, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, the_fire_nation_drill, tundra_tank, unwinding_clock,
+    white_lotus_tile, blood_crypt, bloodstained_mire, command_tower, crumbling_necropolis,
+    dragonskull_summit, drowned_catacomb, exotic_orchard, fire_nation_palace,
+    jasmine_dragon_tea_shop, luxury_suite, morphic_pool, path_of_ancestry, polluted_delta,
+    scalding_tarn, shivan_reef, steam_vents, sulfur_falls, training_center, watery_grave,
+    xanders_lounge, avatar_roku_firebender, baleful_strix, boiling_rock_rioter,
+    etherium_sculptor, fire_lord_azula, firebending_student, foundry_inspector,
+    iroh_dragon_of_the_west, jhoira_weatherlight_captain, jwari_shapeshifter,
+    katara_waterbending_master, longshot_rebel_bowman, loyal_fire_sage, mai_scornful_striker,
+    ozai_the_phoenix_king, sea_gate_loremaster, smellerbee_rebel_fighter,
+    sokka_bold_boomeranger, the_blue_spirit, the_mechanist_aerial_artisan, ty_lee_chi_blocker,
+    wartime_protestors, zuko_exiled_prince, zuko_firebending_master, fated_firepower,
+    fire_nation_occupation, firebender_ascension, the_legend_of_roku, an_offer_you_cant_refuse,
+    arcane_denial, chaos_warp, counterspell, dark_ritual, deadly_rollick, deflecting_swat,
+    fierce_guardianship, redirect_lightning, swan_song, the_last_agni_kai, blasphemous_act,
+    demonic_tutor, fabricate, sozins_comet, vandalblast,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp,
+];
