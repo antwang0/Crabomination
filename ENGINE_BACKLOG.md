@@ -209,7 +209,7 @@ the handoff.
 - **Guardrails:** `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, determinism ok;
   cube/sos/sealed 2,400/1,500/3,600 two-player games (seed 52001) 0 undecided.
 
-## FIXED/OPEN 2026-10-17/18 (Commander run, `019Y6J4R`) — 178 closer cards, 263 seats, the cast-lock and wish classes
+## FIXED/OPEN 2026-10-17/18 (Commander run, `019Y6J4R`) — 183 closer cards, 272 seats, the cast-lock and wish classes
 
 - **Cards** in `decks::cmdr_019y_a`..`_t` (decks4 part) and `cmdr_019y_woe` (Gadwick's First Duel — decks2, beside
   `woe_roles`); tests `recent_b/cmdr_019y_{a..p}.rs`. Picked off a fresh 70-page EDHREC scan plus the exact pair
@@ -217,7 +217,7 @@ the handoff.
   primitives. **Closed from `3chree`'s open list:** Eater of Virtue, Gilt-Leaf Winnower.
 - **Seats** 3846-3847 (Hama Pashar and Moon-Boy — zero-gap singles nobody had seated), 3858-3879, 3888-3898,
   3902-3958 (less the other sessions'), 3959-4054, and (batches Q-T) up to 4092, 4107-4115, 4120-4124,
-  4138-4145, 4159-4164, 4173-4181: each after `cr_903_5a_target_decks_are_legal` and 4-seat pod
+  4138-4145, 4159-4164, 4173-4181, 4197-4198, 4201-4204, 4207-4209: each after `cr_903_5a_target_decks_are_legal` and 4-seat pod
   smokes (every game decided). **Faceless One** pairs (Burakos, Dungeon Delver, Zellix) stay unseated: its
   CR 903.4b color choice *is* modelled, but EDHREC's average mixes decks that chose different colors, so no one
   choice makes the 100 cards legal (two seat commit messages say "not modelled" — they're wrong).
@@ -243,7 +243,15 @@ the handoff.
   `CounterType::Music` (client arms too) + `DestroySourceUnlessPayValue` + `AddMusicCounterGrantUpkeepToll`
   (Musician); `RemoveBlockerThenReblock` (Balduvian Warlord); `CopyForChosenOtherTargetableCreature`, Zada's arm
   moved beside it (`game/effects/spell_copy_others.rs`, Beamsplitter Mage). Cosmium Confluence and Brine Comber
-  needed none (`choose_one_then`; `EventSpec.causer_filter`).
+  needed none (`choose_one_then`; `EventSpec.causer_filter`); nor did Scientist Supreme of A.I.M. (`CopyAbility`
+  over `HasAbilityOnStack ∧ Artifact`) or Wizard's Spellbook (`RollDie` + `CastCopyForCost`). Last round:
+  `StaticEffect::DrawsRevealedOthersMayPayLifeToBin` (`game/zurs_weirding.rs`, `DrawDig::OthersMayBin`);
+  `CounterType::Hatching` + `LookTopExileOneFaceDownWithCounter` (`game/effects/hatching.rs`, The Dragon-Kami
+  Reborn); Synthesis Pod's `exile_spell_cost` now stamps `ExiledForCostManaValue`, and **`RevealUntilFind`
+  concretizes a filter's XFromCost atoms** (they read false there before — any reveal-until keyed on X was blind).
+- **FIXED (shared tests):** `015x`'s Marvel modal DFCs that transform (Bruce Banner, Peter Parker, Miles Morales)
+  joined `MODAL_DFCS_THAT_TRANSFORM`, and its Maraxus of Keld creature closed that `KNOWN_IDENTITY_GAPS` row —
+  `core_rules` was red on the branch for both.
 - **FIXED (CR 611.2c / 400.7):** a permanent's self-scoped effect (`AffectedPermanents::Source`, e.g. a crewed
   Vehicle's "becomes an artifact creature until end of turn") survived its zone change — Conqueror's Galleon came
   back as a 0/0 creature land and died. `game/source_scoped_effects.rs` drops them as it leaves.
@@ -281,8 +289,9 @@ the handoff.
 - **Released claims (each needs a primitive):** Grub, Storied Matriarch // Grub's Command (Notorious Auntie's
   "blight 1; copy the blighted creature" needs the blighted creature exposed). Still open from the batch-J+ scan,
   each 2-3 decks: Miss Highwater (player contract counters + lose-game copies), Invasion of New Phyrexia,
-  Wizard's Spellbook, Synthesis Pod, Zur's Weirding, Scientist Supreme of A.I.M., Falco Spara, The Dragon-Kami
-  Reborn, Deification, Hogaak, Extrapolate the Impossible.
+  Deification (a `CardCold.chosen_planeswalker_type`, a hexproof grant keyed to it — the layer gather's
+  `GrantKeywordToChosenType` reads creature types only — and the "all but one loyalty" floor in both
+  `movement.rs`'s and `combat.rs`'s PW-damage sites), Hogaak, Extrapolate the Impossible.
 - ⚠ **Myra's Marvels partners (Nocturno, Ignacio, Hardy, Fluros) are not Commander-legal** — the pair scan's
   biggest "blockers" (61 pair decks) can never seat. Several other one-gap commanders are Unfinity / acorn too
   (Sahir, Claire D'Loon, D00-DL, Brad Boimler, Devil K. Nevil, Truss, Solaflora, Tolabow, Rusko, Itazura) —
