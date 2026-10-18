@@ -706,3 +706,23 @@ fn zog_stops_a_blocker() {
     cast(&mut g, zog, None);
     assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::CantBlock));
 }
+
+/// Casey & Raph: both modes, each on a different player — one exiles their
+/// top card and may play it free; the other makes two Treasures.
+#[test]
+fn casey_and_raph_split_the_modes_between_players() {
+    let mut g = pod(3);
+    flood(&mut g);
+    let casey = g.add_card_to_hand(0, catalog::casey_and_raph_hotheads());
+    let tops: Vec<CardId> = (0..3).map(|p| g.players[p].library[0].id).collect();
+    cast(&mut g, casey, None);
+    let treasures: Vec<usize> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Treasure").map(|c| c.controller).collect();
+    assert_eq!(treasures.len(), 2);
+    assert!(treasures[0] == treasures[1]);
+    let exiled: Vec<usize> = (0..3).filter(|&p| g.exile.iter().any(|c| c.id == tops[p])).collect();
+    assert_eq!(exiled.len(), 1, "one player exiled their top card");
+    assert_ne!(exiled[0], treasures[0], "each mode on a different player");
+    let card = g.exile.iter().find(|c| c.id == tops[exiled[0]]).unwrap();
+    assert!(card.may_play_until.is_some(), "and may play it");
+}

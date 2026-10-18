@@ -17636,6 +17636,7 @@ static DECKS: &[Factory] = &[
     super::decks::soundwave_sonic_spy,
     super::decks::cosmic_spider_man,
     super::decks::zog_triceraton_castaway,
+    super::decks::casey_and_raph_hotheads,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

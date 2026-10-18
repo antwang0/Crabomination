@@ -1110,3 +1110,45 @@ pub fn zog_triceraton_castaway() -> CardDefinition {
         ..Default::default()
     })
 }
+
+/// Casey & Raph, Hotheads — {4}{R} legendary 4/4 Mutant Ninja Human Turtle.
+/// Entering, choose one or both, each mode targeting a different player:
+/// that player exiles their top card and may play it free until their next
+/// end step; that player creates two Treasures. (`ChooseN` gives each mode
+/// its own player slot and never reuses a player.)
+pub fn casey_and_raph_hotheads() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Casey & Raph, Hotheads",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Human, CreatureType::Turtle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::AsPlayer {
+                    who: PlayerRef::Target(0),
+                    body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        duration: MayPlayDuration::UntilYourNextEndStep,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    }),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::Target(0),
+                    count: Value::Const(2),
+                    definition: Arc::new(crabomination_base::tokens::treasure_token()),
+                },
+            ],
+        })],
+        ..Default::default()
+    })
+}
