@@ -422,3 +422,56 @@ pub fn cosmium_confluence() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Brine Comber // Brinebound Gift — {1}{W}{U} 1/1 Spirit. Whenever it enters
+/// or becomes the target of an Aura spell, create a 1/1 white flying Spirit.
+/// Disturb {W}{U}: Brinebound Gift, an Aura — whenever it enters or enchanted
+/// creature becomes the target of an Aura spell, create a 1/1 Spirit.
+pub fn brine_comber() -> CardDefinition {
+    use crate::card::{EquipBonus, TokenDefinition};
+    use crate::mana::Color;
+    let spirit = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: std::sync::Arc::new(TokenDefinition {
+            name: "Spirit".into(),
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::White],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+            keywords: vec![Keyword::Flying],
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
+    };
+    let aura_spell = || R::IsSpellOnStack.and(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura));
+    let targeted = || TriggeredAbility {
+        event: EventSpec {
+            causer_filter: Some(aura_spell()),
+            ..EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+        },
+        effect: spirit(),
+    };
+    let gift = CardDefinition {
+        name: "Brinebound Gift",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        color_indicator: vec![Color::White, Color::Blue],
+        effect: Effect::Attach { what: Selector::This, to: crate::effect::shortcut::target_filtered(R::Creature) },
+        triggered_abilities: vec![crate::effect::shortcut::etb(spirit())],
+        equipped_bonus: Some(EquipBonus { triggered_abilities: vec![targeted()], ..Default::default() }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Brine Comber",
+        cost: cost(&[generic(1), crate::mana::w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Disturb(cost(&[crate::mana::w(), u()]))],
+        triggered_abilities: vec![crate::effect::shortcut::etb(spirit()), targeted()],
+        back_face: Some(Box::new(gift)),
+        ..Default::default()
+    }
+}

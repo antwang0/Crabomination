@@ -1979,6 +1979,7 @@ library-exile event.
 | The Raven's Warning | III "you may put a card you own from outside the game on top of your library" does nothing | no wish-to-library-top effect (`WishToLibrary` shuffles in); a Commander game has no sideboard, so the gap only shows in sideboarded play |
 | 🟡 Cryptic Spires | the two colors are circled as the deck is built | no deck-building choice: `ManaPayload::CircledColors` reads the controller's commander identity — exact for a one- or two-color identity, its first two colors (WUBRG order) in a 3+ color deck, white and blue with no commander |
 | 🟡 Dawnhand Dissident | the blight player picks the creature; the caster picks which three counters to remove | both picks are automatic: blight goes on a creature that survives it (weakest first), the counter drain takes -1/-1 counters first, weakest creature first (as Ward—Blight's payer already does) |
+| 🟡 Brine Comber // Brinebound Gift | the Gift's "enchanted creature becomes the target of an Aura spell" Spirit is the Aura controller's | the trigger rides the enchanted creature (`EquipBonus.triggered_abilities`), so on an opponent's creature its controller gets the Spirit |
 
 ### EDHREC average-deck seats (`decks::cmdr_edhrec3`, 2026-10-11 Commander run) — open residuals
 

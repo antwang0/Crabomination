@@ -465,3 +465,45 @@ fn cosmium_confluence_animates_a_cave() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     let _ = cave;
 }
+
+/// Brine Comber — a Spirit on entering and another when an Aura spell
+/// targets it; disturbed (CR 702.146) as Brinebound Gift onto the bear, a
+/// Spirit as it enters and another when an Aura spell targets the bear.
+#[test]
+fn brine_comber_makes_spirits_from_aura_spells() {
+    let mut g = pod(2);
+    let spirits = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
+    let bc = g.add_card_to_hand(0, catalog::brine_comber());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell { card_id: bc, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(spirits(&g), 1, "enters");
+    let rancor = g.add_card_to_hand(0, catalog::rancor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rancor, target: Some(Target::Permanent(bc)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("rancor");
+    drain_stack(&mut g);
+    assert_eq!(spirits(&g), 2, "targeted by an Aura spell");
+
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bc = g.add_card_to_graveyard(0, catalog::brine_comber());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastDisturb { card_id: bc, target: Some(Target::Permanent(bear)), additional_targets: vec![] })
+    .expect("disturb");
+    drain_stack(&mut g);
+    assert_eq!(spirits(&g), 1, "the Gift enters");
+    let rancor = g.add_card_to_hand(0, catalog::rancor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rancor, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("rancor");
+    drain_stack(&mut g);
+    assert_eq!(spirits(&g), 2, "enchanted creature targeted by an Aura spell");
+}
