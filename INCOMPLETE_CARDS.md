@@ -2243,3 +2243,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Primal Adversary | each payment animates its land at once (not "up to that many target lands" after all payments) | `MayPayRepeatedly` + `ChooseSomeAmong` + `BecomeCreature` |
 | 🟡 Alhammarret, High Arbiter | the name is any nonland card, not one revealed from the opponents' hands (no reveal step) | `NameCard { restrict_to: Nonland }` + `OpponentsCantCastNamed` |
 | 🟡 Jetfire, Ingenious Scientist | the {C} goes to Jetfire's controller (no "target player"), and is artifact-only for abilities too (`ArtifactOnly`), where the card only bars nonartifact spells | `remove_counter_among_x` + `ManaPayload::Restricted` |
+| 🟡 Alex Wilder, Runaway | "cast from anywhere other than your hand" reads library / graveyard / exile casts; a command-zone cast isn't counted | `R::WasCastFrom{Library,Graveyard,Exile}` |

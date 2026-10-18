@@ -17594,6 +17594,12 @@ static DECKS: &[Factory] = &[
     super::decks::infinite_coursework,
     super::decks::madame_web_clairvoyant,
     super::decks::jetfire_ingenious_scientist,
+    super::decks::arbor_armament,
+    super::decks::fairgrounds_trumpeter,
+    super::decks::graft_surgeon,
+    super::decks::predictive_preparations,
+    super::decks::alex_wilder_runaway,
+    super::decks::invasion_of_karsus,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

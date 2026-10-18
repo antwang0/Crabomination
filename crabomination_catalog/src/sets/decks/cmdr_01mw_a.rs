@@ -2290,3 +2290,155 @@ pub fn jetfire_ingenious_scientist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Arbor Armament — {G} instant. A +1/+1 counter on target creature; it gains
+/// reach until end of turn.
+pub fn arbor_armament() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Arbor Armament",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: crate::effect::shortcut::target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Reach, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fairgrounds Trumpeter — {2}{G} 2/2 Elephant. At the beginning of each end
+/// step, if you put a +1/+1 counter on a permanent you control this turn, a
+/// +1/+1 counter on it.
+pub fn fairgrounds_trumpeter() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Fairgrounds Trumpeter",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                Predicate::ValueAtLeast(Value::PlusOneCountersPutOnYourCreaturesThisTurn(PlayerRef::You), Value::ONE),
+            ),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Graft Surgeon — {2}{W} 2/2 Human Cleric; enters with a +1/+1 counter. When
+/// it dies, put its counters on up to one target creature you control.
+pub fn graft_surgeon() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Graft Surgeon",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Cleric], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::MoveAllCounters {
+                from: Selector::This,
+                to: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Predictive Preparations — {1}{W} sorcery. A +1/+1 counter on each of one or
+/// two target creatures. Flashback {3}{W}.
+pub fn predictive_preparations() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Predictive Preparations",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), w()]))],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 1,
+            filter: R::Creature,
+            effect: Box::new(Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Alex Wilder, Runaway — {1}{R} legendary 1/3 Human Hero Villain. It or
+/// another creature of yours entering, if cast from anywhere but your hand,
+/// gets +2/+0 and haste until end of turn. Escape—{2}{R}, exile three others.
+pub fn alex_wilder_runaway() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Alex Wilder, Runaway",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Hero, CreatureType::Villain],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Escape(cost(&[generic(2), r()]), 3)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::WasCastFromLibrary.or(R::WasCastFromGraveyard).or(R::WasCastFromExile)),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::TriggerSource, power: Value::Const(2), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::TriggerSource, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invasion of Karsus // Refraction Elemental — {2}{R}{R} Siege, defense 4.
+/// ETB: 3 damage to each creature and each planeswalker. Back: 4/4 Elemental,
+/// ward—pay 2 life; whenever you cast a spell, 2 damage to each opponent.
+pub fn invasion_of_karsus() -> CardDefinition {
+    use crate::card::{BattleSubtype, WardCost};
+    let elemental = CardDefinition {
+        name: "Refraction Elemental",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![crate::mana::Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Ward(WardCost::Life(2))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Karsus",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() },
+        defense: 4,
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: Selector::EachPermanent(R::Creature.or(R::Planeswalker)),
+            amount: Value::Const(3),
+        })],
+        back_face: Some(Box::new(elemental)),
+        ..Default::default()
+    }
+}

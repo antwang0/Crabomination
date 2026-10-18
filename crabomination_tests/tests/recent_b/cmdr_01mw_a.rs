@@ -965,3 +965,29 @@ fn jetfire_cashes_counters_into_mana_and_converts() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0);
     assert_eq!(c.definition.name, "Jetfire, Air Guardian");
 }
+
+/// Graft Surgeon enters with a counter and passes its counters on as it dies;
+/// Fairgrounds Trumpeter grows at the end step after a counter landed.
+#[test]
+fn graft_surgeon_passes_counters_and_trumpeter_notices() {
+    let mut g = pod(2);
+    let trumpet = ready(&mut g, 0, catalog::fairgrounds_trumpeter());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gs = g.add_card_to_hand(0, catalog::graft_surgeon());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, gs);
+    assert_eq!(g.battlefield_find(gs).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    let dies = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![gs]) };
+    let evs = g.resolve_effect(&dies, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let total = |g: &GameState| {
+        [bear, trumpet].iter().map(|&id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne)).sum::<u32>()
+    };
+    assert_eq!(total(&g), 1, "the counter moved to one of them");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(total(&g), 2, "the Trumpeter's own end-step counter");
+}
