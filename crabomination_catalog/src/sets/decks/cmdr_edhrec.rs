@@ -4261,10 +4261,10 @@ pub fn hallowed_haunting() -> CardDefinition {
 
 /// Archpriest of Shadows — {3}{B}{B} 4/4 Human Warlock. Backup 1 (deathtouch
 /// and its combat trigger to the backed-up creature); combat damage to a
-/// player returns target creature card from your graveyard to the battlefield.
+/// player or battle returns target creature card from your graveyard to the battlefield.
 pub fn archpriest_of_shadows() -> CardDefinition {
     let reanimate = TriggeredAbility {
-        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
         effect: Effect::Move {
             what: target_filtered(R::Creature.and(R::InYourGraveyard)),
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
@@ -8045,7 +8045,7 @@ fn equipment(name: &'static str, mana: crate::mana::ManaCost, equip: crate::mana
 
 /// Beamtown Beatstick — {R} Equipment. Equipped creature gets +1/+0 and has
 /// menace; whenever it deals combat damage to a player or battle, create a
-/// Treasure. Equip {2}. (The battle half has no trigger — INCOMPLETE_CARDS.)
+/// Treasure. Equip {2}.
 pub fn beamtown_beatstick() -> CardDefinition {
     use crate::card::EquipBonus;
     equipment(
@@ -8056,7 +8056,7 @@ pub fn beamtown_beatstick() -> CardDefinition {
             power: 1,
             keywords: vec![Keyword::Menace],
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
                 effect: crate::effect::shortcut::mint_treasures(1),
             }],
             ..Default::default()

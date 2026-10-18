@@ -4575,6 +4575,11 @@ pub struct EventSpec {
     /// all combat damage to a player, which the engine emits per attacker).
     #[serde(default)]
     pub batch_life_lost_exactly: Option<u32>,
+    /// "…deals combat damage to a player **or battle**": a
+    /// `DealsCombatDamageToPlayer` trigger that also fires off combat damage
+    /// to a battle (CR 310.6), the battle bound to slot 0.
+    #[serde(default)]
+    pub or_battle: bool,
 }
 
 /// CR 113.6b — "an ability that states which zones it functions in functions
@@ -4642,7 +4647,13 @@ impl EventSpec {
             self_caused: false,
             by_activated_ability: false,
             batch_life_lost_exactly: None,
+            or_battle: false,
         }
+    }
+    /// "…to a player or battle" — see `or_battle`.
+    pub fn or_battle(mut self) -> Self {
+        self.or_battle = true;
+        self
     }
     /// "…the target of an activated ability" — see `by_activated_ability`.
     pub fn by_activated_ability(mut self) -> Self {

@@ -720,7 +720,7 @@ pub fn kari_zevs_expertise() -> CardDefinition {
 }
 
 /// Furnace Reins — {2}{R} sorcery. Threaten target creature; until end of turn
-/// it has "whenever this deals combat damage to a player, create a Treasure".
+/// it has "whenever this deals combat damage to a player or battle, create a Treasure".
 pub fn furnace_reins() -> CardDefinition {
     spell(
         "Furnace Reins",
@@ -731,7 +731,7 @@ pub fn furnace_reins() -> CardDefinition {
             vec![Effect::GrantTriggeredAbility {
                 what: Selector::Target(0),
                 trigger: Box::new(TriggeredAbility {
-                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
                     effect: Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
@@ -1692,7 +1692,7 @@ pub fn ballad_of_the_black_flag() -> CardDefinition {
 
 /// Zurgo and Ojutai — {2}{U}{R}{W} 4/4 legendary flying, haste Orc Dragon;
 /// hexproof the turn it entered. Whenever one or more Dragons you control deal
-/// combat damage to a player, look at the top three: one to hand, the rest on
+/// combat damage to a player or battle, look at the top three: one to hand, the rest on
 /// the bottom; you may return one of those Dragons to its owner's hand.
 pub fn zurgo_and_ojutai() -> CardDefinition {
     CardDefinition {
@@ -1705,7 +1705,7 @@ pub fn zurgo_and_ojutai() -> CardDefinition {
             },
         )],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).or_battle()
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Dragon),

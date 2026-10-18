@@ -6870,6 +6870,28 @@ fn cr_306_9_combat_damage_to_planeswalker_removes_loyalty() {
     assert_eq!(now, start - 3, "3 combat damage removed 3 loyalty");
 }
 
+/// CR 510.2 — combat damage to a planeswalker is combat damage: Drinker of
+/// Sorrow's recipient-agnostic "deals combat damage" trigger fires off it
+/// (only the planeswalker-specific kind used to).
+#[test]
+fn cr_510_2_a_hit_on_a_planeswalker_fires_deals_combat_damage() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::drinker_of_sorrow());
+    g.clear_sickness(atk);
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+    g.battlefield_find_mut(pw).unwrap().counters.insert(CounterType::Loyalty, 9);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Planeswalker(pw),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none(), "Drinker's sacrifice trigger took its only permanent");
+}
+
 // ── CR 702.4 / 702.9 — Flying can only be blocked by flying or reach ──────────
 
 /// A flyer can't be blocked by a creature without flying or reach (CR 702.4c).

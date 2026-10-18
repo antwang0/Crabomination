@@ -174,3 +174,53 @@ fn lazotep_convert_copies_a_graveyard_creature_as_a_black_zombie() {
     assert_eq!((cp.power, cp.toughness), (4, 4), "the copy exception sets 4/4");
     assert!(cp.colors.contains(Color::White) && cp.colors.contains(Color::Black), "white and black");
 }
+
+/// CR 310.6 / 510.2 — combat damage to a battle is combat damage: an
+/// "or battle" trigger (Beamtown Beatstick's Treasure) and a recipient-agnostic
+/// "deals combat damage" one (Drinker of Sorrow's sacrifice) both fire off a
+/// hit on a Siege, where neither used to.
+#[test]
+fn combat_damage_to_a_battle_fires_or_battle_and_agnostic_triggers() {
+    let mut g = two_player_game();
+    let (battle, atk) = seeded_battle_and_attacker(&mut g, catalog::invasion_of_zendikar, 9);
+    let stick = g.add_card_to_battlefield(0, catalog::beamtown_beatstick());
+    g.battlefield_find_mut(stick).unwrap().attached_to = Some(atk);
+    let drinker = g.add_card_to_battlefield(0, catalog::drinker_of_sorrow());
+    g.clear_sickness(drinker);
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: atk, target: AttackTarget::Battle(battle) },
+        Attack { attacker: drinker, target: AttackTarget::Battle(battle) },
+    ]))
+    .expect("attack your own Siege");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let treasures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 1, "the Beatstick's 'player or battle' trigger");
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(after, before, "one Treasure in, one permanent sacrificed to Drinker of Sorrow");
+    assert_eq!(g.battlefield_find(battle).unwrap().counter_count(CounterType::Defense), 1, "8 of 9 defense removed");
+}
+
+/// CR 310.6 — a plain "deals combat damage to a player" trigger doesn't hear
+/// a hit on a battle (Illvoi Infiltrator has no `or_battle`).
+#[test]
+fn a_player_only_combat_trigger_ignores_a_battle() {
+    let mut g = two_player_game();
+    let (battle, _) = seeded_battle_and_attacker(&mut g, catalog::invasion_of_zendikar, 9);
+    let sab = g.add_card_to_battlefield(0, catalog::illvoi_infiltrator());
+    g.clear_sickness(sab);
+    let hand = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::forest());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: sab, target: AttackTarget::Battle(battle) }]))
+        .expect("attack your own Siege");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].hand.len(), hand, "no draw off a battle hit");
+}

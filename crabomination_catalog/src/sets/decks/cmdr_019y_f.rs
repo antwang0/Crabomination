@@ -150,14 +150,13 @@ pub fn stockman_mad_fly_entist() -> CardDefinition {
 }
 
 /// Thorin, Company's Leader — {4}{R} legendary 4/5 Dwarf Warrior. A Dwarf you
-/// control dealing combat damage to a player makes two Treasures (the battle
-/// half has no event — INCOMPLETE_CARDS). {10}: your creatures gain double
-/// strike until end of turn.
+/// control dealing combat damage to a player or battle makes two Treasures.
+/// {10}: your creatures gain double strike until end of turn.
 pub fn thorin_companys_leader() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).or_battle().with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Dwarf),

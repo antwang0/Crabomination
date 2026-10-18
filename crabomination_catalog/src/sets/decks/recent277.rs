@@ -48,7 +48,7 @@ pub fn attentive_skywarden() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,

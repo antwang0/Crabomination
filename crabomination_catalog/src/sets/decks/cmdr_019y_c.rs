@@ -488,9 +488,8 @@ pub fn rankle_and_torbran() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Haste],
-        // The battle half has no event to ride (INCOMPLETE_CARDS).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
             effect: modes,
         }],
         ..creature(

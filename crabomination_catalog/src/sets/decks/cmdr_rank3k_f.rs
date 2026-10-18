@@ -198,7 +198,7 @@ pub fn hawkeye_trick_shot() -> CardDefinition {
 /// and put it into your hand; the rest on the bottom in a random order.
 pub fn doomskar_warrior() -> CardDefinition {
     let dig = TriggeredAbility {
-        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
         effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::TriggerEventAmount,

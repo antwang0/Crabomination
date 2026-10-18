@@ -6498,9 +6498,15 @@ impl GameState {
                 }
                 if amount > 0 {
                     let granted = self.static_granted_triggers_of(atk.id);
+                    // Combat damage is damage: the recipient-agnostic
+                    // wordings fire too (CR 510.2).
                     self.fire_combat_damage_triggers(
                         atk.id,
-                        &[EventKind::DealsCombatDamageToPlaneswalker],
+                        &[
+                            EventKind::DealsCombatDamageToPlaneswalker,
+                            EventKind::DealsCombatDamage,
+                            EventKind::DealsDamage,
+                        ],
                         Target::Permanent(pw_id),
                         amount,
                         &granted,
@@ -6540,6 +6546,23 @@ impl GameState {
                         from_controller: Some(atk.controller),
                         from_card: Some(atk.id),
                     });
+                }
+                // "…to a player or battle" (`EventSpec::or_battle`) and the
+                // recipient-agnostic wordings, the battle in slot 0.
+                if amount > 0 {
+                    let granted = self.static_granted_triggers_of(atk.id);
+                    self.fire_combat_damage_triggers(
+                        atk.id,
+                        &[
+                            EventKind::DealsCombatDamageToPlayer,
+                            EventKind::DealsCombatDamage,
+                            EventKind::DealsDamage,
+                        ],
+                        Target::Permanent(b_id),
+                        amount,
+                        &granted,
+                        true,
+                    );
                 }
                 amount
             }
@@ -7633,7 +7656,16 @@ impl GameState {
             && self.noncombat_damage_batch_open();
         // One [`DamageTrigger`] bucket per requested kind; drained in order at
         // the bottom.
-        let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
+        // CR 310.6 — a battle delivery passes `DealsCombatDamageToPlayer`
+        // with the battle as the target: only an `or_battle` trigger hears it.
+        let to_battle = matches!(default_target, Target::Permanent(_))
+            && kinds.first() == Some(&EventKind::DealsCombatDamageToPlayer);
+        let slot = |e: &crate::effect::EventSpec| {
+            kinds
+                .iter()
+                .position(|want| *want == e.kind)
+                .filter(|_| !to_battle || e.or_battle || e.kind != EventKind::DealsCombatDamageToPlayer)
+        };
         // Inline, by (-71)'s device: `kinds` is one to three entries and the
         // outer `Vec` allocated on **every** call whether or not a trigger
         // fires — 6,480 / 20,022 / 22,134 allocations over six bench games.
@@ -7747,7 +7779,7 @@ impl GameState {
                 // Goblin deals combat damage" — its `dealer_filter` reads the
                 // dealer here exactly as Phase 1.6 reads it for a bystander
                 // (Cabal Slaver is a Cleric; its own hit strips nothing).
-                if let Some(i) = slot(&t.event.kind)
+                if let Some(i) = slot(&t.event)
                     && t.event.dealer_filter.as_ref().is_none_or(|f| {
                         self.evaluate_requirement_static(
                             f,
@@ -7789,7 +7821,7 @@ impl GameState {
                         t.event.scope,
                         crate::effect::EventScope::SelfSource
                             | crate::effect::EventScope::AnyPlayer
-                    ) && let Some(i) = slot(&t.event.kind)
+                    ) && let Some(i) = slot(&t.event)
                     {
                         by_kind[i].push((
                             trig_source,
@@ -7812,7 +7844,7 @@ impl GameState {
                 }
                 for (idx, t) in aura.definition.triggered_abilities.iter().enumerate() {
                     if t.event.scope == crate::effect::EventScope::EnchantedBySource
-                        && let Some(i) = slot(&t.event.kind)
+                        && let Some(i) = slot(&t.event)
                     {
                         by_kind[i].push((
                             aura.id,
@@ -7844,7 +7876,7 @@ impl GameState {
                     continue;
                 }
                 for t in &bonus.triggered_abilities {
-                    if let Some(i) = slot(&t.event.kind) {
+                    if let Some(i) = slot(&t.event) {
                         by_kind[i].push((
                             source,
                             t.effect.clone(),
@@ -7922,7 +7954,7 @@ impl GameState {
                         crate::effect::EventScope::YourControl if mine => {
                             // "Whenever a Mutant, Ninja or Turtle you control
                             // deals combat damage" gates on the dealer too.
-                            if let Some(i) = slot(&t.event.kind)
+                            if let Some(i) = slot(&t.event)
                                 && t.event.dealer_filter.as_ref().is_none_or(|f| {
                                     self.evaluate_requirement_static(
                                         f,
@@ -7943,7 +7975,7 @@ impl GameState {
                             }
                         }
                         crate::effect::EventScope::AnyPlayer if other => {
-                            if let Some(i) = slot(&t.event.kind)
+                            if let Some(i) = slot(&t.event)
                                 && t.event.dealer_filter.as_ref().is_none_or(|f| {
                                     self.evaluate_requirement_static(
                                         f,
@@ -7986,7 +8018,7 @@ impl GameState {
                 matches!(
                     g.ability.event.scope,
                     crate::effect::EventScope::YourControl | crate::effect::EventScope::AnyPlayer
-                ) && slot(&g.ability.event.kind).is_some()
+                ) && slot(&g.ability.event).is_some()
             })
             .collect();
         if !grants.is_empty() {
@@ -8004,7 +8036,7 @@ impl GameState {
                         crate::effect::EventScope::AnyPlayer => c.id != source,
                         _ => false,
                     };
-                    let Some(i) = slot(&t.event.kind) else { continue };
+                    let Some(i) = slot(&t.event) else { continue };
                     if !listens
                         || !t.event.dealer_filter.as_ref().is_none_or(|f| {
                             self.evaluate_requirement_static(f, &Target::Permanent(source), c.controller, Some(c.id))
@@ -8097,7 +8129,7 @@ impl GameState {
         // controller a free copy whenever the creature deals combat damage to a
         // player. Reuses the Paradigm free-copy effect (mint a token copy of the
         // exiled card and free-cast it; the encoded original stays in exile).
-        if let Some(i) = slot(&EventKind::DealsCombatDamageToPlayer)
+        if let Some(i) = kinds.iter().position(|k| *k == EventKind::DealsCombatDamageToPlayer).filter(|_| !to_battle)
             && let Some(atk_ctrl) = attacker_controller
         {
             // Behind the pile's lane: `encoded_on` sits behind each exiled
