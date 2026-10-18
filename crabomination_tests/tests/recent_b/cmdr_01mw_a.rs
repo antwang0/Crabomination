@@ -582,3 +582,25 @@ fn cr_101_2_a_locked_free_cast_is_skipped() {
     assert!(g.battlefield.iter().all(|c| c.definition.name != "Hill Giant"));
     assert_eq!(g.players[1].life, life - 2, "the Shock was cast");
 }
+
+/// Dáin of the Ancient Halls hits each opponent for the Dwarves you control
+/// (Dáin and Nori: 2 apiece at three seats); Nori's attack hands an attacking
+/// creature first strike.
+#[test]
+fn dain_and_nori_attack_together() {
+    use crabomination::card::Keyword;
+    let mut g = pod(3);
+    let dain = ready(&mut g, 0, catalog::dain_of_the_ancient_halls());
+    let nori = ready(&mut g, 0, catalog::nori_teller_of_tales());
+    let life = [g.players[1].life, g.players[2].life];
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: dain, target: AttackTarget::Player(1) },
+        Attack { attacker: nori, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!([g.players[1].life, g.players[2].life], [life[0] - 2, life[1] - 2]);
+    let fs = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::FirstStrike);
+    assert!(fs(dain) || fs(nori), "one attacker gained first strike");
+}

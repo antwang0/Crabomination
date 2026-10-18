@@ -996,3 +996,53 @@ pub fn arcee_sharpshooter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dáin of the Ancient Halls — {3}{R}{W} legendary 4/5 vigilance, haste Dwarf
+/// Noble. Whenever it attacks, it deals damage equal to the Dwarves you
+/// control to each opponent.
+pub fn dain_of_the_ancient_halls() -> CardDefinition {
+    CardDefinition {
+        name: "Dáin of the Ancient Halls",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Noble], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::count(Selector::EachPermanent(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Dwarf)).and(R::ControlledByYou),
+                )),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nori, Teller of Tales — {1}{R/W} legendary 2/2 Dwarf Bard. Whenever Nori
+/// attacks, target attacking creature gains first strike until end of turn.
+pub fn nori_teller_of_tales() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Nori, Teller of Tales",
+        cost: cost(&[generic(1), crate::mana::hybrid(crate::mana::Color::Red, crate::mana::Color::White)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Bard], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(R::Creature.and(R::IsAttacking)),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

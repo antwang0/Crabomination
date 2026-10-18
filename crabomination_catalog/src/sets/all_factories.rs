@@ -17538,6 +17538,8 @@ static DECKS: &[Factory] = &[
     super::decks::blinding_spray,
     super::decks::built_to_last,
     super::decks::arcee_sharpshooter,
+    super::decks::dain_of_the_ancient_halls,
+    super::decks::nori_teller_of_tales,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
