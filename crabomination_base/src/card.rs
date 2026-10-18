@@ -1105,6 +1105,8 @@ pub enum CounterType {
     Odor,
     /// Musician's music counters (the granted upkeep toll reads them).
     Music,
+    /// Evelyn, the Covetous's collection counters, on the cards she exiles.
+    Collection,
 }
 
 /// Every zone a card can occupy.
