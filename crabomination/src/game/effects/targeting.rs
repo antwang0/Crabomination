@@ -1409,7 +1409,7 @@ fn copies_to_the_team(c: &CardInstance) -> bool {
     c.definition
         .triggered_abilities
         .iter()
-        .any(|t| matches!(t.effect, Effect::CopyForEachOtherTargetableCreature))
+        .any(|t| matches!(t.effect, Effect::CopyForEachOtherTargetableCreature | Effect::CopyForChosenOtherTargetableCreature))
 }
 
 /// The effect doubles the counters on its target — a friendly target is then

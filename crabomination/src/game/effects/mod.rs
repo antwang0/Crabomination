@@ -66,6 +66,7 @@ mod fumble;
 mod threats_undetected;
 mod music;
 mod reblock;
+mod spell_copy_others;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
@@ -38169,77 +38170,8 @@ impl GameState {
                 self.may_pay_to_copy_onto_other_creatures(per_copy, ctx, effect, events)
             }
 
-            Effect::CopyForEachOtherTargetableCreature => {
-                use crate::game::types::StackItem;
-                // The spell that triggered this (Zada's cast trigger binds it
-                // as the trigger source).
-                let Some(spell_id) = ctx
-                    .trigger_source
-                    .and_then(|e| e.as_card_id())
-                    .or(ctx.source)
-                else {
-                    return Ok(());
-                };
-                let Some(idx) = self
-                    .stack
-                    .iter()
-                    .rposition(|s| matches!(s, StackItem::Spell { card, .. } if card.id == spell_id))
-                else {
-                    return Ok(());
-                };
-                let StackItem::Spell {
-                    card, caster, target, additional_targets, mode, x_value, ..
-                } = &self.stack[idx]
-                else {
-                    return Ok(());
-                };
-                // "Targets only [this creature]" — one target slot, and it is
-                // the source permanent.
-                let me = ctx.source;
-                let targets_only_me = additional_targets.is_empty()
-                    && matches!((target, me), (Some(Target::Permanent(t)), Some(m)) if *t == m);
-                if !targets_only_me {
-                    return Ok(());
-                }
-                let (def, caster) = (card.definition.arc(), *caster);
-                // CR 707.10 — decisions copied; no mana spent (converge 0).
-                let (mode, x_value, choices) = (*mode, *x_value, crate::game::spell_copy::CastChoices::of(card));
-                let others: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == caster && Some(c.id) != me)
-                    .filter(|c| self.computed_is_creature(c))
-                    .map(|c| c.id)
-                    .collect();
-                let legal = self.enumerate_legal_targets(&def.effect, caster);
-                for id in others {
-                    let t = Target::Permanent(id);
-                    if !legal.contains(&t) {
-                        continue;
-                    }
-                    let new_id = self.next_id();
-                    let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
-                    copy_inst.is_token = true;
-                    choices.apply(&mut copy_inst);
-                    self.push_stack(StackItem::Spell {
-                        card: Box::new(copy_inst),
-                        caster,
-                        target: Some(t),
-                        additional_targets: Vec::new(),
-                        mode,
-                        x_value,
-                        converged_value: 0,
-                        mana_spent: 0,
-                        uncounterable: false,
-                    });
-                    events.push(GameEvent::SpellsCopied {
-                        original: spell_id,
-                        count: 1,
-                        controller: caster,
-                    });
-                }
-                Ok(())
-            }
+            Effect::CopyForEachOtherTargetableCreature => self.copy_spell_for_other_creatures(ctx, events, effect, false),
+            Effect::CopyForChosenOtherTargetableCreature => self.copy_spell_for_other_creatures(ctx, events, effect, true),
 
             Effect::Demonstrate => {
                 // CR 702.144 — copy this spell for its caster, then an

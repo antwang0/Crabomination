@@ -963,6 +963,7 @@ impl Effect {
             | Effect::EachPlayerSacrificesDownTo { .. }
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
+            | Effect::CopyForChosenOtherTargetableCreature
             | Effect::MayPayToCopyOntoOtherCreatures { .. }
             | Effect::SearchRevealPunishSameNameCasters { .. }
             | Effect::ExileTopGreatestManaValueTakesExtraTurn

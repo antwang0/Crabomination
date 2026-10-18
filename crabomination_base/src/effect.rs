@@ -6376,6 +6376,10 @@ pub enum Effect {
     /// become unblocked, then it blocks an attacking creature of your choice"
     /// (Balduvian Warlord; `game/effects/reblock.rs`).
     RemoveBlockerThenReblock { what: Selector },
+    /// Beamsplitter Mage — `CopyForEachOtherTargetableCreature` with one
+    /// copy, aimed at the other creature its caster chooses
+    /// (`game/effects/spell_copy_others.rs`).
+    CopyForChosenOtherTargetableCreature,
     /// The rest of a token-copy's "except" clause, written into the tokens
     /// this resolution created (`Selector::LastCreatedTokens`) as copiable
     /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
