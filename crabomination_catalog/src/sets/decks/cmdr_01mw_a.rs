@@ -1373,3 +1373,130 @@ pub fn surtland_flinger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Arcane Infusion — {U}{R} instant. Look at the top four; you may reveal an
+/// instant or sorcery among them and take it; the rest go to the bottom in a
+/// random order. Flashback {3}{U}{R}.
+pub fn arcane_infusion() -> CardDefinition {
+    use crate::effect::LookPick;
+    CardDefinition {
+        name: "Arcane Infusion",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u(), r()]))],
+        effect: Effect::LookPickToHand(Box::new(LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            pick_filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+            optional: true,
+            rest_bottom_random: true,
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Hypothesizzle — {3}{U}{R} instant. Draw two; then you may discard a
+/// nonland card, and when you do, 4 damage to target creature.
+pub fn hypothesizzle() -> CardDefinition {
+    CardDefinition {
+        name: "Hypothesizzle",
+        cost: cost(&[generic(3), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::MayDiscardMatching {
+                description: "Discard a nonland card for 4 damage to a creature?".into(),
+                count: Value::ONE,
+                filter: R::Nonland,
+                then: Box::new(Effect::Reflexive {
+                    body: Box::new(Effect::DealDamage {
+                        to: crate::effect::shortcut::target_filtered(R::Creature),
+                        amount: Value::Const(4),
+                    }),
+                }),
+                else_: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Master the Way — {3}{U}{R} sorcery. Draw a card, then deal damage equal to
+/// the cards in your hand to any target.
+pub fn master_the_way() -> CardDefinition {
+    CardDefinition {
+        name: "Master the Way",
+        cost: cost(&[generic(3), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::HandSizeOf(PlayerRef::You) },
+        ]),
+        ..Default::default()
+    }
+}
+
+fn wall(name: &'static str, mana: crate::mana::ManaCost, toughness: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness,
+        keywords: vec![Keyword::Defender],
+        ..Default::default()
+    }
+}
+
+/// Glacial Wall — {2}{U} 0/7 Wall, defender.
+pub fn glacial_wall() -> CardDefinition {
+    wall("Glacial Wall", cost(&[generic(2), u()]), 7)
+}
+
+/// Wall of Mist — {1}{U} 0/5 Wall, defender.
+pub fn wall_of_mist() -> CardDefinition {
+    wall("Wall of Mist", cost(&[generic(1), u()]), 5)
+}
+
+/// Biolume Egg // Biolume Serpent — {2}{U} 0/4 defender Serpent Egg; ETB
+/// scry 2; when you sacrifice it, it returns transformed at the beginning of
+/// the next end step. Back: 4/4 Serpent; sacrifice two Islands: it can't be
+/// blocked this turn.
+pub fn biolume_egg() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::Duration;
+    let serpent = CardDefinition {
+        name: "Biolume Serpent",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![crate::mana::Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::HasLandType(LandType::Island), 2)),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Biolume Egg",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent, CreatureType::Egg], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![
+            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::SelfSource),
+                effect: Effect::AtNextEndStep { body: Box::new(Effect::ExileSelfReturnTransformed) },
+            },
+        ],
+        back_face: Some(Box::new(serpent)),
+        ..Default::default()
+    }
+}

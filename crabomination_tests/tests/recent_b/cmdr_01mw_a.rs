@@ -694,3 +694,42 @@ fn surtland_flinger_doubles_a_flung_giant() {
     assert!(g.battlefield_find(giant).is_none(), "sacrificed");
     assert_eq!(g.players[1].life, life - 6);
 }
+
+/// Biolume Egg: sacrificed, it comes back as Biolume Serpent at the
+/// beginning of the next end step.
+#[test]
+fn biolume_egg_hatches_after_a_sacrifice() {
+    let mut g = pod(2);
+    let egg = ready(&mut g, 0, catalog::biolume_egg());
+    let sac = crabomination::effect::Effect::Sacrifice {
+        who: crabomination::effect::Selector::You,
+        count: crabomination::card::Value::ONE,
+        filter: crabomination::card::SelectionRequirement::Creature,
+    };
+    let evs = g.resolve_effect(&sac, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(egg).is_none());
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Biolume Serpent" && c.controller == 0));
+}
+
+/// Master the Way draws first, then deals damage equal to the new hand size.
+#[test]
+fn master_the_way_counts_the_hand_after_drawing() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    let mtw = g.add_card_to_hand(0, catalog::master_the_way());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: mtw, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "two Forests plus the draw");
+}
