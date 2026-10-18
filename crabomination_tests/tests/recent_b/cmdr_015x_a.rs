@@ -816,3 +816,138 @@ fn lodestone_bauble_restacks_basic_lands() {
     let top: Vec<CardId> = g.players[1].library.iter().take(2).map(|c| c.id).collect();
     assert!(top.contains(&a) && top.contains(&b), "both on top");
 }
+
+/// Tazri lends creatures with another activated ability a mana ability of
+/// their colors, and digs five for creatures with non-mana abilities.
+#[test]
+fn tazri_lends_mana_and_digs_for_activators() {
+    let mut g = pod(2);
+    let tazri = ready(&mut g, 0, catalog::tazri_stalwart_survivor());
+    let fury = ready(&mut g, 0, catalog::nick_fury_agent_of_shield());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let try_tap = |g: &mut GameState, id: CardId, index: usize| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: index,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_ok()
+    };
+    assert!(!try_tap(&mut g, bear, 0), "a vanilla bear gets nothing");
+    assert!(try_tap(&mut g, fury, 1), "Nick Fury taps for his white");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "one mana, for creature abilities only");
+    g.players[0].library.clear();
+    for def in [catalog::nick_fury_agent_of_shield(), catalog::grizzly_bears(), catalog::forest(), catalog::island(), catalog::bruce_banner()] {
+        g.add_card_to_library(0, def);
+    }
+    flood(&mut g);
+    activate(&mut g, tazri, 0, None);
+    let names: Vec<&str> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert!(names.contains(&"Nick Fury, Agent of S.H.I.E.L.D.") && names.contains(&"Bruce Banner"), "{names:?}");
+    assert!(!names.contains(&"Grizzly Bears"));
+}
+
+/// Sensational Spider-Man stuns a defender's creature, then cashes up to
+/// three stun counters (its own victim's included) into cards.
+#[test]
+fn sensational_spider_man_stuns_and_draws() {
+    let mut g = pod(2);
+    let spidey = ready(&mut g, 0, catalog::sensational_spider_man());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).unwrap().add_counters(CounterType::Stun, 3);
+    let hand = g.players[0].hand.len();
+    attack(&mut g, &[spidey]);
+    let stuns = |g: &GameState| -> u32 { [bear, other].iter().map(|&id| g.battlefield_find(id).unwrap().counter_count(CounterType::Stun)).sum() };
+    assert_eq!(stuns(&g), 1, "four counters out, three taken back");
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+}
+
+/// Involuntary Cooldown taps two permanents and stuns each twice.
+#[test]
+fn involuntary_cooldown_stuns_two() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::sol_ring());
+    flood(&mut g);
+    let spell = g.add_card_to_hand(0, catalog::involuntary_cooldown());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        let c = g.battlefield_find(id).unwrap();
+        assert!(c.tapped);
+        assert_eq!(c.counter_count(CounterType::Stun), 2);
+    }
+}
+
+/// Delif's Cone: the bear attacks unblocked, its controller gains 2 and the
+/// bear deals no combat damage.
+#[test]
+fn delifs_cone_trades_damage_for_life() {
+    let mut g = pod(2);
+    let cone = ready(&mut g, 0, catalog::delifs_cone());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cone,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("cone");
+    drain_stack(&mut g);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    attack(&mut g, &[bear]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22, "gained its power");
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.players[1].life, 20, "and it dealt none");
+}
+
+/// Energy Arc untaps two creatures and shields them in combat both ways.
+#[test]
+fn energy_arc_untaps_and_fogs_its_targets() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    flood(&mut g);
+    let arc = g.add_card_to_hand(0, catalog::energy_arc());
+    cast(&mut g, arc, Some(Target::Permanent(mine)));
+    assert!(!g.battlefield_find(mine).unwrap().tapped);
+    attack(&mut g, &[mine]);
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.players[1].life, 20, "its combat damage is prevented");
+}
+
+/// Robaran Mercenaries borrows the activated abilities of your legendary
+/// creatures (Bruce Banner's draw).
+#[test]
+fn robaran_mercenaries_borrows_legendary_abilities() {
+    let mut g = pod(2);
+    let merc = ready(&mut g, 0, catalog::robaran_mercenaries());
+    ready(&mut g, 0, catalog::bruce_banner());
+    flood(&mut g);
+    activate(&mut g, merc, 0, Some(1));
+    assert_eq!(g.players[0].hand.len(), 1, "Bruce Banner's draw-X ability, as its own");
+}

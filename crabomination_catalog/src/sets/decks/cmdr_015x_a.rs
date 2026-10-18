@@ -1344,3 +1344,176 @@ pub fn lodestone_bauble() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tazri, Stalwart Survivor — {2}{W} legendary 3/3 Human Warrior. Each
+/// creature you control with another activated ability has "{T}: add one
+/// mana of any of this creature's colors, spent only on creature abilities".
+/// {W}{U}{B}{R}{G}, {T}: mill five; every creature card among them with a
+/// non-mana activated ability goes to your hand.
+pub fn tazri_stalwart_survivor() -> CardDefinition {
+    legend(CardDefinition {
+        name: "Tazri, Stalwart Survivor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Warrior], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control has \"{T}: Add one mana of any of this creature's colors. Spend this mana only to activate an ability of a creature. Activate only if this creature has another activated ability.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::HasActivatedAbility)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: crate::effect::ManaPayload::Restricted(
+                            Box::new(crate::effect::ManaPayload::AnyColorOfSource),
+                            crate::mana::SpendRestriction::CreatureAbilitiesOnly,
+                        ),
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            effect: Effect::MillThenToHandN {
+                amount: Value::Const(5),
+                filter: R::Creature.and(R::HasNonManaActivatedAbility),
+                take: Value::Const(5),
+                otherwise: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    })
+}
+
+/// Sensational Spider-Man — {1}{W}{U} legendary 3/3 Spider Human Hero.
+/// Attacking, it taps target creature defending player controls and stuns
+/// it; then you may remove up to three stun counters from among all
+/// permanents and draw that many.
+pub fn sensational_spider_man() -> CardDefinition {
+    use crate::card::CounterType;
+    legend(CardDefinition {
+        name: "Sensational Spider-Man",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)) },
+                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+                Effect::RemoveCountersOfKindAmongUpTo { kind: CounterType::Stun, max: Value::Const(3), filter: R::Any },
+                Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::CountersRemovedThisEffect },
+            ]),
+        }],
+        ..Default::default()
+    })
+}
+
+/// Involuntary Cooldown — {3}{U} sorcery. Tap up to two target artifacts
+/// and/or creatures and put two stun counters on each.
+pub fn involuntary_cooldown() -> CardDefinition {
+    CardDefinition {
+        name: "Involuntary Cooldown",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Artifact.or(R::Creature),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: crate::card::CounterType::Stun,
+                    amount: Value::Const(2),
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Delif's Cone — {0} artifact. {T}, sacrifice it: this turn, when target
+/// creature you control attacks and isn't blocked, you may gain life equal
+/// to its power; if you do, it assigns no combat damage this turn.
+pub fn delifs_cone() -> CardDefinition {
+    CardDefinition {
+        name: "Delif's Cone",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            // "Target creature you control": the slot's filter, declared by
+            // the wrapper (the watch itself only reads the slot).
+            effect: Effect::TargetPlayerThen {
+                filter: R::Creature.and(R::ControlledByYou),
+                then: Box::new(Effect::WhenTargetAttacksUnblockedThisTurn {
+                slot: 0,
+                body: Box::new(Effect::MayDo {
+                    description: "Gain life equal to its power (it then deals no combat damage)?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::GainLife {
+                            who: Selector::Player(PlayerRef::You),
+                            amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                        },
+                        Effect::AssignsNoCombatDamageThisTurn { what: Selector::TriggerSource },
+                    ])),
+                }),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Energy Arc — {W}{U} instant. Untap any number of target creatures; all
+/// combat damage to and by them is prevented this turn.
+pub fn energy_arc() -> CardDefinition {
+    CardDefinition {
+        name: "Energy Arc",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+                Effect::PreventCombatDamageToTargetThisTurn { target: Selector::Target(0) },
+                Effect::PreventCombatDamageByTargetThisTurn { target: Selector::Target(0) },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Robaran Mercenaries — {3}{W} 3/4 vigilance Human Mercenary; it has all
+/// activated abilities of all legendary creatures you control.
+pub fn robaran_mercenaries() -> CardDefinition {
+    CardDefinition {
+        name: "Robaran Mercenaries",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Mercenary], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "This creature has all activated abilities of all legendary creatures you control.",
+            effect: StaticEffect::HasActivatedAbilitiesOfControlledLegendaryCreatures,
+        }],
+        ..Default::default()
+    }
+}

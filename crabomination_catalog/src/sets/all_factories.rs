@@ -17641,6 +17641,12 @@ static DECKS: &[Factory] = &[
     super::decks::construct_a_cosmic_cube,
     super::decks::jeweled_amulet,
     super::decks::lodestone_bauble,
+    super::decks::tazri_stalwart_survivor,
+    super::decks::sensational_spider_man,
+    super::decks::involuntary_cooldown,
+    super::decks::delifs_cone,
+    super::decks::energy_arc,
+    super::decks::robaran_mercenaries,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
