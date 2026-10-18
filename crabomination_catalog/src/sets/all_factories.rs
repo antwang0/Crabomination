@@ -17579,6 +17579,10 @@ static DECKS: &[Factory] = &[
     super::decks::witchstalker,
     super::decks::primal_adversary,
     super::decks::somberwald_alpha,
+    super::decks::beetle_legacy_criminal,
+    super::decks::ghostform,
+    super::decks::kolaghan_forerunners,
+    super::decks::whirlwind_killer_cyclone,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1917,3 +1917,119 @@ pub fn somberwald_alpha() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Beetle, Legacy Criminal — {3}{U} legendary 3/3 flying Human Rogue Villain.
+/// {1}{U}, exile it from your graveyard: a +1/+1 counter on target creature,
+/// which gains flying until end of turn; sorcery speed.
+pub fn beetle_legacy_criminal() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Beetle, Legacy Criminal",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Villain],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: crate::effect::shortcut::target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ghostform — {1}{U} sorcery. Up to two target creatures can't be blocked
+/// this turn.
+pub fn ghostform() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Ghostform",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kolaghan Forerunners — {2}{R} */3 trample Human Berserker; power equals
+/// the creatures you control. Dash {2}{R}.
+pub fn kolaghan_forerunners() -> CardDefinition {
+    use crate::card::{AlternativeCost, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Kolaghan Forerunners",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Berserker], ..Default::default() },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Kolaghan Forerunners's power is equal to the number of creatures you control.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::count(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        alternative_cost: Some(AlternativeCost { mana_cost: cost(&[generic(2), r()]), dash: true, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Whirlwind, Killer Cyclone — {2}{R} legendary 2/3 haste Mutant Villain.
+/// Whenever one or more creatures you control that entered this turn attack a
+/// player, target creature that player controls can't block this turn.
+pub fn whirlwind_killer_cyclone() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Whirlwind, Killer Cyclone",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mutant, CreatureType::Villain], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::EnteredThisTurn.and(R::IsAttackingOpponentPlayer),
+                })
+                .once_per_batch(),
+            effect: Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

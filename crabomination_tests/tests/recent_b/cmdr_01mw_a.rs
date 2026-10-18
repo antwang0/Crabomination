@@ -874,3 +874,23 @@ fn primal_adversary_wakes_lands_per_payment() {
         .count();
     assert_eq!(wolves, 2);
 }
+
+/// Whirlwind stays home; a creature that entered this turn attacks seat 2 at
+/// three seats, and seat 2's creature (not seat 1's) can't block.
+#[test]
+fn whirlwind_locks_a_blocker_of_the_attacked_player() {
+    use crabomination::card::Keyword;
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::whirlwind_killer_cyclone());
+    let fresh = ready(&mut g, 0, catalog::goblin_javelineer());
+    g.battlefield_find_mut(fresh).unwrap().entered_turn = Some(g.turn_number);
+    let theirs = ready(&mut g, 2, catalog::grizzly_bears());
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: fresh, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let cant = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CantBlock);
+    assert!(cant(theirs));
+    assert!(!cant(other));
+}
