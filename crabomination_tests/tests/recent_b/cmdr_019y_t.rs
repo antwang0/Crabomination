@@ -244,3 +244,31 @@ fn sculpted_sunburst_keeps_one_creature_each() {
     assert!(g.battlefield_find(opp_elf).is_none());
     assert!(g.battlefield_find(big).is_none(), "power 6 can't be chosen");
 }
+
+/// Fumble — the bounced creature's Equipment and Aura change control (CR
+/// 108.4) and attach to another creature: the opponent's bear goes home, its
+/// Bonesplitter and Rancor end up mine on my bear.
+#[test]
+fn fumble_steals_the_attachments() {
+    let mut g = pod(2);
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let split = ready(&mut g, 1, catalog::bonesplitter());
+    let rancor = ready(&mut g, 1, catalog::rancor());
+    for id in [split, rancor] {
+        g.battlefield_find_mut(id).unwrap().attached_to = Some(theirs);
+    }
+    let f = g.add_card_to_hand(0, catalog::fumble());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: f, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("fumble");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "back to its owner's hand");
+    for id in [split, rancor] {
+        let c = g.battlefield_find(id).expect("still on the battlefield");
+        assert_eq!(c.controller, 0, "{} is mine", c.definition.name);
+        assert_eq!(c.attached_to, Some(mine));
+    }
+}

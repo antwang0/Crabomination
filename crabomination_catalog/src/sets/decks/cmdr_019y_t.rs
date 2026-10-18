@@ -201,3 +201,16 @@ pub fn sculpted_sunburst() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fumble — {1}{U} instant. Return target creature to its owner's hand; gain
+/// control of all Auras and Equipment that were attached to it, then attach
+/// them to another creature.
+pub fn fumble() -> CardDefinition {
+    CardDefinition {
+        name: "Fumble",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BounceStealAttachmentsReattach { what: crate::effect::shortcut::target_filtered(R::Creature) },
+        ..Default::default()
+    }
+}
