@@ -25548,6 +25548,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_LADY_OF_OTARIA_COMMANDERS,
             main: decks::THE_LADY_OF_OTARIA_MAIN,
         },
+        // Seat 4183: Chisei, Heart of Oceans's EDHREC average deck. `--pod-decks 4183`.
+        PodDeck {
+            name: "Chisei, Heart of Oceans (U)",
+            commanders: decks::CHISEI_COMMANDERS,
+            main: decks::CHISEI_MAIN,
+        },
+        // Seat 4184: Maraxus of Keld's EDHREC average deck. `--pod-decks 4184`.
+        PodDeck {
+            name: "Maraxus of Keld (R)",
+            commanders: decks::MARAXUS_OF_KELD_COMMANDERS,
+            main: decks::MARAXUS_OF_KELD_MAIN,
+        },
+        // Seat 4185: Bessie, the Doctor's Roadster's EDHREC average deck. `--pod-decks 4185`.
+        PodDeck {
+            name: "Bessie, the Doctor's Roadster (C)",
+            commanders: decks::BESSIE_COMMANDERS,
+            main: decks::BESSIE_MAIN,
+        },
+        // Seat 4186: April O'Neil, Hacktivist's EDHREC average deck. `--pod-decks 4186`.
+        PodDeck {
+            name: "April O'Neil, Hacktivist (U)",
+            commanders: decks::APRIL_ONEIL_6_COMMANDERS,
+            main: decks::APRIL_ONEIL_6_MAIN,
+        },
+        // Seat 4187: Bruce Banner's EDHREC average deck. `--pod-decks 4187`.
+        PodDeck {
+            name: "Bruce Banner (URG)",
+            commanders: decks::BRUCE_BANNER_COMMANDERS,
+            main: decks::BRUCE_BANNER_MAIN,
+        },
+        // Seat 4188: Peter Parker's EDHREC average deck. `--pod-decks 4188`.
+        PodDeck {
+            name: "Peter Parker (WUG)",
+            commanders: decks::PETER_PARKER_COMMANDERS,
+            main: decks::PETER_PARKER_MAIN,
+        },
+        // Seat 4189: Ramses Overdark's EDHREC average deck. `--pod-decks 4189`.
+        PodDeck {
+            name: "Ramses Overdark (UB)",
+            commanders: decks::RAMSES_OVERDARK_COMMANDERS,
+            main: decks::RAMSES_OVERDARK_MAIN,
+        },
     ]
 }
 
@@ -31625,6 +31667,13 @@ mod tests {
             ("Alharu, Solemn Ritualist and Siani, Eye of the Storm", &[0x1A6A]),
             ("Dorothea, Vengeful Victim", &[0x1A6B]),
             ("The Lady of Otaria", &[0x1A6C]),
+            ("Chisei, Heart of Oceans", &[0x1A6D]),
+            ("Maraxus of Keld", &[0x1A6E]),
+            ("Bessie, the Doctor's Roadster", &[0x1A6F]),
+            ("April O'Neil, Hacktivist", &[0x1A70]),
+            ("Bruce Banner", &[0x1A71]),
+            ("Peter Parker", &[0x1A72]),
+            ("Ramses Overdark", &[0x1A73]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
