@@ -1046,3 +1046,117 @@ pub fn nori_teller_of_tales() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Turtle Van — {3} 4/4 Vehicle, crew 1. Whenever it attacks, a +1/+1 counter
+/// on target creature that crewed it this turn; then if that creature is a
+/// Mutant, Ninja, or Turtle, double its +1/+1 counters.
+pub fn turtle_van() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType, Predicate};
+    let ninja_turtle = R::HasCreatureType(CreatureType::Mutant)
+        .or(R::HasCreatureType(CreatureType::Ninja))
+        .or(R::HasCreatureType(CreatureType::Turtle));
+    CardDefinition {
+        name: "Turtle Van",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: crate::effect::shortcut::target_filtered(R::Creature.and(R::CrewedSourceThisTurn)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: ninja_turtle },
+                    then: Box::new(Effect::DoubleCountersOnEach {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zoo Escapees — {1}{G} 2/2 Boar Rhino. When it leaves the battlefield,
+/// create a Mutagen token.
+pub fn zoo_escapees() -> CardDefinition {
+    CardDefinition {
+        name: "Zoo Escapees",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Boar, CreatureType::Rhino], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(crabomination_base::tokens::mutagen_token()),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Super Suit — {1}{U} Equipment, flash. When it enters, attach it to target
+/// creature you control and untap that creature. +1/+2. Equip {2}.
+pub fn super_suit() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Super Suit",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Attach {
+                what: Selector::This,
+                to: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)),
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Vision Quest — {X}{U}{R} sorcery. Search your library and/or graveyard for
+/// an artifact creature card with mana value X or less and put it onto the
+/// battlefield with X +1/+1 counters; at X 4 or more it gains haste this turn.
+pub fn vision_quest() -> CardDefinition {
+    use crate::card::{CounterType, Predicate, Zone};
+    use crate::effect::{Duration, ZoneDest};
+    CardDefinition {
+        name: "Vision Quest",
+        cost: cost(&[crate::mana::x(), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::SearchZones {
+                who: PlayerRef::You,
+                zones: vec![Zone::Library, Zone::Graveyard],
+                filter: R::Artifact.and(R::Creature).and(R::ManaValueAtMostXFromCost),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::PlusOnePlusOne, amount: Value::XFromCost },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(4)),
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::LastMoved,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

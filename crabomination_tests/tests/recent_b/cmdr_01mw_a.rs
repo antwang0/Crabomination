@@ -604,3 +604,43 @@ fn dain_and_nori_attack_together() {
     let fs = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::FirstStrike);
     assert!(fs(dain) || fs(nori), "one attacker gained first strike");
 }
+
+/// Turtle Van's attack feeds the creature that crewed it — doubled for a
+/// Mutant Ninja Turtle (1 → 2), a single counter for a bear.
+#[test]
+fn turtle_van_doubles_for_a_ninja_turtle_crew() {
+    let run = |crew: crabomination::card::CardDefinition| {
+        let mut g = pod(2);
+        let van = ready(&mut g, 0, catalog::turtle_van());
+        let who = ready(&mut g, 0, crew);
+        g.battlefield_find_mut(van).unwrap().crewed_by.push(who);
+        let atk = catalog::turtle_van().triggered_abilities[0].effect.clone();
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(van);
+        ctx.targets = vec![Target::Permanent(who)];
+        let evs = g.resolve_effect(&atk, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        g.battlefield_find(who).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(run(catalog::leonardo_sewer_samurai()), 2);
+    assert_eq!(run(catalog::grizzly_bears()), 1);
+}
+
+/// Vision Quest at X = 4 fetches a four-drop artifact creature from the
+/// graveyard with four +1/+1 counters and haste.
+#[test]
+fn vision_quest_fetches_with_counters_and_haste() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let golem = g.add_card_to_graveyard(0, catalog::burnished_hart());
+    let vq = g.add_card_to_hand(0, catalog::vision_quest());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: vq, target: None, additional_targets: vec![], mode: None, x_value: Some(4) })
+        .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(golem).expect("on the battlefield");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 4);
+    assert!(g.computed_permanent(golem).unwrap().keywords().contains(&Keyword::Haste));
+}

@@ -17540,6 +17540,10 @@ static DECKS: &[Factory] = &[
     super::decks::arcee_sharpshooter,
     super::decks::dain_of_the_ancient_halls,
     super::decks::nori_teller_of_tales,
+    super::decks::turtle_van,
+    super::decks::zoo_escapees,
+    super::decks::super_suit,
+    super::decks::vision_quest,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
