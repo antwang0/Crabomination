@@ -798,7 +798,7 @@ impl GameState {
                 }
                 // "Even number of counters" gate (Sab-Sunen). Zero is even.
                 Keyword::CantAttackOrBlockUnlessEvenCounters
-                    if card.counter_sum() % 2 != 0 =>
+                    if !card.counter_sum().is_multiple_of(2) =>
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
@@ -6753,7 +6753,7 @@ impl GameState {
                     false
                 }
                 Keyword::CantAttackOrBlockUnlessEvenCounters => {
-                    blocker.counter_sum() % 2 != 0
+                    !blocker.counter_sum().is_multiple_of(2)
                 }
                 Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
                     self.players[owner].hand.len() as u32 > *n

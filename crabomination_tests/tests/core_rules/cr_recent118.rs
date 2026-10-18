@@ -1648,3 +1648,20 @@ fn cr_732_2a_a_copier_blinking_itself_stops_the_loop() {
     assert!(g.battlefield_find(naru).is_some() && g.battlefield_find(island).is_some());
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Ghostly Flicker").count(), 2);
 }
+
+/// CR 614.6 / 701.17c — a milled Blightsteel Colossus shuffles back into its
+/// owner's hidden library instead, where no effect can find it: Zellix's "mills
+/// one or more creature cards" never sees it. (Sweep seed 926094: Zellix +
+/// Altar of the Brood re-milled a lone Colossus 400 times into a draw.)
+#[test]
+fn cr_701_17c_a_mill_shuffled_back_into_the_library_is_not_seen() {
+    let mut g = main_phase();
+    let zellix = g.add_card_to_battlefield(0, catalog::zellix_sanity_flayer());
+    g.add_card_to_library(1, catalog::blightsteel_colossus());
+    let before = g.battlefield.len();
+    let mill = Effect::Mill { who: Selector::Player(PlayerRef::Seat(1)), amount: crabomination::effect::Value::Const(1) };
+    resolve(&mut g, zellix, None, &mill);
+    assert_eq!(g.players[1].library.len(), 1, "the Colossus is back in the library");
+    assert!(g.players[1].graveyard.is_empty());
+    assert_eq!(g.battlefield.len(), before, "no Horror token");
+}

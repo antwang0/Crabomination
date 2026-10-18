@@ -11953,8 +11953,9 @@ impl GameState {
     /// Place `card` into its owner's graveyard, or exile it instead when a
     /// graveyard-hate static (Rest in Peace / Leyline of the Void) is active
     /// for that owner. Pushes a `PermanentExiled` event and returns `true`
-    /// when the card was redirected to exile, so callers can suppress their
-    /// own graveyard-specific event (CardMilled, etc.).
+    /// when the card was redirected to exile or shuffled into its library
+    /// instead (CR 614.6), so callers can suppress their own
+    /// graveyard-specific event (CardMilled, etc.).
     pub fn route_to_graveyard(
         &mut self,
         mut card: crate::card::CardInstance,
@@ -12021,9 +12022,14 @@ impl GameState {
         }
         // CR 614.6 — "shuffle into its owner's library instead" (Darksteel
         // Colossus). The card never touches the graveyard.
+        // `true` like an exile: a milled card back in a hidden library is one
+        // no effect can find (CR 701.17c), so no "mills a creature card"
+        // trigger reads it — Zellix + Altar of the Brood re-milled a lone
+        // Blightsteel Colossus 400 times into a CR 104.4b draw (sweep seed
+        // 926094).
         if card.definition.shuffles_into_library_instead {
             self.shuffle_into_library_instead(card);
-            return false;
+            return true;
         }
         if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() {
             let cid = card.id;
