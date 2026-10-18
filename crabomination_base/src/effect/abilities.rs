@@ -1836,6 +1836,9 @@ pub enum StaticEffect {
     /// (Advancing the Spirit). Read at activation; `Player::power_up_turn`
     /// says whether one was already activated this turn.
     FirstPowerUpEachYourTurnFree,
+    /// CR 702.193 — "Power-up abilities of other creatures you control cost
+    /// {N} less to activate" (Hulk, Gamma Goliath). Generic only.
+    OtherPowerUpsCostLess { amount: u32 },
     /// CR 702.193 — "Each power-up ability of permanents you control can be
     /// activated an additional time" (Wonder Man, Hollywood Hero).
     PowerUpOnceMore,

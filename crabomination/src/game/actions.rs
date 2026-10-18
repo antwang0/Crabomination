@@ -23970,6 +23970,20 @@ impl GameState {
             if let Some(cost) = entered.map(|c| c.definition.cost.clone()) {
                 effective_mana_cost.reduce_by_cost(&cost);
             }
+            // Hulk, Gamma Goliath — other creatures' power-ups cost less.
+            let less: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && c.id != card_id)
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+                .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::OtherPowerUpsCostLess { amount }) => Some(*amount),
+                    _ => None,
+                })
+                .sum();
+            if less > 0 {
+                effective_mana_cost.reduce_generic(less);
+            }
             // Advancing the Spirit — the first power-up of each of your turns
             // may cost {0} instead.
             if self.active_player_idx == p
