@@ -5459,6 +5459,7 @@ impl Effect {
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
+                Effect::SwitchBlockers { first, second } => sel_find(first, slot).or_else(|| sel_find(second, slot)),
                 Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_find(target, slot),
                 Effect::MustBlockTarget { blocker, attacker } => {
                     sel_find(blocker, slot).or_else(|| sel_find(attacker, slot))
