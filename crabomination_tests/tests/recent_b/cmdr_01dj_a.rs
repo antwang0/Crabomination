@@ -1861,3 +1861,72 @@ fn gert_discards_for_a_basic() {
     assert_eq!(g.players[0].hand.len(), 1);
     assert_eq!(g.players[0].hand[0].definition.name, "Forest");
 }
+
+// ── Erebor Goblins and Tiger Shark (`decks::cmdr_01dj_g`) ──────────────────
+
+/// Bolg, Erebor's Reckoning, at each beginning of combat (anyone's): your
+/// other Goblins +2/+2, opponents' creatures -1/-1.
+#[test]
+fn bolg_erebors_reckoning_shapes_each_combat() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::bolg_erebors_reckoning());
+    let gob = g.add_card_to_battlefield(0, catalog::knucklebone_witch());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    assert_eq!(power(&g, gob), 3);
+    assert_eq!(power(&g, bear), 1);
+}
+
+/// Great Goblin amasses 3 on entering and on attacking; Armies have trample.
+#[test]
+fn great_goblin_amasses_and_tramples() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let gg = g.add_card_to_hand(0, catalog::great_goblin_foul_hearted());
+    cast_targets(&mut g, gg, &[]);
+    let a = army(&g, 0).expect("Army");
+    assert_eq!(plus(&g, a), 3);
+    assert!(
+        g.computed_permanent(a)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Trample)
+    );
+    g.clear_sickness(gg);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gg,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, a), 6);
+}
+
+/// Tiger Shark connives entering and attacking; {4}{U/B} makes him
+/// unblockable.
+#[test]
+fn tiger_shark_connives_and_slips_away() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    let ts = g.add_card_to_hand(0, catalog::tiger_shark_abyssal_hunter());
+    cast_targets(&mut g, ts, &[]);
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        1,
+        "the enter connive's discard"
+    );
+    flood(&mut g, 0);
+    activate_on(&mut g, ts, 0, None);
+    assert!(
+        g.computed_permanent(ts)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Unblockable)
+    );
+}

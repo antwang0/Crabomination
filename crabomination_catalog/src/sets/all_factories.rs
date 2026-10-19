@@ -17741,6 +17741,10 @@ static DECKS: &[Factory] = &[
     super::decks::painful_lesson,
     super::decks::karolina_dean_runaway,
     super::decks::gert_and_old_lace_runaways,
+    super::decks::bolg_erebors_reckoning,
+    super::decks::great_goblin_foul_hearted,
+    super::decks::tiger_shark_abyssal_hunter,
+    super::decks::spined_megalodon,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
