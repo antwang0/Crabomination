@@ -25980,6 +25980,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRENDEL_COMMANDERS,
             main: decks::GRENDEL_MAIN,
         },
+        // Seat 4255: Uglúk of the White Hand's EDHREC average deck. `--pod-decks 4255`.
+        PodDeck {
+            name: "Uglúk of the White Hand (BR)",
+            commanders: decks::UGLUK_OF_THE_WHITE_HAND_COMMANDERS,
+            main: decks::UGLUK_OF_THE_WHITE_HAND_MAIN,
+        },
+        // Seat 4256: Grond, the Gatebreaker's EDHREC average deck. `--pod-decks 4256`.
+        PodDeck {
+            name: "Grond, the Gatebreaker (B)",
+            commanders: decks::GROND_COMMANDERS,
+            main: decks::GROND_MAIN,
+        },
+        // Seat 4257: Killmonger, Scourge of Wakanda's EDHREC average deck. `--pod-decks 4257`.
+        PodDeck {
+            name: "Killmonger, Scourge of Wakanda (BG)",
+            commanders: decks::KILLMONGER_2_COMMANDERS,
+            main: decks::KILLMONGER_2_MAIN,
+        },
+        // Seat 4258: Azog, Moria's Ruin's EDHREC average deck. `--pod-decks 4258`.
+        PodDeck {
+            name: "Azog, Moria's Ruin (B)",
+            commanders: decks::AZOG_COMMANDERS,
+            main: decks::AZOG_MAIN,
+        },
+        // Seat 4259: Crossbones, Malicious Mercenary's EDHREC average deck. `--pod-decks 4259`.
+        PodDeck {
+            name: "Crossbones, Malicious Mercenary (B)",
+            commanders: decks::CROSSBONES_COMMANDERS,
+            main: decks::CROSSBONES_MAIN,
+        },
+        // Seat 4260: Stilt-Man, Towering Terror's EDHREC average deck. `--pod-decks 4260`.
+        PodDeck {
+            name: "Stilt-Man, Towering Terror (R)",
+            commanders: decks::STILT_MAN_COMMANDERS,
+            main: decks::STILT_MAN_MAIN,
+        },
+        // Seat 4261: Yellowjacket, Heartless Marauder's EDHREC average deck. `--pod-decks 4261`.
+        PodDeck {
+            name: "Yellowjacket, Heartless Marauder (B)",
+            commanders: decks::YELLOWJACKET_COMMANDERS,
+            main: decks::YELLOWJACKET_MAIN,
+        },
     ]
 }
 
@@ -32135,6 +32177,13 @@ mod tests {
             ("Iron Monger, Sadistic Tycoon", &[0x1AB2]),
             ("Titania, Rugged Rumbler", &[0x1AB3]),
             ("Grendel, Spawn of Knull", &[0x1AB4]),
+            ("Uglúk of the White Hand", &[0x1AB5]),
+            ("Grond, the Gatebreaker", &[0x1AB6]),
+            ("Killmonger, Scourge of Wakanda", &[0x1AB7]),
+            ("Azog, Moria's Ruin", &[0x1AB8]),
+            ("Crossbones, Malicious Mercenary", &[0x1AB9]),
+            ("Stilt-Man, Towering Terror", &[0x1ABA]),
+            ("Yellowjacket, Heartless Marauder", &[0x1ABB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

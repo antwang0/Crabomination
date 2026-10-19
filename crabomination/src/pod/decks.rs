@@ -119345,3 +119345,201 @@ pub const GRENDEL_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const UGLUK_OF_THE_WHITE_HAND_COMMANDERS: &[CardFactory] = &[ugluk_of_the_white_hand];
+
+/// **Uglúk of the White Hand**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Mountains + 11 Swamps = 99.
+/// Uglúk of the White Hand (EDHREC, fetched 2026-10-19).
+pub const UGLUK_OF_THE_WHITE_HAND_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, mind_stone, rakdos_signet, skullclamp, sol_ring,
+    swiftfoot_boots, talisman_of_indulgence, barad_dur, bloodfell_caves, command_tower,
+    dragonskull_summit, evolving_wilds, foreboding_ruins, goblin_town, path_of_ancestry,
+    rogues_passage, smoldering_marsh, temple_of_malice, azog_morias_ruin, boggart_cursecrafter,
+    bolgs_company, bothersome_noisemaker, cirith_ungol_patrol, dunland_crebain,
+    eclipsed_boggart, fearsome_goblin_pair, frogtosser_banneret, goblin_matron,
+    goblin_trashmaster, goblin_warchief, gorbag_of_minas_morgul, gothmog_morgul_lieutenant,
+    grishnakh_brash_instigator, krenko_mob_boss, krenko_tin_street_kingpin, legion_warboss,
+    mauhur_uruk_hai_captain, mirkwood_bats, mordor_trebuchet, moria_marauder, munitions_expert,
+    orcish_siegemaster, pashalik_mons, siege_gang_commander, siege_gang_lieutenant,
+    skirk_prospector, sling_gang_lieutenant, the_great_goblin, warg_rider, boggart_mischief,
+    book_of_mazarbul, fall_of_cair_andros, goblin_bombardment, impact_tremors,
+    march_from_the_black_gate, bedevil, brightstone_ritual, corrupted_conviction,
+    deadly_dispute, fling, nasty_end, orcish_medicine, terminate, village_rites,
+    assault_on_osgiliath, blasphemous_act, dragon_fodder, foray_of_orcs, hordeling_outburst,
+    krenkos_command, lash_of_the_balrog, mordor_muster, rage_into_the_valley, swarming_of_moria,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const GROND_COMMANDERS: &[CardFactory] = &[grond_the_gatebreaker];
+
+/// **Grond, the Gatebreaker**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Grond, the Gatebreaker (EDHREC, fetched 2026-10-19).
+pub const GROND_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, heraldic_banner, jet_medallion, lashwrithe,
+    lightning_greaves, mind_stone, nazgul_battle_mace, sol_ring, the_darkness_crystal,
+    the_fire_nation_drill, wayfarers_bauble, barad_dur, bojuka_bog, cabal_coffers,
+    minas_morgul_dark_fortress, myriad_landscape, rogues_passage, the_black_gate,
+    urborg_tomb_of_yawgmoth, witchs_cottage, azog_morias_ruin, changeling_outcast, crypt_ghast,
+    dunland_crebain, easterling_vanguard, fire_navy_trebuchet, gorbag_of_minas_morgul,
+    gothmog_morgul_lieutenant, gray_merchant_of_asphodel, great_ugly_looking_goblin,
+    grima_wormtongue, herald_of_the_dreadhorde, lazotep_reaver, mirkwood_bats,
+    morbid_opportunist, mordor_trebuchet, orcish_bowmasters, rhovanion_rampager,
+    sauron_the_necromancer, troll_of_khazad_dum, uruk_hai_berserker, vizier_of_the_scorpion,
+    voracious_fell_beast, warg_rider, witch_king_of_angmar, agent_of_the_shadow_thieves,
+    along_the_crooked_way, call_of_the_ring, down_down_to_goblin_town, dreadhorde_invasion,
+    march_from_the_black_gate, mindless_conscription, phyrexian_arena, astarions_thirst,
+    dark_ritual, deadly_dispute, defile, go_for_the_throat, nasty_end, orcish_medicine,
+    village_rites, bleeding_edge, claim_the_precious, feed_the_swarm, gathering_of_darkness,
+    mordor_muster, nights_whisper, rage_into_the_valley, sign_in_blood, the_torment_of_gollum,
+    toll_of_the_invasion,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const KILLMONGER_2_COMMANDERS: &[CardFactory] = &[killmonger_scourge_of_wakanda];
+
+/// **Killmonger, Scourge of Wakanda**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Forests + 12 Swamps = 99.
+/// Killmonger, Scourge of Wakanda (EDHREC, fetched 2026-10-19).
+pub const KILLMONGER_2_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, conjurers_closet, golgari_signet, lightning_greaves,
+    sol_ring, swiftfoot_boots, talisman_of_resilience, vibranium_energy_daggers, bojuka_bog,
+    command_tower, deathcap_glade, evolving_wilds, golgari_rot_farm, llanowar_wastes,
+    overgrown_tomb, rogues_passage, subterranean_cavern, twilight_mire, undergrowth_stadium,
+    woodland_cemetery, arnim_zola_bio_fanatic, baron_strucker_hydra_overlord,
+    beledros_witherbloom, birds_of_paradise, blood_artist, crossbones_malicious_mercenary,
+    eternal_witness, guerrilla_gorilla, hydra_troopers, hellcat_undying_vigilante,
+    ka_zar_of_the_savage_land, kingpins_enforcers, knight_of_wundagore, llanowar_elves,
+    mister_hyde_monster_within, mole_man_moloid_master, moonstone_harsh_mistress,
+    morbid_opportunist, ninja_of_the_hand, red_room_recruit, sakura_tribe_elder,
+    serpent_specialist, studious_first_year, teachers_pest, the_masters_of_evil,
+    the_serpent_society, titania_rugged_rumbler, undercover_skrull, vraska_the_cutting_glare,
+    ygra_eater_of_all, animate_dead, claim_the_kingdom, hydra_infiltration, robot_domination,
+    the_coming_of_galactus, training_regimen, assassins_trophy, beast_within, dark_deed,
+    dark_ritual, deadly_dispute, hour_of_defeat, punishing_punch, putrefy, visions_of_villainy,
+    call_damage_control, culling_ritual, cultivate, dread_return, farseek, natures_lore,
+    reanimate, toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const AZOG_COMMANDERS: &[CardFactory] = &[azog_morias_ruin];
+
+/// **Azog, Moria's Ruin**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Azog, Moria's Ruin (EDHREC, fetched 2026-10-19).
+pub const AZOG_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bolass_citadel, charcoal_diamond, conjurers_closet,
+    fellwar_stone, jet_medallion, skullclamp, sol_ring, thought_vessel, barad_dur, bojuka_bog,
+    cabal_coffers, cabal_stronghold, nykthos_shrine_to_nyx, phyrexian_tower,
+    takenuma_abandoned_mire, war_room, blood_artist, boggart_harbinger, boggart_trawler,
+    braids_arisen_nightmare, frogtosser_banneret, goblin_turncoat, gorbag_of_minas_morgul,
+    gothmog_morgul_lieutenant, gray_merchant_of_asphodel, great_ugly_looking_goblin,
+    grim_wanderer, knucklebone_witch, mad_auntie, morbid_opportunist, orcish_bowmasters,
+    pitiless_plunderer, putrid_goblin, rhovanion_rampager, sling_gang_lieutenant,
+    solemn_simulacrum, stalactite_stalker, warg_rider, warren_soultrader, warteye_witch,
+    zulaport_cutthroat, along_the_crooked_way, bastion_of_remembrance, black_market_connections,
+    boggart_mischief, kayas_ghostform, march_from_the_black_gate, phyrexian_arena,
+    culling_the_weak, dark_ritual, deadly_dispute, fake_your_own_death, feign_death,
+    infernal_grasp, malakir_rebirth, not_dead_after_all, supernatural_stamina, undying_malice,
+    village_rites, feed_the_swarm, gathering_of_darkness, nights_whisper, rage_into_the_valley,
+    reanimate, sign_in_blood, toxic_deluge, unearth, victimize, warren_weirding,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const CROSSBONES_COMMANDERS: &[CardFactory] = &[crossbones_malicious_mercenary];
+
+/// **Crossbones, Malicious Mercenary**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Crossbones, Malicious Mercenary (EDHREC, fetched 2026-10-19).
+pub const CROSSBONES_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, hydra_disintegrator, jet_medallion, lightning_greaves,
+    sol_ring, stolen_stark_tech, swiftfoot_boots, vedalken_orrery, bojuka_bog, cabal_coffers,
+    reliquary_tower, urborg_tomb_of_yawgmoth, villainous_hideout, agents_of_hydra,
+    arnim_zola_bio_fanatic, baron_helmut_zemo, baron_strucker_hydra_overlord,
+    black_cat_cunning_thief, bob_reluctant_hydra_agent, boomerang_blade_flinger,
+    citizen_v_helmut_zemo, common_crook, crimson_cowl_master_of_evil,
+    elektra_daughter_of_the_hand, gray_merchant_of_asphodel, grim_reaper_lethal_legionnaire,
+    hydra_troopers, kingpins_enforcers, klaw_sonic_subjugator, m_o_d_o_k, madame_masque,
+    merciless_enforcers, minotaur_roxxon_ceo, moonstone_harsh_mistress, red_room_recruit,
+    roxxon_brutes, scorpion_seething_striker, swarm_being_of_bees, symbiote_spawn,
+    the_frightful_four, the_masters_of_evil, tombstone_career_criminal, venom_eddie_brock,
+    white_widow_yelena_belova, yellowjacket_heartless_marauder, criminal_enterprise,
+    doom_reigns_supreme, robot_domination, thunderbolts_conspiracy, villainous_syndication,
+    dark_ritual, deadly_dispute, deadly_rollick, decoy_ploy, heros_downfall, hour_of_defeat,
+    the_spots_portal, visions_of_villainy, withering_torment, behold_the_sinister_six,
+    endless_ranks_of_hydra, exsanguinate, feed_the_swarm, reanimate, sign_in_blood,
+    venoms_hunger, villainous_wrath,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const STILT_MAN_COMMANDERS: &[CardFactory] = &[stilt_man_towering_terror];
+
+/// **Stilt-Man, Towering Terror**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Mountains = 99.
+/// Stilt-Man, Towering Terror (EDHREC, fetched 2026-10-19).
+pub const STILT_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, embercleave, grim_monolith, hammer_of_purphoros,
+    lokis_scepter, lotus_petal, mana_vault, ruby_medallion, sol_ring, the_reaver_cleaver,
+    voltaic_key, wayfarers_bauble, ancient_tomb, ash_barrens, forgotten_cave, myriad_landscape,
+    rogues_passage, sokenzan_crucible_of_defiance, talon_gates_of_madara, aim_synthoids,
+    alex_wilder_runaway, anger, batroc_the_leaper, combat_celebrant, delina_wild_mage,
+    dualcaster_mage, electro_assaulting_battery, grenzo_havoc_raiser, hydra_assault_robot,
+    hobgoblin_mantled_marauder, kazuul_tyrant_of_the_cliffs, kiki_jiki_mirror_breaker,
+    killmonger_ruthless_usurper, knuckles_the_echidna, living_laser, loki_laufeyson,
+    loki_god_of_lies, puppet_master_string_puller, red_hulk, rionya_fire_dancer,
+    stegron_the_dinosaur_man, super_adaptoid, taurean_mauler, titania_proud_pummeler,
+    tri_sentinel_act_of_vengeance, whirlwind_killer_cyclone, zealous_conscripts,
+    aggravated_assault, curse_of_opulence, fable_of_the_mirror_breaker, loot_dispute,
+    shiny_impetus, uphill_battle, abrade, chaos_warp, electrodominance, sos_flashback_instant,
+    hire_a_crew, lightning_bolt, return_the_favor, seething_song, untimely_malfunction,
+    blasphemous_act, evils_thrall, faithless_looting, full_throttle, gamble, heat_shimmer,
+    mana_geyser, seize_the_day, twinflame, vandalblast, wrangle,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const YELLOWJACKET_COMMANDERS: &[CardFactory] = &[yellowjacket_heartless_marauder];
+
+/// **Yellowjacket, Heartless Marauder**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Yellowjacket, Heartless Marauder (EDHREC, fetched 2026-10-19).
+pub const YELLOWJACKET_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, banner_of_kinship, bontus_monument, coat_of_arms,
+    door_of_destinies, heralds_horn, jet_medallion, mind_stone, mox_amber, panharmonicon,
+    patchwork_banner, phyrexian_altar, skullclamp, sol_ring, bojuka_bog, cabal_coffers,
+    path_of_ancestry, phyrexian_tower, shizo_deaths_storehouse, spymasters_vault, war_room,
+    witchs_cottage, arnim_zola_bio_fanatic, ayara_first_of_locthwain, baron_helmut_zemo,
+    baron_strucker_hydra_overlord, black_cat_cunning_thief, blood_artist,
+    boomerang_blade_flinger, citizen_v_helmut_zemo, crimson_cowl_master_of_evil,
+    crossbones_malicious_mercenary, doctor_doom, hydra_troopers, hammerhead_maggia_boss,
+    iron_monger_sadistic_tycoon, klaw_master_of_sound, klaw_sonic_subjugator, m_o_d_o_k,
+    m_o_d_o_k_evil_intellect, mach_1_swooping_scoundrel, madame_hydra_reanimated,
+    marionette_master, metallic_mimic, moonstone_harsh_mistress, morbid_opportunist,
+    roaming_throne, thanos_deaths_consort, the_frightful_four, the_masters_of_evil,
+    tombstone_career_criminal, valentina_allegra_de_fontaine, venom_eddie_brock,
+    bastion_of_remembrance, black_market_connections, cover_of_darkness, grave_pact,
+    phyrexian_arena, thunderbolts_conspiracy, dark_ritual, deadly_rollick, go_for_the_throat,
+    infernal_grasp, snuff_out, vampiric_tutor, demonic_tutor, feed_the_swarm, living_death,
+    reanimate, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
