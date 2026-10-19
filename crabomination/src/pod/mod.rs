@@ -26280,6 +26280,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GOLLUM_5_COMMANDERS,
             main: decks::GOLLUM_5_MAIN,
         },
+        // Seat 4305: Valentina Allegra de Fontaine's EDHREC average deck. `--pod-decks 4305`.
+        PodDeck {
+            name: "Valentina Allegra de Fontaine (B)",
+            commanders: decks::VALENTINA_ALLEGRA_DE_FONTAINE_COMMANDERS,
+            main: decks::VALENTINA_ALLEGRA_DE_FONTAINE_MAIN,
+        },
+        // Seat 4306: Temmet, Vizier of Naktamun's EDHREC average deck. `--pod-decks 4306`.
+        PodDeck {
+            name: "Temmet, Vizier of Naktamun (WU)",
+            commanders: decks::TEMMET_2_COMMANDERS,
+            main: decks::TEMMET_2_MAIN,
+        },
+        // Seat 4307: Splinter & Leo, Father & Son's EDHREC average deck. `--pod-decks 4307`.
+        PodDeck {
+            name: "Splinter & Leo, Father & Son (W)",
+            commanders: decks::SPLINTER_LEO_COMMANDERS,
+            main: decks::SPLINTER_LEO_MAIN,
+        },
+        // Seat 4308: Tomik, Wielder of Law's EDHREC average deck. `--pod-decks 4308`.
+        PodDeck {
+            name: "Tomik, Wielder of Law (WB)",
+            commanders: decks::TOMIK_3_COMMANDERS,
+            main: decks::TOMIK_3_MAIN,
+        },
     ]
 }
 
@@ -32485,6 +32509,10 @@ mod tests {
             ("Namor, Atlantean King", &[0x1AE4]),
             ("Inga Rune-Eyes", &[0x1AE5]),
             ("Gollum, Silent Slinker", &[0x1AE6]),
+            ("Valentina Allegra de Fontaine", &[0x1AE7]),
+            ("Temmet, Vizier of Naktamun", &[0x1AE8]),
+            ("Splinter & Leo, Father & Son", &[0x1AE9]),
+            ("Tomik, Wielder of Law", &[0x1AEA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

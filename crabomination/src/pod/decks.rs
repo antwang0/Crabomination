@@ -120751,3 +120751,119 @@ pub const GOLLUM_5_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const VALENTINA_ALLEGRA_DE_FONTAINE_COMMANDERS: &[CardFactory] = &[valentina_allegra_de_fontaine];
+
+/// **Valentina Allegra de Fontaine**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Valentina Allegra de Fontaine (EDHREC, fetched 2026-10-19).
+pub const VALENTINA_ALLEGRA_DE_FONTAINE_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, hulkbuster_armor, jet_medallion, patchwork_banner,
+    phyrexian_altar, sol_ring, team_transmitter, the_darkness_crystal, cabal_coffers,
+    evolving_wilds, nykthos_shrine_to_nyx, three_tree_city, urborg_tomb_of_yawgmoth,
+    villainous_hideout, agent_venom, agents_of_hydra, arnim_zola_bio_fanatic, baron_helmut_zemo,
+    baron_strucker_hydra_overlord, black_cat_cunning_thief, citizen_v_helmut_zemo,
+    crimson_cowl_master_of_evil, crossbones_malicious_mercenary, doctor_doom,
+    elektra_daughter_of_the_hand, green_goblin_back_for_more, grim_reaper_lethal_legionnaire,
+    gwenom_remorseless, hydra_troopers, iron_monger_sadistic_tycoon, kingpins_enforcers,
+    kingpin_wilson_fisk, m_o_d_o_k, m_o_d_o_k_evil_intellect, mach_1_swooping_scoundrel,
+    madame_hydra_reanimated, madame_masque, minotaur_roxxon_ceo, molecule_man,
+    moonstone_harsh_mistress, radioactive_man, scorpion_seething_striker, the_frightful_four,
+    the_masters_of_evil, tombstone_career_criminal, ultron_the_annihilator, venom_eddie_brock,
+    viper_cruel_conspirator, white_widow_yelena_belova, yellowjacket_heartless_marauder,
+    black_market_connections, construct_a_cosmic_cube, criminal_enterprise, doom_reigns_supreme,
+    robot_domination, thunderbolts_conspiracy, villainous_syndication, dark_ritual,
+    deadly_dispute, decoy_ploy, fell_the_profane, infernal_rebirth, snuff_out,
+    visions_of_villainy, vraska_betrayals_sting, cruel_alliance, endless_ranks_of_hydra,
+    finale_of_eternity, reanimate, rise_of_the_dark_realms, too_evil_to_stay_dead,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const TEMMET_2_COMMANDERS: &[CardFactory] = &[temmet_vizier_of_naktamun];
+
+/// **Temmet, Vizier of Naktamun**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Plains = 99.
+/// Temmet, Vizier of Naktamun (EDHREC, fetched 2026-10-19).
+pub const TEMMET_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, batterskull, bident_of_thassa, bitterthorn_nissas_animus,
+    bonehoard, idol_of_oblivion, kaldra_compleat, mask_of_memory, mimic_vat, mind_stone,
+    nettlecyst, scytheclaw, sol_ring, swiftfoot_boots, talisman_of_progress, adarkar_wastes,
+    azorius_chancery, command_tower, deserted_beach, flooded_strand, glacial_fortress,
+    hallowed_fountain, irrigated_farmland, mystic_gate, port_town, prairie_stream,
+    rogues_passage, sea_of_clouds, skycloud_expanse, temple_of_enlightenment, adorned_pouncer,
+    angel_of_sanctions, anointer_priest, aven_wind_guide, champion_of_wits, curiosity_crafter,
+    faerie_artisans, glyph_keeper, god_eternal_oketra, mirror_sigil_sergeant, nesting_dovehawk,
+    puresteel_paladin, reef_worm, sacred_cat, solemn_simulacrum, sublime_archangel,
+    timeless_dragon, trueheart_duelist, vizier_of_many_faces, vizier_of_the_anointed,
+    anointed_procession, caretakers_talent, duelists_heritage, intangible_virtue,
+    on_wings_of_gold, reconnaissance_mission, song_of_the_worldsoul, cackling_counterpart,
+    counterspell, dovins_veto, generous_gift, lazotep_plating, path_to_exile, perplexing_test,
+    rootborn_defenses, see_double, swords_to_plowshares, theoretical_duplication,
+    elspeth_storm_slayer, fractured_identity, hour_of_reckoning, phyrexian_rebirth,
+    quasiduplicate, rite_of_replication, saheelis_artistry, stolen_identity, sunfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const SPLINTER_LEO_COMMANDERS: &[CardFactory] = &[splinter_leo_father_son];
+
+/// **Splinter & Leo, Father & Son**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Splinter & Leo, Father & Son (EDHREC, fetched 2026-10-19).
+pub const SPLINTER_LEO_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, fellwar_stone, heraldic_banner, liquimetal_torque,
+    marble_diamond, mind_stone, panharmonicon, pearl_medallion, skullclamp, sol_ring,
+    sword_of_hearth_and_home, the_mind_stone, thought_vessel, castle_ardenvale,
+    eiganjo_seat_of_the_empire, karns_bastion, nykthos_shrine_to_nyx, reliquary_tower,
+    windbrisk_heights, april_oneil_kunoichi_trainee, belladonna_took, cosmogrand_zenith,
+    definitely_not_a_turtle, dain_lord_of_the_iron_hills, eldrazi_displacer, emeritus_of_truce,
+    enduring_innocence, esper_sentinel, gilraen_dunedain_protector,
+    jennika_bad_apple_big_sister, leonardo_big_brother, leonardo_cutting_edge,
+    leonardo_leader_in_blue, leonardo_sewer_samurai, lita_little_orphan_amphibian,
+    loran_of_the_third_path, mentor_of_the_meek, mighty_mutanimals, restoration_angel,
+    rumor_gatherer, sally_pride_lioness_leader, soul_warden, welcoming_vampire,
+    airbender_ascension, aligned_heart, anointed_procession, caretakers_talent,
+    endless_foot_assault, ghostly_prison, teleportation_circle, tocasias_welcome, akromas_will,
+    cloudshift, ephemerate, flawless_maneuver, generous_gift, parting_gust, path_to_exile,
+    slip_on_the_ring, stroke_of_midnight, swords_to_plowshares, teferis_protection,
+    the_last_ronins_technique, austere_command, dusk_dawn, leonardos_technique, open_the_armory,
+    vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const TOMIK_3_COMMANDERS: &[CardFactory] = &[tomik_wielder_of_law];
+
+/// **Tomik, Wielder of Law**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Plains + 9 Swamps = 99.
+/// Tomik, Wielder of Law (EDHREC, fetched 2026-10-19).
+pub const TOMIK_3_MAIN: &[CardFactory] = &[
+    arcane_signet, gatewatch_beacon, gideons_memorial, honor_worn_shaku, norns_annex,
+    orzhov_signet, sol_ring, talisman_of_hierarchy, the_chain_veil, bojuka_bog, caves_of_koilos,
+    command_tower, fetid_heath, godless_shrine, interplanar_beacon, isolated_chapel,
+    karns_bastion, marsh_flats, orzhov_basilica, shadowy_backstreet, shattered_sanctum,
+    shineshadow_snarl, tainted_field, temple_of_silence, vault_of_champions,
+    archon_of_absolution, arena_rector, baird_steward_of_argive, breena_the_demagogue,
+    djeru_with_eyes_open, grateful_apparition, laezel_vlaakiths_champion,
+    lotho_corrupt_shirriff, mangara_the_diplomat, norns_choirmaster, onakke_oathkeeper,
+    patrolling_peacemaker, sanctum_lurker, the_peregrine_dynamo, tomik_orzhov_lawmage,
+    elspeths_talent, ghostly_prison, lilianas_talent, oath_of_gideon, oath_of_kaya,
+    oath_of_liliana, urza_assembles_the_titans, way_of_the_necromancer, anguished_unmaking,
+    despark, generous_gift, loyal_tutor, path_to_exile, semesters_end, swords_to_plowshares,
+    ajani_steadfast, elspeth_suns_champion, kaya_the_inexorable, kaya_geist_hunter,
+    kaya_intangible_slayer, kaya_spirits_justice, liliana_dreadhorde_general,
+    lolth_spider_queen, ob_nixilis_reignited, ral_zarek_guest_lecturer, sorin_grim_nemesis,
+    sorin_lord_of_innistrad, tevesh_szat_doom_of_fools, teyo_geometric_tactician,
+    the_eternal_wanderer, the_wanderer, vraska_betrayals_sting, call_the_gatewatch, damn,
+    deploy_the_gatewatch, drown_in_ichor, farewell, primevals_glorious_rebirth,
+    urzas_ruinous_blast,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
