@@ -255,8 +255,10 @@ the handoff.
   `Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw { draw }` (Turtles in Time, Kwain's APNAP shape);
   `SpendRestriction::PartySpellsOrAbilities` (Base Camp); `PlaneswalkerSubtype::Arzakon`;
   `Value::DistinctPlaneswalkerTypesAmong` (Tam, the Possibility).
-- **Gaps found:** a *granted* `Keyword::Saddle` can't be activated — `saddle` and the bot's `pick_saddle`
-  read `definition.saddle_cost()` (Jandor, Fortuned Traveler waits on it); no "card put into a library"
+- **FIXED** `dede3a487`: a *granted* `Keyword::Saddle` (CR 702.171) is activatable —
+  `GameState::effective_saddle_cost` (crew's twin) feeds `saddle`, `pick_saddle` and the bot's sink mask,
+  which asks the layers only when a static grants Saddle; `--bench` byte-identical (196,176). Jandor seated.
+- **Gaps found:** no "card put into a library"
   event exists and library writes go through `CardPile`'s `DerefMut` at ~87 sites (Wan Shi Tong).
 - **FIXED (bugs in the other session's cards):** Old Hob's `DelayUntil { NextEndStep, Destroy {
   LastCreatedToken } }` re-read the selector at the end step and destroyed whatever token was made last
