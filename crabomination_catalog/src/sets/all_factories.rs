@@ -18113,6 +18113,16 @@ static DECKS: &[Factory] = &[
     super::decks::rimebound_dead,
     super::decks::winters_rest,
     super::decks::dead_of_winter,
+    super::decks::heidar_rimewind_master,
+    super::decks::rimewind_cryomancer,
+    super::decks::icehide_golem,
+    super::decks::rimefeather_owl,
+    super::decks::ascendant_spirit,
+    super::decks::pilfering_hawk,
+    super::decks::berg_strider,
+    super::decks::avalanche_caller,
+    super::decks::blizzard_strix,
+    super::decks::winters_chill,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

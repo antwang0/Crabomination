@@ -1764,3 +1764,127 @@ fn priest_of_the_haunted_edge_counts_snow_lands() {
     assert!(g.battlefield_find(giant).is_none(), "-3/-3 kills the 3/3");
 }
 
+
+// ── Heidar, Rimewind Master (`decks::cmdr_016x_p`) ──────────────────────────
+
+/// Heidar's bounce needs four snow permanents.
+#[test]
+fn heidar_bounces_with_four_snow() {
+    let mut g = pod(2);
+    let heidar = ready(&mut g, 0, catalog::heidar_rimewind_master());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::snow_covered_island());
+    }
+    flood(&mut g, 0);
+    let bounce = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: heidar,
+            ability_index: 0,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(bounce(&mut g).is_err(), "three snow permanents");
+    ready(&mut g, 0, catalog::snow_covered_island());
+    bounce(&mut g).expect("four");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+}
+
+/// CR 107.4h — Icehide Golem's {S} is cast off a snow land.
+#[test]
+fn icehide_golem_casts_off_a_snow_land() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::island());
+    let golem = g.add_card_to_hand(0, catalog::icehide_golem());
+    assert!(cast(&mut g, golem, None).is_err(), "an Island isn't snow");
+    ready(&mut g, 0, catalog::snow_covered_island());
+    cast(&mut g, golem, None).expect("snow");
+    assert!(g.battlefield_find(golem).is_some());
+}
+
+/// CR 205.4 — Rimefeather Owl's ice counter makes a permanent snow, and the
+/// Owl counts it.
+#[test]
+fn rimefeather_owl_ices_a_permanent() {
+    let mut g = pod(2);
+    let owl = ready(&mut g, 0, catalog::rimefeather_owl());
+    ready(&mut g, 0, catalog::snow_covered_island());
+    ready(&mut g, 0, catalog::snow_covered_island());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(owl).unwrap().power, 3, "two snow lands and itself");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: owl,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ice");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(owl).unwrap().power, 4, "the iced Bears are snow");
+}
+
+/// Ascendant Spirit climbs Warrior → Angel (flying counter) on snow mana.
+#[test]
+fn ascendant_spirit_levels_up() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let sp = ready(&mut g, 0, catalog::ascendant_spirit());
+    for _ in 0..5 {
+        ready(&mut g, 0, catalog::snow_covered_island());
+    }
+    let act = |g: &mut GameState, i: usize| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sp,
+            ability_index: i,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("level");
+        drain_stack(g);
+    };
+    act(&mut g, 0);
+    assert_eq!(g.computed_permanent(sp).unwrap().power, 2);
+    act(&mut g, 1);
+    let c = g.computed_permanent(sp).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(g.permanent_has_keyword(sp, &Keyword::Flying));
+}
+
+/// Berg Strider cast with {S} also freezes its target.
+#[test]
+fn berg_strider_freezes_with_snow_mana() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    for _ in 0..5 {
+        ready(&mut g, 0, catalog::snow_covered_island());
+    }
+    let bs = g.add_card_to_hand(0, catalog::berg_strider());
+    cast(&mut g, bs, None).expect("strider");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    pass_to(&mut g, TurnStep::Upkeep);
+    assert_eq!(g.active_player_idx, 1);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "skips its untap");
+}
+
+/// Blizzard Strix flickers a permanent until the next end step.
+#[test]
+fn blizzard_strix_flickers_until_end_step() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::snow_covered_island());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let strix = g.add_card_to_hand(0, catalog::blizzard_strix());
+    flood(&mut g, 0);
+    cast(&mut g, strix, None).expect("strix");
+    assert!(g.battlefield_find(bear).is_none(), "exiled");
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 1));
+}
