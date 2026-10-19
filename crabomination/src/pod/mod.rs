@@ -26652,6 +26652,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TRYSTAN_COMMANDERS,
             main: decks::TRYSTAN_MAIN,
         },
+        // Seat 4367: Hei Bai, Forest Guardian's EDHREC average deck. `--pod-decks 4367`.
+        PodDeck {
+            name: "Hei Bai, Forest Guardian (WUBRG)",
+            commanders: decks::HEI_BAI_2_COMMANDERS,
+            main: decks::HEI_BAI_2_MAIN,
+        },
+        // Seat 4368: The Great Goblin's EDHREC average deck. `--pod-decks 4368`.
+        PodDeck {
+            name: "The Great Goblin (BR)",
+            commanders: decks::THE_GREAT_GOBLIN_COMMANDERS,
+            main: decks::THE_GREAT_GOBLIN_MAIN,
+        },
+        // Seat 4369: Vazi, Keen Negotiator's EDHREC average deck. `--pod-decks 4369`.
+        PodDeck {
+            name: "Vazi, Keen Negotiator (BRG)",
+            commanders: decks::VAZI_COMMANDERS,
+            main: decks::VAZI_MAIN,
+        },
+        // Seat 4370: Wort, Boggart Auntie's EDHREC average deck. `--pod-decks 4370`.
+        PodDeck {
+            name: "Wort, Boggart Auntie (BR)",
+            commanders: decks::WORT_2_COMMANDERS,
+            main: decks::WORT_2_MAIN,
+        },
+        // Seat 4371: Sanar, Innovative First-Year's EDHREC average deck. `--pod-decks 4371`.
+        PodDeck {
+            name: "Sanar, Innovative First-Year (UR)",
+            commanders: decks::SANAR_2_COMMANDERS,
+            main: decks::SANAR_2_MAIN,
+        },
+        // Seat 4372: Madame Hydra's EDHREC average deck. `--pod-decks 4372`.
+        PodDeck {
+            name: "Madame Hydra (BR)",
+            commanders: decks::MADAME_HYDRA_2_COMMANDERS,
+            main: decks::MADAME_HYDRA_2_MAIN,
+        },
+        // Seat 4373: The Whizzer, Classic Speedster's EDHREC average deck. `--pod-decks 4373`.
+        PodDeck {
+            name: "The Whizzer, Classic Speedster (R)",
+            commanders: decks::THE_WHIZZER_COMMANDERS,
+            main: decks::THE_WHIZZER_MAIN,
+        },
+        // Seat 4374: The Balrog, Flame of Udûn's EDHREC average deck. `--pod-decks 4374`.
+        PodDeck {
+            name: "The Balrog, Flame of Udûn (BR)",
+            commanders: decks::THE_BALROG_2_COMMANDERS,
+            main: decks::THE_BALROG_2_MAIN,
+        },
+        // Seat 4375: The Ruinous Wrecking Crew's EDHREC average deck. `--pod-decks 4375`.
+        PodDeck {
+            name: "The Ruinous Wrecking Crew (BR)",
+            commanders: decks::THE_RUINOUS_WRECKING_CREW_COMMANDERS,
+            main: decks::THE_RUINOUS_WRECKING_CREW_MAIN,
+        },
+        // Seat 4376: Ulrich of the Krallenhorde's EDHREC average deck. `--pod-decks 4376`.
+        PodDeck {
+            name: "Ulrich of the Krallenhorde (RG)",
+            commanders: decks::ULRICH_OF_THE_KRALLENHORDE_COMMANDERS,
+            main: decks::ULRICH_OF_THE_KRALLENHORDE_MAIN,
+        },
+        // Seat 4377: Cabal Patriarch's EDHREC average deck. `--pod-decks 4377`.
+        PodDeck {
+            name: "Cabal Patriarch (B)",
+            commanders: decks::CABAL_PATRIARCH_COMMANDERS,
+            main: decks::CABAL_PATRIARCH_MAIN,
+        },
     ]
 }
 
@@ -32919,6 +32985,17 @@ mod tests {
             ("Storm, Shaker of Skies", &[0x1B22]),
             ("Pharaoh Rama-Tut", &[0x1B23]),
             ("Trystan, Callous Cultivator", &[0x1B24]),
+            ("Hei Bai, Forest Guardian", &[0x1B25]),
+            ("The Great Goblin", &[0x1B26]),
+            ("Vazi, Keen Negotiator", &[0x1B27]),
+            ("Wort, Boggart Auntie", &[0x1B28]),
+            ("Sanar, Innovative First-Year", &[0x1B29]),
+            ("Madame Hydra", &[0x1B2A]),
+            ("The Whizzer, Classic Speedster", &[0x1B2B]),
+            ("The Balrog, Flame of Udûn", &[0x1B2C]),
+            ("The Ruinous Wrecking Crew", &[0x1B2D]),
+            ("Ulrich of the Krallenhorde", &[0x1B2E]),
+            ("Cabal Patriarch", &[0x1B2F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
