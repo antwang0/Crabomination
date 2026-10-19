@@ -538,6 +538,10 @@ pub enum Selector {
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
     AttachedToMe(Box<Selector>),
+    /// CR 702.22 — the other creatures in the attacking band `anchor`
+    /// belongs to this combat ("all creatures banded with it" — Icatian
+    /// Skirmishers, Urza's Engine). Empty outside a declared band.
+    BandedWith(Box<Selector>),
     /// CR 702.6e — the Aura/Equipment attached to the source that granted the
     /// ability now resolving, for granted lines that name their granter
     /// ("{T}: Put an aim counter on Hankyu" — Hankyu, Rakdos Riteknife).

@@ -45913,6 +45913,20 @@ impl GameState {
                     .collect()
             }
 
+            Selector::BandedWith(inner) => {
+                let anchors: Vec<CardId> = self
+                    .resolve_selector(inner, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                self.attack_bands
+                    .iter()
+                    .filter(|band| band.iter().any(|m| anchors.contains(m)))
+                    .flat_map(|band| band.iter().copied())
+                    .filter(|m| !anchors.contains(m) && self.battlefield_find(*m).is_some())
+                    .map(EntityRef::Permanent)
+                    .collect()
+            }
             Selector::AttachedToMe(inner) => {
                 let anchors: Vec<CardId> = self
                     .resolve_selector(inner, ctx)
