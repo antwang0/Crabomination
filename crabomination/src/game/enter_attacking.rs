@@ -40,7 +40,10 @@ impl GameState {
                 | crate::game::types::TurnStep::CombatDamage
                 | crate::game::types::TurnStep::EndCombat
         );
-        if !declared {
+        // A re-run (its pick logged) that finds combat emptied meanwhile is
+        // moot too (CR 506.4 — the attackers it would join are gone).
+        let outlived = self.attacking.is_empty() && !self.scratch.resolution_answer_log.is_empty();
+        if !declared || outlived {
             self.clear_answer_log();
             return Ok(());
         }

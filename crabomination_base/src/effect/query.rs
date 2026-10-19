@@ -424,6 +424,7 @@ impl Effect {
             }
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::EnlistThen { then } => f(then),
+            Effect::BlightThen { then, .. } => f(then),
             // Magar's puppet's on-hit body runs later, under the puppet.
             Effect::PutFaceDownAsNotedSpell { on_hit, .. } => f(on_hit),
             Effect::AsSubjectsAbility(e) => f(e),
