@@ -19612,6 +19612,7 @@ impl GameState {
             avail[color_index(c)] = pool.amount(c);
         }
         let mut avail_colorless = pool.colorless_amount();
+        let pool_snow = pool.snow_amount();
 
         // Inline rather than `Vec::new()`: both buffers are per-call, hold one
         // entry per pip of a printed cost, and their first `push` was
@@ -19631,6 +19632,10 @@ impl GameState {
         // pool is drained by the more-constrained colored pips first.
         let mut hybrids: SmallVec<[(ManaColor, ManaColor); 8]> = SmallVec::new();
         let mut generic: u32 = 0;
+        // CR 107.4h — each {S} is one mana from a snow source: tapped like a
+        // generic pip, but from a snow source while the pool's snow mana
+        // falls short.
+        let mut snow_pips: u32 = 0;
 
         for sym in &cost.symbols {
             match sym {
@@ -19677,9 +19682,14 @@ impl GameState {
                     // If colorless bucket can't cover it fully, we'd need to tap a colorless
                     // source — skip that complexity for now (generic fallback handles it).
                 }
-                ManaSymbol::Snow | ManaSymbol::X => {}
+                ManaSymbol::Snow => {
+                    generic += 1;
+                    snow_pips += 1;
+                }
+                ManaSymbol::X => {}
             }
         }
+        let mut snow_short = snow_pips.saturating_sub(pool_snow);
 
         // Resolve hybrid pips ({a/b}). Each can be paid by one mana of
         // either color — from the pool, or by tapping a source that makes
@@ -19726,7 +19736,7 @@ impl GameState {
 
         // Remaining pool total after colored deductions covers generic pips.
         let pool_total_left: u32 = avail.iter().sum::<u32>() + avail_colorless;
-        let generic_to_tap = generic.saturating_sub(pool_total_left);
+        let generic_to_tap = generic.saturating_sub(pool_total_left).max(snow_short);
 
         // Nothing to tap: the two loops below are no-ops and `events` is
         // still empty, so return before building the source table. That
@@ -19929,11 +19939,15 @@ impl GameState {
                         Some(c) => s.color_idx[color_index(c)],
                         None => s.first_idx,
                     };
-                    (fresh.is_none(), rarity, s.rank, std::cmp::Reverse(keep), s.id, idx, fresh)
+                    let unsnowy = snow_short > 0 && !self.source_card(s).is_some_and(|c| c.definition.is_snow());
+                    (unsnowy, fresh.is_none(), rarity, s.rank, std::cmp::Reverse(keep), s.id, idx, fresh)
                 })
-                .min_by_key(|&(stale, rarity, rank, keep, ..)| (stale, rarity, rank, keep))
-                .map(|(_, _, _, _, id, idx, fresh)| (id, idx, fresh));
-            let Some((id, idx, fresh)) = source else { break };
+                .min_by_key(|&(unsnowy, stale, rarity, rank, keep, ..)| (unsnowy, stale, rarity, rank, keep))
+                .map(|(unsnowy, _, _, _, _, id, idx, fresh)| (unsnowy, id, idx, fresh));
+            let Some((unsnowy, id, idx, fresh)) = source else { break };
+            if !unsnowy {
+                snow_short = snow_short.saturating_sub(1);
+            }
             // Same reserve as the colored loop above; the two share
             // `events` and either can be the first to write.
             if events.is_empty() {

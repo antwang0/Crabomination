@@ -36307,6 +36307,10 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::IsSourceChosenCreatureType
         | R::HasChosenLandTypeOfSource
         | R::HasChosenPlaneswalkerTypeOfSource
+        // CR 205.4 — snow is a supertype the decomposition below has no arm
+        // for; unrouted, Narfi's "other snow and Zombie creatures" pump was
+        // dropped whole.
+        | R::IsSnow
         // Per-turn combat history (Moraug's "for each time it has attacked
         // this turn") — not a printed characteristic either.
         | R::AttackedThisTurn
