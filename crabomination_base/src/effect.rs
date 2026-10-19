@@ -882,6 +882,10 @@ pub enum Value {
     /// "Bloodthirst X, where X is the damage dealt to your opponents this
     /// turn" (Petrified Wood-Kin). Sums across the resolved players.
     DamageTakenThisTurn(PlayerRef),
+    /// The most damage any one of the resolved players was dealt this turn
+    /// (`Player.damage_taken_this_turn`, MAX not sum) — "if an opponent was
+    /// dealt 3 or more damage this turn" (Lightning Phoenix).
+    MostDamageTakenThisTurn(PlayerRef),
     /// The noncombat slice of `DamageTakenThisTurn`, summed across the
     /// resolved players (Chandra's Incinerator's cost reduction).
     NoncombatDamageTakenThisTurn(PlayerRef),
