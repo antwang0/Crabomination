@@ -17910,6 +17910,18 @@ static DECKS: &[Factory] = &[
     super::decks::gideons_resolve,
     super::decks::gideons_phalanx,
     super::decks::gideon_the_oathsworn,
+    super::decks::elvish_vatkeeper,
+    super::decks::blighted_burgeoning,
+    super::decks::gift_of_compleation,
+    super::decks::glistening_dawn,
+    super::decks::traumatic_revelation,
+    super::decks::chief_of_the_wilds,
+    super::decks::chief_wargs_company,
+    super::decks::duskwatch_hunter,
+    super::decks::nighthowl_pursuer,
+    super::decks::the_chief_warg,
+    super::decks::mirkwood,
+    super::decks::desolation_prowler,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

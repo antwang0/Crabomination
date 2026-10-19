@@ -672,3 +672,91 @@ fn gideons_phalanx_spell_mastery() {
         assert_eq!(g.permanent_has_keyword(knights[0], &crabomination::card::Keyword::Indestructible), mastery);
     }
 }
+
+// ── Glissa, Chief of the Wilds, The Chief Warg (`decks::cmdr_016x_d`) ───────
+
+/// Chief of the Wilds doubles another Wolf's trigger: Chief Warg's Company's
+/// upkeep makes two Wolves, and each Wolf entering grows the Chief by two.
+#[test]
+fn chief_of_the_wilds_doubles_wolf_triggers() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let chief = ready(&mut g, 0, catalog::chief_of_the_wilds());
+    ready(&mut g, 0, catalog::chief_wargs_company());
+    g.step = TurnStep::Untap;
+    g.active_player_idx = 0;
+    pass_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let wolves = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Wolf").count();
+    assert_eq!(wolves, 2, "the upkeep trigger fired twice");
+    assert_eq!(g.battlefield_find(chief).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+/// Chief Warg's Company can't attack without two other Wolves.
+#[test]
+fn chief_wargs_company_needs_two_other_wolves() {
+    for (others, ok) in [(1, false), (2, true)] {
+        let mut g = pod(2);
+        let c = ready(&mut g, 0, catalog::chief_wargs_company());
+        for _ in 0..others {
+            ready(&mut g, 0, catalog::nighthowl_pursuer());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        let res = g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+            attacker: c,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        }]));
+        assert_eq!(res.is_ok(), ok, "others={others}");
+    }
+}
+
+/// Traumatic Revelation takes a creature card, or incubates 3 when there is
+/// none to take.
+#[test]
+fn traumatic_revelation_discards_or_incubates() {
+    for creature in [true, false] {
+        let mut g = pod(2);
+        g.players[1].hand.clear();
+        let card = if creature { catalog::grizzly_bears() } else { catalog::lightning_bolt() };
+        let id = g.add_card_to_hand(1, card);
+        let tr = g.add_card_to_hand(0, catalog::traumatic_revelation());
+        flood(&mut g, 0);
+        cast(&mut g, tr, Some(Target::Player(1))).expect("cast");
+        assert_eq!(g.players[1].hand.iter().any(|c| c.id == id), !creature);
+        let incs = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
+        assert_eq!(incs, usize::from(!creature));
+    }
+}
+
+/// Elvish Vatkeeper's {5} transforms an Incubator and doubles its counters;
+/// Glistening Dawn's incubators carry one counter per land.
+#[test]
+fn vatkeeper_doubles_and_glistening_dawn_counts_lands() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let gd = g.add_card_to_hand(0, catalog::glistening_dawn());
+    flood(&mut g, 0);
+    cast(&mut g, gd, None).expect("dawn");
+    let incs: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").map(|c| c.id).collect();
+    assert_eq!(incs.len(), 2);
+    assert_eq!(g.battlefield_find(incs[0]).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    let vk = ready(&mut g, 0, catalog::elvish_vatkeeper());
+    drain_stack(&mut g);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vk,
+        ability_index: 0,
+        target: Some(Target::Permanent(incs[0])),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("vatkeeper");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(incs[0]).unwrap();
+    assert!(p.definition.is_creature(), "transformed");
+    assert_eq!(p.counter_count(CounterType::PlusOnePlusOne), 6);
+}
