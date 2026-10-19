@@ -18134,6 +18134,16 @@ static DECKS: &[Factory] = &[
     super::decks::cooperation,
     super::decks::formation,
     super::decks::general_jarkeld,
+    super::decks::the_space_family_goblinson,
+    super::decks::atomwheel_acrobats,
+    super::decks::resolute_veggiesaur,
+    super::decks::swarming_goblins,
+    super::decks::sylvan_shepherd,
+    super::decks::vegetation_abomination,
+    super::decks::priority_boarding,
+    super::decks::faridehs_fireball,
+    super::decks::critical_hit,
+    super::decks::slight_malfunction,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

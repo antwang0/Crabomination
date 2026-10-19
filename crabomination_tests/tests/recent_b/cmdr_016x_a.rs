@@ -2026,3 +2026,116 @@ fn general_jarkeld_switches_blockers() {
     assert_eq!(g.block_map.get(&wall).map(|l| l.to_vec()), Some(vec![giant]), "the Wall now blocks the Giant");
     assert_eq!(g.block_map.get(&elf).map(|l| l.to_vec()), Some(vec![bear]));
 }
+
+// ── The Space Family Goblinson (`decks::cmdr_016x_r`) ───────────────────────
+
+fn roll_d6(g: &mut GameState, acrobats: CardId) {
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: acrobats,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("roll");
+    drain_stack(g);
+}
+
+/// CR 706 — Goblinson grows per die and tramples from the third die this
+/// turn; Atomwheel Acrobats takes a 1 or 2 as counters; Resolute Veggiesaur
+/// grows on the third die only.
+#[test]
+fn goblinson_counts_the_dice() {
+    use crabomination::card::{CounterType, Keyword};
+    let mut g = pod(2);
+    let gob = ready(&mut g, 0, catalog::the_space_family_goblinson());
+    let acro = ready(&mut g, 0, catalog::atomwheel_acrobats());
+    let veg = ready(&mut g, 0, catalog::resolute_veggiesaur());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DieRoll(2),
+        DecisionAnswer::DieRoll(5),
+        DecisionAnswer::DieRoll(6),
+        DecisionAnswer::DieRoll(1),
+    ]));
+    let plus = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    roll_d6(&mut g, acro);
+    assert_eq!(plus(&g, acro), 2, "a 2: two counters");
+    assert!(!g.permanent_has_keyword(gob, &Keyword::Trample));
+    roll_d6(&mut g, acro);
+    assert_eq!(plus(&g, veg), 0);
+    roll_d6(&mut g, acro);
+    assert_eq!(plus(&g, veg), 1, "the third die");
+    assert!(g.permanent_has_keyword(gob, &Keyword::Trample), "three dice this turn");
+    flood(&mut g, 0);
+    roll_d6(&mut g, acro);
+    assert_eq!(plus(&g, veg), 1, "not the fourth");
+    assert_eq!(plus(&g, gob), 4, "one per die");
+    assert_eq!(plus(&g, acro), 3, "a 5, a 6, then a 1");
+}
+
+/// CR 706.3a — Swarming Goblins on a 20 makes three Goblins.
+#[test]
+fn swarming_goblins_rolls_for_tokens() {
+    let mut g = pod(2);
+    let sg = g.add_card_to_hand(0, catalog::swarming_goblins());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(20)]));
+    cast(&mut g, sg, None).expect("goblins");
+    let tokens = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Goblin").count();
+    assert_eq!(tokens, 3);
+}
+
+/// Farideh's Fireball: a 10+ spares its caster.
+#[test]
+fn faridehs_fireball_spares_you_on_a_high_roll() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::faridehs_fireball());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(15)]));
+    cast(&mut g, f, Some(Target::Permanent(bear))).expect("fireball");
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (20, 18, 18));
+}
+
+/// Critical Hit returns from the graveyard on a natural 20.
+#[test]
+fn critical_hit_returns_on_a_natural_twenty() {
+    let mut g = pod(2);
+    let ch = g.add_card_to_graveyard(0, catalog::critical_hit());
+    let sg = g.add_card_to_hand(0, catalog::swarming_goblins());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(20)]));
+    cast(&mut g, sg, None).expect("goblins");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ch));
+}
+
+/// Priority Boarding exiles a top card cheaper than the result to play.
+#[test]
+fn priority_boarding_impulses_under_the_roll() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::priority_boarding());
+    let acro = ready(&mut g, 0, catalog::atomwheel_acrobats());
+    g.players[0].library.clear();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DieRoll(5),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    roll_d6(&mut g, acro);
+    assert!(g.exile.iter().any(|c| c.id == bear), "MV 2 < 5: exiled to play");
+}
+
+/// Vegetation Abomination's sacrifice gains the d6 result.
+#[test]
+fn vegetation_abomination_gains_the_roll() {
+    let mut g = pod(2);
+    let va = ready(&mut g, 0, catalog::vegetation_abomination());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(4)]));
+    roll_d6(&mut g, va);
+    assert_eq!(g.players[0].life, 24);
+}
