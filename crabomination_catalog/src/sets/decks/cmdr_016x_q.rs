@@ -176,3 +176,23 @@ pub fn formation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// General Jarkeld — {3}{W} 1/2 legendary Human Soldier. {T}: switch the
+/// blockers of two target blocked attacking creatures, if each could be
+/// blocked by all of the other's blockers; declare blockers step only.
+pub fn general_jarkeld() -> CardDefinition {
+    let blocked_attacker = || R::Creature.and(R::IsAttacking).and(R::IsBlocked);
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::DeclareBlockers)),
+            effect: Effect::SwitchBlockers {
+                first: Selector::TargetFiltered { slot: 0, filter: blocked_attacker() },
+                second: Selector::TargetFiltered { slot: 1, filter: blocked_attacker() },
+            },
+            ..Default::default()
+        }],
+        ..soldier("General Jarkeld", cost(&[generic(3), w()]), vec![], 1, 2)
+    }
+}

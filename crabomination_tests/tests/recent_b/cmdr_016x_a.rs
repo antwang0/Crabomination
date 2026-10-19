@@ -1985,3 +1985,44 @@ fn cooperation_grants_banding() {
     cast(&mut g, c, Some(Target::Permanent(bear))).expect("cooperation");
     assert!(g.permanent_has_keyword(bear, &Keyword::Banding));
 }
+
+/// CR 509.1 / 506.4 — General Jarkeld switches two attackers' blockers.
+#[test]
+fn general_jarkeld_switches_blockers() {
+    let mut g = pod(2);
+    let jarkeld = ready(&mut g, 1, catalog::general_jarkeld());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let wall = ready(&mut g, 1, catalog::wall_of_shields());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        [bear, giant]
+            .iter()
+            .map(|&attacker| crabomination::game::types::Attack {
+                attacker,
+                target: crabomination::game::types::AttackTarget::Player(1),
+            })
+            .collect(),
+    ))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear), (elf, giant)])).expect("block");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jarkeld,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(giant)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("switch");
+    drain_stack(&mut g);
+    assert_eq!(g.block_map.get(&wall).map(|l| l.to_vec()), Some(vec![giant]), "the Wall now blocks the Giant");
+    assert_eq!(g.block_map.get(&elf).map(|l| l.to_vec()), Some(vec![bear]));
+}

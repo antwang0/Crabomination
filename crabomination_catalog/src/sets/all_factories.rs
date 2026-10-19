@@ -18133,6 +18133,7 @@ static DECKS: &[Factory] = &[
     super::decks::baton_of_morale,
     super::decks::cooperation,
     super::decks::formation,
+    super::decks::general_jarkeld,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
