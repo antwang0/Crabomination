@@ -26466,6 +26466,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PEGGY_CARTER_COMMANDERS,
             main: decks::PEGGY_CARTER_MAIN,
         },
+        // Seat 4336: Glissa, Herald of Predation's EDHREC average deck. `--pod-decks 4336`.
+        PodDeck {
+            name: "Glissa, Herald of Predation (BG)",
+            commanders: decks::GLISSA_2_COMMANDERS,
+            main: decks::GLISSA_2_MAIN,
+        },
+        // Seat 4337: Chief of the Wilds's EDHREC average deck. `--pod-decks 4337`.
+        PodDeck {
+            name: "Chief of the Wilds (BG)",
+            commanders: decks::CHIEF_OF_THE_WILDS_COMMANDERS,
+            main: decks::CHIEF_OF_THE_WILDS_MAIN,
+        },
+        // Seat 4338: The Chief Warg's EDHREC average deck. `--pod-decks 4338`.
+        PodDeck {
+            name: "The Chief Warg (BG)",
+            commanders: decks::THE_CHIEF_WARG_COMMANDERS,
+            main: decks::THE_CHIEF_WARG_MAIN,
+        },
     ]
 }
 
@@ -32702,6 +32720,9 @@ mod tests {
             ("Agent 13, Sharon Carter", &[0x1B03]),
             ("Black Panther, Claws of Bast", &[0x1B04]),
             ("Peggy Carter, Secret Agent", &[0x1B05]),
+            ("Glissa, Herald of Predation", &[0x1B06]),
+            ("Chief of the Wilds", &[0x1B07]),
+            ("The Chief Warg", &[0x1B08]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

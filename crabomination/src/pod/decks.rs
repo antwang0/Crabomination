@@ -121637,3 +121637,86 @@ pub const PEGGY_CARTER_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const GLISSA_2_COMMANDERS: &[CardFactory] = &[glissa_herald_of_predation];
+
+/// **Glissa, Herald of Predation**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Forests + 11 Swamps = 99.
+/// Glissa, Herald of Predation (EDHREC, fetched 2026-10-19).
+pub const GLISSA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, contagion_clasp, glistening_sphere, golgari_signet,
+    ozolith_the_shattered_spire, sol_ring, swiftfoot_boots, talisman_of_resilience,
+    throne_of_geth, bojuka_bog, command_tower, deathcap_glade, golgari_rot_farm, karns_bastion,
+    llanowar_wastes, necroblossom_snarl, overgrown_tomb, path_of_ancestry, tainted_wood,
+    temple_of_malady, twilight_mire, woodland_cemetery, adaptive_sporesinger,
+    agent_frank_horrigan, armored_scrapgorger, blight_titan, blightbelly_rat,
+    bloated_contaminator, bloated_processor, cankerbloom, compleated_huntmaster,
+    contaminant_grafter, converter_beast, defiler_of_vigor, elvish_vatkeeper, evolution_sage,
+    fynn_the_fangbearer, glissa_sunslayer, grafted_butcher, ichor_drinker,
+    kami_of_whispered_hopes, necrogen_rotpriest, scheming_aspirant, terror_of_towashi,
+    venerated_rotpriest, vorinclex_monstrous_raider, winding_constrictor,
+    zopandrel_hunger_dominus, blighted_burgeoning, doubling_season, gift_of_compleation,
+    hardened_scales, parallel_lives, phyrexian_arena, tangled_skyline, assassins_trophy,
+    atomize, beast_within, infectious_bite, inspiring_call, putrefy, vraskas_fall,
+    whisper_of_the_dross, vraska_betrayals_sting, cultivate, drown_in_ichor, expand_the_sphere,
+    glistening_dawn, infectious_inquiry, kodamas_reach, natures_lore, rampant_growth,
+    thirsting_roots, traumatic_revelation, unnatural_restoration, vat_emergence,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const CHIEF_OF_THE_WILDS_COMMANDERS: &[CardFactory] = &[chief_of_the_wilds];
+
+/// **Chief of the Wilds**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 12 Forests + 7 Swamps = 99.
+/// Chief of the Wilds (EDHREC, fetched 2026-10-19).
+pub const CHIEF_OF_THE_WILDS_MAIN: &[CardFactory] = &[
+    arcane_signet, chronicle_of_victory, heralds_horn, patchwork_banner, sol_ring,
+    swiftfoot_boots, the_earth_crystal, the_great_henge, bojuka_bog, command_tower,
+    deathcap_glade, llanowar_wastes, overgrown_tomb, path_of_ancestry, rogues_passage,
+    tainted_wood, three_tree_city, twilight_mire, undergrowth_stadium, vernal_fen,
+    wastewood_verge, woodland_cemetery, yavimaya_cradle_of_growth, invasion_of_ikoria,
+    invasion_of_zendikar, anara_wolvid_familiar, ascendant_packleader, bejeweled_warg,
+    cemetery_prowler, chief_wargs_company, chomping_changeling, duskwatch_hunter, ferocious_pup,
+    head_of_the_hunt, hollowhenge_overlord, master_of_the_wild_hunt, nighthowl_pursuer,
+    nightpack_ambusher, packsong_pup, ravening_warg, realmwalker, rhovanion_rampager,
+    roaming_throne, sarulfs_packmate, sarulf_realm_eater, silverfur_partisan,
+    spirit_of_the_hunt, summon_fenrir, the_chief_warg, torgal_a_fine_hound, wargling,
+    wilderland_scrounger, young_wolf, beastmaster_ascension, doubling_season, feed_the_pack,
+    garruks_uprising, howling_moon, howlpack_resurgence, raised_by_wolves, unnatural_growth,
+    wolfcallers_howl, assassins_trophy, beast_within, golgari_charm, heroic_intervention,
+    moonlight_hunt, putrefy, return_of_the_wildspeaker, revitalizing_repast, tear_asunder,
+    garruk_cursed_huntsman, cultivate, farseek, howl_of_the_night_pack, kindred_dominance,
+    natures_lore, overwhelming_stampede, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_CHIEF_WARG_COMMANDERS: &[CardFactory] = &[the_chief_warg];
+
+/// **The Chief Warg**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 15 Forests + 11 Swamps = 99.
+/// The Chief Warg (EDHREC, fetched 2026-10-19).
+pub const THE_CHIEF_WARG_MAIN: &[CardFactory] = &[
+    arcane_signet, golgari_signet, patchwork_banner, sol_ring, swiftfoot_boots,
+    talisman_of_resilience, bojuka_bog, command_tower, deathcap_glade, evolving_wilds,
+    jungle_hollow, llanowar_wastes, mirkwood, path_of_ancestry, tainted_wood, vernal_fen,
+    woodland_cemetery, ambush_wolf, anara_wolvid_familiar, ascendant_packleader, bejeweled_warg,
+    beorn_reluctant_host, cemetery_prowler, chief_wargs_company, chief_of_the_wilds,
+    desolation_prowler, duskwatch_hunter, head_of_the_hunt, hollowhenge_overlord, large_bear,
+    little_bear, master_of_the_wild_hunt, nasty_little_rabbit, nighthowl_pursuer,
+    nightpack_ambusher, ordinary_bear, packsong_pup, primal_adversary, radagast_of_rhosgobel,
+    ravening_warg, rhovanion_rampager, sarulf_realm_eater, silverfur_partisan, summon_fenrir,
+    tom_bert_and_william, wargling, wilderland_scrounger, beastmaster_ascension,
+    beorns_hospitality, garruks_uprising, howling_moon, howlpack_resurgence, unnatural_growth,
+    wolfcallers_howl, assassins_trophy, beast_within, bilbos_deadly_slice, heroic_intervention,
+    putrefy, quarrel, return_of_the_wildspeaker, reverent_howl, warg_tactics,
+    garruk_cursed_huntsman, cultivate, farseek, gnashing_of_teeth, natures_lore, nights_whisper,
+    overwhelming_stampede, rampant_growth, shamanic_revelation, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
