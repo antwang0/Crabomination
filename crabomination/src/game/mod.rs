@@ -12192,6 +12192,32 @@ impl GameState {
                 _ => false,
             })
         }) || self.granted_cant_lose_controllers().any(|c| c == seat)
+            || self.emblem_cant_lose(seat)
+    }
+
+    /// CR 114.4 — an emblem's "you can't lose the game and your opponents
+    /// can't win the game" works from the command zone, bare or gated on a
+    /// condition (Gideon of the Trials: "as long as you control a Gideon
+    /// planeswalker").
+    fn emblem_cant_lose(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        let Some(pl) = self.players.get(seat) else { return false };
+        if pl.emblems.is_empty() {
+            return false;
+        }
+        pl.emblems.iter().any(|em| {
+            em.statics.iter().any(|sa| match &sa.effect {
+                StaticEffect::ControllerCantLoseGame => true,
+                StaticEffect::WhileCondition { condition, inner } => {
+                    matches!(**inner, StaticEffect::ControllerCantLoseGame)
+                        && self.evaluate_predicate(
+                            condition,
+                            &crate::game::effects::EffectContext::for_spell(seat, None, 0, 0),
+                        )
+                }
+                _ => false,
+            })
+        })
     }
 
     /// Controllers of permanents that have the granted "you can't lose the
@@ -12506,6 +12532,7 @@ impl GameState {
             })
         })
             || self.granted_cant_lose_controllers().any(|c| !self.same_team(c, seat))
+            || (0..self.players.len()).any(|p| !self.same_team(p, seat) && self.emblem_cant_lose(p))
     }
 
     /// Angel's Grace / Worship — clamp a would-be damage life delta so it
