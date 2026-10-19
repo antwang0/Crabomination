@@ -25938,6 +25938,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VIPER_COMMANDERS,
             main: decks::VIPER_MAIN,
         },
+        // Seat 4248: Swordsman, Sharp Scoundrel's EDHREC average deck. `--pod-decks 4248`.
+        PodDeck {
+            name: "Swordsman, Sharp Scoundrel (B)",
+            commanders: decks::SWORDSMAN_COMMANDERS,
+            main: decks::SWORDSMAN_MAIN,
+        },
+        // Seat 4249: Doc Ock, Sinister Scientist's EDHREC average deck. `--pod-decks 4249`.
+        PodDeck {
+            name: "Doc Ock, Sinister Scientist (U)",
+            commanders: decks::DOC_OCK_2_COMMANDERS,
+            main: decks::DOC_OCK_2_MAIN,
+        },
+        // Seat 4250: Scarlet Spider, Kaine's EDHREC average deck. `--pod-decks 4250`.
+        PodDeck {
+            name: "Scarlet Spider, Kaine (BR)",
+            commanders: decks::SCARLET_SPIDER_2_COMMANDERS,
+            main: decks::SCARLET_SPIDER_2_MAIN,
+        },
+        // Seat 4251: Venom, Evil Unleashed's EDHREC average deck. `--pod-decks 4251`.
+        PodDeck {
+            name: "Venom, Evil Unleashed (B)",
+            commanders: decks::VENOM_3_COMMANDERS,
+            main: decks::VENOM_3_MAIN,
+        },
+        // Seat 4252: Iron Monger, Sadistic Tycoon's EDHREC average deck. `--pod-decks 4252`.
+        PodDeck {
+            name: "Iron Monger, Sadistic Tycoon (B)",
+            commanders: decks::IRON_MONGER_COMMANDERS,
+            main: decks::IRON_MONGER_MAIN,
+        },
+        // Seat 4253: Titania, Rugged Rumbler's EDHREC average deck. `--pod-decks 4253`.
+        PodDeck {
+            name: "Titania, Rugged Rumbler (BG)",
+            commanders: decks::TITANIA_5_COMMANDERS,
+            main: decks::TITANIA_5_MAIN,
+        },
+        // Seat 4254: Grendel, Spawn of Knull's EDHREC average deck. `--pod-decks 4254`.
+        PodDeck {
+            name: "Grendel, Spawn of Knull (B)",
+            commanders: decks::GRENDEL_COMMANDERS,
+            main: decks::GRENDEL_MAIN,
+        },
     ]
 }
 
@@ -32086,6 +32128,13 @@ mod tests {
             ("Scorpion, Seething Striker", &[0x1AAB]),
             ("Casey & Raph, Hotheads", &[0x1AAC]),
             ("Viper, Cruel Conspirator", &[0x1AAD]),
+            ("Swordsman, Sharp Scoundrel", &[0x1AAE]),
+            ("Doc Ock, Sinister Scientist", &[0x1AAF]),
+            ("Scarlet Spider, Kaine", &[0x1AB0]),
+            ("Venom, Evil Unleashed", &[0x1AB1]),
+            ("Iron Monger, Sadistic Tycoon", &[0x1AB2]),
+            ("Titania, Rugged Rumbler", &[0x1AB3]),
+            ("Grendel, Spawn of Knull", &[0x1AB4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

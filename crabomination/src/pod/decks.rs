@@ -119153,3 +119153,195 @@ pub const VIPER_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const SWORDSMAN_COMMANDERS: &[CardFactory] = &[swordsman_sharp_scoundrel];
+
+/// **Swordsman, Sharp Scoundrel**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Swordsman, Sharp Scoundrel (EDHREC, fetched 2026-10-19).
+pub const SWORDSMAN_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, argentum_armor, basilisk_collar,
+    bitterthorn_nissas_animus, blackblade_reforged, bloodforged_battle_axe, colossus_hammer,
+    commanders_plate, cranial_plating, doc_ocks_tentacles, genji_glove, hulkbuster_armor,
+    leyline_axe, mask_of_griselbrand, masterwork_of_ingenuity, monument_to_endurance,
+    patchwork_banner, rocket_powered_goblin_glider, shadowspear, skullclamp, sol_ring,
+    swiftfoot_boots, sword_of_vengeance, sword_of_the_animist, swordsmans_steel, vorpal_sword,
+    wrecking_ball_arm, bojuka_bog, buried_ruin, cabal_coffers, path_of_ancestry, rogues_passage,
+    villainous_hideout, war_room, armed_assailant, baron_helmut_zemo,
+    baron_strucker_hydra_overlord, changeling_outcast, citizen_v_helmut_zemo,
+    crimson_cowl_master_of_evil, crossbones_malicious_mercenary, doctor_doom,
+    fixer_techno_terror, iron_monger_sadistic_tycoon, m_o_d_o_k, m_o_d_o_k_evil_intellect,
+    madame_masque, moonstone_harsh_mistress, ronin_shadow_stalker, super_adaptoid,
+    swarm_being_of_bees, the_frightful_four, the_masters_of_evil, tombstone_career_criminal,
+    ultron_artificial_malevolence, whiplash_vengeful_engineer, yellowjacket_heartless_marauder,
+    black_market_connections, construct_a_cosmic_cube, thunderbolts_conspiracy, dark_ritual,
+    infernal_grasp, lethal_scheme, visions_of_villainy, withering_torment,
+    endless_ranks_of_hydra, feed_the_swarm, kindred_dominance, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const DOC_OCK_2_COMMANDERS: &[CardFactory] = &[doc_ock_sinister_scientist];
+
+/// **Doc Ock, Sinister Scientist**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Doc Ock, Sinister Scientist (EDHREC, fetched 2026-10-19).
+pub const DOC_OCK_2_MAIN: &[CardFactory] = &[
+    arcane_signet, doc_ocks_tentacles, haunted_cloak, lightning_greaves, mind_stone,
+    sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel,
+    wayfarers_bauble, academy_ruins, halimar_depths, lonely_sandbar, mystic_sanctuary,
+    reliquary_tower, remote_isle, terramorphic_expanse, a_i_m_bot, aim_scientists,
+    aim_synthoids, aerial_doombot, alchemax_slayer_bots, archaeomancer, beetle_legacy_criminal,
+    chameleon_master_of_disguise, deranged_assistant, doc_ocks_henchmen, flying_octobot,
+    graviton_fundamental_force, hydro_man_fluid_felon, lady_octopus_inspired_inventor,
+    leader_super_genius, mechanical_mobster, millikin, mysterios_phantasm,
+    mysterio_master_of_illusion, ornithopter_of_paradise, silver_myr, solemn_simulacrum,
+    universal_automaton, aqueous_form, enchanted_rivers_grasp, imprisoned_in_the_moon,
+    security_bypass, spider_man_no_more, amazing_acrobatics, arcane_denial, brainstorm,
+    consider, counterspell, curate, dreams_of_laguna, frantic_search, high_tide, negate, opt,
+    otherworldly_gaze, resculpt, think_twice, thought_scour, unstable_experiment, whoosh,
+    artful_dodge, deep_analysis, enter_the_enigma, ponder, preordain, ravenform, treasure_cruise,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const SCARLET_SPIDER_2_COMMANDERS: &[CardFactory] = &[scarlet_spider_kaine];
+
+/// **Scarlet Spider, Kaine**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Mountains + 12 Swamps = 99.
+/// Scarlet Spider, Kaine (EDHREC, fetched 2026-10-19).
+pub const SCARLET_SPIDER_2_MAIN: &[CardFactory] = &[
+    arcane_signet, eerie_gravestone, pumpkin_bombs, rakdos_signet, rocket_powered_goblin_glider,
+    sol_ring, spider_suit, steel_wrecking_ball, swiftfoot_boots, talisman_of_indulgence,
+    barren_moor, bloodfell_caves, canyon_slough, command_tower, daily_bugle_building,
+    dragonskull_summit, exotic_orchard, ominous_asylum, path_of_ancestry, restless_vents,
+    shadowblood_ridge, vibrant_cityscape, agent_venom, anje_falkenrath, archfiend_of_ifnir,
+    black_cat_cunning_thief, carnage_crimson_chaos, chainer_nightmare_adept,
+    glint_horn_buccaneer, green_goblin_nemesis, green_goblin_revenant,
+    hobgoblin_mantled_marauder, j_jonah_jameson, masked_meower, morlun_devourer_of_spiders,
+    raging_goblinoids, shocker_unshakable, shriek_treblemaker, spider_gwen_free_spirit,
+    spider_islanders, spider_man_noir, spider_punk, swarm_being_of_bees,
+    tombstone_career_criminal, ultimate_green_goblin, venom_evil_unleashed, venomized_cat,
+    alien_symbiosis, feast_of_sanity, maximum_carnage, shadow_of_the_goblin,
+    the_death_of_gwen_stacy, bedevil, big_score, chaos_warp, dark_ritual, dark_withering,
+    rakdos_charm, scorpions_sting, shock, terminate, thrill_of_possibility, unexpected_windfall,
+    behold_the_sinister_six, blasphemous_act, electros_bolt, faithless_looting,
+    lethal_protection, prison_break, pumpkin_bombardment, reanimate, risky_research,
+    romantic_rendezvous, sandmans_quicksand, terminal_agony,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const VENOM_3_COMMANDERS: &[CardFactory] = &[venom_evil_unleashed];
+
+/// **Venom, Evil Unleashed**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Venom, Evil Unleashed (EDHREC, fetched 2026-10-19).
+pub const VENOM_3_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, black_mages_rod, buried_treasure, charcoal_diamond,
+    jet_medallion, mind_stone, sol_ring, wayfarers_bauble, bojuka_bog, cabal_coffers,
+    escape_tunnel, phyrexian_tower, urborg_tomb_of_yawgmoth, accursed_marauder,
+    archpriest_of_shadows, audacious_thief, baleful_eidolon, blood_artist, bonebind_orator,
+    common_crook, contagious_nim, flensermite, forsworn_paladin, geode_golem,
+    gray_merchant_of_asphodel, insatiable_skittermaw, merciless_enforcers,
+    paragon_of_open_graves, pirate_peddlers, qarsi_revenant, reassembling_skeleton,
+    scorpion_seething_striker, sinister_starfish, soul_of_new_phyrexia, symbiote_spawn,
+    temple_thief, troll_of_khazad_dum, unwilling_ingredient, venom_eddie_brock, venomized_cat,
+    fungal_fortitude, phyresis, scion_of_halaster, sinister_possession, sinister_strength,
+    unholy_indenture, alchemists_gift, corrupted_conviction, dark_ritual, deadly_dispute,
+    doom_blade, murder, supernatural_stamina, toxin_analysis, undying_evil, village_rites,
+    dread_return, feed_the_swarm, fortuitous_find, midnight_recovery, raise_dead, reanimate,
+    revoke_demise, risky_research, risky_shortcut, venoms_hunger, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const IRON_MONGER_COMMANDERS: &[CardFactory] = &[iron_monger_sadistic_tycoon];
+
+/// **Iron Monger, Sadistic Tycoon**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Iron Monger, Sadistic Tycoon (EDHREC, fetched 2026-10-19).
+pub const IRON_MONGER_MAIN: &[CardFactory] = &[
+    arcane_signet, helm_of_the_host, jet_medallion, mind_stone, monument_to_endurance,
+    patchwork_banner, sol_ring, swiftfoot_boots, the_ozolith, trailblazers_boots, bojuka_bog,
+    cabal_coffers, castle_doom, rogues_passage, spymasters_vault, urborg_tomb_of_yawgmoth,
+    villainous_hideout, witchs_cottage, agents_of_hydra, archfiend_of_ifnir, baron_helmut_zemo,
+    baron_strucker_hydra_overlord, body_launderer, changeling_outcast, citizen_v_helmut_zemo,
+    crimson_cowl_master_of_evil, crossbones_malicious_mercenary, doctor_doom, doombot_harbinger,
+    hammerhead_maggia_boss, m_o_d_o_k, madame_masque, mechanical_mobster, minotaur_roxxon_ceo,
+    moonstone_harsh_mistress, raffines_silencer, red_room_recruit, revel_ruiner, roxxon_brutes,
+    scorpion_seething_striker, scurrilous_sentry, super_adaptoid, swarm_being_of_bees,
+    thanos_deaths_consort, the_frightful_four, the_masters_of_evil, tombstone_career_criminal,
+    tri_sentinel_act_of_vengeance, ultimo_civilizations_end, valentina_allegra_de_fontaine,
+    age_of_ultron, black_market_connections, construct_a_cosmic_cube, criminal_enterprise,
+    doom_reigns_supreme, thunderbolts_conspiracy, dark_ritual, doom_blade, go_for_the_throat,
+    infernal_grasp, lethal_scheme, the_spots_portal, visions_of_villainy, withering_torment,
+    dread_return, endless_ranks_of_hydra, feed_the_swarm, nights_whisper, reanimate,
+    sign_in_blood, syphon_mind, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const TITANIA_5_COMMANDERS: &[CardFactory] = &[titania_rugged_rumbler];
+
+/// **Titania, Rugged Rumbler**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Forests + 12 Swamps = 99.
+/// Titania, Rugged Rumbler (EDHREC, fetched 2026-10-19).
+pub const TITANIA_5_MAIN: &[CardFactory] = &[
+    arcane_signet, broodheart_engine, currency_converter, golgari_signet, sol_ring,
+    swiftfoot_boots, blooming_marsh, command_tower, deathcap_glade, exotic_orchard,
+    golgari_rot_farm, llanowar_wastes, necroblossom_snarl, overgrown_tomb, temple_of_malady,
+    twilight_mire, undergrowth_stadium, verdant_catacombs, vernal_fen, wastewood_verge,
+    woodland_cemetery, alpharael_stonechosen, arbiter_of_woe, archon_of_cruelty,
+    avatar_kyoshi_earthbender, birds_of_paradise, burglar_rat, colossal_grave_reaver,
+    containment_construct, daemogoth_woe_eater, disciple_of_freyalise, drainpipe_vermin,
+    elvish_mystic, fanatic_of_rhonas, fyndhorn_elves, ghalta_primal_hunger, greater_tanuki,
+    greenhouse_propagator, llanowar_elves, loot_the_nexus, madame_masque,
+    mister_hyde_monster_within, roxxon_brutes, sakura_tribe_elder, the_gitrog_ravenous_ride,
+    the_masters_of_evil, tombstone_career_criminal, void_winnower, animate_dead,
+    court_of_ambition, garruks_uprising, thickest_in_the_thicket, training_regimen,
+    utopia_sprawl, vraska_joins_up, wild_growth, assassins_trophy, back_for_more, beast_within,
+    dark_ritual, heritage_reclamation, lifestreams_blessing, punishing_punch, cultivate,
+    dread_return, farseek, kodamas_reach, natures_lore, persist, rampant_growth, reanimate,
+    restorative_technique, rise_of_the_witch_king, rishkars_expertise, too_evil_to_stay_dead,
+    toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GRENDEL_COMMANDERS: &[CardFactory] = &[grendel_spawn_of_knull];
+
+/// **Grendel, Spawn of Knull**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Swamps = 99.
+/// Grendel, Spawn of Knull (EDHREC, fetched 2026-10-19).
+pub const GRENDEL_MAIN: &[CardFactory] = &[
+    blackblade_reforged, bontus_monument, contagion_engine, crawlspace, fireshrieker,
+    grafted_exoskeleton, jet_medallion, loxodon_warhammer, mithril_coat, nightmare_lash,
+    shadowspear, sol_ring, sword_of_truth_and_justice, sword_of_the_animist,
+    the_darkness_crystal, vorpal_sword, whip_of_erebos, cabal_coffers, cabal_stronghold,
+    karns_bastion, minas_morgul_dark_fortress, mortuary_mire, urborg_tomb_of_yawgmoth,
+    banehound, dream_beavers, faerie_dreamthief, gix_yawgmoth_praetor, gonti_night_minister,
+    gurmag_swiftwing, hammerhead_maggia_boss, maha_its_feathers_night,
+    massacre_girl_known_killer, opposition_agent, orcish_bowmasters, project_deathlok_soldier,
+    reaper_of_sheoldred, red_room_recruit, roxxon_brutes, sheoldred, sheoldred_the_apocalypse,
+    summon_primal_odin, unliving_legionnaire, vampire_nighthawk, dauthi_embrace,
+    kayas_ghostform, necropotence, phyresis, shades_form, armor_of_shadows, dark_ritual,
+    darkness, deadly_rollick, decoy_ploy, defile, fell_the_profane, malakir_rebirth,
+    not_dead_after_all, vraskas_fall, withering_torment, damnation, demonic_tutor,
+    feed_the_swarm, infectious_inquiry, reanimate, torment_of_hailfire, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
