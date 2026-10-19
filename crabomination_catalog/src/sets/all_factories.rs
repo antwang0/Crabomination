@@ -17909,6 +17909,8 @@ static DECKS: &[Factory] = &[
     super::decks::dawnhand_eulogist,
     super::decks::moon_vigil_adherents,
     super::decks::unbury,
+    super::decks::jandor_fortuned_traveler,
+    super::decks::wakandan_tusker,
     super::decks::the_ruinous_wrecking_crew,
     super::decks::wee_champion,
     super::decks::vazi_keen_negotiator,

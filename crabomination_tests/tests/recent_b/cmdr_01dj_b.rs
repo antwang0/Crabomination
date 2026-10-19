@@ -928,3 +928,28 @@ fn unbury_returns_a_pair_sharing_a_type() {
         assert_eq!(r.is_ok() && back, ok, "second_elf={second_elf}");
     }
 }
+
+// ── Jandor, Fortuned Traveler (`decks::cmdr_01dj_y`) ───────────────────────
+
+/// CR 702.171 — Jandor grants saddle 2 to an Elephant: the granted keyword
+/// can be activated (`effective_saddle_cost`), and the saddled Tusker's
+/// attack pumps it, draws and makes a Food; its own "becomes tapped" trigger
+/// gains a life as it attacks.
+#[test]
+fn jandor_grants_saddle_and_rewards_a_saddled_attack() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::jandor_fortuned_traveler());
+    let tusker = ready(&mut g, 0, catalog::wakandan_tusker());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(g.effective_saddle_cost(tusker), Some(2));
+    assert_eq!(g.effective_saddle_cost(bear), None, "a Bear is no Mount");
+    g.perform_action(GameAction::Saddle { mount: tusker, creatures: vec![bear] }).expect("saddle 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tusker).unwrap().saddled);
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    attack(&mut g, &[tusker]);
+    assert_eq!(power(&g, tusker), 4);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
+    assert_eq!(g.players[0].life, life + 1, "the Tusker's tap trigger");
+}
