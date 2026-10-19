@@ -17849,6 +17849,15 @@ static DECKS: &[Factory] = &[
     super::decks::splinter_leo_father_son,
     super::decks::djeru_with_eyes_open,
     super::decks::elspeths_talent,
+    super::decks::old_hob_alleycat_blues,
+    super::decks::mechanized_ninja_cavalry,
+    super::decks::a_i_m_labs,
+    super::decks::rewrite_history,
+    super::decks::gixs_caress,
+    super::decks::okiba_salvage,
+    super::decks::norritt,
+    super::decks::gideon_of_the_trials,
+    super::decks::dedicated_commons,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

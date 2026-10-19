@@ -169,3 +169,133 @@ fn elspeths_talent_grants_soldiers_and_pumps_on_loyalty() {
     assert_eq!((b.power(), b.toughness()), (4, 4));
     assert!(b.has_keyword(&crabomination::card::Keyword::Vigilance));
 }
+
+// ── Old Hob, Kang, Ultimo, Mila (`decks::cmdr_016x_b`) ──────────────────────
+
+fn pass_to(g: &mut GameState, step: TurnStep) {
+    for _ in 0..200 {
+        if g.step == step {
+            return;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    panic!("never reached {step:?}");
+}
+
+/// Old Hob's combat Mutant has haste and is destroyed at the next end step.
+#[test]
+fn old_hob_makes_a_hasty_mutant_that_dies_at_end_step() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::old_hob_alleycat_blues());
+    pass_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let m = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Mutant").expect("mutant").id;
+    assert!(g.battlefield_find(m).unwrap().has_keyword(&crabomination::card::Keyword::Haste));
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m).is_none(), "destroyed at the end step");
+}
+
+/// CR 603.7 — Rewrite History's fourth plan counter sacrifices it, and the
+/// reflexive trigger returns an instant from your graveyard.
+#[test]
+fn rewrite_history_fourth_plan_counter_returns_spells() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let rh = ready(&mut g, 0, catalog::rewrite_history());
+    g.battlefield_find_mut(rh).unwrap().counters.insert(CounterType::Plan, 3);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rh).is_none(), "sacrificed at four");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "bolt returned");
+}
+
+/// Gix's Caress takes a nonland card and leaves a tapped Powerstone.
+#[test]
+fn gixs_caress_discards_a_nonland_and_makes_a_powerstone() {
+    let mut g = pod(2);
+    g.players[1].hand.clear();
+    let land = g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let gc = g.add_card_to_hand(0, catalog::gixs_caress());
+    flood(&mut g, 0);
+    cast(&mut g, gc, Some(Target::Player(1))).expect("cast");
+    let hand: Vec<CardId> = g.players[1].hand.iter().map(|c| c.id).collect();
+    assert_eq!(hand, vec![land]);
+    let ps = g.battlefield.iter().find(|c| c.definition.name == "Powerstone").expect("powerstone");
+    assert!(ps.tapped);
+}
+
+/// Okiba Salvage's rider needs both an artifact and an enchantment.
+#[test]
+fn okiba_salvage_counters_with_artifact_and_enchantment() {
+    use crabomination::card::CounterType;
+    for (both, want) in [(true, 2), (false, 0)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::sol_ring());
+        if both {
+            ready(&mut g, 0, catalog::rewrite_history());
+        }
+        let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        let os = g.add_card_to_hand(0, catalog::okiba_salvage());
+        flood(&mut g, 0);
+        cast(&mut g, os, Some(Target::Permanent(bear))).expect("cast");
+        let c = g.battlefield_find(bear).expect("reanimated");
+        assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), want, "both={both}");
+    }
+}
+
+/// Norritt forces the active player's creature to attack; one that never
+/// did is destroyed at the next end step.
+#[test]
+fn norritt_destroys_a_creature_that_did_not_attack() {
+    let mut g = pod(2);
+    let norritt = ready(&mut g, 0, catalog::norritt());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: norritt,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&crabomination::card::Keyword::MustAttack));
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 1;
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "never attacked: destroyed");
+}
+
+/// CR 104.3d / 114.4 — Gideon of the Trials' emblem keeps you in the game at
+/// 0 life only while you control a Gideon planeswalker.
+#[test]
+fn gideon_of_the_trials_emblem_needs_a_gideon() {
+    let mut g = pod(3);
+    let gid = ready(&mut g, 0, catalog::gideon_of_the_trials());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 2, target: None, x_value: None })
+        .expect("emblem");
+    drain_stack(&mut g);
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[0].eliminated, "Gideon out: still in");
+    g.battlefield_find_mut(gid).unwrap().counters.insert(crabomination::card::CounterType::Loyalty, 0);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(gid).is_none());
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated, "no Gideon: the loss lands");
+}
