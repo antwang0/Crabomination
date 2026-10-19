@@ -121833,3 +121833,92 @@ pub const DONATELLO_7_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island,
 ];
+
+pub const THE_DESTINED_WARRIOR_COMMANDERS: &[CardFactory] = &[the_destined_warrior];
+
+/// **The Destined Warrior**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 4 Islands + 6 Plains + 5 Swamps = 99.
+/// The Destined Warrior (EDHREC, fetched 2026-10-19).
+pub const THE_DESTINED_WARRIOR_MAIN: &[CardFactory] = &[
+    arcane_signet, chaos_shrines_black_crystal, maskwood_nexus, multiclass_baldric, sol_ring,
+    swiftfoot_boots, talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress,
+    thiefs_knife, adarkar_wastes, arcane_sanctum, base_camp, bojuka_bog, caves_of_koilos,
+    command_tower, drowned_catacomb, exotic_orchard, glacial_fortress, godless_shrine,
+    hallowed_fountain, isolated_chapel, mutavault, path_of_ancestry, prairie_stream,
+    raffines_tower, shattered_sanctum, sunken_hollow, underground_river, watery_grave,
+    alisaie_leveilleur, alphinaud_leveilleur, archpriest_of_iona, ardbert_warrior_of_darkness,
+    burakos_party_leader, changeling_outcast, dark_confidant, faerie_mastermind,
+    frontline_medic, ghostly_pilferer, grim_hireling, harper_recruiter, kamiz_obscura_oculus,
+    linvala_shield_of_sea_gate, locke_cole, lotho_corrupt_shirriff, mangara_the_diplomat,
+    midnight_pathlighter, mindblade_render, mirror_entity, mother_of_runes, nalia_dearnise,
+    nimble_trapfinder, rosa_resolute_white_mage, seasoned_dungeoneer, selfless_spirit,
+    shadowmage_infiltrator, solemn_doomguide, squad_commander, the_destined_black_mage,
+    the_destined_thief, the_destined_white_mage, tymna_the_weaver, unsettled_mariner,
+    black_market_connections, champions_from_beyond, journey_to_oblivion,
+    reconnaissance_mission, akromas_will, anguished_unmaking, concerted_defense, counterspell,
+    deadly_alliance, dovins_veto, path_to_exile, spoils_of_adventure, swords_to_plowshares,
+    void_rend, coveted_prize, damn, sevinnes_reclamation, skyclave_plunder, stick_together,
+    thwart_the_grave,
+    // Basics
+    island, island, island, island, plains, plains, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const TAZRI_2_COMMANDERS: &[CardFactory] = &[tazri_beacon_of_unity];
+
+/// **Tazri, Beacon of Unity**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Tazri, Beacon of Unity (EDHREC, fetched 2026-10-19).
+pub const TAZRI_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, dungeon_map, fellwar_stone, maskwood_nexus,
+    multiclass_baldric, sarevoks_tome, sol_ring, azorius_guildgate, baldurs_gate, base_camp,
+    basilisk_gate, black_dragon_gate, boros_guildgate, citadel_gate, cliffgate, command_tower,
+    dimir_guildgate, exotic_orchard, golgari_guildgate, gond_gate, gruul_guildgate, heap_gate,
+    izzet_guildgate, manor_gate, orzhov_guildgate, path_of_ancestry, rakdos_guildgate, sea_gate,
+    selesnya_guildgate, simic_guildgate, the_world_tree, acererak_the_archlich,
+    archpriest_of_iona, barrowin_of_clan_undurr, burakos_party_leader, hama_pashar_ruin_seeker,
+    harper_recruiter, imoen_mystic_trickster, linvala_shield_of_sea_gate, midnight_pathlighter,
+    mirror_entity, nadaar_selfless_paladin, najeela_the_blade_blossom, nalia_dearnise,
+    nimble_trapfinder, nine_fingers_keene, ravenloft_adventurer, rilsa_rael_kingpin,
+    safana_calimport_cutthroat, seasoned_dungeoneer, sefris_of_the_hidden_ways, selfless_spirit,
+    solemn_doomguide, squad_commander, tajuru_paragon, the_destined_black_mage,
+    the_destined_thief, the_destined_warrior, the_destined_white_mage, undermountain_adventurer,
+    unsettled_mariner, veteran_adventurer, white_plume_adventurer, yuan_ti_malison,
+    zagras_thief_of_heartbeats, dungeon_delver, journey_to_oblivion, loot_dispute,
+    outlaws_merriment, thorough_investigation, bar_the_gate, concerted_defense, deadly_alliance,
+    heroic_intervention, path_to_exile, practiced_tactics, spoils_of_adventure,
+    swords_to_plowshares, ellywick_tumblestrum, circuitous_route, coveted_prize, cultivate,
+    explore_the_underdark, farseek, stick_together, thwart_the_grave, you_find_a_cursed_idol,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp, swamp,
+];
+
+pub const CAPTAIN_AMERICA_7_COMMANDERS: &[CardFactory] = &[captain_america_unbowed];
+
+/// **Captain America, Unbowed**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Captain America, Unbowed (EDHREC, fetched 2026-10-19).
+pub const CAPTAIN_AMERICA_7_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, captain_americas_shield, iconic_shield, infinity_formula,
+    lightning_greaves, orcrist_goblin_cleaver, sol_ring, swiftfoot_boots, the_mind_stone,
+    thought_vessel, wedding_ring, well_worn_spatula, avengers_tower, command_tower,
+    emeria_the_sky_ruin, reliquary_tower, aegis_of_the_gods, agent_phil_coulson,
+    bastion_protector, black_widow_intel_expert, brimaz_king_of_oreskos,
+    bucky_barnes_eager_ally, captain_america_liberator, captain_america_skybound,
+    captain_america_steve_rogers, captain_america_super_soldier,
+    captain_america_wings_of_freedom, captain_mar_vell_space_born, esper_sentinel,
+    general_thunderbolt_ross, gilraen_dunedain_protector, haliya_guided_by_light,
+    hercules_olympian_hero, invisible_woman_sue_storm, keeper_of_the_accord,
+    long_bodied_grey_dog, luke_cage_power_man, mandroid_squadron, odric_lunarch_marshal,
+    peggy_carter_secret_agent, rescue_retriever, reverent_hoplite, roaming_throne,
+    siege_veteran, taranika_akroan_veteran, the_howling_commandos, winter_soldier_bucky_barnes,
+    winter_soldier_reborn_avenger, avengers_assemble, folk_hero, monologue_tax,
+    origin_of_captain_america, pacifism, roads_go_ever_ever_on, super_soldier_serum,
+    acrobatic_maneuver, ephemerate, heroic_sacrifice, make_your_move, path_to_exile, reprieve,
+    swords_to_plowshares, the_eternal_wanderer, austere_command, avenge, gift_of_estates,
+    wondrous_revival, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];

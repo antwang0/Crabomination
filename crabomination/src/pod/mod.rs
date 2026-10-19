@@ -26508,6 +26508,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DONATELLO_7_COMMANDERS,
             main: decks::DONATELLO_7_MAIN,
         },
+        // Seat 4343: The Destined Warrior's EDHREC average deck. `--pod-decks 4343`.
+        PodDeck {
+            name: "The Destined Warrior (WUB)",
+            commanders: decks::THE_DESTINED_WARRIOR_COMMANDERS,
+            main: decks::THE_DESTINED_WARRIOR_MAIN,
+        },
+        // Seat 4344: Tazri, Beacon of Unity's EDHREC average deck. `--pod-decks 4344`.
+        PodDeck {
+            name: "Tazri, Beacon of Unity (WUBRG)",
+            commanders: decks::TAZRI_2_COMMANDERS,
+            main: decks::TAZRI_2_MAIN,
+        },
+        // Seat 4345: Captain America, Unbowed's EDHREC average deck. `--pod-decks 4345`.
+        PodDeck {
+            name: "Captain America, Unbowed (W)",
+            commanders: decks::CAPTAIN_AMERICA_7_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_7_MAIN,
+        },
     ]
 }
 
@@ -32751,6 +32769,9 @@ mod tests {
             ("Worzel, the Protector", &[0x1B0A]),
             ("Captain Kathryn Janeway", &[0x1B0B]),
             ("Donatello, Turtle Techie", &[0x1B0C]),
+            ("The Destined Warrior", &[0x1B0D]),
+            ("Tazri, Beacon of Unity", &[0x1B0E]),
+            ("Captain America, Unbowed", &[0x1B0F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
