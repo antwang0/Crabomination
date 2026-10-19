@@ -155,3 +155,30 @@ fn fire_of_orthanc_destroys_and_grounds_blockers() {
     assert!(!g.computed_permanent(bird).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
+
+/// CR 115.1 — Cranial Archive's player slot carries a filter (it targeted
+/// through a bare slot the walker can't see) and still resolves: the target
+/// player's graveyard goes into their library, and its controller draws.
+#[test]
+fn cranial_archive_shuffles_the_target_players_graveyard() {
+    let mut g = pod(3);
+    let arc = ready(&mut g, 0, catalog::cranial_archive());
+    g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    g.add_card_to_graveyard(2, catalog::lightning_bolt());
+    let lib = g.players[2].library.len();
+    let hand = g.players[0].hand.len();
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: arc,
+        ability_index: 0,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[2].graveyard.is_empty());
+    assert_eq!(g.players[2].library.len(), lib + 2);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

@@ -368,7 +368,12 @@ pub fn cranial_archive() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile_self_cost: true,
             effect: Effect::Seq(vec![
-                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Target(0) },
+                // The player slot carries its filter (CR 115.1): a bare
+                // `PlayerRef::Target(0)` slot is invisible to the walker.
+                Effect::TargetPlayerThen {
+                    filter: R::Player,
+                    then: Box::new(Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Target(0) }),
+                },
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
             ]),
             ..Default::default()
