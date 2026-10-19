@@ -2273,3 +2273,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Noctis, Heir Apparent | warp-strike's return is a delayed trigger read off its activator's next declaration, not its owner's when they differ | `DelayedKind::PlayersNextDeclareAttackers` |
 | 🟡 Floodchaser | "target land becomes an Island until end of turn" adds Island instead of replacing its land types (the attack gate reads the type; the land keeps its own mana ability) | `Effect::GainLandType` |
 | 🟡 Magical Hack | the basic-land-type text change can target a permanent only, not a spell on the stack | `Effect::ReplaceBasicLandType` |
+| 🟡 Bloodfeather Phoenix | only an instant or sorcery's damage to an *opponent* returns it — damage to a battle doesn't | `FromYourGraveyardSourceDamagedOpponent` + `dealt_by` |

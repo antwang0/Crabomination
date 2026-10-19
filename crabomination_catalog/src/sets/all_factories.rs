@@ -18074,6 +18074,14 @@ static DECKS: &[Factory] = &[
     super::decks::magical_hack,
     super::decks::beluna_grandsquall,
     super::decks::hearth_elemental,
+    super::decks::bloodfeather_phoenix,
+    super::decks::chandras_phoenix,
+    super::decks::kuldotha_phoenix,
+    super::decks::lightning_phoenix,
+    super::decks::magma_phoenix,
+    super::decks::nemesis_phoenix,
+    super::decks::sunstreak_phoenix,
+    super::decks::warcry_phoenix,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

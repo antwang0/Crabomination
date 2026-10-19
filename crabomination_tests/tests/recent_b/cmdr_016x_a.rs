@@ -1189,3 +1189,180 @@ fn seek_thrills_keeps_the_adventurers() {
     assert_eq!(giants, 3);
     assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
 }
+
+// ── Syrix, Carrier of the Flame (`decks::cmdr_016x_l`) ──────────────────────
+
+fn activate(g: &mut GameState, card_id: CardId) -> Result<(), GameError> {
+    g.perform_action(GameAction::ActivateAbility {
+        card_id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })?;
+    drain_stack(g);
+    Ok(())
+}
+
+fn on_battlefield(g: &GameState, name: &str) -> Option<CardId> {
+    g.battlefield.iter().find(|c| c.definition.name == name).map(|c| c.id)
+}
+
+/// CR 603.2 / 113.6k — Bloodfeather Phoenix's ability works from the
+/// graveyard: an instant that hits an opponent buys it back for {R}, hasty.
+#[test]
+fn bloodfeather_phoenix_rises_on_spell_damage() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::bloodfeather_phoenix());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    let p = on_battlefield(&g, "Bloodfeather Phoenix").expect("returned");
+    assert!(g.permanent_has_keyword(p, &Keyword::Haste));
+}
+
+/// Chandra's Phoenix returns to hand when a red instant hits an opponent,
+/// not when a creature does.
+#[test]
+fn chandras_phoenix_returns_on_red_spell_damage_only() {
+    let mut g = pod(2);
+    let ph = g.add_card_to_graveyard(0, catalog::chandras_phoenix());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, bear, 1);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+    pass_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 18);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ph), "combat damage: stays");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ph), "red instant: back to hand");
+}
+
+/// CR 603.4 — Lightning Phoenix's end-step return checks that an opponent
+/// was dealt 3 or more damage this turn (one opponent, not the sum).
+#[test]
+fn lightning_phoenix_needs_three_damage_to_one_opponent() {
+    let mut g = pod(3);
+    g.add_card_to_graveyard(0, catalog::lightning_phoenix());
+    let hit = |g: &mut GameState, seat: usize, n: i32| {
+        let ping = crabomination::effect::Effect::DealDamage {
+            to: crabomination::effect::Selector::Target(0),
+            amount: crabomination::card::Value::Const(n),
+        };
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.targets = vec![Target::Player(seat)];
+        g.resolve_effect(&ping, &ctx).unwrap();
+    };
+    hit(&mut g, 1, 2);
+    hit(&mut g, 2, 2);
+    ready(&mut g, 0, catalog::mountain());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(on_battlefield(&g, "Lightning Phoenix").is_none(), "2 + 2 split damage isn't 3 to one opponent");
+}
+
+/// Lightning Phoenix returns for {R} once one opponent took 3.
+#[test]
+fn lightning_phoenix_returns_after_three_damage() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::lightning_phoenix());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    ready(&mut g, 0, catalog::mountain());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(on_battlefield(&g, "Lightning Phoenix").is_some());
+}
+
+/// Magma Phoenix dying deals 3 to each creature and each player; {3}{R}{R}
+/// returns it from the graveyard to hand.
+#[test]
+fn magma_phoenix_erupts_and_recurs() {
+    let mut g = pod(2);
+    let ph = ready(&mut g, 0, catalog::magma_phoenix());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(ph)];
+    g.resolve_effect(&kill, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!((g.players[0].life, g.players[1].life), (17, 17));
+    flood(&mut g, 0);
+    activate(&mut g, ph).expect("return to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ph));
+}
+
+/// CR 506.2 — Nemesis Phoenix returns attacking only while you attack two
+/// or more opponents.
+#[test]
+fn nemesis_phoenix_needs_two_defenders() {
+    let mut g = pod(3);
+    let ph = g.add_card_to_graveyard(0, catalog::nemesis_phoenix());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    attack(&mut g, a, 1);
+    assert!(activate(&mut g, ph).is_err(), "one defender");
+    g.attacking.push(crabomination::game::types::Attack {
+        attacker: b,
+        target: crabomination::game::types::AttackTarget::Player(2),
+    });
+    activate(&mut g, ph).expect("two defenders");
+    assert!(g.attacking.iter().any(|x| x.attacker == ph));
+}
+
+/// Warcry Phoenix joins an attack of three or more for {2}{R}.
+#[test]
+fn warcry_phoenix_joins_a_big_attack() {
+    let mut g = pod(2);
+    let ph = g.add_card_to_graveyard(0, catalog::warcry_phoenix());
+    let bears: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(
+        bears
+            .iter()
+            .map(|&attacker| crabomination::game::types::Attack {
+                attacker,
+                target: crabomination::game::types::AttackTarget::Player(1),
+            })
+            .collect(),
+    ))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.attacking.iter().any(|x| x.attacker == ph));
+}
+
+/// Kuldotha Phoenix: metalcraft, during your upkeep only.
+#[test]
+fn kuldotha_phoenix_needs_upkeep_and_metalcraft() {
+    let mut g = pod(2);
+    let ph = g.add_card_to_graveyard(0, catalog::kuldotha_phoenix());
+    flood(&mut g, 0);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::ornithopter());
+    }
+    assert!(activate(&mut g, ph).is_err(), "main phase");
+    g.step = TurnStep::Upkeep;
+    activate(&mut g, ph).expect("upkeep with metalcraft");
+    assert!(g.battlefield_find(ph).is_some());
+}
+
+/// CR 726.2 — Sunstreak Phoenix makes it day as it enters.
+#[test]
+fn sunstreak_phoenix_makes_it_day() {
+    let mut g = pod(2);
+    let ph = g.add_card_to_hand(0, catalog::sunstreak_phoenix());
+    flood(&mut g, 0);
+    cast(&mut g, ph, None).expect("phoenix");
+    assert_eq!(g.day_night, Some(crabomination::game::types::DayNight::Day));
+}
