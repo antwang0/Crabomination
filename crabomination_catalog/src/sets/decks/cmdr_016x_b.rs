@@ -67,10 +67,10 @@ pub fn old_hob_alleycat_blues() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(mutant) },
                 Effect::GrantKeyword { what: Selector::LastCreatedToken, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
-                Effect::DelayUntil {
-                    kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Destroy { what: Selector::LastCreatedToken }),
-                },
+                // The delayed destroy is bound to this Mutant now: a deferred
+                // `LastCreatedToken` re-reads at the end step and would hit
+                // whatever token was made last.
+                Effect::DestroyAtNextEndStep { what: Selector::LastCreatedToken },
             ]),
         }],
         activated_abilities: vec![ActivatedAbility {
