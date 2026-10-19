@@ -3136,6 +3136,24 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-19 (Commander run, `01DJHkWk`) — guardrail; 90 cards, 48 seats, one `WardCost` variant
+
+Hot-path touches: none — `WardCost::ManaOrDiscard` adds an arm to the ward
+payer, the bot's ward reads and the trivial-ward check; every card is a
+Commander seat card outside the 2-player pools. `release` bot_ladder, 4-core
+Xeon @ 2.80 GHz, base = `5de5da256` (the tip before this run's engine commit):
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical, base and tip
+                 (distinct binaries); determinism ok. ⚠ `015cG1GZ`'s 195,845 below does not
+                 reproduce at its own tip: 196,176 there too
+paired bench_ab  12 pairs, tip vs base: median +2.32 % / mean +2.15 % / sd 5.82 — noise
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 9250): 0 undecided, 0 panics
+pods (overflow)  6,300 games over seats 4228-4275 at 4-7 seats (seeds 9215-9242, 9320-9442):
+                 0 panics, 0 stalls, 3 CR 104.4a draws
+suite            27,981 / 0 / 6 (strict answer log, pod seat test excluded); clippy 0
+```
+
 ### 2026-10-19 (Commander run, `015cG1GZ`) — guardrail; four sweep fixes, no cards
 
 Hot-path touches: `apply_soulbond_pairing` asks the printed Soulbond walk before
