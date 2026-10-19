@@ -18082,6 +18082,15 @@ static DECKS: &[Factory] = &[
     super::decks::nemesis_phoenix,
     super::decks::sunstreak_phoenix,
     super::decks::warcry_phoenix,
+    super::decks::meng_huo_barbarian_king,
+    super::decks::meng_huos_horde,
+    super::decks::hunting_cheetah,
+    super::decks::slashing_tiger,
+    super::decks::taoist_hermit,
+    super::decks::heavy_fog,
+    super::decks::false_mourning,
+    super::decks::riding_the_dilu_horse,
+    super::decks::wielding_the_green_dragon,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1366,3 +1366,100 @@ fn sunstreak_phoenix_makes_it_day() {
     cast(&mut g, ph, None).expect("phoenix");
     assert_eq!(g.day_night, Some(crabomination::game::types::DayNight::Day));
 }
+
+// ── Meng Huo, Barbarian King (`decks::cmdr_016x_m`) ─────────────────────────
+
+/// Meng Huo pumps other green creatures you control, not himself or a
+/// nongreen one.
+#[test]
+fn meng_huo_pumps_other_green_creatures() {
+    let mut g = pod(2);
+    let mh = ready(&mut g, 0, catalog::meng_huo_barbarian_king());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 3, "red: unpumped");
+    assert_eq!(g.computed_permanent(mh).unwrap().power, 4, "other");
+}
+
+/// Slashing Tiger gets +2/+2 when it becomes blocked.
+#[test]
+fn slashing_tiger_grows_when_blocked() {
+    let mut g = pod(2);
+    let tiger = ready(&mut g, 0, catalog::slashing_tiger());
+    let wall = ready(&mut g, 1, catalog::hill_giant());
+    attack(&mut g, tiger, 1);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, tiger)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(tiger).unwrap().power, 5);
+}
+
+/// CR 601.3 — Heavy Fog is castable only in the declare attackers step
+/// after you're attacked; it prevents the attackers' damage to you.
+#[test]
+fn heavy_fog_stops_the_attackers() {
+    let mut g = pod(2);
+    let fog = g.add_card_to_hand(0, catalog::heavy_fog());
+    flood(&mut g, 0);
+    assert!(cast(&mut g, fog, None).is_err(), "main phase");
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: giant,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    flood(&mut g, 0);
+    cast(&mut g, fog, None).expect("fog");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+    pass_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Riding the Dilu Horse: +2/+2 and horsemanship that outlast the turn.
+#[test]
+fn riding_the_dilu_horse_is_indefinite() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::riding_the_dilu_horse());
+    flood(&mut g, 0);
+    cast(&mut g, s, Some(Target::Permanent(bear))).expect("dilu");
+    pass_to(&mut g, TurnStep::Upkeep);
+    assert_ne!(g.active_player_idx, 0, "the next turn");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Horsemanship));
+}
+
+/// Hunting Cheetah hitting an opponent tutors a Forest to hand.
+#[test]
+fn hunting_cheetah_finds_a_forest() {
+    let mut g = pod(2);
+    let cat = ready(&mut g, 0, catalog::hunting_cheetah());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let forests = |g: &GameState| g.players[0].hand.iter().filter(|c| c.definition.name == "Forest").count();
+    attack(&mut g, cat, 1);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+    pass_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 18);
+    assert_eq!(forests(&g), 1);
+}
+
+/// False Mourning puts a card from your graveyard on top of your library.
+#[test]
+fn false_mourning_stacks_the_top() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::false_mourning());
+    flood(&mut g, 0);
+    cast(&mut g, s, Some(Target::Permanent(bear))).expect("mourning");
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(bear));
+}
