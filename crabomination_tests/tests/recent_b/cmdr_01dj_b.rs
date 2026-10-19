@@ -469,3 +469,112 @@ fn infinity_formula_attaches_and_gains_on_attack() {
     attack(&mut g, &[bear]);
     assert_eq!(g.players[0].life, life + 2);
 }
+
+// ── T'Pol, the Enterprise-D and Arzakon (`decks::cmdr_01dj_s`) ─────────────
+
+fn activate(g: &mut GameState, id: CardId, idx: usize, target: Option<Target>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: idx,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+/// T'Pol taps an opposing creature and puts two stun counters on it.
+#[test]
+fn tpol_stuns_an_opposing_creature() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let t = g.add_card_to_hand(0, catalog::tpol_vulcan_representative());
+    cast_targets(&mut g, t, &[]);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped);
+    assert_eq!(b.counter_count(CounterType::Stun), 2);
+}
+
+/// Cybernetic Specialist puts a graveyard card on the bottom of its owner's
+/// library.
+#[test]
+fn cybernetic_specialist_recycles_a_graveyard_card() {
+    let mut g = pod(2);
+    let spec = ready(&mut g, 0, catalog::cybernetic_specialist());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    activate(&mut g, spec, 0, Some(Target::Permanent(bolt)));
+    assert!(g.players[0].graveyard.is_empty());
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bolt));
+}
+
+/// CR 702.184 — stationing the Enterprise-D puts charge counters on it and,
+/// the first time each turn, exiles the top card to play this turn; it is a
+/// 4/5 flying creature at seven.
+#[test]
+fn enterprise_d_stations_and_exiles_the_top_card() {
+    let mut g = pod(2);
+    let ship = g.add_card_to_battlefield(0, catalog::uss_enterprise_d_galaxy_class());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let top = g.players[0].library.first().map(|c| c.id).unwrap();
+    g.battlefield_find_mut(ship).unwrap().add_counters(CounterType::Charge, 4);
+    activate(&mut g, ship, 0, None);
+    assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 7);
+    assert!(g.exile.iter().any(|c| c.id == top), "the top card is exiled");
+    let cp = g.computed_permanent(ship).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    let _ = giant;
+}
+
+/// Arzakon's −3 makes a Black Lotus (three mana of one colour), and its −7
+/// has every player shuffle hand and graveyard away and draw seven.
+#[test]
+fn arzakon_makes_a_lotus_and_resets_hands() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::arzakon());
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::Loyalty, 10);
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: a, ability_index: 1, target: None, x_value: None })
+        .expect("−3");
+    drain_stack(&mut g);
+    let lotus = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Black Lotus")
+        .map(|c| c.id)
+        .expect("a Black Lotus token");
+    activate(&mut g, lotus, 0, None);
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+    assert!(g.battlefield_find(lotus).is_none(), "sacrificed");
+
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::arzakon());
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::Loyalty, 10);
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: a, ability_index: 2, target: None, x_value: None })
+        .expect("−7");
+    drain_stack(&mut g);
+    for p in 0..2 {
+        assert_eq!(g.players[p].hand.len(), 7, "seat {p}");
+        assert!(g.players[p].graveyard.is_empty(), "seat {p}");
+    }
+}
+
+/// Tam proliferates once per planeswalker type you control: two walkers of
+/// different types add two loyalty to each.
+#[test]
+fn tam_proliferates_per_planeswalker_type() {
+    let mut g = pod(2);
+    let tam = ready(&mut g, 0, catalog::tam_the_possibility());
+    let a = g.add_card_to_battlefield(0, catalog::arzakon());
+    let t = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    let before = [a, t].map(|id| g.battlefield_find(id).unwrap().counter_count(CounterType::Loyalty));
+    flood(&mut g, 0);
+    activate(&mut g, tam, 0, None);
+    for (i, id) in [a, t].into_iter().enumerate() {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Loyalty), before[i] + 2);
+    }
+}

@@ -1242,6 +1242,9 @@ pub use cmdr_01dj_q::*;
 #[path = "../../../src/sets/decks/cmdr_01dj_r.rs"]
 mod cmdr_01dj_r;
 pub use cmdr_01dj_r::*;
+#[path = "../../../src/sets/decks/cmdr_01dj_s.rs"]
+mod cmdr_01dj_s;
+pub use cmdr_01dj_s::*;
 #[path = "../../../src/sets/decks/cmdr_016x_d.rs"]
 mod cmdr_016x_d;
 pub use cmdr_016x_d::*;
