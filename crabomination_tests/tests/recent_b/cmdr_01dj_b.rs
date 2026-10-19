@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -260,4 +261,75 @@ fn widows_bite_both_with_teamwork() {
     let cp = g.computed_permanent(giant).unwrap();
     assert!(cp.keywords().contains(&Keyword::Deathtouch));
     assert!(g.battlefield_find(giant).unwrap().tapped, "teamwork tapped the Giant");
+}
+
+// ── Sharae of Numbing Depths' Merfolk (`decks::cmdr_01dj_q`) ───────────────
+
+/// CR 701.4a — Champions of the Shoal beholds and exiles a Merfolk from hand
+/// as it's cast, stuns a creature on entering, and returns the exiled card
+/// when it leaves.
+#[test]
+fn champions_of_the_shoal_beholds_stuns_and_returns() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let fish = g.add_card_to_hand(0, catalog::wanderbrine_trapper());
+    let champ = g.add_card_to_hand(0, catalog::champions_of_the_shoal());
+    cast_targets(&mut g, champ, &[]);
+    assert!(g.exile.iter().any(|c| c.id == fish), "the beheld Merfolk is exiled");
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped && b.counter_count(CounterType::Stun) == 1);
+    let bolt = g.add_card_to_hand(0, catalog::murder());
+    cast_targets(&mut g, bolt, &[Target::Permanent(champ)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == fish), "it comes back");
+}
+
+/// Eclipsed Merrow finds a Merfolk or a Plains/Island in the top four.
+#[test]
+fn eclipsed_merrow_finds_a_merfolk() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let fish = g.add_card_to_library(0, catalog::wanderbrine_trapper());
+    let m = g.add_card_to_hand(0, catalog::eclipsed_merrow());
+    cast_targets(&mut g, m, &[]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == fish));
+    assert_eq!(g.players[0].library.len(), 3);
+}
+
+/// Meanders Guide taps another Merfolk to reanimate a small creature card.
+#[test]
+fn meanders_guide_taps_a_merfolk_to_reanimate() {
+    let mut g = pod(2);
+    let guide = ready(&mut g, 0, catalog::meanders_guide());
+    let fish = ready(&mut g, 0, catalog::wanderbrine_trapper());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, &[guide]);
+    assert!(g.battlefield_find(fish).unwrap().tapped);
+    assert!(g.battlefield_find(dead).is_some(), "the Bears return");
+}
+
+/// Wanderbrine Trapper taps itself and another creature to tap an opposing
+/// creature.
+#[test]
+fn wanderbrine_trapper_taps_an_opposing_creature() {
+    let mut g = pod(2);
+    let trap = ready(&mut g, 0, catalog::wanderbrine_trapper());
+    let helper = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trap,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+    assert!(g.battlefield_find(helper).unwrap().tapped && g.battlefield_find(trap).unwrap().tapped);
 }
