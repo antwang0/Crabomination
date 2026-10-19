@@ -3136,6 +3136,27 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-19 (Commander run, `016Xh16H`) — guardrail; 112 cards, 29 seats, eight primitives, a step-trigger fix
+
+Hot-path touches: the beginning-of-step trigger collector now asks
+`ally_trigger_extra_fires` per surviving candidate (a presence-gated walk; only
+steps with triggers pay it); a planeswalker damage event asks
+`loyalty_after_damage`, which walks the board only when the damage would take
+the last counter; the prevent-static lane gains one bit
+(`PreventDamageToYouAndYoursFromNamed`), the block-tax lane one variant; the
+flanking pass counts `OtherFlankersHaveFlanking` only when an attacker flanks.
+`release` bot_ladder at `4611709a2`, 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed
+                 invariant; determinism ok; thread_determinism ok (3 vs 1); peak_rss_mib 44.0
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 9256): 0 undecided, 0 panics
+pods (overflow)  seeds 9250-9256, 3-8 seats: 12,672 games incl. 440 over seats 4285-4312;
+                 0 panics; 7 CR 104.4a draws (Descent into Avernus, Bloodthirsty Conqueror x
+                 Enduring Tenacity) and 5 board caps (City of Death x Mondrak; Chief of the Wilds
+                 doubling Hollowhenge Overlord's upkeep Wolves — the step-trigger fix made it real)
+```
+
 ### 2026-10-19 (Commander run, `01DJHkWk`) — guardrail; 90 cards, 48 seats, one `WardCost` variant
 
 Hot-path touches: none — `WardCost::ManaOrDiscard` adds an arm to the ward

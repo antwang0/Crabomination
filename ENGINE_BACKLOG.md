@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 60 closer cards, 21 seats, a step-trigger doubler bug](#fixedopen-2026-10-19-commander-run-016xh16h--60-closer-cards-21-seats-a-step-trigger-doubler-bug) | 38 |
+| Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 112 closer cards, 29 seats, a step-trigger doubler bug](#fixedopen-2026-10-19-commander-run-016xh16h--112-closer-cards-29-seats-a-step-trigger-doubler-bug) | 47 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required](#fixedopen-2026-10-10-sixteenth-commander-run-01s495n5--up-to-one-target-modelled-as-required) | 27 |
 | Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 63 |
@@ -180,19 +180,23 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
-## FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 60 closer cards, 21 seats, a step-trigger doubler bug
+## FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 112 closer cards, 29 seats, a step-trigger doubler bug
 
-- **Seats** 4305-4312, 4315-4324, 4336-4338: Valentina Allegra de Fontaine, Temmet, Splinter & Leo, Tomik
+- **Seats** 4305-4312, 4315-4324, 4336-4338, 4346-4351, 4355-4356: Valentina Allegra de Fontaine, Temmet, Splinter & Leo, Tomik
   Wielder of Law, Mila, Kang, Old Hob, Ultimo; Elminster, Djeru, Quickbeam, Tobias Andrion, Tomik Orzhov
   Lawmage, Óin the Brave, Lin Sivvi, Bucky Barnes, Kytheon, Klaw; Glissa Herald of Predation, Chief of the
-  Wilds, The Chief Warg. Cards in `decks::cmdr_016x_a`..`_d`, tests `recent_b/cmdr_016x_a.rs` (37).
+  Wilds, The Chief Warg; Rakka Mar, Sidar Jabari, Starling, Falcon Winged Wonder (4346-4349); Tesak, Zhang He
+  (4350-4351); Thelon of Havenwood, Teyo Diamondblade Mage (4355-4356). Cards in `decks::cmdr_016x_a`..`_i`,
+  tests `recent_b/cmdr_016x_a.rs` (48).
 - **Primitives:** `ActivationTrait::Embalm` + `ActivatedAbility::is_embalm_like` + `R::HasEmbalmOrEternalize`
   (Vizier of the Anointed); `Effect::NamePlaneswalkerType` + `CardCold.chosen_planeswalker_type` +
   `R::HasChosenPlaneswalkerTypeOfSource` (a live layer leaf) + `StaticEffect::DamageLeavesYourPlaneswalkersAtOneLoyalty`
   (Deification, `game/deification.rs`); `StaticEffect::BlockTaxForEnchantedAttacker` (Awesome Presence, CR 509.1d —
   priced in the bot's block-tax trim); `StaticEffect::PreventDamageToYouAndYoursFromNamed` (Gideon's
   Intervention, a prevent-lane bit); emblem `ControllerCantLoseGame`, bare or under `WhileCondition`
-  (Gideon of the Trials, CR 114.4).
+  (Gideon of the Trials, CR 114.4); `StaticEffect::OtherFlankersHaveFlanking` (Cavalry Master, CR 702.25b —
+  computed keywords collapse a granted duplicate, so the extra instance is counted in the flanking pass);
+  `R::ToughnessLessThanSource` (Thunderkin Awakener's graveyard target).
 - **Fixes:** beginning-of-step triggers never asked `ally_trigger_extra_fires` — every "triggers an additional
   time" static (Katara, Harmonic Prodigy, Fractured Realm, Annie Joins Up, typed doublers) left upkeep / end
   step triggers single (CR 603.2d, `stack.rs`); an `AbilityActivated` whose cost exiled its own card had no
@@ -200,16 +204,21 @@ the handoff.
   `EventScope::EnchantedBySource` reads `AbilityActivated` (Elspeth's Talent).
 - **Found, not a bug:** a deferred `DelayUntil` body reading `LastCreatedToken` IS bound to its token
   (`bound_token`); `delayed_last_created_token_stays_bound_to_its_token` pins it (13 cards use the shape).
-- **Sweeps** (`overflow` + debug-assertions, seeds 9250-9255): 10,321 pod games at 3-8 seats incl. 440 over
-  seats 4285-4312, 0 panics; 4 CR 104.4a draws (Descent into Avernus killing every remaining seat — the
-  damage is mandatory, rules-correct) and 2 board caps (8-seat).
+- **Sweeps** (`overflow` + debug-assertions, seeds 9250-9256): 12,672 pod games at 3-8 seats incl. 440 over
+  seats 4285-4312, 0 panics; 7 CR 104.4a draws (Descent into Avernus killing every remaining seat — the
+  damage is mandatory, rules-correct; Bloodthirsty Conqueror x Enduring Tenacity) and 5 board caps (City of
+  Death x Mondrak; Chief of the Wilds doubling Hollowhenge Overlord's upkeep Wolves, real since the fix).
+- **Guardrail:** `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical; 2-player pools 7,500 games 0
+  undecided; suite 28,108 / 0 / 6 (pod seat test excluded). PERF `016Xh16H`.
 - **Collisions:** the concurrent session (`01DJHkWk`) landed Noggin Whack and the Elesh Norn trio first;
   the duplicates were dropped on rebase. Work the 5-7-gap tier when it is on the one- and two-gap one.
 - **Released (each needs a primitive):** The Ruinous Wrecking Crew ("choose up to X" with targeted modes —
   ~15 trigger-target sites key on a top-level `ChooseN`), Wan Shi Tong (no "put into a library" event),
   Henry Wu (the exploit event carries no exploited creature), Prismabasher ("up to X targets", X dynamic),
   Flooded Woodlands (a sacrifice-to-attack cost the bot can't plan), Selenia (a "would lose the game"
-  replacement).
+  replacement). Scoped, not built (5-8 gaps): Syrix (Phoenix graveyard triggers, day/night), Tetzin (craft
+  DFCs), Tam (Prismabasher's "up to X targets"), Dromar (Flooded Woodlands), General Jarkeld (banding);
+  the Marvel decks (War Machine, The Howling Commandos, Captain America) were left to `01DJHkWk`'s cluster.
 
 ## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — ~215 closer cards, ~80 seats, the Marvel Villain / LOTR Goblin / attacks-alone / Lorwyn Merfolk clusters
 
