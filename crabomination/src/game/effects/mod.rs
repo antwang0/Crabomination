@@ -1479,6 +1479,9 @@ impl GameState {
     /// stored-result effects.
     pub(crate) fn roll_one_die(&mut self, player: usize, sides: u8) -> u8 {
         let sides = sides.max(1);
+        if let Some(pl) = self.players.get_mut(player) {
+            pl.dice_rolled_this_turn += 1;
+        }
         let rolled = rand::RngExt::random_range(&mut self.rng.draw(), 1..=sides);
         match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides, rolled }) {
             crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),

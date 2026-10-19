@@ -661,6 +661,11 @@ pub struct PlayerData {
     /// spells (Phyrexian Censor). Reset at Cleanup.
     #[serde(default)]
     pub non_phyrexian_spells_cast_this_game_turn: u32,
+    /// CR 706 — dice this player rolled this turn, planar die included
+    /// (The Space Family Goblinson, Resolute Veggiesaur). Reset for every
+    /// player at Cleanup.
+    #[serde(default)]
+    pub dice_rolled_this_turn: u32,
     /// "You can cast only N more spells this turn" (Irencrag Feat): the
     /// `spells_cast_this_game_turn` count at which casting stops. Reset at
     /// Cleanup.
@@ -1850,6 +1855,7 @@ impl Player {
             noncreature_spells_cast_this_game_turn: 0,
             nonartifact_spells_cast_this_game_turn: 0,
             non_phyrexian_spells_cast_this_game_turn: 0,
+            dice_rolled_this_turn: 0,
             spell_cap_this_turn: None,
             life_gained_this_turn: 0,
             gained_life_earlier_this_turn: false,

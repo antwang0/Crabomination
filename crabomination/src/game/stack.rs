@@ -1106,6 +1106,9 @@ impl GameState {
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.non_phyrexian_spells_cast_this_game_turn = 0;
+                    if pl.dice_rolled_this_turn != 0 {
+                        pl.dice_rolled_this_turn = 0;
+                    }
                     pl.spell_cap_this_turn = None;
                     pl.multicolored_spells_cast_this_turn = 0;
                     pl.spell_names_cast_this_turn.clear();

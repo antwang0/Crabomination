@@ -890,6 +890,10 @@ pub enum Value {
     /// (`Player.damage_taken_this_turn`, MAX not sum) — "if an opponent was
     /// dealt 3 or more damage this turn" (Lightning Phoenix).
     MostDamageTakenThisTurn(PlayerRef),
+    /// CR 706 — dice the resolved players rolled this turn, summed
+    /// ("as long as you've rolled three or more dice this turn" — The Space
+    /// Family Goblinson; "your third die each turn" — Resolute Veggiesaur).
+    DiceRolledThisTurn(PlayerRef),
     /// CR 303.4 — how many `filter` permanents are attached to the players
     /// `who` resolves to ("the number of Curses attached to that player" —
     /// Curse of Thirst; "each Aura attached to you").
