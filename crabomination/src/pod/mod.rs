@@ -25860,6 +25860,84 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MINOTAUR_COMMANDERS,
             main: decks::MINOTAUR_MAIN,
         },
+        // Seat 4235: Splinter, Radical Rat's EDHREC average deck. `--pod-decks 4235`.
+        PodDeck {
+            name: "Splinter, Radical Rat (WUB)",
+            commanders: decks::SPLINTER_2_COMMANDERS,
+            main: decks::SPLINTER_2_MAIN,
+        },
+        // Seat 4236: Loki, the Deceiver's EDHREC average deck. `--pod-decks 4236`.
+        PodDeck {
+            name: "Loki, the Deceiver (UBR)",
+            commanders: decks::LOKI_4_COMMANDERS,
+            main: decks::LOKI_4_MAIN,
+        },
+        // Seat 4237: Daredevil, Man Without Fear's EDHREC average deck. `--pod-decks 4237`.
+        PodDeck {
+            name: "Daredevil, Man Without Fear (WR)",
+            commanders: decks::DAREDEVIL_2_COMMANDERS,
+            main: decks::DAREDEVIL_2_MAIN,
+        },
+        // Seat 4238: Gabriel Angelfire's EDHREC average deck. `--pod-decks 4238`.
+        PodDeck {
+            name: "Gabriel Angelfire (WG)",
+            commanders: decks::GABRIEL_ANGELFIRE_COMMANDERS,
+            main: decks::GABRIEL_ANGELFIRE_MAIN,
+        },
+        // Seat 4239: Venom, Eddie Brock's EDHREC average deck. `--pod-decks 4239`.
+        PodDeck {
+            name: "Venom, Eddie Brock (B)",
+            commanders: decks::VENOM_2_COMMANDERS,
+            main: decks::VENOM_2_MAIN,
+        },
+        // Seat 4240: Bob, Reluctant HYDRA Agent's EDHREC average deck. `--pod-decks 4240`.
+        PodDeck {
+            name: "Bob, Reluctant HYDRA Agent (B)",
+            commanders: decks::BOB_COMMANDERS,
+            main: decks::BOB_MAIN,
+        },
+        // Seat 4241: Baron Strucker, HYDRA Overlord's EDHREC average deck. `--pod-decks 4241`.
+        PodDeck {
+            name: "Baron Strucker, HYDRA Overlord (B)",
+            commanders: decks::BARON_STRUCKER_COMMANDERS,
+            main: decks::BARON_STRUCKER_MAIN,
+        },
+        // Seat 4242: Citizen V, Helmut Zemo's EDHREC average deck. `--pod-decks 4242`.
+        PodDeck {
+            name: "Citizen V, Helmut Zemo (B)",
+            commanders: decks::CITIZEN_V_COMMANDERS,
+            main: decks::CITIZEN_V_MAIN,
+        },
+        // Seat 4243: Crimson Cowl, Master of Evil's EDHREC average deck. `--pod-decks 4243`.
+        PodDeck {
+            name: "Crimson Cowl, Master of Evil (B)",
+            commanders: decks::CRIMSON_COWL_COMMANDERS,
+            main: decks::CRIMSON_COWL_MAIN,
+        },
+        // Seat 4244: Tombstone, Career Criminal's EDHREC average deck. `--pod-decks 4244`.
+        PodDeck {
+            name: "Tombstone, Career Criminal (B)",
+            commanders: decks::TOMBSTONE_COMMANDERS,
+            main: decks::TOMBSTONE_MAIN,
+        },
+        // Seat 4245: Scorpion, Seething Striker's EDHREC average deck. `--pod-decks 4245`.
+        PodDeck {
+            name: "Scorpion, Seething Striker (B)",
+            commanders: decks::SCORPION_COMMANDERS,
+            main: decks::SCORPION_MAIN,
+        },
+        // Seat 4246: Casey & Raph, Hotheads's EDHREC average deck. `--pod-decks 4246`.
+        PodDeck {
+            name: "Casey & Raph, Hotheads (R)",
+            commanders: decks::CASEY_RAPH_COMMANDERS,
+            main: decks::CASEY_RAPH_MAIN,
+        },
+        // Seat 4247: Viper, Cruel Conspirator's EDHREC average deck. `--pod-decks 4247`.
+        PodDeck {
+            name: "Viper, Cruel Conspirator (B)",
+            commanders: decks::VIPER_COMMANDERS,
+            main: decks::VIPER_MAIN,
+        },
     ]
 }
 
@@ -31995,6 +32073,19 @@ mod tests {
             ("Dennick, Pious Apprentice", &[0x1A9E]),
             ("Shriek, Treblemaker", &[0x1A9F]),
             ("Minotaur, Roxxon CEO", &[0x1AA0]),
+            ("Splinter, Radical Rat", &[0x1AA1]),
+            ("Loki, the Deceiver", &[0x1AA2]),
+            ("Daredevil, Man Without Fear", &[0x1AA3]),
+            ("Gabriel Angelfire", &[0x1AA4]),
+            ("Venom, Eddie Brock", &[0x1AA5]),
+            ("Bob, Reluctant HYDRA Agent", &[0x1AA6]),
+            ("Baron Strucker, HYDRA Overlord", &[0x1AA7]),
+            ("Citizen V, Helmut Zemo", &[0x1AA8]),
+            ("Crimson Cowl, Master of Evil", &[0x1AA9]),
+            ("Tombstone, Career Criminal", &[0x1AAA]),
+            ("Scorpion, Seething Striker", &[0x1AAB]),
+            ("Casey & Raph, Hotheads", &[0x1AAC]),
+            ("Viper, Cruel Conspirator", &[0x1AAD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
