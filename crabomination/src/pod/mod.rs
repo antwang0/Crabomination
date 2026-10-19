@@ -26826,6 +26826,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_SPACE_FAMILY_GOBLINSON_COMMANDERS,
             main: decks::THE_SPACE_FAMILY_GOBLINSON_MAIN,
         },
+        // Seat 4396: Echo, Perceptive Prodigy's EDHREC average deck. `--pod-decks 4396`.
+        PodDeck {
+            name: "Echo, Perceptive Prodigy (U)",
+            commanders: decks::ECHO_COMMANDERS,
+            main: decks::ECHO_MAIN,
+        },
+        // Seat 4397: Wan Shi Tong, All-Knowing's EDHREC average deck. `--pod-decks 4397`.
+        PodDeck {
+            name: "Wan Shi Tong, All-Knowing (U)",
+            commanders: decks::WAN_SHI_TONG_2_COMMANDERS,
+            main: decks::WAN_SHI_TONG_2_MAIN,
+        },
     ]
 }
 
@@ -33122,6 +33134,8 @@ mod tests {
             ("Ayesha Tanaka", &[0x1B3F]),
             ("General Jarkeld", &[0x1B40]),
             ("The Space Family Goblinson", &[0x1B41]),
+            ("Echo, Perceptive Prodigy", &[0x1B42]),
+            ("Wan Shi Tong, All-Knowing", &[0x1B43]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -123312,3 +123312,56 @@ pub const THE_SPACE_FAMILY_GOBLINSON_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const ECHO_COMMANDERS: &[CardFactory] = &[echo_perceptive_prodigy];
+
+/// **Echo, Perceptive Prodigy**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Echo, Perceptive Prodigy (EDHREC, fetched 2026-10-19).
+pub const ECHO_MAIN: &[CardFactory] = &[
+    arcane_signet, illusionists_bracers, lightning_greaves, mind_stone, sapphire_medallion,
+    sky_diamond, sol_ring, swiftfoot_boots, thought_vessel, thousand_year_elixir, thran_dynamo,
+    waterbending_scroll, lonely_sandbar, minamo_school_at_waters_edge, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower,
+    aboleth_spawn, aether_channeler, aphetto_alchemist, apprentice_wizard,
+    arcanis_the_omnipotent, archaeomancer, burnished_hart, chasm_skulker, corridor_monitor,
+    crashing_drawbridge, dreamscape_artist, faerie_artisans, faerie_mastermind,
+    forensic_researcher, gogo_master_of_mimicry, hullbreaker_horror,
+    ioreth_of_the_healing_house, kelpie_guide, laboratory_maniac, marvin_murderous_mimic,
+    mulldrifter, nulldrifter, omen_hawker, peregrine_drake, phyrexian_metamorph,
+    solemn_simulacrum, the_unagi_of_kyoshi_island, troop_of_ponies, vizier_of_tumbling_sands,
+    wan_shi_tong_all_knowing, propaganda, rhystic_study, unstoppable_plan, verity_circle,
+    aetherize, an_offer_you_cant_refuse, arcane_denial, counterspell, frantic_search, high_tide,
+    mana_drain, muddle_the_mixture, negate, pongify, rapid_hybridization, reality_shift,
+    resculpt, fabricate, preordain, sea_gate_restoration, stock_up, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const WAN_SHI_TONG_2_COMMANDERS: &[CardFactory] = &[wan_shi_tong_all_knowing];
+
+/// **Wan Shi Tong, All-Knowing**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Wan Shi Tong, All-Knowing (EDHREC, fetched 2026-10-19).
+pub const WAN_SHI_TONG_2_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, benders_waterskin, bident_of_thassa, conjurers_closet,
+    midnight_clock, patchwork_banner, sapphire_medallion, scroll_rack, senseis_divining_top,
+    skullclamp, sol_ring, teferis_puzzle_box, thought_vessel, academy_ruins, accursed_duneyard,
+    myriad_landscape, mystic_sanctuary, ominous_cemetery, otawara_soaring_city, reliquary_tower,
+    three_tree_city, baboon_spirit, cavalier_of_gales, curiosity_crafter, deadeye_navigator,
+    displacer_kitten, dutiful_knowledge_seeker, enduring_curiosity, harmonized_trio,
+    mausoleum_wanderer, nebelgast_herald, patrician_geist, shacklegeist, spark_double, subtlety,
+    supreme_phantom, thassa_deep_dwelling, wan_shi_tong_librarian, yshtola_rhul,
+    kindred_discovery, propaganda, the_legend_of_kuruk, tolarian_contempt, aetherspouts,
+    blue_suns_zenith, blur, brainstorm, brainsurge, commit_memory, counterspell, essence_flux,
+    expel_from_orazca, ghostly_flicker, high_tide, hinder, memory_lapse, planar_incision,
+    spell_crumple, submerge, swat_away, synchronized_eviction, jace_the_mind_sculptor,
+    deem_inferior, dream_cache, echo_of_eons, ponder, see_beyond, spirit_water_revival,
+    splash_portal, temporal_cleansing,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
