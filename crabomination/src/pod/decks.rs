@@ -119543,3 +119543,322 @@ pub const YELLOWJACKET_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const DOCTOR_OCTOPUS_COMMANDERS: &[CardFactory] = &[doctor_octopus_master_planner];
+
+/// **Doctor Octopus, Master Planner**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Swamps = 99.
+/// Doctor Octopus, Master Planner (EDHREC, fetched 2026-10-19).
+pub const DOCTOR_OCTOPUS_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, doc_ocks_tentacles, heralds_horn, lightning_greaves,
+    mind_stone, patchwork_banner, sol_ring, swiftfoot_boots, talisman_of_dominance,
+    the_soul_stone, thought_vessel, choked_estuary, command_tower, darkwater_catacombs,
+    dimir_aqueduct, drowned_catacomb, path_of_ancestry, reliquary_tower, sinister_hideout,
+    sunken_hollow, tainted_isle, underground_river, vibrant_cityscape, villainous_hideout,
+    watery_grave, baron_strucker_hydra_overlord, beetle_legacy_criminal,
+    black_cat_cunning_thief, chameleon_master_of_disguise, common_crook, doc_ocks_henchmen,
+    doc_ock_evil_inventor, doc_ock_sinister_scientist, flying_octobot, hydro_man_fluid_felon,
+    kang_temporal_tyrant, lady_octopus_inspired_inventor, leader_super_genius,
+    mechanical_mobster, merciless_enforcers, mob_lookout, morbius_the_living_vampire,
+    morlun_devourer_of_spiders, mysterios_phantasm, mysterio_master_of_illusion,
+    prowler_clawed_thief, scorpion_seething_striker, swarm_being_of_bees,
+    tombstone_career_criminal, venom_eddie_brock, venom_evil_unleashed,
+    vulture_scheming_scavenger, construct_a_cosmic_cube, impostor_syndrome, ominous_seas,
+    spider_man_no_more, the_clone_saga, the_death_of_gwen_stacy, amazing_acrobatics,
+    an_offer_you_cant_refuse, counterspell, dark_ritual, frantic_search, infernal_grasp,
+    scorpions_sting, spider_sense, the_spots_portal, unstable_experiment, whoosh,
+    behold_the_sinister_six, feed_the_swarm, grasping_tentacles, prison_break, reanimate,
+    risky_research, venoms_hunger, villainous_wrath,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KAROLINA_DEAN_COMMANDERS: &[CardFactory] = &[karolina_dean_runaway];
+
+/// **Karolina Dean, Runaway**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 2 Forests + 2 Islands + 4 Mountains + 2 Plains + 2 Swamps = 99.
+/// Karolina Dean, Runaway (EDHREC, fetched 2026-10-19).
+pub const KAROLINA_DEAN_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, interdimensional_web_watch, izzet_signet,
+    lightning_greaves, sol_ring, swiftfoot_boots, unstable_amulet, arid_mesa, baxter_building,
+    blood_crypt, bloodstained_mire, breeding_pool, cascading_cataracts, city_of_brass,
+    command_tower, exotic_orchard, fabled_passage, jetmirs_garden, ketria_triome,
+    overgrown_tomb, path_of_ancestry, sacred_foundry, scalding_tarn, steam_vents,
+    stomping_ground, temple_garden, the_world_tree, windswept_heath, wooded_foothills,
+    ziatoras_proving_ground, alex_wilder_runaway, birds_of_paradise, bloom_tender,
+    chase_stein_runaway, doc_aurlock_grizzled_genius, eruth_tormented_prophet, faeburrow_elder,
+    faldorn_dread_wolf_herald, fire_lord_zuko, flaming_tyrannosaurus,
+    gert_and_old_lace_runaways, gwen_stacy, keeper_of_secrets, kellan_the_kid,
+    laelia_the_blade_reforged, loot_the_key_to_everything, molly_hayes_runaway, nalfeshnee,
+    nico_minoru_runaway, party_thrasher, pia_nalaar_consul_of_revival, prosper_tome_bound,
+    rocco_street_chef, savvy_trader, vega_the_watcher, victor_mancha_runaway,
+    wiccan_young_avenger, wild_magic_sorcerer, annie_joins_up, charred_foyer_warped_space,
+    fortune_tellers_talent, passionate_archaeologist, shadow_of_the_goblin,
+    the_lost_and_the_damned, wandas_vision, wild_wasteland, an_offer_you_cant_refuse,
+    chaos_warp, crossover_collaboration, delayed_blast_fireball, heroic_intervention,
+    path_to_exile, swords_to_plowshares, ultimate_magic_holy, quintorius_kand, avatars_wrath,
+    escape_to_the_wilds, expressive_iteration, farseek, hex_magic, ignite_the_future,
+    improvisation_capstone, jeskas_will, natures_lore, three_visits,
+    // Basics
+    forest, forest, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    swamp, swamp,
+];
+
+pub const MAUHUR_COMMANDERS: &[CardFactory] = &[mauhur_uruk_hai_captain];
+
+/// **Mauhúr, Uruk-hai Captain**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Swamps = 99.
+/// Mauhúr, Uruk-hai Captain (EDHREC, fetched 2026-10-19).
+pub const MAUHUR_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, goblin_plate_mail, grond_the_gatebreaker, mind_stone,
+    rakdos_signet, sol_ring, talisman_of_indulgence, the_ozolith, barad_dur, bloodfell_caves,
+    command_tower, dragonskull_summit, evolving_wilds, foreboding_ruins, goblin_town,
+    karns_bastion, path_of_ancestry, rakdos_carnarium, rogues_passage, smoldering_marsh,
+    temple_of_malice, azog_morias_ruin, bolg_of_the_north, bothersome_noisemaker,
+    dunland_crebain, easterling_vanguard, fearsome_goblin_pair, goblin_town_flunkies,
+    gorbag_of_minas_morgul, gothmog_morgul_lieutenant, great_ugly_looking_goblin,
+    grishnakh_brash_instigator, grima_wormtongue, krenko_tin_street_kingpin, mer_ek_nightblade,
+    misty_mountains_raider, mordor_trebuchet, moria_marauder, moria_scavenger,
+    orcish_bowmasters, orcish_siegemaster, rhovanion_rampager, shagrat_loot_bearer,
+    taurean_mauler, the_great_goblin, ugluk_of_the_white_hand, warbeast_of_gorgoroth,
+    warg_rider, along_the_crooked_way, book_of_mazarbul, down_down_to_goblin_town,
+    dreadhorde_invasion, fall_of_cair_andros, feast_on_the_fallen, march_from_the_black_gate,
+    chaos_warp, fling, nasty_end, orcish_medicine, rakdos_charm, rush_the_room, terminate,
+    thrill_of_possibility, assault_on_osgiliath, blasphemous_act, feed_the_swarm, foray_of_orcs,
+    gathering_of_darkness, honor_the_god_pharaoh, mordor_muster, rage_into_the_valley,
+    swarming_of_moria, the_torment_of_gollum, tidings_of_war, widespread_brutality,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const PROWLER_2_COMMANDERS: &[CardFactory] = &[prowler_clawed_thief];
+
+/// **Prowler, Clawed Thief**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Islands + 12 Swamps = 99.
+/// Prowler, Clawed Thief (EDHREC, fetched 2026-10-19).
+pub const PROWLER_2_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, monument_to_endurance,
+    rocket_powered_goblin_glider, sol_ring, swiftfoot_boots, talisman_of_dominance,
+    thought_vessel, choked_estuary, command_tower, daily_bugle_building, drowned_catacomb,
+    path_of_ancestry, rogues_passage, shipwreck_marsh, sinister_hideout, sunken_hollow,
+    tainted_isle, vibrant_cityscape, villainous_hideout, baron_strucker_hydra_overlord,
+    beetle_legacy_criminal, black_cat_cunning_thief, chameleon_master_of_disguise, common_crook,
+    crossbones_malicious_mercenary, doc_ocks_henchmen, doc_ock_sinister_scientist,
+    doctor_octopus_master_planner, flying_octobot, hydro_man_fluid_felon,
+    iron_monger_sadistic_tycoon, kang_temporal_tyrant, kid_loki, leader_super_genius,
+    madame_masque, mechanical_mobster, merciless_enforcers, mob_lookout,
+    moonstone_harsh_mistress, morbius_the_living_vampire, morlun_devourer_of_spiders,
+    mysterio_master_of_illusion, scorpion_seething_striker, swarm_being_of_bees,
+    taskmaster_mercenary_mimic, tombstone_career_criminal, ultron_unlimited,
+    venom_evil_unleashed, vulture_scheming_scavenger, alien_symbiosis, construct_a_cosmic_cube,
+    doom_reigns_supreme, robot_domination, spider_man_no_more, the_clone_saga,
+    amazing_acrobatics, counterspell, frantic_search, infernal_grasp, lethal_scheme, negate,
+    scorpions_sting, the_spots_portal, unstable_experiment, visions_of_villainy, whoosh,
+    behold_the_sinister_six, prison_break, reanimate, risky_research, sandmans_quicksand,
+    venoms_hunger, victimize, villainous_wrath,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const MYSTERIO_COMMANDERS: &[CardFactory] = &[mysterio_master_of_illusion];
+
+/// **Mysterio, Master of Illusion**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Mysterio, Master of Illusion (EDHREC, fetched 2026-10-19).
+pub const MYSTERIO_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, conjurers_closet, helm_of_the_host, maskwood_nexus,
+    mirror_box, panharmonicon, patchwork_banner, sapphire_medallion, sky_diamond, sol_ring,
+    swiftfoot_boots, thought_vessel, myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx,
+    reliquary_tower, three_tree_city, war_room, adaptive_automaton, aerial_doombot,
+    alchemax_slayer_bots, bloodline_pretender, chameleon_master_of_disguise,
+    clever_impersonator, doc_ocks_henchmen, doc_ock_sinister_scientist, flying_octobot,
+    glasspool_mimic, hydro_man_fluid_felon, lady_octopus_inspired_inventor, living_lies_of_loki,
+    loki_god_of_mischief, lord_of_the_unreal, metallic_mimic, minn_wily_illusionist,
+    mirror_image, mysterios_phantasm, phantasmal_image, phyrexian_metamorph, roaming_throne,
+    sakashima_of_a_thousand_faces, spark_double, starfield_vocalist, titan_of_littjara,
+    impostor_syndrome, kindred_discovery, leyline_of_transformation, moonlit_meditation,
+    mysterios_mirage, the_clone_saga, aetherize, an_offer_you_cant_refuse, arcane_denial,
+    counterspell, ghostly_flicker, harmonized_crescendo, hide_on_the_ceiling, negate, pongify,
+    rapid_hybridization, reality_shift, spider_sense, three_steps_ahead, distant_melody,
+    irenicuss_vile_duplication, multiversal_incursion, quantum_misalignment, raise_the_palisade,
+    rite_of_replication,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const LEADER_COMMANDERS: &[CardFactory] = &[leader_super_genius];
+
+/// **Leader, Super-Genius**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Leader, Super-Genius (EDHREC, fetched 2026-10-19).
+pub const LEADER_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, mask_of_the_schemer, mind_stone, monument_to_endurance,
+    sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, thought_vessel,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower,
+    rogues_passage, villainous_hideout, aim_scientists, alandra_sky_dreamer,
+    atlantean_skirmisher, baxter_fly_in_the_ointment, chameleon_master_of_disguise,
+    chasm_skulker, copycrook, doc_ocks_henchmen, emrakuls_messenger, faerie_mastermind,
+    graviton_fundamental_force, hypnotic_grifter, iron_man_armored_avenger, kid_loki,
+    krang_the_all_powerful, ledger_shredder, loki_god_of_mischief, lyla_holographic_assistant,
+    lyra_tolarian_archangel, mischievous_mystic, namor_scourge_of_the_seas, pensive_professor,
+    pharaoh_rama_tut, psionic_snoop, psychosis_crawler, twenty_toed_toad, wonder,
+    glorious_purpose, imprisoned_in_the_moon, ominous_seas, profts_eidetic_memory,
+    security_bypass, super_intelligence, teferis_ageless_insight, wizard_class, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, change_of_plans, counterspell,
+    frantic_search, negate, pongify, rapid_hybridization, reality_shift, ripples_of_potential,
+    unstable_experiment, teferi_temporal_pilgrim, multiversal_recruitment, ponder,
+    tricksters_stratagem, wave_goodbye, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const THE_BALROG_OF_MORIA_COMMANDERS: &[CardFactory] = &[the_balrog_of_moria];
+
+/// **The Balrog of Moria**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Swamps = 99.
+/// The Balrog of Moria (EDHREC, fetched 2026-10-19).
+pub const THE_BALROG_OF_MORIA_MAIN: &[CardFactory] = &[
+    arcane_signet, campfire, fellwar_stone, mind_stone, netherborn_altar, rakdos_signet,
+    sol_ring, swiftfoot_boots, talisman_of_indulgence, thought_vessel, thran_dynamo,
+    wayfarers_bauble, blood_crypt, bojuka_bog, canyon_slough, command_beacon, command_tower,
+    dragonskull_summit, foreboding_ruins, luxury_suite, mines_of_moria, rakdos_carnarium,
+    rogues_passage, smoldering_marsh, sulfurous_springs, tainted_peak, anger, azog_morias_ruin,
+    balor, cavern_hoard_dragon, decadent_dragon, fearsome_goblin_pair, front_porch_sentries,
+    goblin_town_flunkies, great_ugly_looking_goblin, kardur_doomscourge, mahadi_emporium_master,
+    mayhem_devil, mirkwood_bats, misty_mountains_raider, old_thrush, oliphaunt,
+    rampaging_war_mammoth, shelob_dread_weaver, smaug_wicked_worm, smaug_the_great_calamity,
+    solemn_simulacrum, stony_voiced_goblins, the_balrog_durins_bane, the_balrog_flame_of_udun,
+    troll_of_khazad_dum, animate_dead, down_down_to_goblin_town, last_light_of_durins_day,
+    phyrexian_reclamation, rakdos_joins_up, shiny_impetus, bedevil, big_score, chaos_warp,
+    dark_ritual, deadly_dispute, rakdos_charm, stinging_study, terminate, thrill_of_possibility,
+    unexpected_windfall, blasphemous_act, decree_of_pain, faithless_looting, feed_the_swarm,
+    grave_upheaval, lash_of_the_balrog, living_death, reanimate, seize_the_spoils,
+    too_greedily_too_deep, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ATLAS_COMMANDERS: &[CardFactory] = &[atlas_sizable_stooge];
+
+/// **Atlas, Sizable Stooge**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 14 Forests + 12 Swamps = 99.
+/// Atlas, Sizable Stooge (EDHREC, fetched 2026-10-19).
+pub const ATLAS_MAIN: &[CardFactory] = &[
+    arcane_signet, eerie_gravestone, golgari_signet, sol_ring, stolen_stark_tech,
+    talisman_of_resilience, bojuka_bog, command_tower, deathcap_glade, evolving_wilds,
+    myriad_landscape, necroblossom_snarl, path_of_ancestry, thriving_grove, thriving_moor,
+    woodland_cemetery, baron_strucker_hydra_overlord, bogwater_lumaret, challenger_troll,
+    citizen_v_helmut_zemo, crossbones_malicious_mercenary, defiant_bloodlord,
+    dooms_servo_guards, epicure_of_blood, fixer_techno_terror, flopsie_bumis_buddy,
+    gamma_grotesque, giant_man_gargantuan_genius, goreclaw_terror_of_qal_sisma,
+    grim_reaper_lethal_legionnaire, hellcat_undying_vigilante, hercules_prince_of_power,
+    kingpins_enforcers, knight_of_wundagore, mach_1_swooping_scoundrel,
+    mister_hyde_monster_within, moonstone_harsh_mistress, raucous_audience, serpent_specialist,
+    songbird_sonic_screamer, tigra_feline_fury, titania_rugged_rumbler,
+    tombstone_career_criminal, ultimo_civilizations_end, undercover_skrull,
+    valentina_allegra_de_fontaine, wakandan_royal_guard, whisperer_of_the_wilds,
+    white_tiger_ava_ayala, garruks_uprising, hydra_infiltration, heroic_feast, sanguine_bond,
+    training_regimen, beast_within, dark_ritual, doom_blade, feral_ferocity, giant_growth,
+    hour_of_defeat, infernal_rebirth, punishing_punch, return_to_nature, visions_of_villainy,
+    colossal_collision, cultivate, farseek, natures_lore, rampant_growth, restorative_technique,
+    root_manipulation, three_visits, too_evil_to_stay_dead,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const THE_MASTERS_OF_EVIL_COMMANDERS: &[CardFactory] = &[the_masters_of_evil];
+
+/// **The Masters of Evil**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Swamps = 99.
+/// The Masters of Evil (EDHREC, fetched 2026-10-19).
+pub const THE_MASTERS_OF_EVIL_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, chimil_the_inner_sun, crystal_chimes,
+    elixir_of_immortality, hydra_disintegrator, jet_medallion, lightning_greaves,
+    prismatic_lens, sol_ring, stoneforge_masterwork, whip_of_erebos, bojuka_bog, cabal_coffers,
+    mortuary_mire, nykthos_shrine_to_nyx, phyrexian_tower, spymasters_vault,
+    urborg_tomb_of_yawgmoth, urzas_saga, villainous_hideout, witchs_cottage,
+    arnim_zola_bio_fanatic, baron_helmut_zemo, baron_strucker_hydra_overlord,
+    bob_reluctant_hydra_agent, citizen_v_helmut_zemo, common_crook, crimson_cowl_master_of_evil,
+    crossbones_malicious_mercenary, doctor_doom, dooms_servo_guards,
+    iron_monger_sadistic_tycoon, madame_masque, minotaur_roxxon_ceo, radioactive_man,
+    swordsman_sharp_scoundrel, the_frightful_four, titanium_man, tombstone_career_criminal,
+    ultron_drone, ultron_the_annihilator, valentina_allegra_de_fontaine, venom_eddie_brock,
+    venomized_cat, warren_soultrader, yellowjacket_heartless_marauder, age_of_ultron,
+    construct_a_cosmic_cube, criminal_enterprise, doom_reigns_supreme, omen_of_the_dead,
+    origin_of_black_widow, phyrexian_reclamation, robot_domination, thunderbolts_conspiracy,
+    villainous_syndication, dark_ritual, deadly_dispute, decoy_ploy, fell_the_profane,
+    the_spots_portal, visions_of_villainy, void_helix, withering_torment, agadeems_awakening,
+    crawl_from_the_cellar, disentomb, endless_ranks_of_hydra, feed_the_swarm, final_act,
+    ill_gotten_gains, lich_knights_conquest, torment_of_hailfire,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_SQUADRON_SINISTER_COMMANDERS: &[CardFactory] = &[the_squadron_sinister];
+
+/// **The Squadron Sinister**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Islands + 10 Mountains = 99.
+/// The Squadron Sinister (EDHREC, fetched 2026-10-19).
+pub const THE_SQUADRON_SINISTER_MAIN: &[CardFactory] = &[
+    arcane_signet, cloud_key, dooms_time_platform, izzet_signet, lokis_scepter,
+    patchwork_banner, ruby_medallion, sapphire_medallion, sol_ring, talisman_of_creativity,
+    the_black_arrow, urzas_incubator, well_worn_spatula, cascade_bluffs, command_tower,
+    evolving_wilds, exotic_orchard, path_of_ancestry, riverpyre_verge, steam_vents,
+    stormcarved_coast, sulfur_falls, temple_of_epiphany, terramorphic_expanse, treasure_vault,
+    villainous_hideout, volatile_fjord, aim_scientists, abomination_world_ravager,
+    chameleon_master_of_disguise, crimson_operative, doc_ocks_henchmen,
+    doc_ock_sinister_scientist, electro_assaulting_battery, fin_fang_foom, flying_octobot,
+    graviton_fundamental_force, hydra_assault_robot, hydro_man_fluid_felon,
+    immortus_master_of_eternity, kang_the_conqueror, kid_loki, killmonger_ruthless_usurper,
+    kree_sentinel, lady_loki_agent_of_chaos, lady_octopus_inspired_inventor, molecule_man,
+    mysterio_master_of_illusion, puppet_master_string_puller, red_ghost_intangible_genius,
+    red_hulk, stilt_man_towering_terror, super_adaptoid, titania_proud_pummeler,
+    tri_sentinel_act_of_vengeance, ultron_artificial_malevolence, enchanted_rivers_grasp,
+    fated_firepower, favorable_winds, propaganda, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, chaos_warp, counterspell, mana_drain, pinecone_strike, uneasy_partings,
+    untimely_malfunction, blasphemous_act, clear_the_mind, echocasting_symposium, evils_thrall,
+    improvisation_capstone, irenicuss_vile_duplication, quantum_misalignment,
+    seize_the_spotlight,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const MADAME_MASQUE_COMMANDERS: &[CardFactory] = &[madame_masque];
+
+/// **Madame Masque**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Swamps = 99.
+/// Madame Masque (EDHREC, fetched 2026-10-19).
+pub const MADAME_MASQUE_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, commanders_sphere, decanter_of_endless_water, fellwar_stone,
+    gilded_lotus, hedron_archive, mind_stone, otherworld_atlas, phyrexian_altar, sisays_ring,
+    sol_ring, thought_vessel, thran_dynamo, wayfarers_bauble, cabal_coffers, cabal_stronghold,
+    fabled_passage, phyrexian_tower, reliquary_tower, ayara_first_of_locthwain, blood_artist,
+    front_porch_sentries, gixian_puppeteer, gravecrawler, hydra_troopers, mirkwood_bats,
+    morbid_opportunist, nadiers_nightblade, nether_traitor, nirkana_revenant, psychosis_crawler,
+    roaming_throne, rot_curse_rakshasa, sheoldred_the_apocalypse, starscream_power_hungry,
+    the_masters_of_evil, vengeful_bloodwitch, vilis_broker_of_blood, zenith_chronicler,
+    zulaport_cutthroat, black_market_connections, greed, phyrexian_arena, polluted_bonds,
+    altars_reap, blood_pact, corrupted_conviction, costly_plunder, dark_ritual, deadly_dispute,
+    eviscerators_insight, fanatical_offering, merciless_resolve, reckoners_bargain,
+    rowans_grim_search, succumb_to_temptation, toxin_analysis, village_rites, withering_torment,
+    buried_alive, exsanguinate, feed_the_swarm, head_games, nights_whisper, painful_lesson,
+    sign_in_blood,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

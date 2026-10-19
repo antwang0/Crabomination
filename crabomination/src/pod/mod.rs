@@ -26022,6 +26022,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YELLOWJACKET_COMMANDERS,
             main: decks::YELLOWJACKET_MAIN,
         },
+        // Seat 4262: Doctor Octopus, Master Planner's EDHREC average deck. `--pod-decks 4262`.
+        PodDeck {
+            name: "Doctor Octopus, Master Planner (UB)",
+            commanders: decks::DOCTOR_OCTOPUS_COMMANDERS,
+            main: decks::DOCTOR_OCTOPUS_MAIN,
+        },
+        // Seat 4263: Karolina Dean, Runaway's EDHREC average deck. `--pod-decks 4263`.
+        PodDeck {
+            name: "Karolina Dean, Runaway (WUBRG)",
+            commanders: decks::KAROLINA_DEAN_COMMANDERS,
+            main: decks::KAROLINA_DEAN_MAIN,
+        },
+        // Seat 4264: Mauhúr, Uruk-hai Captain's EDHREC average deck. `--pod-decks 4264`.
+        PodDeck {
+            name: "Mauhúr, Uruk-hai Captain (BR)",
+            commanders: decks::MAUHUR_COMMANDERS,
+            main: decks::MAUHUR_MAIN,
+        },
+        // Seat 4265: Prowler, Clawed Thief's EDHREC average deck. `--pod-decks 4265`.
+        PodDeck {
+            name: "Prowler, Clawed Thief (UB)",
+            commanders: decks::PROWLER_2_COMMANDERS,
+            main: decks::PROWLER_2_MAIN,
+        },
+        // Seat 4266: Mysterio, Master of Illusion's EDHREC average deck. `--pod-decks 4266`.
+        PodDeck {
+            name: "Mysterio, Master of Illusion (U)",
+            commanders: decks::MYSTERIO_COMMANDERS,
+            main: decks::MYSTERIO_MAIN,
+        },
+        // Seat 4267: Leader, Super-Genius's EDHREC average deck. `--pod-decks 4267`.
+        PodDeck {
+            name: "Leader, Super-Genius (U)",
+            commanders: decks::LEADER_COMMANDERS,
+            main: decks::LEADER_MAIN,
+        },
+        // Seat 4268: The Balrog of Moria's EDHREC average deck. `--pod-decks 4268`.
+        PodDeck {
+            name: "The Balrog of Moria (BR)",
+            commanders: decks::THE_BALROG_OF_MORIA_COMMANDERS,
+            main: decks::THE_BALROG_OF_MORIA_MAIN,
+        },
+        // Seat 4269: Atlas, Sizable Stooge's EDHREC average deck. `--pod-decks 4269`.
+        PodDeck {
+            name: "Atlas, Sizable Stooge (BG)",
+            commanders: decks::ATLAS_COMMANDERS,
+            main: decks::ATLAS_MAIN,
+        },
+        // Seat 4270: The Masters of Evil's EDHREC average deck. `--pod-decks 4270`.
+        PodDeck {
+            name: "The Masters of Evil (B)",
+            commanders: decks::THE_MASTERS_OF_EVIL_COMMANDERS,
+            main: decks::THE_MASTERS_OF_EVIL_MAIN,
+        },
+        // Seat 4271: The Squadron Sinister's EDHREC average deck. `--pod-decks 4271`.
+        PodDeck {
+            name: "The Squadron Sinister (UR)",
+            commanders: decks::THE_SQUADRON_SINISTER_COMMANDERS,
+            main: decks::THE_SQUADRON_SINISTER_MAIN,
+        },
+        // Seat 4272: Madame Masque's EDHREC average deck. `--pod-decks 4272`.
+        PodDeck {
+            name: "Madame Masque (B)",
+            commanders: decks::MADAME_MASQUE_COMMANDERS,
+            main: decks::MADAME_MASQUE_MAIN,
+        },
     ]
 }
 
@@ -32184,6 +32250,17 @@ mod tests {
             ("Crossbones, Malicious Mercenary", &[0x1AB9]),
             ("Stilt-Man, Towering Terror", &[0x1ABA]),
             ("Yellowjacket, Heartless Marauder", &[0x1ABB]),
+            ("Doctor Octopus, Master Planner", &[0x1ABC]),
+            ("Karolina Dean, Runaway", &[0x1ABD]),
+            ("Mauhúr, Uruk-hai Captain", &[0x1ABE]),
+            ("Prowler, Clawed Thief", &[0x1ABF]),
+            ("Mysterio, Master of Illusion", &[0x1AC0]),
+            ("Leader, Super-Genius", &[0x1AC1]),
+            ("The Balrog of Moria", &[0x1AC2]),
+            ("Atlas, Sizable Stooge", &[0x1AC3]),
+            ("The Masters of Evil", &[0x1AC4]),
+            ("The Squadron Sinister", &[0x1AC5]),
+            ("Madame Masque", &[0x1AC6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
