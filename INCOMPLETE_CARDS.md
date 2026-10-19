@@ -2264,3 +2264,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Deification | the planeswalker-type ballot offers only the types among cards its controller owns (a seat owning none names nothing) | `Effect::NamePlaneswalkerType` |
 | 🟡 Chandra's Embercat | its {R} pays for Elemental spells only; "or a Chandra planeswalker spell" has no `SpendRestriction` | `SpendRestriction::CreatureOfType(Elemental)` |
 | 🟡 Thelon of Havenwood | "each Fungus creature gets +1/+1 per spore counter" pumps only the Fungi its controller controls (`PumpTeamByControlledPermanents` is you-scoped) | `per_own_counter: Some(Spore)` |
+| 🟡 The Ruinous Wrecking Crew | the up-to-X modes are chosen as the trigger resolves (CR 700.2b chooses them as it is put on the stack), so a target is named for every targeted mode up front | `ChooseN { up_to: Some(XFromCost) }` |
+| 🟡 Draugr Necromancer | "spend mana from snow sources as though any color" is not modelled (the exiled cards cost their printed colors); only the Draugr that exiled a card grants its cast | `ExileDyingOpponentCreaturesWithCounterCastable` |
+| 🟡 Grub, Notorious Auntie | the copy's "at the beginning of the end step, sacrifice this token" is a delayed sacrifice, not an ability the token has (a copy of the token lacks it) | `BlightThen` + `SacrificeAtNextEndStep` |
+| 🟡 Wee Champion | the art-sticker counter never comes up — only name stickers exist (CR 123.6) | `KeywordAct::StickerPlaced` |
