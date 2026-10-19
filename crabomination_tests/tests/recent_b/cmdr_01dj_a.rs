@@ -1580,3 +1580,284 @@ fn stegron_formula_from_hand() {
             .contains(&CreatureType::Dinosaur)
     );
 }
+
+// ── Closers for the Villain, Goblin and Runaways decks (`decks::cmdr_01dj_f`) ─
+
+/// Bolg sacrifices a creature and hits another with its power; the excess
+/// amasses Goblins (CR 120.4a excess damage).
+#[test]
+fn bolg_of_the_north_flings_and_amasses() {
+    let mut g = pod(2);
+    let fodder = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolg = g.add_card_to_hand(0, catalog::bolg_of_the_north());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_targets(&mut g, bolg, &[]);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
+    assert!(g.battlefield_find(bear).is_none(), "3 damage to the 2/2");
+    assert_eq!(plus(&g, army(&g, 0).expect("Army")), 1, "one excess");
+}
+
+/// The Balrog goes to the bottom of its owner's library when an opponent's
+/// legendary creature dies — not for a nonlegendary one.
+#[test]
+fn balrog_leaves_when_a_legend_dies() {
+    let mut g = pod(2);
+    let balrog = g.add_card_to_battlefield(0, catalog::the_balrog_flame_of_udun());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    assert!(g.battlefield_find(balrog).is_some());
+    let legend = g.add_card_to_battlefield(1, catalog::azog_morias_ruin());
+    kill(&mut g, legend);
+    assert!(g.battlefield_find(balrog).is_none());
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(balrog));
+}
+
+/// Void Helix: 5 to any target, 5 life.
+#[test]
+fn void_helix_drains_five() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::void_helix());
+    cast_targets(&mut g, s, &[Target::Player(1)]);
+    assert_eq!((g.players[0].life, g.players[1].life), (25, 15));
+}
+
+/// Vulture gives other Villains flying when it attacks.
+#[test]
+fn vulture_lends_flight_to_villains() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let vul = ready(&mut g, 0, catalog::vulture_scheming_scavenger());
+    let v = ready(&mut g, 0, catalog::red_room_recruit());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: vul,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(v)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Flying)
+    );
+    assert!(
+        !g.computed_permanent(bear)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Flying)
+    );
+}
+
+/// Living Lies of Loki counts other Illusions; Mysterio's Mirage makes one
+/// at your end step only after a discard.
+#[test]
+fn loki_illusions_and_mirage() {
+    let mut g = pod(2);
+    let lies = ready(&mut g, 0, catalog::living_lies_of_loki());
+    assert_eq!(power(&g, lies), 1);
+    for discarded in [false, true] {
+        let mut g = g.clone();
+        g.add_card_to_battlefield(0, catalog::mysterios_mirage());
+        if discarded {
+            use crabomination::effect::{Effect, Selector, Value};
+            g.add_card_to_hand(0, catalog::forest());
+            run(
+                &mut g,
+                &Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
+            );
+        }
+        g.step = TurnStep::PostCombatMain;
+        while g.step != TurnStep::End && g.game_over.is_none() {
+            g.perform_action(GameAction::PassPriority).ok();
+        }
+        drain_stack(&mut g);
+        assert_eq!(
+            named(&g, 0, "Illusion Villain").len(),
+            usize::from(discarded)
+        );
+        assert_eq!(power(&g, lies), 1 + i32::from(discarded));
+    }
+}
+
+/// Pharaoh Rama-Tut connives on noncreature spells, not creature spells.
+#[test]
+fn rama_tut_connives_on_noncreature_spells() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::pharaoh_rama_tut());
+    g.players[0].hand.clear();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_targets(&mut g, bear, &[]);
+    assert_eq!(g.players[0].graveyard.len(), 0);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast_targets(&mut g, ring, &[]);
+    assert_eq!(g.players[0].graveyard.len(), 1, "connive discard");
+}
+
+/// Atlas gains a life per 4-power creature you control as it attacks or
+/// blocks.
+#[test]
+fn atlas_gains_per_big_creature() {
+    let mut g = pod(2);
+    let atlas = ready(&mut g, 0, catalog::atlas_sizable_stooge());
+    ready(&mut g, 0, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atlas,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 21, "only Atlas has power 4+");
+}
+
+/// Colossal Collision grows your creature, then it hits theirs for its power.
+#[test]
+fn colossal_collision_counter_then_bite() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::colossal_collision());
+    cast_targets(
+        &mut g,
+        s,
+        &[Target::Permanent(bear), Target::Permanent(giant)],
+    );
+    assert_eq!(plus(&g, bear), 1);
+    assert!(g.battlefield_find(giant).is_none(), "3 damage to the 3/3");
+}
+
+/// Gnashing of Teeth: -5/-5 exiles; the other mode shrinks a player's team.
+#[test]
+fn gnashing_of_teeth_modes() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::gnashing_of_teeth());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(in_exile(&g, giant));
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let s = g.add_card_to_hand(0, catalog::gnashing_of_teeth());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(elf).is_none());
+}
+
+/// Pinecone Strike's both modes: 3 damage (exiled on death) and an artifact
+/// token destroyed.
+#[test]
+fn pinecone_strike_both_modes() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let treasure = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.battlefield_find_mut(treasure).unwrap().is_token = true;
+    let p = g.add_card_to_hand(0, catalog::pinecone_strike());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: p,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(treasure)],
+        x_value: None,
+    })
+    .expect("both");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(in_exile(&g, bear));
+    assert!(g.battlefield_find(treasure).is_none());
+}
+
+/// Merciless Resolve costs a creature or land and draws two; Painful Lesson
+/// makes its target draw two and lose 2.
+#[test]
+fn merciless_resolve_and_painful_lesson() {
+    let mut g = pod(2);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    let s = g.add_card_to_hand(0, catalog::merciless_resolve());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none());
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    let hand1 = g.players[1].hand.len();
+    let p = g.add_card_to_hand(0, catalog::painful_lesson());
+    cast_targets(&mut g, p, &[Target::Player(1)]);
+    assert_eq!(
+        (g.players[1].hand.len(), g.players[1].life),
+        (hand1 + 2, 18)
+    );
+}
+
+/// Karolina's WUBRG can pay for an ability but not a spell from hand.
+#[test]
+fn karolina_mana_is_not_for_hand_spells() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::karolina_dean_runaway());
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].mana_pool.restricted_total(),
+        5,
+        "WUBRG at the first main phase"
+    );
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(
+        g.clone()
+            .perform_action(GameAction::CastSpell {
+                card_id: bolt,
+                target: Some(Target::Player(1)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None
+            })
+            .is_err()
+    );
+}
+
+/// Gert and Old Lace trade a discard for a basic land.
+#[test]
+fn gert_discards_for_a_basic() {
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let gert = g.add_card_to_hand(0, catalog::gert_and_old_lace_runaways());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_targets(&mut g, gert, &[]);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].hand[0].definition.name, "Forest");
+}
