@@ -2676,3 +2676,179 @@ fn atlantis_attacks_both_with_teamwork() {
         "teamwork tapped power 4+"
     );
 }
+
+// ── She-Hulk Jade Defender, Maria Hill, Fangorn (`decks::cmdr_01dj_l`) ──────
+
+/// Bouncer's Beatdown hits for your greatest power and exiles what it kills;
+/// {2} less at a black permanent.
+#[test]
+fn bouncers_beatdown_exiles() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hill_giant());
+    let v = g.add_card_to_battlefield(1, catalog::red_room_recruit());
+    let s = g.add_card_to_hand(0, catalog::bouncers_beatdown());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Permanent(v)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{G} alone at a black creature");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(in_exile(&g, v));
+}
+
+/// Dragonscale Boon: two counters and an untap; Monstrous Growth +4/+4.
+#[test]
+fn dragonscale_boon_and_growth() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let s = g.add_card_to_hand(0, catalog::dragonscale_boon());
+    cast_targets(&mut g, s, &[Target::Permanent(bear)]);
+    assert_eq!(plus(&g, bear), 2);
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+    let m = g.add_card_to_hand(0, catalog::monstrous_growth());
+    cast_targets(&mut g, m, &[Target::Permanent(bear)]);
+    assert_eq!(power(&g, bear), 8);
+}
+
+/// Thwart the Enemy prevents damage from opponents' creatures this turn.
+#[test]
+fn thwart_the_enemy_fogs_their_creatures() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::thwart_the_enemy());
+    cast_targets(&mut g, s, &[]);
+    use crabomination::effect::{Effect, Selector, Value};
+    let ctx = EffectContext::for_trigger(giant, 1, None, 0);
+    let evs = g
+        .resolve_effect(
+            &Effect::DealDamage {
+                to: Selector::Player(crabomination::effect::PlayerRef::Seat(0)),
+                amount: Value::Const(3),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Hieromancer's Cage holds a permanent until it leaves.
+#[test]
+fn hieromancers_cage_holds() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let c = g.add_card_to_hand(0, catalog::hieromancers_cage());
+    cast_targets(&mut g, c, &[Target::Permanent(ring)]);
+    assert!(in_exile(&g, ring));
+}
+
+/// Helicarrier Strike deals 2, or 4 with teamwork, to an attacker.
+#[test]
+fn helicarrier_strike_teamwork() {
+    for team in [false, true] {
+        let mut g = pod(2);
+        let giant = ready(&mut g, 1, catalog::hill_giant());
+        g.attacking = vec![Attack {
+            attacker: giant,
+            target: AttackTarget::Player(0),
+        }];
+        ready(&mut g, 0, catalog::grizzly_bears());
+        let s = g.add_card_to_hand(0, catalog::helicarrier_strike());
+        flood(&mut g, 0);
+        let (card_id, target, additional_targets, mode, x_value) =
+            (s, Some(Target::Permanent(giant)), vec![], None, None);
+        g.perform_action(if team {
+            GameAction::CastSpellKicked {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            }
+        } else {
+            GameAction::CastSpell {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            }
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        g.check_state_based_actions();
+        assert_eq!(
+            g.battlefield_find(giant).is_none(),
+            team,
+            "4 kills the 3/3, 2 doesn't"
+        );
+    }
+}
+
+/// Spell mastery — Swift Reckoning is instant-speed only with two instants or
+/// sorceries in your graveyard.
+#[test]
+fn swift_reckoning_spell_mastery() {
+    for mastery in [false, true] {
+        let mut g = pod(2);
+        let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.battlefield_find_mut(giant).unwrap().tapped = true;
+        if mastery {
+            g.add_card_to_graveyard(0, catalog::lightning_bolt());
+            g.add_card_to_graveyard(0, catalog::shock());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        let s = g.add_card_to_hand(0, catalog::swift_reckoning());
+        flood(&mut g, 0);
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: s,
+            target: Some(Target::Permanent(giant)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(r.is_ok(), mastery);
+    }
+}
+
+/// Battlewand Oak grows on a Forest of yours entering; Rootgrapple draws with
+/// a Treefolk around; Tend the Sprigs fetches a basic.
+#[test]
+fn fangorn_treefolk() {
+    let mut g = pod(2);
+    let oak = ready(&mut g, 0, catalog::battlewand_oak());
+    let f = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(power(&g, oak), 3);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let hand = g.players[0].hand.len();
+    let rg = g.add_card_to_hand(0, catalog::rootgrapple());
+    cast_targets(&mut g, rg, &[Target::Permanent(ring)]);
+    assert!(g.battlefield_find(ring).is_none());
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand + 1,
+        "drew with Battlewand Oak around"
+    );
+    let lands = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Forest")
+        .count();
+    let ts = g.add_card_to_hand(0, catalog::tend_the_sprigs());
+    cast_targets(&mut g, ts, &[]);
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.controller == 0 && c.definition.name == "Forest")
+            .count(),
+        lands + 1
+    );
+}
