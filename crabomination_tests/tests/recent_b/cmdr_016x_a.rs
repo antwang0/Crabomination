@@ -433,3 +433,135 @@ fn delayed_last_created_token_stays_bound_to_its_token() {
     assert!(g.battlefield_find(copy).is_none(), "the copy is exiled");
     assert!(g.battlefield_find(tr).is_some(), "the Treasure stays");
 }
+
+// ── Bucky Barnes, Óin the Brave, Lin Sivvi (`decks::cmdr_016x_c`) ───────────
+
+fn attack(g: &mut GameState, attacker: CardId, defender: usize) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker,
+        target: crabomination::game::types::AttackTarget::Player(defender),
+    }]))
+    .expect("attack");
+    drain_stack(g);
+}
+
+/// Alaborn Zealot blocking destroys itself and the attacker it blocks.
+#[test]
+fn alaborn_zealot_trades_on_block() {
+    let mut g = pod(2);
+    let atk = ready(&mut g, 0, catalog::hill_giant());
+    let z = ready(&mut g, 1, catalog::alaborn_zealot());
+    attack(&mut g, atk, 1);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(z, atk)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none() && g.battlefield_find(z).is_none());
+}
+
+/// CR 509.1b — Amrou Seekers: a green blocker is refused, a white one isn't.
+#[test]
+fn amrou_seekers_only_artifact_or_white_blocks() {
+    for (blocker, ok) in [(catalog::grizzly_bears(), false), (catalog::savannah_lions(), true)] {
+        let mut g = pod(2);
+        let atk = ready(&mut g, 0, catalog::amrou_seekers());
+        let blk = ready(&mut g, 1, blocker);
+        attack(&mut g, atk, 1);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        assert_eq!(g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).is_ok(), ok);
+    }
+}
+
+/// CR 603.4 — Wandering Champion's loot needs a blue or red permanent.
+#[test]
+fn wandering_champion_loots_only_with_blue_or_red() {
+    for (red, drew) in [(false, false), (true, true)] {
+        let mut g = pod(2);
+        let wc = ready(&mut g, 0, catalog::wandering_champion());
+        if red {
+            ready(&mut g, 0, catalog::goblin_settler());
+        }
+        g.players[0].hand.clear();
+        g.add_card_to_hand(0, catalog::forest());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        attack(&mut g, wc, 1);
+        g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+        pass_to(&mut g, TurnStep::PostCombatMain);
+        drain_stack(&mut g);
+        let looted = g.players[0].graveyard.iter().any(|c| c.definition.name == "Forest");
+        assert_eq!(looted, drew, "red={red}");
+    }
+}
+
+/// Zealot il-Vec unblocked pings a creature and deals no combat damage.
+#[test]
+fn zealot_il_vec_pings_instead_of_hitting() {
+    let mut g = pod(2);
+    let z = ready(&mut g, 0, catalog::zealot_il_vec());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, z, 1);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+    drain_stack(&mut g);
+    pass_to(&mut g, TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none(), "the ping kills the elf");
+    assert_eq!(g.players[1].life, 20, "its combat damage is prevented");
+}
+
+/// Immortal Phoenix returns to hand as it dies; Firewing Phoenix buys itself
+/// back from the graveyard.
+#[test]
+fn phoenixes_come_back_to_hand() {
+    let mut g = pod(2);
+    let ip = ready(&mut g, 0, catalog::immortal_phoenix());
+    let fw = g.add_card_to_graveyard(0, catalog::firewing_phoenix());
+    flood(&mut g, 0);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(ip))).expect("bolt");
+    cast(&mut g, bolt2, Some(Target::Player(1))).expect("bolt");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ip), "Immortal Phoenix in hand");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fw,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("return");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == fw), "Firewing Phoenix in hand");
+}
+
+/// Amrou Scout puts a Rebel of mana value 3 or less from the library onto the
+/// battlefield; Hallowed Burial then bottoms every creature.
+#[test]
+fn amrou_scout_fetches_a_rebel_and_hallowed_burial_bottoms_creatures() {
+    let mut g = pod(2);
+    let scout = ready(&mut g, 0, catalog::amrou_scout());
+    let seekers = g.add_card_to_library(0, catalog::amrou_seekers());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scout,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("search");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(seekers).is_some());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let hb = g.add_card_to_hand(0, catalog::hallowed_burial());
+    flood(&mut g, 0);
+    cast(&mut g, hb, None).expect("burial");
+    assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()));
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear), "bottom of its owner's library");
+}
