@@ -123365,3 +123365,58 @@ pub const WAN_SHI_TONG_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const FARIDEH_COMMANDERS: &[CardFactory] = &[farideh_devils_chosen];
+
+/// **Farideh, Devil's Chosen**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Islands + 12 Mountains = 99.
+/// Farideh, Devil's Chosen (EDHREC, fetched 2026-10-19).
+pub const FARIDEH_MAIN: &[CardFactory] = &[
+    arcane_signet, bucknards_everfull_purse, component_pouch, goblin_morningstar, izzet_signet,
+    sol_ring, spiked_pit_trap, sword_of_hours, talisman_of_creativity, the_deck_of_many_things,
+    thought_vessel, treasure_chest, vexing_puzzlebox, wand_of_wonder, wizards_spellbook,
+    cascade_bluffs, command_tower, evolving_wilds, frostboil_snarl, izzet_boilerworks,
+    reliquary_tower, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    temple_of_epiphany, training_center, underdark_rift, aberrant_mind_sorcerer,
+    ancient_copper_dragon, ancient_silver_dragon, arcane_investigator, bamboozling_beeble,
+    brazen_dwarf, chaos_channeler, chaos_dragon, clay_golem, delina_wild_mage, djinni_windseer,
+    earth_cult_elemental, feywild_trickster, goblin_electromancer, hoarding_ogre, iron_mastiff,
+    mathise_surge_channeler, pixie_guide, scion_of_stygia, swarming_goblins,
+    wyll_blade_of_frontiers, barbarian_class, maddening_hex, netherese_puzzle_ward,
+    priority_boarding, wizard_class, berserkers_frenzy, boing, brainstorm, chaos_warp,
+    contact_other_plane, counterspell, critical_hit, diviners_portent, faridehs_fireball,
+    gales_redirection, negate, opt, wylls_reversal, arcane_endeavor, blasphemous_act,
+    circuits_act, cone_of_cold, power_of_persuasion, reckless_endeavor, thunderwave, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const MONOXA_COMMANDERS: &[CardFactory] = &[monoxa_midway_manager];
+
+/// **Monoxa, Midway Manager**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Swamps = 99.
+/// Monoxa, Midway Manager (EDHREC, fetched 2026-10-19).
+pub const MONOXA_MAIN: &[CardFactory] = &[
+    arcane_signet, bucknards_everfull_purse, clown_car, component_pouch, ebony_fly,
+    goblin_morningstar, luck_bobblehead, rakdos_signet, sol_ring, strength_testing_hammer,
+    swiftfoot_boots, sword_of_hours, talisman_of_indulgence, tenza_godos_maul,
+    the_deck_of_many_things, treasure_chest, vexing_puzzlebox, wand_of_wonder, bloodfell_caves,
+    bojuka_bog, command_tower, dragonskull_summit, evolving_wilds, foreboding_ruins,
+    rakdos_carnarium, rogues_passage, shadowblood_ridge, smoldering_marsh, tainted_peak,
+    temple_of_malice, underdark_rift, lifetime_pass_holder, brazen_dwarf, celebr_8000,
+    chaos_channeler, chaos_dragon, clay_golem, deadbeat_attendant, delina_wild_mage,
+    discourtesy_clerk, earth_cult_elemental, herald_of_hadar, hoarding_ogre, iron_mastiff,
+    lightfoot_rogue, line_cutter, nothic, quick_fixer, rad_rascal, swarming_goblins,
+    wyll_blade_of_frontiers, xenosquirrels, barbarian_class, maddening_hex,
+    night_shift_of_the_living_dead, phyrexian_arena, priority_boarding, bedevil,
+    berserkers_frenzy, chaos_warp, critical_hit, faridehs_fireball, grave_endeavor,
+    rakdos_charm, six_sided_die, terminate, wylls_reversal, attempted_murder, blasphemous_act,
+    circuits_act, danse_macabre, myrkuls_edict, reckless_endeavor, slight_malfunction,
+    step_right_up, thunderwave,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

@@ -26838,6 +26838,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WAN_SHI_TONG_2_COMMANDERS,
             main: decks::WAN_SHI_TONG_2_MAIN,
         },
+        // Seat 4398: Farideh, Devil's Chosen's EDHREC average deck. `--pod-decks 4398`.
+        PodDeck {
+            name: "Farideh, Devil's Chosen (UR)",
+            commanders: decks::FARIDEH_COMMANDERS,
+            main: decks::FARIDEH_MAIN,
+        },
+        // Seat 4399: Monoxa, Midway Manager's EDHREC average deck. `--pod-decks 4399`.
+        PodDeck {
+            name: "Monoxa, Midway Manager (BR)",
+            commanders: decks::MONOXA_COMMANDERS,
+            main: decks::MONOXA_MAIN,
+        },
     ]
 }
 
@@ -33136,6 +33148,8 @@ mod tests {
             ("The Space Family Goblinson", &[0x1B41]),
             ("Echo, Perceptive Prodigy", &[0x1B42]),
             ("Wan Shi Tong, All-Knowing", &[0x1B43]),
+            ("Farideh, Devil's Chosen", &[0x1B44]),
+            ("Monoxa, Midway Manager", &[0x1B45]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
