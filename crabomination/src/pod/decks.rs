@@ -121321,3 +121321,116 @@ pub const KLAW_2_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const DONATELLO_5_COMMANDERS: &[CardFactory] = &[donatello_way_with_machines];
+
+/// **Donatello, Way with Machines**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Donatello, Way with Machines (EDHREC, fetched 2026-10-19).
+pub const DONATELLO_5_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, benders_waterskin, bespoke_bo, cloud_key,
+    commanders_plate, lightning_greaves, midnight_clock, mind_stone, mystic_forge, nettlecyst,
+    panharmonicon, sapphire_medallion, sewer_veillance_cam, skateboard, sky_diamond, sol_ring,
+    swiftfoot_boots, the_ooze, thought_vessel, unwinding_clock, uthros_research_craft,
+    academy_ruins, buried_ruin, darksteel_citadel, reliquary_tower, seat_of_the_synod,
+    treasure_vault, uthros_titanic_godcore, buzz_bots, chrome_dome, cyberdrive_awakener,
+    donatello_gadget_master, donatello_mutant_mechanic, donatello_turtle_techie,
+    donatello_the_brains, emry_lurker_of_the_loch, etherium_sculptor, forensic_gadgeteer,
+    foundry_inspector, fugitive_droid, jhoiras_familiar, kappa_cannoneer, krang_master_mind,
+    mmmenon_the_right_hand, ornithopter_of_paradise, padeem_consul_of_innovation,
+    sai_master_thopterist, silver_myr, solemn_simulacrum, the_reality_chip, thought_monitor,
+    urza_lord_high_artificer, does_machines, efficient_construction, mechanized_production,
+    retro_mutation, thopter_spy_network, amazing_acrobatics, an_offer_you_cant_refuse,
+    arcane_denial, brainstorm, counterspell, mind_transfer_protocol, negate, ooze_spill,
+    pongify, return_to_the_sewers, donatellos_technique, fabricate, one_with_the_machine,
+    thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const FILI_AND_KILI_COMMANDERS: &[CardFactory] = &[fili_and_kili_joyous];
+
+/// **Fíli and Kíli, Joyous**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Fíli and Kíli, Joyous (EDHREC, fetched 2026-10-19).
+pub const FILI_AND_KILI_MAIN: &[CardFactory] = &[
+    arcane_signet, cloudstone_curio, crystal_chimes, cursed_mirror, excalibur_sword_of_eden,
+    mind_stone, nettlecyst, orcrist_goblin_cleaver, power_conduit, ruby_medallion, sol_ring,
+    sword_of_the_animist, the_fire_crystal, the_reaver_cleaver, abstergo_entertainment,
+    dwarven_mine, mines_of_moria, nesting_grounds, nykthos_shrine_to_nyx, urzas_saga,
+    valakut_the_molten_pinnacle, war_room, balin_loremaster, blazing_firesinger,
+    chong_and_lily_nomads, clive_ifrits_dominant, dwarven_recruiter, dain_ironfoot,
+    gimli_of_the_glittering_caves, gloin_the_mighty, gloin_dwarf_emissary, keldon_warcaller,
+    magda_brazen_outlaw, magda_the_hoardmaster, plundering_barbarian, smaug_the_magnificent,
+    summon_bahamut, summon_brynhildr, summon_esper_valigarmanda, summon_gf_cerberus,
+    summon_gf_ifrit, summon_kujata, thorin_companys_leader, torbran_thane_of_red_fell,
+    burn_burn_tree_and_fern, fable_of_the_mirror_breaker, korvold_and_the_noble_thief,
+    kumano_faces_kakkazan, maximum_carnage, origin_of_thor, ral_and_the_implicit_maze,
+    the_akroan_war, the_brothers_war, the_elder_dragon_war, the_flux, the_legend_of_roku,
+    the_misty_mountains_cold, the_parting_of_the_ways, there_and_back_again,
+    vault_21_house_gambit, big_score, chaos_warp, deflecting_swat, return_the_favor,
+    unexpected_windfall, untimely_malfunction, valakut_awakening, blasphemous_act,
+    faithless_looting, jeskas_will, reality_scramble, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const BLACK_PANTHER_3_COMMANDERS: &[CardFactory] = &[black_panther_vanguard];
+
+/// **Black Panther, Vanguard**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 12 Forests + 14 Plains = 99.
+/// Black Panther, Vanguard (EDHREC, fetched 2026-10-19).
+pub const BLACK_PANTHER_3_MAIN: &[CardFactory] = &[
+    arcane_signet, captain_americas_shield, door_of_destinies, shield_spy_kit, selesnya_signet,
+    sol_ring, swiftfoot_boots, vibranium_energy_daggers, avengers_tower, birnin_zana_plaza,
+    blossoming_sands, canopy_vista, command_tower, gathering_place, path_of_ancestry,
+    sunpetal_grove, surveillance_room, thriving_grove, agent_phil_coulson, agents_of_shield,
+    brave_brawler, captain_america_super_soldier, captain_america_wings_of_freedom,
+    captain_mar_vell_space_born, doc_samson_super_psychiatrist, guerrilla_gorilla,
+    hellcat_undying_vigilante, hercules_prince_of_power, hero_in_training,
+    hulkling_burgeoning_bruiser, invisible_woman_sue_storm, jennifer_walters,
+    ka_zar_of_the_savage_land, luke_cage_power_man, mockingbird_ace_agent,
+    night_nurse_healer_of_heroes, okoye_dora_milaje_leader, patriot_shield_wielder,
+    pet_avengers, quake_agent_of_shield, she_hulk_jade_defender, spider_man_to_the_rescue,
+    storm_windrider, the_thing_ben_grimm, the_unbeatable_squirrel_girl, tigra_feline_fury,
+    undercover_skrull, viv_vision_teen_synthezoid, wakandan_royal_guard, white_tiger_ava_ayala,
+    white_widow_free_agent, claim_the_kingdom, doubling_season, origin_of_the_avengers,
+    political_triumph, super_strength, training_regimen, web_up, beast_within, giant_growth,
+    heroic_intervention, panther_pounce, path_to_exile, punishing_punch, swords_to_plowshares,
+    take_up_the_shield, borough_backup, call_damage_control, cultivate, farseek, go_nuts,
+    murdocks_crusade, restorative_technique,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const DONATELLO_6_COMMANDERS: &[CardFactory] = &[donatello_rad_scientist];
+
+/// **Donatello, Rad Scientist**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Donatello, Rad Scientist (EDHREC, fetched 2026-10-19).
+pub const DONATELLO_6_MAIN: &[CardFactory] = &[
+    arcane_signet, bespoke_bo, conjurers_closet, manhole_cover, mind_stone, panharmonicon,
+    sapphire_medallion, sewer_veillance_cam, skateboard, sol_ring, swiftfoot_boots,
+    karns_bastion, mystic_sanctuary, reliquary_tower, rogues_passage, seat_of_the_synod,
+    turtle_lair, april_oneil_human_element, big_mother_mouser, buzz_bots, deadeye_navigator,
+    donatello_turtle_techie, donatello_way_with_machines, dour_port_mage, floodpits_drowner,
+    flux_channeler, fugitive_droid, henchbots, lulu_stern_guardian, mulldrifter,
+    ray_fillet_wave_warrior, renet_temporal_apprentice, roadkill_rodney, solemn_simulacrum,
+    starfield_vocalist, tekuthal_inquiry_dominus, thassa_deep_dwelling, utrom_monitor,
+    utrom_scientists, does_machines, imprisoned_in_the_moon, inexorable_tide, lost_in_the_maze,
+    mesmerizing_dose, retro_mutation, blur, counterspell, displace, donatellos_science_lesson,
+    essence_flux, ghostly_flicker, hide_on_the_ceiling, mind_transfer_protocol, negate,
+    ooze_spill, out_cold, planar_incision, pongify, reality_shift, return_to_the_sewers,
+    teferis_time_twist, contentious_plan, donatellos_technique, freeze_in_place,
+    impede_momentum, ponder, preordain, splash_portal, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];

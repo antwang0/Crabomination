@@ -26400,6 +26400,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KLAW_2_COMMANDERS,
             main: decks::KLAW_2_MAIN,
         },
+        // Seat 4325: Donatello, Way with Machines's EDHREC average deck. `--pod-decks 4325`.
+        PodDeck {
+            name: "Donatello, Way with Machines (U)",
+            commanders: decks::DONATELLO_5_COMMANDERS,
+            main: decks::DONATELLO_5_MAIN,
+        },
+        // Seat 4326: Fíli and Kíli, Joyous's EDHREC average deck. `--pod-decks 4326`.
+        PodDeck {
+            name: "Fíli and Kíli, Joyous (R)",
+            commanders: decks::FILI_AND_KILI_COMMANDERS,
+            main: decks::FILI_AND_KILI_MAIN,
+        },
+        // Seat 4327: Black Panther, Vanguard's EDHREC average deck. `--pod-decks 4327`.
+        PodDeck {
+            name: "Black Panther, Vanguard (WG)",
+            commanders: decks::BLACK_PANTHER_3_COMMANDERS,
+            main: decks::BLACK_PANTHER_3_MAIN,
+        },
+        // Seat 4328: Donatello, Rad Scientist's EDHREC average deck. `--pod-decks 4328`.
+        PodDeck {
+            name: "Donatello, Rad Scientist (U)",
+            commanders: decks::DONATELLO_6_COMMANDERS,
+            main: decks::DONATELLO_6_MAIN,
+        },
     ]
 }
 
@@ -32625,6 +32649,10 @@ mod tests {
             ("Bucky Barnes, Eager Ally", &[0x1AF8]),
             ("Kytheon, Hero of Akros", &[0x1AF9]),
             ("Klaw, Sonic Subjugator", &[0x1AFA]),
+            ("Donatello, Way with Machines", &[0x1AFB]),
+            ("Fíli and Kíli, Joyous", &[0x1AFC]),
+            ("Black Panther, Vanguard", &[0x1AFD]),
+            ("Donatello, Rad Scientist", &[0x1AFE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
