@@ -3136,6 +3136,28 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-19 (Commander run, `015cG1GZ`) — guardrail; four sweep fixes, no cards
+
+Hot-path touches: `apply_soulbond_pairing` asks the printed Soulbond walk before
+`computed_is_creature` (less work on every entry); the cast board gate reads a
+`CastSpell`'s targets and X; `effect_token_estimate` gains `ApplyToTargets` /
+`TargetsExactlyX` arms; `route_to_graveyard` returns `true` for a shuffle-instead
+card; the pod loop probes stand down past 256 permanents. `release` bot_ladder,
+4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 195,845 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+                 (after the copier guard and cast gate); 154,182-180,801 after the Soulbond
+                 precheck on a loaded box — paired bench_ab, 12 pairs, base = tip minus the
+                 precheck: median -2.42 % / mean +1.04 % / sd 9.35, i.e. noise
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 52301): 0 undecided, 0 panics
+pods (release)   4 / 6 / 8 seats x 600 (seeds 42304/6/8): 1,800/1,800 decided
+pods (audit)     seeds 9230 (4/6/8 x 1) + 9231 (3/4/6/8 x 2): 9,672 games, 0 panics, 10
+                 undecided — 3 fixed (Doppelgang x2, Zellix x Blightsteel), 6 CR 104.4a/b draws,
+                 1 slow board cap (seed 925292: 2,536 s -> 670 s, see Perf candidates)
+suite            27,898 / 0 / 6 (strict answer log, pod seat test excluded); clippy 0
+```
+
 ### 2026-10-18 (Commander run, `01MWhJbe`) — guardrail; 52 seats, 84 cards, seven engine primitives
 
 Hot-path touches: `scale_damage_to` reads one more static arm behind the presence gate; `AddCounter`
