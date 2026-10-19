@@ -2269,3 +2269,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Grub, Notorious Auntie | the copy's "at the beginning of the end step, sacrifice this token" is a delayed sacrifice, not an ability the token has (a copy of the token lacks it) | `BlightThen` + `SacrificeAtNextEndStep` |
 | 🟡 Wee Champion | the art-sticker counter never comes up — only name stickers exist (CR 123.6) | `KeywordAct::StickerPlaced` |
 | 🟡 Werewolf Ransacker | the 3 damage goes to the destroyed artifact's owner (its last controller in almost every game) | `OwnerOf(Target(0))` |
+| 🟡 Taster of Wares | a headless revealer shows the cards it would discard first (its own choice of which X); "for as long as you control this creature" lasts while it is on the battlefield | `RevealFromHandExileChosen` + `WhileSourceOnBattlefield` |
+| 🟡 Noctis, Heir Apparent | warp-strike's return is a delayed trigger read off its activator's next declaration, not its owner's when they differ | `DelayedKind::PlayersNextDeclareAttackers` |

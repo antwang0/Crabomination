@@ -1,4 +1,4 @@
-//! Commander: the 2026-10-19 (`01GwrDKP`) closers (`decks::cmdr_01gw_a`, `_b`, `_c`).
+//! Commander: the 2026-10-19 (`01GwrDKP`) closers (`decks::cmdr_01gw_a`..`_e`).
 
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
@@ -435,4 +435,205 @@ fn neglected_heirloom_flips_with_its_werewolf() {
     assert_eq!(g.battlefield_find(heirloom).unwrap().definition.name, "Ashmouth Blade");
     let cp = g.computed_permanent(wolf).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 7));
+}
+
+// ── `decks::cmdr_01gw_d` ────────────────────────────────────────────────────
+
+/// Taster of Wares: the opponent reveals one card per Goblin, the controller
+/// picks the instant among them, and may cast it while Taster stays, paying
+/// with mana of any type.
+#[test]
+fn taster_of_wares_steals_a_revealed_instant() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::forest());
+    let taster = g.add_card_to_hand(0, catalog::taster_of_wares());
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: taster,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("taster");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "two Goblins: both cards shown, the bolt chosen");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast it with green");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}
+
+/// Champion of the Weird: pay 1 life and blight 2 to make an opponent blight 2.
+#[test]
+fn champion_of_the_weird_makes_an_opponent_blight() {
+    let mut g = pod(2);
+    let champ = g.add_card_to_battlefield(0, catalog::champion_of_the_weird());
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: champ,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("blight");
+    drain_stack(&mut g);
+    use crabomination::card::CounterType;
+    assert_eq!(g.players[0].life, 19);
+    assert_eq!(g.battlefield_find(champ).unwrap().counter_count(CounterType::MinusOneMinusOne), 2);
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::MinusOneMinusOne), 2);
+}
+
+/// CR 508.2 / 802.2 — Noctis's warp-strike exiles it; at its controller's
+/// next declare attackers step — even one with no attackers declared — it
+/// returns tapped and attacking an opponent (every opponent is a defending
+/// player in a multiplayer game), and can't be blocked that combat.
+#[test]
+fn noctis_warp_strikes_back_into_combat() {
+    let mut g = pod(3);
+    let noctis = g.add_card_to_battlefield(0, catalog::noctis_heir_apparent());
+    g.clear_sickness(noctis);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: noctis,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("warp-strike");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == noctis), "exiled");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![])).expect("no attackers");
+    drain_stack(&mut g);
+    let n = g.battlefield_find(noctis).expect("returned");
+    assert!(n.tapped);
+    assert!(g.attacking.iter().any(|a| a.attacker == noctis), "attacking");
+    assert!(g.computed_permanent(noctis).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
+}
+
+// ── `decks::cmdr_01gw_e` ────────────────────────────────────────────────────
+
+/// Warren Pilferers returns a creature card; a Goblin card hastes it.
+#[test]
+fn warren_pilferers_hastes_for_a_goblin() {
+    for (def, haste) in [(catalog::goblin_guide(), true), (catalog::grizzly_bears(), false)] {
+        let mut g = pod(2);
+        let back = g.add_card_to_graveyard(0, def);
+        let wp = g.add_card_to_hand(0, catalog::warren_pilferers());
+        flood(&mut g, 0);
+        g.perform_action(GameAction::CastSpell { card_id: wp, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("pilferers");
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == back));
+        let kw = g.computed_permanent(wp).unwrap().keywords().contains(&crabomination::card::Keyword::Haste);
+        assert_eq!(kw, haste);
+    }
+}
+
+/// Scrapper Champion's attack trigger turns two energy into a +1/+1 counter.
+#[test]
+fn scrapper_champion_spends_energy_for_a_counter() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let sc = g.add_card_to_hand(0, catalog::scrapper_champion());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: sc, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("champion");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 2);
+    g.clear_sickness(sc);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: sc,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0);
+    assert_eq!(g.battlefield_find(sc).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Deadlock Trap taps a creature and locks its activated abilities this turn.
+#[test]
+fn deadlock_trap_taps_and_locks() {
+    let mut g = pod(2);
+    let trap = g.add_card_to_battlefield(0, catalog::deadlock_trap());
+    g.battlefield_find_mut(trap).unwrap().tapped = false;
+    g.players[0].energy = 1;
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trap,
+        ability_index: 0,
+        target: Some(Target::Permanent(elf)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("trap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).unwrap().tapped);
+    assert_eq!(g.players[0].energy, 0);
+}
+
+// ── `decks::cmdr_01gw_f` ────────────────────────────────────────────────────
+
+/// Sentinel of Lost Lore's three modes: an exiled Adventure card of yours
+/// comes home, an opponent's goes to the bottom of their library, and the
+/// opponent's graveyard is exiled. Regressions: the trigger's extra-slot fill
+/// never searched exile, and `slot_owner` read a `ChooseN`'s third slot as no
+/// mode's, so its hostile player slot aimed at the controller's own graveyard.
+#[test]
+fn sentinel_of_lost_lore_runs_its_modes() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_exile(0, catalog::bonecrusher_giant());
+    let theirs = g.add_card_to_exile(1, catalog::bonecrusher_giant());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::sentinel_of_lost_lore());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("sentinel");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "home");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(theirs), "bottom of its owner's library");
+    assert!(g.players[1].graveyard.is_empty(), "graveyard exiled");
+}
+
+// ── `decks::cmdr_01gw_g` ────────────────────────────────────────────────────
+
+/// Righteous Fury destroys only tapped creatures and gains 2 life apiece.
+#[test]
+fn righteous_fury_punishes_the_tapped() {
+    let mut g = pod(2);
+    let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let untapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for id in [tapped, mine] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    let rf = g.add_card_to_hand(0, catalog::righteous_fury());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: rf, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("fury");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tapped).is_none() && g.battlefield_find(mine).is_none());
+    assert!(g.battlefield_find(untapped).is_some());
+    assert_eq!(g.players[0].life, 24);
 }

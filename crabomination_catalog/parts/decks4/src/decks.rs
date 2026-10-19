@@ -1284,3 +1284,15 @@ pub use cmdr_01gw_b::*;
 #[path = "../../../src/sets/decks/cmdr_01gw_c.rs"]
 mod cmdr_01gw_c;
 pub use cmdr_01gw_c::*;
+#[path = "../../../src/sets/decks/cmdr_01gw_d.rs"]
+mod cmdr_01gw_d;
+pub use cmdr_01gw_d::*;
+#[path = "../../../src/sets/decks/cmdr_01gw_e.rs"]
+mod cmdr_01gw_e;
+pub use cmdr_01gw_e::*;
+#[path = "../../../src/sets/decks/cmdr_01gw_f.rs"]
+mod cmdr_01gw_f;
+pub use cmdr_01gw_f::*;
+#[path = "../../../src/sets/decks/cmdr_01gw_g.rs"]
+mod cmdr_01gw_g;
+pub use cmdr_01gw_g::*;
