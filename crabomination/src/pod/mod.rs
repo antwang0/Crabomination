@@ -26592,6 +26592,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEYO_2_COMMANDERS,
             main: decks::TEYO_2_MAIN,
         },
+        // Seat 4357: Tam, the Possibility's EDHREC average deck. `--pod-decks 4357`.
+        PodDeck {
+            name: "Tam, the Possibility (WUBRG)",
+            commanders: decks::TAM_2_COMMANDERS,
+            main: decks::TAM_2_MAIN,
+        },
+        // Seat 4358: Baxter Stockman's EDHREC average deck. `--pod-decks 4358`.
+        PodDeck {
+            name: "Baxter Stockman (UR)",
+            commanders: decks::BAXTER_STOCKMAN_COMMANDERS,
+            main: decks::BAXTER_STOCKMAN_MAIN,
+        },
+        // Seat 4359: Captain America, Steve Rogers's EDHREC average deck. `--pod-decks 4359`.
+        PodDeck {
+            name: "Captain America, Steve Rogers (W)",
+            commanders: decks::CAPTAIN_AMERICA_8_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_8_MAIN,
+        },
+        // Seat 4360: Arnim Zola, Bio-Fanatic's EDHREC average deck. `--pod-decks 4360`.
+        PodDeck {
+            name: "Arnim Zola, Bio-Fanatic (B)",
+            commanders: decks::ARNIM_ZOLA_COMMANDERS,
+            main: decks::ARNIM_ZOLA_MAIN,
+        },
+        // Seat 4361: V'Ger, the Intruder's EDHREC average deck. `--pod-decks 4361`.
+        PodDeck {
+            name: "V'Ger, the Intruder (U)",
+            commanders: decks::VGER_COMMANDERS,
+            main: decks::VGER_MAIN,
+        },
     ]
 }
 
@@ -32849,6 +32879,11 @@ mod tests {
             ("T'Pol, Vulcan Representative", &[0x1B18]),
             ("Thelon of Havenwood", &[0x1B19]),
             ("Teyo, Diamondblade Mage", &[0x1B1A]),
+            ("Tam, the Possibility", &[0x1B1B]),
+            ("Baxter Stockman", &[0x1B1C]),
+            ("Captain America, Steve Rogers", &[0x1B1D]),
+            ("Arnim Zola, Bio-Fanatic", &[0x1B1E]),
+            ("V'Ger, the Intruder", &[0x1B1F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
