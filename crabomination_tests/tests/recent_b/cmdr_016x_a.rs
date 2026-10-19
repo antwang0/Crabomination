@@ -2139,3 +2139,106 @@ fn vegetation_abomination_gains_the_roll() {
     roll_d6(&mut g, va);
     assert_eq!(g.players[0].life, 24);
 }
+
+// ── Farideh / Monoxa (`decks::cmdr_016x_s`) ─────────────────────────────────
+
+/// CR 706.6 — Bamboozling Beeble on an opponent: they roll one extra die and
+/// the Beeble's controller ignores the best one.
+#[test]
+fn bamboozling_beeble_takes_the_best_roll_away() {
+    let mut g = pod(2);
+    let beeble = ready(&mut g, 0, catalog::bamboozling_beeble());
+    let herald = ready(&mut g, 1, catalog::herald_of_hadar());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: beeble,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("beeble");
+    drain_stack(&mut g);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    flood(&mut g, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(20), DecisionAnswer::DieRoll(5)]));
+    activate_as(&mut g, herald, 1);
+    // The 20 is ignored: the 5 drains 2 and gains nothing.
+    assert_eq!((g.players[0].life, g.players[1].life), (18, 20));
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Treasure"));
+}
+
+fn activate_as(g: &mut GameState, card_id: CardId, seat: usize) {
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+/// CR 706.2 — Xenosquirrels spends a +1/+1 counter to push a 19 to a 20.
+#[test]
+fn xenosquirrels_nudges_a_roll() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let xs = g.add_card_to_hand(0, catalog::xenosquirrels());
+    let herald = ready(&mut g, 0, catalog::herald_of_hadar());
+    flood(&mut g, 0);
+    cast(&mut g, xs, None).expect("squirrels");
+    assert_eq!(g.battlefield_find(xs).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(19)]));
+    activate_as(&mut g, herald, 0);
+    assert_eq!(g.battlefield_find(xs).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 2, "a 20: two Treasures");
+}
+
+/// Farideh: flying and menace off any roll, a card on 10+.
+#[test]
+fn farideh_draws_on_a_high_roll() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let far = ready(&mut g, 0, catalog::farideh_devils_chosen());
+    let herald = ready(&mut g, 0, catalog::herald_of_hadar());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(12)]));
+    activate_as(&mut g, herald, 0);
+    assert!(g.permanent_has_keyword(far, &Keyword::Flying) && g.permanent_has_keyword(far, &Keyword::Menace));
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Monoxa's keywords scale with the result.
+#[test]
+fn monoxa_scales_with_the_roll() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::monoxa_midway_manager());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(4)]));
+    activate_as(&mut g, m, 0);
+    assert!(g.permanent_has_keyword(m, &Keyword::FirstStrike));
+    assert!(g.permanent_has_keyword(m, &Keyword::Menace));
+    assert!(!g.permanent_has_keyword(m, &Keyword::Lifelink), "4 < 5");
+}
+
+/// CR 701.52a — Line Cutter's roll to visit is a die roll even with no
+/// Attractions out (Goblinson counts it).
+#[test]
+fn line_cutter_rolls_to_visit() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let gob = ready(&mut g, 0, catalog::the_space_family_goblinson());
+    let lc = g.add_card_to_hand(0, catalog::line_cutter());
+    flood(&mut g, 0);
+    cast(&mut g, lc, None).expect("line cutter");
+    assert_eq!(g.battlefield_find(gob).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
