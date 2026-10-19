@@ -14800,6 +14800,7 @@ pub fn static_effect_changes_land_types(effect: &StaticEffect) -> bool {
         | SE::GrantAllBasicLandTypes { .. }
         | SE::LandTypeChanger { .. }
         | SE::LandTypeChangerWhileCounters { .. }
+        | SE::LandTypeChangerChosen { .. }
         | SE::LandsYouControlAreChosenType
         | SE::SelfIsChosenLandType => true,
         SE::WhileClassLevelAtLeast { inner, .. }
@@ -14864,7 +14865,9 @@ pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
         | SE::NamedLandsNeutralized
         | SE::BlightedLandsNeutralized => true,
         // Blood Moon replaces; Urborg only adds.
-        SE::LandTypeChanger { replace, .. } | SE::LandTypeChangerWhileCounters { replace, .. } => {
+        SE::LandTypeChanger { replace, .. }
+        | SE::LandTypeChangerWhileCounters { replace, .. }
+        | SE::LandTypeChangerChosen { replace, .. } => {
             *replace
         }
         // Gate wrappers — `static_effect_to_effects` recurses through these

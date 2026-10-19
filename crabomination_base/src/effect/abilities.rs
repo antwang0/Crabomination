@@ -2431,6 +2431,11 @@ pub enum StaticEffect {
         land_type: crate::card::LandType,
         replace: bool,
     },
+    /// CR 305.7 — `LandTypeChanger` whose type is the source's
+    /// `chosen_land_type` (Phantasmal Terrain: "As this Aura enters, choose a
+    /// basic land type. Enchanted land is the chosen type."). No-op until
+    /// the as-enters choice stamps it.
+    LandTypeChangerChosen { applies_to: Selector, replace: bool },
     /// CR 305.7 — "Lands you control are the [chosen] type in addition to
     /// their other types." Reads the source permanent's `chosen_land_type`
     /// (stamped by `Effect::ChooseBasicLandTypeForSource` as it entered) and

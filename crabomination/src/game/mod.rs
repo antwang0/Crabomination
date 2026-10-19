@@ -34755,6 +34755,12 @@ fn static_effect_to_effects(
                     });
                 }
             }
+            StaticEffect::LandTypeChangerChosen { applies_to, replace } => {
+                if let Some(land_type) = card.chosen_land_type {
+                    let fixed = StaticEffect::LandTypeChanger { applies_to: applies_to.clone(), land_type, replace: *replace };
+                    static_effect_to_effects(&fixed, card, timestamp, your_turn, out);
+                }
+            }
             StaticEffect::LandsYouControlAreChosenType => {
                 // Realmwright — lands the source's controller controls are the
                 // chosen basic type in addition (layer-4 additive). No-op until
