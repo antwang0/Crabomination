@@ -896,6 +896,10 @@ pub enum SpendRestriction {
     /// types in any zone. `SpellKind::creature_types` is filled only for a
     /// creature or Kindred object, which is exactly what can carry one.
     OutlawSpellsOrAbilities,
+    /// "Spend this mana only to cast a Cleric, Rogue, Warrior, or Wizard spell
+    /// or to activate an ability of a Cleric, Rogue, Warrior, or Wizard" (Base
+    /// Camp) — the party types (CR 700.8), read as `OutlawSpellsOrAbilities`.
+    PartySpellsOrAbilities,
     /// "Spend this mana only to cast an Assassin spell or a spell that has
     /// freerunning, or to activate an ability of an Assassin source"
     /// (Brotherhood Headquarters).
@@ -972,6 +976,9 @@ impl SpendRestriction {
                 "only creatures of the chosen type or legendary creatures"
             }
             SpendRestriction::OutlawSpellsOrAbilities => "only outlaws and their abilities",
+            SpendRestriction::PartySpellsOrAbilities => {
+                "only Clerics, Rogues, Warriors, Wizards and their abilities"
+            }
             SpendRestriction::AssassinOrFreerunning => "only Assassins, freerunning spells and Assassin abilities",
             SpendRestriction::SpellsYouDontOwn => "only spells you don't own",
             SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
@@ -1096,6 +1103,13 @@ impl SpendRestriction {
                 kind.changeling
                     || kind.creature_types.contains(&crate::card::CreatureType::Assassin)
                     || (kind.freerunning && !kind.activating_ability)
+            }
+            SpendRestriction::PartySpellsOrAbilities => {
+                use crate::card::CreatureType::*;
+                kind.changeling
+                    || [Cleric, Rogue, Warrior, Wizard]
+                        .iter()
+                        .any(|t| kind.creature_types.contains(t))
             }
             SpendRestriction::OutlawSpellsOrAbilities => {
                 use crate::card::CreatureType::*;

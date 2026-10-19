@@ -668,7 +668,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
                 | RedInstantSorceryCopy | InstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard | SpellFromExile
-                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
+                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | PartySpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | KnightOrEquipmentSpells | DwarfEquipmentOrSagaSpells | CreatureSpellWithNoAbilities | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
                 | SpellsOnly | TypeSpellOrItsAbility(_) | KickedSpellsOnly | PowerUpOnly | NotSpellsFromHand => {}
@@ -690,6 +690,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryCopy,
             DragonCreatureScryTwo,
             OutlawSpellsOrAbilities,
+            PartySpellsOrAbilities,
             AssassinOrFreerunning,
             SpellsYouDontOwn,
             SpellsOnly,
