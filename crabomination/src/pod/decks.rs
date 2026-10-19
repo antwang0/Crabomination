@@ -120982,3 +120982,60 @@ pub const ULTIMO_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const ELESH_NORN_3_COMMANDERS: &[CardFactory] = &[elesh_norn];
+
+/// **Elesh Norn**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Elesh Norn (EDHREC, fetched 2026-10-19).
+pub const ELESH_NORN_3_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, argent_dais, idol_of_oblivion, infested_fleshcutter,
+    mind_stone, norns_annex, norns_wellspring, oketras_monument, pearl_medallion, skullclamp,
+    sol_ring, staff_of_compleation, throne_of_geth, emeria_the_sky_ruin, karns_bastion,
+    minas_tirith, mirrex, myriad_landscape, the_fair_basilica, the_seedcore, war_room,
+    annex_sentry, attentive_skywarden, basilica_shepherd, blade_splicer, crawling_chorus,
+    darksteel_splicer, defiler_of_faith, elesh_norn_grand_cenobite,
+    elesh_norn_mother_of_machines, esper_sentinel, essence_of_orthodoxy, filigree_vector,
+    master_splicer, metastatic_evangel, mite_overseer, mondrak_glory_dominus, norns_choirmaster,
+    norns_inquisitor, phyrexian_censor, phyrexian_vindicator, progenitor_exarch,
+    skrelv_defector_mite, solemn_simulacrum, soul_of_new_phyrexia, suture_priest,
+    tiller_of_flesh, vulpine_harvester, zenith_chronicler, anointed_procession, ghostly_prison,
+    intangible_virtue, land_tax, norns_decree, phyrexian_awakening, skrelvs_hive, akromas_will,
+    charge_of_the_mites, excise_the_imperfect, flawless_maneuver, generous_gift, path_to_exile,
+    stroke_of_midnight, swords_to_plowshares, unbreakable_formation, elspeth_storm_slayer,
+    cut_a_deal, phyrexian_rebirth, sunder_the_gateway, sunfall, white_suns_twilight,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const SHE_HULK_4_COMMANDERS: &[CardFactory] = &[she_hulk_attorney_at_law];
+
+/// **She-Hulk, Attorney-at-Law**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 14 Forests + 12 Plains = 99.
+/// She-Hulk, Attorney-at-Law (EDHREC, fetched 2026-10-19).
+pub const SHE_HULK_4_MAIN: &[CardFactory] = &[
+    arcane_signet, costume_closet, panther_habit, sol_ring, swiftfoot_boots, the_earth_crystal,
+    the_ozolith, canopy_vista, command_tower, evolving_wilds, fortified_village, karns_bastion,
+    overgrown_farmland, razorverge_thicket, scattered_groves, sungrass_prairie, sunpetal_grove,
+    agent_phil_coulson, anti_venom_horrifying_healer, blossom_blessed_angel,
+    captain_america_super_soldier, doc_samson_super_psychiatrist, doctor_spectrum,
+    edgar_moonlit_sovereign, emergency_phytomedic, flickering_hound, guiding_hydra,
+    hercules_olympian_hero, hulk_brutal_brawler, hulk_strongest_there_is, jennifer_walters,
+    koth_of_the_homestead, loyal_guardian, managorger_hydra, matt_murdock_justice_seeker,
+    medusa_inhuman_queen, okoye_mighty_and_adored, shang_chi_martial_mentor,
+    she_hulk_jade_defender, simulacrum_shaper, spectacular_spider_man, storm_windrider,
+    teyo_lightshield_expert, the_thing_ben_grimm, vinelasher_adept, yoshimaru_beloved_companion,
+    yoshimaru_scrappy_stray, avengers_assemble, branching_evolution,
+    case_of_the_locked_hothouse, folk_hero, garruks_uprising, hardened_scales,
+    political_triumph, ride_the_shoopuf, training_regimen, beast_within, generous_gift,
+    inspiring_call, path_to_exile, punishing_punch, return_of_the_wildspeaker,
+    swords_to_plowshares, take_up_the_shield, ajani_the_greathearted, austere_command,
+    call_damage_control, cultivate, go_nuts, moment_of_glory, predictive_preparations,
+    rampant_growth, surgical_precision,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

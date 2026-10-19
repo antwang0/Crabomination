@@ -26328,6 +26328,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ULTIMO_COMMANDERS,
             main: decks::ULTIMO_MAIN,
         },
+        // Seat 4313: Elesh Norn's EDHREC average deck. `--pod-decks 4313`.
+        PodDeck {
+            name: "Elesh Norn (W)",
+            commanders: decks::ELESH_NORN_3_COMMANDERS,
+            main: decks::ELESH_NORN_3_MAIN,
+        },
+        // Seat 4314: She-Hulk, Attorney-at-Law's EDHREC average deck. `--pod-decks 4314`.
+        PodDeck {
+            name: "She-Hulk, Attorney-at-Law (WG)",
+            commanders: decks::SHE_HULK_4_COMMANDERS,
+            main: decks::SHE_HULK_4_MAIN,
+        },
     ]
 }
 
@@ -32541,6 +32553,8 @@ mod tests {
             ("Kang, Temporal Tyrant", &[0x1AEC]),
             ("Old Hob, Alleycat Blues", &[0x1AED]),
             ("Ultimo, Civilization's End", &[0x1AEE]),
+            ("Elesh Norn", &[0x1AEF]),
+            ("She-Hulk, Attorney-at-Law", &[0x1AF0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
