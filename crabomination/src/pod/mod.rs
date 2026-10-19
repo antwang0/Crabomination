@@ -26622,6 +26622,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VGER_COMMANDERS,
             main: decks::VGER_MAIN,
         },
+        // Seat 4362: Rex, Cyber-Hound's EDHREC average deck. `--pod-decks 4362`.
+        PodDeck {
+            name: "Rex, Cyber-Hound (WU)",
+            commanders: decks::REX_COMMANDERS,
+            main: decks::REX_MAIN,
+        },
+        // Seat 4363: Ezekiel Sims, Spider-Totem's EDHREC average deck. `--pod-decks 4363`.
+        PodDeck {
+            name: "Ezekiel Sims, Spider-Totem (G)",
+            commanders: decks::EZEKIEL_SIMS_COMMANDERS,
+            main: decks::EZEKIEL_SIMS_MAIN,
+        },
+        // Seat 4364: Storm, Shaker of Skies's EDHREC average deck. `--pod-decks 4364`.
+        PodDeck {
+            name: "Storm, Shaker of Skies (G)",
+            commanders: decks::STORM_3_COMMANDERS,
+            main: decks::STORM_3_MAIN,
+        },
     ]
 }
 
@@ -32884,6 +32902,9 @@ mod tests {
             ("Captain America, Steve Rogers", &[0x1B1D]),
             ("Arnim Zola, Bio-Fanatic", &[0x1B1E]),
             ("V'Ger, the Intruder", &[0x1B1F]),
+            ("Rex, Cyber-Hound", &[0x1B20]),
+            ("Ezekiel Sims, Spider-Totem", &[0x1B21]),
+            ("Storm, Shaker of Skies", &[0x1B22]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -122367,3 +122367,83 @@ pub const VGER_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island,
 ];
+
+pub const REX_COMMANDERS: &[CardFactory] = &[rex_cyber_hound];
+
+/// **Rex, Cyber-Hound**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Plains = 99.
+/// Rex, Cyber-Hound (EDHREC, fetched 2026-10-19).
+pub const REX_MAIN: &[CardFactory] = &[
+    aetherflux_conduit, aetherworks_marvel, arcane_signet, automated_assembly_line,
+    azorius_signet, bespoke_battlewagon, conversion_apparatus, decoction_module,
+    fabrication_module, gontis_aether_heart, sol_ring, solar_transformer, swiftfoot_boots,
+    talisman_of_progress, adarkar_wastes, aether_hub, azorius_chancery, command_tower,
+    deserted_beach, exotic_orchard, glacial_fortress, helios_one, hallowed_fountain,
+    meticulous_archive, port_town, prairie_stream, rogues_passage, sea_of_clouds,
+    skycloud_expanse, temple_of_enlightenment, aether_theorist, aethergeode_miner, aetherling,
+    aethersquall_ancient, aetherstorm_roc, aethertide_whale, arcanis_the_omnipotent,
+    brotherhood_scribe, cephalid_inkshrouder, electrostatic_pummeler, emry_lurker_of_the_loch,
+    farmstead_gleaner, guide_of_souls, horseshoe_crab, jaces_archivist, marvin_murderous_mimic,
+    minister_of_inquiries, morphling, omen_hawker, palladium_myr, pili_pala, puresight_merrow,
+    riddle_gate_gargoyle, roil_cartographer, sphinx_of_the_revelation, tempest_harvester,
+    vedalken_engineer, volatile_stormdrake, walking_ballista, consulate_surveillance,
+    era_of_innovation, static_prison, training_grounds, aether_spike, counterspell, dovins_veto,
+    faithful_mending, frantic_search, generous_gift, glimmer_of_genius, path_to_exile,
+    swords_to_plowshares, thirst_for_knowledge, tune_the_narrative, jolted_awake,
+    localized_destruction, supreme_verdict, windfall, wrath_of_the_skies,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const EZEKIEL_SIMS_COMMANDERS: &[CardFactory] = &[ezekiel_sims_spider_totem];
+
+/// **Ezekiel Sims, Spider-Totem**'s EDHREC average deck, card for card:
+/// 63 nonbasic cards + 36 Forests = 99.
+/// Ezekiel Sims, Spider-Totem (EDHREC, fetched 2026-10-19).
+pub const EZEKIEL_SIMS_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_totem, heraldic_banner, lifecrafters_bestiary, orazca_relic, sol_ring,
+    arch_of_orazca, castle_garenbrig, high_market, swarmyard, war_room, acid_web_spider,
+    adaptive_automaton, aquastrand_spider, arasta_of_the_endless_web, brood_weaver,
+    cactarantula, caldaia_strongarm, canopy_spider, courier_of_comestibles, damage_control_crew,
+    deadly_recluse, giant_adephage, giant_spider, gloomwidow, gnottvold_recluse,
+    guy_in_the_chair, hoarding_recluse, juvenile_gloomwidow, kessig_recluse, mirkwood_spider,
+    netcaster_spider, penumbra_spider, skysnare_spider, snarespinner, spider_bot,
+    spider_man_brooklyn_visionary, spider_rex_daring_dino, spinner_of_souls, sporecap_spider,
+    stingerfling_spider, trusted_forcemage, twin_silk_spider, twitching_doll,
+    watcher_in_the_web, arachnus_web, tangled_skyline, web_of_life_and_destiny, wild_growth,
+    arbor_armament, gloomwidows_feast, grow_extra_arms, harrow, return_of_the_wildspeaker,
+    snakeskin_veil, terrific_team_up, trash_the_town, blizzard_brawl, cultivate, explore,
+    kodamas_reach, reclaiming_vines, scout_the_city,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];
+
+pub const STORM_3_COMMANDERS: &[CardFactory] = &[storm_shaker_of_skies];
+
+/// **Storm, Shaker of Skies**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Forests = 99.
+/// Storm, Shaker of Skies (EDHREC, fetched 2026-10-19).
+pub const STORM_3_MAIN: &[CardFactory] = &[
+    colossal_dreadmask, flayer_husk, hand_of_vecna, mesmeric_orb, phyrexian_grimoire,
+    surge_node, arcane_lighthouse, blighted_woodland, cradle_of_the_accursed,
+    gallifrey_council_chamber, grasping_dunes, terminal_moraine, thran_quarry,
+    tomb_of_the_spirit_dragon, argentum_masticore, battle_mammoth, beanstalk_wurm, bulette,
+    campus_guide, carnassid, copper_longlegs, disciple_of_freyalise, district_guide,
+    dragon_scarred_bear, fangorn_tree_shepherd, flayer_of_loyalties, garruks_packleader,
+    great_oak_guardian, hornet_queen, ironhoof_ox, keen_eyed_curator, malamet_brawler,
+    nessian_boar, nullmage_shepherd, outland_colossus, sagu_wildling, skalla_wolf, thragtusk,
+    ticket_tortoise, voice_of_many, workshop_warchief, yavimaya_scion, yisan_the_wanderer_bard,
+    zodiac_ox, ana_sanctuary, crop_sigil, feed_the_pack, glorious_sunrise, spelunking,
+    utopia_sprawl, entish_restoration, ferocious_charge, insatiable_appetite, noxious_revival,
+    karn_living_legacy, adventure_awaits, beneath_the_sands, blessing_of_frost, clear_the_land,
+    field_trip, full_steam_ahead, grim_flowering, growth_spasm, kodamas_reach,
+    return_from_the_wilds, they_went_this_way, viviens_invocation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
