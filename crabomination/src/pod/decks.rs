@@ -120670,3 +120670,57 @@ pub const SHE_HULK_3_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest,
 ];
+
+pub const NAMOR_2_COMMANDERS: &[CardFactory] = &[namor_atlantean_king];
+
+/// **Namor, Atlantean King**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 13 Islands + 8 Plains = 99.
+/// Namor, Atlantean King (EDHREC, fetched 2026-10-19).
+pub const NAMOR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, lightning_greaves, patchwork_banner,
+    sapphire_medallion, skullclamp, sol_ring, talisman_of_progress, thought_vessel,
+    adarkar_wastes, command_tower, deserted_beach, flooded_strand, floodfarm_verge,
+    glacial_fortress, gleaming_bastion, hallowed_fountain, path_of_ancestry, port_town,
+    prairie_stream, reliquary_tower, sea_of_clouds, wanderwine_hub, adept_watershaper,
+    attuma_atlantean_warlord, daughter_of_the_deep, deepchannel_duelist, deepway_navigator,
+    emperor_mihail_ii, harmonized_trio, kopala_warden_of_waves, lord_of_atlantis,
+    lullmage_mentor, master_of_the_pearl_trident, merfolk_sovereign, merrow_reejerey,
+    mist_dancer, namor_the_sub_mariner, namor_scourge_of_the_seas, seafloor_oracle,
+    stonybrook_banneret, summon_leviathan, svyelun_of_sea_and_sky, sygg_river_guide,
+    vodalian_hexcatcher, vodalian_wave_knight, anointed_procession, deeproot_pilgrimage,
+    deeproot_waters, kindred_discovery, merrow_commerce, propaganda, renewed_solidarity,
+    rhystic_study, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm, consider,
+    counterspell, cyclonic_rift, dovins_veto, flawless_maneuver, frantic_search,
+    harmonized_crescendo, negate, opt, path_to_exile, pongify, swords_to_plowshares,
+    aquitects_will, distant_melody, ponder, preordain, raise_the_palisade, summon_the_school,
+    syggs_command,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const INGA_RUNE_EYES_COMMANDERS: &[CardFactory] = &[inga_rune_eyes];
+
+/// **Inga Rune-Eyes**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Inga Rune-Eyes (EDHREC, fetched 2026-10-19).
+pub const INGA_RUNE_EYES_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, ashnods_altar, cauldron_of_souls, midnight_clock,
+    mind_stone, nim_deathmantle, phyrexian_altar, sapphire_medallion, skullclamp, sol_ring,
+    spawning_pit, thought_vessel, wayfarers_bauble, buried_ruin, castle_vantress, high_market,
+    myriad_landscape, mystic_sanctuary, otawara_soaring_city, reliquary_tower, war_room,
+    alchemists_apprentice, aura_thief, burnished_hart, chasm_skulker, drowned_rusalka,
+    emrakuls_messenger, floating_dream_zubera, floodgate, jeskai_sage, keiga_the_tide_star,
+    malcators_watcher, minn_wily_illusionist, mulldrifter, murder_of_crows, nadir_kraken,
+    oculus, oracle_of_tragedy, overcharged_amalgam, palace_familiar, psychosis_crawler,
+    purple_crystal_crab, reef_worm, sidisis_faithful, silver_myr, solemn_simulacrum,
+    specimen_collector, stitchers_apprentice, surveilling_sprite, trophy_mage,
+    watcher_for_tomorrow, false_demise, fools_demise, homarid_spawning_bed, ominous_seas,
+    teferis_ageless_insight, abjure, an_offer_you_cant_refuse, arcane_denial, counterspell,
+    high_tide, negate, pongify, rapid_hybridization, reality_shift, resculpt, fabricate,
+    fade_away, ravenform, rite_of_replication,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];

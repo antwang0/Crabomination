@@ -26262,6 +26262,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHE_HULK_3_COMMANDERS,
             main: decks::SHE_HULK_3_MAIN,
         },
+        // Seat 4302: Namor, Atlantean King's EDHREC average deck. `--pod-decks 4302`.
+        PodDeck {
+            name: "Namor, Atlantean King (WU)",
+            commanders: decks::NAMOR_2_COMMANDERS,
+            main: decks::NAMOR_2_MAIN,
+        },
+        // Seat 4303: Inga Rune-Eyes's EDHREC average deck. `--pod-decks 4303`.
+        PodDeck {
+            name: "Inga Rune-Eyes (U)",
+            commanders: decks::INGA_RUNE_EYES_COMMANDERS,
+            main: decks::INGA_RUNE_EYES_MAIN,
+        },
     ]
 }
 
@@ -32464,6 +32476,8 @@ mod tests {
             ("Fangorn, Tree Shepherd", &[0x1AE1]),
             ("Agent Maria Hill", &[0x1AE2]),
             ("She-Hulk, Jade Defender", &[0x1AE3]),
+            ("Namor, Atlantean King", &[0x1AE4]),
+            ("Inga Rune-Eyes", &[0x1AE5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
