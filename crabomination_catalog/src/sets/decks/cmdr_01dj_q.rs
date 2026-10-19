@@ -1,6 +1,6 @@
 //! Commander: 2026-10-19 (`01DJHkWk`) — Sharae of Numbing Depths' Lorwyn
 //! Merfolk: Champions of the Shoal, Eclipsed Merrow, Meanders Guide,
-//! Wanderbrine Trapper.
+//! Wanderbrine Trapper; Turtles in Time (Donatello, Turtle Techie).
 //! Tests in `tests/recent_b/cmdr_01dj_b.rs`.
 
 use crate::card::{
@@ -164,5 +164,26 @@ pub fn wanderbrine_trapper() -> CardDefinition {
             2,
             1,
         )
+    }
+}
+
+/// Turtles in Time — {5}{U}{U} sorcery. Return all creatures to their owners'
+/// hands. Each player may shuffle their hand and graveyard into their
+/// library, then each player who does draws seven cards. Exile Turtles in
+/// Time.
+pub fn turtles_in_time() -> CardDefinition {
+    CardDefinition {
+        name: "Turtles in Time",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::EachPermanent(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw { draw: 7 },
+        ]),
+        exile_on_resolve: true,
+        ..Default::default()
     }
 }

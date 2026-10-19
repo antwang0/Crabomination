@@ -333,3 +333,25 @@ fn wanderbrine_trapper_taps_an_opposing_creature() {
     assert!(g.battlefield_find(theirs).unwrap().tapped);
     assert!(g.battlefield_find(helper).unwrap().tapped && g.battlefield_find(trap).unwrap().tapped);
 }
+
+/// Turtles in Time bounces every creature, the takers shuffle hand and
+/// graveyard away and draw seven, and the spell exiles itself.
+#[test]
+fn turtles_in_time_resets_the_takers() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(2, catalog::lightning_bolt());
+    let tit = g.add_card_to_hand(0, catalog::turtles_in_time());
+    // APNAP from the caster: seat 0 and 2 take it, seat 1 keeps the Bears.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),
+    ]));
+    cast_targets(&mut g, tit, &[]);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced, and seat 1 declined");
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[2].hand.len(), 7);
+    assert!(g.players[2].graveyard.is_empty());
+    assert!(g.exile.iter().any(|c| c.id == tit));
+}

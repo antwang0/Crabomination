@@ -17862,6 +17862,7 @@ static DECKS: &[Factory] = &[
     super::decks::eclipsed_merrow,
     super::decks::meanders_guide,
     super::decks::wanderbrine_trapper,
+    super::decks::turtles_in_time,
     super::decks::cruel_alliance,
     super::decks::glyph_keeper,
     super::decks::vizier_of_the_anointed,
