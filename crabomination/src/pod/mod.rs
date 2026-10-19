@@ -26424,6 +26424,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DONATELLO_6_COMMANDERS,
             main: decks::DONATELLO_6_MAIN,
         },
+        // Seat 4329: Black Widow, Double Agent's EDHREC average deck. `--pod-decks 4329`.
+        PodDeck {
+            name: "Black Widow, Double Agent (WB)",
+            commanders: decks::BLACK_WIDOW_6_COMMANDERS,
+            main: decks::BLACK_WIDOW_6_MAIN,
+        },
+        // Seat 4330: Nick Fury, Spymaster's EDHREC average deck. `--pod-decks 4330`.
+        PodDeck {
+            name: "Nick Fury, Spymaster (W)",
+            commanders: decks::NICK_FURY_2_COMMANDERS,
+            main: decks::NICK_FURY_2_MAIN,
+        },
+        // Seat 4331: Zarda, the Power Princess's EDHREC average deck. `--pod-decks 4331`.
+        PodDeck {
+            name: "Zarda, the Power Princess (W)",
+            commanders: decks::ZARDA_COMMANDERS,
+            main: decks::ZARDA_MAIN,
+        },
+        // Seat 4332: Luke Cage, Power Man's EDHREC average deck. `--pod-decks 4332`.
+        PodDeck {
+            name: "Luke Cage, Power Man (W)",
+            commanders: decks::LUKE_CAGE_2_COMMANDERS,
+            main: decks::LUKE_CAGE_2_MAIN,
+        },
+        // Seat 4333: Agent 13, Sharon Carter's EDHREC average deck. `--pod-decks 4333`.
+        PodDeck {
+            name: "Agent 13, Sharon Carter (W)",
+            commanders: decks::AGENT_13_COMMANDERS,
+            main: decks::AGENT_13_MAIN,
+        },
+        // Seat 4334: Black Panther, Claws of Bast's EDHREC average deck. `--pod-decks 4334`.
+        PodDeck {
+            name: "Black Panther, Claws of Bast (W)",
+            commanders: decks::BLACK_PANTHER_4_COMMANDERS,
+            main: decks::BLACK_PANTHER_4_MAIN,
+        },
+        // Seat 4335: Peggy Carter, Secret Agent's EDHREC average deck. `--pod-decks 4335`.
+        PodDeck {
+            name: "Peggy Carter, Secret Agent (W)",
+            commanders: decks::PEGGY_CARTER_COMMANDERS,
+            main: decks::PEGGY_CARTER_MAIN,
+        },
     ]
 }
 
@@ -32653,6 +32695,13 @@ mod tests {
             ("Fíli and Kíli, Joyous", &[0x1AFC]),
             ("Black Panther, Vanguard", &[0x1AFD]),
             ("Donatello, Rad Scientist", &[0x1AFE]),
+            ("Black Widow, Double Agent", &[0x1AFF]),
+            ("Nick Fury, Spymaster", &[0x1B00]),
+            ("Zarda, the Power Princess", &[0x1B01]),
+            ("Luke Cage, Power Man", &[0x1B02]),
+            ("Agent 13, Sharon Carter", &[0x1B03]),
+            ("Black Panther, Claws of Bast", &[0x1B04]),
+            ("Peggy Carter, Secret Agent", &[0x1B05]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

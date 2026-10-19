@@ -121434,3 +121434,206 @@ pub const DONATELLO_6_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const BLACK_WIDOW_6_COMMANDERS: &[CardFactory] = &[black_widow_double_agent];
+
+/// **Black Widow, Double Agent**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Plains + 10 Swamps = 99.
+/// Black Widow, Double Agent (EDHREC, fetched 2026-10-19).
+pub const BLACK_WIDOW_6_MAIN: &[CardFactory] = &[
+    arcane_signet, captain_americas_shield, fellwar_stone, lightning_greaves, orzhov_signet,
+    shield_spy_kit, shadowspear, sigil_of_valor, sol_ring, stolen_stark_tech, swiftfoot_boots,
+    sword_of_the_animist, talisman_of_hierarchy, voltaic_whip, bojuka_bog, cathedral_of_war,
+    caves_of_koilos, command_tower, fetid_heath, godless_shrine, isolated_chapel,
+    path_of_ancestry, rogues_passage, shattered_sanctum, shineshadow_snarl, tainted_field,
+    vault_of_champions, vault_of_the_archangel, agent_13_sharon_carter, agent_phil_coulson,
+    agents_of_shield, bastion_protector, battlegrace_angel, black_panther_claws_of_bast,
+    black_widow_deadly_hunter, black_widow_intel_expert, black_widow_super_spy,
+    captain_america_super_soldier, cloak_and_dagger_entwined, generals_enforcer,
+    knight_of_infamy, luke_cage_power_man, merchant_of_truth, nick_fury_spymaster,
+    peggy_carter_secret_agent, silent_arbiter, spider_man_noir, squall_seed_mercenary,
+    sublime_archangel, viper_cruel_conspirator, white_widow_free_agent,
+    white_widow_yelena_belova, winter_soldier_icy_assassin, zarda_the_power_princess,
+    angelic_benediction, angelic_exaltation, duelists_heritage, hydra_infiltration, idolized,
+    origin_of_black_widow, strategic_intervention, super_soldier_serum, team_avatar,
+    anguished_unmaking, decoy_ploy, fracture, mortify, path_to_exile, swords_to_plowshares,
+    take_up_the_shield, visions_of_villainy, widows_bite, cruel_alliance, damn, nights_whisper,
+    sign_in_blood, vindicate,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const NICK_FURY_2_COMMANDERS: &[CardFactory] = &[nick_fury_spymaster];
+
+/// **Nick Fury, Spymaster**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Nick Fury, Spymaster (EDHREC, fetched 2026-10-19).
+pub const NICK_FURY_2_MAIN: &[CardFactory] = &[
+    arcane_signet, avengers_quinjet, captain_americas_shield, lightning_greaves, mind_stone,
+    pearl_medallion, s_h_i_e_l_d_helicarrier, shield_spy_kit, sigil_of_valor, sol_ring,
+    swiftfoot_boots, thought_vessel, abandoned_air_temple, cathedral_of_war,
+    emeria_the_sky_ruin, myriad_landscape, nykthos_shrine_to_nyx, rogues_passage,
+    agent_13_sharon_carter, agent_phil_coulson, agents_of_shield, akrasan_squire, aven_squire,
+    bastion_protector, battlegrace_angel, black_panther_claws_of_bast, black_widow_intel_expert,
+    bucky_barnes_eager_ally, captain_america_super_soldier, esper_sentinel,
+    everett_k_ross_hapless_attache, falcon_and_redwing, giver_of_runes, hero_in_training,
+    knight_of_glory, loran_of_the_third_path, luke_cage_power_man, matt_murdock_justice_seeker,
+    mentor_of_the_meek, mother_of_runes, night_nurse_healer_of_heroes, patriot_shield_wielder,
+    peggy_carter_secret_agent, quake_agent_of_shield, sigiled_paladin, sublime_archangel,
+    sun_titan, welcoming_vampire, winter_soldier_reborn_avenger, yuriko_blade_of_the_mighty,
+    zarda_the_power_princess, angelic_benediction, angelic_exaltation, avengers_assemble,
+    idolized, monologue_tax, strategic_intervention, super_villain_lockup, team_avatar,
+    flawless_maneuver, generous_gift, helicarrier_strike, heroic_teamwork, make_a_stand,
+    path_to_exile, stroke_of_midnight, swords_to_plowshares, austere_command, murdocks_crusade,
+    vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ZARDA_COMMANDERS: &[CardFactory] = &[zarda_the_power_princess];
+
+/// **Zarda, the Power Princess**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Zarda, the Power Princess (EDHREC, fetched 2026-10-19).
+pub const ZARDA_MAIN: &[CardFactory] = &[
+    arcane_signet, avengers_quinjet, chronicle_of_victory, heralds_horn, patchwork_banner,
+    pearl_medallion, relic_of_legends, shield_spy_kit, sigil_of_valor, sol_ring,
+    swiftfoot_boots, team_transmitter, vanquishers_banner, avengers_tower, cathedral_of_war,
+    emeria_the_sky_ruin, monumental_henge, path_of_ancestry, plaza_of_heroes, rogues_passage,
+    war_room, agent_13_sharon_carter, agent_phil_coulson, agents_of_shield,
+    anti_venom_horrifying_healer, battlegrace_angel, black_panther_claws_of_bast,
+    bucky_barnes_eager_ally, captain_america_super_soldier, captain_america_unbowed,
+    doctor_spectrum, falcon_and_redwing, hercules_olympian_hero, hero_in_training,
+    hyperion_supreme_hero, invisible_woman_sue_storm, luke_cage_power_man,
+    matt_murdock_justice_seeker, nick_fury_spymaster, night_nurse_healer_of_heroes,
+    nighthawk_dark_defender, patriot_shield_wielder, peggy_carter_secret_agent,
+    sublime_archangel, the_sentry_golden_guardian, viv_vision_teen_synthezoid,
+    white_widow_free_agent, winter_soldier_reborn_avenger, yuriko_blade_of_the_mighty,
+    angelic_benediction, angelic_exaltation, avengers_assemble, blur_of_heroism,
+    champions_from_beyond, idolized, origin_of_the_avengers, strategic_intervention,
+    team_avatar, emergency_eject, generous_gift, heroic_return, hyperions_atomic_vision,
+    methods_of_the_mighty, path_to_exile, swords_to_plowshares, valorous_stance,
+    aerith_rescue_mission, borough_backup, the_crystals_chosen, vanquish_the_horde,
+    wondrous_revival,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const LUKE_CAGE_2_COMMANDERS: &[CardFactory] = &[luke_cage_power_man];
+
+/// **Luke Cage, Power Man**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Luke Cage, Power Man (EDHREC, fetched 2026-10-19).
+pub const LUKE_CAGE_2_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, blackblade_reforged, caduceus_staff_of_hermes,
+    commanders_plate, genji_glove, haunted_cloak, heros_heirloom, marble_diamond,
+    mask_of_memory, mind_stone, shield_spy_kit, shadowspear, sol_ring, swiftfoot_boots,
+    thought_vessel, thran_power_suit, vibranium_energy_daggers, wayfarers_bauble,
+    cathedral_of_war, command_beacon, emeria_the_sky_ruin, myriad_landscape,
+    nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, secluded_steppe, war_room,
+    agent_13_sharon_carter, agent_phil_coulson, agents_of_shield, bastion_protector,
+    battlegrace_angel, black_panther_claws_of_bast, crowd_of_true_believers, danitha_capashen,
+    everett_k_ross_hapless_attache, giver_of_runes, guardians_of_akrasa, knight_of_glory,
+    matt_murdock_justice_seeker, mother_of_runes, peggy_carter_secret_agent, puresteel_paladin,
+    sigiled_paladin, sram_senior_edificer, sublime_archangel, zarda_the_power_princess,
+    all_that_glitters, angelic_benediction, avengers_assemble, ethereal_armor, idolized,
+    mantle_of_the_ancients, monologue_tax, sages_reverie, sigardas_aid, spirit_mantle,
+    strategic_intervention, super_soldier_serum, with_great_power, flawless_maneuver,
+    generous_gift, path_to_exile, rebuff_the_wicked, stroke_of_midnight, swords_to_plowshares,
+    take_up_the_shield, austere_command, avenge, borough_backup, open_the_armory,
+    steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const AGENT_13_COMMANDERS: &[CardFactory] = &[agent_13_sharon_carter];
+
+/// **Agent 13, Sharon Carter**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Plains = 99.
+/// Agent 13, Sharon Carter (EDHREC, fetched 2026-10-19).
+pub const AGENT_13_MAIN: &[CardFactory] = &[
+    ancestral_katana, arcane_signet, archaeomancers_map, brotherhood_regalia,
+    inspiring_statuary, magnifying_glass, marble_diamond, mind_stone, pearl_medallion,
+    prowlers_helm, shield_spy_kit, sigil_of_valor, sol_ring, swiftfoot_boots, tamiyos_journal,
+    thought_vessel, wayfarers_bauble, access_tunnel, cathedral_of_war,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, myriad_landscape, rogues_passage,
+    academy_manufactor, agents_of_shield, akrasan_squire, aven_squire, battlegrace_angel,
+    black_panther_claws_of_bast, bygone_bishop, crowd_of_true_believers, guardians_of_akrasa,
+    ironsoul_enforcer, knight_of_glory, loran_of_the_third_path, luke_cage_power_man,
+    merchant_of_truth, mondrak_glory_dominus, nick_fury_spymaster, novice_inspector,
+    peggy_carter_secret_agent, selfless_samurai, sigiled_paladin, silent_arbiter,
+    sublime_archangel, thraben_inspector, wojek_investigator, yuriko_blade_of_the_mighty,
+    zarda_the_power_princess, all_that_glitters, angelic_benediction, angelic_exaltation,
+    armed_with_proof, idolized, search_the_premises, strategic_intervention, team_avatar,
+    thorough_investigation, dispatch, erase, generous_gift, panther_pounce, path_to_exile,
+    stroke_of_midnight, swords_to_plowshares, austere_command, open_the_armory,
+    secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const BLACK_PANTHER_4_COMMANDERS: &[CardFactory] = &[black_panther_claws_of_bast];
+
+/// **Black Panther, Claws of Bast**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Black Panther, Claws of Bast (EDHREC, fetched 2026-10-19).
+pub const BLACK_PANTHER_4_MAIN: &[CardFactory] = &[
+    arcane_signet, captain_americas_shield, chimil_the_inner_sun, fellwar_stone,
+    hammer_of_nazahn, heraldic_banner, lightning_greaves, marble_diamond, mind_stone,
+    pearl_medallion, shield_spy_kit, shadowspear, sigil_of_valor, sol_ring, swiftfoot_boots,
+    the_one_ring, the_wind_crystal, vibranium_energy_daggers, cathedral_of_war,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, idyllic_grange, monumental_henge,
+    nykthos_shrine_to_nyx, rogues_passage, abzan_falconer, agent_13_sharon_carter,
+    agents_of_shield, ajanis_pridemate, archivist_of_oghma, aven_squire, bastion_protector,
+    battlegrace_angel, crowd_of_true_believers, eiganjo_exemplar, esper_sentinel,
+    giver_of_runes, guardians_of_akrasa, imperial_subduer, ironsoul_enforcer, knight_of_glory,
+    luke_cage_power_man, nick_fury_spymaster, peggy_carter_secret_agent, puresteel_paladin,
+    selfless_samurai, sublime_archangel, wandering_archaic, angelic_benediction,
+    angelic_destiny, angelic_exaltation, authority_of_the_consuls, idolized, pacifism,
+    sigardas_aid, smothering_tithe, strategic_intervention, twinblade_blessing,
+    dual_sun_technique, generous_gift, orims_chant, path_to_exile, reprieve,
+    swords_to_plowshares, take_up_the_shield, teferis_protection, valorous_stance, basri_ket,
+    avatars_wrath, cut_a_deal, sevinnes_reclamation, starfall_invocation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const PEGGY_CARTER_COMMANDERS: &[CardFactory] = &[peggy_carter_secret_agent];
+
+/// **Peggy Carter, Secret Agent**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Peggy Carter, Secret Agent (EDHREC, fetched 2026-10-19).
+pub const PEGGY_CARTER_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, caduceus_staff_of_hermes, endless_atlas, halo_fountain,
+    pearl_medallion, rammas_echor_ancient_shield, shield_spy_kit, sigil_of_valor, sol_ring,
+    wayfarers_bauble, whispersilk_cloak, cathedral_of_war, emeria_the_sky_ruin, lotus_field,
+    myriad_landscape, rogues_passage, scavenger_grounds, seraph_sanctuary, war_room,
+    agent_13_sharon_carter, agent_bishop_man_in_black, agents_of_shield, akrasan_squire,
+    angel_of_jubilation, angelic_sleuth, archangel_of_thune, aven_squire, battle_angels_of_tyr,
+    battlegrace_angel, black_panther_claws_of_bast, crowd_of_true_believers,
+    guardians_of_akrasa, knight_of_glory, linvala_keeper_of_silence, luke_cage_power_man,
+    merchant_of_truth, nick_fury_spymaster, rashel_fist_of_torm, resplendent_angel,
+    segovian_angel, serra_paragon, sigiled_paladin, sublime_archangel,
+    yuriko_blade_of_the_mighty, zarda_the_power_princess, angelic_accord, angelic_benediction,
+    angelic_exaltation, blind_obedience, gift_of_immortality, idolized, land_tax,
+    shielded_by_faith, spirit_mantle, strategic_intervention, team_avatar,
+    unquestioned_authority, clever_concealment, destroy_evil, erode, flawless_maneuver,
+    generous_gift, heliods_intervention, path_to_exile, swords_to_plowshares,
+    take_up_the_shield, cut_a_deal, murdocks_crusade, restoration_seminar,
+    return_to_the_light_realms,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
