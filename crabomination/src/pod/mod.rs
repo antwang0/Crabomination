@@ -26802,6 +26802,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NARFI_COMMANDERS,
             main: decks::NARFI_MAIN,
         },
+        // Seat 4392: Heidar, Rimewind Master's EDHREC average deck. `--pod-decks 4392`.
+        PodDeck {
+            name: "Heidar, Rimewind Master (U)",
+            commanders: decks::HEIDAR_COMMANDERS,
+            main: decks::HEIDAR_MAIN,
+        },
     ]
 }
 
@@ -33094,6 +33100,7 @@ mod tests {
             ("Lynde, Cheerful Tormentor", &[0x1B3B]),
             ("The Unluckiest Planeswalker", &[0x1B3C]),
             ("Narfi, Betrayer King", &[0x1B3D]),
+            ("Heidar, Rimewind Master", &[0x1B3E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

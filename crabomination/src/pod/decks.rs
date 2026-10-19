@@ -123201,3 +123201,32 @@ pub const NARFI_MAIN: &[CardFactory] = &[
     army_of_the_damned, blood_on_the_snow, dead_of_winter, distant_melody, feed_the_swarm,
     reanimate, victimize, zombie_apocalypse,
 ];
+
+pub const HEIDAR_COMMANDERS: &[CardFactory] = &[heidar_rimewind_master];
+
+/// **Heidar, Rimewind Master**'s EDHREC average deck, card for card:
+/// 99 nonbasic cards = 99.
+/// Heidar, Rimewind Master (EDHREC, fetched 2026-10-19).
+pub const HEIDAR_MAIN: &[CardFactory] = &[
+    arcane_signet, arcums_astrolabe, coldsteel_heart, extraplanar_lens, icebind_pillar,
+    illusionists_bracers, replicating_ring, sapphire_medallion, sky_diamond, sol_ring,
+    swiftfoot_boots, thought_vessel, thousand_year_elixir, wayfarers_bauble, dark_depths,
+    faceless_haven, frostwalk_bastion, minamo_school_at_waters_edge, mouth_of_ronom,
+    mystic_sanctuary, reliquary_tower, scrying_sheets, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, aphetto_alchemist, arcanis_the_omnipotent, ascendant_spirit,
+    avalanche_caller, berg_strider, blizzard_strix, fatestitcher, frost_augur, frost_raptor,
+    frost_titan, gadwick_the_wizened, hapatra_the_desert_frost, iceberg_cancrix,
+    icebreaker_kraken, icefall_regent, icehide_golem, pilfering_hawk, rimefeather_owl,
+    rimewind_cryomancer, rimewind_taskmage, vizier_of_tumbling_sands, wall_of_frost,
+    bitter_chill, freed_from_the_real, frozen_aether, frozen_solid, marit_lages_slumber,
+    mystic_remora, propaganda, rhystic_study, time_of_ice, winters_rest, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, cyclonic_rift,
+    dramatic_reversal, graven_lore, high_tide, negate, snap, winters_chill, wizards_retort,
+    narset_parter_of_veils, cone_of_cold, freeze_in_place, ponder, windfall,
+];
