@@ -120724,3 +120724,30 @@ pub const INGA_RUNE_EYES_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const GOLLUM_5_COMMANDERS: &[CardFactory] = &[gollum_silent_slinker];
+
+/// **Gollum, Silent Slinker**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Swamps = 99.
+/// Gollum, Silent Slinker (EDHREC, fetched 2026-10-19).
+pub const GOLLUM_5_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, bumbleflowers_sharepot, charcoal_diamond, fellwar_stone,
+    fishing_pole, giants_skewer, mask_of_griselbrand, mind_stone, sol_ring, springleaf_drum,
+    well_of_lost_dreams, barren_moor, bojuka_bog, cabal_coffers, path_of_ancestry,
+    piranha_marsh, rogues_passage, witchs_cottage, bog_imp, braids_arisen_nightmare,
+    carrion_feeder, cat_gator, creeping_bloodsucker, death_charmer, dreaded_bat_cloud,
+    emperor_of_bones, epicure_of_blood, falkenrath_noble, fear_of_lost_teeth,
+    gollum_the_abandoned, gollum_obsessed_stalker, gollum_patient_plotter, gollum_riddle_master,
+    gollum_scheming_guide, gurmag_angler, haunt_of_the_dead_marshes, marauding_blight_priest,
+    mire_triton, morbid_opportunist, nightblade_brigade, quagmire_lamprey, ravening_warg,
+    sanguine_syphoner, shark_shredder_killer_clone, sinister_starfish, voracious_fell_beast,
+    black_market_connections, exquisite_blood, the_meathook_massacre, trespassers_curse,
+    bilbos_deadly_slice, crypt_incursion, dark_ritual, deadly_rollick, go_for_the_throat,
+    imps_mischief, moment_of_craving, not_dead_after_all, undying_malice, village_rites,
+    damnation, discerning_taste, dry_spell, feed_the_swarm, gnashing_of_teeth, nights_whisper,
+    noggin_whack, sign_in_blood, taste_of_death,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];

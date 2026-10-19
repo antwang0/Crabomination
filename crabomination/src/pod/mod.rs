@@ -26274,6 +26274,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INGA_RUNE_EYES_COMMANDERS,
             main: decks::INGA_RUNE_EYES_MAIN,
         },
+        // Seat 4304: Gollum, Silent Slinker's EDHREC average deck. `--pod-decks 4304`.
+        PodDeck {
+            name: "Gollum, Silent Slinker (B)",
+            commanders: decks::GOLLUM_5_COMMANDERS,
+            main: decks::GOLLUM_5_MAIN,
+        },
     ]
 }
 
@@ -32478,6 +32484,7 @@ mod tests {
             ("She-Hulk, Jade Defender", &[0x1AE3]),
             ("Namor, Atlantean King", &[0x1AE4]),
             ("Inga Rune-Eyes", &[0x1AE5]),
+            ("Gollum, Silent Slinker", &[0x1AE6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
