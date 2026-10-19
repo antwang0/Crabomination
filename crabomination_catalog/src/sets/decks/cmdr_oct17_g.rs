@@ -964,7 +964,7 @@ pub fn tcri_building() -> CardDefinition {
 
 /// The Strixhaven-planeswalker duals: enters tapped unless you control a
 /// planeswalker; {T}: either color.
-fn walker_dual(name: &'static str, a: Color, b2: Color) -> CardDefinition {
+pub(super) fn walker_dual(name: &'static str, a: Color, b2: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],

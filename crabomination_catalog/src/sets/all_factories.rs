@@ -17655,6 +17655,16 @@ static DECKS: &[Factory] = &[
     super::decks::definitely_not_a_turtle,
     super::decks::needle_specter,
     super::decks::shimian_specter,
+    super::decks::ghastlord_of_fugue,
+    super::decks::power_of_persuasion,
+    super::decks::stingerquill_annex,
+    super::decks::ominous_asylum,
+    super::decks::devoted_grafkeeper,
+    super::decks::overwhelmed_archivist,
+    super::decks::alluring_siren,
+    super::decks::courtly_provocateur,
+    super::decks::minotaur_roxxon_ceo,
+    super::decks::vraskas_final_mercy,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
