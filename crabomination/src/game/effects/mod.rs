@@ -89,6 +89,7 @@ mod reselect;
 mod reveal_cast;
 mod blight;
 mod player_auras;
+mod switch_blockers;
 mod hand_reveal;
 mod reveal_until;
 mod shell_game;
@@ -36420,6 +36421,10 @@ impl GameState {
                 self.reattach_player_auras_to_opponents(from, filter, *all, then.as_deref(), ctx, events)
             }
             Effect::EachOtherPlayerMayCopy { what, except } => self.each_other_player_may_copy(what, except, ctx, events),
+            Effect::SwitchBlockers { first, second } => {
+                self.switch_blockers(first, second, ctx);
+                Ok(())
+            }
 
             Effect::ReturnSelfTransformedAttachedTo { host } => {
                 let Some(src) = ctx.source else { return Ok(()) };

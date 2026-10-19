@@ -9117,6 +9117,11 @@ pub enum Effect {
     /// `what` names, choosing new targets for the copy they control (Curse of
     /// Echoes). Each seat is asked; a headless seat copies.
     EachOtherPlayerMayCopy { what: Selector, except: PlayerRef },
+    /// CR 509.1 / 506.4 — General Jarkeld: if each of the two blocked
+    /// attackers `first` and `second` could be blocked by all of the other's
+    /// blockers, every creature blocking exactly one of them switches to
+    /// blocking the other. Otherwise nothing happens.
+    SwitchBlockers { first: Selector, second: Selector },
     /// CR 701.30 — "[body], then clash with an opponent. If you win, repeat
     /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
     /// suspended clash resumes without re-running an earlier `body`.
