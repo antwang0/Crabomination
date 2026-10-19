@@ -1412,6 +1412,10 @@ pub enum StaticEffect {
         #[serde(default)]
         life: bool,
     },
+    /// CR 702.25b — "Other creatures you control with flanking have
+    /// flanking" (Cavalry Master): each source adds one more instance to each
+    /// of its controller's other flankers. Counted in the flanking pass.
+    OtherFlankersHaveFlanking,
     /// CR 509.1d — "Enchanted creature can't be blocked unless defending
     /// player pays {`amount`} for each creature they control that's blocking
     /// it" (Awesome Presence): charged per blocker assigned to the host.

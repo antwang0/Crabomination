@@ -3324,6 +3324,11 @@ pub enum SelectionRequirement {
     /// instead of a hard-coded threshold. Battlefield-only; false when the
     /// source is missing or either side isn't a creature.
     PowerLessThanSource,
+    /// Toughness less than the source's — read off the card in any zone
+    /// (printed plus counters) against the source permanent's live toughness
+    /// (Thunderkin Awakener's "Elemental creature card … with toughness less
+    /// than this creature's toughness").
+    ToughnessLessThanSource,
     /// True when the candidate creature has strictly greater power than the
     /// source permanent (both read at evaluation time). Mirror of
     /// `PowerLessThanSource`; powers Training (CR 702.149 — "if it's

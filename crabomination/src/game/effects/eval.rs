@@ -6944,6 +6944,11 @@ impl GameState {
                         let t = self.find_card_anywhere(*cid).map(|c| self.card_toughness_anywhere(c));
                         t.zip(self.trigger_subject_toughness()).is_some_and(|(t, s)| t < s)
                     }
+                    R::ToughnessLessThanSource => {
+                        let src = source.and_then(|s| self.battlefield_find(s)).map(|s| self.effective_toughness(s));
+                        let t = self.find_card_anywhere(*cid).map(|c| self.card_toughness_anywhere(c));
+                        t.zip(src).is_some_and(|(t, s)| t < s)
+                    }
                     R::ManaValueEqualsTriggerSubject => self
                         .find_card_anywhere(*cid)
                         .zip(self.trigger_subject_mana_value())
@@ -7604,7 +7609,7 @@ impl GameState {
             // No source/battlefield context in the on-card evaluator (used
             // for hidden-zone cards); the source-relative Mentor check only
             // makes sense for battlefield targets, so it's vacuously false.
-            R::PowerLessThanSource => false,
+            R::PowerLessThanSource | R::ToughnessLessThanSource => false,
             R::GreaterPowerOrToughnessThanSource => false,
             R::PowerGreaterThanSource => false,
             R::ToughnessAtMost(n) => self.computed_is_creature(card) && card.toughness() <= *n,

@@ -3628,7 +3628,10 @@ impl GameState {
             let bk = kws_for(b);
             let ak = kws_for(a);
             // Flanking: nonflanking blocker shrinks once per flanking instance.
-            let flank = ak.iter().filter(|k| **k == Keyword::Flanking).count() as i32;
+            let mut flank = ak.iter().filter(|k| **k == Keyword::Flanking).count() as i32;
+            if flank > 0 {
+                flank += self.extra_flanking_instances(a);
+            }
             if flank > 0 && !bk.has_kw(&Keyword::Flanking) {
                 pt_deltas.push((b, -flank));
             }
@@ -6652,6 +6655,19 @@ impl GameState {
             }
         }
         (mana, life)
+    }
+
+    /// CR 702.25b — flanking instances `attacker` gets beyond its own: one
+    /// per `OtherFlankersHaveFlanking` its controller controls on another
+    /// permanent (Cavalry Master).
+    fn extra_flanking_instances(&self, attacker: CardId) -> i32 {
+        let Some(ctrl) = self.battlefield_find(attacker).map(|c| c.controller) else { return 0 };
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == ctrl && c.id != attacker)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::OtherFlankersHaveFlanking))
+            .count() as i32
     }
 
     /// CR 509.1d — the mana one blocker assigned to `attacker` costs: each

@@ -35452,6 +35452,8 @@ fn static_effect_to_effects(
             // BlockTaxToController — consulted in declare_blockers; no layer.
             | StaticEffect::BlockTaxToController { .. }
             | StaticEffect::BlockTaxForEnchantedAttacker { .. }
+            // Counted in the flanking pass (`extra_flanking_instances`).
+            | StaticEffect::OtherFlankersHaveFlanking
             // Read by the planeswalker damage paths (`deification.rs`).
             | StaticEffect::DamageLeavesYourPlaneswalkersAtOneLoyalty { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
