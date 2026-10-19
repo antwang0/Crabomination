@@ -1405,7 +1405,7 @@ pub fn valiant_veteran() -> CardDefinition {
 /// artifact; Balor deals an opponent damage equal to the cards in their hand.
 pub fn balor() -> CardDefinition {
     let opponent = || target_filtered(R::Player.and(R::ControlledByOpponent));
-    let modes = || Effect::ChooseN {
+    let modes = || Effect::ChooseN { up_to: None,
         picks: vec![2, 1, 0],
         modes: vec![
             Effect::Seq(vec![

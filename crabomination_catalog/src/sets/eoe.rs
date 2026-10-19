@@ -6292,7 +6292,7 @@ pub fn mutinous_massacre() -> CardDefinition {
         name: "Mutinous Massacre",
         cost: cost(&[generic(3), b(), b(), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
+        effect: Effect::ChooseN { up_to: None,
             picks: vec![0],
             modes: vec![mode(true), mode(false)],
         },

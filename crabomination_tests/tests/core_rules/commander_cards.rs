@@ -949,7 +949,7 @@ fn cr_700_2_a_death_trigger_spreads_its_modes_over_distinct_opponents() {
     let mut body = bear_commander();
     body.name = "Test Spiteful Corpse";
     body.supertypes.clear();
-    body.triggered_abilities = vec![on_dies(Effect::ChooseN { picks: vec![0, 1, 2], modes: vec![lose(3), lose(2), lose(1)] })];
+    body.triggered_abilities = vec![on_dies(Effect::ChooseN { up_to: None, picks: vec![0, 1, 2], modes: vec![lose(3), lose(2), lose(1)] })];
     for seats in [4usize, 2] {
         let mut g = multi_player_game(seats);
         g.active_player_idx = 0;

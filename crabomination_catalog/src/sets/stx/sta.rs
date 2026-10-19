@@ -72,7 +72,7 @@ pub fn abundant_harvest() -> CardDefinition {
         name: "Abundant Harvest",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
+        effect: Effect::ChooseN { up_to: None,
             picks: vec![0],
             modes: vec![
                 dig(SelectionRequirement::Land),

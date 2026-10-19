@@ -4915,7 +4915,7 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         // An X bound from the countered spell (Counterpoint's recast cap).
         Effect::WithX { body, .. } => effect_counters_spells(body),
         // A "choose N" whose default picks counter.
-        Effect::ChooseN { picks, modes } => {
+        Effect::ChooseN { picks, modes, .. } => {
             picks.iter().any(|&i| modes.get(i as usize).is_some_and(effect_counters_spells))
         }
         // A cast-time modal with a counter mode (Mystic Confluence).

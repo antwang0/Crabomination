@@ -117,7 +117,7 @@ pub fn craftwork_crusher() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::ChooseN {
+        triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
             picks: vec![0, 2],
             modes: vec![
                 Effect::DealDamage { to: target_filtered(R::Creature.or(R::Planeswalker)), amount: Value::Const(4) },

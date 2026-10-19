@@ -82,7 +82,7 @@ pub fn invasion_of_fiora() -> CardDefinition {
         "Invasion of Fiora",
         cost(&[generic(4), b(), b()]),
         4,
-        Effect::ChooseN {
+        Effect::ChooseN { up_to: None,
             picks: vec![0, 1],
             modes: vec![
                 Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(legendary())) },

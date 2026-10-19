@@ -2386,6 +2386,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].tokens_created_this_turn as i32)
                 .unwrap_or(0),
+            Value::TreasuresCreatedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].treasures_created_this_turn as i32)
+                .unwrap_or(0),
             Value::CardsCycledThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_cycled_this_turn as i32)

@@ -1327,6 +1327,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             }
             SE::ExileDyingOpponentCreatures { .. }
             | SE::ExileDyingNontokenCreaturesWithCounter { .. }
+            | SE::ExileDyingOpponentCreaturesWithCounterCastable { .. }
             | SE::ExileDyingOpponentCreaturesGrowingThis
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }
@@ -5206,6 +5207,15 @@ impl GameState {
             // A land is never cast, so it is never played this way.
             crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell => {
                 self.players.get(perm.player).is_some_and(|p| p.spells_cast_this_game_turn > 0)
+            }
+            crate::card::MayPlayDuration::WhileExiledIfHolderControlsCounterCaster { counter } => {
+                self.battlefield.iter().any(|c| {
+                    c.controller == perm.player
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            sa.effect
+                                == crate::effect::StaticEffect::ExileDyingOpponentCreaturesWithCounterCastable { counter }
+                        })
+                })
             }
             _ => true,
         }
@@ -24689,6 +24699,7 @@ impl GameState {
                 loyalty: false,
                 power_up: ability.power_up,
                 embalm: ability.is_embalm_like(),
+                treasure: activation_treasure_mana > 0,
             });
         }
 

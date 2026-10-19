@@ -26,7 +26,7 @@ pub fn mikey_mona_mutant_sitters() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::ChooseN {
+        triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
             picks: vec![0, 1],
             modes: vec![
                 Effect::TargetPlayerThen {

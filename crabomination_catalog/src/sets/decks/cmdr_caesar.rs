@@ -252,7 +252,7 @@ pub fn caesar_legions_emperor() -> CardDefinition {
             filter: R::Creature.and(R::OtherThanSource),
             count: Value::ONE,
             then: Box::new(Effect::Reflexive {
-                body: Box::new(Effect::ChooseN {
+                body: Box::new(Effect::ChooseN { up_to: None,
                     // Choose two; the default pair is the Soldiers and the
                     // card (`picks` names the modes, CR 700.2d).
                     picks: vec![0, 1],

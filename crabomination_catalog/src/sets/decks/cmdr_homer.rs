@@ -1379,7 +1379,7 @@ pub fn black_market_connections() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::PreCombatMain),
                 EventScope::YourControl,
             ),
-            effect: Effect::ChooseN {
+            effect: Effect::ChooseN { up_to: None,
                 picks: vec![0, 1],
                 modes: vec![
                     Effect::Seq(vec![

@@ -513,7 +513,7 @@ pub fn taigam_sidisis_hand() -> CardDefinition {
 /// mode's opponent (or none); the headless fill gives the most hostile the five.
 pub fn vindictive_lich() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_dies(Effect::ChooseN {
+        triggered_abilities: vec![on_dies(Effect::ChooseN { up_to: None,
             picks: vec![2, 1, 0],
             modes: vec![
                 Effect::Sacrifice { who: target_opponent(), count: Value::ONE, filter: R::Creature },

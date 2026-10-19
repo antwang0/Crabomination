@@ -465,7 +465,7 @@ pub fn song_of_inspiration() -> CardDefinition {
 /// Storvald, Frost Giant Jarl — ward {3}, and your other creatures have it;
 /// entering or attacking, one or both: a creature is 7/7, a creature is 1/1.
 pub fn storvald_frost_giant_jarl() -> CardDefinition {
-    let resize = || Effect::ChooseN {
+    let resize = || Effect::ChooseN { up_to: None,
         picks: vec![0, 1],
         modes: vec![
             Effect::SetBasePT {

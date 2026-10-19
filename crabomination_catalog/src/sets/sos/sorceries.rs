@@ -1510,7 +1510,7 @@ pub fn steal_the_show() -> CardDefinition {
         name: "Steal the Show",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
+        effect: Effect::ChooseN { up_to: None,
             picks: vec![0, 1],
             modes: vec![
                 // Mode 0: target player discards any number, then draws

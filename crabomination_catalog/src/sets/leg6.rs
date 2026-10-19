@@ -639,7 +639,7 @@ pub fn gabriel_angelfire() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: upkeep(EventScope::YourControl),
-            effect: Effect::ChooseN {
+            effect: Effect::ChooseN { up_to: None,
                 picks: vec![0],
                 modes: vec![
                     gain(Keyword::Flying),
@@ -716,7 +716,7 @@ pub fn relic_bind() -> CardDefinition {
             event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer).with_filter(
                 Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsHostOfSource },
             ),
-            effect: Effect::ChooseN {
+            effect: Effect::ChooseN { up_to: None,
                 picks: vec![0],
                 modes: vec![
                     Effect::DealDamage {

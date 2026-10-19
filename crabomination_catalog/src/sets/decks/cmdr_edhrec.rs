@@ -7136,7 +7136,7 @@ pub fn phyrexian_dragon_engine() -> CardDefinition {
 pub fn mishra_lost_to_phyrexia() -> CardDefinition {
     use crate::effect::Duration;
     let modes = || {
-        Effect::ChooseN {
+        Effect::ChooseN { up_to: None,
             picks: vec![1, 3, 5],
             modes: vec![
                 Effect::Discard { who: target_filtered(R::OpponentPlayer), amount: Value::Const(2), random: false },

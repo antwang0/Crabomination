@@ -65214,7 +65214,7 @@ pub fn extinction_event() -> CardDefinition {
         name: "Extinction Event",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
+        effect: Effect::ChooseN { up_to: None,
             picks: vec![0],
             modes: vec![
                 // Mode 0: odd mana value.

@@ -107,6 +107,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         | E::Bent { .. }
         | E::SpellCausedLifeGain { .. }
         | E::EchoPaid { .. }
+        | E::StickerPlaced { .. }
         | E::TappedForTeamwork { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
@@ -237,7 +238,7 @@ fn event_payload_matches(
         }
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, paid, adapt, ninjutsu, mana, loyalty, power_up, embalm, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, paid, adapt, ninjutsu, mana, loyalty, power_up, embalm, treasure, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -252,6 +253,7 @@ fn event_payload_matches(
                 T::Loyalty => *loyalty,
                 T::PowerUp => *power_up,
                 T::Embalm => *embalm,
+                T::TreasureMana => *treasure,
             }
         }
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land, .. }) => {
@@ -301,6 +303,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::Bent(want), GameEvent::Bent { kind, .. }) => want.is_none_or(|w| w == *kind),
         (A::SpellCausedLifeGain, GameEvent::SpellCausedLifeGain { .. }) => true,
         (A::EchoPaid, GameEvent::EchoPaid { .. }) => true,
+        (A::StickerPlaced, GameEvent::StickerPlaced { .. }) => true,
         (A::TappedForTeamwork, GameEvent::TappedForTeamwork { .. }) => true,
         (A::ScryBottomed, GameEvent::ScryPerformed { bottomed, .. }) => *bottomed > 0,
         _ => false,
@@ -416,7 +419,7 @@ fn reference_event_kind_matches(
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { mana, .. }) => !mana,
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, paid, adapt, ninjutsu, mana, loyalty, power_up, embalm, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, paid, adapt, ninjutsu, mana, loyalty, power_up, embalm, treasure, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -431,6 +434,7 @@ fn reference_event_kind_matches(
                 T::Loyalty => *loyalty,
                 T::PowerUp => *power_up,
                 T::Embalm => *embalm,
+                T::TreasureMana => *treasure,
             }
         }
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
@@ -1497,6 +1501,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::LifeGained { player, .. }
         | GameEvent::SpellCausedLifeGain { player, .. }
         | GameEvent::EchoPaid { controller: player, .. }
+        | GameEvent::StickerPlaced { player, .. }
         | GameEvent::TappedForTeamwork { controller: player, .. }
         | GameEvent::ScryPerformed { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
@@ -1703,7 +1708,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::ManifestedDread { milled, .. } => Some(EntityRef::Card(*milled)),
         // The spell that caused the gain (Firesong and Sunspeaker's filter).
         GameEvent::SpellCausedLifeGain { spell, .. } => Some(EntityRef::Card(*spell)),
-        GameEvent::EchoPaid { card_id, .. } | GameEvent::TappedForTeamwork { card_id, .. } => {
+        GameEvent::EchoPaid { card_id, .. }
+        | GameEvent::TappedForTeamwork { card_id, .. }
+        | GameEvent::StickerPlaced { card_id, .. } => {
             Some(EntityRef::Permanent(*card_id))
         }
         GameEvent::LifeGained { player, .. }
@@ -1990,13 +1997,13 @@ mod tests {
             E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false },
-            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 2, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, paid: 0, ninjutsu: false, mana: true, loyalty: false, power_up: false, embalm: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: true, power_up: false, embalm: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false, treasure: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false, treasure: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false, treasure: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, paid: 0, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false, treasure: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 2, ninjutsu: false, mana: false, loyalty: false, power_up: false, embalm: false, treasure: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, paid: 0, ninjutsu: false, mana: true, loyalty: false, power_up: false, embalm: false, treasure: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, paid: 0, ninjutsu: false, mana: false, loyalty: true, power_up: false, embalm: false, treasure: false },
             E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
             E::ColorlessManaAdded { player: 0, source: None },
             E::PermanentEntered { card_id: c },
@@ -2049,6 +2056,7 @@ mod tests {
             E::LifeGained { player: 0, amount: 1 },
             E::SpellCausedLifeGain { player: 0, spell: c, amount: 1 },
             E::EchoPaid { card_id: c, controller: 0 },
+            E::StickerPlaced { card_id: c, player: 0 },
             E::TappedForTeamwork { card_id: c, controller: 0 },
             E::CardsExiledFromHandOrBy { player: 0, count: 1 },
             E::CreatureFought { card_id: c, controller: 0 },
@@ -2238,6 +2246,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::Bent(None)),
             K::Performed(crate::effect::KeywordAct::SpellCausedLifeGain),
             K::Performed(crate::effect::KeywordAct::EchoPaid),
+            K::Performed(crate::effect::KeywordAct::StickerPlaced),
             K::Performed(crate::effect::KeywordAct::TappedForTeamwork),
             K::Performed(crate::effect::KeywordAct::ScryBottomed),
             K::EvidenceCollected,
@@ -2265,6 +2274,7 @@ mod tests {
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice),
             K::AbilityActivatedWith(crate::effect::ActivationTrait::ManaWithoutTap),
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Loyalty),
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::TreasureMana),
             K::CardLeftGraveyard,
             K::CardExiled,
             K::CardExiledFrom(crate::effect::exile_from::GRAVEYARD),

@@ -407,6 +407,8 @@ pub enum CreatureType {
     Vorta,
     // Homelands (Homarid Spawning Bed's tokens).
     Camarid,
+    // Unfinity (Wee Champion).
+    Child,
 }
 
 /// Land subtypes (basic land types + others).
@@ -1402,6 +1404,12 @@ pub enum MayPlayDuration {
     /// `WhileExiled`, castable (never played as a land) only once the holder
     /// has cast a spell this turn — checked as it is cast.
     WhileExiledAfterAnotherSpell,
+    /// Draugr Necromancer's "you may cast spells from among cards in exile your
+    /// opponents own with ice counters on them": `WhileExiled`, usable while the
+    /// holder controls a permanent with
+    /// `StaticEffect::ExileDyingOpponentCreaturesWithCounterCastable` for
+    /// `counter` — checked as it is cast.
+    WhileExiledIfHolderControlsCounterCaster { counter: CounterType },
     /// "During any turn you put a lore counter on this Saga, you may play that
     /// card" (Summon: Brynhildr): live on the granting turn, parked at
     /// [`MAY_PLAY_DORMANT`] by the turn sweep, woken for `holder` whenever a

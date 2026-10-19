@@ -5238,6 +5238,7 @@ impl GameState {
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
             pl.tokens_created_this_turn = 0;
+            pl.treasures_created_this_turn = 0;
             if pl.artifact_ability_activated_this_turn {
                 pl.artifact_ability_activated_this_turn = false;
             }
@@ -6098,6 +6099,7 @@ impl GameState {
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControls { .. }
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { .. }
                     | crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell
+                    | crate::card::MayPlayDuration::WhileExiledIfHolderControlsCounterCaster { .. }
                     | crate::card::MayPlayDuration::UntilSourceExilesAnother => false,
                     // Ends with its source; re-armed below.
                     crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. } => false,
@@ -9230,20 +9232,26 @@ impl GameState {
                 None
             };
             // Rayami, First of the Fallen — any player's nontoken creature,
-            // exiled with a counter.
-            let rayami_counter: Option<crate::card::CounterType> = if redirects
+            // exiled with a counter; Draugr Necromancer — an opponent's, and
+            // its controller may cast the card (the grant's holder).
+            let rayami_counter: Option<(crate::card::CounterType, Option<usize>)> = if redirects
                 && valentin_redirect.is_none()
                 && slime_redirect.is_none()
                 && card.definition.is_creature()
                 && !card.is_token
             {
-                self.battlefield.iter().flat_map(|src| src.definition.static_abilities.iter()).find_map(|sa| {
-                    match sa.effect {
+                self.battlefield.iter().find_map(|src| {
+                    src.definition.static_abilities.iter().find_map(|sa| match sa.effect {
                         crate::effect::StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter } => {
-                            Some(counter)
+                            Some((counter, None))
+                        }
+                        crate::effect::StaticEffect::ExileDyingOpponentCreaturesWithCounterCastable { counter }
+                            if src.controller != card.controller && !self.same_team(src.controller, card.controller) =>
+                        {
+                            Some((counter, Some(src.controller)))
                         }
                         _ => None,
-                    }
+                    })
                 })
             } else {
                 None
@@ -9400,10 +9408,28 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             // Rayami's blood counter goes on the exiled card, after the zone
             // change has dropped its battlefield counters (CR 122.2).
-            if let (Some(kind), crate::card::Zone::Exile) = (rayami_counter, resolved)
+            if let (Some((kind, holder)), crate::card::Zone::Exile) = (rayami_counter, resolved)
                 && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
             {
                 c.add_counters(kind, 1);
+                // CR 108.3 — only a card an opponent of the holder owns.
+                if let Some(holder) = holder.filter(|&h| h != c.owner) {
+                    c.may_play_until = Some(crate::card::MayPlayPermission {
+                        player: holder,
+                        granted_turn: self.turn_number,
+                        duration: crate::card::MayPlayDuration::WhileExiledIfHolderControlsCounterCaster { counter: kind },
+                        exile_after: false,
+                        miracle: false,
+                        pay_life: false,
+                        cast_only: true,
+                        locks_further_casts: false,
+                        one_cast_group: None,
+                        bottom_after: false,
+                        undaunted: false,
+                    });
+                    // Cast paying its own cost (the alt cost shares the grant's lifetime).
+                    c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());
+                }
             }
             if let (Some((kind, n)), crate::card::Zone::Exile) = (self_exile_counters, resolved)
                 && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)

@@ -8031,7 +8031,7 @@ fn choose_n_suspends_for_wants_ui_and_runs_picked_modes() {
     let spell = crabomination::card::CardDefinition {
         name: "Test Charm",
         card_types: vec![crabomination::card::CardType::Instant],
-        effect: Effect::ChooseN {
+        effect: Effect::ChooseN { up_to: None,
             picks: vec![0],
             modes: vec![
                 Effect::GainLife { who: Selector::You, amount: Value::Const(3) },

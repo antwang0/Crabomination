@@ -304,7 +304,7 @@ pub fn shadrix_silverquill() -> CardDefinition {
             ),
             effect: Effect::MayDo {
                 description: "choose two — each mode must target a different player".to_string(),
-                body: Box::new(Effect::ChooseN {
+                body: Box::new(Effect::ChooseN { up_to: None,
                     // Default line: draw + lose 1 (mode 1), then mint an
                     // Inkling (mode 0). Each target-bearing mode owns its
                     // own player-target slot in picks order.

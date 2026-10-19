@@ -836,7 +836,7 @@ mod tests {
         // The Strixhaven Command cycle and any future multi-mode spell
         // depend on `Effect::ChooseN` serde parity for snapshot/replay.
         use crate::card::{Effect, Selector, Value};
-        let original = Effect::ChooseN {
+        let original = Effect::ChooseN { up_to: None,
             picks: vec![0, 2],
             modes: vec![
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -847,7 +847,7 @@ mod tests {
         let json = serde_json::to_string(&original).expect("serialize");
         let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
         match parsed {
-            Effect::ChooseN { picks, modes } => {
+            Effect::ChooseN { picks, modes, .. } => {
                 assert_eq!(picks, vec![0, 2]);
                 assert_eq!(modes.len(), 3);
             }

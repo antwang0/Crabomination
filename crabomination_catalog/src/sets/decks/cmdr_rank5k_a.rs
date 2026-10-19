@@ -417,7 +417,7 @@ pub fn patricians_scorn() -> CardDefinition {
 pub fn flash_thompson_spider_fan() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::ChooseN {
+        triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
             picks: vec![0, 1],
             modes: vec![
                 Effect::Tap { what: target_filtered(R::Creature) },

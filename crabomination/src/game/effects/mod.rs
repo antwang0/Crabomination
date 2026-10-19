@@ -87,6 +87,7 @@ mod choose_player;
 mod player_scope;
 mod reselect;
 mod reveal_cast;
+mod blight;
 mod reveal_until;
 mod shell_game;
 mod linked_return;
@@ -5240,6 +5241,7 @@ impl GameState {
                     self.last_name_sticker_vowels = crate::sticker::unique_vowels(
                         crate::sticker::name_sticker_text(sticker),
                     ) as u8;
+                    events.push(GameEvent::StickerPlaced { card_id: obj, player: seat });
                 }
                 Ok(())
             }
@@ -7689,7 +7691,7 @@ impl GameState {
                 }
             }
 
-            Effect::ChooseN { picks, modes } => {
+            Effect::ChooseN { picks, modes, up_to } => {
                 // CR 700.2d — let the controller's decider choose `picks.len()`
                 // distinct modes. `AutoDecider` returns the card's `picks`
                 // default unchanged; a UI/scripted decider can pick any
@@ -7698,6 +7700,23 @@ impl GameState {
                 // if the result is empty.
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
+                // CR 700.2 — "choose up to N": the default is the first N of
+                // `picks`, and no answer runs more than N.
+                let cap = match up_to {
+                    Some(v) => (self.evaluate_value(v, ctx).max(0) as usize).min(picks.len()),
+                    None => usize::MAX,
+                };
+                if cap == 0 {
+                    return Ok(());
+                }
+                let all_picks = picks;
+                let capped: Vec<u8>;
+                let picks: &Vec<u8> = if cap < picks.len() {
+                    capped = picks[..cap].to_vec();
+                    &capped
+                } else {
+                    picks
+                };
                 let decision = Decision::ChooseModes {
                     source,
                     num_modes: modes.len(),
@@ -7734,7 +7753,7 @@ impl GameState {
                     DecisionAnswer::Modes(v) => {
                         let mut seen = Vec::new();
                         for &i in &v {
-                            if (i as usize) < modes.len() && !seen.contains(&i) {
+                            if (i as usize) < modes.len() && !seen.contains(&i) && seen.len() < cap {
                                 seen.push(i);
                             }
                         }
@@ -7762,7 +7781,7 @@ impl GameState {
                 let mut slot_of_mode: crate::fxhash::HashMap<u8, usize> =
                     crate::fxhash::HashMap::default();
                 let mut next_slot = 0usize;
-                for &i in picks {
+                for &i in all_picks {
                     if modes.get(i as usize).is_some_and(|m| m.requires_target()) {
                         slot_of_mode.entry(i).or_insert_with(|| {
                             let s = next_slot;
@@ -13168,6 +13187,9 @@ impl GameState {
             }
 
             Effect::OrderLibraryBottom { who, count } => self.order_library_bottom(who, count, ctx, events),
+            Effect::RevealUntilNonlandsExileOnePerColor { count } => {
+                self.reveal_until_nonlands_exile_per_color(count, ctx, events, effect)
+            }
             Effect::RevealUntilNFound { who, find, count, to } => {
                 self.reveal_until_n_found(who, find, count, to, ctx, events)
             }
@@ -20311,52 +20333,14 @@ impl GameState {
             }
 
             Effect::Blight { n } => {
-                let amt = self.evaluate_value(n, ctx).max(0);
-                if amt == 0 { return Ok(()); }
-                // CR 701.68a/b — the controller chooses one creature they
-                // control; with none, they can't blight (no-op).
-                let candidates: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
-                    .map(|c| c.id)
-                    .collect();
-                if candidates.is_empty() { return Ok(()); }
-                // CR 701.68a — the choice is the controller's own, and it went
-                // to the decider rather than to the seat, so a `wants_ui`
-                // controller was never asked which of their creatures takes it.
-                let chosen = if candidates.len() == 1 {
-                    candidates[0]
-                } else {
-                    let mut cursor = 0;
-                    let Some(picked) = self.ask_seat_target_logged(
-                        &mut cursor,
-                        ctx.controller,
-                        format!("blight {amt}: choose a creature you control"),
-                        ctx.source.unwrap_or(CardId(0)),
-                        candidates.iter().map(|id| Target::Permanent(*id)).collect(),
-                        effect,
-                    ) else {
-                        return Ok(());
-                    };
-                    self.clear_answer_log();
-                    match picked {
-                        Target::Permanent(id) if candidates.contains(&id) => id,
-                        _ => candidates[0],
-                    }
-                };
-                let mut sub = ctx.clone();
-                sub.targets = vec![Target::Permanent(chosen)];
-                self.run_effect(
-                    &Effect::AddCounter {
-                        what: Selector::Target(0),
-                        kind: CounterType::MinusOneMinusOne,
-                        amount: crate::effect::Value::Const(amt),
-                    },
-                    &sub,
-                    events,
-                )?;
+                self.blight(n, ctx, events, effect)?;
                 Ok(())
+            }
+
+            Effect::BlightThen { n, then } => {
+                let Some(blighted) = self.blight(n, ctx, events, effect)? else { return Ok(()) };
+                self.scratch.last_moved_cards = vec![blighted];
+                self.run_effect(then, ctx, events)
             }
 
             Effect::Earthbend { n } => {

@@ -2899,6 +2899,8 @@ pub enum GameEvent {
         /// CR 702.128 / 702.129 — an embalm or eternalize ability (Vizier of
         /// the Anointed); `source` is the card exiled to pay for it.
         embalm: bool,
+        /// Mana from a Treasure paid for it (Vazi, Keen Negotiator).
+        treasure: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.
@@ -2944,6 +2946,8 @@ pub enum GameEvent {
     SpellCausedLifeGain { player: usize, spell: CardId, amount: u32 },
     /// CR 702.30a — `controller` paid `card_id`'s echo cost.
     EchoPaid { card_id: CardId, controller: usize },
+    /// CR 123.3 — `player` put a sticker on `card_id`.
+    StickerPlaced { card_id: CardId, player: usize },
     /// A creature became tapped to pay a teamwork cost (Agent Maria Hill);
     /// emitted beside its `PermanentTapped`.
     TappedForTeamwork { card_id: CardId, controller: usize },

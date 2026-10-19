@@ -834,6 +834,9 @@ pub struct PlayerData {
     /// Reverent Medium). Counted at the mint funnel, cleared each turn.
     #[serde(default)]
     pub tokens_created_this_turn: u32,
+    /// The Treasures among them (Vazi, Keen Negotiator).
+    #[serde(default)]
+    pub treasures_created_this_turn: u32,
     /// Cards this player cycled this turn (CR 702.29; Spellpyre Phoenix,
     /// Gavi's first-cycle-free). Cleared each turn.
     #[serde(default)]
@@ -1883,6 +1886,7 @@ impl Player {
             dealt_noncombat_damage_last_turn: false,
             token_copy_replacement_used_this_turn: false,
             tokens_created_this_turn: 0,
+            treasures_created_this_turn: 0,
             cards_cycled_this_turn: 0,
             cycling_card: None,
             token_doublings_this_turn: 0,

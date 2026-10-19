@@ -924,6 +924,7 @@ impl Effect {
             | Effect::EachPlayerRevealsCreaturesForTokens { .. }
             | Effect::AnyLifeGainPunishedThisTurn { .. } => false,
             Effect::RevealUntilNonlandThen { then }
+            | Effect::BlightThen { then, .. }
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
             | Effect::ChooseOpponentThen { then }
@@ -983,6 +984,7 @@ impl Effect {
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }
+            | Effect::RevealUntilNonlandsExileOnePerColor { .. }
             | Effect::NextSpellGainsConvokeThisTurn
             | Effect::NextSpellGainsImproviseThisTurn
             | Effect::NextInstantOrSorceryGainsStormThisTurn
@@ -3862,7 +3864,7 @@ impl Effect {
             ),
             // Modal: friendly when the first slot-owning mode (default
             // picks order — slot 0's owner) is friendly.
-            Effect::ChooseN { picks, modes } => picks
+            Effect::ChooseN { picks, modes, .. } => picks
                 .iter()
                 .filter_map(|&i| modes.get(i as usize))
                 .find(|m| m.requires_target())
@@ -5163,7 +5165,7 @@ impl Effect {
                 // mirrors the resolution-time slot assignment so a "choose
                 // one or both" spell (Steal the Show) can take a player
                 // target for one mode and a creature target for the other.
-                Effect::ChooseN { picks, modes } => {
+                Effect::ChooseN { picks, modes, .. } => {
                     let mut s = 0u8;
                     for &i in picks {
                         if let Some(m) = modes.get(i as usize)

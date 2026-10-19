@@ -1810,7 +1810,7 @@ pub fn silverquill_verse() -> CardDefinition {
         name: "Silverquill Verse",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN {
+        effect: Effect::ChooseN { up_to: None,
             picks: vec![0, 2],
             modes: vec![
                 Effect::PumpPT {

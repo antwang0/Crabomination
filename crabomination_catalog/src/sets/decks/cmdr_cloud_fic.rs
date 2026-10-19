@@ -441,7 +441,7 @@ pub fn soldier_military_program() -> CardDefinition {
         // the board is read (any player's commander counts — ruling).
         triggered_abilities: vec![begin_combat_on_your_turn(Effect::If {
             cond: Predicate::YouControlACommander,
-            then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
+            then: Box::new(Effect::ChooseN { up_to: None, picks: vec![0, 1], modes: modes() }),
             else_: Box::new(Effect::ChooseMode(modes())),
         })],
         ..spell("SOLDIER Military Program", cost(&[generic(2), w()]), CardType::Enchantment, Effect::Noop)

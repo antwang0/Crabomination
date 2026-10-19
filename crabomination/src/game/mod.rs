@@ -11543,6 +11543,9 @@ impl GameState {
         if inst.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food) {
             self.players[ctrl].foods_entered_this_turn += 1;
         }
+        if inst.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure) {
+            self.players[ctrl].treasures_created_this_turn += 1;
+        }
         if inst.definition.is_land() {
             self.players[ctrl].lands_entered_this_turn += 1;
         } else {
@@ -24851,6 +24854,7 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
+        let ninjutsu_treasure = receipt.pool_before.treasure_amount() > self.players[p].mana_pool.treasure_amount();
 
         let mut events = receipt.auto_events;
         // CR 702.49a — ninjutsu is an activated ability.
@@ -24866,6 +24870,7 @@ impl GameState {
             loyalty: false,
             power_up: false,
             embalm: false,
+            treasure: ninjutsu_treasure,
         });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
@@ -29233,6 +29238,7 @@ impl GameState {
                 loyalty: true,
                 power_up: false,
                 embalm: false,
+                treasure: false,
             },
             GameEvent::LoyaltyChanged {
                 card_id,
@@ -36182,6 +36188,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerCombatDamageToPlayerTriggers
             | StaticEffect::FirstFaceDownSpellEachTurnCostsLess { .. }
             | StaticEffect::ExileDyingNontokenCreaturesWithCounter { .. }
+            | StaticEffect::ExileDyingOpponentCreaturesWithCounterCastable { .. }
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
             | StaticEffect::OpponentsCantCastFromAnywhereButHand
             // Lier — read by the flashback-cast path / graveyard view.

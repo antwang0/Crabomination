@@ -48,6 +48,99 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::RevealUntilNonlandsExileOnePerColor` — Sanar's vivid reveal.
+    /// The picks are asked before any card moves, so a suspended ask re-runs
+    /// over the same library top.
+    pub(super) fn reveal_until_nonlands_exile_per_color(
+        &mut self,
+        count: &Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &crate::effect::Effect,
+    ) -> Result<(), GameError> {
+        use crate::mana::Color;
+        let p = ctx.controller;
+        let need = self.evaluate_value(count, ctx).max(0) as usize;
+        if need == 0 {
+            return Ok(());
+        }
+        let lib = &self.players[p].library;
+        let (mut n, mut nonlands) = (0, 0);
+        while n < lib.len() && nonlands < need {
+            nonlands += usize::from(!lib[n].definition.is_land());
+            n += 1;
+        }
+        // Mana value first, so a first-option decider takes the biggest.
+        let mut revealed: Vec<(CardId, Vec<Color>, u32, String)> = lib
+            .iter()
+            .take(n)
+            .map(|c| (c.id, c.definition.printed_colors(), c.definition.cost.cmc(), c.definition.name.to_string()))
+            .collect();
+        revealed.sort_by_key(|r| std::cmp::Reverse(r.2));
+        let recolored = self.card_color_change_unscoped();
+        let mut colors: Vec<Color> = Vec::new();
+        for c in self.battlefield.iter().filter(|c| c.controller == p) {
+            let cs = if recolored { self.card_colors_anywhere(c.id) } else { c.definition.printed_colors() };
+            for col in cs {
+                if !colors.contains(&col) {
+                    colors.push(col);
+                }
+            }
+        }
+        colors.sort_by_key(|c| *c as u8);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let (mut cursor, mut chosen) = (0, Vec::new());
+        for color in colors {
+            let cands: Vec<&(CardId, Vec<Color>, u32, String)> =
+                revealed.iter().filter(|r| r.1.contains(&color) && !chosen.contains(&r.0)).collect();
+            if cands.is_empty() {
+                continue;
+            }
+            let mut ballot: Vec<String> = cands.iter().map(|r| r.3.clone()).collect();
+            ballot.push("No card".to_string());
+            let ids: Vec<CardId> = cands.iter().map(|r| r.0).collect();
+            let Some(idx) =
+                self.ask_seat_option(&mut cursor, p, format!("Exile a {color:?} card?"), source, ballot, effect)
+            else {
+                return Ok(());
+            };
+            if let Some(&id) = ids.get(idx) {
+                chosen.push(id);
+            }
+        }
+        self.clear_answer_log();
+        let taken: Vec<CardInstance> = (0..n).map(|_| self.players[p].library.remove(0)).collect();
+        let mut rest = Vec::new();
+        for card in taken {
+            if !chosen.contains(&card.id) {
+                rest.push(card);
+                continue;
+            }
+            let cid = card.id;
+            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+            let granted_turn = self.turn_number;
+            if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                c.may_play_until = Some(crate::card::MayPlayPermission {
+                    player: p,
+                    granted_turn,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    exile_after: false,
+                    miracle: false,
+                    pay_life: false,
+                    cast_only: true,
+                    locks_further_casts: false,
+                    one_cast_group: None,
+                    bottom_after: false,
+                    undaunted: false,
+                });
+                c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());
+            }
+        }
+        self.players[p].library.extend(rest);
+        self.shuffle_library(p, events);
+        Ok(())
+    }
+
     /// Takes cards off the top of `seat`'s library until `need` of them pass
     /// `hit`, or the library runs out. Returns `(hits, rest)` in reveal order.
     pub(super) fn reveal_until_n(

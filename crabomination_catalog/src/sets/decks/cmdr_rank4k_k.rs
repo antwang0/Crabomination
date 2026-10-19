@@ -322,7 +322,7 @@ pub fn autumn_willow_harmony() -> CardDefinition {
 /// the "different player" constraint isn't enforced.)
 pub fn donnie_and_april_adorkable_duo() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::ChooseN {
+        triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
             picks: vec![0, 1],
             modes: vec![
                 Effect::Draw {

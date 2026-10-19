@@ -126,7 +126,7 @@ impl GameState {
             return None;
         }
         // One slot per target-bearing mode, as the `ChooseN` arm binds them.
-        let Effect::ChooseN { picks, modes } = &pending.effect else { return None };
+        let Effect::ChooseN { picks, modes, .. } = &pending.effect else { return None };
         let mut owners: Vec<u8> = picks
             .iter()
             .copied()

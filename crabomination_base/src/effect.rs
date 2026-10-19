@@ -1604,6 +1604,9 @@ pub enum Value {
     /// Tokens created under the player's control this turn
     /// (`Player.tokens_created_this_turn`) — Thalisse, Reverent Medium.
     TokensCreatedThisTurn(PlayerRef),
+    /// Treasure tokens created under the player's control this turn
+    /// (`Player.treasures_created_this_turn`) — Vazi, Keen Negotiator.
+    TreasuresCreatedThisTurn(PlayerRef),
     /// Cards the player cycled this turn (`Player.cards_cycled_this_turn`) —
     /// Spellpyre Phoenix's "if you cycled two or more cards this turn".
     CardsCycledThisTurn(PlayerRef),
@@ -4239,6 +4242,9 @@ pub enum KeywordAct {
     /// while scrying; the scryer is the actor, the count bottomed the event
     /// amount (The Temporal Anchor).
     ScryBottomed,
+    /// CR 123.3 — a player put a sticker on an object; the player is the actor,
+    /// the object the subject (Wee Champion).
+    StickerPlaced,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.
@@ -4322,6 +4328,8 @@ pub enum ActivationTrait {
     /// "an ability of a creature" counts mana abilities; the `{T}` ones are
     /// `EventKind::TappedForMana`).
     ManaWithoutTap,
+    /// Mana from a Treasure was spent to activate it (Vazi, Keen Negotiator).
+    TreasureMana,
 }
 
 /// The zones [`EventKind::CardExiledFrom`] distinguishes (a bitmask).
@@ -5039,7 +5047,17 @@ pub enum Effect {
     /// validation assumes the default mode set; a decider that picks a
     /// different subset still supplies targets in the default-picks slot
     /// order. Full cast-time mode selection is tracked in TODO.md.
-    ChooseN { picks: Vec<u8>, modes: Vec<Effect> },
+    ///
+    /// `up_to: Some(n)` is "choose up to N —" with targeted modes (CR 700.2):
+    /// `n` is read at resolution and caps the pick (zero runs nothing); slots
+    /// stay keyed to `picks`, so a trigger names a target for every targeted
+    /// mode up front. The Ruinous Wrecking Crew (N = X).
+    ChooseN {
+        picks: Vec<u8>,
+        modes: Vec<Effect>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        up_to: Option<Box<Value>>,
+    },
     /// CR 700.2 — "Choose up to N, where N is [a live count]." Evaluates `max`
     /// at resolution, caps it at `modes.len()`, and lets the controller pick up
     /// to that many *distinct* modes (AutoDecider takes the first `count`). The
@@ -9329,6 +9347,10 @@ pub enum Effect {
     /// creature they control (their choice). With no creature they can't
     /// blight (701.68b) so it's a no-op. N=0 does nothing.
     Blight { n: Value },
+    /// "Blight N. If you do, [then]": `then` runs only when a creature took the
+    /// counters, reading it as `Selector::LastMoved` (Grub, Notorious
+    /// Auntie's attacking copy of the blighted creature).
+    BlightThen { n: Value, then: Box<Effect> },
     /// CR 701.66 — *earthbend N*: target land you control becomes a 0/0 land
     /// creature with haste (in addition to its other types) and gets N +1/+1
     /// counters; a delayed trigger returns it tapped when it dies or is exiled.
@@ -12831,6 +12853,12 @@ pub enum Effect {
     /// on the bottom in a random order" (Old Stickfingers) — one reveal, so
     /// it stops when the library runs out rather than re-reading the bottom.
     RevealUntilNFound { who: PlayerRef, find: SelectionRequirement, count: Value, to: ZoneDest },
+    /// Vivid (Sanar, Innovative First-Year): "reveal cards from the top of your
+    /// library until you reveal `count` nonland cards. For each color among
+    /// permanents you control, you may exile a card of that color from among
+    /// the revealed cards. Then shuffle. You may cast the exiled cards this
+    /// turn" (paying their costs).
+    RevealUntilNonlandsExileOnePerColor { count: Value },
     RevealUntilFind {
         who: PlayerRef,
         find: SelectionRequirement,

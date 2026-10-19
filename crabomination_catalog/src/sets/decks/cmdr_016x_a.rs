@@ -122,7 +122,7 @@ pub fn splinter_leo_father_son() -> CardDefinition {
     };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
-        triggered_abilities: vec![etb(Effect::ChooseN {
+        triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
             picks: vec![1, 0],
             modes: vec![
                 Effect::CreateToken { who: PlayerRef::Target(0), count: Value::ONE, definition: Arc::new(mutant) },

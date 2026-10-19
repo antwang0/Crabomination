@@ -156,7 +156,7 @@ pub fn gixs_command() -> CardDefinition {
         "Gix's Command",
         cost(&[generic(3), b(), b()]),
         CardType::Sorcery,
-        Effect::ChooseN {
+        Effect::ChooseN { up_to: None,
             picks: vec![0, 3],
             modes: vec![
                 Effect::ForEach {

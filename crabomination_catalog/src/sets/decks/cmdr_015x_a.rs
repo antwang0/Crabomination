@@ -1127,7 +1127,7 @@ pub fn casey_and_raph_hotheads() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::ChooseN {
+        triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
             picks: vec![0, 1],
             modes: vec![
                 Effect::AsPlayer {
