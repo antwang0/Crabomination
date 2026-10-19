@@ -2492,6 +2492,7 @@ impl Effect {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what }
+            | Effect::NamePlaneswalkerType { what }
             | Effect::NameCreatureTypeBy { what, .. }
             | Effect::NameCreatureTypeAmong { what, .. } => sel_has_target(what),
             Effect::NameCard { what, .. } | Effect::RememberNamedCard { what } => sel_has_target(what),
@@ -3443,6 +3444,7 @@ impl Effect {
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }
             | Effect::NameCreatureTypeBy { what, .. }
+            | Effect::NamePlaneswalkerType { what }
             | Effect::NameCard { what, .. }
             | Effect::RememberNamedCard { what }
             | Effect::LockTargetNameUntilYourNextTurn { what }
@@ -5894,6 +5896,7 @@ impl Effect {
                 | Effect::DoubleAllCountersOn { what }
                 | Effect::NameCreatureType { what }
                 | Effect::NameCreatureTypeBy { what, .. }
+                | Effect::NamePlaneswalkerType { what }
                 | Effect::NameCard { what, .. }
                 | Effect::RememberNamedCard { what }
                 | Effect::LockTargetNameUntilYourNextTurn { what }

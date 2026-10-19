@@ -3995,6 +3995,9 @@ pub enum SelectionRequirement {
     /// The card's name begins with the letter the source chose
     /// (`Effect::ChooseLetterForSource` — Katerina of Myra's Marvels).
     NameBeginsWithChosenLetterOfSource,
+    /// A permanent of the planeswalker type the source chose as it entered
+    /// (Deification's "planeswalkers you control of the chosen type").
+    HasChosenPlaneswalkerTypeOfSource,
     /// Mana value equals that of at least one battlefield permanent matching
     /// the inner filter, read from the evaluating controller's side — Rebbec,
     /// Architect of Ascension's "protection from each mana value among
@@ -9207,6 +9210,9 @@ pub struct CardCold {
     /// Two colors chosen as this permanent entered (Tablet of the Guilds).
     /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
     pub chosen_colors: Vec<crate::mana::Color>,
+    /// A planeswalker type chosen as this permanent entered (Deification);
+    /// `None` until `Effect::NamePlaneswalkerType` stamps it.
+    pub chosen_planeswalker_type: Option<PlaneswalkerSubtype>,
     /// CR 701.15 — players who have goaded this creature. A goaded creature
     /// attacks each combat if able and attacks a player other than a goader
     /// if able, until that goader's next turn. Each goader's entry is

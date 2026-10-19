@@ -935,7 +935,13 @@ fn card_has_block_tax_static(c: &CardInstance) -> bool {
     c.definition
         .static_abilities
         .iter()
-        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::BlockTaxToController { .. }))
+        .any(|sa| {
+            matches!(
+                sa.effect,
+                crate::effect::StaticEffect::BlockTaxToController { .. }
+                    | crate::effect::StaticEffect::BlockTaxForEnchantedAttacker { .. }
+            )
+        })
 }
 
 /// Does this permanent's definition carry a static the untap step reads —

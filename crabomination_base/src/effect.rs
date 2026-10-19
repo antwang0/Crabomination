@@ -12857,6 +12857,11 @@ pub enum Effect {
     /// Cavern protects (only those that share the named type).
     NameCreatureType { what: Selector },
 
+    /// "As this enters, choose a planeswalker type" (Deification). Asked as a
+    /// ballot of the types among cards the controller owns, most-held first;
+    /// stamped on `chosen_planeswalker_type`.
+    NamePlaneswalkerType { what: Selector },
+
     /// As [`Effect::NameCreatureType`], but a named player makes the choice
     /// (Callous Oppressor — "an opponent chooses a creature type").
     NameCreatureTypeBy { what: Selector, who: PlayerRef },

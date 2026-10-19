@@ -38608,6 +38608,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NamePlaneswalkerType { what } => {
+                self.name_planeswalker_type(what, ctx, effect);
+                Ok(())
+            }
+
             Effect::RememberNamedCard { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };

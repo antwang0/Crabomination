@@ -7163,6 +7163,10 @@ impl GameState {
                         .and_then(|sid| self.static_source(sid))
                         .and_then(|s| s.chosen_number)
                         .is_some_and(|n| crate::game::effects::choose_letter::initial(card.definition.name) == Some(n)),
+                    R::HasChosenPlaneswalkerTypeOfSource => source
+                        .and_then(|sid| self.static_source(sid))
+                        .and_then(|s| if s.cold_pristine() { None } else { s.chosen_planeswalker_type })
+                        .is_some_and(|t| card.definition.subtypes.planeswalker_subtypes.contains(&t)),
                     R::NameChosenForSource => source.and_then(|sid| self.static_source(sid)).is_some_and(|s| {
                         s.named_card.as_deref().is_some_and(|n| card.definition.has_name(n))
                             || s.cold_any(|k| k.chosen_names.iter().any(|n| card.definition.has_name(n)))
@@ -7676,6 +7680,7 @@ impl GameState {
             | R::SharesNameWithSource
             | R::NameChosenForSource
             | R::NameBeginsWithChosenLetterOfSource
+            | R::HasChosenPlaneswalkerTypeOfSource
             | R::SharesColorWithAttachedHost
             | R::SharesCreatureTypeWithAttachedHost
             | R::SharesCreatureTypeWithSource => false,

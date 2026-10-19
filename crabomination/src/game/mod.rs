@@ -123,6 +123,7 @@ pub mod affordances;
 /// "as this permanent enters" replacements through.
 #[doc(hidden)]
 pub mod as_enters;
+mod deification;
 mod etb_keyword_counters;
 #[doc(hidden)]
 pub mod combat;
@@ -35449,6 +35450,9 @@ fn static_effect_to_effects(
             | StaticEffect::SpellsAndAbilitiesCantBeCountered
             // BlockTaxToController — consulted in declare_blockers; no layer.
             | StaticEffect::BlockTaxToController { .. }
+            | StaticEffect::BlockTaxForEnchantedAttacker { .. }
+            // Read by the planeswalker damage paths (`deification.rs`).
+            | StaticEffect::DamageLeavesYourPlaneswalkersAtOneLoyalty { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
             // layer effect.
             | StaticEffect::CapDrawsPerTurn { .. }
@@ -36258,6 +36262,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::HasName(_)
         | R::IsSourceChosenCreatureType
         | R::HasChosenLandTypeOfSource
+        | R::HasChosenPlaneswalkerTypeOfSource
         // Per-turn combat history (Moraug's "for each time it has attacked
         // this turn") — not a printed characteristic either.
         | R::AttackedThisTurn

@@ -16578,9 +16578,17 @@ fn trim_blocks_to_payable_tax(
             .unwrap_or(0)
     };
     let taxed_board = state.block_tax_present();
+    // Awesome Presence charges per assignment to its host, so a blocker's
+    // cost folds in each attacker it is assigned to.
+    let host_tax = |blocker: CardId| -> u32 {
+        if !taxed_board {
+            return 0;
+        }
+        blocks.iter().filter(|(b, _)| *b == blocker).map(|(_, a)| state.enchanted_attacker_block_tax(*a)).sum()
+    };
     let cost = |blocker: CardId| -> (u32, u32) {
         let (mana, life) = if taxed_board { state.block_tax_for(blocker) } else { (0, 0) };
-        (mana + keyword_tax(blocker), life)
+        (mana + keyword_tax(blocker) + host_tax(blocker), life)
     };
     // A blocker declared twice (Guardian of the Gateless) is charged once,
     // the way the engine charges it: the tax is per declared blocker.

@@ -1412,6 +1412,10 @@ pub enum StaticEffect {
         #[serde(default)]
         life: bool,
     },
+    /// CR 509.1d — "Enchanted creature can't be blocked unless defending
+    /// player pays {`amount`} for each creature they control that's blocking
+    /// it" (Awesome Presence): charged per blocker assigned to the host.
+    BlockTaxForEnchantedAttacker { amount: u32 },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past
     /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models
@@ -1970,6 +1974,11 @@ pub enum StaticEffect {
     /// The creature-side sibling of `ReduceDamageToYouBy`; applied in
     /// `GameState::scale_damage_to` before the doublers.
     ReduceDamageToYourCreaturesBy(u32),
+    /// "As long as you control a creature [if `requires_creature`], if damage
+    /// dealt to a planeswalker you control matching `filter` would result in
+    /// all loyalty counters on it being removed, instead all but one of those
+    /// counters are removed" (Deification, CR 614.1a).
+    DamageLeavesYourPlaneswalkersAtOneLoyalty { filter: SelectionRequirement, requires_creature: bool },
     /// CR 615 — "If a source an opponent controls would deal damage to you or
     /// a permanent you control, prevent N of that damage" (Valkmira,
     /// Protector's Shield): a shave per damage event, read by the source's

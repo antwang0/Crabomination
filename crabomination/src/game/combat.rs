@@ -3251,8 +3251,9 @@ impl GameState {
         // rejected declaration never costs mana (CR 601.2h-style atomicity).
         let mut block_tax_by_controller: crate::game::types::SmallIdMap<usize, (u32, u32)> =
             Default::default();
-        for &(blocker_id, _) in &assignments {
+        for &(blocker_id, attacker_id) in &assignments {
             let (mana, life) = self.block_tax_for(blocker_id);
+            let mana = mana + self.enchanted_attacker_block_tax(attacker_id);
             if mana == 0 && life == 0 {
                 continue;
             }
@@ -6459,9 +6460,11 @@ impl GameState {
                 }
                 let amount = amount - spill;
                 self.note_planeswalker_excess(pw_id, amount);
+                let current =
+                    self.battlefield_find(pw_id).map_or(0, |c| c.counter_count(crate::card::CounterType::Loyalty));
+                let floored = self.loyalty_after_damage(pw_id, current, amount);
                 if let Some(pw) = self.battlefield_find_mut(pw_id) {
-                    let current = pw.counter_count(crate::card::CounterType::Loyalty);
-                    let new_loyalty = current.saturating_sub(amount);
+                    let new_loyalty = floored;
                     pw.counters
                         .insert(crate::card::CounterType::Loyalty, new_loyalty);
                     // The same per-victim record the creature paths keep, so
@@ -6649,6 +6652,23 @@ impl GameState {
             }
         }
         (mana, life)
+    }
+
+    /// CR 509.1d — the mana one blocker assigned to `attacker` costs: each
+    /// Aura on it with `BlockTaxForEnchantedAttacker` (Awesome Presence).
+    pub(crate) fn enchanted_attacker_block_tax(&self, attacker: CardId) -> u32 {
+        if !self.battlefield.has_block_tax_static() {
+            return 0;
+        }
+        self.battlefield
+            .iter()
+            .filter(|a| a.attached_to == Some(attacker))
+            .flat_map(|a| a.definition.static_abilities.iter())
+            .map(|sa| match sa.effect {
+                crate::effect::StaticEffect::BlockTaxForEnchantedAttacker { amount } => amount,
+                _ => 0,
+            })
+            .sum()
     }
 
     /// Does any permanent on this board charge a block tax at all? One walk,

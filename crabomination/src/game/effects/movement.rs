@@ -2001,9 +2001,10 @@ impl GameState {
                     .unwrap_or(false);
                 if is_pw {
                     self.note_planeswalker_excess(cid, amount);
+                    let current = self.battlefield_find(cid).map_or(0, |c| c.counter_count(CounterType::Loyalty));
+                    let floored = self.loyalty_after_damage(cid, current, amount);
                     if let Some(c) = self.battlefield_find_mut(cid) {
-                        let current = c.counter_count(CounterType::Loyalty);
-                        let new_loyalty = current.saturating_sub(amount);
+                        let new_loyalty = floored;
                         c.counters
                             .insert(CounterType::Loyalty, new_loyalty);
                         // The creature branch's per-victim record, so a
