@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes](#fixedopen-2026-10-19-commander-run-01gwrdkp--44-closer-cards-17-seats-six-engine-fixes) | 34 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 112 closer cards, 29 seats, a step-trigger doubler bug](#fixedopen-2026-10-19-commander-run-016xh16h--112-closer-cards-29-seats-a-step-trigger-doubler-bug) | 47 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required](#fixedopen-2026-10-10-sixteenth-commander-run-01s495n5--up-to-one-target-modelled-as-required) | 27 |
@@ -179,6 +180,48 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes
+
+- **Seats** 4367-4377 (Hei Bai Forest Guardian, The Great Goblin, Vazi, Wort Boggart Auntie, Sanar Innovative
+  First-Year, Madame Hydra, The Whizzer, The Balrog Flame of Udûn, The Ruinous Wrecking Crew, Ulrich of the
+  Krallenhorde, Cabal Patriarch), 4378-4383 (Grub Storied Matriarch, Noctis Heir Apparent, Gorbag of Minas
+  Morgul, The Motherlode Excavator, Gorion Wise Mentor, War Machine James Rhodes). Cards in
+  `decks::cmdr_01gw_a`..`_g`, tests `recent_b/cmdr_01gw_a.rs`.
+- **Primitives:** `Effect::ChooseN { up_to }` — "choose up to N" with targeted modes (CR 700.2; N read at
+  resolution, slots keyed to `picks`; The Ruinous Wrecking Crew); `KeywordAct::StickerPlaced` (CR 123.3, Wee
+  Champion); `ActivationTrait::TreasureMana` + `Value::TreasuresCreatedThisTurn` (Vazi);
+  `StaticEffect::ExileDyingOpponentCreaturesWithCounterCastable` +
+  `MayPlayDuration::WhileExiledIfHolderControlsCounterCaster` (Draugr Necromancer);
+  `Effect::RevealUntilNonlandsExileOnePerColor` (Sanar's vivid); `Effect::BlightThen` (Grub; the blight walk
+  moved to `effects/blight.rs`); `Effect::RevealFromHandExileChosen` (Taster of Wares, `effects/hand_reveal.rs`);
+  `DelayedTriggerKind::YourNextDeclareAttackersStep` / `DelayedKind::PlayersNextDeclareAttackers`, fired as
+  `declare_attackers_full` finishes, attackers or none (CR 508.2; Noctis's warp-strike,
+  `game/declare_attackers_delayed.rs`).
+- **Fixes:** `fire_step_triggers` never gathered a suspended card's `WhileSuspended` step triggers (CR 702.62b —
+  Curse of the Cabal); `JoinCombatAttackingChosen` offered only seats already being attacked and no-oped with no
+  attackers — every opponent is a defending player (CR 506.2 two-player, 802.2 attack-multiple-players), the
+  attacked seats still lead so the headless default is unchanged; the extra-slot trigger fill never named an
+  exiled card (Sentinel of Lost Lore's second mode); `Effect::slot_owner` read a `ChooseN`'s slot k as some
+  mode's own slot k instead of the k-th target-bearing mode's slot 0, so every later modal slot's hostility
+  read false (Sentinel exiled its own graveyard; the Shadrix / Vindictive Lich player-per-mode shape too).
+  The CR 802.2 change let a join-combat pick that combat had outlived (attack list emptied) join anyway; an
+  attack of no creatures skips blockers and damage (CR 508.8), so past the declare attackers step an empty list
+  is moot again. `BlightThen` was missing from `for_each_inner` (the target-walker guard caught it). Both
+  landed first as `b5ca740f6` from a parallel session; this run's identical fix was dropped on rebase.
+- **Collision:** `01DJHkWk` landed 14 of the same closers and four of the same seats (Baxter Stockman, Captain
+  America Steve Rogers, Pharaoh Rama-Tut, Rex) between this run's scan and push; the duplicates were dropped
+  on rebase. Fetch before *starting* a cluster, not only before pushing.
+- **Sweeps** (`overflow` + debug-assertions, seed 9260): 840 pod games over seats 4357-4383 (3/4/6 seats) and
+  4,750 over every seat (4/6/8), 0 panics; 2 board caps, both 8-seat (Mondrak, Glory Dominus doubling tokens;
+  Courser of Kruphix + Psychosis Crawler) — the known token-growth class.
+- **Released (each needs a primitive):** Wan Shi Tong, All-Knowing (a "put into a library from anywhere"
+  event — `CardPile::writes` bumps on every `&mut`, so a per-library id diff gated on a listener is the cheap
+  route; Echo + Wan Shi Tong decks), Henry Wu (the exploit event carries no exploited creature), Proft
+  (Tyrannical Pitlord's "choose another creature as it enters" has no chosen-creature link), Mirror of Fate +
+  Thought Lash (an "exile the top card" activation cost and a non-mana cumulative upkeep; Fblthp), The
+  Celestial Toymaker (a look-three face-down/face-up split and a per-turn pile tally), Count Nefaria (Nettlevine
+  Blight's sacrifice-and-reattach), Zhou Yu (Magical Hack's land-type text swap).
 
 ## FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 112 closer cards, 29 seats, a step-trigger doubler bug
 

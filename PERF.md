@@ -3136,6 +3136,26 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-19 evening (Commander run, `01GwrDKP`) — guardrail; 44 cards, 17 seats, nine primitives, six engine fixes
+
+Hot-path touches: `ChooseN` reads one more `Option` field (`None` everywhere but one card) before its
+decision; `AbilityActivated` carries one more `bool`; the token mint funnel tests one more artifact subtype;
+`declare_attackers_full` reads the delayed-trigger list once more as the declaration finishes; the exile
+pile's trigger lane counts `WhileSuspended` abilities; `join_combat_attacking_chosen` walks the turn order
+for opponents (only when an effect puts a creature into combat); `slot_owner` maps a `ChooseN` slot by
+`picks` order. `release` bot_ladder at `8d0d24bb1` (the `b5ca740f6` fix on top touches only the join-combat moot
+check and one walker arm; golden traces pass at it), 4-core:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the entries below;
+                 determinism ok; peak_rss_mib 42.1
+suite            28,152 / 0 / 6 (pod seat test excluded, CARGO_INCREMENTAL=0); clippy 0;
+                 `release-fast` check clean
+pods (overflow)  seed 9260, debug-assertions: 840 games over seats 4357-4383 at 3/4/6 seats and 4,750
+                 over every seat at 4/6/8; 0 panics; 2 board caps (0.04 %, both 8-seat: Mondrak Glory
+                 Dominus token doubling; Courser of Kruphix + Psychosis Crawler), 0 other undecided
+```
+
 ### 2026-10-19 (Commander run, `016Xh16H`) — guardrail; 112 cards, 29 seats, eight primitives, a step-trigger fix
 
 Hot-path touches: the beginning-of-step trigger collector now asks

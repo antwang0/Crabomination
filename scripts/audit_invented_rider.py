@@ -183,6 +183,10 @@ ALLOW = {
         "CR 702.64a — aura swap is 'Activate only as a sorcery' by rule",
     ("gavel_of_the_righteous", "sorcery_speed: true"):
         "CR 702.6a — its 'Equip—remove a counter' is an equip ability, sorcery-speed by rule",
+    ("hand_of_vecna", "sorcery_speed: true"):
+        "CR 702.6a — its 'Equip—Pay 1 life for each card in your hand' is an equip ability",
+    ("pact_weapon", "sorcery_speed: true"):
+        "CR 702.6a — its 'Equip—Discard a card' is an equip ability",
     ("roadkill_rodney", "sorcery_speed: true"):
         "the Mutagen TOKEN's printed ability ('Activate only as a sorcery'), not Rodney's",
     ("valgavoth_harrower_of_souls", "once_per_turn: true"):
