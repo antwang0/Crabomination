@@ -26142,6 +26142,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZOG_COMMANDERS,
             main: decks::ZOG_MAIN,
         },
+        // Seat 4282: Mikey & Don, Party Planners's EDHREC average deck. `--pod-decks 4282`.
+        PodDeck {
+            name: "Mikey & Don, Party Planners (UG)",
+            commanders: decks::MIKEY_DON_COMMANDERS,
+            main: decks::MIKEY_DON_MAIN,
+        },
+        // Seat 4283: Genghis Frog's EDHREC average deck. `--pod-decks 4283`.
+        PodDeck {
+            name: "Genghis Frog (UG)",
+            commanders: decks::GENGHIS_FROG_COMMANDERS,
+            main: decks::GENGHIS_FROG_MAIN,
+        },
+        // Seat 4284: Vulture, Scheming Scavenger's EDHREC average deck. `--pod-decks 4284`.
+        PodDeck {
+            name: "Vulture, Scheming Scavenger (UB)",
+            commanders: decks::VULTURE_2_COMMANDERS,
+            main: decks::VULTURE_2_MAIN,
+        },
+        // Seat 4285: Oroku Saki, Shredder Rising's EDHREC average deck. `--pod-decks 4285`.
+        PodDeck {
+            name: "Oroku Saki, Shredder Rising (B)",
+            commanders: decks::OROKU_SAKI_COMMANDERS,
+            main: decks::OROKU_SAKI_MAIN,
+        },
+        // Seat 4286: Spider-Man, To the Rescue's EDHREC average deck. `--pod-decks 4286`.
+        PodDeck {
+            name: "Spider-Man, To the Rescue (WG)",
+            commanders: decks::SPIDER_MAN_7_COMMANDERS,
+            main: decks::SPIDER_MAN_7_MAIN,
+        },
+        // Seat 4287: MACH-1, Swooping Scoundrel's EDHREC average deck. `--pod-decks 4287`.
+        PodDeck {
+            name: "MACH-1, Swooping Scoundrel (B)",
+            commanders: decks::MACH_1_COMMANDERS,
+            main: decks::MACH_1_MAIN,
+        },
+        // Seat 4288: Splinter, Hamato Yoshi's EDHREC average deck. `--pod-decks 4288`.
+        PodDeck {
+            name: "Splinter, Hamato Yoshi (B)",
+            commanders: decks::SPLINTER_3_COMMANDERS,
+            main: decks::SPLINTER_3_MAIN,
+        },
+        // Seat 4289: Elektra, Femme Fatale's EDHREC average deck. `--pod-decks 4289`.
+        PodDeck {
+            name: "Elektra, Femme Fatale (R)",
+            commanders: decks::ELEKTRA_2_COMMANDERS,
+            main: decks::ELEKTRA_2_MAIN,
+        },
     ]
 }
 
@@ -32324,6 +32372,14 @@ mod tests {
             ("She-Hulk, Wallbreaker", &[0x1ACD]),
             ("Wolfsbane, Highland Hero", &[0x1ACE]),
             ("Zog, Triceraton Castaway", &[0x1ACF]),
+            ("Mikey & Don, Party Planners", &[0x1AD0]),
+            ("Genghis Frog", &[0x1AD1]),
+            ("Vulture, Scheming Scavenger", &[0x1AD2]),
+            ("Oroku Saki, Shredder Rising", &[0x1AD3]),
+            ("Spider-Man, To the Rescue", &[0x1AD4]),
+            ("MACH-1, Swooping Scoundrel", &[0x1AD5]),
+            ("Splinter, Hamato Yoshi", &[0x1AD6]),
+            ("Elektra, Femme Fatale", &[0x1AD7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

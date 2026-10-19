@@ -120115,3 +120115,227 @@ pub const ZOG_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const MIKEY_DON_COMMANDERS: &[CardFactory] = &[mikey_don_party_planners];
+
+/// **Mikey & Don, Party Planners**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 10 Islands = 99.
+/// Mikey & Don, Party Planners (EDHREC, fetched 2026-10-19).
+pub const MIKEY_DON_MAIN: &[CardFactory] = &[
+    arcane_signet, novel_nunchaku, ozolith_the_shattered_spire, simic_signet, sol_ring,
+    the_earth_crystal, the_ooze, turtle_van, breeding_pool, command_tower, dreamroot_cascade,
+    flooded_grove, hinterland_harbor, karns_bastion, mutant_town, path_of_ancestry,
+    rejuvenating_springs, reliquary_tower, sodden_verdure, turtle_lair, vineglimmer_snarl,
+    yavimaya_coast, baxter_fly_in_the_ointment, crustacean_commando, donatello_gadget_master,
+    donatello_rad_scientist, donatello_way_with_machines, donatello_the_brains,
+    evolution_witness, genghis_frog, groundchuck_dirtbag, irma_part_time_mutant,
+    jason_bright_glowing_prophet, leatherhead_iron_gator, leatherhead_swamp_stalker,
+    lily_bowen_raging_grandma, marcus_mutant_mayor, michelangelo_game_master,
+    michelangelo_improviser, michelangelo_mutant_bff, michelangelo_on_the_scene,
+    michelangelo_weirdness_to_11, michelangelo_the_heart, mona_lisa_ever_adaptable,
+    mona_lisa_science_geek, mutagen_man_living_ooze, ray_fillet_man_ray,
+    ray_fillet_wave_warrior, roalesk_apex_hybrid, skatewing_spy, slithering_cryptid,
+    steelbane_hydra, venus_torn_between_worlds, branching_evolution, bred_for_the_hunt,
+    hardened_scales, high_score, retro_mutation, sphere_grid, turtle_power, beast_within,
+    brainstorm, counterspell, growth_spiral, inspiring_call, mutational_advantage, negate,
+    ooze_spill, saved_by_the_shell, cowabunga, cultivate, donatellos_technique,
+    lessons_from_life, mutant_chain_reaction, new_generations_technique, rampant_growth,
+    wave_goodbye,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const GENGHIS_FROG_COMMANDERS: &[CardFactory] = &[genghis_frog];
+
+/// **Genghis Frog**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 10 Islands = 99.
+/// Genghis Frog (EDHREC, fetched 2026-10-19).
+pub const GENGHIS_FROG_MAIN: &[CardFactory] = &[
+    arcade_cabinet, arcane_signet, ozolith_the_shattered_spire, sol_ring, the_earth_crystal,
+    the_ooze, the_ozolith, turtle_van, breeding_pool, command_tower, dreamroot_cascade,
+    flooded_grove, hinterland_harbor, karns_bastion, mutant_town, path_of_ancestry,
+    rejuvenating_springs, reliquary_tower, sodden_verdure, vineglimmer_snarl, yavimaya_coast,
+    baxter_fly_in_the_ointment, benthic_biomancer, crustacean_commando, donatello_gadget_master,
+    donatello_way_with_machines, donatello_the_brains, evolution_witness, groundchuck_dirtbag,
+    irma_part_time_mutant, jason_bright_glowing_prophet, leatherhead_iron_gator,
+    leatherhead_swamp_stalker, lily_bowen_raging_grandma, marcus_mutant_mayor, merfolk_skydiver,
+    michelangelo_game_master, michelangelo_mutant_bff, michelangelo_weirdness_to_11,
+    mikey_don_party_planners, mona_lisa_ever_adaptable, mona_lisa_science_geek,
+    mutagen_man_living_ooze, plaxcaster_frogling, punk_frogs, ray_fillet_man_ray,
+    ray_fillet_wave_warrior, roalesk_apex_hybrid, rocksteady_mutant_marauder, skatewing_spy,
+    slithering_cryptid, venus_torn_between_worlds, watchful_radstag, branching_evolution,
+    bred_for_the_hunt, doubling_season, hardened_scales, high_score, simic_ascendancy,
+    sphere_grid, beast_within, counterspell, heroic_intervention, inspiring_call,
+    mutational_advantage, negate, ooze_spill, return_to_the_sewers, saved_by_the_shell,
+    cowabunga, cultivate, donatellos_technique, lessons_from_life, mutant_chain_reaction,
+    new_generations_technique, rampant_growth, wave_goodbye,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const VULTURE_2_COMMANDERS: &[CardFactory] = &[vulture_scheming_scavenger];
+
+/// **Vulture, Scheming Scavenger**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 14 Islands + 16 Swamps = 99.
+/// Vulture, Scheming Scavenger (EDHREC, fetched 2026-10-19).
+pub const VULTURE_2_MAIN: &[CardFactory] = &[
+    arcane_signet, doc_ocks_tentacles, eerie_gravestone, hot_dog_cart, mind_stone,
+    passenger_ferry, sol_ring, talisman_of_dominance, command_tower, daily_bugle_building,
+    dismal_backwater, drowned_catacomb, sinister_hideout, sunken_hollow, theorix_annex,
+    vibrant_cityscape, alchemax_slayer_bots, baron_strucker_hydra_overlord,
+    beetle_legacy_criminal, black_cat_cunning_thief, chameleon_master_of_disguise, common_crook,
+    crossbones_malicious_mercenary, doc_ocks_henchmen, doc_ock_sinister_scientist,
+    doctor_octopus_master_planner, emrakul_the_exigent_doom, flying_octobot,
+    hydro_man_fluid_felon, inner_demons_gangsters, lady_octopus_inspired_inventor,
+    living_brain_mechanical_marvel, mechanical_mobster, merciless_enforcers, mob_lookout,
+    morbius_the_living_vampire, morlun_devourer_of_spiders, mysterios_phantasm,
+    mysterio_master_of_illusion, prowler_clawed_thief, scorpion_seething_striker,
+    spider_slayer_hatred_honed, swarm_being_of_bees, symbiote_spawn, tombstone_career_criminal,
+    venom_eddie_brock, venom_evil_unleashed, venomized_cat, alien_symbiosis, impostor_syndrome,
+    spider_man_no_more, the_clone_saga, amazing_acrobatics, counterspell, dark_ritual,
+    heros_downfall, hide_on_the_ceiling, scorpions_sting, spider_sense, the_spots_portal,
+    unstable_experiment, whoosh, behold_the_sinister_six, divination, prison_break, reanimate,
+    risky_research, venoms_hunger, villainous_wrath,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const OROKU_SAKI_COMMANDERS: &[CardFactory] = &[oroku_saki_shredder_rising];
+
+/// **Oroku Saki, Shredder Rising**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Swamps = 99.
+/// Oroku Saki, Shredder Rising (EDHREC, fetched 2026-10-19).
+pub const OROKU_SAKI_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, charcoal_diamond, commanders_sphere, jet_medallion,
+    mind_stone, shredders_armor, sol_ring, swiftfoot_boots, whispersilk_cloak, bojuka_bog,
+    cabal_coffers, cabal_stronghold, mortuary_mire, witchs_cottage, accursed_marauder,
+    azra_smokeshaper, burglar_rat, cadaver_imp, changeling_outcast, crypt_rats,
+    dark_matter_manipulator, dokuchi_shadow_walker, dream_beavers, dusk_legion_zealot,
+    elderfang_disciple, engine_rat, gravedigger, gray_merchant_of_asphodel, hecteyes,
+    lilianas_specter, mabel_bitter_recluse, malboro, merciless_enforcers, mukotai_ambusher,
+    nezumi_informant, ninja_of_the_new_moon, orochi_soul_reaver, rank_rat, rotting_rats,
+    squirrelanoids, throat_slitter, troll_of_khazad_dum, virus_beetle, exquisite_blood,
+    no_mercy, oubliette, painful_quandary, phyrexian_arena, dark_ritual, deadly_dispute,
+    eviscerators_insight, fake_your_own_death, feign_death, go_for_the_throat, murder,
+    offer_immortality, pain_101, tragic_slip, undying_malice, village_rites, cast_away_doubt,
+    feed_the_swarm, nights_whisper, overwrite_the_multiverse, reanimate, shredders_technique,
+    sign_in_blood, toxic_deluge, unearth,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const SPIDER_MAN_7_COMMANDERS: &[CardFactory] = &[spider_man_to_the_rescue];
+
+/// **Spider-Man, To the Rescue**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 12 Forests + 14 Plains = 99.
+/// Spider-Man, To the Rescue (EDHREC, fetched 2026-10-19).
+pub const SPIDER_MAN_7_MAIN: &[CardFactory] = &[
+    arcane_signet, bagel_and_schmear, costume_closet, hot_dog_cart, pictures_of_spider_man,
+    sol_ring, subway_train, web_shooters, bountiful_promenade, brushland, canopy_vista,
+    command_tower, fortified_village, path_of_ancestry, suburban_sanctuary, sunpetal_grove,
+    temple_garden, vibrant_cityscape, anti_venom_horrifying_healer, arachne_psionic_weaver,
+    aunt_may, birds_of_paradise, black_panther_vanguard, flash_thompson_spider_fan,
+    gallant_citizen, guerrilla_gorilla, hero_in_training, iron_spider_stark_upgrade,
+    jennifer_walters, ka_zar_of_the_savage_land, mary_jane_watson, night_nurse_healer_of_heroes,
+    professional_wrestler, radioactive_spider, selfless_police_captain, silk_web_weaver,
+    spectacular_spider_man, spider_bot, spider_girl_legacy_hero, spider_ham_peter_porker,
+    spider_man_india, spider_man_brooklyn_visionary, spider_man_miles_morales,
+    spider_man_web_slinger, spider_rex_daring_dino, spider_uk, spiders_man_heroic_horde,
+    web_warriors, amazing_alliance, avengers_assemble, claim_the_kingdom, friendly_neighborhood,
+    origin_of_spider_man, rent_is_due, wall_crawl, web_up, with_great_power, grow_extra_arms,
+    heroic_intervention, rapid_rescue, reprieve, spectacular_tactics, strength_of_will,
+    swords_to_plowshares, take_up_the_shield, terrific_team_up, thwip, borough_backup,
+    call_damage_control, kapow, rampant_growth, restorative_technique, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const MACH_1_COMMANDERS: &[CardFactory] = &[mach_1_swooping_scoundrel];
+
+/// **MACH-1, Swooping Scoundrel**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// MACH-1, Swooping Scoundrel (EDHREC, fetched 2026-10-19).
+pub const MACH_1_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, dross_skullbomb, eye_of_jace, jet_medallion, lichs_relic,
+    paradise_plume, planetarium_of_wan_shi_tong, pristine_talisman, sol_ring,
+    the_darkness_crystal, tithing_blade, wayfarers_bauble, adventurers_inn, bojuka_bog,
+    cabal_coffers, maestros_theater, obscura_storefront, radiant_fountain, riveteers_overlook,
+    acolyte_of_aclazotz, apex_witchstalker, basilica_stalker, chrome_companion,
+    creeping_bloodsucker, crypt_ghast, deathgreeter, desperate_farmer, enduring_tenacity,
+    epicure_of_blood, gray_merchant_of_asphodel, long_bodied_grey_dog, m_o_d_o_k,
+    marauding_blight_priest, massacre_girl_most_wanted, moseo_veins_new_dean,
+    raven_of_fell_omens, scheming_silvertongue, screeching_soulbreaker, snarling_gorehound,
+    south_wind_avatar, spectrum_sentinel, starscape_cleric, witch_of_the_moors,
+    wreckage_wickerfolk, animate_dead, black_market_connections, dogged_pursuit,
+    scion_of_halaster, trespassers_curse, breathe_your_last, crypt_incursion, dark_ritual,
+    defile, murder, orcish_medicine, return_to_action, reverent_howl, snuff_out,
+    alms_of_the_vein, diresight, dread_return, feed_the_swarm, read_the_bones, reanimate,
+    risky_research, sign_in_blood, unearth, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const SPLINTER_3_COMMANDERS: &[CardFactory] = &[splinter_hamato_yoshi];
+
+/// **Splinter, Hamato Yoshi**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Splinter, Hamato Yoshi (EDHREC, fetched 2026-10-19).
+pub const SPLINTER_3_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, foot_chopper, heralds_horn, icon_of_ancestry, jet_medallion,
+    ninjas_blades, patchwork_banner, sol_ring, swiftfoot_boots, whip_of_erebos, bojuka_bog,
+    cabal_coffers, cabal_stronghold, rogues_passage, urborg_tomb_of_yawgmoth, witchs_cottage,
+    azra_smokeshaper, biting_palm_ninja, changeling_outcast, dokuchi_shadow_walker,
+    dokuchi_silencer, elektra_daughter_of_the_hand, foot_mystic, ink_eyes_servant_of_oni,
+    inkrise_infiltrator, kami_of_restless_shadows, mukotai_ambusher, nashi_moon_sages_scion,
+    nether_traitor, nezumi_prowler, ninja_of_the_hand, ninja_of_the_new_moon,
+    okiba_gang_shinobi, orochi_soul_reaver, oroku_saki_shredder_rising, rat_king_pale_piper,
+    rat_king_verminister, shark_shredder_killer_clone, shredder_shadow_master,
+    shredder_unrelenting, skullsnatcher, splinter_the_mentor, super_shredder, throat_slitter,
+    throatseeker, tormented_soul, undead_hand_ninja, cover_of_darkness, ninja_teen,
+    phyrexian_arena, phyrexian_reclamation, dark_ritual, doom_blade, force_of_despair,
+    go_for_the_throat, murder, overkill, sheoldreds_edict, swift_demise, bloodline_bidding,
+    feed_the_swarm, kaitos_pursuit, kindred_dominance, nights_whisper, shredders_technique,
+    splinters_technique, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ELEKTRA_2_COMMANDERS: &[CardFactory] = &[elektra_femme_fatale];
+
+/// **Elektra, Femme Fatale**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Elektra, Femme Fatale (EDHREC, fetched 2026-10-19).
+pub const ELEKTRA_2_MAIN: &[CardFactory] = &[
+    batterbone, butchers_cleaver, caged_sun, empowered_autogenerator,
+    gerrards_hourglass_pendant, gorgons_head, mirror_of_life_trapping, patchwork_banner,
+    ring_of_valkas, t_45_power_armor, tormentors_helm, voyager_staff, arcane_lighthouse,
+    detection_tower, endless_sands, gond_gate, hostile_desert, night_market, path_of_ancestry,
+    the_seedcore, witchs_clinic, blight_herder, chandra_fire_of_kaladesh, colossus_of_sardia,
+    enduring_courage, exuberant_fuseling, flametongue_kavu, frenzied_goblin, ghitu_slinger,
+    goblin_vandal, hamletback_goliath, hanweir_lancer, ilharg_the_raze_boar, imperial_recruiter,
+    moggcatcher, moraug_fury_of_akoum, palladium_myr, purphoros_god_of_the_forge,
+    reckless_brute, roaming_throne, ronin_cavekeeper, sanctuary_raptor, solemn_simulacrum,
+    solphim_mayhem_dominus, soulbright_flamekin, thresher_lizard, torbran_thane_of_red_fell,
+    tunnel_ignus, twinflame_tyrant, urabrasks_anointer, eomer_marshal_of_rohan, blood_mist,
+    braid_of_fire, city_on_fire, dictate_of_the_twin_gods, furnace_of_rath,
+    quest_for_pure_flame, spellshock, warstorm_surge, battle_hymn, burning_hands,
+    eldrazi_confluence, flames_of_the_blood_hand, march_of_reckless_joy,
+    jaya_venerated_firemage, sarkhan_fireblood, barrage_of_boulders, chain_lightning,
+    mizzixs_mastery, molten_exhale, reiterating_bolt, seething_anger,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
