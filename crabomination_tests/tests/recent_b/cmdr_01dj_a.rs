@@ -2132,3 +2132,178 @@ fn mjolnirs_might_burns_and_impulses() {
     assert_eq!(g.players[1].life, 16);
     assert_eq!(g.exile.len(), 1);
 }
+
+// ── Three-gap closers (`decks::cmdr_01dj_i`) ────────────────────────────────
+
+/// Slithering Cryptid and Return to the Sewers each leave a Mutagen; the
+/// Sewers tuck a creature into its owner's library.
+#[test]
+fn mutagen_makers() {
+    let mut g = pod(2);
+    let c = g.add_card_to_hand(0, catalog::slithering_cryptid());
+    cast_targets(&mut g, c, &[]);
+    assert_eq!(named(&g, 0, "Mutagen").len(), 1);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::return_to_the_sewers());
+    cast_targets(&mut g, s, &[Target::Permanent(giant)]);
+    assert!(g.players[1].library.iter().any(|c| c.id == giant));
+    assert_eq!(named(&g, 0, "Mutagen").len(), 2);
+}
+
+/// Retro-Mutation makes a 0/1 Turtle with no abilities that can't attack;
+/// Turtle Power! pumps only Turtles you control.
+#[test]
+fn retro_mutation_and_turtle_power() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = pod(2);
+    let raptor = g.add_card_to_battlefield(1, catalog::rampaging_raptor());
+    let s = g.add_card_to_hand(0, catalog::retro_mutation());
+    cast_targets(&mut g, s, &[Target::Permanent(raptor)]);
+    let cp = g.computed_permanent(raptor).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1));
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Turtle]);
+    assert!(!cp.keywords().contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::CantAttack));
+    let tp = g.add_card_to_hand(0, catalog::turtle_power());
+    cast_targets(&mut g, tp, &[]);
+    assert_eq!(power(&g, raptor), 0, "their Turtle isn't yours");
+}
+
+/// Black Panther, Vanguard rewards a nontoken Hero entering (default mode: a
+/// Soldier); Professional Wrestler brings a Treasure.
+#[test]
+fn black_panther_and_wrestler() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::black_panther_vanguard());
+    let h = g.add_card_to_hand(0, catalog::scarlet_witch_wanda_maximoff());
+    cast_targets(&mut g, h, &[]);
+    assert_eq!(named(&g, 0, "Soldier").len(), 1);
+    let w = g.add_card_to_hand(0, catalog::professional_wrestler());
+    cast_targets(&mut g, w, &[]);
+    assert_eq!(named(&g, 0, "Treasure").len(), 1);
+    assert_eq!(named(&g, 0, "Soldier").len(), 1, "the Wrestler is no Hero");
+}
+
+/// Subway Train's {G} finds a basic land.
+#[test]
+fn subway_train_finds_a_land() {
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    let t = g.add_card_to_hand(0, catalog::subway_train());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_targets(&mut g, t, &[]);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].hand[0].definition.name, "Forest");
+}
+
+/// Inner Demons Gangsters discard a card for +1/+0 and menace.
+#[test]
+fn inner_demons_gangsters_pump() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let gg = ready(&mut g, 0, catalog::inner_demons_gangsters());
+    g.add_card_to_hand(0, catalog::forest());
+    activate_on(&mut g, gg, 0, None);
+    let cp = g.computed_permanent(gg).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&Keyword::Menace));
+}
+
+/// Shredder's Armor attaches itself on entry (+2/+1).
+#[test]
+fn shredders_armor_attaches_on_entry() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let a = g.add_card_to_hand(0, catalog::shredders_armor());
+    cast_targets(&mut g, a, &[]);
+    assert_eq!(g.battlefield_find(a).unwrap().attached_to, Some(bear));
+    assert_eq!(power(&g, bear), 4);
+}
+
+/// Foot Mystic's disappear: a Ninja only if a permanent of yours left this
+/// turn.
+#[test]
+fn foot_mystic_disappear() {
+    for left in [false, true] {
+        let mut g = pod(2);
+        if left {
+            let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            kill(&mut g, bear);
+        }
+        let f = g.add_card_to_hand(0, catalog::foot_mystic());
+        cast_targets(&mut g, f, &[]);
+        assert_eq!(named(&g, 0, "Ninja").len(), usize::from(left));
+    }
+}
+
+/// Mirror of Life Trapping exiles a cast creature and frees the previous
+/// prisoner.
+#[test]
+fn mirror_of_life_trapping_swaps_prisoners() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::mirror_of_life_trapping());
+    let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_targets(&mut g, a, &[]);
+    assert!(in_exile(&g, a));
+    let b = g.add_card_to_hand(0, catalog::hill_giant());
+    cast_targets(&mut g, b, &[]);
+    assert!(in_exile(&g, b));
+    assert!(
+        g.battlefield_find(a).is_some(),
+        "the first prisoner returns"
+    );
+}
+
+/// Thresher Lizard is 4/4 with one card or fewer in hand; Burning Hands deals
+/// 6 to a green creature, 2 otherwise.
+#[test]
+fn thresher_lizard_and_burning_hands() {
+    let mut g = pod(2);
+    let liz = g.add_card_to_battlefield(0, catalog::thresher_lizard());
+    g.players[0].hand.clear();
+    let cp = g.computed_permanent(liz).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    let wurm = g.add_card_to_battlefield(1, catalog::warriors_of_wakanda());
+    let bh = g.add_card_to_hand(0, catalog::burning_hands());
+    cast_targets(&mut g, bh, &[Target::Permanent(wurm)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(wurm).is_none(), "6 to the green 4/4");
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bh = g.add_card_to_hand(0, catalog::burning_hands());
+    cast_targets(&mut g, bh, &[Target::Permanent(giant)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(giant).is_some(), "2 to the red 3/3");
+}
+
+/// Desperate Farmer transforms into Depraved Harvester when another creature
+/// of yours dies.
+#[test]
+fn desperate_farmer_transforms() {
+    let mut g = pod(2);
+    let f = g.add_card_to_battlefield(0, catalog::desperate_farmer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    assert_eq!(power(&g, f), 4);
+}
+
+/// Alms of the Vein drains 3; Reverent Howl's first mode draws two for 2 life.
+#[test]
+fn alms_and_howl() {
+    let mut g = pod(2);
+    let a = g.add_card_to_hand(0, catalog::alms_of_the_vein());
+    cast_targets(&mut g, a, &[Target::Player(1)]);
+    assert_eq!((g.players[0].life, g.players[1].life), (23, 17));
+    let hand = g.players[1].hand.len();
+    let h = g.add_card_to_hand(0, catalog::reverent_howl());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: h,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].hand.len(), g.players[1].life), (hand + 2, 15));
+}
