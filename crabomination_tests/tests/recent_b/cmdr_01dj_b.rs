@@ -578,3 +578,154 @@ fn tam_proliferates_per_planeswalker_type() {
         assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Loyalty), before[i] + 2);
     }
 }
+
+// ── Three-gap closers (`decks::cmdr_01dj_t`) ───────────────────────────────
+
+/// Soldier On: two +1/+1 counters and an untap.
+#[test]
+fn soldier_on_counters_and_untaps() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let s = g.add_card_to_hand(0, catalog::soldier_on());
+    cast_targets(&mut g, s, &[Target::Permanent(bear)]);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(!b.tapped);
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Hawkeye's Shot costs {2} less at a tapped creature: three mana exiles a
+/// tapped Bear and can't pay for an untapped one.
+#[test]
+fn hawkeyes_shot_is_cheaper_at_a_tapped_creature() {
+    for (tapped, ok) in [(true, true), (false, false)] {
+        let mut g = pod(2);
+        let bear = ready(&mut g, 1, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().tapped = tapped;
+        let s = g.add_card_to_hand(0, catalog::hawkeyes_shot());
+        g.players[0].mana_pool.add(Color::White, 3);
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: s,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(cast.is_ok(), ok, "tapped={tapped}");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bear).is_none(), ok);
+    }
+}
+
+/// Entrust the Spark trades a planeswalker for one from the library.
+#[test]
+fn entrust_the_spark_swaps_a_planeswalker() {
+    let mut g = pod(2);
+    let arz = g.add_card_to_battlefield(0, catalog::arzakon());
+    let lili = g.add_card_to_library(0, catalog::liliana_of_the_veil());
+    let s = g.add_card_to_hand(0, catalog::entrust_the_spark());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_targets(&mut g, s, &[]);
+    assert!(g.battlefield_find(arz).is_none(), "sacrificed");
+    assert!(g.battlefield_find(lili).is_some(), "searched onto the battlefield");
+}
+
+/// Mouser Mark III can't attack alone among artifacts; another artifact
+/// frees it.
+#[test]
+fn mouser_mark_iii_needs_another_artifact() {
+    for (ring, ok) in [(false, false), (true, true)] {
+        let mut g = pod(2);
+        let m = ready(&mut g, 0, catalog::mouser_mark_iii());
+        if ring {
+            g.add_card_to_battlefield(0, catalog::sol_ring());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        let r = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: m,
+            target: AttackTarget::Player(1),
+        }]));
+        assert_eq!(r.is_ok(), ok, "ring={ring}");
+    }
+}
+
+/// Nobody bounces another artifact you control and scries; Rock Soldiers
+/// destroys a noncreature artifact.
+#[test]
+fn nobody_bounces_and_rock_soldiers_destroys_artifacts() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let n = g.add_card_to_hand(0, catalog::nobody());
+    cast_targets(&mut g, n, &[Target::Permanent(ring)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring));
+
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let rs = g.add_card_to_hand(0, catalog::rock_soldiers());
+    cast_targets(&mut g, rs, &[Target::Permanent(theirs)]);
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// Transmogrant Altar turns a creature into {C}{C}{C}, or (sorcery speed)
+/// into a 3/3 Zombie artifact creature.
+#[test]
+fn transmogrant_altar_sacrifices_for_mana_or_a_zombie() {
+    let mut g = pod(2);
+    let altar = g.add_card_to_battlefield(0, catalog::transmogrant_altar());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    activate(&mut g, altar, 0, None);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+
+    let mut g = pod(2);
+    let altar = g.add_card_to_battlefield(0, catalog::transmogrant_altar());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    activate(&mut g, altar, 1, None);
+    let z = g.battlefield.iter().find(|c| c.definition.name == "Zombie").expect("a Zombie");
+    assert!(z.definition.card_types.contains(&crabomination::card::CardType::Artifact));
+}
+
+/// Ceti Eel mills two, then grows per artifact/creature card in your
+/// graveyard (two Bears milled + one already there = three).
+#[test]
+fn ceti_eel_grows_from_the_graveyard() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::sol_ring());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let e = g.add_card_to_hand(0, catalog::ceti_eel());
+    cast_targets(&mut g, e, &[]);
+    assert_eq!(g.battlefield_find(e).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// V'Ger's entry, second mode: opposing creatures get -1/-0 until your next
+/// turn.
+#[test]
+fn vger_shrinks_opposing_attackers() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let v = g.add_card_to_hand(0, catalog::vger_the_intruder());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast_targets(&mut g, v, &[]);
+    assert_eq!(power(&g, bear), 1);
+}
+
+/// Boarded Window: attackers aimed at you get -1/-0; after you've taken 4
+/// damage in a turn, the end step exiles it.
+#[test]
+fn boarded_window_weakens_attackers_then_breaks() {
+    let mut g = pod(2);
+    let w = g.add_card_to_battlefield(1, catalog::boarded_window());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    attack(&mut g, &[giant]);
+    assert_eq!(power(&g, giant), 2);
+    g.players[1].damage_taken_this_turn = 4;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == w));
+}

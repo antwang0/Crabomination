@@ -855245,5 +855245,142 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=909544&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/155618?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Valkyrior Skyrider": {
+    "object": "card",
+    "id": "7b75958b-7b72-4c0f-a75e-5e62e3727a7d",
+    "oracle_id": "ea0b0c71-4a1b-49aa-b4cd-db6c5d26b95e",
+    "multiverse_ids": [],
+    "resource_id": "CED83EEC890E7A94628487E412B50008CD25B48AEBCBFBB9BC802AAC3D392B35",
+    "mtgo_id": 151075,
+    "arena_id": 105542,
+    "tcgplayer_id": 697115,
+    "cardmarket_id": 891903,
+    "name": "Valkyrior Skyrider",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/7b75958b-7b72-4c0f-a75e-5e62e3727a7d",
+    "scryfall_uri": "https://scryfall.com/card/msc/525/valkyrior-skyrider?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:38:26Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.jpg?1783903106",
+      "normal": "https://cards.scryfall.io/normal/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.jpg?1783903106",
+      "large": "https://cards.scryfall.io/large/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.jpg?1783903106",
+      "png": "https://cards.scryfall.io/png/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.png?1783903106",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.jpg?1783903106",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.jpg?1783903106",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.webp?1783903106",
+      "grid": "https://cards.scryfall.io/grid/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.webp?1783903106",
+      "display": "https://cards.scryfall.io/display/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.webp?1783903106",
+      "art": "https://cards.scryfall.io/art/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.webp?1783903106",
+      "crop": "https://cards.scryfall.io/crop/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.webp?1783903106",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/b/7b75958b-7b72-4c0f-a75e-5e62e3727a7d.jpg?1783903106"
+    },
+    "mana_cost": "{4}{W}",
+    "cmc": 5.0,
+    "type_line": "Creature — God Warrior Hero",
+    "oracle_text": "Flying (This creature can't be blocked except by creatures with flying or reach.)\nWhen this creature enters, you gain 4 life.",
+    "power": "3",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [
+      "Flying"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7b75958b-7b72-4c0f-a75e-5e62e3727a7d/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aea0b0c71-4a1b-49aa-b4cd-db6c5d26b95e&unique=prints",
+    "collector_number": "525",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "For warriors of Asgard, there can be no more welcome sight than the Valkyries entering the fray atop their noble steeds.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Kevin Glint",
+    "artist_ids": [
+      "1d9ddf35-c50d-4fc7-987c-4e2bf909f75a"
+    ],
+    "illustration_id": "33fffd44-4034-46ec-8034-2ece1c0e8deb",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 27727,
+    "prices": {
+      "usd": "0.27",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "0.28",
+      "eur_foil": null,
+      "tix": "0.26"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DValkyrior%2BSkyrider",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DValkyrior%2BSkyrider",
+      "edhrec": "https://edhrec.com/route/?cc=Valkyrior+Skyrider"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697115%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891903&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151075?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }
