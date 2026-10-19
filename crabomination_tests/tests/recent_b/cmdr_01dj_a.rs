@@ -2852,3 +2852,118 @@ fn fangorn_treefolk() {
         lands + 1
     );
 }
+
+// ── Inga Rune-Eyes, Namor (`decks::cmdr_01dj_m`) ────────────────────────────
+
+/// Homarid Spawning Bed turns a blue creature into Camarids by its mana
+/// value; Stitcher's Apprentice makes a Homunculus, then sacrifices.
+#[test]
+fn homarid_spawning_bed_and_stitcher() {
+    let mut g = pod(2);
+    let bed = ready(&mut g, 0, catalog::homarid_spawning_bed());
+    let seer = g.add_card_to_battlefield(0, catalog::oracle_of_tragedy());
+    flood(&mut g, 0);
+    activate_on(&mut g, bed, 0, None);
+    assert!(g.battlefield_find(seer).is_none());
+    assert_eq!(
+        named(&g, 0, "Camarid").len(),
+        2,
+        "Oracle of Tragedy's mana value"
+    );
+    let st = ready(&mut g, 0, catalog::stitchers_apprentice());
+    flood(&mut g, 0);
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    activate_on(&mut g, st, 0, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        before,
+        "one made, one sacrificed"
+    );
+}
+
+/// Sidisi's Faithful's exploit bounces a creature.
+#[test]
+fn sidisis_faithful_exploits_to_bounce() {
+    let mut g = pod(2);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let sf = g.add_card_to_hand(0, catalog::sidisis_faithful());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_targets(&mut g, sf, &[]);
+    assert!(
+        g.battlefield_find(fodder).is_none() || g.battlefield_find(sf).is_none(),
+        "something was exploited"
+    );
+    assert!(g.players[1].hand.iter().any(|c| c.id == giant));
+}
+
+/// Deepchannel Duelist pumps other Merfolk; Deepway Navigator's +1/+0 needs
+/// three Merfolk attackers.
+#[test]
+fn namor_merfolk_lords() {
+    let mut g = pod(2);
+    let dd = ready(&mut g, 0, catalog::deepchannel_duelist());
+    let nav = ready(&mut g, 0, catalog::deepway_navigator());
+    let sygg = ready(&mut g, 0, catalog::sygg_river_guide());
+    assert_eq!(power(&g, nav), 3);
+    assert_eq!(power(&g, dd), 2);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack {
+            attacker: dd,
+            target: AttackTarget::Player(1),
+        },
+        Attack {
+            attacker: nav,
+            target: AttackTarget::Player(1),
+        },
+        Attack {
+            attacker: sygg,
+            target: AttackTarget::Player(1),
+        },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(power(&g, nav), 4, "+1/+1 lord and +1/+0 Navigator");
+}
+
+/// Summon the School makes two Merfolk Wizards and climbs back by tapping four
+/// Merfolk.
+#[test]
+fn summon_the_school_recurs() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::summon_the_school());
+    cast_targets(&mut g, s, &[]);
+    assert_eq!(named(&g, 0, "Merfolk Wizard").len(), 2);
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::sygg_river_guide());
+    }
+    for id in named(&g, 0, "Merfolk Wizard") {
+        g.clear_sickness(id);
+    }
+    activate_on(&mut g, s, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == s));
+}
+
+/// Sygg's Command: a draw and a stun-tap.
+#[test]
+fn syggs_command_draw_and_stun() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::syggs_command());
+    let hand = g.players[0].hand.len();
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: s,
+        spree_modes: vec![2, 3],
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(giant)],
+        x_value: None,
+    })
+    .expect("two modes");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "cast it, drew one");
+    let c = g.battlefield_find(giant).unwrap();
+    assert!(c.tapped && c.counter_count(CounterType::Stun) == 1);
+}

@@ -17832,6 +17832,16 @@ static DECKS: &[Factory] = &[
     super::decks::rootless_yew,
     super::decks::rootgrapple,
     super::decks::tend_the_sprigs,
+    super::decks::jeskai_sage,
+    super::decks::oracle_of_tragedy,
+    super::decks::sidisis_faithful,
+    super::decks::stitchers_apprentice,
+    super::decks::homarid_spawning_bed,
+    super::decks::deepchannel_duelist,
+    super::decks::deepway_navigator,
+    super::decks::sygg_river_guide,
+    super::decks::summon_the_school,
+    super::decks::syggs_command,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
