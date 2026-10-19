@@ -1170,6 +1170,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::ManaOrMana(a, b) => {
                 format!("Ward—Pay {{{}}} or {{{}}}", a.cmc(), b.cmc())
             }
+            crabomination::card::WardCost::ManaOrDiscard(c, n) => {
+                format!("Ward—Discard {n} or pay {{{}}}", c.cmc())
+            }
             crabomination::card::WardCost::SacrificeAttachedHost => {
                 "Ward—Sacrifice the enchanted permanent".into()
             }

@@ -18362,6 +18362,7 @@ fn ward_tax_payable(
         WardCost::Life(n) => life_ok(*n),
         WardCost::ManaAndLife(mc, n) => mana_ok(mc) && life_ok(*n),
         WardCost::ManaOrMana(a, b) => mana_ok(a) || mana_ok(b),
+        WardCost::ManaOrDiscard(c, n) => mana_ok(c) || state.players[seat].hand.len() >= *n as usize,
         WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => {
             state.players[seat].hand.len() >= *n as usize
         }
@@ -18401,6 +18402,7 @@ fn ward_tax_burden(tax: &crate::card::WardCost) -> i32 {
         WardCost::Life(n) => (*n as i32 + 1) / 2,
         WardCost::ManaAndLife(mc, n) => mc.cmc() as i32 + (*n as i32 + 1) / 2,
         WardCost::ManaOrMana(a, b) => a.cmc().min(b.cmc()) as i32,
+        WardCost::ManaOrDiscard(c, n) => (c.cmc() as i32).min(2 * *n as i32),
         WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => 2 * *n as i32,
         WardCost::DiscardHand => 3,
         WardCost::RevealMatching(_) => 0,

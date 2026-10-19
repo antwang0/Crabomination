@@ -47926,6 +47926,23 @@ impl GameState {
                         self.pay_mana_cost_with_picks(payer, &first, picks, events)
                             || self.pay_mana_cost_with_picks(payer, &second, picks, events)
                     }
+                    // Titania — "discard a card or pay {2}": the mana when the
+                    // payer can afford it, else the discard.
+                    WardCost::ManaOrDiscard(mc, n) => {
+                        let mc = mc.clone();
+                        let n = *n as usize;
+                        if self.pay_mana_cost_with_picks(payer, &mc, picks, events) {
+                            true
+                        } else if self.players[payer].hand.len() >= n {
+                            for _ in 0..n {
+                                let Some(card_id) = self.players[payer].hand.first().map(|c| c.id) else { break };
+                                self.discard_card(payer, card_id, events);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     // Curse Artifact — sacrifice the permanent this Aura is on.
                     WardCost::SacrificeAttachedHost => {
                         let host = ctx

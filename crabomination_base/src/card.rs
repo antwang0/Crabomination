@@ -1230,6 +1230,9 @@ pub enum WardCost {
     /// the payer's choice (Thrull Wizard). Auto-payment takes the first it
     /// can afford.
     ManaOrMana(crate::mana::ManaCost, crate::mana::ManaCost),
+    /// "Ward—Discard N cards or pay {cost}" (Titania, Rugged Rumbler).
+    /// Auto-payment takes the mana when it can and discards otherwise.
+    ManaOrDiscard(crate::mana::ManaCost, u32),
     /// "…unless they sacrifice that [permanent]" — the permanent the source
     /// Aura is attached to, specifically (Curse Artifact). Unpayable once the
     /// Aura has come unattached.
@@ -1290,6 +1293,7 @@ impl WardCost {
             W::ManaCostOfAttached => "Ward—pay the enchanted permanent's mana cost".to_string(),
             W::ManaOrLife(c, n) => format!("Ward—{{{}}} or {n} life", c.cmc()),
             W::ManaOrMana(a, b) => format!("Ward—{} or {}", a.summary(), b.summary()),
+            W::ManaOrDiscard(c, n) => format!("Ward—discard {n} or {}", c.summary()),
             W::SacrificeAttachedHost => "Ward—sacrifice the enchanted permanent".to_string(),
         }
     }
