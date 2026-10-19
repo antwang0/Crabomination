@@ -425,6 +425,7 @@ impl Effect {
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::EnlistThen { then } => f(then),
             Effect::BlightThen { then, .. } => f(then),
+            Effect::ReattachPlayerAurasToOpponents { then: Some(then), .. } => f(then),
             // Magar's puppet's on-hit body runs later, under the puppet.
             Effect::PutFaceDownAsNotedSpell { on_hit, .. } => f(on_hit),
             Effect::AsSubjectsAbility(e) => f(e),
@@ -1557,6 +1558,14 @@ impl Effect {
             Effect::ReturnSomeExiledWithSourceRestToBottom { .. } => false,
             Effect::DestroyWithinTotalManaValue { .. } => false,
             Effect::ReturnSelfTransformedAttachedTo { host } => sel_has_target(host),
+            Effect::ReturnToBattlefieldAttachedToPlayer { what, host } => {
+                sel_has_target(what) || player_has_target(host)
+            }
+            Effect::SearchAttachToPlayer { host, .. } => player_has_target(host),
+            Effect::ReattachPlayerAurasToOpponents { from, then, .. } => {
+                player_has_target(from) || then.as_deref().is_some_and(Effect::requires_target)
+            }
+            Effect::EachOtherPlayerMayCopy { what, except } => sel_has_target(what) || player_has_target(except),
             Effect::RemoveCountersFromAmongDrawAndLoseLife => false,
             Effect::RepeatWhileClashWon { body } => body.requires_target(),
             Effect::RepeatWhileMay { body, .. } => body.requires_target(),

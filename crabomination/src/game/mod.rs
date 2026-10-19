@@ -35794,6 +35794,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerMaxHandSizeFromSourceCounters(_)
             | StaticEffect::ControllerMaxHandSizeIncreased(_)
             | StaticEffect::NamedSpellTax { .. }
+            | StaticEffect::EnchantedPlayerNamedSpellTax { .. }
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard

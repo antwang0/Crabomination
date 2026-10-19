@@ -3836,6 +3836,10 @@ pub enum StaticEffect {
     /// source's `named_card` (stamped at ETB via `Effect::NameCard`).
     /// Disruptor Flute. Folded into `extra_cost_for_spell`.
     NamedSpellTax { amount: u32 },
+    /// "Spells with the chosen name enchanted player casts cost {N} more"
+    /// (Curse of Silence): `NamedSpellTax` paid only by the player the
+    /// source Aura enchants.
+    EnchantedPlayerNamedSpellTax { amount: u32 },
     /// Meddling Mage — spells with the source's `named_card` can't be cast.
     NamedSpellCantBeCast,
     /// Ashiok's Erasure — the controller's *opponents* can't cast spells with
@@ -5282,4 +5286,6 @@ pub enum RulebreakerCards {
     OfCreatureType(crate::card::CreatureType),
     /// Artifact creature and Equipment cards (The Everforger).
     ArtifactCreaturesAndEquipment,
+    /// Aura cards (The Unluckiest Planeswalker).
+    Auras,
 }

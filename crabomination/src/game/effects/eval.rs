@@ -910,6 +910,11 @@ impl GameState {
                 .iter()
                 .map(|&p| self.players[p].damage_taken_this_turn as i32)
                 .sum(),
+            Value::AttachedToPlayerMatching { who, filter } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.auras_attached_to_player(p, filter, ctx.controller).len() as i32)
+                .sum(),
             Value::MostDamageTakenThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()

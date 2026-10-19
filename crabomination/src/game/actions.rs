@@ -1935,6 +1935,12 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 {
                     tax += amount;
                 }
+                StaticEffect::EnchantedPlayerNamedSpellTax { amount }
+                    if src.attached_to_player == Some(caster)
+                        && src.named_card.as_deref().is_some_and(|n| card.definition.has_name(n)) =>
+                {
+                    tax += amount;
+                }
                 // Tithe Taker: on its controller's turn, opponents' spells cost
                 // {amount} more (the controller is exempt).
                 StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount }

@@ -886,6 +886,10 @@ pub enum Value {
     /// (`Player.damage_taken_this_turn`, MAX not sum) — "if an opponent was
     /// dealt 3 or more damage this turn" (Lightning Phoenix).
     MostDamageTakenThisTurn(PlayerRef),
+    /// CR 303.4 — how many `filter` permanents are attached to the players
+    /// `who` resolves to ("the number of Curses attached to that player" —
+    /// Curse of Thirst; "each Aura attached to you").
+    AttachedToPlayerMatching { who: PlayerRef, filter: crate::card::SelectionRequirement },
     /// The noncombat slice of `DamageTakenThisTurn`, summed across the
     /// resolved players (Chandra's Incinerator's cost reduction).
     NoncombatDamageTakenThisTurn(PlayerRef),
@@ -9083,6 +9087,32 @@ pub enum Effect {
     /// its owner's graveyard already transformed to its back face, attached to
     /// the first `host`. A back face that is an Aura enters as that Aura.
     ReturnSelfTransformedAttachedTo { host: Selector },
+    /// CR 303.4f — "return [`what`] to the battlefield attached to [`host`]"
+    /// where `host` is a player: each `what` card in a graveyard enters under
+    /// the effect controller's control enchanting the first player `host`
+    /// resolves to (Lynde, Cheerful Tormentor's end-step return of a Curse).
+    ReturnToBattlefieldAttachedToPlayer { what: Selector, host: PlayerRef },
+    /// CR 303.4f / 701.23 — search your library for a `filter` card and put
+    /// it onto the battlefield attached to the player `host` resolves to,
+    /// then shuffle. `distinct_names`: it can't share a name with an Aura
+    /// already attached to that player (Curse of Misfortunes). Bitterheart
+    /// Witch. The pick is the priciest legal card.
+    SearchAttachToPlayer { filter: crate::card::SelectionRequirement, host: PlayerRef, distinct_names: bool },
+    /// CR 701.3 — attach `filter` Auras attached to `from` to opponents of
+    /// the effect controller (one each, the controller's choice; headless:
+    /// the highest-life opponent). `all` moves every such Aura, else one.
+    /// `then` runs only if an Aura moved ("if you do, draw two cards" —
+    /// Lynde; the Unluckiest Planeswalker's −3 moves them all).
+    ReattachPlayerAurasToOpponents {
+        from: PlayerRef,
+        filter: crate::card::SelectionRequirement,
+        all: bool,
+        then: Option<Box<Effect>>,
+    },
+    /// CR 707.10c — each player other than `except` may copy the spell
+    /// `what` names, choosing new targets for the copy they control (Curse of
+    /// Echoes). Each seat is asked; a headless seat copies.
+    EachOtherPlayerMayCopy { what: Selector, except: PlayerRef },
     /// CR 701.30 — "[body], then clash with an opponent. If you win, repeat
     /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
     /// suspended clash resumes without re-running an earlier `body`.
@@ -14912,6 +14942,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         SE::AdditionalCost { .. }
         | SE::AdditionalCostAfterFirstSpell { .. }
         | SE::NamedSpellTax { .. }
+        | SE::EnchantedPlayerNamedSpellTax { .. }
         | SE::OpponentActivityCostsMoreOnYourTurn { .. }
         | SE::OpponentSpellsCostMore { .. }
         | SE::OpponentSpellsFromGraveyardOrExileCostMore { .. }

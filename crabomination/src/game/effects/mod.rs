@@ -88,6 +88,7 @@ mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod blight;
+mod player_auras;
 mod hand_reveal;
 mod reveal_until;
 mod shell_game;
@@ -36409,11 +36410,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnToBattlefieldAttachedToPlayer { what, host } => {
+                self.return_to_battlefield_attached_to_player(what, host, ctx, events)
+            }
+            Effect::SearchAttachToPlayer { filter, host, distinct_names } => {
+                self.search_attach_to_player(filter, host, *distinct_names, ctx, events)
+            }
+            Effect::ReattachPlayerAurasToOpponents { from, filter, all, then } => {
+                self.reattach_player_auras_to_opponents(from, filter, *all, then.as_deref(), ctx, events)
+            }
+            Effect::EachOtherPlayerMayCopy { what, except } => self.each_other_player_may_copy(what, except, ctx, events),
+
             Effect::ReturnSelfTransformedAttachedTo { host } => {
                 let Some(src) = ctx.source else { return Ok(()) };
-                let Some(host) = self.resolve_selector(host, ctx).iter().find_map(|e| e.as_permanent_id()) else {
+                // CR 303.4 — the host may be a player (Accursed Witch's
+                // Infectious Curse returns enchanting an opponent).
+                let resolved = self.resolve_selector(host, ctx);
+                let host_seat = resolved.iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(*p),
+                    _ => None,
+                });
+                let host = resolved.iter().find_map(|e| e.as_permanent_id());
+                if host.is_none() && host_seat.is_none() {
                     return Ok(());
-                };
+                }
                 let Some(owner) = self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == src)) else {
                     return Ok(());
                 };
@@ -36434,7 +36454,8 @@ impl GameState {
                     events,
                 );
                 if let Some(c) = self.battlefield_find_mut(src) {
-                    c.attached_to = Some(host);
+                    c.attached_to = host;
+                    c.attached_to_player = host_seat.filter(|_| host.is_none());
                 }
                 Ok(())
             }
