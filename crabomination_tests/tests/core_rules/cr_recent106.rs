@@ -943,6 +943,29 @@ fn cr_101_4_each_player_may_draw_and_takers_gain_life() {
     assert_eq!((g.players[1].hand.len(), g.players[1].life), (0, l1));
 }
 
+/// Turtles in Time's offer: each player may shuffle hand and graveyard into
+/// their library; only the takers draw (seven), the decliner keeps all.
+#[test]
+fn cr_101_4_each_player_may_shuffle_hand_and_graveyard_then_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::Effect;
+    let mut g = peace_main();
+    for p in 0..2 {
+        for _ in 0..8 {
+            g.add_card_to_library(p, catalog::plains());
+        }
+        g.add_card_to_hand(p, catalog::grizzly_bears());
+        g.add_card_to_graveyard(p, catalog::lightning_bolt());
+    }
+    let lib1 = g.players[1].library.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)]));
+    run_as_spell(&mut g, Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw { draw: 7 });
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"));
+    assert_eq!(g.players[0].library.len(), 10 - 7);
+    assert_eq!((g.players[1].hand.len(), g.players[1].graveyard.len(), g.players[1].library.len()), (1, 1, lib1));
+}
+
 /// CR 114.4 — an emblem's "cast spells from your hand without paying their
 /// mana costs" works from the command zone.
 #[test]

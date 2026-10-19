@@ -39249,6 +39249,9 @@ impl GameState {
             Effect::EachPlayerMayDrawThenTakersGainLife { life } => {
                 self.each_player_may_draw_then_gain(*life, effect, ctx, events)
             }
+            Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw { draw } => {
+                self.each_player_may_shuffle_then_draw(*draw, effect, ctx, events)
+            }
 
             Effect::ChooseAttackDirection => {
                 self.choose_attack_direction(ctx);

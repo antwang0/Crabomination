@@ -238,6 +238,53 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw` — APNAP, each
+    /// living player may shuffle their hand and graveyard into their library;
+    /// then every player who did draws `draw` (Turtles in Time). The asks are
+    /// logged like `each_player_may_draw_then_gain`'s.
+    pub(super) fn each_player_may_shuffle_then_draw(
+        &mut self,
+        draw: u32,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let seats = self.apnap_sort((0..self.players.len()).collect());
+        let mut cursor = 0usize;
+        let mut takers: Vec<usize> = Vec::new();
+        for q in seats {
+            if !self.logged_gate(&mut cursor, |g| g.players[q].is_alive()) {
+                continue;
+            }
+            let Some(yes) = self.ask_seat_bool(
+                &mut cursor,
+                q,
+                format!("Shuffle your hand and graveyard into your library, then draw {draw}?"),
+                source,
+                effect,
+                OptionalKind::MayBody,
+            ) else {
+                return Ok(());
+            };
+            if yes {
+                takers.push(q);
+            }
+        }
+        self.clear_answer_log();
+        for &q in &takers {
+            self.run_effect(&Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::Seat(q) }, ctx, events)?;
+        }
+        for &q in &takers {
+            self.run_effect(
+                &Effect::Draw { who: Selector::Player(PlayerRef::Seat(q)), amount: Value::Const(draw as i32) },
+                ctx,
+                events,
+            )?;
+        }
+        Ok(())
+    }
+
     /// `Effect::EachPlayerVotesForAPlayer` — CR 701.38: starting with the
     /// controller, in turn order, each living player votes for another living
     /// player (secret council: nobody's vote is shown until all are cast, so

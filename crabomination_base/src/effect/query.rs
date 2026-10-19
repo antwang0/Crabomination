@@ -2561,6 +2561,7 @@ impl Effect {
             | Effect::EachPushesTrigger { .. }
             | Effect::EachOpponentChooses { .. }
             | Effect::EachPlayerMayDrawThenTakersGainLife { .. }
+            | Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw { .. }
             | Effect::ChooseAttackDirection
             | Effect::ChooseAttackDirectionUntilYourNextTurn
             | Effect::EachPlayerChoosesColorExileOthers

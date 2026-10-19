@@ -6481,6 +6481,10 @@ pub enum Effect {
     /// player who drew a card this way gains `life` life." Asked APNAP; the
     /// takers draw, then gain.
     EachPlayerMayDrawThenTakersGainLife { life: u32 },
+    /// Turtles in Time — "Each player may shuffle their hand and graveyard
+    /// into their library, then each player who does draws `draw` cards."
+    /// Asked APNAP; every taker shuffles, then every taker draws.
+    EachPlayerMayShuffleHandAndGraveyardThenDraw { draw: u32 },
     /// Mystic Barrier — "choose left or right", stamped on the source (left:
     /// toward the next seat, the CR 803.1a direction; right: the previous).
     ChooseAttackDirection,
