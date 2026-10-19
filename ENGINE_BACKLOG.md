@@ -239,7 +239,12 @@ the handoff.
   Fury Spymaster, Zarda, Luke Cage Power Man, Agent 13, Black Panther Claws of Bast, Peggy Carter —
   Strategic Intervention + Crowd of True Believers + Widow's Bite), 4339-4341 (Sharae, Worzel, Janeway),
   4342 (Donatello Turtle Techie — Turtles in Time), 4343-4345 (The Destined Warrior, Tazri Beacon of
-  Unity, Captain America Unbowed), 4352-4354 (Arzakon, U.S.S. Enterprise-D, T'Pol).
+  Unity, Captain America Unbowed), 4352-4354 (Arzakon, U.S.S. Enterprise-D, T'Pol), 4357-4366 (Tam,
+  Baxter Stockman, Captain America Steve Rogers, Arnim Zola, V'Ger, Rex Cyber-Hound, Ezekiel Sims, Storm
+  Shaker of Skies, Pharaoh Rama-Tut, Trystan — `decks::cmdr_01dj_t`..`_w`, the three- and four-gap tier).
+- **Audit sweeps** (`RUSTFLAGS=-C debug-assertions=yes`, `overflow`, `scripts/pod_sweep.py --classify`):
+  seed 9258 over seats 4228-4366 at 4/6/8 seats, 1,540 games, 0 bad; seed 9259 over 4000-4366 at 3/5/7,
+  5,000 games, one undecided — a CR 104.4a draw (Descent into Avernus, all three seats at or below 0).
   ⚠ **Whtz, the Bibliophile** reads zero-gap but its EDHREC average lists 254 cards — never seat it.
   **Sygg, Wanderwine Wisdom** has no printed text in the oracle dump yet, so both Sygg decks stay open.
 - **Primitives:** `WardCost::ManaOrDiscard` (Titania); `CreatureType::Camarid`; `DiscardChosenFromRevealed
