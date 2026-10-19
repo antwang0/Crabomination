@@ -26580,6 +26580,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TPOL_COMMANDERS,
             main: decks::TPOL_MAIN,
         },
+        // Seat 4355: Thelon of Havenwood's EDHREC average deck. `--pod-decks 4355`.
+        PodDeck {
+            name: "Thelon of Havenwood (BG)",
+            commanders: decks::THELON_OF_HAVENWOOD_COMMANDERS,
+            main: decks::THELON_OF_HAVENWOOD_MAIN,
+        },
+        // Seat 4356: Teyo, Diamondblade Mage's EDHREC average deck. `--pod-decks 4356`.
+        PodDeck {
+            name: "Teyo, Diamondblade Mage (B)",
+            commanders: decks::TEYO_2_COMMANDERS,
+            main: decks::TEYO_2_MAIN,
+        },
     ]
 }
 
@@ -32835,6 +32847,8 @@ mod tests {
             ("Arzakon", &[0x1B16]),
             ("U.S.S. Enterprise-D, Galaxy-Class", &[0x1B17]),
             ("T'Pol, Vulcan Representative", &[0x1B18]),
+            ("Thelon of Havenwood", &[0x1B19]),
+            ("Teyo, Diamondblade Mage", &[0x1B1A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

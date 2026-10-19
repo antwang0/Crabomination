@@ -122172,3 +122172,55 @@ pub const TPOL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const THELON_OF_HAVENWOOD_COMMANDERS: &[CardFactory] = &[thelon_of_havenwood];
+
+/// **Thelon of Havenwood**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 14 Forests + 8 Swamps = 99.
+/// Thelon of Havenwood (EDHREC, fetched 2026-10-19).
+pub const THELON_OF_HAVENWOOD_MAIN: &[CardFactory] = &[
+    arcane_signet, contagion_clasp, golgari_signet, skullclamp, sol_ring, the_ozolith,
+    bojuka_bog, command_tower, deathcap_glade, golgari_rot_farm, karns_bastion, llanowar_wastes,
+    necroblossom_snarl, overgrown_tomb, tainted_wood, temple_of_malady, twilight_mire,
+    undergrowth_stadium, woodland_cemetery, brightcap_badger, cankerbloom, deathspore_thallid,
+    evolution_sage, ferrafor_young_yew, insidious_fungus, mycoloth, myconid_spore_tender,
+    nemata_primeval_warden, plaguemaw_beast, psychotrope_thallid, rot_shambler, savage_thallid,
+    slimefoot_the_stowaway, spore_flower, sporecrown_thallid, sporemound, sporesower_thallid,
+    sporoloth_ancient, tendershoot_dryad, thallid, thallid_devourer, thallid_germinator,
+    thallid_shell_dweller, thallid_soothsayer, the_mycotyrant, thelonite_hermit, thorn_thallid,
+    tukatongue_thallid, undercellar_myconid, utopia_mycon, vitaspore_thallid,
+    winding_constrictor, doubling_season, fungal_bloom, fungal_plots, golgari_germination,
+    insidious_roots, loading_zone, moldervine_reclamation, necrogenesis, assassins_trophy,
+    atomize, beast_within, fungal_rebirth, golgari_charm, putrefy, sprout_swarm, village_rites,
+    cultivate, drown_in_ichor, fungal_sprouting, rampant_growth, saproling_symbiosis,
+    shamanic_revelation, smell_fear, thirsting_roots, unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const TEYO_2_COMMANDERS: &[CardFactory] = &[teyo_diamondblade_mage];
+
+/// **Teyo, Diamondblade Mage**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Teyo, Diamondblade Mage (EDHREC, fetched 2026-10-19).
+pub const TEYO_2_MAIN: &[CardFactory] = &[
+    ashnods_altar, charcoal_diamond, dissection_tools, dreamstone_hedron, gorgon_flail,
+    gorgons_head, quietus_spike, reapers_talisman, sol_ring, throne_of_eldraine, vorpal_sword,
+    wayfarers_bauble, cabal_coffers, cabal_stronghold, crypt_of_agadeem, maze_of_ith,
+    myriad_landscape, phyrexian_tower, urzas_cave, activated_sleeper, bloodcrazed_paladin,
+    crypt_ghast, cuombajj_witches, death_rattle_oni, fire_nation_ambushers, grim_wanderer,
+    head_of_the_hunt, hired_blade, hooded_blightfang, lobelia_sackville_baggins,
+    lurking_deadeye, nezumi_prowler, nimana_skydancer, onyx_mage, pitiless_plunderer,
+    plague_spitter, qarsi_revenant, rampart_hunter, rooftop_assassin, sanctum_lurker,
+    sautekh_immortal, stingblade_assassin, tonberry, unrooted_ancestor, void_beckoner,
+    white_widow_yelena_belova, wreck_hunter, black_market, carnival_of_souls, fear,
+    sadistic_glee, battle_rage_blessing, coat_with_venom, deadly_rollick, maximum_overdrive,
+    offer_immortality, pain_101, scarblades_malice, simulacrum, songs_of_the_damned,
+    toxin_analysis, blood_money, call_of_the_death_dweller, damnation, in_garruks_wake,
+    mutual_destruction, nights_whisper, reanimate, syphon_mind,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
