@@ -1,5 +1,6 @@
-//! Deification's two halves: the as-enters planeswalker-type choice and the
-//! "all but one loyalty counter" damage floor (CR 614.1a).
+//! Deification's two halves — the as-enters planeswalker-type choice and the
+//! "all but one loyalty counter" damage floor (CR 614.1a) — and Gideon's
+//! Intervention's named-source shield (CR 615.1).
 
 use crate::card::{CardId, PlaneswalkerSubtype};
 use crate::effect::{Effect, Selector, StaticEffect};
@@ -94,5 +95,26 @@ impl GameState {
         } else {
             after
         }
+    }
+
+    /// Is damage to `ent` from `source` prevented by a
+    /// `PreventDamageToYouAndYoursFromNamed` its side controls, i.e. does the
+    /// source carry the name that static's permanent chose?
+    pub(crate) fn named_source_shield(&self, ent: EntityRef, source: Option<CardId>) -> bool {
+        let side = match ent {
+            EntityRef::Player(p) => Some(p),
+            EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
+            EntityRef::Card(_) => None,
+        };
+        let (Some(side), Some(src)) = (side, source) else { return false };
+        let Some(name) = self.find_card_anywhere(src).map(|c| c.definition.name) else { return false };
+        self.battlefield.iter().any(|c| {
+            c.controller == side
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::PreventDamageToYouAndYoursFromNamed))
+                && c.named_card.as_deref().is_some_and(|n| n == name)
+        })
     }
 }

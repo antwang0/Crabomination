@@ -70,6 +70,8 @@ pub(crate) mod prevent_static {
     pub const SPELL_SHIELD: u32 = 1 << 13;
     /// `PreventAllButOneDamageToYouAndYourHeroes` (Hyperion, Supreme Hero).
     pub const ALL_BUT_ONE: u32 = 1 << 14;
+    /// `PreventDamageToYouAndYoursFromNamed` (Gideon's Intervention).
+    pub const NAMED_SHIELD: u32 = 1 << 15;
 }
 
 /// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -109,6 +111,7 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 SE::AllDamageDealtAsThoughWither => prevent_static::ALL_WITHER,
                 SE::PreventSpellDamageToYouAndYourOtherPermanents => prevent_static::SPELL_SHIELD,
                 SE::PreventAllButOneDamageToYouAndYourHeroes => prevent_static::ALL_BUT_ONE,
+                SE::PreventDamageToYouAndYoursFromNamed => prevent_static::NAMED_SHIELD,
                 _ => 0,
             };
         }
@@ -1122,6 +1125,16 @@ impl GameState {
                 });
                 return 0;
             }
+        }
+        // Gideon's Intervention — damage to you or yours from a source with
+        // the name its controller chose.
+        if statics & prevent_static::NAMED_SHIELD != 0 && amount > 0 && self.named_source_shield(ent, source) {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: if let EntityRef::Player(p) = ent { Some(p) } else { None },
+                to_card: if let EntityRef::Permanent(c) = ent { Some(c) } else { None },
+            });
+            return 0;
         }
         if self.turn.prevention_shields.is_empty() {
             return amount;

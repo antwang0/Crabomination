@@ -1974,6 +1974,10 @@ pub enum StaticEffect {
     /// The creature-side sibling of `ReduceDamageToYouBy`; applied in
     /// `GameState::scale_damage_to` before the doublers.
     ReduceDamageToYourCreaturesBy(u32),
+    /// CR 615.1 — "Prevent all damage that would be dealt to you and
+    /// permanents you control by sources with the chosen name" (Gideon's
+    /// Intervention): the name is the source's `named_card`.
+    PreventDamageToYouAndYoursFromNamed,
     /// "As long as you control a creature [if `requires_creature`], if damage
     /// dealt to a planeswalker you control matching `filter` would result in
     /// all loyalty counters on it being removed, instead all but one of those

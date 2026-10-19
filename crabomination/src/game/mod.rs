@@ -35176,6 +35176,7 @@ fn static_effect_to_effects(
             | StaticEffect::EnchantedPlayerCantActivateNonManaAbilities
             | StaticEffect::PreventAllDamageToControllerFromOthersSources
             | StaticEffect::PreventSpellDamageToYouAndYourOtherPermanents
+            | StaticEffect::PreventDamageToYouAndYoursFromNamed
             | StaticEffect::SpellDamageToOpponentsBonus { .. }
             | StaticEffect::AddDamageFromColorSpells { .. }
             // Read where the matching action happens: the hand-reveal
