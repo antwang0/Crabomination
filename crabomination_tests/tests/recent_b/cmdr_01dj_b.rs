@@ -859,3 +859,72 @@ fn welcome_to_the_fold_reaches_further_with_madness() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(giant).unwrap().controller, 0, "madness X = 3");
 }
+
+// ── Trystan, Callous Cultivator (`decks::cmdr_01dj_w`) ─────────────────────
+
+/// Trystan enters: mill three, gain 2 with an Elf in the graveyard. At the
+/// first main phase, paying {B} transforms it; the Culler mills three and
+/// exiling an Elf drains each opponent for 2.
+#[test]
+fn trystan_mills_and_transforms_for_black() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::llanowar_elves());
+    }
+    let t = g.add_card_to_hand(0, catalog::trystan_callous_cultivator());
+    let life = g.players[0].life;
+    cast_targets(&mut g, t, &[]);
+    assert_eq!(g.players[0].graveyard.len(), 3);
+    assert_eq!(g.players[0].life, life + 2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let opp = g.players[1].life;
+    let elf = g.players[0].graveyard[0].id;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![elf])]));
+    g.step = TurnStep::PreCombatMain;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(t).unwrap();
+    assert!(c.transformed, "paid {{B}} and transformed");
+    assert_eq!(g.players[0].library.len(), 0, "the Culler milled three more");
+    assert_eq!(g.players[1].life, opp - 2, "an exiled Elf drains");
+}
+
+/// Moon-Vigil Adherents counts creatures you control and creature cards in
+/// your graveyard.
+#[test]
+fn moon_vigil_adherents_counts_board_and_graveyard() {
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::moon_vigil_adherents());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    assert_eq!(power(&g, m), 3, "itself, the Bears, one creature card");
+}
+
+/// Unbury's second mode returns two creature cards only if they share a
+/// creature type (CR 205.3).
+#[test]
+fn unbury_returns_a_pair_sharing_a_type() {
+    for (second_elf, ok) in [(true, true), (false, false)] {
+        let mut g = pod(2);
+        let a = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+        let b = if second_elf {
+            g.add_card_to_graveyard(0, catalog::llanowar_elves())
+        } else {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears())
+        };
+        let s = g.add_card_to_hand(0, catalog::unbury());
+        flood(&mut g, 0);
+        let r = g.perform_action(GameAction::CastSpellSpree {
+            card_id: s,
+            spree_modes: vec![1],
+            target: Some(Target::Permanent(a)),
+            additional_targets: vec![Target::Permanent(b)],
+            x_value: None,
+        });
+        drain_stack(&mut g);
+        let back = g.players[0].hand.iter().any(|c| c.id == b);
+        assert_eq!(r.is_ok() && back, ok, "second_elf={second_elf}");
+    }
+}
