@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 60 closer cards, 21 seats, a step-trigger doubler bug](#fixedopen-2026-10-19-commander-run-016xh16h--60-closer-cards-21-seats-a-step-trigger-doubler-bug) | 38 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required](#fixedopen-2026-10-10-sixteenth-commander-run-01s495n5--up-to-one-target-modelled-as-required) | 27 |
 | Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 63 |
@@ -178,6 +179,37 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 60 closer cards, 21 seats, a step-trigger doubler bug
+
+- **Seats** 4305-4312, 4315-4324, 4336-4338: Valentina Allegra de Fontaine, Temmet, Splinter & Leo, Tomik
+  Wielder of Law, Mila, Kang, Old Hob, Ultimo; Elminster, Djeru, Quickbeam, Tobias Andrion, Tomik Orzhov
+  Lawmage, Óin the Brave, Lin Sivvi, Bucky Barnes, Kytheon, Klaw; Glissa Herald of Predation, Chief of the
+  Wilds, The Chief Warg. Cards in `decks::cmdr_016x_a`..`_d`, tests `recent_b/cmdr_016x_a.rs` (37).
+- **Primitives:** `ActivationTrait::Embalm` + `ActivatedAbility::is_embalm_like` + `R::HasEmbalmOrEternalize`
+  (Vizier of the Anointed); `Effect::NamePlaneswalkerType` + `CardCold.chosen_planeswalker_type` +
+  `R::HasChosenPlaneswalkerTypeOfSource` (a live layer leaf) + `StaticEffect::DamageLeavesYourPlaneswalkersAtOneLoyalty`
+  (Deification, `game/deification.rs`); `StaticEffect::BlockTaxForEnchantedAttacker` (Awesome Presence, CR 509.1d —
+  priced in the bot's block-tax trim); `StaticEffect::PreventDamageToYouAndYoursFromNamed` (Gideon's
+  Intervention, a prevent-lane bit); emblem `ControllerCantLoseGame`, bare or under `WhileCondition`
+  (Gideon of the Trials, CR 114.4).
+- **Fixes:** beginning-of-step triggers never asked `ally_trigger_extra_fires` — every "triggers an additional
+  time" static (Katara, Harmonic Prodigy, Fractured Realm, Annie Joins Up, typed doublers) left upkeep / end
+  step triggers single (CR 603.2d, `stack.rs`); an `AbilityActivated` whose cost exiled its own card had no
+  actor, so "whenever you activate" missed embalm / eternalize / scavenge / encore (CR 602.1);
+  `EventScope::EnchantedBySource` reads `AbilityActivated` (Elspeth's Talent).
+- **Found, not a bug:** a deferred `DelayUntil` body reading `LastCreatedToken` IS bound to its token
+  (`bound_token`); `delayed_last_created_token_stays_bound_to_its_token` pins it (13 cards use the shape).
+- **Sweeps** (`overflow` + debug-assertions, seeds 9250-9255): 10,321 pod games at 3-8 seats incl. 440 over
+  seats 4285-4312, 0 panics; 4 CR 104.4a draws (Descent into Avernus killing every remaining seat — the
+  damage is mandatory, rules-correct) and 2 board caps (8-seat).
+- **Collisions:** the concurrent session (`01DJHkWk`) landed Noggin Whack and the Elesh Norn trio first;
+  the duplicates were dropped on rebase. Work the 5-7-gap tier when it is on the one- and two-gap one.
+- **Released (each needs a primitive):** The Ruinous Wrecking Crew ("choose up to X" with targeted modes —
+  ~15 trigger-target sites key on a top-level `ChooseN`), Wan Shi Tong (no "put into a library" event),
+  Henry Wu (the exploit event carries no exploited creature), Prismabasher ("up to X targets", X dynamic),
+  Flooded Woodlands (a sacrifice-to-attack cost the bot can't plan), Selenia (a "would lose the game"
+  replacement).
 
 ## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — 90 closer cards, 48 seats, the Marvel Villain and LOTR Goblin clusters
 
