@@ -1185,3 +1185,398 @@ fn titania_ward_takes_mana_or_a_card() {
         assert!(g.players[1].hand.is_empty());
     }
 }
+
+// ── LOTR Goblins and second-tier Villains (`decks::cmdr_01dj_e`) ────────────
+
+fn army(g: &GameState, seat: usize) -> Option<CardId> {
+    use crabomination::card::CreatureType;
+    g.battlefield
+        .iter()
+        .find(|c| {
+            c.controller == seat
+                && g.computed_permanent(c.id)
+                    .is_some_and(|cp| cp.subtypes().creature_types.contains(&CreatureType::Army))
+        })
+        .map(|c| c.id)
+}
+
+fn activate_on(g: &mut GameState, card_id: CardId, ability_index: usize, target: Option<Target>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id,
+        ability_index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+/// CR 701.47a — Azog destroys an opponent's 4-power creature and that player
+/// amasses Goblins 4; killing your own creature draws you a card instead of
+/// feeding an opponent.
+#[test]
+fn azog_feeds_the_victims_army() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(3);
+    let ogre = g.add_card_to_battlefield(2, catalog::hill_giant());
+    g.battlefield_find_mut(ogre)
+        .unwrap()
+        .add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    let azog = g.add_card_to_hand(0, catalog::azog_morias_ruin());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(
+        Target::Permanent(ogre),
+    )]));
+    cast_targets(&mut g, azog, &[]);
+    assert!(g.battlefield_find(ogre).is_none());
+    let a = army(&g, 2).expect("the victim's Army");
+    assert_eq!(plus(&g, a), 4, "Hill Giant's 3 power plus its counter");
+    assert!(
+        g.computed_permanent(a)
+            .unwrap()
+            .subtypes()
+            .creature_types
+            .contains(&CreatureType::Goblin)
+    );
+
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let azog = g.add_card_to_hand(0, catalog::azog_morias_ruin());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(
+        Target::Permanent(bear),
+    )]));
+    cast_targets(&mut g, azog, &[]);
+    assert_eq!(g.players[0].hand.len(), hand, "cast Azog (-1), drew (+1)");
+    assert_eq!(plus(&g, army(&g, 0).unwrap()), 2);
+}
+
+/// Fearsome Goblin Pair dies into Goblins 4; Goblin Plate Mail amasses 1 and
+/// equips the Army (+1/+0, menace).
+#[test]
+fn goblin_amass_pair_and_plate_mail() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let pair = g.add_card_to_battlefield(0, catalog::fearsome_goblin_pair());
+    kill(&mut g, pair);
+    let a = army(&g, 0).expect("Army");
+    assert_eq!(plus(&g, a), 4);
+    let mut g = pod(2);
+    let mail = g.add_card_to_hand(0, catalog::goblin_plate_mail());
+    cast_targets(&mut g, mail, &[]);
+    let a = army(&g, 0).expect("Army");
+    assert_eq!(g.battlefield_find(mail).unwrap().attached_to, Some(a));
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!(cp.power, 2);
+    assert!(cp.keywords().contains(&Keyword::Menace));
+}
+
+/// Gathering of Darkness returns a creature card and amasses Goblins 3.
+#[test]
+fn gathering_of_darkness_returns_and_amasses() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::gathering_of_darkness());
+    cast_targets(&mut g, s, &[Target::Permanent(giant)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant));
+    assert_eq!(plus(&g, army(&g, 0).unwrap()), 3);
+}
+
+/// Great Ugly-Looking Goblin gives menace to your creatures with +1/+1
+/// counters only.
+#[test]
+fn great_ugly_looking_goblin_grants_menace_to_countered() {
+    use crabomination::card::{CounterType, Keyword};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::great_ugly_looking_goblin());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a)
+        .unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(
+        g.computed_permanent(a)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Menace)
+    );
+    assert!(
+        !g.computed_permanent(b)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Menace)
+    );
+}
+
+/// Goblin-town sacrifices for two +1/+1 counters on a Goblin.
+#[test]
+fn goblin_town_grows_a_goblin() {
+    let mut g = pod(2);
+    let town = ready(&mut g, 0, catalog::goblin_town());
+    let gob = ready(&mut g, 0, catalog::knucklebone_witch());
+    flood(&mut g, 0);
+    let sac = g
+        .battlefield_find(town)
+        .unwrap()
+        .definition
+        .activated_abilities
+        .len()
+        - 1;
+    activate_on(&mut g, town, sac, Some(Target::Permanent(gob)));
+    assert_eq!(plus(&g, gob), 2);
+    assert!(g.battlefield_find(town).is_none());
+}
+
+/// Down, Down to Goblin-town: I takes a nonland card, II amasses, III drains.
+#[test]
+fn down_down_to_goblin_town_chapters() {
+    let mut g = pod(2);
+    g.players[1].hand.clear();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::forest());
+    let saga = g.add_card_to_hand(0, catalog::down_down_to_goblin_town());
+    cast_targets(&mut g, saga, &[Target::Player(1)]);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+    assert_eq!(g.players[1].hand.len(), 1);
+    lore(&mut g, saga);
+    assert_eq!(plus(&g, army(&g, 0).unwrap()), 1);
+    lore(&mut g, saga);
+    assert_eq!((g.players[0].life, g.players[1].life), (21, 19));
+}
+
+/// Ravening Warg gains 2 attacking beside a 4-power creature, not alone.
+#[test]
+fn ravening_warg_is_ferocious() {
+    for big in [false, true] {
+        let mut g = pod(2);
+        let warg = ready(&mut g, 0, catalog::ravening_warg());
+        if big {
+            ready(&mut g, 0, catalog::great_ugly_looking_goblin());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: warg,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].life, if big { 22 } else { 20 });
+    }
+}
+
+/// Tragic Backstory — Grim Wanderer can be cast only after a creature died
+/// this turn.
+#[test]
+fn grim_wanderer_needs_a_death() {
+    let mut g = pod(2);
+    let gw = g.add_card_to_hand(0, catalog::grim_wanderer());
+    flood(&mut g, 0);
+    assert!(
+        g.clone()
+            .perform_action(GameAction::CastSpell {
+                card_id: gw,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None
+            })
+            .is_err()
+    );
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    cast_targets(&mut g, gw, &[]);
+    assert!(g.battlefield_find(gw).is_some());
+}
+
+/// Front Porch Sentries' death shrinks an opponent's creature; Knucklebone
+/// Witch grows when a Goblin of yours dies.
+#[test]
+fn goblin_death_triggers() {
+    let mut g = pod(2);
+    let witch = g.add_card_to_battlefield(0, catalog::knucklebone_witch());
+    let fps = g.add_card_to_battlefield(0, catalog::front_porch_sentries());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, fps);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(elf).is_none(), "-1/-1 killed the Elves");
+    assert_eq!(plus(&g, witch), 1);
+}
+
+/// Warren Weirding: a sacrificed Goblin leaves its controller two hasty
+/// Goblin Rogues; any other creature leaves nothing.
+#[test]
+fn warren_weirding_replaces_a_goblin() {
+    for goblin in [false, true] {
+        let mut g = pod(2);
+        let v = if goblin {
+            g.add_card_to_battlefield(1, catalog::knucklebone_witch())
+        } else {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears())
+        };
+        let s = g.add_card_to_hand(0, catalog::warren_weirding());
+        cast_targets(&mut g, s, &[Target::Player(1)]);
+        assert!(g.battlefield_find(v).is_none());
+        assert_eq!(
+            named(&g, 1, "Goblin Rogue").len(),
+            if goblin { 2 } else { 0 }
+        );
+    }
+}
+
+/// Rush the Room gives haste only to a Goblin or Orc.
+#[test]
+fn rush_the_room_hastes_goblins() {
+    use crabomination::card::Keyword;
+    for (def, hasty) in [
+        (catalog::knucklebone_witch(), true),
+        (catalog::grizzly_bears(), false),
+    ] {
+        let mut g = pod(2);
+        let c = g.add_card_to_battlefield(0, def);
+        let s = g.add_card_to_hand(0, catalog::rush_the_room());
+        cast_targets(&mut g, s, &[Target::Permanent(c)]);
+        let cp = g.computed_permanent(c).unwrap();
+        assert!(cp.keywords().contains(&Keyword::FirstStrike));
+        assert_eq!(cp.keywords().contains(&Keyword::Haste), hasty);
+    }
+}
+
+/// Klaw's Sonic Attack reveals one card plus one per creature card in your
+/// graveyard; one of them is discarded.
+#[test]
+fn klaw_discards_from_a_partial_reveal() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[1].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::lightning_bolt());
+    }
+    let k = g.add_card_to_hand(0, catalog::klaw_sonic_subjugator());
+    cast_targets(&mut g, k, &[Target::Player(1)]);
+    assert_eq!(g.players[1].hand.len(), 3);
+}
+
+/// Evil's Thrall steals until end of turn — through your next turn with a
+/// bigger Villain — untapped and hasty.
+#[test]
+fn evils_thrall_steals_longer_with_a_bigger_villain() {
+    use crabomination::card::Keyword;
+    for villain in [false, true] {
+        let mut g = pod(2);
+        if villain {
+            g.add_card_to_battlefield(0, catalog::venom_eddie_brock());
+        }
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().tapped = true;
+        let s = g.add_card_to_hand(0, catalog::evils_thrall());
+        cast_targets(&mut g, s, &[Target::Permanent(bear)]);
+        let c = g.battlefield_find(bear).unwrap();
+        assert!(c.controller == 0 && !c.tapped);
+        assert!(
+            g.computed_permanent(bear)
+                .unwrap()
+                .keywords()
+                .contains(&Keyword::Haste)
+        );
+        pass_until(&mut g, 1);
+        assert_eq!(
+            g.battlefield_find(bear).unwrap().controller,
+            if villain { 0 } else { 1 }
+        );
+    }
+}
+
+/// Trickster's Stratagem tucks an opponent's creature into its owner's
+/// library and connives a creature of yours.
+#[test]
+fn tricksters_stratagem_tucks_and_connives() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].hand.clear();
+    let s = g.add_card_to_hand(0, catalog::tricksters_stratagem());
+    cast_targets(
+        &mut g,
+        s,
+        &[Target::Permanent(theirs), Target::Permanent(mine)],
+    );
+    assert!(g.players[1].library.iter().any(|c| c.id == theirs));
+    assert_eq!(
+        g.players[0].graveyard.len(),
+        2,
+        "the spell and the connive discard"
+    );
+}
+
+/// Hire a Crew: a Villain, then everyone (the Villain included) +1/+0.
+#[test]
+fn hire_a_crew_pumps_the_new_villain() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::hire_a_crew());
+    cast_targets(&mut g, s, &[]);
+    let v = named(&g, 0, "Villain");
+    assert_eq!(power(&g, v[0]), 3);
+}
+
+/// The Coming of Galactus: I destroys, II and III drain each opponent 2, IV
+/// makes the 16/16.
+#[test]
+fn coming_of_galactus_chapters() {
+    let mut g = pod(3);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let saga = g.add_card_to_hand(0, catalog::the_coming_of_galactus());
+    cast_targets(&mut g, saga, &[Target::Permanent(ring)]);
+    assert!(g.battlefield_find(ring).is_none());
+    lore(&mut g, saga);
+    lore(&mut g, saga);
+    assert_eq!((g.players[1].life, g.players[2].life), (16, 16));
+    lore(&mut g, saga);
+    let gal = named(&g, 0, "Galactus");
+    assert_eq!(power(&g, gal[0]), 16);
+}
+
+/// Infernal Rebirth returns two creature cards.
+#[test]
+fn infernal_rebirth_returns_two() {
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::infernal_rebirth());
+    cast_targets(&mut g, s, &[Target::Permanent(a), Target::Permanent(b)]);
+    for id in [a, b] {
+        assert!(g.players[0].hand.iter().any(|c| c.id == id));
+    }
+}
+
+/// HYDRA Disintegrator arrives carrying its own 2/1 Villain: a 5/4.
+#[test]
+fn hydra_disintegrator_equips_its_villain() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::hydra_disintegrator());
+    cast_targets(&mut g, s, &[]);
+    let v = named(&g, 0, "Villain")[0];
+    assert_eq!(g.battlefield_find(s).unwrap().attached_to, Some(v));
+    let cp = g.computed_permanent(v).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4));
+}
+
+/// Stegron's Dinosaur Formula, discarded from hand: +3/+1 and a Dinosaur.
+#[test]
+fn stegron_formula_from_hand() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let st = g.add_card_to_hand(0, catalog::stegron_the_dinosaur_man());
+    flood(&mut g, 0);
+    activate_on(&mut g, st, 0, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3));
+    assert!(
+        cp.subtypes()
+            .creature_types
+            .contains(&CreatureType::Dinosaur)
+    );
+}
