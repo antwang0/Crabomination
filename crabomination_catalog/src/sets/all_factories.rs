@@ -18070,6 +18070,8 @@ static DECKS: &[Factory] = &[
     super::decks::floodchaser,
     super::decks::phantasmal_terrain,
     super::decks::magical_hack,
+    super::decks::beluna_grandsquall,
+    super::decks::hearth_elemental,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1092,3 +1092,100 @@ fn floodchaser_floods_a_land() {
     attack(&mut g, fc, 1);
     assert!(g.attacking.iter().any(|a| a.attacker == fc));
 }
+
+// ── Gorion, Wise Mentor / Beluna Grandsquall (`decks::cmdr_016x_k`) ─────────
+
+fn stomp(g: &mut GameState, giant: CardId, target: Target) -> Result<(), GameError> {
+    g.perform_action(GameAction::CastAdventure {
+        card_id: giant,
+        target: Some(target),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 707.2 / 715.3b — Gorion copies an Adventure spell, and the copy has
+/// only the Adventure's characteristics: two Stomps kill a 3/3, and no
+/// token Bonecrusher Giant appears.
+#[test]
+fn gorion_copies_an_adventure_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::gorion_wise_mentor());
+    let ogre = ready(&mut g, 1, catalog::hill_giant());
+    let giant = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)]));
+    stomp(&mut g, giant, Target::Permanent(ogre)).expect("stomp");
+    assert!(g.battlefield_find(ogre).is_none(), "Stomp and its copy: 2 + 2 kills the 3/3");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Bonecrusher Giant"), "the copy is no creature");
+    assert!(g.exile.iter().any(|c| c.id == giant && c.on_adventure), "the original goes on an adventure");
+}
+
+/// CR 715.3b — Edgewall Innkeeper draws for the creature cast of an
+/// Adventurer card, not for the Adventure cast.
+#[test]
+fn edgewall_innkeeper_draws_on_the_creature_half_only() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::edgewall_innkeeper());
+    let a = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    let b = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    stomp(&mut g, a, Target::Player(1)).expect("stomp");
+    assert_eq!(g.players[0].hand.len(), hand - 1, "the Adventure cast draws nothing");
+    cast(&mut g, b, None).expect("giant");
+    assert_eq!(g.players[0].hand.len(), hand - 1, "the creature cast replaces itself");
+}
+
+/// CR 601.2f — Beluna's {1} discount reaches a permanent spell with an
+/// Adventure: Bonecrusher Giant casts off {1}{R}.
+#[test]
+fn beluna_discounts_adventurer_creatures() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, giant, None).is_err(), "{{2}}{{R}} without Beluna");
+    ready(&mut g, 0, catalog::beluna_grandsquall());
+    cast(&mut g, giant, None).expect("{1}{R} with Beluna");
+    assert!(g.battlefield_find(giant).is_some());
+}
+
+/// Hearth Elemental costs {1} less per instant, sorcery or Adventure card in
+/// your graveyard.
+#[test]
+fn hearth_elemental_counts_spells_in_the_yard() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    g.add_card_to_graveyard(0, catalog::bonecrusher_giant());
+    let he = g.add_card_to_hand(0, catalog::hearth_elemental());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, he, None).expect("{5}{R} less 4");
+    assert!(g.battlefield_find(he).is_some());
+}
+
+/// Seek Thrills mills seven and keeps every Adventure card among them.
+#[test]
+fn seek_thrills_keeps_the_adventurers() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::bonecrusher_giant());
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let beluna = g.add_card_to_hand(0, catalog::beluna_grandsquall());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastAdventure { card_id: beluna, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("seek thrills");
+    drain_stack(&mut g);
+    let giants = g.players[0].hand.iter().filter(|c| c.definition.name == "Bonecrusher Giant").count();
+    assert_eq!(giants, 3);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
+}
