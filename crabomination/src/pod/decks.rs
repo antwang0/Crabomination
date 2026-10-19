@@ -119862,3 +119862,88 @@ pub const MADAME_MASQUE_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BOLG_COMMANDERS: &[CardFactory] = &[bolg_erebors_reckoning];
+
+/// **Bolg, Erebor's Reckoning**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Mountains + 8 Swamps = 99.
+/// Bolg, Erebor's Reckoning (EDHREC, fetched 2026-10-19).
+pub const BOLG_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, goblin_plate_mail, orcrist_goblin_cleaver, patchwork_banner,
+    rakdos_signet, skullclamp, sol_ring, talisman_of_indulgence, barad_dur, blazemire_verge,
+    blood_crypt, bojuka_bog, command_tower, dragonskull_summit, foreboding_ruins, goblin_town,
+    graven_cairns, haunted_ridge, luxury_suite, path_of_ancestry, shadowblood_ridge,
+    smoldering_marsh, sulfurous_springs, tainted_peak, azog_morias_ruin, boggart_cursecrafter,
+    bolg_of_the_north, bolgs_company, bothersome_noisemaker, fearsome_goblin_pair,
+    frogtosser_banneret, general_kreat_the_boltbringer, goblin_chieftain, goblin_king,
+    goblin_matron, goblin_trashmaster, goblin_warchief, gorbag_of_minas_morgul,
+    great_goblin_foul_hearted, howlsquad_heavy, krenko_mob_boss, krenko_tin_street_kingpin,
+    mauhur_uruk_hai_captain, misty_mountains_raider, moria_marauder, muxus_goblin_grandee,
+    orcish_bowmasters, orcish_siegemaster, port_razer, searslicer_goblin, siege_gang_commander,
+    siege_gang_lieutenant, skirk_prospector, sling_gang_lieutenant, the_great_goblin,
+    ugluk_of_the_white_hand, warg_rider, along_the_crooked_way, boggart_mischief,
+    goblin_bombardment, impact_tremors, march_from_the_black_gate, shared_animosity,
+    brightstone_ritual, chaos_warp, dark_ritual, deadly_dispute, orcish_medicine, terminate,
+    village_rites, assault_on_osgiliath, blasphemous_act, feed_the_swarm, gathering_of_darkness,
+    krenkos_command, mordor_muster, rage_into_the_valley, relentless_assault, tidings_of_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GREAT_GOBLIN_COMMANDERS: &[CardFactory] = &[great_goblin_foul_hearted];
+
+/// **Great Goblin, Foul-Hearted**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Mountains + 9 Swamps = 99.
+/// Great Goblin, Foul-Hearted (EDHREC, fetched 2026-10-19).
+pub const GREAT_GOBLIN_MAIN: &[CardFactory] = &[
+    arcane_signet, goblin_plate_mail, lightning_greaves, my_precious, rakdos_signet, sol_ring,
+    swiftfoot_boots, talisman_of_indulgence, the_ozolith, the_reaver_cleaver, barad_dur,
+    blazemire_verge, blood_crypt, bojuka_bog, command_tower, dragonskull_summit,
+    foreboding_ruins, goblin_town, haunted_ridge, luxury_suite, mount_doom, path_of_ancestry,
+    rogues_passage, smoldering_marsh, sulfurous_springs, azog_morias_ruin, bolg_of_the_north,
+    bolgs_company, bolg_erebors_reckoning, bothersome_noisemaker, dunland_crebain,
+    fearsome_goblin_pair, goblin_chieftain, goblin_warchief, goblin_town_flunkies,
+    gorbag_of_minas_morgul, gothmog_morgul_lieutenant, great_ugly_looking_goblin,
+    grishnakh_brash_instigator, hexing_squelcher, krenko_mob_boss, mauhur_uruk_hai_captain,
+    misty_mountains_raider, moria_marauder, moria_scavenger, orcish_bowmasters,
+    orcish_siegemaster, rhovanion_rampager, skirk_prospector, the_great_goblin,
+    ugluk_of_the_white_hand, warbeast_of_gorgoroth, warg_rider, along_the_crooked_way,
+    book_of_mazarbul, down_down_to_goblin_town, dreadhorde_invasion, fall_of_cair_andros,
+    goblin_bombardment, march_from_the_black_gate, bedevil, brightstone_ritual, chaos_warp,
+    dark_ritual, deadly_dispute, orcish_medicine, rakdos_charm, terminate, assault_on_osgiliath,
+    blasphemous_act, feed_the_swarm, foray_of_orcs, gathering_of_darkness,
+    honor_the_god_pharaoh, mordor_muster, rage_into_the_valley, swarming_of_moria,
+    tidings_of_war, vandalblast, widespread_brutality,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const TIGER_SHARK_COMMANDERS: &[CardFactory] = &[tiger_shark_abyssal_hunter];
+
+/// **Tiger Shark, Abyssal Hunter**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Islands + 11 Swamps = 99.
+/// Tiger Shark, Abyssal Hunter (EDHREC, fetched 2026-10-19).
+pub const TIGER_SHARK_MAIN: &[CardFactory] = &[
+    arcane_signet, currency_converter, dimir_signet, fellwar_stone, mask_of_the_schemer,
+    mind_stone, monument_to_endurance, sol_ring, swiftfoot_boots, talisman_of_dominance,
+    wayfarers_bauble, bojuka_bog, choked_estuary, command_tower, dimir_aqueduct,
+    dismal_backwater, drowned_catacomb, morphic_pool, mystic_sanctuary, polluted_delta,
+    sunken_hollow, tainted_isle, underground_river, villainous_hideout, watery_grave,
+    archfiend_of_ifnir, armaggon_future_shark, bigfin_bouncer, bone_miser, chasm_skulker,
+    chrome_host_seedshark, containment_construct, daggermaw_megalodon, giant_shark,
+    gixian_puppeteer, graviton_fundamental_force, hammerhead_shark, iron_monger_sadistic_tycoon,
+    kang_temporal_tyrant, leader_super_genius, loan_shark, m_o_d_o_k_evil_intellect,
+    pouncing_shoreshark, raven_eagle, roxxon_brutes, scorpion_seething_striker,
+    shark_shredder_killer_clone, spined_megalodon, ultron_unlimited, voracious_greatshark,
+    animate_dead, coastal_piracy, construct_a_cosmic_cube, mysterios_mirage, ominous_seas,
+    security_bypass, shark_typhoon, an_offer_you_cant_refuse, counterspell, dark_ritual,
+    deadly_rollick, fake_your_own_death, fell_the_profane, frantic_search, lethal_scheme,
+    oblivions_hunger, sink_into_stupor, unstable_experiment, visions_of_villainy,
+    feed_the_swarm, reanimate, rise_of_the_dark_realms, stitch_together, toxic_deluge,
+    victimize, zombify,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -26088,6 +26088,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MADAME_MASQUE_COMMANDERS,
             main: decks::MADAME_MASQUE_MAIN,
         },
+        // Seat 4273: Bolg, Erebor's Reckoning's EDHREC average deck. `--pod-decks 4273`.
+        PodDeck {
+            name: "Bolg, Erebor's Reckoning (BR)",
+            commanders: decks::BOLG_COMMANDERS,
+            main: decks::BOLG_MAIN,
+        },
+        // Seat 4274: Great Goblin, Foul-Hearted's EDHREC average deck. `--pod-decks 4274`.
+        PodDeck {
+            name: "Great Goblin, Foul-Hearted (BR)",
+            commanders: decks::GREAT_GOBLIN_COMMANDERS,
+            main: decks::GREAT_GOBLIN_MAIN,
+        },
+        // Seat 4275: Tiger Shark, Abyssal Hunter's EDHREC average deck. `--pod-decks 4275`.
+        PodDeck {
+            name: "Tiger Shark, Abyssal Hunter (UB)",
+            commanders: decks::TIGER_SHARK_COMMANDERS,
+            main: decks::TIGER_SHARK_MAIN,
+        },
     ]
 }
 
@@ -32261,6 +32279,9 @@ mod tests {
             ("The Masters of Evil", &[0x1AC4]),
             ("The Squadron Sinister", &[0x1AC5]),
             ("Madame Masque", &[0x1AC6]),
+            ("Bolg, Erebor's Reckoning", &[0x1AC7]),
+            ("Great Goblin, Foul-Hearted", &[0x1AC8]),
+            ("Tiger Shark, Abyssal Hunter", &[0x1AC9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
