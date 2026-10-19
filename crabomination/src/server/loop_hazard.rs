@@ -123,9 +123,11 @@ fn makes_tokens_repeatably(def: &crate::card::CardDefinition) -> bool {
 /// zone), a face-down permanent's real face included — turning a manifested
 /// Ghostly Dancers up under Secret Arcade started the loop (pod sweep 182001,
 /// four seats, decks 271/233/285/18, game 3). Off, the probes cost nothing.
+/// Off past [`PROBE_BOARD_MAX`] too.
 pub(super) fn watch(state: &GameState, seat: usize) -> bool {
     let p = &state.players[seat];
     !p.commanders.is_empty()
+        && state.battlefield.len() < PROBE_BOARD_MAX
         && state
             .battlefield
             .iter()
@@ -138,6 +140,14 @@ pub(super) fn watch(state: &GameState, seat: usize) -> bool {
                     || c.face_up_def.as_deref().is_some_and(makes_tokens_repeatably)
             })
 }
+
+/// The board past which the probes stand down. One probe resolution re-reads
+/// the layers over every permanent and a token trigger fired on a doubled board
+/// mints hundreds more, so on a Food deck's ~900-permanent board one
+/// main-phase decision took 100-150 s and the game 42 minutes (4-seat sweep
+/// seed 925292). A loop started past this meets the board cap within a few
+/// cycles anyway.
+const PROBE_BOARD_MAX: usize = crate::recommend::MAX_BATTLEFIELD / 4;
 
 /// Passes per seat the resolution probe may spend.
 const PROBE_PASSES_PER_SEAT: usize = 72;
