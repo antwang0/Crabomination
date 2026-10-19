@@ -17842,6 +17842,7 @@ static DECKS: &[Factory] = &[
     super::decks::sygg_river_guide,
     super::decks::summon_the_school,
     super::decks::syggs_command,
+    super::decks::noggin_whack,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

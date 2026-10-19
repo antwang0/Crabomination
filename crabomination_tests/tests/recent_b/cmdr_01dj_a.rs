@@ -2967,3 +2967,29 @@ fn syggs_command_draw_and_stun() {
     let c = g.battlefield_find(giant).unwrap();
     assert!(c.tapped && c.counter_count(CounterType::Stun) == 1);
 }
+
+// ── Engine-extension closers (`decks::cmdr_01dj_n`) ─────────────────────────
+
+/// Noggin Whack: the target reveals three cards; the caster chooses two of
+/// those to discard — never a fourth, unrevealed card.
+#[test]
+fn noggin_whack_takes_two_of_three() {
+    let mut g = pod(2);
+    g.players[1].hand.clear();
+    let hand: Vec<CardId> = (0..5)
+        .map(|_| g.add_card_to_hand(1, catalog::lightning_bolt()))
+        .collect();
+    let s = g.add_card_to_hand(0, catalog::noggin_whack());
+    cast_targets(&mut g, s, &[Target::Player(1)]);
+    assert_eq!(g.players[1].hand.len(), 3);
+    let gone: Vec<CardId> = hand
+        .iter()
+        .copied()
+        .filter(|id| g.players[1].graveyard.iter().any(|c| c.id == *id))
+        .collect();
+    assert_eq!(gone.len(), 2);
+    assert!(
+        gone.iter().all(|id| hand[..3].contains(id)),
+        "only revealed cards (the first three) can go"
+    );
+}
