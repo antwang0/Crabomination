@@ -26820,6 +26820,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GENERAL_JARKELD_COMMANDERS,
             main: decks::GENERAL_JARKELD_MAIN,
         },
+        // Seat 4395: The Space Family Goblinson's EDHREC average deck. `--pod-decks 4395`.
+        PodDeck {
+            name: "The Space Family Goblinson (RG)",
+            commanders: decks::THE_SPACE_FAMILY_GOBLINSON_COMMANDERS,
+            main: decks::THE_SPACE_FAMILY_GOBLINSON_MAIN,
+        },
     ]
 }
 
@@ -33115,6 +33121,7 @@ mod tests {
             ("Heidar, Rimewind Master", &[0x1B3E]),
             ("Ayesha Tanaka", &[0x1B3F]),
             ("General Jarkeld", &[0x1B40]),
+            ("The Space Family Goblinson", &[0x1B41]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

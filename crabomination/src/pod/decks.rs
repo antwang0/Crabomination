@@ -123283,3 +123283,32 @@ pub const GENERAL_JARKELD_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const THE_SPACE_FAMILY_GOBLINSON_COMMANDERS: &[CardFactory] = &[the_space_family_goblinson];
+
+/// **The Space Family Goblinson**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Forests + 12 Mountains = 99.
+/// The Space Family Goblinson (EDHREC, fetched 2026-10-19).
+pub const THE_SPACE_FAMILY_GOBLINSON_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_tricks, bucknards_everfull_purse, clown_car, component_pouch,
+    ebony_fly, goblin_morningstar, sol_ring, strength_testing_hammer, swiftfoot_boots,
+    sword_of_hours, the_deck_of_many_things, treasure_chest, vexing_puzzlebox, wand_of_wonder,
+    cinder_glade, command_tower, game_trail, gruul_turf, mossfire_valley, rockfall_vale,
+    rogues_passage, rootbound_crag, spire_garden, stomping_ground, temple_of_abandon,
+    underdark_rift, ancient_bronze_dragon, ancient_copper_dragon, atomwheel_acrobats,
+    brazen_dwarf, celebr_8000, centaur_of_attention, chaos_channeler, chaos_dragon, clay_golem,
+    delina_wild_mage, druid_of_the_emerald_grove, earth_cult_elemental, goblin_anarchomancer,
+    hoarding_ogre, iron_mastiff, kami_of_whispered_hopes, neverwinter_hydra,
+    resolute_veggiesaur, swarming_goblins, sylvan_shepherd, vegetation_abomination,
+    vrondiss_rage_of_ancients, wyll_blade_of_frontiers, barbarian_class, branching_evolution,
+    colossal_majesty, hardened_scales, journey_to_the_lost_city, maddening_hex,
+    priority_boarding, beast_within, berserkers_frenzy, chaos_warp, critical_hit,
+    faridehs_fireball, invigorating_surge, pair_o_dice_lost, song_of_inspiration,
+    wylls_reversal, blasphemous_act, circuits_act, coming_attraction, cultivate,
+    overwhelming_encounter, rampant_growth, reckless_endeavor, slight_malfunction, thunderwave,
+    wild_endeavor,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
