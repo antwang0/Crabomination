@@ -26718,6 +26718,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CABAL_PATRIARCH_COMMANDERS,
             main: decks::CABAL_PATRIARCH_MAIN,
         },
+        // Seat 4378: Grub, Storied Matriarch's EDHREC average deck. `--pod-decks 4378`.
+        PodDeck {
+            name: "Grub, Storied Matriarch (BR)",
+            commanders: decks::GRUB_COMMANDERS,
+            main: decks::GRUB_MAIN,
+        },
+        // Seat 4379: Noctis, Heir Apparent's EDHREC average deck. `--pod-decks 4379`.
+        PodDeck {
+            name: "Noctis, Heir Apparent (WUB)",
+            commanders: decks::NOCTIS_2_COMMANDERS,
+            main: decks::NOCTIS_2_MAIN,
+        },
+        // Seat 4380: Gorbag of Minas Morgul's EDHREC average deck. `--pod-decks 4380`.
+        PodDeck {
+            name: "Gorbag of Minas Morgul (B)",
+            commanders: decks::GORBAG_OF_MINAS_MORGUL_COMMANDERS,
+            main: decks::GORBAG_OF_MINAS_MORGUL_MAIN,
+        },
+        // Seat 4381: The Motherlode, Excavator's EDHREC average deck. `--pod-decks 4381`.
+        PodDeck {
+            name: "The Motherlode, Excavator (R)",
+            commanders: decks::THE_MOTHERLODE_COMMANDERS,
+            main: decks::THE_MOTHERLODE_MAIN,
+        },
+        // Seat 4382: Gorion, Wise Mentor's EDHREC average deck. `--pod-decks 4382`.
+        PodDeck {
+            name: "Gorion, Wise Mentor (WUG)",
+            commanders: decks::GORION_COMMANDERS,
+            main: decks::GORION_MAIN,
+        },
+        // Seat 4383: War Machine, James Rhodes's EDHREC average deck. `--pod-decks 4383`.
+        PodDeck {
+            name: "War Machine, James Rhodes (WU)",
+            commanders: decks::WAR_MACHINE_3_COMMANDERS,
+            main: decks::WAR_MACHINE_3_MAIN,
+        },
     ]
 }
 
@@ -32996,6 +33032,12 @@ mod tests {
             ("The Ruinous Wrecking Crew", &[0x1B2D]),
             ("Ulrich of the Krallenhorde", &[0x1B2E]),
             ("Cabal Patriarch", &[0x1B2F]),
+            ("Grub, Storied Matriarch", &[0x1B30]),
+            ("Noctis, Heir Apparent", &[0x1B31]),
+            ("Gorbag of Minas Morgul", &[0x1B32]),
+            ("The Motherlode, Excavator", &[0x1B33]),
+            ("Gorion, Wise Mentor", &[0x1B34]),
+            ("War Machine, James Rhodes", &[0x1B35]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
