@@ -120867,3 +120867,118 @@ pub const TOMIK_3_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const MILA_COMMANDERS: &[CardFactory] = &[mila_crafty_companion];
+
+/// **Mila, Crafty Companion**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Mountains + 12 Plains = 99.
+/// Mila, Crafty Companion (EDHREC, fetched 2026-10-19).
+pub const MILA_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, gatewatch_beacon, honor_worn_shaku, luxior_giadas_gift,
+    mind_stone, sol_ring, talisman_of_conviction, the_chain_veil, arid_mesa, battlefield_forge,
+    boros_garrison, clifftop_retreat, command_tower, dedicated_commons, furycalm_snarl,
+    interplanar_beacon, karns_bastion, rugged_prairie, sacred_foundry, spectator_seating,
+    sundown_pass, temple_of_triumph, ajani_nacatl_pariah, archon_of_absolution, arena_rector,
+    baird_steward_of_argive, djeru_with_eyes_open, esper_sentinel, grateful_apparition,
+    jayas_phoenix, kazuul_tyrant_of_the_cliffs, keeper_of_the_accord,
+    knight_of_the_white_orchid, laezel_vlaakiths_champion, mangara_the_diplomat,
+    metastatic_evangel, onakke_oathkeeper, patrolling_peacemaker, solemn_simulacrum, sun_titan,
+    witch_enchanter, elspeth_conquers_death, elspeths_talent, oath_of_gideon, rowans_talent,
+    urza_assembles_the_titans, way_of_the_pyromancer, boros_charm, chaos_warp, comeuppance,
+    generous_gift, ignite_the_beacon, loyal_tutor, path_to_exile, semesters_end,
+    swords_to_plowshares, ajani_steadfast, ajani_unrelenting, chandra_acolyte_of_flame,
+    chandra_awakened_inferno, chandra_legacy_of_fire, chandra_torch_of_defiance,
+    elspeth_suns_champion, gideon_jura, gideon_of_the_trials, nahiri_the_harbinger,
+    sarkhan_the_masterless, the_eternal_wanderer, the_wanderer, the_wandering_emperor,
+    ascend_from_avernus, blasphemous_act, call_the_gatewatch, deploy_the_gatewatch,
+    faithless_looting, farewell, vanquish_the_horde,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const KANG_COMMANDERS: &[CardFactory] = &[kang_temporal_tyrant];
+
+/// **Kang, Temporal Tyrant**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Islands + 12 Swamps = 99.
+/// Kang, Temporal Tyrant (EDHREC, fetched 2026-10-19).
+pub const KANG_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, futurist_forge, mind_stone,
+    monument_to_endurance, sol_ring, talisman_of_dominance, thought_vessel, a_i_m_labs,
+    choked_estuary, command_tower, drowned_catacomb, hidden_lair, reliquary_tower,
+    shipwreck_marsh, sunken_hollow, surveillance_room, tainted_isle, villainous_hideout,
+    watery_grave, aim_scientists, agents_of_hydra, archfiend_of_ifnir, baron_helmut_zemo,
+    baron_strucker_hydra_overlord, citizen_v_helmut_zemo, crossbones_malicious_mercenary,
+    doctor_octopus_master_planner, faerie_mastermind, gixian_puppeteer,
+    iron_monger_sadistic_tycoon, kid_loki, krang_the_all_powerful, leader_super_genius,
+    ledger_shredder, m_o_d_o_k, m_o_d_o_k_evil_intellect, madame_masque, mob_lookout,
+    moonstone_harsh_mistress, prowler_clawed_thief, psychosis_crawler, red_room_recruit,
+    roxxon_brutes, taskmaster_mercenary_mimic, the_masters_of_evil, tombstone_career_criminal,
+    ultron_unlimited, construct_a_cosmic_cube, doom_reigns_supreme, glorious_purpose,
+    rewrite_history, rhystic_study, super_intelligence, teferis_ageless_insight,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, dark_ritual, decoy_ploy,
+    depower, frantic_search, lethal_scheme, negate, unstable_experiment, visions_of_villainy,
+    we_say_thee_nay, cruel_alliance, feed_the_swarm, reanimate, too_evil_to_stay_dead,
+    toxic_deluge, tricksters_stratagem, victimize,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const OLD_HOB_COMMANDERS: &[CardFactory] = &[old_hob_alleycat_blues];
+
+/// **Old Hob, Alleycat Blues**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Plains = 99.
+/// Old Hob, Alleycat Blues (EDHREC, fetched 2026-10-19).
+pub const OLD_HOB_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, chromatic_lantern, idol_of_oblivion, infantry_shield,
+    lightning_greaves, mouser_foundry, skullclamp, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, thought_vessel, battlefield_forge, clifftop_retreat, command_tower,
+    dalkovan_encampment, dimension_x, evolving_wilds, exotic_orchard, fabled_passage,
+    minas_tirith, path_of_ancestry, radiant_summit, rugged_prairie, sacred_foundry,
+    spectator_seating, sundown_pass, adeline_resplendent_cathar, agate_instigator,
+    anim_pakal_thousandth_moon, arabella_abandoned_doll, big_mother_mouser, epf_point_squad,
+    exalted_sunborn, jennika_bad_apple_big_sister, leonardo_big_brother,
+    lita_little_orphan_amphibian, loyal_apprentice, mechanized_ninja_cavalry, mighty_mutanimals,
+    molten_gatekeeper, mondrak_glory_dominus, mutant_town_musicians,
+    raph_and_leo_sibling_rivals, raphael_tag_team_tough, raphael_tough_turtle,
+    raphael_the_nightwatcher, sally_pride_lioness_leader, slash_reptile_rampager,
+    splinter_leo_father_son, the_neutrinos, wingnut_bat_on_the_belfry, witty_roastmaster,
+    anointed_procession, caretakers_talent, endless_foot_assault, felidar_retreat,
+    impact_tremors, intangible_virtue, smothering_tithe, warleaders_call, windcrag_siege,
+    big_score, boros_charm, chaos_warp, continue_card, demand_answers, manhole_missile,
+    path_to_exile, swords_to_plowshares, the_last_ronins_technique, unbreakable_formation,
+    elspeth_storm_slayer, blasphemous_act, go_ninja_go, grab_the_prize, leonardos_technique,
+    waves_of_aggression,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const ULTIMO_COMMANDERS: &[CardFactory] = &[ultimo_civilizations_end];
+
+/// **Ultimo, Civilization's End**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Ultimo, Civilization's End (EDHREC, fetched 2026-10-19).
+pub const ULTIMO_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, commanders_sphere, moonring_mirror, nazgul_battle_mace,
+    oblivion_stone, portal_to_phyrexia, tamiyos_journal, arcane_lighthouse, cabal_stronghold,
+    command_tower, desert, field_of_ruin, heap_gate, power_depot, zoetic_cavern, blood_artist,
+    bone_miser, carrion_rats, erebos_god_of_the_dead, falkenrath_noble, gate_colossus,
+    gravelighter, grim_wanderer, harvester_of_souls, high_society_hunter, magus_of_the_coffers,
+    malakir_cullblade, mikaeus_the_unhallowed, morbid_opportunist, nezumi_bladeblesser,
+    nimana_skydancer, norritt, onulet, ravenous_vampire, ruthless_technomancer,
+    sanguinary_priest, scythe_specter, syr_konrad_the_grim, treacherous_vampire, vampire_spawn,
+    wasteland_scorpion, agent_of_the_iron_throne, black_market, court_of_ambition, greed,
+    illness_in_the_ranks, the_meathook_massacre, twisted_embrace, warlock_class,
+    battle_rage_blessing, cabal_ritual, dark_ritual, defile, doom_blade, fatal_fumes,
+    fell_the_profane, heartless_act, sephiroths_intervention, alms_of_the_vein,
+    blood_on_the_snow, come_back_wrong, deadly_embrace, discerning_taste, edgars_awakening,
+    forever_young, gixs_caress, okiba_salvage, profane_transfusion,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];

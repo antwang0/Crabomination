@@ -26304,6 +26304,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOMIK_3_COMMANDERS,
             main: decks::TOMIK_3_MAIN,
         },
+        // Seat 4309: Mila, Crafty Companion's EDHREC average deck. `--pod-decks 4309`.
+        PodDeck {
+            name: "Mila, Crafty Companion (WR)",
+            commanders: decks::MILA_COMMANDERS,
+            main: decks::MILA_MAIN,
+        },
+        // Seat 4310: Kang, Temporal Tyrant's EDHREC average deck. `--pod-decks 4310`.
+        PodDeck {
+            name: "Kang, Temporal Tyrant (UB)",
+            commanders: decks::KANG_COMMANDERS,
+            main: decks::KANG_MAIN,
+        },
+        // Seat 4311: Old Hob, Alleycat Blues's EDHREC average deck. `--pod-decks 4311`.
+        PodDeck {
+            name: "Old Hob, Alleycat Blues (WR)",
+            commanders: decks::OLD_HOB_COMMANDERS,
+            main: decks::OLD_HOB_MAIN,
+        },
+        // Seat 4312: Ultimo, Civilization's End's EDHREC average deck. `--pod-decks 4312`.
+        PodDeck {
+            name: "Ultimo, Civilization's End (B)",
+            commanders: decks::ULTIMO_COMMANDERS,
+            main: decks::ULTIMO_MAIN,
+        },
     ]
 }
 
@@ -32513,6 +32537,10 @@ mod tests {
             ("Temmet, Vizier of Naktamun", &[0x1AE8]),
             ("Splinter & Leo, Father & Son", &[0x1AE9]),
             ("Tomik, Wielder of Law", &[0x1AEA]),
+            ("Mila, Crafty Companion", &[0x1AEB]),
+            ("Kang, Temporal Tyrant", &[0x1AEC]),
+            ("Old Hob, Alleycat Blues", &[0x1AED]),
+            ("Ultimo, Civilization's End", &[0x1AEE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
