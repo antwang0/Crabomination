@@ -119947,3 +119947,171 @@ pub const TIGER_SHARK_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const TARANIKA_COMMANDERS: &[CardFactory] = &[taranika_akroan_veteran];
+
+/// **Taranika, Akroan Veteran**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Taranika, Akroan Veteran (EDHREC, fetched 2026-10-19).
+pub const TARANIKA_MAIN: &[CardFactory] = &[
+    arcane_signet, helm_of_chatzuk, heraldic_banner, lightning_greaves, mind_stone,
+    oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots, tome_of_legends,
+    castle_ardenvale, emeria_the_sky_ruin, idyllic_grange, minas_tirith, myriad_landscape,
+    rogues_passage, secluded_steppe, war_room, windbrisk_heights, adorned_pouncer,
+    auriok_bladewarden, bastion_protector, battering_ram, benalish_hero, deftblade_elite,
+    enduring_innocence, esper_sentinel, fey_steed, firemane_commando, giver_of_runes,
+    icatian_infantry, intrepid_hero, kjeldoran_knight, kjeldoran_skyknight, kjeldoran_warrior,
+    knight_of_the_white_orchid, lion_sash, loran_of_the_third_path, loyal_warhound,
+    luminarch_aspirant, mentor_of_the_meek, mesa_pegasus, mikaeus_the_lunarch, mirran_crusader,
+    mother_of_runes, noble_elephant, pikemen, shield_bearer, stonecoil_serpent, sun_titan,
+    weathered_wayfarer, welcoming_vampire, chivalric_alliance, court_of_ardenvale,
+    duelists_heritage, land_tax, reconnaissance, tocasias_welcome, true_conviction,
+    akromas_will, generous_gift, path_to_exile, sejiri_shelter, stroke_of_midnight,
+    swords_to_plowshares, unbreakable_formation, your_temple_is_under_attack, gideon_blackblade,
+    ascend_from_avernus, austere_command, citywide_bust, sevinnes_reclamation, winds_of_abandon,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const THOR_3_COMMANDERS: &[CardFactory] = &[thor_asgards_avenger];
+
+/// **Thor, Asgard's Avenger**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Thor, Asgard's Avenger (EDHREC, fetched 2026-10-19).
+pub const THOR_3_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_plate, cursed_mirror, fellwar_stone, fire_diamond,
+    mjolnir_hammer_of_thor, phial_of_galadriel, ruby_medallion, sol_ring, swiftfoot_boots,
+    the_fire_crystal, castle_embereth, cori_mountain_monastery, hanweir_battlements,
+    rogues_passage, shinka_the_bloodsoaked_keep, shivan_gorge, valakut_the_molten_pinnacle,
+    war_room, angraths_marauders, blazing_bomb, coruscation_mage, eidolon_of_the_great_revel,
+    electro_assaulting_battery, etali_primal_storm, firebrand_archer, guttersnipe,
+    hawkeye_young_avenger, hazoret_the_fervent, hexing_squelcher, meticulous_artisan,
+    molten_lavamancer, prodigal_pyromancer, purphoros_god_of_the_forge, red_hulk,
+    sifs_spearmaster, solphim_mayhem_dominus, stark_industries_executive, thor_god_of_thunder,
+    torbran_thane_of_red_fell, treasure_nabber, twinflame_tyrant, weaver_of_lightning,
+    artists_talent, count_on_luck, death_to_our_enemies, gratuitous_violence, origin_of_thor,
+    abrade, big_score, bolt_bend, burst_lightning, chaos_warp, delayed_blast_fireball,
+    lightning_bolt, lightning_strike, pyretic_ritual, redirect_lightning, return_the_favor,
+    untimely_malfunction, asgardian_inspiration, blasphemous_act, chandras_ignition, grapeshot,
+    hex_magic, mana_geyser, meteor_swarm, mjolnirs_might, mugging, past_in_flames,
+    sundering_eruption,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const GERT_AND_OLD_LACE_COMMANDERS: &[CardFactory] = &[gert_and_old_lace_runaways];
+
+/// **Gert and Old Lace, Runaways**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 14 Forests + 17 Mountains = 99.
+/// Gert and Old Lace, Runaways (EDHREC, fetched 2026-10-19).
+pub const GERT_AND_OLD_LACE_MAIN: &[CardFactory] = &[
+    dino_dna, experimental_armor, herd_heirloom, team_transmitter, cinder_glade, command_tower,
+    commercial_district, rockfall_vale, rootbound_crag, sheltered_thicket, temple_of_abandon,
+    training_compound, basking_rootwalla, black_widow_natasha_romanoff, blazing_rootwalla,
+    bonehoard_dracosaur, charging_tuskodon, etali_primal_storm, gamma_grotesque,
+    herbie_scout_unit, happy_hogan_dauntless_driver, hellcat_undying_vigilante,
+    hulk_bruce_banner, itzquinth_firstborn_of_gishath, jewel_thief, knight_of_wundagore,
+    moon_boy_dino_rider, quartzwood_crasher, ravenous_sailback, regisaur_alpha,
+    savage_land_dinosaur, sawhorn_nemesis, scarlet_witch_wanda_maximoff, scytheclaw_raptor,
+    selvala_heart_of_the_wilds, serpent_specialist, she_hulk_jennifer_walters,
+    stature_young_avenger, sunfrill_imitator, the_thing_ben_grimm, thrashing_brontodon,
+    topiary_stomper, ultron_drone, undercover_skrull, warriors_of_wakanda, wrathful_raptors,
+    zilortha_strength_incarnate, frantic_strength, furious_strength, garruks_uprising,
+    rising_of_the_day, training_regimen, feral_ferocity, fog, giant_growth,
+    heritage_reclamation, hire_a_crew, lightning_strike, shock, smashing_spree,
+    smugglers_surprise, desecration_plague, escape_to_the_wilds, explore, rampant_growth,
+    repulsor_rays, restorative_technique, vengeful_possession,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const SHE_HULK_2_COMMANDERS: &[CardFactory] = &[she_hulk_wallbreaker];
+
+/// **She-Hulk, Wallbreaker**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Mountains = 99.
+/// She-Hulk, Wallbreaker (EDHREC, fetched 2026-10-19).
+pub const SHE_HULK_2_MAIN: &[CardFactory] = &[
+    arcane_signet, avengers_quinjet, cosmic_cube, experimental_armor, heralds_horn, heros_blade,
+    hulkbuster_armor, mind_stone, mjolnir_hammer_of_thor, ruby_medallion, sol_ring,
+    team_transmitter, thought_vessel, thran_dynamo, tome_of_legends, unstable_molecule_suit,
+    arena_of_glory, avengers_tower, castle_embereth, dwarven_mine, evolving_wilds,
+    mines_of_moria, myriad_landscape, rogues_passage, shinka_the_bloodsoaked_keep, war_room,
+    black_widow_natasha_romanoff, elektra_femme_fatale, firebird_blazing_ranger,
+    ghost_spider_gwen_stacy, hawkeye_master_marksman, hawkeye_trick_shot, hawkeye_young_avenger,
+    hulk_always_angry, hulk_bruce_banner, hulkling_young_avenger, iron_man_tony_stark,
+    jessica_jones_private_eye, jocasta_automaton_avenger, lady_spider_maybelle_reilly,
+    living_lightning_charged_up, luke_cage_hero_for_hire, misty_knight_hero_for_hire,
+    nico_minoru_runaway, photon_mighty_marvel, quicksilver_brash_blur,
+    she_hulk_jennifer_walters, sifs_spearmaster, spider_gwen_free_spirit,
+    spider_man_web_spinner, the_immortal_weapons, thor_asgards_avenger, thor_god_of_thunder,
+    curse_of_opulence, furious_strength, origin_of_thor, power_boost, big_score,
+    blazing_crescendo, bulk_up, chaos_warp, crossover_collaboration, hulk_smash, savage_beating,
+    wisecrack, asgardian_inspiration, avengers_disassembled, blasphemous_act,
+    into_the_time_vortex, nova_flame, romantic_rendezvous, seize_the_day, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const WOLFSBANE_COMMANDERS: &[CardFactory] = &[wolfsbane_highland_hero];
+
+/// **Wolfsbane, Highland Hero**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Wolfsbane, Highland Hero (EDHREC, fetched 2026-10-19).
+pub const WOLFSBANE_MAIN: &[CardFactory] = &[
+    adventuring_gear, arcane_signet, bramble_armor, goldvein_pick, guac_and_marshmallow_pizza,
+    malamet_scythe, meltstriders_gear, moss_diamond, ash_barrens, captivating_cave,
+    cave_of_temptation, escape_tunnel, forge_of_heroes, khalni_garden, opal_palace,
+    path_of_ancestry, tranquil_thicket, turntimber_grove, balamb_t_rexaur, bristlepack_sentry,
+    cytospawn_shambler, elvish_aberration, elvish_visionary, evolution_witness, foe_liage,
+    frog_butler, fyndhorn_elves, kravens_cats, llanowar_elves, llanowar_visionary,
+    michelangelo_game_master, migrating_ketradon, prehistoric_turtlesaurus,
+    primordial_pachyderm, scorned_villager, simic_initiate, spider_man_brooklyn_visionary,
+    spider_rex_daring_dino, twisted_spider_clone, ulvenwald_captive, weaver_of_blossoms,
+    zoo_escapees, accelerated_evolution, ancestral_mask, forced_adaptation, lignify,
+    setessan_training, snake_umbra, spider_umbra, utopia_sprawl, aspect_of_hydra, beast_mode,
+    biosynthic_burst, broken_wings, feral_ferocity, gaeas_gift, giant_growth,
+    origin_of_metalbending, pillar_launch, ram_through, rangers_guile, tenderize, thing_swing,
+    colossal_collision, cowabunga, cultivate, go_nuts, mutant_chain_reaction, natures_lore,
+    restorative_technique, scout_the_city,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
+
+pub const ZOG_COMMANDERS: &[CardFactory] = &[zog_triceraton_castaway];
+
+/// **Zog, Triceraton Castaway**'s EDHREC average deck, card for card:
+/// 65 nonbasic cards + 34 Mountains = 99.
+/// Zog, Triceraton Castaway (EDHREC, fetched 2026-10-19).
+pub const ZOG_MAIN: &[CardFactory] = &[
+    cursed_mirror, helm_of_the_host, heraldic_banner, mimic_vat, mirror_box, patchwork_banner,
+    sol_ring, sundial_of_the_infinite, the_fire_crystal, mines_of_moria, myriad_landscape,
+    anger, angraths_marauders, atsushi_the_blazing_sky, bearer_of_the_heavens,
+    brazen_freebooter, breeches_eager_pillager, burning_suns_avatar, captain_lannery_storm,
+    captivating_crew, craven_giant, delina_wild_mage, dwarven_miner, dwarven_sea_clan,
+    etali_primal_storm, forerunner_of_the_empire, goblin_lackey, goblin_marshal,
+    inti_seneschal_of_the_sun, kiki_jiki_mirror_breaker, kobold_overlord, kyren_legate,
+    magda_brazen_outlaw, mogg_maniac, orcish_mechanics, orthion_hero_of_lavabrink,
+    otepec_huntmaster, patron_of_the_arts, plundering_pirate, purphoros_god_of_the_forge,
+    raging_minotaur, rampaging_ferocidon, rampaging_raptor, rapacious_dragon, sawhorn_nemesis,
+    sawtooth_ogre, starke_of_rath, wrathful_raptors, xorn, yuan_shao_the_indecisive, agility,
+    arcane_teachings, bitter_reunion, mana_echoes, splinter_twin, annihilating_fire, big_score,
+    chaos_warp, lightning_bolt, unexpected_windfall, blasphemous_act, collision_of_realms,
+    full_throttle, seize_the_spoils, twinflame,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

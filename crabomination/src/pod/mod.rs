@@ -26106,6 +26106,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TIGER_SHARK_COMMANDERS,
             main: decks::TIGER_SHARK_MAIN,
         },
+        // Seat 4276: Taranika, Akroan Veteran's EDHREC average deck. `--pod-decks 4276`.
+        PodDeck {
+            name: "Taranika, Akroan Veteran (W)",
+            commanders: decks::TARANIKA_COMMANDERS,
+            main: decks::TARANIKA_MAIN,
+        },
+        // Seat 4277: Thor, Asgard's Avenger's EDHREC average deck. `--pod-decks 4277`.
+        PodDeck {
+            name: "Thor, Asgard's Avenger (R)",
+            commanders: decks::THOR_3_COMMANDERS,
+            main: decks::THOR_3_MAIN,
+        },
+        // Seat 4278: Gert and Old Lace, Runaways's EDHREC average deck. `--pod-decks 4278`.
+        PodDeck {
+            name: "Gert and Old Lace, Runaways (RG)",
+            commanders: decks::GERT_AND_OLD_LACE_COMMANDERS,
+            main: decks::GERT_AND_OLD_LACE_MAIN,
+        },
+        // Seat 4279: She-Hulk, Wallbreaker's EDHREC average deck. `--pod-decks 4279`.
+        PodDeck {
+            name: "She-Hulk, Wallbreaker (R)",
+            commanders: decks::SHE_HULK_2_COMMANDERS,
+            main: decks::SHE_HULK_2_MAIN,
+        },
+        // Seat 4280: Wolfsbane, Highland Hero's EDHREC average deck. `--pod-decks 4280`.
+        PodDeck {
+            name: "Wolfsbane, Highland Hero (G)",
+            commanders: decks::WOLFSBANE_COMMANDERS,
+            main: decks::WOLFSBANE_MAIN,
+        },
+        // Seat 4281: Zog, Triceraton Castaway's EDHREC average deck. `--pod-decks 4281`.
+        PodDeck {
+            name: "Zog, Triceraton Castaway (R)",
+            commanders: decks::ZOG_COMMANDERS,
+            main: decks::ZOG_MAIN,
+        },
     ]
 }
 
@@ -32282,6 +32318,12 @@ mod tests {
             ("Bolg, Erebor's Reckoning", &[0x1AC7]),
             ("Great Goblin, Foul-Hearted", &[0x1AC8]),
             ("Tiger Shark, Abyssal Hunter", &[0x1AC9]),
+            ("Taranika, Akroan Veteran", &[0x1ACA]),
+            ("Thor, Asgard's Avenger", &[0x1ACB]),
+            ("Gert and Old Lace, Runaways", &[0x1ACC]),
+            ("She-Hulk, Wallbreaker", &[0x1ACD]),
+            ("Wolfsbane, Highland Hero", &[0x1ACE]),
+            ("Zog, Triceraton Castaway", &[0x1ACF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
