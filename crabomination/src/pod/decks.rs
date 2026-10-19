@@ -123057,3 +123057,31 @@ pub const SYRIX_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const MENG_HUO_COMMANDERS: &[CardFactory] = &[meng_huo_barbarian_king];
+
+/// **Meng Huo, Barbarian King**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Forests = 99.
+/// Meng Huo, Barbarian King (EDHREC, fetched 2026-10-19).
+pub const MENG_HUO_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lifecrafters_bestiary, rhonass_monument, sol_ring,
+    the_earth_crystal, the_great_henge, boseiju_who_endures, castle_garenbrig, mosswort_bridge,
+    nykthos_shrine_to_nyx, oran_rief_the_vastwood, war_room, yavimaya_cradle_of_growth,
+    allosaurus_shepherd, avenger_of_zendikar, beast_whisperer, birds_of_paradise,
+    champion_of_lambholt, circle_of_dreams_druid, craterhoof_behemoth, defiler_of_vigor,
+    elfsworn_giant, elvish_mystic, eternal_witness, formidable_speaker, fyndhorn_elves,
+    hua_tuo_honored_physician, hunting_cheetah, ka_zar_of_the_savage_land, kaysa,
+    lady_zhurong_warrior_queen, llanowar_elves, meng_huos_horde, paragon_of_eternal_wilds,
+    priest_of_titania, rampaging_baloths, reclamation_sage, sakura_tribe_elder, scute_swarm,
+    slashing_tiger, taoist_hermit, toski_bearer_of_secrets, wood_elves, yeva_natures_herald,
+    zuo_ci_the_mocking_sage, beastmaster_ascension, growing_rites_of_itlimoc, guardian_project,
+    kenriths_transformation, sylvan_anthem, sylvan_library, tribute_to_the_world_tree,
+    wild_growth, beast_within, chord_of_calling, fog, heavy_fog, heroic_intervention,
+    return_of_the_wildspeaker, veil_of_summer, garruk_primal_hunter, cultivate, false_mourning,
+    kodamas_reach, natures_lore, rampant_growth, riding_the_dilu_horse, spoils_of_victory,
+    three_visits, untamed_wilds, wielding_the_green_dragon,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest,
+];

@@ -26772,6 +26772,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SYRIX_COMMANDERS,
             main: decks::SYRIX_MAIN,
         },
+        // Seat 4387: Meng Huo, Barbarian King's EDHREC average deck. `--pod-decks 4387`.
+        PodDeck {
+            name: "Meng Huo, Barbarian King (G)",
+            commanders: decks::MENG_HUO_COMMANDERS,
+            main: decks::MENG_HUO_MAIN,
+        },
     ]
 }
 
@@ -33059,6 +33065,7 @@ mod tests {
             ("Zhou Yu, Chief Commander", &[0x1B36]),
             ("Beluna Grandsquall", &[0x1B37]),
             ("Syrix, Carrier of the Flame", &[0x1B38]),
+            ("Meng Huo, Barbarian King", &[0x1B39]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
