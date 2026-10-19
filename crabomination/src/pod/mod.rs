@@ -26244,6 +26244,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FOGGY_NELSON_COMMANDERS,
             main: decks::FOGGY_NELSON_MAIN,
         },
+        // Seat 4299: Fangorn, Tree Shepherd's EDHREC average deck. `--pod-decks 4299`.
+        PodDeck {
+            name: "Fangorn, Tree Shepherd (G)",
+            commanders: decks::FANGORN_COMMANDERS,
+            main: decks::FANGORN_MAIN,
+        },
+        // Seat 4300: Agent Maria Hill's EDHREC average deck. `--pod-decks 4300`.
+        PodDeck {
+            name: "Agent Maria Hill (W)",
+            commanders: decks::AGENT_MARIA_HILL_COMMANDERS,
+            main: decks::AGENT_MARIA_HILL_MAIN,
+        },
+        // Seat 4301: She-Hulk, Jade Defender's EDHREC average deck. `--pod-decks 4301`.
+        PodDeck {
+            name: "She-Hulk, Jade Defender (G)",
+            commanders: decks::SHE_HULK_3_COMMANDERS,
+            main: decks::SHE_HULK_3_MAIN,
+        },
     ]
 }
 
@@ -32443,6 +32461,9 @@ mod tests {
             ("Rocksteady, Crash Courser", &[0x1ADE]),
             ("Spider-Woman, Secret Agent", &[0x1ADF]),
             ("Foggy Nelson, On Retainer", &[0x1AE0]),
+            ("Fangorn, Tree Shepherd", &[0x1AE1]),
+            ("Agent Maria Hill", &[0x1AE2]),
+            ("She-Hulk, Jade Defender", &[0x1AE3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -120589,3 +120589,84 @@ pub const FOGGY_NELSON_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const FANGORN_COMMANDERS: &[CardFactory] = &[fangorn_tree_shepherd];
+
+/// **Fangorn, Tree Shepherd**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Fangorn, Tree Shepherd (EDHREC, fetched 2026-10-19).
+pub const FANGORN_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, heralds_horn, rhonass_monument, sol_ring, the_great_henge,
+    castle_garenbrig, mosswort_bridge, myriad_landscape, path_of_ancestry, reliquary_tower,
+    yavimaya_cradle_of_growth, battlewand_oak, bosk_banneret, dauntless_dourbark,
+    dungrove_elder, everbark_shaman, ezzaroot_channeler, generous_ent, ghastbark_twins,
+    ghoultree, great_forest_druid, great_oak_guardian, heartwood_storyteller,
+    kalonian_twingrove, leaf_crowned_elder, orchard_warden, quickbeam_upstart_ent, realmwalker,
+    rootless_yew, scurry_oak, seedguide_ash, shriekwood_devourer, six, timber_protector,
+    treefolk_harbinger, ulvenwald_observer, unstoppable_ash, verdeloth_the_ancient,
+    wickerbough_elder, woodfall_primus, yedora_grave_gardener, assault_formation,
+    assemble_the_entmoot, garruks_uprising, lignify, sapling_nursery, treefolk_umbra,
+    tribute_to_the_world_tree, unnatural_growth, up_the_beanstalk, beast_within,
+    entish_restoration, fog, heroic_intervention, reach_of_branches, return_of_the_wildspeaker,
+    rootgrapple, wrenn_and_seven, cultivate, harmonize, kodamas_reach, last_march_of_the_ents,
+    natures_lore, rampant_growth, rishkars_expertise, skyshroud_claim, tend_the_sprigs,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const AGENT_MARIA_HILL_COMMANDERS: &[CardFactory] = &[agent_maria_hill];
+
+/// **Agent Maria Hill**'s EDHREC average deck, card for card:
+/// 65 nonbasic cards + 34 Plains = 99.
+/// Agent Maria Hill (EDHREC, fetched 2026-10-19).
+pub const AGENT_MARIA_HILL_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, dynavolt_tower, isochron_scepter, liquimetal_torque,
+    mind_stone, pearl_medallion, prismatic_lens, skullclamp, sol_ring, thought_vessel,
+    thousand_year_elixir, unwinding_clock, wayfarers_bauble, wooden_stake, blast_zone,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith, myriad_landscape, urzas_cave,
+    urzas_mine, urzas_tower, winding_canyons, aerial_extortionist, agent_phil_coulson,
+    auron_venerated_guardian, bronzebeak_foragers, captain_america_super_soldier,
+    captain_america_unbowed, deep_gnome_terramancer, drumbellower, esper_sentinel,
+    informed_inkwright, iron_spider_stark_upgrade, mavinda_students_advocate, monastery_mentor,
+    seasoned_dungeoneer, sokka_swordmaster, spectacular_spider_man, spider_uk,
+    the_dawning_archaic, werefox_bodyguard, avengers_assemble, hieromancers_cage,
+    isolation_zone, sinstrikers_will, smothering_tithe, tocasias_welcome, trapped_in_the_screen,
+    trouble_in_pairs, clever_concealment, enlightened_tutor, flawless_maneuver, generous_gift,
+    helicarrier_strike, heroic_teamwork, path_to_exile, swords_to_plowshares,
+    teferis_protection, elspeth_suns_champion, damning_verdict, emerias_call, murdocks_crusade,
+    swift_reckoning,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const SHE_HULK_3_COMMANDERS: &[CardFactory] = &[she_hulk_jade_defender];
+
+/// **She-Hulk, Jade Defender**'s EDHREC average deck, card for card:
+/// 65 nonbasic cards + 34 Forests = 99.
+/// She-Hulk, Jade Defender (EDHREC, fetched 2026-10-19).
+pub const SHE_HULK_3_MAIN: &[CardFactory] = &[
+    herd_heirloom, blighted_woodland, fabled_passage, ghost_town, havenwood_battleground,
+    myriad_landscape, terramorphic_expanse, ancient_greenwarden, arbor_elf,
+    ashaya_soul_of_the_wild, avenger_of_zendikar, azusa_lost_but_seeking, bane_of_progress,
+    beanstalk_giant, boreal_druid, bramble_sovereign, elvish_mystic, frilled_sandwalla,
+    garruks_companion, grizzly_bears, jadelight_spelunker, llanowar_elves, oracle_of_mul_daya,
+    rampaging_baloths, ramunap_excavator, reclamation_sage, rosethorn_acolyte, saruli_caretaker,
+    selvala_heart_of_the_wilds, starved_rusalka, wall_of_roots, wary_okapi, woodland_champion,
+    beastmaster_ascension, birthing_ritual, find_the_path, paradox_zone, parallel_lives,
+    rite_of_passage, roaring_earth, trollhide, archdruids_charm, beast_within, bestow_greatness,
+    bouncers_beatdown, broken_wings, dragonscale_boon, harrow, krosan_grip, return_to_nature,
+    thwart_the_enemy, cultivate, curse_of_the_werefox, far_wanderings, fork_in_the_road,
+    grow_from_the_ashes, harmonize, kodamas_reach, monstrous_growth, mulch, natures_lore,
+    rampant_growth, rishkars_expertise, seek_the_horizon, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest,
+];
