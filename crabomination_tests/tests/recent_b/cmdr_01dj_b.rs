@@ -729,3 +729,90 @@ fn boarded_window_weakens_attackers_then_breaks() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == w));
 }
+
+// ── Four-gap closers (`decks::cmdr_01dj_u`) ────────────────────────────────
+
+/// Bulette grows at your end step only if a creature died this turn.
+#[test]
+fn bulette_grows_after_a_death() {
+    for (death, want) in [(false, 0), (true, 1)] {
+        let mut g = pod(2);
+        let bul = ready(&mut g, 0, catalog::bulette());
+        if death {
+            let bear = ready(&mut g, 1, catalog::grizzly_bears());
+            let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+            cast_targets(&mut g, bolt, &[Target::Permanent(bear)]);
+        }
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bul).unwrap().counter_count(CounterType::PlusOnePlusOne), want);
+    }
+}
+
+/// Vivien's Invocation deploys a creature from the top seven, which then
+/// deals its power to an opposing creature.
+#[test]
+fn viviens_invocation_deploys_and_bites() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::viviens_invocation());
+    cast_targets(&mut g, s, &[]);
+    assert!(g.battlefield_find(giant).is_some(), "the Giant entered");
+    assert!(g.battlefield_find(bear).is_none(), "and dealt 3 to the Bears");
+}
+
+/// Gloomwidow's Feast kills a flyer; a blue or black one also leaves you a
+/// Spider.
+#[test]
+fn gloomwidows_feast_spiders_on_a_blue_flyer() {
+    let mut g = pod(2);
+    let crow = ready(&mut g, 1, catalog::storm_crow());
+    let s = g.add_card_to_hand(0, catalog::gloomwidows_feast());
+    cast_targets(&mut g, s, &[Target::Permanent(crow)]);
+    assert!(g.battlefield_find(crow).is_none());
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spider"));
+}
+
+/// Blizzard Brawl: with three snow permanents your creature gets +1/+0 and
+/// indestructible before the fight, so the Bears beat a Hill Giant and live.
+#[test]
+fn blizzard_brawl_wins_with_snow() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::snow_covered_forest());
+    }
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::blizzard_brawl());
+    cast_targets(&mut g, s, &[Target::Permanent(bear), Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none(), "3 damage kills the 3/3");
+    assert!(g.battlefield_find(bear).is_some(), "indestructible");
+}
+
+/// Energy (CR 107.16): Aether Theorist and Minister of Inquiries pay {E} for
+/// their tap abilities; Electrostatic Pummeler's {E}{E}{E} doubles its power.
+#[test]
+fn energy_creatures_spend_their_energy() {
+    let mut g = pod(2);
+    let mi = g.add_card_to_hand(0, catalog::minister_of_inquiries());
+    cast_targets(&mut g, mi, &[]);
+    assert_eq!(g.players[0].energy, 2);
+    g.clear_sickness(mi);
+    let lib = g.players[1].library.len();
+    activate(&mut g, mi, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].library.len(), lib - 3);
+    assert_eq!(g.players[0].energy, 1);
+
+    let ep = g.add_card_to_hand(0, catalog::electrostatic_pummeler());
+    cast_targets(&mut g, ep, &[]);
+    assert_eq!(g.players[0].energy, 4);
+    activate(&mut g, ep, 0, None);
+    assert_eq!(power(&g, ep), 2);
+    assert_eq!(g.players[0].energy, 1);
+}
