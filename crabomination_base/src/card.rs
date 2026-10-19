@@ -405,6 +405,8 @@ pub enum CreatureType {
     Borg,
     // Star Trek (Dominion Supervisor).
     Vorta,
+    // Homelands (Homarid Spawning Bed's tokens).
+    Camarid,
 }
 
 /// Land subtypes (basic land types + others).
