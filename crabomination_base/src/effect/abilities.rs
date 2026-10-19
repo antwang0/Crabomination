@@ -5177,6 +5177,19 @@ pub struct ActivatedAbility {
 }
 
 impl ActivatedAbility {
+    /// CR 702.128a / 702.129a — the shape `shortcut::embalm` / `eternalize`
+    /// build: exile this card from your graveyard for a Zombie token copy of
+    /// it with no mana cost.
+    pub fn is_embalm_like(&self) -> bool {
+        self.from_graveyard
+            && self.exile_self_cost
+            && matches!(
+                &self.effect,
+                Effect::CreateTokenCopyOf { source: Selector::This, no_mana_cost: true, extra_creature_types, .. }
+                    if extra_creature_types.contains(&crate::card::CreatureType::Zombie)
+            )
+    }
+
     /// True when activating this costs and restricts nothing — every field but
     /// the body sits at its default, so it can be re-activated without bound.
     /// Read by the CR 104.4b mandatory-loop watchdog. Deliberately conservative:

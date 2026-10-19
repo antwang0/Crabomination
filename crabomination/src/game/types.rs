@@ -2896,6 +2896,9 @@ pub enum GameEvent {
         loyalty: bool,
         /// CR 702.193 — a power-up ability (Marvel Boy, Noh-Varr).
         power_up: bool,
+        /// CR 702.128 / 702.129 — an embalm or eternalize ability (Vizier of
+        /// the Anointed); `source` is the card exiled to pay for it.
+        embalm: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

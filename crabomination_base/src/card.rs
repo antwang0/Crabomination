@@ -3141,6 +3141,9 @@ pub enum SelectionRequirement {
     /// that is one (equip, crew, reconfigure, cycling): The Enigma Jewel's
     /// "four or more nonlands with activated abilities".
     HasActivatedAbility,
+    /// Prints an embalm (CR 702.128) or eternalize (CR 702.129) ability —
+    /// Vizier of the Anointed's "creature card with eternalize or embalm".
+    HasEmbalmOrEternalize,
     /// Has a Morph / Megamorph / Disguise ability (Backslide).
     HasMorphAbility,
     /// CR 702.173 — has freerunning, printed ("a card with freerunning" —
@@ -8623,6 +8626,11 @@ impl CardDefinition {
                 .keywords
                 .iter()
                 .any(|k| matches!(k, Keyword::Equip(_) | Keyword::Crew(_) | Keyword::Reconfigure(_)))
+    }
+
+    /// CR 702.128 / 702.129 — does this card print embalm or eternalize?
+    pub fn has_embalm_or_eternalize(&self) -> bool {
+        self.activated_abilities.iter().any(crate::effect::ActivatedAbility::is_embalm_like)
     }
 
     pub fn has_cycling_ability(&self) -> bool {

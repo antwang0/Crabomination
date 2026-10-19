@@ -2161,6 +2161,7 @@ pub(crate) fn requirement_matches_card_typed(
         // Survivor's "creature cards with activated abilities that aren't mana
         // abilities"): this walker answered false for both leaves.
         R::HasActivatedAbility => def.has_activated_ability(),
+        R::HasEmbalmOrEternalize => def.has_embalm_or_eternalize(),
         R::HasNonManaActivatedAbility => {
             def.activated_abilities.iter().any(|a| !crate::game::actions::is_mana_ability(&a.effect))
         }

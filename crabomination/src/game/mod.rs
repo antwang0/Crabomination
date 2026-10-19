@@ -24837,6 +24837,7 @@ impl GameState {
             mana: false,
             loyalty: false,
             power_up: false,
+            embalm: false,
         });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
@@ -29203,6 +29204,7 @@ impl GameState {
                 mana: false,
                 loyalty: true,
                 power_up: false,
+                embalm: false,
             },
             GameEvent::LoyaltyChanged {
                 card_id,

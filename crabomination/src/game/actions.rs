@@ -24688,6 +24688,7 @@ impl GameState {
                 mana: ability_is_mana,
                 loyalty: false,
                 power_up: ability.power_up,
+                embalm: ability.is_embalm_like(),
             });
         }
 
