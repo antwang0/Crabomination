@@ -288,14 +288,14 @@ const PILE_LANE_TOKEN: u32 = 0;
 /// (`push`, `DerefMut`) clears the whole word, unlike the battlefield's.
 const PILE_LANE_ENCODED: u32 = 2;
 /// A card here carries a `TriggerZone::WhileExiled` trigger ("if this card is
-/// exiled" — Senu, Keen-Eyed Protector). Definition-only.
+/// exiled" — Senu, Keen-Eyed Protector) or a `WhileSuspended` one (CR
+/// 702.62b — Curse of the Cabal). Definition-only.
 const PILE_LANE_EXILE_TRIGGER: u32 = 4;
 
 fn card_has_exile_trigger(c: &CardInstance) -> bool {
-    c.definition
-        .triggered_abilities
-        .iter()
-        .any(|t| t.event.zone == crate::effect::TriggerZone::WhileExiled)
+    c.definition.triggered_abilities.iter().any(|t| {
+        matches!(t.event.zone, crate::effect::TriggerZone::WhileExiled | crate::effect::TriggerZone::WhileSuspended)
+    })
 }
 
 impl CardPile {

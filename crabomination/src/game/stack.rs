@@ -1470,12 +1470,20 @@ impl GameState {
         }
         // CR 113.6 — an exiled card's `WhileExiled` step triggers ("at the
         // beginning of your upkeep, if this card is exiled…" — Darigaaz
-        // Reincarnated), owned and so controlled by its owner (CR 108.4a).
-        // Behind the exile pile's lane: one word load on a board without one.
+        // Reincarnated), owned and so controlled by its owner (CR 108.4a);
+        // CR 702.62b — a suspended card's `WhileSuspended` ones ("at the
+        // beginning of each player's upkeep, if this card is suspended" —
+        // Curse of the Cabal). Behind the exile pile's lane: one word load on
+        // a board without one.
         if self.exile.has_exile_trigger() {
             for c in self.exile.iter() {
                 for t in &c.definition.triggered_abilities {
-                    if t.event.zone == crate::effect::TriggerZone::WhileExiled
+                    let zone_ok = match t.event.zone {
+                        crate::effect::TriggerZone::WhileExiled => true,
+                        crate::effect::TriggerZone::WhileSuspended => c.is_suspended(),
+                        _ => false,
+                    };
+                    if zone_ok
                         && t.event.kind == kind
                         && scope_matches(&t.event, c.owner)
                     {
