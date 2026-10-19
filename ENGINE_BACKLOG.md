@@ -211,7 +211,7 @@ the handoff.
   Flooded Woodlands (a sacrifice-to-attack cost the bot can't plan), Selenia (a "would lose the game"
   replacement).
 
-## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — 90 closer cards, 48 seats, the Marvel Villain and LOTR Goblin clusters
+## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — ~215 closer cards, ~80 seats, the Marvel Villain / LOTR Goblin / attacks-alone / Lorwyn Merfolk clusters
 
 - **Method:** rank missing cards by decks they close *together* (`scripts/edhrec_rank_closers.py`: `Σ 1/missing` over Commander-legal decks,
   every card in the 99 legal too), not one deck at a time. Two clusters fell out: the Marvel Villain
@@ -224,7 +224,25 @@ the handoff.
   Stilt-Man, Yellowjacket; Doctor Octopus Master Planner, Karolina Dean, Mauhúr, Prowler, Mysterio,
   Leader, The Balrog of Moria, Atlas, The Masters of Evil, The Squadron Sinister, Madame Masque; Bolg
   Erebor's Reckoning, Great Goblin, Tiger Shark.
-- **Primitive:** `WardCost::ManaOrDiscard` (Titania). Everything else composed from existing pieces.
+- **Later batches** (`decks::cmdr_01dj_h`..`_q`, tests `recent_b/cmdr_01dj_a.rs` + `cmdr_01dj_b.rs`):
+  seats 4276-4304, 4313-4314 (Elesh Norn, She-Hulk Attorney-at-Law), 4325-4328 (two Donatellos, Fíli and
+  Kíli, Black Panther Vanguard), 4329-4335 (the attacks-alone Marvel seven: Black Widow Double Agent, Nick
+  Fury Spymaster, Zarda, Luke Cage Power Man, Agent 13, Black Panther Claws of Bast, Peggy Carter —
+  Strategic Intervention + Crowd of True Believers + Widow's Bite), 4339-4341 (Sharae, Worzel, Janeway).
+  ⚠ **Whtz, the Bibliophile** reads zero-gap but its EDHREC average lists 254 cards — never seat it.
+  **Sygg, Wanderwine Wisdom** has no printed text in the oracle dump yet, so both Sygg decks stay open.
+- **Primitives:** `WardCost::ManaOrDiscard` (Titania); `CreatureType::Camarid`; `DiscardChosenFromRevealed
+  { pick }` (serde default one); `Effect::DestroyAtNextEndStep { what }` — the destroy twin of
+  `SacrificeAtNextEndStep`, binding the object when it resolves.
+- **FIXED (bugs in the other session's cards):** Old Hob's `DelayUntil { NextEndStep, Destroy {
+  LastCreatedToken } }` re-read the selector at the end step and destroyed whatever token was made last
+  (a Treasure made after the Mutant died in its place) — now `DestroyAtNextEndStep`, regression test
+  `old_hob_mutant_lives_a_turn`. Cranial Archive targeted through a bare `PlayerRef::Target(0)` slot and
+  tipped the CR 115.1 ratchet to 57 of 56 — now `TargetPlayerThen { R::Player }`, with a test.
+- **Engine gap found:** a *triggered* `ChooseModesCast` runs one mode (`ctx.mode`); only a cast stamps
+  `spree_modes`. "When this enters, choose up to X —" with targeted modes (The Ruinous Wrecking Crew)
+  needs trigger-time multi-mode selection with per-mode slots; `ChooseUpToN` exists but only for
+  untargeted modes.
 - **Gotchas found:** a `ChooseModesCast` mode numbers its targets from slot 0 (Decoy Ploy's second mode
   read slot 1 and never resolved); a target named only inside `WithX { x }` is invisible to the target
   walker — declare it in the body and read `Target(0)` in `x`; `Value::PowerOf` keeps LKI only for the
