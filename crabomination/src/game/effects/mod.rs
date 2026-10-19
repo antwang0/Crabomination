@@ -88,6 +88,7 @@ mod player_scope;
 mod reselect;
 mod reveal_cast;
 mod blight;
+mod hand_reveal;
 mod reveal_until;
 mod shell_game;
 mod linked_return;
@@ -11335,6 +11336,9 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+            Effect::RevealFromHandExileChosen { who, count } => {
+                self.reveal_from_hand_exile_chosen(who, count, ctx, events, effect)
             }
             Effect::ExileFromHand { who, amount } => {
                 // The exiling player picks (Ashiok −3, Kheru Mind-Eater). A

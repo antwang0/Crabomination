@@ -1116,6 +1116,7 @@ impl Effect {
             Effect::DamageTargetPlayerMayRedirect { .. } => true,
             Effect::CopySpellForEachOtherTarget { what } => sel_has_target(what),
             Effect::ExchangeGraveyardAndLibrary { who } => matches!(who, PlayerRef::Target(_)),
+            Effect::RevealFromHandExileChosen { who, .. } => matches!(who, PlayerRef::Target(_)),
             Effect::FlipCoinBy { on_heads, on_tails, .. }
             | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
                 on_heads.requires_target() || on_tails.requires_target()

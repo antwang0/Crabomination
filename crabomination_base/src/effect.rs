@@ -5889,6 +5889,10 @@ pub enum Effect {
     /// (auto-decider exiles by hand order). Like `Discard` but routes to
     /// exile instead of the graveyard (Ashiok, Nightmare Muse −3).
     ExileFromHand { who: Selector, amount: Value },
+    /// "`who` reveals `count` cards from their hand. You choose one of those
+    /// cards. That player exiles it" (Taster of Wares): the revealer picks the
+    /// cards shown, the controller the one exiled (`Selector::LastMoved`).
+    RevealFromHandExileChosen { who: PlayerRef, count: Value },
     /// `ExileFromHand` whose cards are linked to the source (`exiled_with`),
     /// for "exile a card from your hand" on a permanent that later counts
     /// what it exiled (Azor's Gateway).
@@ -14342,6 +14346,10 @@ pub enum DelayedTriggerKind {
     /// "At the beginning of the next combat" — the next Begin Combat step on
     /// any player's turn (Legion's Initiative).
     NextCombat,
+    /// "At the beginning of your next declare attackers step" — fired once the
+    /// declaration is made, attackers or none (CR 508.2; Noctis, Heir
+    /// Apparent's warp-strike return).
+    YourNextDeclareAttackersStep,
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, …" (Jace, Architect of Thought's +1). The
     /// attacker is the trigger source.

@@ -45,6 +45,9 @@ pub(crate) fn delayed_kind_from_effect(
         }
         DelayedTriggerKind::EndOfCombat => DelayedKind::EndOfCombat,
         DelayedTriggerKind::NextCombat => DelayedKind::NextCombat,
+        DelayedTriggerKind::YourNextDeclareAttackersStep => {
+            DelayedKind::PlayersNextDeclareAttackers { player: controller, after_turn: turn.saturating_sub(1) }
+        }
         DelayedTriggerKind::CreatureAttacksYouUntilYourNextTurn => {
             DelayedKind::CreatureAttacksYouUntilYourNextTurn
         }

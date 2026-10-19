@@ -16,11 +16,12 @@ use crate::effect::{Effect, Selector};
 
 impl GameState {
     /// `Effect::JoinCombatAttackingChosen` — CR 508.4: each of `what` not yet
-    /// attacking joins combat tapped, attacking the defending player (one
-    /// being attacked this combat) or planeswalker of theirs its controller
-    /// chooses. Headless, and the default, is the source's defender, else the
-    /// first defending player. The asks come first and are replayed by a
-    /// re-run, which names the movers it resolved.
+    /// attacking joins combat tapped, attacking a defending player (any
+    /// opponent, CR 802.2) or planeswalker of theirs its controller chooses.
+    /// Headless, and the default, is the source's defender, else the first
+    /// player being attacked, else the first opponent in turn order. The asks
+    /// come first and are replayed by a re-run, which names the movers it
+    /// resolved.
     pub(crate) fn join_combat_attacking_chosen(
         &mut self,
         what: &Selector,
@@ -28,9 +29,18 @@ impl GameState {
         ctx: &EffectContext,
         effect: &Effect,
     ) -> Result<(), GameError> {
-        if self.attacking.is_empty() {
-            // A re-run after combat ended while the pick waited: moot, and
-            // its logged pick goes with it.
+        // Only once attackers have been declared this combat (CR 508.4). A
+        // re-run after combat ended while the pick waited is moot, and its
+        // logged pick goes with it.
+        let declared = matches!(
+            self.step,
+            crate::game::types::TurnStep::DeclareAttackers
+                | crate::game::types::TurnStep::DeclareBlockers
+                | crate::game::types::TurnStep::FirstStrikeDamage
+                | crate::game::types::TurnStep::CombatDamage
+                | crate::game::types::TurnStep::EndCombat
+        );
+        if !declared {
             self.clear_answer_log();
             return Ok(());
         }
@@ -41,10 +51,20 @@ impl GameState {
             .filter(|id| !self.attacking.iter().any(|a| a.attacker == *id))
             .filter_map(|id| self.battlefield_find(id).map(|c| (id, c.controller)))
             .collect();
+        // CR 506.2 / 802.2 — every opponent of the attacking player is a
+        // defending player, attacked or not (a two-player game's nonactive
+        // player; all of them under the attack-multiple-players option). The
+        // seats already attacked lead, so the headless default is unchanged.
         let mut seats: Vec<usize> =
             self.attacking.iter().filter_map(|a| self.defender_for(a.target)).filter(|&p| self.players[p].is_alive()).collect();
         seats.sort_unstable();
         seats.dedup();
+        let active = self.active_player_idx;
+        for p in self.seats_in_turn_order_from(active) {
+            if !seats.contains(&p) && self.players[p].is_alive() && !self.same_team(p, active) {
+                seats.push(p);
+            }
+        }
         let source_target = ctx
             .source
             .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))

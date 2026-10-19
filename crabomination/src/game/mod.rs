@@ -168,6 +168,7 @@ mod entry_tally;
 mod damage_life;
 mod mana_burn;
 mod exile_triggers;
+mod declare_attackers_delayed;
 mod casualty_copy;
 mod prevent_attacking;
 mod loss_exile;
@@ -28941,6 +28942,17 @@ impl GameState {
                     cards.sort_by_key(|c| std::cmp::Reverse(c.definition.cost.cmc()));
                     cards.first().map(|c| Target::Permanent(c.id))
                 });
+            }
+            // An exile slot ("target card you don't own in exile" — Sentinel of
+            // Lost Lore's second mode): the priciest legal card there.
+            if pick.is_none() && req.mentions_offboard_zone() {
+                let mut cards: Vec<&crate::card::CardInstance> = self
+                    .exile
+                    .iter()
+                    .filter(|c| !avoid.contains(&c.id) && is_legal(&Target::Permanent(c.id)))
+                    .collect();
+                cards.sort_by_key(|c| std::cmp::Reverse(c.definition.cost.cmc()));
+                pick = cards.first().map(|c| Target::Permanent(c.id));
             }
             match pick {
                 Some(t) => {

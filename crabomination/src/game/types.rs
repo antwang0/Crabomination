@@ -1280,6 +1280,10 @@ pub enum DelayedKind {
     /// "At the beginning of the next combat" — fires on the next Begin Combat
     /// step, whoever's turn it is (Legion's Initiative).
     NextCombat,
+    /// CR 508.2 — `player`'s next declare attackers step on a turn after
+    /// `after_turn`, fired as the declaration finishes
+    /// (`declare_attackers_delayed.rs`).
+    PlayersNextDeclareAttackers { player: usize, after_turn: u32 },
     /// At the beginning of `controller`'s next upkeep.
     YourNextUpkeep,
     /// "At the beginning of the next turn's upkeep" — whoever's turn it is,

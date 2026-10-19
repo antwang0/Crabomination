@@ -3003,6 +3003,7 @@ impl GameState {
             }
         }
 
+        self.fire_declare_attackers_delayed();
         self.give_priority_to_active();
         Ok(events)
     }
