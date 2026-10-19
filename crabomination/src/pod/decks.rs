@@ -121720,3 +121720,88 @@ pub const THE_CHIEF_WARG_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const SHARAE_OF_NUMBING_DEPTHS_COMMANDERS: &[CardFactory] = &[sharae_of_numbing_depths];
+
+/// **Sharae of Numbing Depths**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Islands + 11 Plains = 99.
+/// Sharae of Numbing Depths (EDHREC, fetched 2026-10-19).
+pub const SHARAE_OF_NUMBING_DEPTHS_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, hyldas_crown_of_winter, mind_stone, mjolnir_storm_hammer,
+    sol_ring, talisman_of_progress, thought_vessel, adarkar_wastes, azorius_chancery,
+    command_tower, deserted_beach, evolving_wilds, glacial_fortress, hallowed_fountain,
+    port_town, prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse,
+    temple_of_enlightenment, adept_watershaper, archaeomancer, champions_of_the_shoal,
+    deepchannel_duelist, deepway_navigator, dreamshackle_geist, eclipsed_merrow,
+    fear_of_sleep_paralysis, floodpits_drowner, githzerai_monk, hylda_of_the_icy_crown,
+    icewrought_sentry, lulu_stern_guardian, meanders_guide, merfolk_trickster,
+    metastatic_evangel, rhoda_geist_avenger, soulherder, summon_shiva, sunblast_angel,
+    tempest_caller, thassa_deep_dwelling, timin_youthful_geist, topplegeist,
+    wanderbrine_trapper, bitter_chill, citadel_siege, lost_in_the_maze, opposition,
+    scroll_of_isildur, solitary_sanctuary, teleportation_circle, verity_circle, blustersquall,
+    cloudshift, counterspell, dovins_veto, ephemerate, generous_gift, ghostly_flicker,
+    momentary_blink, negate, path_to_exile, plunge_into_winter, rapier_wit, succumb_to_the_cold,
+    swords_to_plowshares, tamiyo_the_moon_sage, borrowing_100_000_arrows, freeze_in_place,
+    impede_momentum, sleep, split_up, syggs_command,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const WORZEL_COMMANDERS: &[CardFactory] = &[worzel_the_protector];
+
+/// **Worzel, the Protector**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Worzel, the Protector (EDHREC, fetched 2026-10-19).
+pub const WORZEL_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, gatewatch_beacon, gideons_memorial, honor_worn_shaku,
+    idol_of_oblivion, luxior_giadas_gift, pearl_medallion, sol_ring, the_chain_veil,
+    the_mind_stone, abandoned_air_temple, emeria_the_sky_ruin, interplanar_beacon,
+    karns_bastion, monumental_henge, nykthos_shrine_to_nyx, war_room, archangel_of_tithes,
+    baird_steward_of_argive, djeru_with_eyes_open, drumbellower, enduring_innocence,
+    exalted_sunborn, grateful_apparition, laezel_vlaakiths_champion, liliana_the_faultless,
+    mangara_the_diplomat, mondrak_glory_dominus, ocelot_pride, ojer_taq_deepest_foundation,
+    onakke_oathkeeper, patrolling_peacemaker, tomik_orzhov_lawmage, anointed_procession,
+    caretakers_talent, deification, elspeths_talent, land_tax, oath_of_gideon,
+    urza_assembles_the_titans, way_of_the_mentor, clever_concealment, erode, generous_gift,
+    loyal_tutor, path_to_exile, stroke_of_midnight, swords_to_plowshares, ajani_resolute,
+    ajani_steadfast, ajani_adversary_of_tyrants, ajani_caller_of_the_pride,
+    ajani_outland_chaperone, ajani_strength_of_the_pride, archangel_elspeth, basri_ket,
+    elspeth_tirel, elspeth_knight_errant, elspeth_storm_slayer, elspeth_suns_champion,
+    gideon_ally_of_zendikar, serra_the_benevolent, teyo_geometric_tactician,
+    the_eternal_wanderer, the_wanderer, the_wandering_emperor, ascend_from_avernus,
+    deploy_the_gatewatch, hour_of_reckoning, promise_of_loyalty,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const CAPTAIN_KATHRYN_JANEWAY_COMMANDERS: &[CardFactory] = &[captain_kathryn_janeway];
+
+/// **Captain Kathryn Janeway**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Forests = 99.
+/// Captain Kathryn Janeway (EDHREC, fetched 2026-10-19).
+pub const CAPTAIN_KATHRYN_JANEWAY_MAIN: &[CardFactory] = &[
+    chocobo_racetrack, conduit_of_worlds, emerald_medallion, exploration_broodship, sol_ring,
+    the_earth_crystal, boseiju_who_endures, castle_garenbrig, evendo_waking_haven,
+    fabled_passage, nykthos_shrine_to_nyx, prismatic_vista, reliquary_tower, roiling_canopy,
+    shifting_woodland, war_room, yavimaya_cradle_of_growth, ancient_greenwarden,
+    augur_of_autumn, avenger_of_zendikar, azusa_lost_but_seeking, beast_whisperer,
+    birds_of_paradise, bristly_bill_spine_sower, courser_of_kruphix, craterhoof_behemoth,
+    elvish_mystic, evolution_sage, greensleeves_maro_sorcerer, icetill_explorer, llanowar_elves,
+    loot_exuberant_explorer, lotus_cobra, mole_man_moloid_master, mossborn_hydra,
+    oracle_of_mul_daya, rampaging_baloths, ramunap_excavator, sakura_tribe_elder, scute_swarm,
+    simulacrum_shaper, six, springheart_nantuko, tireless_provisioner, tireless_tracker,
+    topography_tracker, wayward_swordtooth, wildgrowth_walker, case_of_the_locked_hothouse,
+    dancing_from_dark_to_dawn, exploration, garruks_uprising, hardened_scales,
+    path_of_discovery, sapling_nursery, twists_and_turns, zendikars_roil, archdruids_charm,
+    beast_within, crop_rotation, heroic_intervention, inspiring_call,
+    nissa_who_shakes_the_world, awaken_the_woods, bala_ged_recovery, cultivate, explore,
+    finale_of_devastation, kodamas_reach, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest,
+];

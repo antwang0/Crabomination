@@ -26484,6 +26484,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_CHIEF_WARG_COMMANDERS,
             main: decks::THE_CHIEF_WARG_MAIN,
         },
+        // Seat 4339: Sharae of Numbing Depths's EDHREC average deck. `--pod-decks 4339`.
+        PodDeck {
+            name: "Sharae of Numbing Depths (WU)",
+            commanders: decks::SHARAE_OF_NUMBING_DEPTHS_COMMANDERS,
+            main: decks::SHARAE_OF_NUMBING_DEPTHS_MAIN,
+        },
+        // Seat 4340: Worzel, the Protector's EDHREC average deck. `--pod-decks 4340`.
+        PodDeck {
+            name: "Worzel, the Protector (W)",
+            commanders: decks::WORZEL_COMMANDERS,
+            main: decks::WORZEL_MAIN,
+        },
+        // Seat 4341: Captain Kathryn Janeway's EDHREC average deck. `--pod-decks 4341`.
+        PodDeck {
+            name: "Captain Kathryn Janeway (G)",
+            commanders: decks::CAPTAIN_KATHRYN_JANEWAY_COMMANDERS,
+            main: decks::CAPTAIN_KATHRYN_JANEWAY_MAIN,
+        },
     ]
 }
 
@@ -32723,6 +32741,9 @@ mod tests {
             ("Glissa, Herald of Predation", &[0x1B06]),
             ("Chief of the Wilds", &[0x1B07]),
             ("The Chief Warg", &[0x1B08]),
+            ("Sharae of Numbing Depths", &[0x1B09]),
+            ("Worzel, the Protector", &[0x1B0A]),
+            ("Captain Kathryn Janeway", &[0x1B0B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
