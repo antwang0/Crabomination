@@ -26562,6 +26562,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZHANG_HE_COMMANDERS,
             main: decks::ZHANG_HE_MAIN,
         },
+        // Seat 4352: Arzakon's EDHREC average deck. `--pod-decks 4352`.
+        PodDeck {
+            name: "Arzakon (WUBRG)",
+            commanders: decks::ARZAKON_COMMANDERS,
+            main: decks::ARZAKON_MAIN,
+        },
+        // Seat 4353: U.S.S. Enterprise-D, Galaxy-Class's EDHREC average deck. `--pod-decks 4353`.
+        PodDeck {
+            name: "U.S.S. Enterprise-D, Galaxy-Class (C)",
+            commanders: decks::U_S_S_ENTERPRISE_D_COMMANDERS,
+            main: decks::U_S_S_ENTERPRISE_D_MAIN,
+        },
+        // Seat 4354: T'Pol, Vulcan Representative's EDHREC average deck. `--pod-decks 4354`.
+        PodDeck {
+            name: "T'Pol, Vulcan Representative (U)",
+            commanders: decks::TPOL_COMMANDERS,
+            main: decks::TPOL_MAIN,
+        },
     ]
 }
 
@@ -32814,6 +32832,9 @@ mod tests {
             ("Falcon, Winged Wonder", &[0x1B13]),
             ("Tesak, Judith's Hellhound", &[0x1B14]),
             ("Zhang He, Wei General", &[0x1B15]),
+            ("Arzakon", &[0x1B16]),
+            ("U.S.S. Enterprise-D, Galaxy-Class", &[0x1B17]),
+            ("T'Pol, Vulcan Representative", &[0x1B18]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

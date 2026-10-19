@@ -122084,3 +122084,91 @@ pub const ZHANG_HE_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const ARZAKON_COMMANDERS: &[CardFactory] = &[arzakon];
+
+/// **Arzakon**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 3 Forests + 2 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Arzakon (EDHREC, fetched 2026-10-19).
+pub const ARZAKON_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, chromatic_orrery, fellwar_stone, ichormoon_gauntlet,
+    rings_of_brighthearth, sol_ring, the_chain_veil, timeless_lotus, blood_crypt, breeding_pool,
+    city_of_brass, command_tower, exotic_orchard, flooded_strand, godless_shrine,
+    hallowed_fountain, karns_bastion, ketria_triome, marsh_flats, misty_rainforest,
+    overgrown_tomb, polluted_delta, sacred_foundry, scalding_tarn, steam_vents, stomping_ground,
+    temple_garden, verdant_catacombs, watery_grave, windswept_heath, wooded_foothills,
+    zagoth_triome, atraxa_praetors_voice, birds_of_paradise, bloom_tender, carth_the_lion,
+    deepglow_skate, delighted_halfling, evolution_sage, faeburrow_elder, flux_channeler,
+    laezel_vlaakiths_champion, onakke_oathkeeper, sanctum_lurker, spark_double,
+    tam_the_possibility, tekuthal_inquiry_dominus, thrummingbird, vorinclex_monstrous_raider,
+    brokers_ascendancy, doubling_season, ghostly_prison, inexorable_tide, oath_of_nissa,
+    oath_of_teferi, propaganda, rhystic_study, smothering_tithe, an_offer_you_cant_refuse,
+    counterspell, dark_ritual, heroic_intervention, loyal_tutor, mana_drain, path_to_exile,
+    ripples_of_potential, swords_to_plowshares, ajani_unrelenting, commodore_guff,
+    elspeth_storm_slayer, elspeth_suns_champion, feroz_ulgrothas_warden, nicol_bolas_dragon_god,
+    tamiyo_field_researcher, teferi_master_of_time, teferi_temporal_archmage,
+    the_theorist_jace_beleren, vraska_betrayals_sting, worzel_the_protector, blasphemous_act,
+    cultivate, demonic_tutor, farseek, kodamas_reach, natures_lore, supreme_verdict,
+    three_visits,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp, swamp,
+];
+
+pub const U_S_S_ENTERPRISE_D_COMMANDERS: &[CardFactory] = &[uss_enterprise_d_galaxy_class];
+
+/// **U.S.S. Enterprise-D, Galaxy-Class**'s EDHREC average deck, card for card:
+/// 89 nonbasic cards + 10 Wastes = 99.
+/// U.S.S. Enterprise-D, Galaxy-Class (EDHREC, fetched 2026-10-19).
+pub const U_S_S_ENTERPRISE_D_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, arc_reactor, astral_cornucopia, cloud_key, darksteel_reactor,
+    dawnsire_sunstar_dreadnought, dreamstone_hedron, empowered_autogenerator, energy_chamber,
+    everflowing_chalice, expedition_map, extinguisher_battleship, forsaken_monument,
+    manifold_key, mind_stone, minds_eye, mystic_forge, power_conduit, sculpting_steel,
+    senseis_divining_top, sol_ring, the_eternity_elevator, the_millennium_calendar,
+    the_one_ring, thought_vessel, thran_dynamo, unwinding_clock, voltaic_key, worn_powerstone,
+    adventurers_inn, bonders_enclave, buried_ruin, darksteel_citadel, demolition_field,
+    inventors_fair, karns_bastion, planar_nexus, reliquary_tower, rogues_passage,
+    scavenger_grounds, secluded_starforge, shrine_of_the_forsaken_gods, snow_covered_wastes,
+    strip_mine, talon_gates_of_madara, temple_of_the_false_god, the_mycosynth_gardens,
+    thespians_stage, urzas_cave, urzas_mine, urzas_power_plant, urzas_saga, urzas_tower,
+    urzas_workshop, war_room, abstruse_archaic, breaker_of_creation, bygone_colossus,
+    coretapper, cybernetic_specialist, foundry_inspector, glaring_fleshraker, hedron_crawler,
+    jhoiras_familiar, liberator_urzas_battlethopter, metalwork_colossus, meteor_golem,
+    ornithopter, palladium_myr, sandstone_oracle, shimmer_myr, solemn_simulacrum,
+    steel_overseer, stonecoil_serpent, surge_conductor, walls_of_ba_sing_se,
+    ultima_origin_of_oblivion, ultron_artificial_malevolence, walking_ballista,
+    echoes_of_eternity, eldritch_immunity, kozileks_command, not_of_this_world,
+    null_elemental_blast, tezzeret_cruel_captain, ugin_the_ineffable, all_is_dust,
+    introduction_to_prophecy, selective_obliteration,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+];
+
+pub const TPOL_COMMANDERS: &[CardFactory] = &[tpol_vulcan_representative];
+
+/// **T'Pol, Vulcan Representative**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Islands = 99.
+/// T'Pol, Vulcan Representative (EDHREC, fetched 2026-10-19).
+pub const TPOL_MAIN: &[CardFactory] = &[
+    conjurers_closet, contagion_clasp, contagion_engine, decanter_of_endless_water,
+    fellwar_stone, mindsplice_apparatus, panharmonicon, panoptic_mirror, replicating_ring,
+    sapphire_medallion, semblance_anvil, sol_ring, swiftfoot_boots, sword_of_truth_and_justice,
+    thought_vessel, buried_ruin, inventors_fair, karns_bastion, mistrise_village,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, sand_silos, urzas_saga,
+    ancient_silver_dragon, archaeomancer, consecrated_sphinx, constrictor_sage, dour_port_mage,
+    fear_of_sleep_paralysis, floodpits_drowner, flux_channeler, guildpact_informant,
+    laboratory_maniac, monstrosity_of_the_lake, roaming_throne, sakashima_of_a_thousand_faces,
+    spark_double, spellseeker, summon_shiva, tekuthal_inquiry_dominus, thassas_oracle,
+    thassa_deep_dwelling, the_watcher_in_the_water, thunderclap_drake, zygon_infiltrator,
+    inexorable_tide, lost_in_the_maze, rhystic_study, teferis_ageless_insight, verity_circle,
+    wizard_class, an_offer_you_cant_refuse, blue_suns_zenith, counterspell, displace,
+    essence_flux, experimental_augury, mana_drain, negate, out_cold, planar_incision,
+    sirens_ruse, succumb_to_the_cold, three_steps_ahead, wicked_slumber,
+    jace_wielder_of_mysteries, tamiyo_the_moon_sage, borrowing_100_000_arrows,
+    enter_the_infinite, freeze_in_place, sea_gate_restoration, splash_portal, theft_of_dreams,
+    tranquilize, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
