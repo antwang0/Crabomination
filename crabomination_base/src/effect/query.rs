@@ -3580,6 +3580,16 @@ impl Effect {
         match self {
             Effect::Seq(v) => v.iter().find_map(|c| c.slot_owner(slot, None)),
             Effect::SlotGroups(v) => Self::slot_group_owner(v, slot).and_then(|(m, rel)| m.slot_owner(rel, None)),
+            // A "choose N" numbers one slot per target-bearing mode, in
+            // `picks` order (the `ChooseN` resolution arm's binding): slot k
+            // is that mode's own slot 0.
+            Effect::ChooseN { picks, modes, .. } if mode.is_none() => {
+                let mut owners = picks.iter().filter_map(|&i| modes.get(i as usize)).filter(|m| m.requires_target());
+                match owners.nth(slot as usize) {
+                    Some(m) => m.slot_owner(0, None),
+                    None => modes.iter().find_map(|e| e.slot_owner(slot, None)),
+                }
+            }
             Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.slot_owner(slot, None)),
                 None => modes.iter().find_map(|e| e.slot_owner(slot, None)),
