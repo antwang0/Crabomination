@@ -26502,6 +26502,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_KATHRYN_JANEWAY_COMMANDERS,
             main: decks::CAPTAIN_KATHRYN_JANEWAY_MAIN,
         },
+        // Seat 4342: Donatello, Turtle Techie's EDHREC average deck. `--pod-decks 4342`.
+        PodDeck {
+            name: "Donatello, Turtle Techie (U)",
+            commanders: decks::DONATELLO_7_COMMANDERS,
+            main: decks::DONATELLO_7_MAIN,
+        },
     ]
 }
 
@@ -32744,6 +32750,7 @@ mod tests {
             ("Sharae of Numbing Depths", &[0x1B09]),
             ("Worzel, the Protector", &[0x1B0A]),
             ("Captain Kathryn Janeway", &[0x1B0B]),
+            ("Donatello, Turtle Techie", &[0x1B0C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -121805,3 +121805,31 @@ pub const CAPTAIN_KATHRYN_JANEWAY_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const DONATELLO_7_COMMANDERS: &[CardFactory] = &[donatello_turtle_techie];
+
+/// **Donatello, Turtle Techie**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Donatello, Turtle Techie (EDHREC, fetched 2026-10-19).
+pub const DONATELLO_7_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, bone_saw, cloud_key, dark_sphere, everflowing_chalice,
+    god_pharaohs_statue, ichor_wellspring, magistrates_scepter, mind_stone, mox_amber,
+    mystic_forge, repurposing_bay, scrap_compactor, sewer_veillance_cam, sol_ring,
+    the_everflowing_well, thought_vessel, weather_maker, buried_ruin, darksteel_citadel,
+    lonely_sandbar, myriad_landscape, mystic_sanctuary, reliquary_tower, rogues_passage,
+    seat_of_the_synod, treasure_vault, aim_scientists, aerial_doombot, april_oneil_hacktivist,
+    artificers_assistant, donatello_gadget_master, donatello_way_with_machines,
+    etherium_sculptor, foundry_inspector, fugitive_droid, herbie_scout_unit,
+    iron_man_modern_marvel, kappa_cannoneer, krang_master_mind, myr_retriever,
+    ornithopter_of_paradise, phyrexian_metamorph, sai_master_thopterist, scrap_trawler,
+    silver_myr, solemn_simulacrum, steel_overseer, thought_monitor,
+    ultron_artificial_malevolence, ultron_machine_overlord, mechanized_production,
+    mystic_remora, retro_mutation, rhystic_study, arcane_denial, counterspell, displace,
+    frantic_search, ghostly_flicker, mind_transfer_protocol, muddle_the_mixture, negate,
+    ooze_spill, quick_study, return_to_the_sewers, sirens_ruse, whir_of_invention, ponder,
+    thoughtcast, turtles_in_time, wave_goodbye,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
