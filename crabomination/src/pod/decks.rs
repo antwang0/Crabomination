@@ -123113,3 +123113,61 @@ pub const JANDOR_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
     mountain, mountain, plains, plains, plains, plains,
 ];
+
+pub const LYNDE_COMMANDERS: &[CardFactory] = &[lynde_cheerful_tormentor];
+
+/// **Lynde, Cheerful Tormentor**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Islands + 5 Mountains + 7 Swamps = 99.
+/// Lynde, Cheerful Tormentor (EDHREC, fetched 2026-10-19).
+pub const LYNDE_MAIN: &[CardFactory] = &[
+    arcane_signet, claws_of_gix, cloud_key, dimir_signet, izzet_signet, lightning_greaves,
+    rakdos_signet, sol_ring, talisman_of_dominance, blood_crypt, bojuka_bog, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, evolving_wilds, exotic_orchard,
+    luxury_suite, morphic_pool, reliquary_tower, smoldering_marsh, steam_vents, sulfur_falls,
+    sunken_hollow, training_center, watery_grave, xanders_lounge, accursed_witch,
+    ashioks_reaper, bitterheart_witch, braids_arisen_nightmare, clever_impersonator,
+    demon_of_fates_design, doomwake_giant, entity_tracker, grim_guardian, nightscape_familiar,
+    obeka_splitter_of_seconds, protean_thaumaturge, sphinx_of_the_second_sun,
+    thoughtrender_lamia, wicked_visitor, copy_enchantment, cruel_reality, curse_of_bloodletting,
+    curse_of_deaths_hold, curse_of_disturbance, curse_of_echoes, curse_of_fools_wisdom,
+    curse_of_hospitality, curse_of_misfortunes, curse_of_obsession, curse_of_opulence,
+    curse_of_shaken_faith, curse_of_shallow_graves, curse_of_surveillance, curse_of_thirst,
+    curse_of_unbinding, curse_of_vengeance, curse_of_verbosity, curse_of_the_nightly_hunt,
+    curse_of_the_pierced_heart, curse_of_the_restless_dead, maddening_hex, mirrormade,
+    paradox_haze, propaganda, torment_of_scarabs, trespassers_curse, arcane_denial, bedevil,
+    chaos_warp, counterspell, negate, perilous_research, terminate, blasphemous_act,
+    curse_of_the_swine, disrupt_decorum, feed_the_swarm, vandalblast,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_UNLUCKIEST_PLANESWALKER_COMMANDERS: &[CardFactory] = &[the_unluckiest_planeswalker];
+
+/// **The Unluckiest Planeswalker**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 3 Forests + 3 Islands + 9 Mountains + 3 Plains + 4 Swamps = 99.
+/// The Unluckiest Planeswalker (EDHREC, fetched 2026-10-19).
+pub const THE_UNLUCKIEST_PLANESWALKER_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, cloud_key, crawlspace, crystal_chimes,
+    decanter_of_endless_water, fellwar_stone, sol_ring, city_of_brass, evolving_wilds,
+    exotic_orchard, fabled_passage, forbidden_orchard, mana_confluence, prismatic_vista,
+    reflecting_pool, reliquary_tower, terramorphic_expanse, thriving_bluff,
+    urborg_tomb_of_yawgmoth, yavimaya_cradle_of_growth, alexios_deimos_of_kosmos,
+    bothersome_quasit, brash_taunter, jayas_phoenix, kazuul_tyrant_of_the_cliffs,
+    longshot_rebel_bowman, ornithopter_of_paradise, silent_arbiter, solemn_simulacrum,
+    abundant_growth, cruel_reality, curse_of_bloodletting, curse_of_bounty,
+    curse_of_clinging_webs, curse_of_deaths_hold, curse_of_disturbance, curse_of_echoes,
+    curse_of_exhaustion, curse_of_fools_wisdom, curse_of_hospitality, curse_of_misfortunes,
+    curse_of_obsession, curse_of_opulence, curse_of_shaken_faith, curse_of_shallow_graves,
+    curse_of_silence, curse_of_surveillance, curse_of_thirst, curse_of_unbinding,
+    curse_of_vengeance, curse_of_verbosity, curse_of_vitality, curse_of_the_restless_dead,
+    darksteel_mutation, fertile_ground, ghoulish_impetus, grievous_wound,
+    imprisoned_in_the_moon, kayas_ghostform, lilianas_talent, maddening_hex,
+    overwhelming_splendor, rowans_talent, shiny_impetus, torment_of_scarabs, trespassers_curse,
+    wild_growth, big_score, chaos_warp, unexpected_windfall, untimely_malfunction,
+    chandra_acolyte_of_flame, blasphemous_act, disrupt_decorum, smoke_spirits_aid, vandalblast,
+    // Basics
+    forest, forest, forest, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, swamp, swamp,
+    swamp, swamp,
+];

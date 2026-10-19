@@ -26784,6 +26784,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JANDOR_COMMANDERS,
             main: decks::JANDOR_MAIN,
         },
+        // Seat 4389: Lynde, Cheerful Tormentor's EDHREC average deck. `--pod-decks 4389`.
+        PodDeck {
+            name: "Lynde, Cheerful Tormentor (UBR)",
+            commanders: decks::LYNDE_COMMANDERS,
+            main: decks::LYNDE_MAIN,
+        },
+        // Seat 4390: The Unluckiest Planeswalker's EDHREC average deck. `--pod-decks 4390`.
+        PodDeck {
+            name: "The Unluckiest Planeswalker (R)",
+            commanders: decks::THE_UNLUCKIEST_PLANESWALKER_COMMANDERS,
+            main: decks::THE_UNLUCKIEST_PLANESWALKER_MAIN,
+        },
     ]
 }
 
@@ -33073,6 +33085,8 @@ mod tests {
             ("Syrix, Carrier of the Flame", &[0x1B38]),
             ("Meng Huo, Barbarian King", &[0x1B39]),
             ("Jandor, Fortuned Traveler", &[0x1B3A]),
+            ("Lynde, Cheerful Tormentor", &[0x1B3B]),
+            ("The Unluckiest Planeswalker", &[0x1B3C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
