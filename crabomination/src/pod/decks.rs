@@ -122474,3 +122474,32 @@ pub const PHARAOH_RAMA_TUT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const TRYSTAN_COMMANDERS: &[CardFactory] = &[trystan_callous_cultivator];
+
+/// **Trystan, Callous Cultivator**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Forests + 9 Swamps = 99.
+/// Trystan, Callous Cultivator (EDHREC, fetched 2026-10-19).
+pub const TRYSTAN_MAIN: &[CardFactory] = &[
+    arcane_signet, chronicle_of_victory, dawn_blessed_pennant, gathering_stone, sol_ring,
+    bojuka_bog, command_tower, deathcap_glade, eclipsed_realms, evolving_wilds,
+    golgari_rot_farm, llanowar_wastes, overgrown_tomb, path_of_ancestry, tainted_wood,
+    twilight_mire, undergrowth_stadium, vernal_fen, woodland_cemetery, abomination_of_llanowar,
+    aftermath_analyst, beast_whisperer, champions_of_the_perfect, dawnhand_dissident,
+    dawnhand_eulogist, deathrite_shaman, dwynen_gilt_leaf_daen, eclipsed_elf,
+    elves_of_deep_shadow, elvish_archdruid, elvish_mystic, formidable_speaker, fyndhorn_elves,
+    glissa_sunslayer, gloom_ripper, high_perfect_morcant, imperious_perfect,
+    jarad_golgari_lich_lord, kagha_shadow_archdruid, lathril_blade_of_the_elves,
+    leaf_crowned_visionary, llanowar_elves, lluwen_imperfect_naturalist, lys_alana_dignitary,
+    marwyn_the_nurturer, moon_vigil_adherents, morcants_loyalist, priest_of_titania,
+    reclamation_sage, scarblade_scout, selfless_safewright, shaman_of_the_pack,
+    skemfar_shadowsage, twilight_diviner, virulent_emissary, deadbridge_chant, elderfang_venom,
+    harald_unites_the_elves, morcants_eyes, prowess_of_the_fair, ripples_of_undeath,
+    assassins_trophy, beast_within, grisly_salvage, midnight_tilling, putrefy,
+    scarblades_malice, unbury, tyvar_kell, bloodline_bidding, cultivate, dread_return,
+    living_death, rampant_growth, reanimate, rise_of_the_dark_realms, rise_of_the_witch_king,
+    trystans_command, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -26646,6 +26646,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PHARAOH_RAMA_TUT_COMMANDERS,
             main: decks::PHARAOH_RAMA_TUT_MAIN,
         },
+        // Seat 4366: Trystan, Callous Cultivator's EDHREC average deck. `--pod-decks 4366`.
+        PodDeck {
+            name: "Trystan, Callous Cultivator (BG)",
+            commanders: decks::TRYSTAN_COMMANDERS,
+            main: decks::TRYSTAN_MAIN,
+        },
     ]
 }
 
@@ -32912,6 +32918,7 @@ mod tests {
             ("Ezekiel Sims, Spider-Totem", &[0x1B21]),
             ("Storm, Shaker of Skies", &[0x1B22]),
             ("Pharaoh Rama-Tut", &[0x1B23]),
+            ("Trystan, Callous Cultivator", &[0x1B24]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
