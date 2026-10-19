@@ -120510,3 +120510,82 @@ pub const SHREDDER_2_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ROCKSTEADY_2_COMMANDERS: &[CardFactory] = &[rocksteady_crash_courser];
+
+/// **Rocksteady, Crash Courser**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Forests = 99.
+/// Rocksteady, Crash Courser (EDHREC, fetched 2026-10-19).
+pub const ROCKSTEADY_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chitinous_cloak, emerald_medallion, heralds_horn, inquisitorial_rosette,
+    patchwork_banner, rhonass_monument, sol_ring, vanquishers_banner, daily_bugle_building,
+    mosswort_bridge, myriad_landscape, rogues_passage, archetype_of_endurance, argothian_swine,
+    brindle_boar, brindle_shoat, bristling_boar, carefree_swinemaster, contagious_vorrac,
+    copperhoof_vorrac, crashing_boars, decimator_of_the_provinces, durkwood_boars,
+    eager_trufflesnout, end_raze_forerunners, festerhide_boar, giant_warthog, gristleback,
+    intrepid_trufflesnout, kessig_dire_swine, krosan_tusker, nessian_boar, nettle_swine,
+    prize_pig, pygmy_razorback, rural_recruit, spider_ham_peter_porker, territorial_boar,
+    trufflesnout, warped_tusker, warthog, zoo_escapees, boar_umbra, colossal_majesty,
+    garruks_uprising, unnatural_growth, wild_growth, beast_within, fog, natures_claim,
+    origin_of_metalbending, ram_through, return_of_the_wildspeaker, return_to_nature,
+    snakeskin_veil, wrap_in_vigor, cultivate, explore, harmonize, kodamas_reach, natures_lore,
+    overrun, rampant_growth, skyshroud_claim, wolfs_quarry,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const SPIDER_WOMAN_2_COMMANDERS: &[CardFactory] = &[spider_woman_secret_agent];
+
+/// **Spider-Woman, Secret Agent**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Islands + 10 Plains = 99.
+/// Spider-Woman, Secret Agent (EDHREC, fetched 2026-10-19).
+pub const SPIDER_WOMAN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, fellwar_stone, helm_of_the_host, mind_stone,
+    murmuring_volume, sapphire_medallion, sol_ring, super_suit, talisman_of_progress,
+    thought_vessel, white_auracite, adarkar_wastes, avengers_hangar, command_tower,
+    deserted_beach, glacial_fortress, hallowed_fountain, mystic_gate, nimbus_maze, port_town,
+    prairie_stream, reliquary_tower, tranquil_cove, atlantean_cavalry, divining_duelist,
+    esper_sentinel, giant_sized_flying_ant, grand_abolisher, grappling_kraken,
+    guidelight_optimizer, herbie_scout_unit, hydraulic_helper, lavinia_azorius_renegade,
+    loch_mare, peregrine_drake, quake_agent_of_shield, raft_security_officer, roaming_throne,
+    solemn_simulacrum, summon_shiva, super_adaptoid, the_sentry_golden_guardian,
+    the_wondrous_wasp, voyager_quickwelder, enchanted_rivers_grasp, frozen_in_ice,
+    ghostly_prison, infinite_coursework, mystic_remora, propaganda, rhystic_study,
+    super_villain_lockup, web_up, an_offer_you_cant_refuse, counterspell, cyclonic_rift,
+    depower, dovins_veto, enlightened_tutor, ephemerate, fierce_guardianship, force_of_negation,
+    ghostly_flicker, mana_drain, mystical_tutor, path_to_exile, swan_song, swords_to_plowshares,
+    teferis_protection, atlantis_attacks, farewell, impede_momentum, procrastinate,
+    show_and_tell, tricksters_stratagem,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const FOGGY_NELSON_COMMANDERS: &[CardFactory] = &[foggy_nelson_on_retainer];
+
+/// **Foggy Nelson, On Retainer**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Plains = 99.
+/// Foggy Nelson, On Retainer (EDHREC, fetched 2026-10-19).
+pub const FOGGY_NELSON_MAIN: &[CardFactory] = &[
+    ancestral_blade, arcane_signet, archaeomancers_map, bessie_the_doctors_roadster,
+    celestial_armor, conjurers_closet, costume_closet, crystal_fragments, holy_avenger,
+    marble_diamond, panharmonicon, sol_ring, buried_ruin, emeria_the_sky_ruin, war_room,
+    windbrisk_heights, abbey_matron, acrobatic_cheerleader, action_news_crew,
+    agent_bishop_man_in_black, angelic_cub, april_oneil_kunoichi_trainee, avatar_enthusiasts,
+    beloved_chaplain, blessed_spirits, cat_collector, city_pigeon, daily_bugle_reporters,
+    devout_harpist, elder_cathar, exemplar_of_light, flash_thompson_spider_fan, glider_kids,
+    invisible_woman_sue_storm, kindly_customer, knighted_myr, mangara_the_diplomat,
+    matt_murdock_justice_seeker, phantom_flock, phantom_nomad, prowl_stoic_strategist,
+    spirited_companion, star_pupil, vengeful_villagers, a_tale_for_the_ages, ashas_favor,
+    bound_in_silence, far_traveler, light_of_promise, nine_lives, ordeal_of_heliod, sunbond,
+    teleportation_circle, altars_light, angels_mercy, angelsong, bilbos_gambit,
+    brave_the_elements, ephemerate, spectacular_tactics, thats_rough_buddy,
+    will_of_the_all_hunter, basris_solidarity, day_of_judgment, open_the_armory, split_up,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

@@ -26226,6 +26226,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHREDDER_2_COMMANDERS,
             main: decks::SHREDDER_2_MAIN,
         },
+        // Seat 4296: Rocksteady, Crash Courser's EDHREC average deck. `--pod-decks 4296`.
+        PodDeck {
+            name: "Rocksteady, Crash Courser (G)",
+            commanders: decks::ROCKSTEADY_2_COMMANDERS,
+            main: decks::ROCKSTEADY_2_MAIN,
+        },
+        // Seat 4297: Spider-Woman, Secret Agent's EDHREC average deck. `--pod-decks 4297`.
+        PodDeck {
+            name: "Spider-Woman, Secret Agent (WU)",
+            commanders: decks::SPIDER_WOMAN_2_COMMANDERS,
+            main: decks::SPIDER_WOMAN_2_MAIN,
+        },
+        // Seat 4298: Foggy Nelson, On Retainer's EDHREC average deck. `--pod-decks 4298`.
+        PodDeck {
+            name: "Foggy Nelson, On Retainer (W)",
+            commanders: decks::FOGGY_NELSON_COMMANDERS,
+            main: decks::FOGGY_NELSON_MAIN,
+        },
     ]
 }
 
@@ -32422,6 +32440,9 @@ mod tests {
             ("Chong and Lily, Nomads", &[0x1ADB]),
             ("Bolg of the North", &[0x1ADC]),
             ("Shredder, Unrelenting", &[0x1ADD]),
+            ("Rocksteady, Crash Courser", &[0x1ADE]),
+            ("Spider-Woman, Secret Agent", &[0x1ADF]),
+            ("Foggy Nelson, On Retainer", &[0x1AE0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
