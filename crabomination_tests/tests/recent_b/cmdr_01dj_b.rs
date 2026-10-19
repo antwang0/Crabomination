@@ -355,3 +355,117 @@ fn turtles_in_time_resets_the_takers() {
     assert!(g.players[2].graveyard.is_empty());
     assert!(g.exile.iter().any(|c| c.id == tit));
 }
+
+// ── The party pair and Captain America, Unbowed (`decks::cmdr_01dj_r`) ────
+
+fn begin_combat(g: &mut GameState) {
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(g);
+}
+
+/// Base Camp's coloured mana pays for a Rogue (Merfolk Looter) but not a
+/// Bear.
+#[test]
+fn base_camp_funds_only_party_types() {
+    for (rogue, ok) in [(true, true), (false, false)] {
+        let mut g = pod(2);
+        let camp = ready(&mut g, 0, catalog::base_camp());
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: camp,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for party mana");
+        drain_stack(&mut g);
+        let (def, colour) = if rogue {
+            (catalog::merfolk_looter(), Color::Blue)
+        } else {
+            (catalog::grizzly_bears(), Color::Green)
+        };
+        g.players[0].mana_pool.add(colour, 1);
+        let id = g.add_card_to_hand(0, def);
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(cast.is_ok(), ok, "rogue={rogue}");
+    }
+}
+
+/// The Destined Warrior's combat pump is +1/+0 alone and +3/+0 with a full
+/// party (CR 700.8: a Warrior, a Rogue, a Wizard and a Cleric).
+#[test]
+fn the_destined_warrior_pumps_harder_with_a_full_party() {
+    for (full, want) in [(false, 3), (true, 5)] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::the_destined_warrior());
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        if full {
+            ready(&mut g, 0, catalog::merfolk_looter());
+            ready(&mut g, 0, catalog::prodigal_sorcerer());
+            ready(&mut g, 0, catalog::soul_warden());
+        }
+        begin_combat(&mut g);
+        assert_eq!(power(&g, bear), want, "full party: {full}");
+    }
+}
+
+/// Skyclave Plunder looks at 3 + party (here 2: a Rogue and a Wizard) and
+/// keeps three.
+#[test]
+fn skyclave_plunder_digs_deeper_with_a_party() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::merfolk_looter());
+    ready(&mut g, 0, catalog::prodigal_sorcerer());
+    let lib = g.players[0].library.len();
+    let s = g.add_card_to_hand(0, catalog::skyclave_plunder());
+    let hand = g.players[0].hand.len();
+    cast_targets(&mut g, s, &[]);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
+    assert_eq!(g.players[0].library.len(), lib - 3);
+}
+
+/// Practiced Tactics deals twice the party size to an attacker.
+#[test]
+fn practiced_tactics_scales_with_the_party() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::merfolk_looter());
+    ready(&mut g, 1, catalog::soul_warden());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    attack(&mut g, &[giant]);
+    let s = g.add_card_to_hand(1, catalog::practiced_tactics());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "4 damage kills the 3/3");
+}
+
+/// Infinity Formula attaches as it enters: +1/+2, and the equipped
+/// creature's attack gains 2 life.
+#[test]
+fn infinity_formula_attaches_and_gains_on_attack() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::infinity_formula());
+    cast_targets(&mut g, f, &[]);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4));
+    let life = g.players[0].life;
+    attack(&mut g, &[bear]);
+    assert_eq!(g.players[0].life, life + 2);
+}
