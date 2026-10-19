@@ -1065,3 +1065,123 @@ fn doc_ocks_henchmen_connive_on_attack() {
     assert_eq!(g.players[0].hand.len(), 1);
     assert_eq!(g.players[0].graveyard.len(), 1);
 }
+
+// ── One-gap Villain closers (`decks::cmdr_01dj_d`) ──────────────────────────
+
+/// Armed Assailant gets +2/+0 and menace only while equipped.
+#[test]
+fn armed_assailant_is_stronger_equipped() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::armed_assailant());
+    assert_eq!(power(&g, a), 1);
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(a);
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!(cp.power, 1 + 2 + 2, "Bonesplitter's +2 and its own +2");
+    assert!(cp.keywords().contains(&Keyword::Menace));
+}
+
+/// Steel Wrecking Ball deals 5 as it enters; from hand, {1}{R} and a discard
+/// destroy an artifact.
+#[test]
+fn steel_wrecking_ball_smashes() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ball = g.add_card_to_hand(0, catalog::steel_wrecking_ball());
+    cast_targets(&mut g, ball, &[Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let ball2 = g.add_card_to_hand(0, catalog::steel_wrecking_ball());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ball2,
+        ability_index: 0,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("discard to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ball2));
+}
+
+/// CR 601.2f — Revoke Demise costs {2} less aimed at a creature card with
+/// mana value 3 or less: {2}{B} returns a Grizzly Bears and gains 2.
+#[test]
+fn revoke_demise_is_cheaper_for_small_creatures() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::revoke_demise());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("three mana is enough");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.players[0].life, 22);
+}
+
+/// Unliving Legionnaire's power-up returns a creature card and grows it.
+#[test]
+fn unliving_legionnaire_powers_up() {
+    let mut g = pod(2);
+    let ul = ready(&mut g, 0, catalog::unliving_legionnaire());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ul,
+        ability_index: 0,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("power-up");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant));
+    assert_eq!(plus(&g, ul), 2);
+}
+
+/// CR 702.21a — Titania's ward is "discard a card or pay {2}": an opponent
+/// with {2} pays mana; one with no mana discards; one with neither is
+/// countered.
+#[test]
+fn titania_ward_takes_mana_or_a_card() {
+    for (mana, cards, survives) in [(2, 0, false), (0, 1, false), (0, 0, true)] {
+        let mut g = pod(2);
+        let t = g.add_card_to_battlefield(0, catalog::titania_rugged_rumbler());
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 1;
+        g.players[1].hand.clear();
+        let doom = g.add_card_to_hand(1, catalog::murder());
+        for _ in 0..cards {
+            g.add_card_to_hand(1, catalog::forest());
+        }
+        g.players[1].mana_pool.add(Color::Black, 3);
+        g.players[1].mana_pool.add_colorless(mana);
+        g.perform_action(GameAction::CastSpell {
+            card_id: doom,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("murder");
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(t).is_some(),
+            survives,
+            "mana {mana}, cards {cards}"
+        );
+        assert!(g.players[1].hand.is_empty());
+    }
+}

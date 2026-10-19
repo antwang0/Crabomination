@@ -17694,6 +17694,13 @@ static DECKS: &[Factory] = &[
     super::decks::avengers_under_siege,
     super::decks::doc_ocks_henchmen,
     super::decks::mysterio_master_of_illusion,
+    super::decks::armed_assailant,
+    super::decks::a_i_m_bot,
+    super::decks::steel_wrecking_ball,
+    super::decks::revoke_demise,
+    super::decks::revel_ruiner,
+    super::decks::unliving_legionnaire,
+    super::decks::titania_rugged_rumbler,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

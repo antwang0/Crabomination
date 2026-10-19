@@ -1188,3 +1188,6 @@ pub use cmdr_01dj_b::*;
 #[path = "../../../src/sets/decks/cmdr_01dj_c.rs"]
 mod cmdr_01dj_c;
 pub use cmdr_01dj_c::*;
+#[path = "../../../src/sets/decks/cmdr_01dj_d.rs"]
+mod cmdr_01dj_d;
+pub use cmdr_01dj_d::*;
