@@ -2502,3 +2502,177 @@ fn ral_and_the_implicit_maze_chapters() {
     cast_targets(&mut g, ring, &[]);
     assert_eq!(plus(&g, weird), 1);
 }
+
+// ── Rocksteady, Foggy Nelson, Spider-Woman (`decks::cmdr_01dj_k`) ───────────
+
+/// Carefree Swinemaster pays {1}{G} for a Boar that joins the attack.
+#[test]
+fn carefree_swinemaster_brings_a_boar() {
+    let mut g = pod(2);
+    let sm = ready(&mut g, 0, catalog::carefree_swinemaster());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sm,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let boar = named(&g, 0, "Boar");
+    assert_eq!(boar.len(), 1);
+    assert!(g.attacking.iter().any(|a| a.attacker == boar[0]));
+}
+
+/// Morbid — Festerhide Boar enters with two counters only after a death.
+#[test]
+fn festerhide_boar_morbid() {
+    for death in [false, true] {
+        let mut g = pod(2);
+        if death {
+            let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            kill(&mut g, bear);
+        }
+        let fb = g.add_card_to_hand(0, catalog::festerhide_boar());
+        cast_targets(&mut g, fb, &[]);
+        assert_eq!(plus(&g, fb), if death { 2 } else { 0 });
+    }
+}
+
+/// Wolf's Quarry's Boars leave Food when they die; Trufflesnout's default
+/// mode grows it.
+#[test]
+fn wolfs_quarry_boars_leave_food() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::wolfs_quarry());
+    cast_targets(&mut g, s, &[]);
+    let boars = named(&g, 0, "Boar");
+    assert_eq!(boars.len(), 3);
+    kill(&mut g, boars[0]);
+    assert_eq!(named(&g, 0, "Food").len(), 1);
+    let t = g.add_card_to_hand(0, catalog::trufflesnout());
+    cast_targets(&mut g, t, &[]);
+    assert_eq!(plus(&g, t), 1);
+}
+
+/// Action News Crew's channel counters your team and draws.
+#[test]
+fn action_news_crew_channel() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let crew = g.add_card_to_hand(0, catalog::action_news_crew());
+    let hand = g.players[0].hand.len();
+    flood(&mut g, 0);
+    activate_on(&mut g, crew, 0, None);
+    assert_eq!(plus(&g, bear), 1);
+    assert_eq!(g.players[0].hand.len(), hand, "discarded it, drew one");
+}
+
+/// Blessed Spirits grow on enchantment spells; Bound in Silence pins a
+/// creature; Elder Cathar's death gives a Human two counters.
+#[test]
+fn foggy_nelson_whites() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bs = ready(&mut g, 0, catalog::blessed_spirits());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bis = g.add_card_to_hand(0, catalog::bound_in_silence());
+    cast_targets(&mut g, bis, &[Target::Permanent(giant)]);
+    assert_eq!(plus(&g, bs), 1);
+    let cp = g.computed_permanent(giant).unwrap();
+    assert!(
+        cp.keywords().contains(&Keyword::CantAttack) && cp.keywords().contains(&Keyword::CantBlock)
+    );
+    let mut g = pod(2);
+    let human = g.add_card_to_battlefield(0, catalog::raft_security_officer());
+    let ec = g.add_card_to_battlefield(0, catalog::elder_cathar());
+    kill(&mut g, ec);
+    assert_eq!(plus(&g, human), 2, "a Human gets two");
+}
+
+/// Spider-Woman taps an opponent's creature, which stays tapped while you
+/// control her.
+#[test]
+fn spider_woman_locks_down() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let sw = g.add_card_to_hand(0, catalog::spider_woman_secret_agent());
+    cast_targets(&mut g, sw, &[Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).unwrap().tapped);
+    pass_until(&mut g, 1);
+    assert!(
+        g.battlefield_find(giant).unwrap().tapped,
+        "no untap while she stays"
+    );
+}
+
+/// Raft Security Officer taps for {1} when the target has power 3 or less.
+#[test]
+fn raft_security_officer_discount() {
+    let mut g = pod(2);
+    let rso = ready(&mut g, 0, catalog::raft_security_officer());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    activate_on(&mut g, rso, 0, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+}
+
+/// Frozen in Ice taps the creature, strips its abilities and holds it down.
+#[test]
+fn frozen_in_ice_holds() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let raptor = g.add_card_to_battlefield(1, catalog::rampaging_raptor());
+    let f = g.add_card_to_hand(0, catalog::frozen_in_ice());
+    cast_targets(&mut g, f, &[Target::Permanent(raptor)]);
+    assert!(g.battlefield_find(raptor).unwrap().tapped);
+    assert!(
+        !g.computed_permanent(raptor)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Trample)
+    );
+    pass_until(&mut g, 1);
+    assert!(g.battlefield_find(raptor).unwrap().tapped);
+}
+
+/// Atlantis Attacks: one mode unkicked (a Leviathan); both modes is the
+/// teamwork cast (CR 700.2), tapping power 4.
+#[test]
+fn atlantis_attacks_both_with_teamwork() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::atlantis_attacks());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("one mode");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Leviathan").len(), 1);
+
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let s = g.add_card_to_hand(0, catalog::atlantis_attacks());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: s,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(ring)],
+        x_value: None,
+    })
+    .expect("both modes, with teamwork");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Leviathan").len(), 1);
+    assert!(g.players[1].hand.iter().any(|c| c.id == ring));
+    assert!(
+        g.battlefield_find(giant).unwrap().tapped && g.battlefield_find(bear).unwrap().tapped,
+        "teamwork tapped power 4+"
+    );
+}
