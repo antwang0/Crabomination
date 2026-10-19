@@ -816,3 +816,46 @@ fn energy_creatures_spend_their_energy() {
     assert_eq!(power(&g, ep), 2);
     assert_eq!(g.players[0].energy, 1);
 }
+
+// ── Pharaoh Rama-Tut (`decks::cmdr_01dj_v`) ────────────────────────────────
+
+/// Umara Wizard gains flying when you cast an instant.
+#[test]
+fn umara_wizard_flies_on_an_instant() {
+    let mut g = pod(2);
+    let uw = ready(&mut g, 0, catalog::umara_wizard());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_targets(&mut g, bolt, &[Target::Player(1)]);
+    assert!(g.computed_permanent(uw).unwrap().keywords().contains(&Keyword::Flying));
+}
+
+/// CR 702.35 — Welcome to the Fold hard-cast steals only toughness 2 or
+/// less; discarded and cast for madness with X = 3, it takes a 3/3.
+#[test]
+fn welcome_to_the_fold_reaches_further_with_madness() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::welcome_to_the_fold());
+    cast_targets(&mut g, s, &[Target::Permanent(giant)]);
+    assert_eq!(g.battlefield_find(giant).unwrap().controller, 1, "toughness 3 is out of reach");
+
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.players[0].hand.clear();
+    g.add_card_to_hand(0, catalog::welcome_to_the_fold());
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Discard {
+                who: crabomination::effect::Selector::You,
+                amount: crabomination::effect::Value::ONE,
+                random: false,
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(giant).unwrap().controller, 0, "madness X = 3");
+}
