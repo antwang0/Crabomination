@@ -3177,6 +3177,20 @@ pods (overflow)  seeds 9250-9256, 3-8 seats: 12,672 games incl. 440 over seats 4
                  doubling Hollowhenge Overlord's upkeep Wolves — the step-trigger fix made it real)
 ```
 
+### 2026-10-19 night (Commander run, `016Xh16H`, continued) — guardrail after the `{S}` auto-tap fix
+
+Hot-path touch: `auto_tap_for_cost_inner` counts `{S}` pips as pips to tap for and, while the pool's
+snow mana falls short, ranks non-snow sources after snow ones (an extra `bool` at the head of the
+generic loop's sort key — constant `false` when the cost has no `{S}`). `R::IsSnow` joined the live
+layer leaves (filters naming it resolve live instead of being dropped). `release` bot_ladder at
+`cd6532a2e`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 thread_determinism ok (3 vs 1); peak_rss_mib 44.1
+pods (overflow)  seeds 9260-9262 over seats 4340-4390: 338 games, 0 panics, one CR 104.4a draw
+```
+
 ### 2026-10-19 night (Commander run, `01DJHkWk`, closing) — guardrail; ~140 more cards, six primitives
 
 Hot-path touches: none on the 2-player path — the primitives are a new `Effect` arm, a new

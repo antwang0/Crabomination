@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes](#fixedopen-2026-10-19-commander-run-01gwrdkp--44-closer-cards-17-seats-six-engine-fixes) | 34 |
-| Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 112 closer cards, 29 seats, a step-trigger doubler bug](#fixedopen-2026-10-19-commander-run-016xh16h--112-closer-cards-29-seats-a-step-trigger-doubler-bug) | 47 |
+| Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 168 closer cards, 37 seats, step-trigger / Adventure-copy / snow-payment bugs](#fixedopen-2026-10-19-commander-run-016xh16h--168-closer-cards-37-seats-step-trigger--adventure-copy--snow-payment-bugs) | 47 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required](#fixedopen-2026-10-10-sixteenth-commander-run-01s495n5--up-to-one-target-modelled-as-required) | 27 |
 | Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 63 |
@@ -223,7 +223,7 @@ the handoff.
   Celestial Toymaker (a look-three face-down/face-up split and a per-turn pile tally), Count Nefaria (Nettlevine
   Blight's sacrifice-and-reattach), Zhou Yu (Magical Hack's land-type text swap).
 
-## FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 112 closer cards, 29 seats, a step-trigger doubler bug
+## FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 168 closer cards, 37 seats, step-trigger / Adventure-copy / snow-payment bugs
 
 - **Seats** 4305-4312, 4315-4324, 4336-4338, 4346-4351, 4355-4356: Valentina Allegra de Fontaine, Temmet, Splinter & Leo, Tomik
   Wielder of Law, Mila, Kang, Old Hob, Ultimo; Elminster, Djeru, Quickbeam, Tobias Andrion, Tomik Orzhov
@@ -262,6 +262,27 @@ the handoff.
   replacement). Scoped, not built (5-8 gaps): Syrix (Phoenix graveyard triggers, day/night), Tetzin (craft
   DFCs), Tam (Prismabasher's "up to X targets"), Dromar (Flooded Woodlands), General Jarkeld (banding);
   the Marvel decks (War Machine, The Howling Commandos, Captain America) were left to `01DJHkWk`'s cluster.
+- **Later the same run (56 cards, 8 seats):** Zhou Yu (4384), Beluna Grandsquall (4385), Syrix (4386), Meng Huo
+  (4387), Lynde and The Unluckiest Planeswalker (4389-4390), Narfi (4391), Heidar (4392); `decks::cmdr_016x_j`..`_p`.
+  Gorion's Adventure cards collided with `01GwrDKP` (theirs kept; Beluna + Hearth Elemental mine).
+  **Primitives:** `StaticEffect::LandTypeChangerChosen` (Phantasmal Terrain, CR 305.7);
+  `Value::MostDamageTakenThisTurn` (Lightning Phoenix — one opponent's total, not the sum); the player-Aura
+  family in `game/effects/player_auras.rs` (CR 303.4: `Value::AttachedToPlayerMatching`,
+  `Effect::SearchAttachToPlayer` / `ReturnToBattlefieldAttachedToPlayer` / `ReattachPlayerAurasToOpponents` /
+  `EachOtherPlayerMayCopy`, `StaticEffect::EnchantedPlayerNamedSpellTax`, a player host for
+  `ReturnSelfTransformedAttachedTo`, `RulebreakerCards::Auras`); `StaticEffect::PermanentsWithCounterHaveSupertype`
+  (Rimefeather Owl's ice → snow).
+  **Fixes:** a copy of an Adventure spell was built from the main face — Chancellor of Tales / Gorion copying
+  Stomp resolved a token Bonecrusher Giant (CR 707.2 / 715.3b; the old Chancellor test passed because one Puny
+  Snack already kills its 2/2); `requirement_matches_card_typed` had no `HasAdventure` arm (Seek Thrills kept
+  nothing); the auto-tapper ignored `{S}` pips, so every snow-cost spell or ability failed unless snow mana was
+  already floating (CR 107.4h — Icehide Golem, Narfi, Mouth of Ronom); `R::IsSnow` was not a live layer leaf,
+  so a static over "snow creatures" was dropped whole; ported the tip's two core_rules reds (`BlightThen`
+  missing from `for_each_inner`; a join-combat re-run that outlived its combat, CR 506.4).
+  **Gap:** a CDA counting other permanents' supertypes reads them before layer 4 (Rimefeather Owl counts its
+  ice counters directly instead).
+  **Sweeps** 9260-9262 (audit build): 338 games over seats 4340-4390, 0 panics, one CR 104.4a draw.
+  `--bench` byte-identical after the snow auto-tap change.
 
 ## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — ~230 closer cards, ~90 seats, the Marvel Villain / LOTR Goblin / attacks-alone / Lorwyn Merfolk / party clusters
 
