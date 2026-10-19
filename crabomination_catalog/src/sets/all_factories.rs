@@ -17843,6 +17843,12 @@ static DECKS: &[Factory] = &[
     super::decks::summon_the_school,
     super::decks::syggs_command,
     super::decks::noggin_whack,
+    super::decks::cruel_alliance,
+    super::decks::glyph_keeper,
+    super::decks::vizier_of_the_anointed,
+    super::decks::splinter_leo_father_son,
+    super::decks::djeru_with_eyes_open,
+    super::decks::elspeths_talent,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
