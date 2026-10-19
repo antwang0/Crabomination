@@ -468,6 +468,8 @@ fn no_trigger_sits_under_a_scope_the_dispatcher_never_matches() {
                 | EventKind::Tapped
                 | EventKind::CardDrawn
                 | EventKind::BecameTarget
+                | EventKind::AbilityActivated
+                | EventKind::AbilityActivatedWith(_)
         ) || name.contains("Damage")
             || name.contains("Block")
     };

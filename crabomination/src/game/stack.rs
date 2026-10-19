@@ -1579,6 +1579,24 @@ impl GameState {
                 let ctx = crate::game::effects::EffectContext::for_trigger(*src, *ctrl, None, 0);
                 self.evaluate_predicate(pred, &ctx)
             });
+            // CR 603.2d — "triggers an additional time" covers a beginning-of-
+            // step trigger as much as an event one (Chief of the Wilds over a
+            // Wolf's upkeep trigger, Katara over an Ally's). Each copy sits
+            // beside its original, so the APNAP sort below keeps them together.
+            let mut i = 0;
+            while i < triggers_with_filter.len() {
+                let (src, ctrl) = (triggers_with_filter[i].0, triggers_with_filter[i].2);
+                let extra = if self.battlefield_find(src).is_some() {
+                    crate::game::actions::ally_trigger_extra_fires(self, ctrl, src)
+                } else {
+                    0
+                };
+                for _ in 0..extra {
+                    let copy = triggers_with_filter[i].clone();
+                    triggers_with_filter.insert(i + 1, copy);
+                }
+                i += 1 + extra;
+            }
         }
 
         // Drain matching delayed triggers off the queue and queue them up
