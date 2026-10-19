@@ -2839,6 +2839,8 @@ pub enum GameEventWire {
     EchoPaid { card_id: CardId, controller: usize },
     /// Wire mirror of `GameEvent::StickerPlaced`.
     StickerPlaced { card_id: CardId, player: usize },
+    /// Wire mirror of `GameEvent::CardsPutIntoLibrary`.
+    CardsPutIntoLibrary { player: usize, count: u32 },
     /// Wire mirror of `GameEvent::TappedForTeamwork`.
     TappedForTeamwork { card_id: CardId, controller: usize },
     /// Wire mirror of `GameEvent::CreatureFought`.
@@ -3124,6 +3126,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::StickerPlaced { card_id, player } => {
                 GameEventWire::StickerPlaced { card_id: *card_id, player: *player }
+            }
+            GameEvent::CardsPutIntoLibrary { player, count } => {
+                GameEventWire::CardsPutIntoLibrary { player: *player, count: *count }
             }
             GameEvent::CreatureFought { card_id, controller } => {
                 GameEventWire::CreatureFought { card_id: *card_id, controller: *controller }
@@ -3550,6 +3555,7 @@ impl GameEventWire {
             }
             E::EchoPaid { controller, .. } => format!("{} paid echo", pn(*controller)),
             E::StickerPlaced { player, .. } => format!("{} placed a sticker", pn(*player)),
+            E::CardsPutIntoLibrary { count, .. } => format!("{count} card(s) put into a library"),
             E::TappedForTeamwork { controller, .. } => format!("{} tapped a creature for teamwork", pn(*controller)),
             E::SpellCausedLifeGain { player, amount, .. } => {
                 format!("a spell gained {} {amount} life", pn(*player))

@@ -11301,6 +11301,10 @@ pub struct CardInstance {
     /// Legend). Stamped as `PermanentTapped` dispatches; reset each turn.
     pub tapped_this_turn: bool,
     pub tapped_again_this_turn: bool,
+    /// Last placed by a library pile, and no other zone has taken it since —
+    /// so a library write of it is a reorder, not "put into a library" (Wan
+    /// Shi Tong's ruling: scry and surveil don't count). See `CardPile::admit`.
+    pub in_library: bool,
 }
 
 impl std::ops::Deref for CardInstance {
@@ -11345,6 +11349,7 @@ impl From<CardData> for CardInstance {
             blocked_this_turn: false,
             tapped_this_turn: false,
             tapped_again_this_turn: false,
+            in_library: false,
         }
     }
 }

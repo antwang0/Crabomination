@@ -453,6 +453,7 @@ pub struct PlayerData {
     /// The card zones are [`CowBox`]-wrapped so a `GameState` clone
     /// (affordance probes, the `perform_action` checkpoint) shares them
     /// until written — see `crate::cow`.
+    #[serde(deserialize_with = "crate::zone::deserialize_library")]
     pub library: crate::zone::CardPile,
     pub hand: crate::zone::CardPile,
     /// The graveyard is the one zone with a wrapper of its own: it also
@@ -1828,7 +1829,7 @@ impl Player {
             starting_life: 20,
             mana_pool: ManaPool::new(),
             kept_mana_this_turn: ManaPool::new(),
-            library: crate::zone::CardPile::default(),
+            library: crate::zone::CardPile::library(),
             hand: crate::zone::CardPile::default(),
             graveyard: crate::zone::Graveyard::default(),
             command: CowBox::default(),
@@ -2163,7 +2164,7 @@ impl PlayerData {
         id: CardId,
         definition: impl Into<std::sync::Arc<CardDefinition>>,
     ) {
-        self.library.insert(0, CardInstance::new(id, definition, self.id.0));
+        self.library.insert(0, Self::placed_in_library(id, definition.into(), self.id.0));
     }
 
     /// Push a card definition to the bottom of the library.
@@ -2178,6 +2179,14 @@ impl PlayerData {
         id: CardId,
         definition: impl Into<std::sync::Arc<CardDefinition>>,
     ) {
-        self.library.push(CardInstance::new(id, definition, self.id.0));
+        self.library.push(Self::placed_in_library(id, definition.into(), self.id.0));
+    }
+
+    /// A card built straight into a library (deck construction, fixtures):
+    /// stamped as already there, so it isn't "put into a library".
+    fn placed_in_library(id: CardId, definition: std::sync::Arc<CardDefinition>, owner: usize) -> CardInstance {
+        let mut card = CardInstance::new(id, definition, owner);
+        card.in_library = true;
+        card
     }
 }

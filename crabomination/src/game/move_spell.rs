@@ -35,6 +35,14 @@ impl GameState {
             ZoneDest::Library { who: PlayerRef::OwnerOfMoved | PlayerRef::OwnerOf(_), pos: LibraryPosition::Bottom } => {
                 CounteredSpellZone::OwnerLibraryBottom
             }
+            // Swat Away — the owner's choice of top or bottom (Hinder's zone).
+            ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved | PlayerRef::OwnerOf(_),
+                pos: LibraryPosition::OwnerChoice,
+            } => CounteredSpellZone::OwnerLibraryTopOrBottom,
+            ZoneDest::Library { who: PlayerRef::OwnerOfMoved | PlayerRef::OwnerOf(_), pos: LibraryPosition::FromTop(1) } => {
+                CounteredSpellZone::OwnerLibrarySecondFromTop
+            }
             _ => return false,
         };
         let mut sub = ctx.clone();

@@ -456,6 +456,7 @@ fn restore_player(ps: PlayerSnapshot) -> Result<Player, LoadError> {
         .map(restore_card)
         .collect::<Result<Vec<_>, _>>()?
         .into();
+    p.library.mark_library();
     p.hand = ps
         .hand
         .into_iter()

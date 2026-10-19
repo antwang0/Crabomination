@@ -214,6 +214,7 @@ mod retarget_any;
 mod token_batch;
 mod life_events;
 mod draw_batch;
+mod library_arrivals;
 mod exile_return;
 mod answer_log;
 pub(crate) mod spell_copy;
@@ -25628,6 +25629,7 @@ impl GameState {
             && self.pending_permanent_deaths.is_empty()
             && self.scratch.pending_control_changes.is_empty()
             && self.scratch.pending_exile_tally.is_empty()
+            && self.players.iter().all(|p| p.library.arrivals() == 0)
         {
             return;
         }
@@ -25729,13 +25731,19 @@ impl GameState {
         // chokepoint since the last dispatch (Risky Move's hand-off).
         let control_changes: Vec<_> = take_scratch!(self.pending_control_changes);
         let exile_tally: Vec<(usize, u32)> = take_scratch!(self.pending_exile_tally);
+        let into_library = self.take_library_arrivals();
         // Nothing to fire and nothing to synthesize. The two takes above are
         // all the state this call has touched by here, so this leaves exactly
         // what the `events.is_empty()` return below leaves — without the
         // synthesis collect, the graveyard-batch count walk or the per-event
         // match. `perform_action_inner` drains every action's event list
         // through here, so the empty batch is a common one.
-        if events.is_empty() && deaths.is_empty() && control_changes.is_empty() && exile_tally.is_empty() {
+        if events.is_empty()
+            && deaths.is_empty()
+            && control_changes.is_empty()
+            && exile_tally.is_empty()
+            && into_library.is_none()
+        {
             return;
         }
         // Replay the deaths' causing spell/ability over the dispatch: the
@@ -25757,6 +25765,7 @@ impl GameState {
         let synthesized: Vec<GameEvent> = if deaths.is_empty()
             && control_changes.is_empty()
             && exile_tally.is_empty()
+            && into_library.is_none()
         {
             Vec::new()
         } else {
@@ -25775,6 +25784,7 @@ impl GameState {
                 .chain(exile_tally.into_iter().map(|(player, count)| {
                     GameEvent::CardsExiledFromHandOrBy { player, count }
                 }))
+                .chain(into_library.map(|(player, count)| GameEvent::CardsPutIntoLibrary { player, count }))
                 .collect()
         };
         let folded: Vec<GameEvent>;
@@ -33763,6 +33773,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         GameEvent::DiscardedBatch { count, .. } => *count,
         GameEvent::ScryPerformed { bottomed, .. } => *bottomed as u32,
         GameEvent::CardsExiledFromHandOrBy { count, .. } => *count,
+        GameEvent::CardsPutIntoLibrary { count, .. } => *count,
         GameEvent::CounterAdded { count, .. } | GameEvent::KeywordCounterAdded { count, .. } => *count,
         GameEvent::CounterRemoved { count, .. } => *count,
         GameEvent::Discovered { value, .. } => *value,

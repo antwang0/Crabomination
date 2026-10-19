@@ -4261,6 +4261,11 @@ pub enum KeywordAct {
     /// CR 123.3 — a player put a sticker on an object; the player is the actor,
     /// the object the subject (Wee Champion).
     StickerPlaced,
+    /// One or more cards were put into a library from another zone since the
+    /// last dispatch (a scry or reorder isn't one); one event a batch, the
+    /// count the amount, the first receiving library's owner the actor (Wan
+    /// Shi Tong, All-Knowing; Dutiful Knowledge Seeker).
+    CardsPutIntoLibrary,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.

@@ -31666,8 +31666,12 @@ impl GameState {
 
             Effect::ExchangeHandAndLibrary { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
+                    // Card by card, so each pile admits what it receives.
                     let pl = &mut *self.players[p];
-                    std::mem::swap(&mut pl.hand, &mut pl.library);
+                    let hand = std::mem::take(&mut *pl.hand);
+                    let library = std::mem::take(&mut *pl.library);
+                    pl.hand.extend(library);
+                    pl.library.extend(hand);
                     self.shuffle_library(p, events);
                 }
                 Ok(())
@@ -32604,8 +32608,11 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let gy = std::mem::take(&mut *self.players[p].graveyard);
                 let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
-                let lib = std::mem::replace(&mut *self.players[p].library, gy);
-                *self.players[p].graveyard = lib;
+                let lib = std::mem::take(&mut *self.players[p].library);
+                self.players[p].library.extend(gy);
+                for c in lib {
+                    self.players[p].graveyard.push(c);
+                }
                 for id in ids {
                     self.note_left_graveyard(p, id, events);
                 }

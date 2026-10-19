@@ -2952,6 +2952,10 @@ pub enum GameEvent {
     EchoPaid { card_id: CardId, controller: usize },
     /// CR 123.3 — `player` put a sticker on `card_id`.
     StickerPlaced { card_id: CardId, player: usize },
+    /// `count` cards were put into libraries from other zones since the last
+    /// dispatch; `player` owns the first library. Synthesized at dispatch from
+    /// the library piles' arrival tallies.
+    CardsPutIntoLibrary { player: usize, count: u32 },
     /// A creature became tapped to pay a teamwork cost (Agent Maria Hill);
     /// emitted beside its `PermanentTapped`.
     TappedForTeamwork { card_id: CardId, controller: usize },

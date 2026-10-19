@@ -169,7 +169,8 @@ impl Graveyard {
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes
     /// with room for the card. Inherent, so it shadows the `Deref`'d
     /// `Vec::push`; the memo is invalidated exactly as `DerefMut` would.
-    pub fn push(&mut self, card: CardInstance) {
+    pub fn push(&mut self, mut card: CardInstance) {
+        card.in_library = false;
         self.lanes.store(0, Ordering::Relaxed);
         self.cards.push(card);
     }
@@ -279,6 +280,13 @@ pub struct CardPile {
     /// `(-303)`'s read audit, 5 sites), so the state-level gather memo's key
     /// needs it. The starting value is arbitrary — only a *change* is read.
     writes: u32,
+    /// A player's library (set by [`CardPile::library`]). Every card this pile
+    /// admits is stamped `in_library`; any other pile clears the stamp.
+    library: bool,
+    /// Cards admitted to this library from another zone since the last
+    /// [`take_arrivals`](Self::take_arrivals) — "one or more cards are put
+    /// into a library from anywhere" (Wan Shi Tong, All-Knowing).
+    arrivals: u16,
 }
 
 /// CR 704.5d — a token is here.
@@ -344,9 +352,68 @@ impl CardPile {
     /// Append through [`CowBox::push`] so the unshare materializes with room
     /// for the card. Inherent, so it shadows the `Deref`'d `Vec::push` at
     /// every existing call site.
-    pub fn push(&mut self, card: CardInstance) {
+    pub fn push(&mut self, mut card: CardInstance) {
+        self.admit(&mut card);
         self.note_write();
         self.cards.push(card);
+    }
+
+    /// `Vec::insert`, shadowed so the card is [`admit`](Self::admit)ted.
+    pub fn insert(&mut self, index: usize, mut card: CardInstance) {
+        self.admit(&mut card);
+        self.note_write();
+        self.cards.insert(index, card);
+    }
+
+    /// `Vec::extend`, shadowed so each card is [`admit`](Self::admit)ted.
+    pub fn extend(&mut self, cards: impl IntoIterator<Item = CardInstance>) {
+        self.note_write();
+        for mut card in cards {
+            self.admit(&mut card);
+            self.cards.push(card);
+        }
+    }
+
+    /// An empty library pile.
+    pub fn library() -> Self {
+        Self { library: true, ..Self::default() }
+    }
+
+    /// Make this pile a library: its cards count as already in it (a
+    /// deserialized or rebuilt library).
+    pub fn mark_library(&mut self) {
+        self.library = true;
+        if self.cards.iter().any(|c| !c.in_library) {
+            for c in self.deref_mut().iter_mut() {
+                c.in_library = true;
+            }
+        }
+    }
+
+    /// CR 400.7 — a card reaching a library from another zone is "put into a
+    /// library"; one already in it (a scry, a reorder) is not.
+    #[inline]
+    fn admit(&mut self, card: &mut CardInstance) {
+        if self.library {
+            if !card.in_library {
+                card.in_library = true;
+                self.arrivals = self.arrivals.saturating_add(1);
+            }
+        } else {
+            card.in_library = false;
+        }
+    }
+
+    /// Cards put into this library from elsewhere since the last call.
+    #[inline]
+    pub fn arrivals(&self) -> u16 {
+        self.arrivals
+    }
+
+    /// Read and reset [`arrivals`](Self::arrivals). Touches no card, so it
+    /// never unshares the pile.
+    pub fn take_arrivals(&mut self) -> u16 {
+        std::mem::take(&mut self.arrivals)
     }
 
     /// One `&mut` reach at this pile: clear the lane word and bump
@@ -392,6 +459,8 @@ impl Clone for CardPile {
             cards: self.cards.clone(),
             lanes: AtomicU8::new(self.lanes.load(Ordering::Relaxed)),
             writes: self.writes,
+            library: self.library,
+            arrivals: self.arrivals,
         }
     }
 }
@@ -412,13 +481,13 @@ impl DerefMut for CardPile {
 
 impl From<Vec<CardInstance>> for CardPile {
     fn from(cards: Vec<CardInstance>) -> Self {
-        Self { cards: cards.into(), lanes: AtomicU8::new(0), writes: 0 }
+        Self { cards: cards.into(), lanes: AtomicU8::new(0), writes: 0, library: false, arrivals: 0 }
     }
 }
 
 impl From<CowBox<Vec<CardInstance>>> for CardPile {
     fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
-        Self { cards, lanes: AtomicU8::new(0), writes: 0 }
+        Self { cards, lanes: AtomicU8::new(0), writes: 0, library: false, arrivals: 0 }
     }
 }
 
@@ -451,6 +520,13 @@ impl<'de> serde::Deserialize<'de> for CardPile {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         CowBox::<Vec<CardInstance>>::deserialize(deserializer).map(CardPile::from)
     }
+}
+
+/// A library's `Deserialize`: the pile, marked as a library.
+pub fn deserialize_library<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<CardPile, D::Error> {
+    let mut pile = <CardPile as serde::Deserialize>::deserialize(deserializer)?;
+    pile.mark_library();
+    Ok(pile)
 }
 
 /// Packed two-bit memo lanes for [`Battlefield`], so one store on the write
@@ -2294,7 +2370,8 @@ impl Battlefield {
     /// every `ABSENT` lane is re-answered off the card by its registered
     /// predicate ([`LANE_PREDICATES`]), and the two member-list lanes clear,
     /// their indices being what they hold (PERF `(-212)`, `(-213)`).
-    pub fn push(&mut self, card: CardInstance) {
+    pub fn push(&mut self, mut card: CardInstance) {
+        card.in_library = false;
         self.note_write();
         self.lanes_after_push(&card);
         self.cards.push(card);
