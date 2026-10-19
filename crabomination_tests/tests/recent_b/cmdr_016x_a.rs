@@ -947,3 +947,92 @@ fn nightsquad_commando_needs_an_attack() {
         assert_eq!(made, attacked);
     }
 }
+
+// ── Thelon of Havenwood (`decks::cmdr_016x_h`) ──────────────────────────────
+
+/// Thelon pumps each Fungus +1/+1 per spore counter on it, and its
+/// activation (exiling a Fungus card from a graveyard) adds a spore to each.
+#[test]
+fn thelon_pumps_fungi_by_their_spores() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let thelon = ready(&mut g, 0, catalog::thelon_of_havenwood());
+    let tt = ready(&mut g, 0, catalog::thorn_thallid());
+    g.battlefield_find_mut(tt).unwrap().counters.insert(CounterType::Spore, 2);
+    assert_eq!(g.computed_permanent(tt).unwrap().power, 4, "2/2 + two spores");
+    g.add_card_to_graveyard(1, catalog::spore_flower());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: thelon,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tt).unwrap().counter_count(CounterType::Spore), 3);
+}
+
+/// Spore Flower's three spores: a fog — an attacker deals no damage.
+#[test]
+fn spore_flower_fogs() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let sf = ready(&mut g, 1, catalog::spore_flower());
+    g.battlefield_find_mut(sf).unwrap().counters.insert(CounterType::Spore, 3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, bear, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sf,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("fog");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+    pass_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 20);
+}
+
+// ── Teyo, Diamondblade Mage (`decks::cmdr_016x_i`) ──────────────────────────
+
+/// Death-Rattle Oni destroys every other creature dealt damage this turn.
+#[test]
+fn death_rattle_oni_finishes_the_wounded() {
+    let mut g = pod(2);
+    let hurt = ready(&mut g, 1, catalog::hill_giant());
+    let fine = ready(&mut g, 1, catalog::grizzly_bears());
+    let ping = crabomination::effect::Effect::DealDamage {
+        to: crabomination::effect::Selector::Target(0),
+        amount: crabomination::card::Value::Const(1),
+    };
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(hurt)];
+    g.resolve_effect(&ping, &ctx).unwrap();
+    assert!(g.battlefield_find(hurt).is_some(), "the 3/3 survives the ping");
+    let oni = g.add_card_to_hand(0, catalog::death_rattle_oni());
+    flood(&mut g, 0);
+    cast(&mut g, oni, None).expect("oni");
+    assert!(g.battlefield_find(hurt).is_none(), "damaged this turn: destroyed");
+    assert!(g.battlefield_find(fine).is_some());
+}
+
+/// Teyo's ETB: deathtouch and a +1/+1 counter on your creature.
+#[test]
+fn teyo_grants_deathtouch_and_a_counter() {
+    use crabomination::card::{CounterType, Keyword};
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let teyo = g.add_card_to_hand(0, catalog::teyo_diamondblade_mage());
+    flood(&mut g, 0);
+    cast(&mut g, teyo, None).expect("teyo");
+    let target = if g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne) == 1 { bear } else { teyo };
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.permanent_has_keyword(target, &Keyword::Deathtouch));
+}
