@@ -760,3 +760,133 @@ fn vatkeeper_doubles_and_glistening_dawn_counts_lands() {
     assert!(p.definition.is_creature(), "transformed");
     assert_eq!(p.counter_count(CounterType::PlusOnePlusOne), 6);
 }
+
+// ── Sidar Jabari, Rakka Mar (`decks::cmdr_016x_e`) ──────────────────────────
+
+/// CR 702.25b — Cavalry Master gives another flanker a second instance: a
+/// non-flanking blocker of Benalish Cavalry gets -2/-2, and a 2/2 dies.
+#[test]
+fn cavalry_master_doubles_flanking() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::cavalry_master());
+    let bc = ready(&mut g, 0, catalog::benalish_cavalry());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    attack(&mut g, bc, 1);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, bc)])).expect("block");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "two flanking triggers: -2/-2");
+}
+
+/// Gustcloak Cavalier slips its blocker: untapped and out of combat.
+#[test]
+fn gustcloak_cavalier_leaves_combat_when_blocked() {
+    let mut g = pod(2);
+    let gc = ready(&mut g, 0, catalog::gustcloak_cavalier());
+    let wall = ready(&mut g, 1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
+    attack(&mut g, gc, 1);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, gc)])).expect("block");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(gc).unwrap();
+    assert!(!c.tapped, "untapped");
+    assert!(!g.attacking.iter().any(|a| a.attacker == gc), "removed from combat");
+}
+
+/// Thunderkin Awakener returns a smaller Elemental from the graveyard
+/// attacking, sacrificed at the end step.
+#[test]
+fn thunderkin_awakener_returns_a_smaller_elemental_attacking() {
+    let mut g = pod(2);
+    let ta = ready(&mut g, 0, catalog::thunderkin_awakener());
+    let rock = g.add_card_to_graveyard(0, catalog::rockslide_elemental());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: ta,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.attacking.iter().any(|a| a.attacker == rock), "the Elemental attacks");
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "sacrificed at the end step");
+}
+
+/// Chandra's Embercat's {R} pays for an Elemental, not for a non-Elemental.
+#[test]
+fn chandras_embercat_mana_is_for_elementals() {
+    let mut g = pod(2);
+    let cat = ready(&mut g, 0, catalog::chandras_embercat());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cat,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(cast(&mut g, bolt, Some(Target::Player(1))).is_err(), "not an Elemental spell");
+}
+
+// ── Starling, Falcon (`decks::cmdr_016x_f`) ─────────────────────────────────
+
+/// Doomskar Oracle: the second spell in a turn gains 2 life, the first and
+/// third don't.
+#[test]
+fn doomskar_oracle_gains_on_the_second_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::doomskar_oracle());
+    flood(&mut g, 0);
+    let mut lives = vec![];
+    for _ in 0..3 {
+        let b = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, b, Some(Target::Player(1))).expect("bolt");
+        lives.push(g.players[0].life);
+    }
+    assert_eq!(lives, vec![20, 22, 22]);
+}
+
+/// Falcon makes Redwing, whose attack surveils 1.
+#[test]
+fn falcon_makes_redwing() {
+    let mut g = pod(2);
+    let f = g.add_card_to_hand(0, catalog::falcon_winged_wonder());
+    flood(&mut g, 0);
+    cast(&mut g, f, None).expect("falcon");
+    let rw = g.battlefield.iter().find(|c| c.definition.name == "Redwing").expect("Redwing").id;
+    g.clear_sickness(rw);
+    let lib = g.players[0].library.len();
+    attack(&mut g, rw, 1);
+    assert!(g.players[0].library.len() <= lib, "surveilled");
+}
+
+/// TVA Bureaucrat: a noncreature spell makes it +1/+0 and unblockable.
+#[test]
+fn tva_bureaucrat_slips_past_after_a_noncreature_spell() {
+    let mut g = pod(2);
+    let tva = ready(&mut g, 0, catalog::tva_bureaucrat());
+    flood(&mut g, 0);
+    let b = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, b, Some(Target::Player(1))).expect("bolt");
+    assert_eq!(g.battlefield_find(tva).unwrap().power(), 2);
+    assert!(g.permanent_has_keyword(tva, &crabomination::card::Keyword::Unblockable));
+}
+
+/// Stitched Mangler taps an opposing creature that then skips its untap.
+#[test]
+fn stitched_mangler_freezes_a_creature() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let sm = g.add_card_to_hand(0, catalog::stitched_mangler());
+    flood(&mut g, 0);
+    cast(&mut g, sm, None).expect("mangler");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    assert!(g.battlefield_find(sm).unwrap().tapped, "enters tapped");
+}

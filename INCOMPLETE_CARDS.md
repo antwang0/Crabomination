@@ -2262,3 +2262,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Titania, Rugged Rumbler | Ward's "discard a card or pay {2}" auto-pays the mana when it can (no menu); the discard is the hand's first card | `WardCost::ManaOrDiscard` |
 | 🟡 Norritt | "controlled continuously since the beginning of the turn" reads "didn't enter this turn" (a creature that changed control this turn qualifies) | `R::Not(EnteredThisTurn)` + `DelayUntilWithCapture` |
 | 🟡 Deification | the planeswalker-type ballot offers only the types among cards its controller owns (a seat owning none names nothing) | `Effect::NamePlaneswalkerType` |
+| 🟡 Chandra's Embercat | its {R} pays for Elemental spells only; "or a Chandra planeswalker spell" has no `SpendRestriction` | `SpendRestriction::CreatureOfType(Elemental)` |
