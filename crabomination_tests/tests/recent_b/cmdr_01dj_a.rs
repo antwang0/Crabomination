@@ -2993,3 +2993,102 @@ fn noggin_whack_takes_two_of_three() {
         "only revealed cards (the first three) can go"
     );
 }
+
+// ── Old Hob's fix, She-Hulk Attorney, Elesh Norn (`decks::cmdr_01dj_o`) ─────
+
+/// Old Hob's Mutant arrives hasty at your beginning of combat and is
+/// destroyed at the next end step — unless it was made indestructible. Bug
+/// fix: the delayed destroy is bound to *that* Mutant; a token made later in
+/// the turn (a Treasure) used to be the "last created token" it destroyed.
+#[test]
+fn old_hob_mutant_lives_a_turn() {
+    for saved in [false, true] {
+        let mut g = pod(2);
+        let hob = ready(&mut g, 0, catalog::old_hob_alleycat_blues());
+        g.step = TurnStep::PreCombatMain;
+        while g.step != TurnStep::BeginCombat {
+            g.perform_action(GameAction::PassPriority).ok();
+        }
+        drain_stack(&mut g);
+        let m = named(&g, 0, "Mutant");
+        assert_eq!(m.len(), 1);
+        if saved {
+            g.attacking = vec![Attack { attacker: m[0], target: AttackTarget::Player(1) }];
+            flood(&mut g, 0);
+            activate_on(&mut g, hob, 0, Some(Target::Permanent(m[0])));
+            g.attacking.clear();
+        }
+        let w = g.add_card_to_hand(0, catalog::professional_wrestler());
+        g.step = TurnStep::PostCombatMain;
+        cast_targets(&mut g, w, &[]);
+        assert_eq!(named(&g, 0, "Treasure").len(), 1);
+        while g.step != TurnStep::Cleanup && g.game_over.is_none() {
+            g.perform_action(GameAction::PassPriority).ok();
+        }
+        drain_stack(&mut g);
+        assert_eq!(named(&g, 0, "Mutant").len(), usize::from(saved), "indestructible survives the destroy");
+        assert_eq!(named(&g, 0, "Treasure").len(), 1, "the later token is not the one destroyed");
+    }
+}
+
+/// She-Hulk's power-up puts a counter on her, then doubles every +1/+1
+/// counter among your creatures.
+#[test]
+fn she_hulk_attorney_doubles_counters() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let sh = ready(&mut g, 0, catalog::she_hulk_attorney_at_law());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear)
+        .unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 2);
+    flood(&mut g, 0);
+    flood(&mut g, 0);
+    activate_on(&mut g, sh, 0, None);
+    assert_eq!((plus(&g, sh), plus(&g, bear)), (2, 4));
+}
+
+/// Emergency Phytomedic enters prepared (CR prepare, SOS): it carries the
+/// counter that lets its controller cast Seed Suture.
+#[test]
+fn phytomedic_enters_prepared() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let p = g.add_card_to_hand(0, catalog::emergency_phytomedic());
+    cast_targets(&mut g, p, &[]);
+    assert_eq!(
+        g.battlefield_find(p)
+            .unwrap()
+            .counter_count(CounterType::Prepared),
+        1
+    );
+}
+
+/// Elesh Norn's incubators: Norn's Inquisitor incubates 2; Progenitor Exarch
+/// transforms an Incubator, which the Inquisitor then grows; Tiller of Flesh
+/// incubates on a permanent-targeting spell.
+#[test]
+fn elesh_norn_incubators() {
+    let mut g = pod(2);
+    let inq = g.add_card_to_hand(0, catalog::norns_inquisitor());
+    cast_targets(&mut g, inq, &[]);
+    let inc = named(&g, 0, "Incubator");
+    assert_eq!(inc.len(), 1);
+    assert_eq!(plus(&g, inc[0]), 2);
+    let ex = ready(&mut g, 0, catalog::progenitor_exarch());
+    activate_on(&mut g, ex, 0, Some(Target::Permanent(inc[0])));
+    assert_eq!(
+        plus(&g, inc[0]),
+        3,
+        "transformed into a Phyrexian: +1 from the Inquisitor"
+    );
+    ready(&mut g, 0, catalog::tiller_of_flesh());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_targets(&mut g, bolt, &[Target::Permanent(bear)]);
+    assert_eq!(
+        named(&g, 0, "Incubator").len(),
+        1,
+        "a fresh Incubator from the Tiller"
+    );
+}
