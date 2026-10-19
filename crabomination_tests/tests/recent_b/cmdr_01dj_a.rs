@@ -1930,3 +1930,205 @@ fn tiger_shark_connives_and_slips_away() {
             .contains(&Keyword::Unblockable)
     );
 }
+
+// ── Four-gap decks of simple cards (`decks::cmdr_01dj_h`) ───────────────────
+
+/// Burning Sun's Avatar: 3 to an opponent and 3 to up to one creature.
+#[test]
+fn burning_suns_avatar_splits_its_entry() {
+    let mut g = pod(3);
+    let giant = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let a = g.add_card_to_hand(0, catalog::burning_suns_avatar());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Player(1)),
+        DecisionAnswer::Target(Target::Permanent(giant)),
+    ]));
+    cast_targets(&mut g, a, &[]);
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.battlefield_find(giant).is_none());
+}
+
+/// Rampaging Raptor redirects its combat damage to an opponent onto that
+/// player's planeswalker.
+#[test]
+fn rampaging_raptor_hits_the_walker_too() {
+    let mut g = pod(2);
+    let raptor = ready(&mut g, 0, catalog::rampaging_raptor());
+    let walker = g.add_card_to_battlefield(1, catalog::tibalt_rakish_instigator());
+    combat(
+        &mut g,
+        vec![Attack {
+            attacker: raptor,
+            target: AttackTarget::Player(1),
+        }],
+        vec![],
+    );
+    damage(&mut g);
+    assert_eq!(g.players[1].life, 16);
+    let loyalty = g.battlefield_find(walker).map_or(0, |c| {
+        c.counter_count(crabomination::card::CounterType::Loyalty)
+    });
+    assert_eq!(loyalty, 1, "Tibalt's 5 loyalty took the same 4");
+}
+
+/// The banding Knights: Kjeldoran Knight pumps itself; Icatian Infantry buys
+/// first strike and banding.
+#[test]
+fn kjeldoran_and_icatian_banding_abilities() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let k = ready(&mut g, 0, catalog::kjeldoran_knight());
+    let inf = ready(&mut g, 0, catalog::icatian_infantry());
+    flood(&mut g, 0);
+    activate_on(&mut g, k, 0, None);
+    activate_on(&mut g, k, 1, None);
+    let cp = g.computed_permanent(k).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3));
+    assert!(cp.keywords().contains(&Keyword::Banding));
+    activate_on(&mut g, inf, 0, None);
+    activate_on(&mut g, inf, 1, None);
+    let cp = g.computed_permanent(inf).unwrap();
+    assert!(
+        cp.keywords().contains(&Keyword::FirstStrike) && cp.keywords().contains(&Keyword::Banding)
+    );
+}
+
+/// Experimental Armor and Furious Strength dress a creature: +3/+3, flying,
+/// haste, menace.
+#[test]
+fn armor_and_furious_strength_stack() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let armor = g.add_card_to_battlefield(0, catalog::experimental_armor());
+    g.battlefield_find_mut(armor).unwrap().attached_to = Some(bear);
+    let fs = g.add_card_to_hand(0, catalog::furious_strength());
+    cast_targets(&mut g, fs, &[Target::Permanent(bear)]);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    for k in [Keyword::Flying, Keyword::Haste, Keyword::Menace] {
+        assert!(cp.keywords().contains(&k), "{k:?}");
+    }
+}
+
+/// Living Lightning hastes another creature at your beginning of combat;
+/// Sif's Spearmaster taps to hit an opponent for its power.
+#[test]
+fn living_lightning_and_spearmaster() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::living_lightning_charged_up());
+    let sif = g.add_card_to_battlefield(0, catalog::sifs_spearmaster());
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).ok();
+    }
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(sif).unwrap();
+    assert_eq!(cp.power, 2);
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    activate_on(&mut g, sif, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Foe-liage grows when any land enters during your turn, not on another
+/// player's turn.
+#[test]
+fn foe_liage_grows_on_your_turn_lands() {
+    let mut g = pod(2);
+    let f = ready(&mut g, 0, catalog::foe_liage());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, f), 1);
+    g.active_player_idx = 1;
+    let theirs = g.add_card_to_hand(1, catalog::forest());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::PlayLand(theirs))
+        .expect("their land");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, f), 1);
+}
+
+/// Accelerated Evolution: +2/+2 and hexproof until end of turn.
+#[test]
+fn accelerated_evolution_shields_on_entry() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ae = g.add_card_to_hand(0, catalog::accelerated_evolution());
+    cast_targets(&mut g, ae, &[Target::Permanent(bear)]);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&Keyword::Hexproof));
+}
+
+/// Beast Mode: +2/+2 and trample; with teamwork also a +1/+1 counter.
+#[test]
+fn beast_mode_counter_needs_teamwork() {
+    for team in [false, true] {
+        let mut g = pod(2);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        ready(&mut g, 0, catalog::llanowar_elves());
+        let s = g.add_card_to_hand(0, catalog::beast_mode());
+        flood(&mut g, 0);
+        let (card_id, target, additional_targets, mode, x_value) =
+            (s, Some(Target::Permanent(bear)), vec![], None, None);
+        g.perform_action(if team {
+            GameAction::CastSpellKicked {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            }
+        } else {
+            GameAction::CastSpell {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            }
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(plus(&g, bear), u32::from(team));
+        assert_eq!(power(&g, bear), 4 + i32::from(team));
+    }
+}
+
+/// Molten Lavamancer makes one Elemental a turn for noncombat damage to
+/// opponents on your turn.
+#[test]
+fn molten_lavamancer_once_a_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::molten_lavamancer());
+    for _ in 0..2 {
+        let b = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast_targets(&mut g, b, &[Target::Player(1)]);
+    }
+    assert_eq!(named(&g, 0, "Elemental").len(), 1);
+}
+
+/// Weaver of Lightning pings an opponent's creature per instant or sorcery.
+#[test]
+fn weaver_of_lightning_pings() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::weaver_of_lightning());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let b = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_targets(&mut g, b, &[Target::Player(1)]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(elf).is_none());
+}
+
+/// Mjölnir's Might: 4 to a player and an impulse card.
+#[test]
+fn mjolnirs_might_burns_and_impulses() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::mjolnirs_might());
+    cast_targets(&mut g, s, &[Target::Player(1)]);
+    assert_eq!(g.players[1].life, 16);
+    assert_eq!(g.exile.len(), 1);
+}
