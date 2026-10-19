@@ -2274,3 +2274,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Floodchaser | "target land becomes an Island until end of turn" adds Island instead of replacing its land types (the attack gate reads the type; the land keeps its own mana ability) | `Effect::GainLandType` |
 | 🟡 Magical Hack | the basic-land-type text change can target a permanent only, not a spell on the stack | `Effect::ReplaceBasicLandType` |
 | 🟡 Bloodfeather Phoenix | only an instant or sorcery's damage to an *opponent* returns it — damage to a battle doesn't | `FromYourGraveyardSourceDamagedOpponent` + `dealt_by` |
+| 🟡 Curse of Shaken Faith | "or copies a spell" doesn't trigger it — only a cast after the first | `SpellCast` + `SpellsCastThisTurnEquals` |
+| 🟡 Curse of Surveillance | "any number of target players other than that player" is only you | `Draw { who: You }` |
+| 🟡 Accursed Witch // Infectious Curse | the Witch's {1} discount also reaches your own spells targeting it; Infectious Curse's "spells you cast that target enchanted player cost {1} less" is not modelled | `CostReductionForYourSpellsTargetingThis { any_caster: true }` |
+| 🟡 The Unluckiest Planeswalker | the +1's Gremlin rides your next Aura spell this turn, not the spending of that specific mana | `OnYourNextSpellMatchingThisTurn` |

@@ -18091,6 +18091,18 @@ static DECKS: &[Factory] = &[
     super::decks::false_mourning,
     super::decks::riding_the_dilu_horse,
     super::decks::wielding_the_green_dragon,
+    super::decks::curse_of_thirst,
+    super::decks::curse_of_obsession,
+    super::decks::curse_of_shaken_faith,
+    super::decks::curse_of_surveillance,
+    super::decks::torment_of_scarabs,
+    super::decks::curse_of_echoes,
+    super::decks::curse_of_silence,
+    super::decks::curse_of_misfortunes,
+    super::decks::bitterheart_witch,
+    super::decks::accursed_witch,
+    super::decks::lynde_cheerful_tormentor,
+    super::decks::the_unluckiest_planeswalker,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1463,3 +1463,205 @@ fn false_mourning_stacks_the_top() {
     cast(&mut g, s, Some(Target::Permanent(bear))).expect("mourning");
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(bear));
 }
+
+// ── The Unluckiest Planeswalker / Lynde (`decks::cmdr_016x_n`) ──────────────
+
+/// A Curse of `seat_from`'s on the battlefield enchanting `on`.
+fn curse_on(g: &mut GameState, seat_from: usize, def: crabomination::card::CardDefinition, on: usize) -> CardId {
+    let id = g.add_card_to_battlefield(seat_from, def);
+    g.battlefield_find_mut(id).unwrap().attached_to_player = Some(on);
+    id
+}
+
+/// CR 303.4 — Curse of Thirst counts every Curse attached to the player.
+#[test]
+fn curse_of_thirst_counts_the_curses_on_its_player() {
+    let mut g = pod(2);
+    curse_on(&mut g, 0, catalog::curse_of_thirst(), 1);
+    curse_on(&mut g, 0, catalog::torment_of_scarabs(), 1);
+    let life = g.players[1].life;
+    pass_to(&mut g, TurnStep::Upkeep);
+    assert_eq!(g.active_player_idx, 1);
+    drain_stack(&mut g);
+    // Thirst deals 2; Scarabs (no hand, no nonland permanent) takes 3.
+    assert_eq!(g.players[1].life, life - 2 - 3);
+}
+
+/// Curse of Shaken Faith punishes the enchanted player's second spell, not
+/// the first.
+#[test]
+fn curse_of_shaken_faith_hits_the_second_spell() {
+    let mut g = pod(2);
+    curse_on(&mut g, 0, catalog::curse_of_shaken_faith(), 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    flood(&mut g, 1);
+    let a = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let b = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, a, Some(Target::Player(0))).expect("first");
+    assert_eq!(g.players[1].life, 20);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, b, Some(Target::Player(0))).expect("second");
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// CR 707.10c — Curse of Echoes: the other player copies the enchanted
+/// player's instant and aims it back.
+#[test]
+fn curse_of_echoes_turns_a_bolt_around() {
+    let mut g = pod(2);
+    curse_on(&mut g, 0, catalog::curse_of_echoes(), 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    flood(&mut g, 1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(0))).expect("bolt");
+    assert_eq!(g.players[0].life, 17);
+    assert_eq!(g.players[1].life, 17, "seat 0's copy hits back");
+}
+
+/// CR 601.2f — Curse of Silence taxes the named spell for its player only.
+#[test]
+fn curse_of_silence_taxes_the_named_spell() {
+    let mut g = pod(2);
+    let cs = curse_on(&mut g, 0, catalog::curse_of_silence(), 1);
+    g.battlefield_find_mut(cs).unwrap().named_card = Some("Lightning Bolt".into());
+    let mine = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, mine, Some(Target::Player(1))).expect("the curser pays no tax");
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let theirs = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, theirs, Some(Target::Player(0))).is_err(), "{{R}} + {{2}}");
+    g.players[1].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    cast(&mut g, theirs, Some(Target::Player(0))).expect("taxed");
+    assert!(g.battlefield_find(cs).is_none(), "sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew");
+}
+
+/// CR 303.4f — Curse of Misfortunes fetches a differently named Curse onto
+/// its player at your upkeep.
+#[test]
+fn curse_of_misfortunes_fetches_another_curse() {
+    let mut g = pod(2);
+    curse_on(&mut g, 0, catalog::curse_of_misfortunes(), 1);
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::curse_of_misfortunes());
+    let thirst = g.add_card_to_library(0, catalog::curse_of_thirst());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Untap;
+    pass_to(&mut g, TurnStep::Upkeep);
+    assert_eq!(g.active_player_idx, 0);
+    drain_stack(&mut g);
+    let t = g.battlefield_find(thirst).expect("Thirst fetched, not a second Misfortunes");
+    assert_eq!(t.attached_to_player, Some(1));
+}
+
+/// Accursed Witch returns as Infectious Curse on an opponent, which drains
+/// at their upkeep.
+#[test]
+fn accursed_witch_returns_as_infectious_curse() {
+    let mut g = pod(2);
+    let witch = ready(&mut g, 0, catalog::accursed_witch());
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(witch)];
+    g.resolve_effect(&kill, &ctx).unwrap();
+    drain_stack(&mut g);
+    let c = g.battlefield_find(witch).expect("back");
+    assert_eq!(c.definition.name, "Infectious Curse");
+    assert_eq!(c.attached_to_player, Some(1));
+    pass_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (21, 19));
+}
+
+/// Bitterheart Witch dying fetches a Curse onto an opponent.
+#[test]
+fn bitterheart_witch_fetches_a_curse() {
+    let mut g = pod(2);
+    let witch = ready(&mut g, 0, catalog::bitterheart_witch());
+    let thirst = g.add_card_to_library(0, catalog::curse_of_thirst());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(witch)];
+    g.resolve_effect(&kill, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(thirst).map(|c| c.attached_to_player), Some(Some(1)));
+}
+
+/// Lynde: a Curse of yours dying returns attached to you at the end step;
+/// at your upkeep it moves to an opponent and you draw two.
+#[test]
+fn lynde_recycles_her_curses() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::lynde_cheerful_tormentor());
+    let thirst = curse_on(&mut g, 0, catalog::curse_of_thirst(), 1);
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(thirst)];
+    g.resolve_effect(&kill, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thirst).is_none());
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(thirst).map(|c| c.attached_to_player), Some(Some(0)), "back, on Lynde's player");
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let move_it = crabomination::effect::Effect::ReattachPlayerAurasToOpponents {
+        from: crabomination::effect::PlayerRef::You,
+        filter: crabomination::card::SelectionRequirement::Any,
+        all: false,
+        then: Some(Box::new(crabomination::effect::Effect::Draw {
+            who: crabomination::effect::Selector::You,
+            amount: crabomination::card::Value::Const(2),
+        })),
+    };
+    g.resolve_effect(&move_it, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert_eq!(g.battlefield_find(thirst).map(|c| c.attached_to_player), Some(Some(1)));
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// The Unluckiest Planeswalker's −3 refills off your Auras and ships the
+/// ones on you to an opponent.
+#[test]
+fn unluckiest_planeswalker_ships_its_curses() {
+    let mut g = pod(2);
+    let pw = ready(&mut g, 0, catalog::the_unluckiest_planeswalker());
+    let thirst = curse_on(&mut g, 0, catalog::curse_of_thirst(), 0);
+    curse_on(&mut g, 0, catalog::curse_of_obsession(), 1);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw,
+        ability_index: 1,
+        target: None,
+        x_value: None,
+    })
+    .expect("-3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 4, "two Auras: four cards");
+    assert_eq!(g.battlefield_find(thirst).map(|c| c.attached_to_player), Some(Some(1)));
+}
+
+/// CR 903.4 Rulebreaker — The Unluckiest Planeswalker's deck may hold Aura
+/// cards outside its color identity.
+#[test]
+fn unluckiest_planeswalker_rulebreaker_admits_offcolor_auras() {
+    use crabomination::format::Deck;
+    let mut main: Vec<crabomination::card::CardDefinition> = vec![catalog::curse_of_echoes()];
+    while main.len() < 99 {
+        main.push(catalog::mountain());
+    }
+    let deck = Deck { commanders: vec![catalog::the_unluckiest_planeswalker()], main, sideboard: vec![] };
+    assert!(crabomination::format::validate_commander_deck(&deck).is_ok());
+    let mut bad = deck.clone();
+    bad.main[0] = catalog::counterspell();
+    assert!(crabomination::format::validate_commander_deck(&bad).is_err(), "a blue non-Aura stays out");
+}
