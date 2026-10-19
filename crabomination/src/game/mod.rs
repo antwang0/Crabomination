@@ -24917,7 +24917,7 @@ impl GameState {
     pub fn apply_soulbond_pairing(&mut self, entered: CardId) {
         use crate::card::Keyword;
         let Some(card) = self.battlefield_find(entered) else { return };
-        if !self.computed_is_creature(card) || card.soulbond_partner.is_some() {
+        if card.soulbond_partner.is_some() {
             return;
         }
         let controller = card.controller;
@@ -24928,6 +24928,23 @@ impl GameState {
         // no Soulbond on the entering creature means no partner exists, on
         // every board that does not play the mechanic (PERF `(-327)`).
         if !entered_has_soulbond && !self.battlefield.has_gate_keyword() {
+            return;
+        }
+        // The lane is shared with other keywords, so on a board it can't settle
+        // ask the printed walk exactly before any `computed_is_creature` gather:
+        // a doubled Food board spent half its time on this pairing check, one
+        // gather per permanent per token entry (4-seat sweep seed 925292).
+        if !entered_has_soulbond
+            && !self.battlefield.iter().any(|c| {
+                c.id != entered
+                    && c.controller == controller
+                    && c.soulbond_partner.is_none()
+                    && c.definition.keywords.has_kw(&Keyword::Soulbond)
+            })
+        {
+            return;
+        }
+        if !self.computed_is_creature(card) {
             return;
         }
         let partner = self

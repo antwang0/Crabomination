@@ -20078,6 +20078,27 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-10-19 — a near-cap Commander board gathers O(n²) per token mint
+
+Commander-only. 4-seat pod `--pod-decks 2508,456,1112,2678 --seed 925292`
+(Food deck: Academy Manufactor, Second Harvest, Nuka-Cola + Trail of Crumbs),
+overflow audit build, 2 games:
+
+```
+tip                                    2,536 s   (game 1: board cap at 3,769 actions, both runs)
++ loop probes off past 256 permanents    892 s
++ exact Soulbond precheck                670 s   (same 3,769 actions)
+```
+
+What is left (36 gdb samples): `mint_token_with_counters` →
+`apply_matching_enters_with` → `computed_permanent` → a full gather on the
+just-grown board, whose `evaluate_value` walks a board-counting selector with
+`requirement_on_permanent` → `computed_permanent` per permanent: O(n) gathers
+of O(n) each per mint, ~100 s a main-phase decision at ~900 permanents.
+Candidate: answer an enters-with requirement off printed characteristics when
+no layer-4 effect can touch the token, or memoise the counted selector across
+one gather.
+
 ### 2026-10-17 — `loop_hazard::sets_up_loop` is half of a Bard the Bowman pod
 
 Commander-only (two-player play never probes). Seat 3616 (Bard the Bowman) in a
