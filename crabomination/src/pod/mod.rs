@@ -26766,6 +26766,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BELUNA_GRANDSQUALL_COMMANDERS,
             main: decks::BELUNA_GRANDSQUALL_MAIN,
         },
+        // Seat 4386: Syrix, Carrier of the Flame's EDHREC average deck. `--pod-decks 4386`.
+        PodDeck {
+            name: "Syrix, Carrier of the Flame (BR)",
+            commanders: decks::SYRIX_COMMANDERS,
+            main: decks::SYRIX_MAIN,
+        },
     ]
 }
 
@@ -33052,6 +33058,7 @@ mod tests {
             ("War Machine, James Rhodes", &[0x1B35]),
             ("Zhou Yu, Chief Commander", &[0x1B36]),
             ("Beluna Grandsquall", &[0x1B37]),
+            ("Syrix, Carrier of the Flame", &[0x1B38]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

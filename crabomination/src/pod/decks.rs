@@ -123029,3 +123029,31 @@ pub const BELUNA_GRANDSQUALL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
     island, island, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const SYRIX_COMMANDERS: &[CardFactory] = &[syrix_carrier_of_the_flame];
+
+/// **Syrix, Carrier of the Flame**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 14 Mountains + 9 Swamps = 99.
+/// Syrix, Carrier of the Flame (EDHREC, fetched 2026-10-19).
+pub const SYRIX_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, desecrated_tomb, hazorets_monument, heralds_horn,
+    patchwork_banner, pyre_of_heroes, rakdos_signet, ruby_medallion, sol_ring,
+    talisman_of_indulgence, blood_crypt, bojuka_bog, command_tower, dragonskull_summit,
+    foreboding_ruins, haunted_ridge, luxury_suite, myriad_landscape, path_of_ancestry,
+    rakdos_carnarium, shadowblood_ridge, smoldering_marsh, tainted_peak, temple_of_malice,
+    akoum_firebird, ashcloud_phoenix, bloodfeather_phoenix, chainer_nightmare_adept,
+    chandras_phoenix, darklight_phoenix, detectives_phoenix, everquill_phoenix,
+    firewing_phoenix, flame_wreathed_phoenix, flamewake_phoenix, flayer_of_the_hatebound,
+    immortal_phoenix, kuldotha_phoenix, lamplight_phoenix, lightning_phoenix, magma_phoenix,
+    nemesis_phoenix, phoenix_chick, phoenix_of_ash, rekindling_phoenix, shard_phoenix,
+    skarrgan_firebird, skyfire_phoenix, sunstreak_phoenix, syr_konrad_the_grim, warcry_phoenix,
+    descendants_fury, molten_echoes, sunbirds_invocation, thran_vigil, tortured_existence,
+    warstorm_surge, bedevil, big_score, chaos_warp, corrupted_conviction, deadly_dispute,
+    magmaquake, rakdos_charm, terminate, thrill_of_possibility, village_rites, blasphemous_act,
+    buried_alive, earthquake, faithless_looting, feed_the_swarm, patriarchs_bidding,
+    vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
