@@ -2162,6 +2162,9 @@ pub(crate) fn requirement_matches_card_typed(
         // abilities"): this walker answered false for both leaves.
         R::HasActivatedAbility => def.has_activated_ability(),
         R::HasEmbalmOrEternalize => def.has_embalm_or_eternalize(),
+        // CR 715.1 — "a card that has an Adventure" among milled/revealed
+        // cards (Seek Thrills): this walker answered false.
+        R::HasAdventure => def.adventure.is_some(),
         R::HasNonManaActivatedAbility => {
             def.activated_abilities.iter().any(|a| !crate::game::actions::is_mana_ability(&a.effect))
         }

@@ -2195,8 +2195,16 @@ impl GameState {
         // are copied; converge is not (a copy has no mana spent: 0).
         let (orig_card_def, orig_caster, target, additional_targets, mode, x_value, choices) =
             if let StackItem::Spell { card, caster, target, additional_targets, mode, x_value, .. } = &self.stack[idx] {
+                // CR 707.2 / 715.3b — a spell cast as its Adventure (or Omen)
+                // has only that half's characteristics, and so does its copy:
+                // the main face's definition resolved the copy as a token
+                // creature (Gorion copying Stomp made a Bonecrusher Giant).
+                let def = match card.casting_alt_half().then(|| card.face_view(true)).flatten() {
+                    Some(face) => face.definition.arc(),
+                    None => card.definition.arc(),
+                };
                 (
-                    card.definition.arc(),
+                    def,
                     *caster,
                     target.clone(),
                     additional_targets.clone(),
