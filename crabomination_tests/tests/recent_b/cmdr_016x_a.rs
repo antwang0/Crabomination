@@ -1036,3 +1036,59 @@ fn teyo_grants_deathtouch_and_a_counter() {
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert!(g.permanent_has_keyword(target, &Keyword::Deathtouch));
 }
+
+// ── Zhou Yu, Chief Commander (`decks::cmdr_016x_j`) ─────────────────────────
+
+/// CR 508.1c — Wu Warship can't attack a player with no Island; CR 305.7 —
+/// Phantasmal Terrain (Island chosen) makes the defender's Forest an Island,
+/// and then it can.
+#[test]
+fn phantasmal_terrain_opens_the_island_gate() {
+    let mut g = pod(2);
+    let forest = ready(&mut g, 1, catalog::forest());
+    let ship = ready(&mut g, 0, catalog::wu_warship());
+    g.step = TurnStep::DeclareAttackers;
+    let atk = |ship| {
+        GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+            attacker: ship,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        }])
+    };
+    assert!(g.perform_action(atk(ship)).is_err(), "no Island: can't attack");
+    g.step = TurnStep::PreCombatMain;
+    let pt = g.add_card_to_hand(0, catalog::phantasmal_terrain());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    cast(&mut g, pt, Some(Target::Permanent(forest))).expect("terrain");
+    assert_eq!(g.battlefield_find(pt).unwrap().attached_to, Some(forest));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(atk(ship)).expect("the Forest is an Island now");
+}
+
+/// Floodchaser enters with six +1/+1 counters; {U}, remove one: target land
+/// is an Island this turn, opening its own gate.
+#[test]
+fn floodchaser_floods_a_land() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let forest = ready(&mut g, 1, catalog::forest());
+    let fc = g.add_card_to_hand(0, catalog::floodchaser());
+    flood(&mut g, 0);
+    cast(&mut g, fc, None).expect("floodchaser");
+    g.clear_sickness(fc);
+    assert_eq!(g.battlefield_find(fc).unwrap().counter_count(CounterType::PlusOnePlusOne), 6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fc,
+        ability_index: 0,
+        target: Some(Target::Permanent(forest)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("flood");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(fc).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
+    attack(&mut g, fc, 1);
+    assert!(g.attacking.iter().any(|a| a.attacker == fc));
+}

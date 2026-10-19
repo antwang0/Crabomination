@@ -2271,3 +2271,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Werewolf Ransacker | the 3 damage goes to the destroyed artifact's owner (its last controller in almost every game) | `OwnerOf(Target(0))` |
 | 🟡 Taster of Wares | a headless revealer shows the cards it would discard first (its own choice of which X); "for as long as you control this creature" lasts while it is on the battlefield | `RevealFromHandExileChosen` + `WhileSourceOnBattlefield` |
 | 🟡 Noctis, Heir Apparent | warp-strike's return is a delayed trigger read off its activator's next declaration, not its owner's when they differ | `DelayedKind::PlayersNextDeclareAttackers` |
+| 🟡 Floodchaser | "target land becomes an Island until end of turn" adds Island instead of replacing its land types (the attack gate reads the type; the land keeps its own mana ability) | `Effect::GainLandType` |
+| 🟡 Magical Hack | the basic-land-type text change can target a permanent only, not a spell on the stack | `Effect::ReplaceBasicLandType` |

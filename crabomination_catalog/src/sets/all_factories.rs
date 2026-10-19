@@ -18065,6 +18065,11 @@ static DECKS: &[Factory] = &[
     super::decks::coat_with_venom,
     super::decks::scarblades_malice,
     super::decks::simulacrum,
+    super::decks::zhou_yu_chief_commander,
+    super::decks::wu_warship,
+    super::decks::floodchaser,
+    super::decks::phantasmal_terrain,
+    super::decks::magical_hack,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
