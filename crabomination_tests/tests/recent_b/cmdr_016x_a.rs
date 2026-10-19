@@ -890,3 +890,60 @@ fn stitched_mangler_freezes_a_creature() {
     assert!(g.battlefield_find(bear).unwrap().tapped);
     assert!(g.battlefield_find(sm).unwrap().tapped, "enters tapped");
 }
+
+// ── Tesak, Zhang He (`decks::cmdr_016x_g`) ──────────────────────────────────
+
+/// Ashmouth Hound blocked by a 1-toughness creature kills it before combat
+/// damage (the trigger resolves in the declare-blockers step).
+#[test]
+fn ashmouth_hound_pings_its_blocker() {
+    let mut g = pod(2);
+    let ah = ready(&mut g, 0, catalog::ashmouth_hound());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    attack(&mut g, ah, 1);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(elf, ah)])).expect("block");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(elf).is_none());
+    assert!(g.battlefield_find(ah).is_some(), "the elf died before dealing damage");
+}
+
+/// Wei Assassins: the targeted opponent picks which of their creatures dies.
+#[test]
+fn wei_assassins_destroys_the_opponents_pick() {
+    let mut g = pod(3);
+    let small = ready(&mut g, 2, catalog::llanowar_elves());
+    let big = ready(&mut g, 2, catalog::hill_giant());
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    let wa = g.add_card_to_hand(0, catalog::wei_assassins());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: wa, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let died = [small, big].iter().filter(|id| g.battlefield_find(**id).is_none()).count()
+        + usize::from(g.battlefield_find(other).is_none());
+    assert_eq!(died, 1, "exactly one opposing creature is destroyed");
+}
+
+/// CR 603.4 — Nightsquad Commando's Soldier needs an attack this turn.
+#[test]
+fn nightsquad_commando_needs_an_attack() {
+    for attacked in [false, true] {
+        let mut g = pod(2);
+        if attacked {
+            let bear = ready(&mut g, 0, catalog::grizzly_bears());
+            attack(&mut g, bear, 1);
+            g.perform_action(GameAction::DeclareBlockers(vec![])).ok();
+            pass_to(&mut g, TurnStep::PostCombatMain);
+            drain_stack(&mut g);
+        }
+        let nc = g.add_card_to_hand(0, catalog::nightsquad_commando());
+        flood(&mut g, 0);
+        g.priority.player_with_priority = 0;
+        cast(&mut g, nc, None).expect("cast");
+        let made = g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Human Soldier");
+        assert_eq!(made, attacked);
+    }
+}
