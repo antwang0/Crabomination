@@ -42554,14 +42554,19 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SacrificeAtNextEndStep { what } => {
+            Effect::SacrificeAtNextEndStep { what } | Effect::DestroyAtNextEndStep { what } => {
+                let delayed = if matches!(effect, Effect::DestroyAtNextEndStep { .. }) {
+                    Effect::Destroy { what: Selector::This }
+                } else {
+                    Effect::SacrificeSource
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: id,
                         kind: crate::game::types::DelayedKind::NextEndStep,
-                        effect: Effect::SacrificeSource,
+                        effect: delayed.clone(),
                         target: None,
                         bound_token: None,
                         bound_subject: None,

@@ -7311,6 +7311,10 @@ pub enum Effect {
     /// selector is resolved now; each hit gets its own CR 603.7a delayed
     /// trigger.
     SacrificeAtNextEndStep { what: Selector },
+    /// "Destroy it at the beginning of the next end step" (Old Hob, Alleycat
+    /// Blues' Mutant) — the destroy twin of `SacrificeAtNextEndStep`, so an
+    /// indestructible object survives it.
+    DestroyAtNextEndStep { what: Selector },
     /// "Return that creature to its owner's hand at the beginning of the next
     /// end step" — a per-permanent delayed return (Zara, Renegade
     /// Recruiter), the hand-bound sibling of `SacrificeAtNextEndStep`.

@@ -1237,6 +1237,7 @@ impl Effect {
             Effect::SacrificeAtNextUpkeep { what }
             | Effect::ExileAtYourNextUpkeep { what }
             | Effect::SacrificeAtNextEndStep { what }
+            | Effect::DestroyAtNextEndStep { what }
             | Effect::ReturnToOwnersHandAtNextEndStep { what } => sel_has_target(what),
             Effect::ExileAtNextEndStep { what }
             | Effect::AssignsNoCombatDamageThisTurn { what } => sel_has_target(what),
