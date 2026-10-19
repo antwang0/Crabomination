@@ -18103,6 +18103,16 @@ static DECKS: &[Factory] = &[
     super::decks::accursed_witch,
     super::decks::lynde_cheerful_tormentor,
     super::decks::the_unluckiest_planeswalker,
+    super::decks::narfi_betrayer_king,
+    super::decks::icebind_pillar,
+    super::decks::shimmerdrift_vale,
+    super::decks::frostwalk_bastion,
+    super::decks::frost_augur,
+    super::decks::grim_draugr,
+    super::decks::priest_of_the_haunted_edge,
+    super::decks::rimebound_dead,
+    super::decks::winters_rest,
+    super::decks::dead_of_winter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

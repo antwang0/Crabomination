@@ -1665,3 +1665,102 @@ fn unluckiest_planeswalker_rulebreaker_admits_offcolor_auras() {
     bad.main[0] = catalog::counterspell();
     assert!(crabomination::format::validate_commander_deck(&bad).is_err(), "a blue non-Aura stays out");
 }
+
+// ── Narfi, Betrayer King (`decks::cmdr_016x_o`) ─────────────────────────────
+
+/// Narfi pumps other snow and Zombie creatures you control.
+#[test]
+fn narfi_pumps_snow_and_zombies() {
+    let mut g = pod(2);
+    let narfi = ready(&mut g, 0, catalog::narfi_betrayer_king());
+    let draugr = ready(&mut g, 0, catalog::grim_draugr());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(draugr).unwrap().power, 4);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
+    assert_eq!(g.computed_permanent(narfi).unwrap().power, 4, "other");
+}
+
+/// CR 107.4h — Narfi's {S}{S}{S} needs mana from snow sources: three
+/// Swamps can't pay it, three Snow-Covered Swamps can.
+#[test]
+fn narfi_returns_for_snow_mana_only() {
+    let mut g = pod(2);
+    let narfi = g.add_card_to_graveyard(0, catalog::narfi_betrayer_king());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::swamp());
+    }
+    assert!(activate(&mut g, narfi).is_err(), "plain Swamps aren't snow");
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::snow_covered_swamp());
+    }
+    activate(&mut g, narfi).expect("snow mana");
+    let n = g.battlefield_find(narfi).expect("returned");
+    assert!(n.tapped);
+}
+
+/// Dead of Winter shrinks nonsnow creatures by the snow permanents you
+/// control and spares snow ones.
+#[test]
+fn dead_of_winter_spares_snow_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::snow_covered_swamp());
+    let draugr = ready(&mut g, 0, catalog::grim_draugr());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::dead_of_winter());
+    flood(&mut g, 0);
+    cast(&mut g, s, None).expect("dead of winter");
+    assert!(g.battlefield_find(bear).is_none(), "-2/-2");
+    assert_eq!(g.computed_permanent(draugr).unwrap().power, 3, "snow: untouched");
+}
+
+/// CR 502.3 — Winter's Rest keeps its creature tapped while you control
+/// another snow permanent.
+#[test]
+fn winters_rest_holds_the_creature_down() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::snow_covered_island());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let wr = g.add_card_to_hand(0, catalog::winters_rest());
+    flood(&mut g, 0);
+    cast(&mut g, wr, Some(Target::Permanent(bear))).expect("rest");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "tapped as it enters");
+    pass_to(&mut g, TurnStep::Upkeep);
+    assert_eq!(g.active_player_idx, 1);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "no untap");
+}
+
+/// Frost Augur takes a snow card off the top, not a nonsnow one.
+#[test]
+fn frost_augur_finds_snow() {
+    let mut g = pod(2);
+    let augur = ready(&mut g, 0, catalog::frost_augur());
+    ready(&mut g, 0, catalog::snow_covered_island());
+    g.players[0].library.clear();
+    let sw = g.add_card_to_library(0, catalog::snow_covered_swamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, augur).expect("augur");
+    assert!(g.players[0].hand.iter().any(|c| c.id == sw));
+}
+
+/// Priest of the Haunted Edge: -X/-X, X the snow lands you control.
+#[test]
+fn priest_of_the_haunted_edge_counts_snow_lands() {
+    let mut g = pod(2);
+    let priest = ready(&mut g, 0, catalog::priest_of_the_haunted_edge());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::snow_covered_swamp());
+    }
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: priest,
+        ability_index: 0,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("priest");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "-3/-3 kills the 3/3");
+}
+

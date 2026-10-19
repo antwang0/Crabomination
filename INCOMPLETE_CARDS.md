@@ -2278,3 +2278,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Curse of Surveillance | "any number of target players other than that player" is only you | `Draw { who: You }` |
 | 🟡 Accursed Witch // Infectious Curse | the Witch's {1} discount also reaches your own spells targeting it; Infectious Curse's "spells you cast that target enchanted player cost {1} less" is not modelled | `CostReductionForYourSpellsTargetingThis { any_caster: true }` |
 | 🟡 The Unluckiest Planeswalker | the +1's Gremlin rides your next Aura spell this turn, not the spending of that specific mana | `OnYourNextSpellMatchingThisTurn` |
+| 🟡 Frostwalk Bastion | its {1}{S} animation makes a 2/3 Construct creature land but not an *artifact* | `Effect::BecomeCreature` |
