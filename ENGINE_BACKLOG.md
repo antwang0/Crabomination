@@ -245,6 +245,8 @@ the handoff.
 - **Audit sweeps** (`RUSTFLAGS=-C debug-assertions=yes`, `overflow`, `scripts/pod_sweep.py --classify`):
   seed 9258 over seats 4228-4366 at 4/6/8 seats, 1,540 games, 0 bad; seed 9259 over 4000-4366 at 3/5/7,
   5,000 games, one undecided — a CR 104.4a draw (Descent into Avernus, all three seats at or below 0).
+- **Precon seat test** (`cr_903_5a_the_official_precon_seats_play_pod_games`, `--cargo-profile overflow`,
+  `CRAB_SEAT_SHARD=0/2` then `1/2`): every seat through 4377 plays its pod game — 221 s + 224 s, both pass.
   ⚠ **Whtz, the Bibliophile** reads zero-gap but its EDHREC average lists 254 cards — never seat it.
   **Sygg, Wanderwine Wisdom** has no printed text in the oracle dump yet, so both Sygg decks stay open.
 - **Primitives:** `WardCost::ManaOrDiscard` (Titania); `CreatureType::Camarid`; `DiscardChosenFromRevealed
