@@ -26388,6 +26388,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BUCKY_BARNES_COMMANDERS,
             main: decks::BUCKY_BARNES_MAIN,
         },
+        // Seat 4323: Kytheon, Hero of Akros's EDHREC average deck. `--pod-decks 4323`.
+        PodDeck {
+            name: "Kytheon, Hero of Akros (W)",
+            commanders: decks::KYTHEON_COMMANDERS,
+            main: decks::KYTHEON_MAIN,
+        },
+        // Seat 4324: Klaw, Sonic Subjugator's EDHREC average deck. `--pod-decks 4324`.
+        PodDeck {
+            name: "Klaw, Sonic Subjugator (B)",
+            commanders: decks::KLAW_2_COMMANDERS,
+            main: decks::KLAW_2_MAIN,
+        },
     ]
 }
 
@@ -32611,6 +32623,8 @@ mod tests {
             ("Óin the Brave", &[0x1AF6]),
             ("Lin Sivvi, Defiant Hero", &[0x1AF7]),
             ("Bucky Barnes, Eager Ally", &[0x1AF8]),
+            ("Kytheon, Hero of Akros", &[0x1AF9]),
+            ("Klaw, Sonic Subjugator", &[0x1AFA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

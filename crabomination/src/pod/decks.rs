@@ -121263,3 +121263,61 @@ pub const BUCKY_BARNES_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const KYTHEON_COMMANDERS: &[CardFactory] = &[kytheon_hero_of_akros];
+
+/// **Kytheon, Hero of Akros**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Kytheon, Hero of Akros (EDHREC, fetched 2026-10-19).
+pub const KYTHEON_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, gatewatch_beacon, gideons_memorial, luxior_giadas_gift,
+    oketras_monument, pearl_medallion, sol_ring, the_chain_veil, castle_ardenvale,
+    emeria_the_sky_ruin, karns_bastion, minas_tirith, myriad_landscape, nykthos_shrine_to_nyx,
+    war_room, windbrisk_heights, archetype_of_courage, baird_steward_of_argive,
+    captain_of_the_watch, defiler_of_faith, djeru_with_eyes_open, esper_sentinel,
+    gideons_avenger, gideons_company, gideons_lawkeeper, keeper_of_the_accord,
+    knight_of_the_white_orchid, kytheons_irregulars, laezel_vlaakiths_champion,
+    mangara_the_diplomat, mentor_of_the_meek, myrel_shield_of_argive, odric_master_tactician,
+    onakke_oathkeeper, precinct_captain, reverent_hoplite, sun_titan, thalia_heretic_cathar,
+    valiant_veteran, deification, elspeths_talent, gideons_intervention, gideons_resolve,
+    land_tax, oath_of_gideon, shielded_by_faith, true_conviction, worship, generous_gift,
+    gideons_phalanx, gideons_reproach, gideons_sacrifice, gideons_triumph, ignite_the_beacon,
+    loyal_tutor, path_to_exile, swords_to_plowshares, elspeth_suns_champion, gideon_blackblade,
+    gideon_jura, gideon_of_the_trials, gideon_ally_of_zendikar, gideon_champion_of_justice,
+    gideon_martial_paragon, gideon_the_oathsworn, call_the_gatewatch, collective_effort,
+    deploy_the_gatewatch, gideons_battle_cry, martial_coup, tragic_arrogance,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const KLAW_2_COMMANDERS: &[CardFactory] = &[klaw_sonic_subjugator];
+
+/// **Klaw, Sonic Subjugator**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 14 Swamps = 99.
+/// Klaw, Sonic Subjugator (EDHREC, fetched 2026-10-19).
+pub const KLAW_2_MAIN: &[CardFactory] = &[
+    cauldron_of_souls, cranial_archive, erratic_portal, ghoulcallers_bell,
+    masterwork_of_ingenuity, nim_deathmantle, panharmonicon, patchwork_banner, prototype_portal,
+    sculpting_steel, sol_ring, throne_of_eldraine, travelers_amulet, vat_of_rebirth,
+    wishclaw_talisman, barren_moor, bojuka_bog, cabal_stronghold, command_tower,
+    cradle_of_the_accursed, exotic_orchard, ghost_quarter, memorial_to_folly, mortuary_mire,
+    myriad_landscape, snow_covered_swamp, snow_covered_swamp, snow_covered_swamp,
+    snow_covered_swamp, snow_covered_swamp, abattoir_ghoul, blackbloom_rogue, faceless_butcher,
+    graveshifter, gray_merchant_of_asphodel, highborn_ghoul, lord_of_the_accursed,
+    nadiers_nightblade, plaguecrafter, ravenous_rats, refurbished_familiar, skull_collector,
+    solemn_simulacrum, tattered_mummy, thought_stalker_warlock, wight_of_precinct_six,
+    young_necromancer, endless_ranks_of_the_dead, endless_whispers, grave_pact, kayas_ghostform,
+    lilianas_mastery, no_mercy, phyrexian_arena, quest_for_the_gravelord,
+    quest_for_the_nihil_stone, shrieking_affliction, trespassers_curse, vessel_of_malignity,
+    dark_ritual, deadly_dispute, doom_blade, fell_the_profane, go_for_the_throat,
+    malakir_rebirth, not_dead_after_all, return_to_action, supernatural_stamina, undying_evil,
+    undying_malice, agadeems_awakening, annihilating_glare, appetite_for_brains,
+    blood_on_the_snow, coiling_rebirth, come_back_wrong, crawl_from_the_cellar,
+    horrifying_revelation, infernal_offering, lash_of_the_balrog, lay_bare_the_heart, mind_rake,
+    nights_whisper, syphon_mind, the_torment_of_gollum,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
