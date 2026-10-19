@@ -123085,3 +123085,31 @@ pub const MENG_HUO_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest,
 ];
+
+pub const JANDOR_COMMANDERS: &[CardFactory] = &[jandor_fortuned_traveler];
+
+/// **Jandor, Fortuned Traveler**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 8 Forests + 4 Mountains + 4 Plains = 99.
+/// Jandor, Fortuned Traveler (EDHREC, fetched 2026-10-19).
+pub const JANDOR_MAIN: &[CardFactory] = &[
+    alacrian_armory, arcane_signet, bag_end_banquet, inspiring_statuary, lightning_greaves,
+    sol_ring, bountiful_promenade, canopy_vista, cinder_glade, clifftop_retreat, command_tower,
+    country_roads, exotic_orchard, jetmirs_garden, jungle_shrine, overgrown_farmland,
+    reliquary_tower, rootbound_crag, sacred_foundry, spectator_seating, spire_garden,
+    stomping_ground, sunpetal_grove, temple_garden, wild_roads, windswept_heath,
+    academy_manufactor, autarch_mammoth, bejeweled_warg, bilbo_fellow_conspirator,
+    blossoming_bogbeast, bounding_felidar, bulwark_ox, calamity_galloping_inferno,
+    caradora_heart_of_alacria, cloudspire_coordinator, conclave_evangelist, congregation_gryff,
+    craterhoof_behemoth, crested_sunmare, district_mascot, elder_gargaroth, fortune_loyal_steed,
+    frenzied_baloth, gahiji_honored_one, gilded_ghoda, guardian_sunmare, interface_ace,
+    kolodin_triumph_caster, kona_rescue_beastie, lagorin_soul_of_alacria, miriam_herd_whisperer,
+    motivated_pony, ornery_tumblewagg, peregrin_took, provisions_merchant, questing_beast,
+    seraphic_steed, shadowfax_lord_of_horses, thunderfoot_baloth, wakandan_tusker, wicked_wolf,
+    wylie_duke_atiin_hero, annie_joins_up, campsite_cuisine, night_of_the_sweets_revenge,
+    ninja_pizza, rhythm_of_the_wild, windcrag_siege, beast_within, boros_charm, chaos_warp,
+    defend_the_rider, generous_gift, heroic_intervention, path_to_exile, swords_to_plowshares,
+    blasphemous_act, cultivate, farseek, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains,
+];
