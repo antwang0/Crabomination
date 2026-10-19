@@ -2260,3 +2260,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bolg of the North | the reflexive "When you do, … another target creature" is targeted with the ETB, before the sacrifice; the sacrificed creature's power is read from its card (printed), not its last-known power (CR 608.2h) | `MayDo` + `Sacrifice` + `PowerOf(SacrificedThisResolution)` |
 | 🟡 Goblin Plate Mail | "attach this Equipment to the amassed Army" attaches to the first Army you control, which is the amassed one unless you control two | `Amass` + `Attach { EachPermanent(Army) }` |
 | 🟡 Titania, Rugged Rumbler | Ward's "discard a card or pay {2}" auto-pays the mana when it can (no menu); the discard is the hand's first card | `WardCost::ManaOrDiscard` |
+| 🟡 Norritt | "controlled continuously since the beginning of the turn" reads "didn't enter this turn" (a creature that changed control this turn qualifies) | `R::Not(EnteredThisTurn)` + `DelayUntilWithCapture` |
+| 🟡 Deification | the planeswalker-type ballot offers only the types among cards its controller owns (a seat owning none names nothing) | `Effect::NamePlaneswalkerType` |

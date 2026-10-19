@@ -17864,6 +17864,15 @@ static DECKS: &[Factory] = &[
     super::decks::norritt,
     super::decks::gideon_of_the_trials,
     super::decks::dedicated_commons,
+    super::decks::lumberknot,
+    super::decks::norns_inquisitor,
+    super::decks::progenitor_exarch,
+    super::decks::tiller_of_flesh,
+    super::decks::deification,
+    super::decks::way_of_the_healer,
+    super::decks::campus_crier,
+    super::decks::proteges_awakening,
+    super::decks::awesome_presence,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1,5 +1,7 @@
 //! Commander: 2026-10-19 (`016Xh16H`) — two- and three-gap closers: Old Hob,
-//! Kang, Ultimo, Mila. Tests in `tests/recent_b/cmdr_016x_a.rs`.
+//! Kang, Ultimo, Mila, Quickbeam, Elesh Norn, Elminster, Djeru, Tomik,
+//! Tobias Andrion. Tests in
+//! `tests/recent_b/cmdr_016x_a.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -10,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::{draw, etb, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, generic, hybrid, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w, x};
 use crate::sets::{dual_land_untyped, etb_gain_one, tapland_untyped};
 use std::sync::Arc;
 
@@ -373,5 +375,192 @@ pub fn dedicated_commons() -> CardDefinition {
             },
         }],
         ..dual_land_untyped("Dedicated Commons", Color::Red, Color::White, vec![])
+    }
+}
+
+// ── Quickbeam, Upstart Ent ──────────────────────────────────────────────────
+
+/// Lumberknot — {2}{G}{G} 1/1 hexproof Treefolk; a +1/+1 counter whenever a
+/// creature dies.
+pub fn lumberknot() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..creature("Lumberknot", cost(&[generic(2), g(), g()]), vec![CreatureType::Treefolk], 1, 1)
+    }
+}
+
+// ── Elesh Norn ──────────────────────────────────────────────────────────────
+
+fn incubate(n: i32) -> Effect {
+    Effect::Incubate { who: PlayerRef::You, amount: Value::Const(n) }
+}
+
+/// Norn's Inquisitor — {1}{W} 1/1 Phyrexian Knight. ETB incubate 2; a
+/// permanent of yours transforming into a Phyrexian gets a +1/+1 counter.
+pub fn norns_inquisitor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(incubate(2)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Transformed, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Phyrexian),
+                    },
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        ..creature("Norn's Inquisitor", cost(&[generic(1), w()]), vec![CreatureType::Phyrexian, CreatureType::Knight], 1, 1)
+    }
+}
+
+/// Progenitor Exarch — {X}{X}{W} 1/2 Phyrexian Cat Cleric. ETB incubate 3,
+/// X times; {T}: transform target Incubator token you control.
+pub fn progenitor_exarch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Repeat { count: Value::XFromCost, body: Box::new(incubate(3)) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Transform {
+                what: target_filtered(R::IsToken.and(R::HasName("Incubator".into())).and(R::ControlledByYou)),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Progenitor Exarch",
+            cost(&[x(), x(), w()]),
+            vec![CreatureType::Phyrexian, CreatureType::Cat, CreatureType::Cleric],
+            1,
+            2,
+        )
+    }
+}
+
+/// Tiller of Flesh — {3}{W} 2/4 Phyrexian Knight. Casting a spell that
+/// targets a permanent incubates 2.
+pub fn tiller_of_flesh() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellTargetsMatch(R::Permanent)),
+            effect: incubate(2),
+        }],
+        ..creature("Tiller of Flesh", cost(&[generic(3), w()]), vec![CreatureType::Phyrexian, CreatureType::Knight], 2, 4)
+    }
+}
+
+// ── Elminster / Djeru ───────────────────────────────────────────────────────
+
+/// Deification — {1}{W} enchantment. As it enters, choose a planeswalker
+/// type; your planeswalkers of that type have hexproof, and while you
+/// control a creature, damage can't take their last loyalty counter.
+pub fn deification() -> CardDefinition {
+    let chosen = || R::Planeswalker.and(R::HasChosenPlaneswalkerTypeOfSource);
+    CardDefinition {
+        name: "Deification",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        as_enters_effect: Some(Effect::NamePlaneswalkerType { what: Selector::This }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Planeswalkers you control of the chosen type have hexproof.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(chosen().and(R::ControlledByYou)),
+                    keyword: Keyword::Hexproof,
+                },
+            },
+            StaticAbility {
+                description: "As long as you control a creature, if damage dealt to a planeswalker you control of the chosen type would result in all loyalty counters on it being removed, instead all but one of those counters are removed.",
+                effect: StaticEffect::DamageLeavesYourPlaneswalkersAtOneLoyalty { filter: chosen(), requires_creature: true },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Tomik, Orzhov Lawmage / Tobias Andrion ──────────────────────────────────
+
+fn empower(n: i32) -> Effect {
+    Effect::EmpowerJace { who: PlayerRef::You, count: Value::Const(n) }
+}
+
+/// Way of the Healer — {3}{W} legendary enchantment. ETB empower Jace 5;
+/// planeswalkers you control have "[−2]: a 2/2 colorless Wizard Soldier named
+/// Cadet, then surveil 1".
+pub fn way_of_the_healer() -> CardDefinition {
+    let cadet = TokenDefinition {
+        name: "Cadet".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Way of the Healer",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(empower(5))],
+        static_abilities: vec![StaticAbility {
+            description: "Planeswalkers you control have \"[−2]: Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1.\"",
+            effect: StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
+                abilities: vec![LoyaltyAbility {
+                    loyalty_cost: -2,
+                    effect: Effect::Seq(vec![
+                        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(cadet) },
+                        Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                    ]),
+                    ..Default::default()
+                }],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Campus Crier — {1}{W} 3/1 Human Advisor. {1}, exile it from your
+/// graveyard: empower Jace 2.
+pub fn campus_crier() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: empower(2),
+            ..Default::default()
+        }],
+        ..creature("Campus Crier", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Advisor], 3, 1)
+    }
+}
+
+/// Protégé's Awakening — {3}{U} sorcery. Empower Jace 6, then draw a card.
+pub fn proteges_awakening() -> CardDefinition {
+    spell("Protege's Awakening", cost(&[generic(3), u()]), Effect::Seq(vec![empower(6), draw(1)]))
+}
+
+/// Awesome Presence — {U} Aura. Enchanted creature can't be blocked unless
+/// the defending player pays {3} for each creature blocking it (CR 509.1d).
+pub fn awesome_presence() -> CardDefinition {
+    CardDefinition {
+        name: "Awesome Presence",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature can't be blocked unless defending player pays {3} for each creature they control that's blocking it.",
+            effect: StaticEffect::BlockTaxForEnchantedAttacker { amount: 3 },
+        }],
+        ..Default::default()
     }
 }

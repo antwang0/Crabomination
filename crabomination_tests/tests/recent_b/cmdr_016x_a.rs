@@ -299,3 +299,148 @@ fn gideon_of_the_trials_emblem_needs_a_gideon() {
     g.check_state_based_actions();
     assert!(g.players[0].eliminated, "no Gideon: the loss lands");
 }
+
+// ── Quickbeam, Elesh Norn ───────────────────────────────────────────────────
+
+/// Progenitor Exarch at X = 2 incubates 3 twice; transforming one with
+/// Norn's Inquisitor out gives the Phyrexian a +1/+1 counter (4 in all).
+#[test]
+fn progenitor_exarch_incubates_x_times_and_inquisitor_grows_the_phyrexian() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::norns_inquisitor());
+    let pe = g.add_card_to_hand(0, catalog::progenitor_exarch());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: pe, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("cast");
+    drain_stack(&mut g);
+    let incs: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").map(|c| c.id).collect();
+    assert_eq!(incs.len(), 2);
+    g.clear_sickness(pe);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pe,
+        ability_index: 0,
+        target: Some(Target::Permanent(incs[0])),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("transform");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(incs[0]).unwrap();
+    assert_eq!(p.counter_count(CounterType::PlusOnePlusOne), 4, "3 + the Inquisitor's 1");
+}
+
+/// Tiller of Flesh incubates on a spell targeting a permanent, not a player.
+#[test]
+fn tiller_of_flesh_incubates_on_permanent_targets() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::tiller_of_flesh());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let n = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
+    cast(&mut g, b1, Some(Target::Player(1))).expect("face");
+    assert_eq!(n(&g), 0);
+    cast(&mut g, b2, Some(Target::Permanent(bear))).expect("bear");
+    assert_eq!(n(&g), 1);
+}
+
+/// Lumberknot grows on any creature's death.
+#[test]
+fn lumberknot_grows_when_a_creature_dies() {
+    let mut g = pod(2);
+    let lk = ready(&mut g, 0, catalog::lumberknot());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("bolt");
+    assert_eq!(g.battlefield_find(lk).unwrap().power(), 2);
+}
+
+/// CR 614.1a — Deification names its controller's planeswalker type as it
+/// enters; with a creature out, lethal damage to that walker leaves one
+/// loyalty counter, and without one it dies. The walker has hexproof.
+#[test]
+fn deification_leaves_the_chosen_walker_at_one_loyalty() {
+    use crabomination::card::{CounterType, Keyword};
+    for with_creature in [true, false] {
+        let mut g = pod(2);
+        let lili = ready(&mut g, 0, catalog::liliana_death_mage());
+        if with_creature {
+            ready(&mut g, 0, catalog::grizzly_bears());
+        }
+        let d = g.add_card_to_hand(0, catalog::deification());
+        flood(&mut g, 0);
+        cast(&mut g, d, None).expect("deification");
+        assert!(g.permanent_has_keyword(lili, &Keyword::Hexproof), "hexproof from the static");
+        g.battlefield_find_mut(lili).unwrap().counters.insert(CounterType::Loyalty, 3);
+        let dmg = crabomination::effect::Effect::DealDamage {
+            to: crabomination::effect::Selector::Target(0),
+            amount: crabomination::card::Value::Const(5),
+        };
+        let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+        ctx.targets = vec![Target::Permanent(lili)];
+        let evs = g.resolve_effect(&dmg, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        g.check_state_based_actions();
+        match with_creature {
+            true => assert_eq!(g.battlefield_find(lili).unwrap().counter_count(CounterType::Loyalty), 1),
+            false => assert!(g.battlefield_find(lili).is_none(), "no creature: it dies"),
+        }
+    }
+}
+
+// ── Tomik, Orzhov Lawmage / Tobias Andrion ──────────────────────────────────
+
+/// Way of the Healer empowers Jace 5, and that Jace has the granted [−2]:
+/// a Cadet, then surveil 1.
+#[test]
+fn way_of_the_healer_empowers_and_grants_cadets() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let woh = g.add_card_to_hand(0, catalog::way_of_the_healer());
+    flood(&mut g, 0);
+    cast(&mut g, woh, None).expect("cast");
+    let jace = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 0 && c.definition.is_planeswalker())
+        .expect("a Jace token")
+        .id;
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 5);
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: jace, ability_index: 2, target: None, x_value: None })
+        .expect("granted −2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Cadet"));
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 3);
+}
+
+/// CR 509.1d — Awesome Presence: a blocker on the enchanted attacker costs
+/// {3}; with no mana the block is refused, with it the block stands.
+#[test]
+fn awesome_presence_taxes_blockers_of_its_host() {
+    for pay in [false, true] {
+        let mut g = pod(2);
+        let atk = ready(&mut g, 0, catalog::grizzly_bears());
+        let blk = ready(&mut g, 1, catalog::grizzly_bears());
+        let ap = g.add_card_to_hand(0, catalog::awesome_presence());
+        flood(&mut g, 0);
+        cast(&mut g, ap, Some(Target::Permanent(atk))).expect("aura");
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+            attacker: atk,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        drain_stack(&mut g);
+        if pay {
+            g.players[1].mana_pool.add_colorless(3);
+        }
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let res = g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)]));
+        assert_eq!(res.is_ok(), pay, "pay={pay}");
+    }
+}
