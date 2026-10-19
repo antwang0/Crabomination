@@ -1888,3 +1888,100 @@ fn blizzard_strix_flickers_until_end_step() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 1));
 }
+
+// ── Ayesha Tanaka (`decks::cmdr_016x_q`) ────────────────────────────────────
+
+fn attack_banded(g: &mut GameState, band: &[CardId], defender: usize) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackersBanded {
+        attacks: band
+            .iter()
+            .map(|&attacker| crabomination::game::types::Attack {
+                attacker,
+                target: crabomination::game::types::AttackTarget::Player(defender),
+            })
+            .collect(),
+        bands: vec![band.to_vec()],
+    })
+    .expect("banded attack");
+    drain_stack(g);
+}
+
+/// CR 702.22 — Icatian Skirmishers gives first strike to the creatures in
+/// its band, and only those.
+#[test]
+fn icatian_skirmishers_arms_its_band() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let sk = ready(&mut g, 0, catalog::icatian_skirmishers());
+    let mate = ready(&mut g, 0, catalog::grizzly_bears());
+    let loner = ready(&mut g, 0, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackersBanded {
+        attacks: [sk, mate, loner]
+            .iter()
+            .map(|&attacker| crabomination::game::types::Attack {
+                attacker,
+                target: crabomination::game::types::AttackTarget::Player(1),
+            })
+            .collect(),
+        bands: vec![vec![sk, mate]],
+    })
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(mate, &Keyword::FirstStrike), "banded with it");
+    assert!(!g.permanent_has_keyword(loner, &Keyword::FirstStrike), "not in the band");
+}
+
+/// CR 702.22 — Urza's Engine bands for {3}, then gives its band trample.
+#[test]
+fn urzas_engine_tramples_its_band() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let engine = ready(&mut g, 0, catalog::urzas_engine());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    activate(&mut g, engine).expect("banding");
+    attack_banded(&mut g, &[engine, bear], 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: engine,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("trample");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Trample));
+}
+
+/// Formation: banding now, a card at the next upkeep.
+#[test]
+fn formation_draws_at_the_next_upkeep() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::formation());
+    flood(&mut g, 0);
+    cast(&mut g, f, Some(Target::Permanent(bear))).expect("formation");
+    assert!(g.permanent_has_keyword(bear, &Keyword::Banding));
+    let hand = g.players[0].hand.len();
+    pass_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drawn at the next turn's upkeep");
+}
+
+/// Cooperation's creature has banding.
+#[test]
+fn cooperation_grants_banding() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let c = g.add_card_to_hand(0, catalog::cooperation());
+    flood(&mut g, 0);
+    cast(&mut g, c, Some(Target::Permanent(bear))).expect("cooperation");
+    assert!(g.permanent_has_keyword(bear, &Keyword::Banding));
+}

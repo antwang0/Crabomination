@@ -18123,6 +18123,16 @@ static DECKS: &[Factory] = &[
     super::decks::avalanche_caller,
     super::decks::blizzard_strix,
     super::decks::winters_chill,
+    super::decks::icatian_phalanx,
+    super::decks::kjeldoran_escort,
+    super::decks::kjeldoran_phalanx,
+    super::decks::kjeldoran_skycaptain,
+    super::decks::icatian_skirmishers,
+    super::decks::wall_of_shields,
+    super::decks::urzas_engine,
+    super::decks::baton_of_morale,
+    super::decks::cooperation,
+    super::decks::formation,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
