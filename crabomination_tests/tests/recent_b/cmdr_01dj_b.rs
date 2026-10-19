@@ -182,3 +182,82 @@ fn cranial_archive_shuffles_the_target_players_graveyard() {
     assert_eq!(g.players[2].library.len(), lib + 2);
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// CR 506.5 — Strategic Intervention: a lone attacker gets +1/+1 and the
+/// defending player's creature is tapped.
+#[test]
+fn strategic_intervention_pumps_and_taps_a_blocker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::strategic_intervention());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wall = ready(&mut g, 1, catalog::hill_giant());
+    attack(&mut g, &[bear]);
+    assert_eq!(power(&g, bear), 3);
+    assert!(g.battlefield_find(wall).unwrap().tapped);
+}
+
+/// Crowd of True Believers pumps only a creature attacking alone, and gains
+/// a life.
+#[test]
+fn crowd_of_true_believers_backs_a_lone_attacker() {
+    let mut g = pod(2);
+    let crowd = ready(&mut g, 0, catalog::crowd_of_true_believers());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let home = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, &[bear]);
+    let act = |g: &mut GameState, t: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: crowd,
+            ability_index: 0,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(act(&mut g, home).is_err(), "the creature at home isn't attacking");
+    act(&mut g, bear).expect("the lone attacker");
+    drain_stack(&mut g);
+    assert_eq!(power(&g, bear), 3);
+    assert_eq!(g.players[0].life, 21);
+}
+
+/// Widow's Bite: one mode alone; with teamwork 3 both — deathtouch on yours
+/// and -2/-2 kills theirs.
+#[test]
+fn widows_bite_both_with_teamwork() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::widows_bite());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("one mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::widows_bite());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: s,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![Target::Permanent(bear)],
+        x_value: None,
+    })
+    .expect("both modes, with teamwork");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    let cp = g.computed_permanent(giant).unwrap();
+    assert!(cp.keywords().contains(&Keyword::Deathtouch));
+    assert!(g.battlefield_find(giant).unwrap().tapped, "teamwork tapped the Giant");
+}

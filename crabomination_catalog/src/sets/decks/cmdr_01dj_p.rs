@@ -1,15 +1,16 @@
 //! Commander: 2026-10-19 (`01DJHkWk`) — single-card closers: Keldon
 //! Warcaller, Mind Transfer Protocol, Donatello's Science Lesson, Agents of
-//! S.H.I.E.L.D., Luke Cage, Fire of Orthanc.
+//! S.H.I.E.L.D., Luke Cage, Fire of Orthanc; the attacks-alone pair
+//! (Strategic Intervention, Crowd of True Believers) and Widow's Bite.
 //! Tests in `tests/recent_b/cmdr_01dj_b.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
+    EventSpec, Keyword, ModesWiden, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, Predicate, Selector, Value};
-use crate::mana::{ManaCost, cost, generic, r, u, w};
+use crate::mana::{ManaCost, b, cost, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -193,3 +194,102 @@ pub fn fire_of_orthanc() -> CardDefinition {
     )
 }
 
+
+/// Strategic Intervention — {1}{W} enchantment. Whenever a creature you
+/// control attacks alone, it gets +1/+1 until end of turn. Tap up to one
+/// target creature defending player controls.
+pub fn strategic_intervention() -> CardDefinition {
+    CardDefinition {
+        name: "Strategic Intervention",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::AttackingAlone),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Tap {
+                        what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crowd of True Believers — {W} 1/2 Human Citizen. {T}: target creature you
+/// control that's attacking alone gets +1/+0 until end of turn. You gain 1
+/// life.
+pub fn crowd_of_true_believers() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        R::Creature.and(R::ControlledByYou).and(R::IsAttackingAlone),
+                    ),
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Crowd of True Believers",
+            cost(&[w()]),
+            vec![CreatureType::Human, CreatureType::Citizen],
+            1,
+            2,
+        )
+    }
+}
+
+/// Widow's Bite — {1}{B} instant, teamwork 3. Choose one — both if cast
+/// using teamwork: target creature gains deathtouch until end of turn; target
+/// creature gets -2/-2 until end of turn.
+pub fn widows_bite() -> CardDefinition {
+    CardDefinition {
+        kicker_action_cost: Some(AdditionalCastCost::TapTotalPower {
+            filter: R::Creature.and(R::ControlledByYou),
+            power: 3,
+        }),
+        modes_widen: Some(ModesWiden::Kicked),
+        ..spell(
+            "Widow's Bite",
+            cost(&[generic(1), b()]),
+            true,
+            Effect::ChooseModesCast {
+                modes: vec![
+                    Effect::GrantKeyword {
+                        what: target_filtered(R::Creature),
+                        keyword: Keyword::Deathtouch,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::PumpPT {
+                        what: target_filtered(R::Creature),
+                        power: Value::Const(-2),
+                        toughness: Value::Const(-2),
+                        duration: Duration::EndOfTurn,
+                    },
+                ],
+                min: 1,
+                max: 1,
+                allow_repeats: false,
+            },
+        )
+    }
+}
