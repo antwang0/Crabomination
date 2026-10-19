@@ -123230,3 +123230,56 @@ pub const HEIDAR_MAIN: &[CardFactory] = &[
     dramatic_reversal, graven_lore, high_tide, negate, snap, winters_chill, wizards_retort,
     narset_parter_of_veils, cone_of_cold, freeze_in_place, ponder, windfall,
 ];
+
+pub const AYESHA_TANAKA_2_COMMANDERS: &[CardFactory] = &[ayesha_tanaka];
+
+/// **Ayesha Tanaka**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 9 Islands + 13 Plains = 99.
+/// Ayesha Tanaka (EDHREC, fetched 2026-10-19).
+pub const AYESHA_TANAKA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, baton_of_morale, bident_of_thassa, dolmen_gate,
+    fellwar_stone, helm_of_chatzuk, infiltration_lens, mind_stone, sol_ring,
+    talisman_of_progress, adarkar_wastes, azorius_chancery, command_tower, deserted_beach,
+    glacial_fortress, hallowed_fountain, mystic_gate, port_town, prairie_stream,
+    reliquary_tower, sea_of_clouds, skycloud_expanse, temple_of_enlightenment, abu_jafar,
+    battering_ram, benalish_hero, benalish_infantry, camel, fog_bank, icatian_infantry,
+    icatian_phalanx, icatian_skirmishers, kjeldoran_escort, kjeldoran_knight, kjeldoran_phalanx,
+    kjeldoran_skycaptain, kjeldoran_skyknight, kjeldoran_warrior, knights_of_thorn,
+    mesa_pegasus, noble_elephant, phyrexian_vindicator, pikemen, saprazzan_heir, shield_bearer,
+    stuffy_doll, sun_titan, teremko_griffin, tolarian_entrancer, urzas_engine, wall_of_shields,
+    war_elephant, always_watching, brave_the_sands, cooperation, ghostly_prison,
+    glorious_anthem, land_tax, propaganda, rhystic_study, serras_blessing, arcane_denial,
+    brainstorm, counterspell, disenchant, dovins_veto, errand_of_duty, formation, negate,
+    path_to_exile, swords_to_plowshares, elspeth_suns_champion, austere_command, farewell,
+    supreme_verdict, wrath_of_god,
+    // Basics
+    island, island, island, island, island, island, island, island, island, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GENERAL_JARKELD_COMMANDERS: &[CardFactory] = &[general_jarkeld];
+
+/// **General Jarkeld**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// General Jarkeld (EDHREC, fetched 2026-10-19).
+pub const GENERAL_JARKELD_MAIN: &[CardFactory] = &[
+    arcane_signet, baton_of_morale, helm_of_chatzuk, infiltration_lens, lightning_greaves,
+    marble_diamond, mind_stone, oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots,
+    castle_ardenvale, emeria_the_sky_ruin, maze_of_ith, myriad_landscape, nykthos_shrine_to_nyx,
+    war_room, windbrisk_heights, abu_jafar, archetype_of_courage, benalish_hero,
+    benalish_infantry, cho_manno_revolutionary, deftblade_elite, icatian_infantry,
+    icatian_skirmishers, kjeldoran_escort, kjeldoran_knight, kjeldoran_skycaptain,
+    kjeldoran_skyknight, kjeldoran_warrior, knight_of_the_white_orchid, mangara_the_diplomat,
+    mentor_of_the_meek, mesa_pegasus, mother_of_runes, noble_elephant, odric_master_tactician,
+    oracle_en_vec, phyrexian_vindicator, pikemen, shield_bearer, stuffy_doll, sun_titan,
+    teremko_griffin, trap_runner, war_elephant, brave_the_sands, defensive_formation,
+    ghostly_prison, glorious_anthem, high_ground, honor_of_the_pure, land_tax, reconnaissance,
+    trouble_in_pairs, errand_of_duty, formation, generous_gift, holy_day, moment_of_silence,
+    path_to_exile, reprieve, stroke_of_midnight, swords_to_plowshares, unbreakable_formation,
+    elspeth_suns_champion, austere_command, cut_a_deal, retribution_of_the_meek,
+    secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];

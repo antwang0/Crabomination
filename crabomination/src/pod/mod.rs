@@ -26808,6 +26808,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HEIDAR_COMMANDERS,
             main: decks::HEIDAR_MAIN,
         },
+        // Seat 4393: Ayesha Tanaka's EDHREC average deck. `--pod-decks 4393`.
+        PodDeck {
+            name: "Ayesha Tanaka (WU)",
+            commanders: decks::AYESHA_TANAKA_2_COMMANDERS,
+            main: decks::AYESHA_TANAKA_2_MAIN,
+        },
+        // Seat 4394: General Jarkeld's EDHREC average deck. `--pod-decks 4394`.
+        PodDeck {
+            name: "General Jarkeld (W)",
+            commanders: decks::GENERAL_JARKELD_COMMANDERS,
+            main: decks::GENERAL_JARKELD_MAIN,
+        },
     ]
 }
 
@@ -33101,6 +33113,8 @@ mod tests {
             ("The Unluckiest Planeswalker", &[0x1B3C]),
             ("Narfi, Betrayer King", &[0x1B3D]),
             ("Heidar, Rimewind Master", &[0x1B3E]),
+            ("Ayesha Tanaka", &[0x1B3F]),
+            ("General Jarkeld", &[0x1B40]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
