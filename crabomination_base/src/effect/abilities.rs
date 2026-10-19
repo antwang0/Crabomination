@@ -1726,6 +1726,11 @@ pub enum StaticEffect {
     /// increase or decrease the result by 1. Do this only once each turn"
     /// (Night Shift of the Living Dead). Read by the `RollDie` resolver.
     PayLifeToShiftDieOnceEachTurn,
+    /// CR 706.2 — "After you roll a die, you may remove a [counter] counter
+    /// from this creature. If you do, increase or decrease the result by 1"
+    /// (Xenosquirrels). Read in `Effect::RollDie` after the Night Shift
+    /// offer; the headless pick shifts a die up into a better arm.
+    RemoveCounterToShiftDie(crate::card::CounterType),
     /// CR 701.27 — "[filter] can't transform" (Immerwolf: "Non-Human
     /// Werewolves you control can't transform"), the filter read from this
     /// permanent's controller. Checked by `GameState::transform_permanent`.

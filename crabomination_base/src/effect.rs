@@ -9131,6 +9131,15 @@ pub enum Effect {
     /// blockers, every creature blocking exactly one of them switches to
     /// blocking the other. Otherwise nothing happens.
     SwitchBlockers { first: Selector, second: Selector },
+    /// CR 701.52a — "roll to visit your Attractions": roll a d6 (a die roll,
+    /// even with no Attraction out), then visit each Attraction you control
+    /// with that number lit up (Line Cutter).
+    RollToVisitAttractions,
+    /// "The next time [who] would roll one or more dice this turn, instead
+    /// they roll that many dice plus one and you choose one of those rolls to
+    /// ignore" (Bamboozling Beeble, CR 706.6): the effect controller ignores
+    /// the lowest of a friendly roll and the highest of an opponent's.
+    NextRollExtraDieThisTurn { who: PlayerRef },
     /// CR 701.30 — "[body], then clash with an opponent. If you win, repeat
     /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
     /// suspended clash resumes without re-running an earlier `body`.

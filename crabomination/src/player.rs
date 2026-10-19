@@ -667,6 +667,10 @@ pub struct PlayerData {
     /// player at Cleanup.
     #[serde(default)]
     pub dice_rolled_this_turn: u32,
+    /// Bamboozling Beeble — the seat that will choose which of this player's
+    /// next roll's dice (one extra) to ignore, this turn. Cleared at Cleanup.
+    #[serde(default)]
+    pub next_roll_extra_die_by: Option<usize>,
     /// "You can cast only N more spells this turn" (Irencrag Feat): the
     /// `spells_cast_this_game_turn` count at which casting stops. Reset at
     /// Cleanup.
@@ -1857,6 +1861,7 @@ impl Player {
             nonartifact_spells_cast_this_game_turn: 0,
             non_phyrexian_spells_cast_this_game_turn: 0,
             dice_rolled_this_turn: 0,
+            next_roll_extra_die_by: None,
             spell_cap_this_turn: None,
             life_gained_this_turn: 0,
             gained_life_earlier_this_turn: false,

@@ -7503,17 +7503,33 @@ impl GameState {
                 // that many lowest results. Ignored rolls never happened, so
                 // they're dropped before any arm, doubles check or trigger.
                 let extra = std::mem::take(&mut self.extra_ignored_dice) as u32;
-                let ignored =
+                let mut ignored =
                     if n > 0 { self.extra_dice_for(ctx.controller) + *ignore_lowest as u32 + extra } else { 0 };
+                // Bamboozling Beeble — one more die, its chooser ignoring one.
+                let beeble = if n > 0 && self.players[ctx.controller].next_roll_extra_die_by.is_some() {
+                    self.players[ctx.controller].next_roll_extra_die_by.take()
+                } else {
+                    None
+                };
                 // CR 706.5 — track natural faces to detect "doubles".
                 let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
-                for _ in 0..n as u32 + ignored {
+                for _ in 0..n as u32 + ignored + u32::from(beeble.is_some()) {
                     let mut natural = roll_one(self);
                     // CR 706.2b — reroll a low natural result exactly once.
                     if *reroll_at_most > 0 && natural <= *reroll_at_most {
                         natural = roll_one(self);
                     }
                     naturals.push(natural);
+                }
+                match beeble {
+                    // An opponent's chooser ignores the best face.
+                    Some(chooser) if !self.same_team(chooser, ctx.controller) => {
+                        if let Some(top) = naturals.iter().enumerate().max_by_key(|(_, v)| **v).map(|(i, _)| i) {
+                            naturals.remove(top);
+                        }
+                    }
+                    Some(_) => ignored += 1,
+                    None => {}
                 }
                 if ignored > 0 {
                     naturals.sort_unstable_by(|a, b| b.cmp(a));
@@ -7531,6 +7547,7 @@ impl GameState {
                     .collect();
                 if n > 0 {
                     self.offer_die_shift(ctx.controller, &mut rolls, results);
+                    self.offer_counter_die_shift(ctx.controller, &mut rolls, results, events);
                 }
                 // CR 706.2 / 706.3a — the roll is over, and its result fixed,
                 // *before* the results table is consulted, so "whenever a
@@ -36431,6 +36448,27 @@ impl GameState {
                 self.reattach_player_auras_to_opponents(from, filter, *all, then.as_deref(), ctx, events)
             }
             Effect::EachOtherPlayerMayCopy { what, except } => self.each_other_player_may_copy(what, except, ctx, events),
+            Effect::RollToVisitAttractions => {
+                let p = ctx.controller;
+                let result = self.roll_one_die(p, 6);
+                events.push(GameEvent::DiceRolled { player: p, count: 1, high: result });
+                events.push(GameEvent::DieResult { player: p, result });
+                events.push(GameEvent::RolledToVisitAttractions { player: p, result });
+                let lit: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.attraction_lights.contains(&result))
+                    .map(|c| c.id)
+                    .collect();
+                events.extend(lit.into_iter().map(|card_id| GameEvent::AttractionVisited { card_id }));
+                Ok(())
+            }
+            Effect::NextRollExtraDieThisTurn { who } => {
+                for seat in self.resolve_players(who, ctx) {
+                    self.players[seat].next_roll_extra_die_by = Some(ctx.controller);
+                }
+                Ok(())
+            }
             Effect::SwitchBlockers { first, second } => {
                 self.switch_blockers(first, second, ctx);
                 Ok(())

@@ -310,4 +310,66 @@ impl GameState {
         self.players[seat].die_shift_used_this_turn = true;
         self.pay_life_cost(seat, 1);
     }
+
+    /// CR 706.2 — Xenosquirrels: after `seat` rolls, each of its permanents
+    /// with `RemoveCounterToShiftDie` may pay one counter of that kind to move
+    /// a die by one. The headless pick (every seat — the roll can't park
+    /// mid-resolution) raises a die into a later results-table arm, or onto a
+    /// threshold one of `seat`'s die triggers names; it never lowers one.
+    pub(super) fn offer_counter_die_shift(
+        &mut self,
+        seat: usize,
+        rolls: &mut [u8],
+        results: &[(u8, u8, Effect)],
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::card::Predicate;
+        use crate::effect::{EventKind, KeywordAct, StaticEffect};
+        let shifters: Vec<(CardId, crate::card::CounterType)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| {
+                c.definition.static_abilities.iter().filter_map(move |sa| match sa.effect {
+                    StaticEffect::RemoveCounterToShiftDie(kind) if c.counter_count(kind) > 0 => Some((c.id, kind)),
+                    _ => None,
+                })
+            })
+            .collect();
+        if shifters.is_empty() {
+            return;
+        }
+        fn thresholds(p: &Predicate, out: &mut Vec<u8>) {
+            match p {
+                Predicate::DieResultAtLeast(n) => out.push(*n),
+                Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(n)) => out.push(*n as u8),
+                Predicate::All(ps) | Predicate::Any(ps) => ps.iter().for_each(|q| thresholds(q, out)),
+                _ => {}
+            }
+        }
+        let mut wanted: Vec<u8> = Vec::new();
+        for c in self.battlefield.iter().filter(|c| c.controller == seat) {
+            for t in &c.definition.triggered_abilities {
+                if matches!(t.event.kind, EventKind::RolledDice | EventKind::Performed(KeywordAct::DieResult))
+                    && let Some(f) = &t.event.filter
+                {
+                    thresholds(f, &mut wanted);
+                }
+            }
+        }
+        let arm = |r: u8| results.iter().position(|(lo, hi, _)| r >= *lo && r <= *hi);
+        for (id, kind) in shifters {
+            let better = |r: u8| {
+                let up = r.saturating_add(1);
+                if results.is_empty() { wanted.contains(&up) } else { arm(up).is_some_and(|b| arm(r).is_none_or(|a| b > a)) }
+            };
+            let Some(k) = rolls.iter().position(|&r| better(r)) else { continue };
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.remove_counters(kind, 1);
+            }
+            events.push(GameEvent::CounterRemoved { card_id: id, counter_type: kind, count: 1 });
+            rolls[k] = rolls[k].saturating_add(1);
+        }
+    }
 }
+

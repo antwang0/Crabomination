@@ -1109,6 +1109,9 @@ impl GameState {
                     if pl.dice_rolled_this_turn != 0 {
                         pl.dice_rolled_this_turn = 0;
                     }
+                    if pl.next_roll_extra_die_by.is_some() {
+                        pl.next_roll_extra_die_by = None;
+                    }
                     pl.spell_cap_this_turn = None;
                     pl.multicolored_spells_cast_this_turn = 0;
                     pl.spell_names_cast_this_turn.clear();

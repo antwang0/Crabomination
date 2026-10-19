@@ -35230,6 +35230,7 @@ fn static_effect_to_effects(
             | StaticEffect::HalveDamageDealt
             | StaticEffect::RollExtraDiceIgnoreLowest(_)
             | StaticEffect::PayLifeToShiftDieOnceEachTurn
+            | StaticEffect::RemoveCounterToShiftDie(_)
             | StaticEffect::CantTransform { .. }
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
