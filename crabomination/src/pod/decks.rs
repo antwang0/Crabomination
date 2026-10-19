@@ -122030,3 +122030,57 @@ pub const FALCON_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const TESAK_COMMANDERS: &[CardFactory] = &[tesak_judiths_hellhound];
+
+/// **Tesak, Judith's Hellhound**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Tesak, Judith's Hellhound (EDHREC, fetched 2026-10-19).
+pub const TESAK_MAIN: &[CardFactory] = &[
+    arcane_signet, dolmen_gate, hazorets_monument, heralds_horn, heraldic_banner, mind_stone,
+    patchwork_banner, ruby_medallion, sol_ring, vanquishers_banner, animal_sanctuary,
+    castle_embereth, karns_bastion, myriad_landscape, path_of_ancestry, rogues_passage,
+    war_room, akoum_hellhound, arcbound_tracker, ashmouth_hound, bolt_hound, chandras_magmutt,
+    deer_dog, edgewall_pack, enduring_courage, fiery_hellhound, goldhound, hellfire_mongrel,
+    hound_of_griselbrand, igneous_cur, immolating_souleater, iron_mastiff, komainu_battle_armor,
+    leyline_tyrant, mogiss_warhound, pyre_hound, scrapwork_mutt, scrapyard_mongrel,
+    slumbering_cerberus, sterling_hound, summon_gf_cerberus, taurean_mauler,
+    two_headed_cerberus, underworld_rage_hound, wildfire_cerberus, zurgos_vanguard,
+    aggravated_assault, ferocity_of_the_wilds, goblin_war_drums, shared_animosity,
+    uncivil_unrest, war_cadence, abrade, ambitious_assault, battle_hymn, big_score, chaos_warp,
+    comet_storm, demand_answers, dogpile, dragonrage, electrodominance, great_train_heist,
+    thrill_of_possibility, unexpected_windfall, blasphemous_act, disrupt_decorum,
+    faithless_looting, kindred_charge, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const ZHANG_HE_COMMANDERS: &[CardFactory] = &[zhang_he_wei_general];
+
+/// **Zhang He, Wei General**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Zhang He, Wei General (EDHREC, fetched 2026-10-19).
+pub const ZHANG_HE_MAIN: &[CardFactory] = &[
+    anduril_flame_of_the_west, arcane_signet, bontus_monument, charcoal_diamond,
+    helm_of_the_host, heraldic_banner, inquisitorial_rosette, jet_medallion, lightning_greaves,
+    nightmare_lash, sol_ring, swiftfoot_boots, wand_of_orcus, whip_of_erebos, bojuka_bog,
+    cabal_coffers, cabal_stronghold, castle_locthwain, myriad_landscape, nykthos_shrine_to_nyx,
+    reliquary_tower, urborg_tomb_of_yawgmoth, ayara_first_of_locthwain, cao_cao_lord_of_wei,
+    cao_ren_wei_commander, crypt_ghast, dauthi_slayer, gallia_tragic_host, gonti_night_minister,
+    krrik_son_of_yawgmoth, nightsquad_commando, sanctum_lurker, screeching_soulbreaker,
+    sima_yi_wei_field_marshal, spectrum_sentinel, stone_catapult, vicious_conquistador,
+    wei_ambush_force, wei_assassins, wei_elite_companions, wei_infantry, wei_night_raiders,
+    wei_scout, wei_strike_force, xiahou_dun_the_one_eyed, xun_yu_wei_advisor,
+    young_wei_recruits, bad_moon, bastion_of_remembrance, black_market_connections,
+    death_pit_offering, phyrexian_arena, sadistic_glee, cabal_ritual, dark_ritual, darkness,
+    deadly_rollick, defile, go_for_the_throat, vampiric_tutor, village_rites, cast_away_doubt,
+    demonic_tutor, desperate_charge, emergency_weld, feed_the_swarm, ghostly_visit,
+    nights_whisper, return_to_battle, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

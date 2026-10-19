@@ -26550,6 +26550,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FALCON_2_COMMANDERS,
             main: decks::FALCON_2_MAIN,
         },
+        // Seat 4350: Tesak, Judith's Hellhound's EDHREC average deck. `--pod-decks 4350`.
+        PodDeck {
+            name: "Tesak, Judith's Hellhound (R)",
+            commanders: decks::TESAK_COMMANDERS,
+            main: decks::TESAK_MAIN,
+        },
+        // Seat 4351: Zhang He, Wei General's EDHREC average deck. `--pod-decks 4351`.
+        PodDeck {
+            name: "Zhang He, Wei General (B)",
+            commanders: decks::ZHANG_HE_COMMANDERS,
+            main: decks::ZHANG_HE_MAIN,
+        },
     ]
 }
 
@@ -32800,6 +32812,8 @@ mod tests {
             ("Sidar Jabari", &[0x1B11]),
             ("Starling, Aerial Ally", &[0x1B12]),
             ("Falcon, Winged Wonder", &[0x1B13]),
+            ("Tesak, Judith's Hellhound", &[0x1B14]),
+            ("Zhang He, Wei General", &[0x1B15]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
