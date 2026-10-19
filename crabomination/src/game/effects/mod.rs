@@ -34011,14 +34011,15 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DiscardChosenFromRevealed { from, reveal } => {
+            Effect::DiscardChosenFromRevealed { from, reveal, pick } => {
                 // CR — the caster only picks from the revealed subset. Same
                 // decision shape as `DiscardChosen`, with the candidate list
                 // capped at `reveal` (hand order stands in for the revealing
                 // player's choice of which cards to show).
                 use crate::decision::Decision;
                 let cap = self.evaluate_value(reveal, ctx).max(0) as usize;
-                if cap == 0 {
+                let n = (self.evaluate_value(pick, ctx).max(0) as usize).min(cap);
+                if cap == 0 || n == 0 {
                     return Ok(());
                 }
                 let picker = ctx.controller;
@@ -34041,13 +34042,14 @@ impl GameState {
                     if candidates.is_empty() {
                         continue;
                     }
-                    let decision = Decision::Discard { player: picker, count: 1, hand: candidates };
+                    let decision = Decision::Discard { player: picker, count: n.min(candidates.len()) as u32, hand: candidates };
                     let pending = PendingEffectState::DiscardChosenPending { target_player, max: None };
                     if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::DiscardChosenFromRevealed {
                                 from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                                 reveal: crate::effect::Value::Const(cap as i32),
+                                pick: crate::effect::Value::Const(n as i32),
                             }
                         });
                         self.suspend_signal = Some(Box::new((decision, pending, rest)));

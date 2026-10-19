@@ -12286,8 +12286,14 @@ pub enum Effect {
     /// them; that player discards it." The reveal-capped sibling of
     /// [`Effect::DiscardChosen`] — the caster only sees the revealed subset
     /// (Disciple of Phenax). Which cards get revealed is the revealing
-    /// player's choice; the engine takes them in hand order.
-    DiscardChosenFromRevealed { from: Selector, reveal: Value },
+    /// player's choice; the engine takes them in hand order. `pick` is how many
+    /// of the revealed cards the caster chooses (Noggin Whack's "three … two").
+    DiscardChosenFromRevealed {
+        from: Selector,
+        reveal: Value,
+        #[serde(default = "crate::effect::one_value")]
+        pick: Value,
+    },
     /// "Look at `from`'s hand; you may choose `count` card(s) matching
     /// `filter`. That player puts the chosen card(s) on the bottom of their
     /// library, then draws that many cards." Vendilion Clique. Same
@@ -14494,6 +14500,12 @@ mod query;
 /// deserialize cleanly.
 pub fn zero_value() -> Value {
     Value::Const(0)
+}
+
+/// Serde default for `Effect::DiscardChosenFromRevealed.pick` — the one card
+/// every printing before Noggin Whack chose.
+pub fn one_value() -> Value {
+    Value::ONE
 }
 
 /// What `Effect::LookTopExileOneMayPlay`'s exiled card may do.

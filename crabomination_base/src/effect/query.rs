@@ -2482,7 +2482,7 @@ impl Effect {
                     || zonedest_has_target(to)
                     || value_has_target(cap)
             }
-            Effect::DiscardChosenFromRevealed { from, reveal: count }
+            Effect::DiscardChosenFromRevealed { from, reveal: count, .. }
             | Effect::DiscardChosen { from, count, .. }
             | Effect::BottomChosenFromHandAndDraw { from, count, .. }
             | Effect::TopChosenFromHand { from, count, .. }

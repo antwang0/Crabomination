@@ -485,6 +485,7 @@ pub fn klaw_sonic_subjugator() -> CardDefinition {
                     filter: R::Creature,
                 }),
             ]),
+            pick: Value::ONE,
         })],
         ..creature(
             "Klaw, Sonic Subjugator",

@@ -400,6 +400,7 @@ pub fn bala_ged_thief() -> CardDefinition {
         triggered_abilities: vec![rally(Effect::DiscardChosenFromRevealed {
             from: Selector::Player(PlayerRef::Target(0)),
             reveal: ally_count(),
+            pick: Value::ONE,
         })],
         ..ally(
             "Bala Ged Thief",

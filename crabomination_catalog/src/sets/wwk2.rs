@@ -806,6 +806,7 @@ pub fn mires_toll() -> crate::card::CardDefinition {
             reveal: Value::count(Selector::EachPermanent(
                 R::HasLandType(LandType::Swamp).and(R::ControlledByYou),
             )),
+            pick: Value::ONE,
         },
         ..Default::default()
     }

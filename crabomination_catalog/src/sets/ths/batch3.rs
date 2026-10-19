@@ -680,6 +680,7 @@ pub fn disciple_of_phenax() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::DiscardChosenFromRevealed {
             from: Selector::Player(PlayerRef::Target(0)),
             reveal: Value::DevotionTo(vec![Color::Black]),
+            pick: Value::ONE,
         })],
         ..creature(
             "Disciple of Phenax",

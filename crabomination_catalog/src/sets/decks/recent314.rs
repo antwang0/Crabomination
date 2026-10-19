@@ -300,6 +300,7 @@ pub fn pulse_of_the_dross() -> CardDefinition {
             Effect::DiscardChosenFromRevealed {
                 from: Selector::Player(PlayerRef::Target(0)),
                 reveal: Value::Const(3),
+                pick: Value::ONE,
             },
             Effect::If {
                 cond: Predicate::ValueAtLeast(

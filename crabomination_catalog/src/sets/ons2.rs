@@ -1130,6 +1130,7 @@ pub fn blackmail() -> CardDefinition {
         effect: Effect::DiscardChosenFromRevealed {
             from: Selector::Player(PlayerRef::Target(0)),
             reveal: Value::Const(3),
+            pick: Value::ONE,
         },
         ..Default::default()
     }

@@ -648,6 +648,7 @@ pub fn cabal_interrogator() -> CardDefinition {
             effect: Effect::DiscardChosenFromRevealed {
                 from: Selector::Player(PlayerRef::Target(0)),
                 reveal: Value::XFromCost,
+                pick: Value::ONE,
             },
             ..Default::default()
         }],
