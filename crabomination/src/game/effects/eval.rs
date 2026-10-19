@@ -2210,6 +2210,21 @@ impl GameState {
                 }
                 seen.len() as i32
             }
+            Value::DistinctPlaneswalkerTypesAmong(s) => {
+                let mut seen: Vec<crate::card::PlaneswalkerSubtype> = Vec::new();
+                for ent in self.resolve_selector(s, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find(cid)
+                    {
+                        for t in &c.definition.subtypes.planeswalker_subtypes {
+                            if !seen.contains(t) {
+                                seen.push(*t);
+                            }
+                        }
+                    }
+                }
+                seen.len() as i32
+            }
             Value::DistinctTypesInTopOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

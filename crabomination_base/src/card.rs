@@ -576,6 +576,8 @@ pub enum PlaneswalkerSubtype {
     Worzel,
     // Feroz, Ulgrotha's Warden (its own EDHREC deck).
     Feroz,
+    // Arzakon (its own EDHREC deck; Tam, the Possibility counts it).
+    Arzakon,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

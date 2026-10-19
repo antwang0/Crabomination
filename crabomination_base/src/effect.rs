@@ -1446,6 +1446,11 @@ pub enum Value {
     /// control" — Case of the Shattered Pact). Contrast `ColorCountOf`, which
     /// reads a single object's colors.
     DistinctColorsAmong(Box<Selector>),
+    /// Number of distinct planeswalker types among the planeswalkers the
+    /// selector resolves to (CR 205.3j — Tam, the Possibility's "proliferate
+    /// X times, where X is the number of planeswalker types among
+    /// planeswalkers you control").
+    DistinctPlaneswalkerTypesAmong(Box<Selector>),
     /// The number of colors among permanents the controller controls and
     /// spells they've cast this turn (First Family).
     ColorsAmongYoursAndSpellsCastThisTurn,
