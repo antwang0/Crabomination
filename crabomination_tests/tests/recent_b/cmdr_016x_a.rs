@@ -565,3 +565,110 @@ fn amrou_scout_fetches_a_rebel_and_hallowed_burial_bottoms_creatures() {
     assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()));
     assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear), "bottom of its owner's library");
 }
+
+// ── Klaw, Kytheon ───────────────────────────────────────────────────────────
+
+/// Abattoir Ghoul: a creature it damaged this turn dying gains you life equal
+/// to that creature's toughness (Hill Giant: 3).
+#[test]
+fn abattoir_ghoul_gains_the_toughness_of_its_victim() {
+    let mut g = pod(2);
+    let ghoul = ready(&mut g, 0, catalog::abattoir_ghoul());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let ping = crabomination::effect::Effect::DealDamage {
+        to: crabomination::effect::Selector::Target(0),
+        amount: crabomination::card::Value::Const(3),
+    };
+    let mut ctx = EffectContext::for_ability(ghoul, 0, None);
+    ctx.targets = vec![Target::Permanent(giant)];
+    let evs = g.resolve_effect(&ping, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Appetite for Brains can only take a card of mana value 4 or more.
+#[test]
+fn appetite_for_brains_takes_only_big_cards() {
+    let mut g = pod(2);
+    g.players[1].hand.clear();
+    let small = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let big = g.add_card_to_hand(1, catalog::hill_giant());
+    let afb = g.add_card_to_hand(0, catalog::appetite_for_brains());
+    flood(&mut g, 0);
+    cast(&mut g, afb, Some(Target::Player(1))).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == big));
+    assert!(g.players[1].hand.iter().any(|c| c.id == small));
+}
+
+/// CR 615.1 — Gideon's Intervention naming Lightning Bolt: the opponent can't
+/// cast one, and one already on its way (a copy cast by a third seat before
+/// it entered) deals no damage to you.
+#[test]
+fn gideons_intervention_locks_and_shields_the_named_card() {
+    let mut g = pod(3);
+    let gi = g.add_card_to_hand(0, catalog::gideons_intervention());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Lightning Bolt".into())]));
+    cast(&mut g, gi, None).expect("intervention");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "the name is locked"
+    );
+    let dmg = crabomination::effect::Effect::DealDamage {
+        to: crabomination::effect::Selector::Target(0),
+        amount: crabomination::card::Value::Const(3),
+    };
+    let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+    ctx.source = Some(bolt);
+    ctx.targets = vec![Target::Player(0)];
+    g.resolve_effect(&dmg, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 20, "damage from a Lightning Bolt is prevented");
+}
+
+/// Gideon, the Oathsworn: attacking with two non-Gideon creatures puts a
+/// +1/+1 counter on each of them.
+#[test]
+fn gideon_the_oathsworn_counters_a_two_creature_attack() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::gideon_the_oathsworn());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        crabomination::game::types::Attack { attacker: a, target: crabomination::game::types::AttackTarget::Player(1) },
+        crabomination::game::types::Attack { attacker: b, target: crabomination::game::types::AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+}
+
+/// Gideon's Phalanx: four vigilant Knights; spell mastery (two instants or
+/// sorceries in the graveyard) makes your team indestructible this turn.
+#[test]
+fn gideons_phalanx_spell_mastery() {
+    for mastery in [false, true] {
+        let mut g = pod(2);
+        if mastery {
+            g.add_card_to_graveyard(0, catalog::lightning_bolt());
+            g.add_card_to_graveyard(0, catalog::lightning_bolt());
+        }
+        let gp = g.add_card_to_hand(0, catalog::gideons_phalanx());
+        flood(&mut g, 0);
+        cast(&mut g, gp, None).expect("cast");
+        let knights: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Knight").map(|c| c.id).collect();
+        assert_eq!(knights.len(), 4);
+        assert_eq!(g.permanent_has_keyword(knights[0], &crabomination::card::Keyword::Indestructible), mastery);
+    }
+}

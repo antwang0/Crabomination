@@ -17887,6 +17887,16 @@ static DECKS: &[Factory] = &[
     super::decks::ramosian_revivalist,
     super::decks::zealot_il_vec,
     super::decks::hallowed_burial,
+    super::decks::cranial_archive,
+    super::decks::abattoir_ghoul,
+    super::decks::vessel_of_malignity,
+    super::decks::appetite_for_brains,
+    super::decks::lay_bare_the_heart,
+    super::decks::kytheons_irregulars,
+    super::decks::gideons_intervention,
+    super::decks::gideons_resolve,
+    super::decks::gideons_phalanx,
+    super::decks::gideon_the_oathsworn,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1,15 +1,17 @@
 //! Commander: 2026-10-19 (`016Xh16H`) — the five- and six-gap decks of simple
 //! cards: Bucky Barnes's white weenies, Óin the Brave's red recursion, Lin
-//! Sivvi's Rebels. Tests in `tests/recent_b/cmdr_016x_a.rs`.
+//! Sivvi's Rebels, Klaw's hand attack, Kytheon's Gideons. Tests in
+//! `tests/recent_b/cmdr_016x_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, MayPlayDuration, SelectionRequirement as R, Subtypes, TokenDefinition,
-    TriggeredAbility,
+    EventSpec, Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Zone,
 };
-use crate::effect::shortcut::{blocks, boast, etb, if_discarded, on_attack, on_dies, target_filtered};
-use crate::effect::{Effect, LibraryPosition, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, cost, generic, r, w};
+use crate::effect::shortcut::{blocks, boast, etb, if_discarded, on_attack, on_dies, renown, target_filtered};
+use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, Selector, Value, ZoneDest};
+use crate::mana::{Color, ManaCost, b, cost, generic, r, w};
 use std::sync::Arc;
 
 fn creature(
@@ -349,6 +351,272 @@ pub fn hallowed_burial() -> CardDefinition {
             what: Selector::EachPermanent(R::Creature),
             to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
         },
+        ..Default::default()
+    }
+}
+
+// ── Klaw, Sonic Subjugator ──────────────────────────────────────────────────
+
+/// Cranial Archive — {2} artifact. {2}, exile it: target player shuffles
+/// their graveyard into their library; draw a card.
+pub fn cranial_archive() -> CardDefinition {
+    CardDefinition {
+        name: "Cranial Archive",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            exile_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Target(0) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abattoir Ghoul — {3}{B} 3/2 first strike Zombie. A creature it damaged
+/// this turn dying gains you life equal to that creature's toughness.
+pub fn abattoir_ghoul() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::DamagedBySourceThisTurn },
+            ),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..creature("Abattoir Ghoul", cost(&[generic(3), b()]), vec![CreatureType::Zombie], 3, 2)
+    }
+}
+
+/// Vessel of Malignity — {1}{B} enchantment. {1}{B}, sacrifice it: target
+/// opponent exiles two cards from their hand. Sorcery speed.
+pub fn vessel_of_malignity() -> CardDefinition {
+    CardDefinition {
+        name: "Vessel of Malignity",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::ExileFromHand { who: target_filtered(R::OpponentPlayer), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Appetite for Brains — {B} sorcery. Target opponent reveals their hand;
+/// you exile a card from it with mana value 4 or greater.
+pub fn appetite_for_brains() -> CardDefinition {
+    CardDefinition {
+        name: "Appetite for Brains",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileChosenFromHand {
+            from: target_filtered(R::OpponentPlayer),
+            count: Value::ONE,
+            filter: R::ManaValueAtLeast(4),
+            link_to_source: false,
+            face_down: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Lay Bare the Heart — {1}{B} sorcery. Target opponent reveals their hand;
+/// you choose a nonlegendary, nonland card and they discard it.
+pub fn lay_bare_the_heart() -> CardDefinition {
+    CardDefinition {
+        name: "Lay Bare the Heart",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DiscardChosen {
+            from: target_filtered(R::OpponentPlayer),
+            count: Value::ONE,
+            filter: R::Nonland.and(R::Not(Box::new(R::HasSupertype(Supertype::Legendary)))),
+        },
+        ..Default::default()
+    }
+}
+
+// ── Kytheon, Hero of Akros ──────────────────────────────────────────────────
+
+/// Kytheon's Irregulars — {2}{W}{W} 4/3, renown 1; {W}{W}: tap target
+/// creature.
+pub fn kytheons_irregulars() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![renown(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), w()]),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Kytheon's Irregulars",
+            cost(&[generic(2), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            4,
+            3,
+        )
+    }
+}
+
+/// Gideon's Intervention — {2}{W}{W} enchantment. As it enters, choose a card
+/// name: opponents can't cast spells with it, and damage to you and your
+/// permanents from sources with it is prevented.
+pub fn gideons_intervention() -> CardDefinition {
+    CardDefinition {
+        name: "Gideon's Intervention",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        as_enters_effect: Some(Effect::NameCard { what: Selector::This, restrict_to: None }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Your opponents can't cast spells with the chosen name.",
+                effect: StaticEffect::OpponentsCantCastNamed,
+            },
+            StaticAbility {
+                description: "Prevent all damage that would be dealt to you and permanents you control by sources with the chosen name.",
+                effect: StaticEffect::PreventDamageToYouAndYoursFromNamed,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gideon's Resolve — {4}{W} enchantment. ETB may find Gideon, Martial
+/// Paragon in your library and/or graveyard; creatures you control get +1/+1.
+pub fn gideons_resolve() -> CardDefinition {
+    CardDefinition {
+        name: "Gideon's Resolve",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for Gideon, Martial Paragon?".into(),
+            body: Box::new(Effect::SearchZones {
+                who: PlayerRef::You,
+                zones: vec![Zone::Library, Zone::Graveyard],
+                filter: R::HasName("Gideon, Martial Paragon".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature,
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gideon's Phalanx — {5}{W}{W} instant. Four 2/2 white Knights with
+/// vigilance; spell mastery — your creatures gain indestructible this turn.
+pub fn gideons_phalanx() -> CardDefinition {
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Gideon's Phalanx",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(4), definition: Arc::new(knight) },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    },
+                    Value::Const(2),
+                ),
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gideon, the Oathsworn — {4}{W}{W}, loyalty 4. Attacking with two or more
+/// non-Gideon creatures puts a +1/+1 counter on each; +2: a 5/5 Soldier
+/// this turn with damage to him prevented; −9: exile him and every creature
+/// your opponents control.
+pub fn gideon_the_oathsworn() -> CardDefinition {
+    let non_gideon_attackers = || {
+        R::Creature
+            .and(R::IsAttacking)
+            .and(R::ControlledByYou)
+            .and(R::Not(Box::new(R::HasPlaneswalkerType(PlaneswalkerSubtype::Gideon))))
+    };
+    CardDefinition {
+        name: "Gideon, the Oathsworn",
+        cost: cost(&[generic(4), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Gideon], ..Default::default() },
+        base_loyalty: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(
+                Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(non_gideon_attackers()), n: Value::Const(2) },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(non_gideon_attackers()),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(5),
+                        toughness: Value::Const(5),
+                        creature_types: vec![CreatureType::Soldier],
+                        keywords: vec![],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::PreventAllDamageThisTurn { target: Selector::This, redirect_to: None },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -9,
+                effect: Effect::Seq(vec![
+                    Effect::Exile { what: Selector::This },
+                    Effect::Exile { what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)) },
+                ]),
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
