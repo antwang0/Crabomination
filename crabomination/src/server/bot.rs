@@ -10104,6 +10104,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             matches!(&sa.effect, crate::effect::StaticEffect::GrantKeyword { keyword: crate::card::Keyword::Crew(_), .. })
         }) || c.definition.equipped_bonus.as_ref().is_some_and(|b| b.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Crew(_))))
     });
+    let saddle_granted = saddle_is_granted(state);
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         let def = &c.definition;
         if def.is_planeswalker() {
@@ -10112,7 +10113,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
         if def.crew_cost().is_some() || (crew_granted && state.effective_crew_cost(c.id).is_some()) {
             m |= sink::CREW;
         }
-        if def.saddle_cost().is_some() {
+        if def.saddle_cost().is_some() || (saddle_granted && state.effective_saddle_cost(c.id).is_some()) {
             m |= sink::SADDLE;
         }
         if (def.is_equipment() && (def.has_equip().is_some() || def.equip_filtered_cost.is_some()))
@@ -12135,6 +12136,16 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
 /// least-valuable other untapped creatures (smallest power first). Only saddles
 /// a Mount that can attack this turn and isn't already saddled, and never spends
 /// more board power than the Mount itself is worth.
+/// A granted saddle (Jandor, Fortuned Traveler) needs the layers; ask them only
+/// on a board where some static grants one — the `crew_granted` gate's twin.
+fn saddle_is_granted(state: &GameState) -> bool {
+    state.battlefield.iter().any(|c| {
+        c.definition.static_abilities.iter().any(|sa| {
+            matches!(&sa.effect, crate::effect::StaticEffect::GrantKeyword { keyword: crate::card::Keyword::Saddle(_), .. })
+        })
+    })
+}
+
 fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
     // Saddled is "until end of turn" (CR 702.171e), so only pay the tap cost
     // when a combat phase still follows — i.e. precombat main. Saddling in
@@ -12142,11 +12153,13 @@ fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
     if state.step != TurnStep::PreCombatMain {
         return None;
     }
+    let granted = saddle_is_granted(state);
     for mount in &state.battlefield {
         if mount.controller != seat || mount.saddled || mount.tapped {
             continue;
         }
-        let Some(saddle_n) = mount.definition.saddle_cost() else { continue };
+        let printed = mount.definition.saddle_cost();
+        let Some(saddle_n) = (if granted { state.effective_saddle_cost(mount.id) } else { printed }) else { continue };
         if !mount.can_attack() {
             continue;
         }

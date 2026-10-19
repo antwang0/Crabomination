@@ -24597,6 +24597,24 @@ impl GameState {
             .min()
     }
 
+    /// CR 702.171 — a Mount's saddle N: the printed keyword or a granted one
+    /// on the computed line (Jandor, Fortuned Traveler's "has saddle 2"),
+    /// whichever is cheaper — the `effective_crew_cost` of saddle.
+    pub fn effective_saddle_cost(&self, mount: crate::card::CardId) -> Option<u32> {
+        let c = self.battlefield_find(mount)?;
+        let printed = c.definition.saddle_cost();
+        let granted = self
+            .computed_permanent_on(c)?
+            .keywords()
+            .iter()
+            .filter_map(|k| if let Keyword::Saddle(n) = k { Some(*n) } else { None })
+            .min();
+        match (printed, granted) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }
+    }
+
     fn crew(
         &mut self,
         vehicle: crate::card::CardId,
@@ -24715,10 +24733,7 @@ impl GameState {
         if self.battlefield[mount_pos].controller != p {
             return Err(GameError::NotYourPriority);
         }
-        let saddle_n = self.battlefield[mount_pos]
-            .definition
-            .saddle_cost()
-            .ok_or(GameError::InvalidTarget)?;
+        let saddle_n = self.effective_saddle_cost(mount).ok_or(GameError::InvalidTarget)?;
         let computed = self.compute_battlefield();
         let mut seen = crate::fxhash::HashSet::default();
         let mut total_power: i32 = 0;
