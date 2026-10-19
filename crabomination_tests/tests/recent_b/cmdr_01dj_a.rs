@@ -2307,3 +2307,198 @@ fn alms_and_howl() {
     drain_stack(&mut g);
     assert_eq!((g.players[1].hand.len(), g.players[1].life), (hand + 2, 15));
 }
+
+// ── The Foot, Kate Stewart, Chong and Lily (`decks::cmdr_01dj_j`) ───────────
+
+/// Tunnel Rats climb back from the graveyard tapped.
+#[test]
+fn tunnel_rats_return_tapped() {
+    let mut g = pod(2);
+    let rats = g.add_card_to_graveyard(0, catalog::tunnel_rats());
+    flood(&mut g, 0);
+    activate_on(&mut g, rats, 0, None);
+    assert!(g.battlefield_find(rats).is_some_and(|c| c.tapped));
+}
+
+/// Foot Elite makes another attacker indestructible and +1/+0.
+#[test]
+fn foot_elite_shields_a_partner() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let fe = ready(&mut g, 0, catalog::foot_elite());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    combat(
+        &mut g,
+        vec![
+            Attack {
+                attacker: fe,
+                target: AttackTarget::Player(1),
+            },
+            Attack {
+                attacker: bear,
+                target: AttackTarget::Player(1),
+            },
+        ],
+        vec![],
+    );
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
+}
+
+/// Uneasy Alliance stops attacks and blocks; its activation exiles the
+/// creature for a Ninja.
+#[test]
+fn uneasy_alliance_pacifies_then_exiles() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ua = g.add_card_to_hand(0, catalog::uneasy_alliance());
+    cast_targets(&mut g, ua, &[Target::Permanent(giant)]);
+    let cp = g.computed_permanent(giant).unwrap();
+    assert!(
+        cp.keywords().contains(&Keyword::CantAttack) && cp.keywords().contains(&Keyword::CantBlock)
+    );
+    flood(&mut g, 0);
+    activate_on(&mut g, ua, 0, None);
+    assert!(in_exile(&g, giant));
+    assert_eq!(named(&g, 0, "Ninja").len(), 1);
+}
+
+/// Karai's Technique, both modes: +3/+3 on yours, -3/-3 on theirs.
+#[test]
+fn karais_technique_both_modes() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let s = g.add_card_to_hand(0, catalog::karais_technique());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: s,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(giant)],
+        x_value: None,
+    })
+    .expect("both");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert_eq!(power(&g, bear), 5);
+    assert!(g.battlefield_find(giant).is_none());
+}
+
+/// Shredder's Revenge: two discards, or two draws for 2 life.
+#[test]
+fn shredders_revenge_modes() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    let hand = g.players[1].hand.len();
+    let s = g.add_card_to_hand(0, catalog::shredders_revenge());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand - 2);
+}
+
+/// Time Bomb ticks each upkeep; sacrificed, it deals its counters to every
+/// creature and player.
+#[test]
+fn time_bomb_ticks_and_blows() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let tb = ready(&mut g, 0, catalog::time_bomb());
+    g.battlefield_find_mut(tb)
+        .unwrap()
+        .add_counters(CounterType::Time, 2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    activate_on(&mut g, tb, 0, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!((g.players[0].life, g.players[1].life), (18, 18));
+}
+
+/// Tidewalker enters with a time counter per Island and is that big; the
+/// vanishing pair grow their clocks off your creatures.
+#[test]
+fn tidewalker_and_the_vanishing_clocks() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let t = g.add_card_to_hand(0, catalog::tidewalker());
+    cast_targets(&mut g, t, &[]);
+    let cp = g.computed_permanent(t).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    let golem = ready(&mut g, 0, catalog::soultether_golem());
+    let before = g
+        .battlefield_find(golem)
+        .unwrap()
+        .counter_count(CounterType::Time);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_targets(&mut g, bear, &[]);
+    assert_eq!(
+        g.battlefield_find(golem)
+            .unwrap()
+            .counter_count(CounterType::Time),
+        before + 1
+    );
+}
+
+/// Chong and Lily: Bards attacking add a lore counter to each Saga (the
+/// default mode); Founding of Omashu's chapter I makes two Allies.
+#[test]
+fn chong_and_lily_turn_the_page() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let chong = ready(&mut g, 0, catalog::chong_and_lily_nomads());
+    let saga = g.add_card_to_hand(0, catalog::founding_of_omashu());
+    cast_targets(&mut g, saga, &[]);
+    assert_eq!(named(&g, 0, "Ally").len(), 2);
+    let lore = g
+        .battlefield_find(saga)
+        .unwrap()
+        .counter_count(CounterType::Lore);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: chong,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(saga)
+            .unwrap()
+            .counter_count(CounterType::Lore),
+        lore + 1
+    );
+}
+
+/// Ral and the Implicit Maze: I burns the opponents' creatures; III makes a
+/// Spellgorger Weird that grows on noncreature spells.
+#[test]
+fn ral_and_the_implicit_maze_chapters() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let saga = g.add_card_to_hand(0, catalog::ral_and_the_implicit_maze());
+    cast_targets(&mut g, saga, &[]);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(theirs).is_none() && g.battlefield_find(mine).is_some());
+    lore(&mut g, saga);
+    lore(&mut g, saga);
+    let weird = named(&g, 0, "Spellgorger Weird")[0];
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast_targets(&mut g, ring, &[]);
+    assert_eq!(plus(&g, weird), 1);
+}
