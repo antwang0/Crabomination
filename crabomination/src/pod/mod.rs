@@ -25818,6 +25818,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAPHAEL_7_COMMANDERS,
             main: decks::RAPHAEL_7_MAIN,
         },
+        // Seat 4228: Wingnut, Bat on the Belfry's EDHREC average deck. `--pod-decks 4228`.
+        PodDeck {
+            name: "Wingnut, Bat on the Belfry (R)",
+            commanders: decks::WINGNUT_COMMANDERS,
+            main: decks::WINGNUT_MAIN,
+        },
+        // Seat 4229: Nebuchadnezzar's EDHREC average deck. `--pod-decks 4229`.
+        PodDeck {
+            name: "Nebuchadnezzar (UB)",
+            commanders: decks::NEBUCHADNEZZAR_COMMANDERS,
+            main: decks::NEBUCHADNEZZAR_MAIN,
+        },
+        // Seat 4230: Mathise, Surge Channeler's EDHREC average deck. `--pod-decks 4230`.
+        PodDeck {
+            name: "Mathise, Surge Channeler (U)",
+            commanders: decks::MATHISE_COMMANDERS,
+            main: decks::MATHISE_MAIN,
+        },
+        // Seat 4231: Maeve, Insidious Singer's EDHREC average deck. `--pod-decks 4231`.
+        PodDeck {
+            name: "Maeve, Insidious Singer (U)",
+            commanders: decks::MAEVE_COMMANDERS,
+            main: decks::MAEVE_MAIN,
+        },
+        // Seat 4232: Dennick, Pious Apprentice's EDHREC average deck. `--pod-decks 4232`.
+        PodDeck {
+            name: "Dennick, Pious Apprentice (WU)",
+            commanders: decks::DENNICK_COMMANDERS,
+            main: decks::DENNICK_MAIN,
+        },
+        // Seat 4233: Shriek, Treblemaker's EDHREC average deck. `--pod-decks 4233`.
+        PodDeck {
+            name: "Shriek, Treblemaker (BR)",
+            commanders: decks::SHRIEK_COMMANDERS,
+            main: decks::SHRIEK_MAIN,
+        },
+        // Seat 4234: Minotaur, Roxxon CEO's EDHREC average deck. `--pod-decks 4234`.
+        PodDeck {
+            name: "Minotaur, Roxxon CEO (B)",
+            commanders: decks::MINOTAUR_COMMANDERS,
+            main: decks::MINOTAUR_MAIN,
+        },
     ]
 }
 
@@ -31946,6 +31988,13 @@ mod tests {
             ("Ragnar", &[0x1A97]),
             ("Urgoros, the Empty One", &[0x1A98]),
             ("Raphael, Tag Team Tough", &[0x1A99]),
+            ("Wingnut, Bat on the Belfry", &[0x1A9A]),
+            ("Nebuchadnezzar", &[0x1A9B]),
+            ("Mathise, Surge Channeler", &[0x1A9C]),
+            ("Maeve, Insidious Singer", &[0x1A9D]),
+            ("Dennick, Pious Apprentice", &[0x1A9E]),
+            ("Shriek, Treblemaker", &[0x1A9F]),
+            ("Minotaur, Roxxon CEO", &[0x1AA0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
