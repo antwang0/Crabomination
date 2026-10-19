@@ -26370,6 +26370,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOMIK_4_COMMANDERS,
             main: decks::TOMIK_4_MAIN,
         },
+        // Seat 4320: Óin the Brave's EDHREC average deck. `--pod-decks 4320`.
+        PodDeck {
+            name: "Óin the Brave (R)",
+            commanders: decks::OIN_THE_BRAVE_COMMANDERS,
+            main: decks::OIN_THE_BRAVE_MAIN,
+        },
+        // Seat 4321: Lin Sivvi, Defiant Hero's EDHREC average deck. `--pod-decks 4321`.
+        PodDeck {
+            name: "Lin Sivvi, Defiant Hero (W)",
+            commanders: decks::LIN_SIVVI_COMMANDERS,
+            main: decks::LIN_SIVVI_MAIN,
+        },
+        // Seat 4322: Bucky Barnes, Eager Ally's EDHREC average deck. `--pod-decks 4322`.
+        PodDeck {
+            name: "Bucky Barnes, Eager Ally (W)",
+            commanders: decks::BUCKY_BARNES_COMMANDERS,
+            main: decks::BUCKY_BARNES_MAIN,
+        },
     ]
 }
 
@@ -32590,6 +32608,9 @@ mod tests {
             ("Quickbeam, Upstart Ent", &[0x1AF3]),
             ("Tobias Andrion", &[0x1AF4]),
             ("Tomik, Orzhov Lawmage", &[0x1AF5]),
+            ("Óin the Brave", &[0x1AF6]),
+            ("Lin Sivvi, Defiant Hero", &[0x1AF7]),
+            ("Bucky Barnes, Eager Ally", &[0x1AF8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

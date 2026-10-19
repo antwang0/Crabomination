@@ -121180,3 +121180,86 @@ pub const TOMIK_4_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const OIN_THE_BRAVE_COMMANDERS: &[CardFactory] = &[oin_the_brave];
+
+/// **Óin the Brave**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Óin the Brave (EDHREC, fetched 2026-10-19).
+pub const OIN_THE_BRAVE_MAIN: &[CardFactory] = &[
+    adventuring_gear, arcane_signet, bonders_ornament, bonesplitter, commanders_sphere,
+    hedron_archive, mind_stone, prying_blade, ruby_medallion, sol_ring, throne_of_eldraine,
+    tormentors_helm, command_tower, conduit_pylons, forgotten_cave, hidden_grotto,
+    nykthos_shrine_to_nyx, survivors_encampment, terramorphic_expanse,
+    valakut_the_molten_pinnacle, akoum_hellhound, anep_vizier_of_hazoret, firewing_phoenix,
+    flame_wreathed_phoenix, gleaming_barrier, goblin_settler, hound_of_griselbrand,
+    immortal_phoenix, ingot_chewer, mad_dog, maelstrom_colossus, oliphaunt, phoenix_of_ash,
+    plundering_pirate, professional_face_breaker, pyre_hound, rapacious_dragon, rapacious_one,
+    reckless_fireweaver, seismic_monstrosaur, skoa_embermage, slumbering_cerberus,
+    smaug_the_great_calamity, tuskeri_firewalker, twinflame_tyrant, wildfire_cerberus,
+    ydwen_efreet, bitter_reunion, descent_into_avernus, underworld_breach, balduvian_rage,
+    bull_rush, chaos_warp, magmatic_sinkhole, thrill_of_possibility, unexpected_windfall,
+    untimely_malfunction, blazing_volley, bonfire_of_the_damned, chain_reaction, demolish,
+    faithless_looting, go_for_blood, jeskas_will, survey_the_wreckage, vandalblast,
+    wheel_of_misfortune, will_of_the_jeskai, wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const LIN_SIVVI_COMMANDERS: &[CardFactory] = &[lin_sivvi_defiant_hero];
+
+/// **Lin Sivvi, Defiant Hero**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Lin Sivvi, Defiant Hero (EDHREC, fetched 2026-10-19).
+pub const LIN_SIVVI_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, firdoch_core, heartstone, lightning_greaves,
+    marble_diamond, maskwood_nexus, mind_stone, pearl_medallion, sol_ring, swiftfoot_boots,
+    thousand_year_elixir, thran_dynamo, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    miren_the_moaning_well, mistveil_plains, myriad_landscape, nykthos_shrine_to_nyx,
+    path_of_ancestry, secluded_steppe, war_room, amrou_scout, amrou_seekers,
+    ashe_princess_of_dalmasca, ballista_squad, children_of_korlis, cho_manno_revolutionary,
+    defiant_falcon, defiant_vanguard, jet_rebel_leader, knight_of_the_holy_nimbus, lawbringer,
+    lightbringer, mirror_entity, nightwind_glider, outrider_en_kor, ramosian_captain,
+    ramosian_commander, ramosian_lieutenant, ramosian_revivalist, ramosian_sergeant,
+    ramosian_sky_marshal, rappelling_scouts, reveille_squad, sally_pride_lioness_leader,
+    shield_dancer, task_force, the_duke_rebel_sentry, thermal_glider, whipcorder, zealot_il_vec,
+    always_watching, animal_boneyard, bound_in_silence, honor_of_the_pure, land_tax, pariah,
+    smothering_tithe, tocasias_welcome, condemn, crib_swap, disenchant, enlightened_tutor,
+    generous_gift, path_to_exile, stroke_of_midnight, swords_to_plowshares, worthy_cause,
+    austere_command, cut_a_deal, hallowed_burial, mass_calcify,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const BUCKY_BARNES_COMMANDERS: &[CardFactory] = &[bucky_barnes_eager_ally];
+
+/// **Bucky Barnes, Eager Ally**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Bucky Barnes, Eager Ally (EDHREC, fetched 2026-10-19).
+pub const BUCKY_BARNES_MAIN: &[CardFactory] = &[
+    armillary_sphere, bitterthorn_nissas_animus, conquerors_flail, lavaspur_boots,
+    mask_of_memory, oketras_monument, pip_boy_3000, pre_war_formalwear, quietus_spike,
+    resurrection_orb, scytheclaw, skeleton_key, skullclamp, sonic_screwdriver, swiftfoot_boots,
+    zephyr_boots, conduit_pylons, fabled_passage, gallifrey_council_chamber, hidden_grotto,
+    high_market, inventors_fair, lazotep_quarry, prismatic_vista, remote_farm,
+    aerial_extortionist, alaborn_zealot, apostle_of_purifying_light, bounty_agent,
+    cathar_commando, cliffside_rescuer, disciple_of_grace, errand_rider_of_gondor,
+    esper_sentinel, foriysian_interceptor, gravel_slinger, haazda_snare_squad,
+    halvar_god_of_battle, hero_in_training, icatian_crier, inside_source, inspired_inventor,
+    leonin_shikari, lion_sash, loyal_sentry, maelstrom_colossus, market_gnome, mausoleum_guard,
+    mentor_of_the_meek, night_nurse_healer_of_heroes, oketras_attendant,
+    ornithopter_of_paradise, ranger_of_eos, redemption_choir, serra_zealot, siege_striker,
+    soltari_foot_soldier, troubled_healer, vanguard_of_brimaz, volunteer_militia,
+    wandering_champion, weathered_wayfarer, witch_enchanter, gift_of_immortality,
+    journey_to_oblivion, minimus_containment, sigardas_aid, acrobatic_maneuver,
+    purify_the_grave, tithe, helping_hand, jolted_awake, sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
