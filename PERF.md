@@ -3157,6 +3157,22 @@ pods (overflow)  seeds 9250-9256, 3-8 seats: 12,672 games incl. 440 over seats 4
                  doubling Hollowhenge Overlord's upkeep Wolves — the step-trigger fix made it real)
 ```
 
+### 2026-10-19 night (Commander run, `01DJHkWk`, closing) — guardrail; ~140 more cards, six primitives
+
+Hot-path touches: none on the 2-player path — the primitives are a new `Effect` arm, a new
+`SpendRestriction` arm, a new `Value` arm, `DestroyAtNextEndStep` sharing `SacrificeAtNextEndStep`'s
+arm, and enum variants appended last. `release` bot_ladder at the tip after `9ec6e2a90`'s rebase:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the entry below;
+                 determinism ok, peak_rss_mib 41.7
+2-player pools   cube 2,400 / sos 1,500 / sealed 3,600 (seed 9256): 0 undecided, 0 panics
+pods (overflow)  3,300 games over seats 4313-4354 at 3-6 seats (seeds 77/78/9256/9257): 0 panics,
+                 0 undecided
+suite            28,108 / 0 / 6 (strict answer log, pod seat test excluded, CARGO_INCREMENTAL=0 —
+                 incremental filled the disk twice); clippy 0; `release-fast` check clean
+```
+
 ### 2026-10-19 (Commander run, `01DJHkWk`) — guardrail; 90 cards, 48 seats, one `WardCost` variant
 
 Hot-path touches: none — `WardCost::ManaOrDiscard` adds an arm to the ward

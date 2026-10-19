@@ -220,7 +220,7 @@ the handoff.
   DFCs), Tam (Prismabasher's "up to X targets"), Dromar (Flooded Woodlands), General Jarkeld (banding);
   the Marvel decks (War Machine, The Howling Commandos, Captain America) were left to `01DJHkWk`'s cluster.
 
-## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — ~215 closer cards, ~80 seats, the Marvel Villain / LOTR Goblin / attacks-alone / Lorwyn Merfolk clusters
+## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — ~230 closer cards, ~90 seats, the Marvel Villain / LOTR Goblin / attacks-alone / Lorwyn Merfolk / party clusters
 
 - **Method:** rank missing cards by decks they close *together* (`scripts/edhrec_rank_closers.py`: `Σ 1/missing` over Commander-legal decks,
   every card in the 99 legal too), not one deck at a time. Two clusters fell out: the Marvel Villain
@@ -237,12 +237,20 @@ the handoff.
   seats 4276-4304, 4313-4314 (Elesh Norn, She-Hulk Attorney-at-Law), 4325-4328 (two Donatellos, Fíli and
   Kíli, Black Panther Vanguard), 4329-4335 (the attacks-alone Marvel seven: Black Widow Double Agent, Nick
   Fury Spymaster, Zarda, Luke Cage Power Man, Agent 13, Black Panther Claws of Bast, Peggy Carter —
-  Strategic Intervention + Crowd of True Believers + Widow's Bite), 4339-4341 (Sharae, Worzel, Janeway).
+  Strategic Intervention + Crowd of True Believers + Widow's Bite), 4339-4341 (Sharae, Worzel, Janeway),
+  4342 (Donatello Turtle Techie — Turtles in Time), 4343-4345 (The Destined Warrior, Tazri Beacon of
+  Unity, Captain America Unbowed), 4352-4354 (Arzakon, U.S.S. Enterprise-D, T'Pol).
   ⚠ **Whtz, the Bibliophile** reads zero-gap but its EDHREC average lists 254 cards — never seat it.
   **Sygg, Wanderwine Wisdom** has no printed text in the oracle dump yet, so both Sygg decks stay open.
 - **Primitives:** `WardCost::ManaOrDiscard` (Titania); `CreatureType::Camarid`; `DiscardChosenFromRevealed
   { pick }` (serde default one); `Effect::DestroyAtNextEndStep { what }` — the destroy twin of
-  `SacrificeAtNextEndStep`, binding the object when it resolves.
+  `SacrificeAtNextEndStep`, binding the object when it resolves;
+  `Effect::EachPlayerMayShuffleHandAndGraveyardThenDraw { draw }` (Turtles in Time, Kwain's APNAP shape);
+  `SpendRestriction::PartySpellsOrAbilities` (Base Camp); `PlaneswalkerSubtype::Arzakon`;
+  `Value::DistinctPlaneswalkerTypesAmong` (Tam, the Possibility).
+- **Gaps found:** a *granted* `Keyword::Saddle` can't be activated — `saddle` and the bot's `pick_saddle`
+  read `definition.saddle_cost()` (Jandor, Fortuned Traveler waits on it); no "card put into a library"
+  event exists and library writes go through `CardPile`'s `DerefMut` at ~87 sites (Wan Shi Tong).
 - **FIXED (bugs in the other session's cards):** Old Hob's `DelayUntil { NextEndStep, Destroy {
   LastCreatedToken } }` re-read the selector at the end step and destroyed whatever token was made last
   (a Treasure made after the Mutant died in its place) — now `DestroyAtNextEndStep`, regression test
