@@ -1,4 +1,4 @@
-//! Commander: the 2026-10-19 (`01GwrDKP`) closers (`decks::cmdr_01gw_a`, `_b`).
+//! Commander: the 2026-10-19 (`01GwrDKP`) closers (`decks::cmdr_01gw_a`, `_b`, `_c`).
 
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
@@ -391,3 +391,48 @@ fn sanctum_of_all_doubles_shrine_triggers_at_six() {
     }
 }
 
+// ── `decks::cmdr_01gw_c` ────────────────────────────────────────────────────
+
+/// CR 702.62b — Curse of the Cabal's upkeep trigger functions from exile while
+/// it is suspended: a player may sacrifice a permanent at their upkeep to put
+/// two more time counters on it.
+#[test]
+fn curse_of_the_cabal_delays_for_a_sacrifice() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let curse = g.add_card_to_hand(0, catalog::curse_of_the_cabal());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Suspend { card_id: curse }).expect("suspend");
+    drain_stack(&mut g);
+    let time = |g: &GameState| g.exile.iter().find(|c| c.id == curse).map(|c| c.counter_count(CounterType::Time));
+    assert_eq!(time(&g), Some(2));
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "sacrificed");
+    assert_eq!(time(&g), Some(4));
+}
+
+/// Neglected Heirloom transforms with the werewolf it equips: Afflicted
+/// Deserter flips at a spell-less upkeep and the Heirloom becomes Ashmouth
+/// Blade (+3/+3, first strike).
+#[test]
+fn neglected_heirloom_flips_with_its_werewolf() {
+    let mut g = pod(2);
+    let wolf = g.add_card_to_battlefield(0, catalog::afflicted_deserter());
+    let heirloom = g.add_card_to_battlefield(0, catalog::neglected_heirloom());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: heirloom, target: wolf }).expect("equip");
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wolf).unwrap().definition.name, "Werewolf Ransacker");
+    assert_eq!(g.battlefield_find(heirloom).unwrap().definition.name, "Ashmouth Blade");
+    let cp = g.computed_permanent(wolf).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 7));
+}

@@ -2268,3 +2268,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Draugr Necromancer | "spend mana from snow sources as though any color" is not modelled (the exiled cards cost their printed colors); only the Draugr that exiled a card grants its cast | `ExileDyingOpponentCreaturesWithCounterCastable` |
 | 🟡 Grub, Notorious Auntie | the copy's "at the beginning of the end step, sacrifice this token" is a delayed sacrifice, not an ability the token has (a copy of the token lacks it) | `BlightThen` + `SacrificeAtNextEndStep` |
 | 🟡 Wee Champion | the art-sticker counter never comes up — only name stickers exist (CR 123.6) | `KeywordAct::StickerPlaced` |
+| 🟡 Werewolf Ransacker | the 3 damage goes to the destroyed artifact's owner (its last controller in almost every game) | `OwnerOf(Target(0))` |
