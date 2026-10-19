@@ -26796,6 +26796,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_UNLUCKIEST_PLANESWALKER_COMMANDERS,
             main: decks::THE_UNLUCKIEST_PLANESWALKER_MAIN,
         },
+        // Seat 4391: Narfi, Betrayer King's EDHREC average deck. `--pod-decks 4391`.
+        PodDeck {
+            name: "Narfi, Betrayer King (UB)",
+            commanders: decks::NARFI_COMMANDERS,
+            main: decks::NARFI_MAIN,
+        },
     ]
 }
 
@@ -33087,6 +33093,7 @@ mod tests {
             ("Jandor, Fortuned Traveler", &[0x1B3A]),
             ("Lynde, Cheerful Tormentor", &[0x1B3B]),
             ("The Unluckiest Planeswalker", &[0x1B3C]),
+            ("Narfi, Betrayer King", &[0x1B3D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -123171,3 +123171,33 @@ pub const THE_UNLUCKIEST_PLANESWALKER_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, plains, plains, plains, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const NARFI_COMMANDERS: &[CardFactory] = &[narfi_betrayer_king];
+
+/// **Narfi, Betrayer King**'s EDHREC average deck, card for card:
+/// 99 nonbasic cards = 99.
+/// Narfi, Betrayer King (EDHREC, fetched 2026-10-19).
+pub const NARFI_MAIN: &[CardFactory] = &[
+    arcane_signet, arcums_astrolabe, coldsteel_heart, dimir_signet, icebind_pillar,
+    replicating_ring, sol_ring, talisman_of_dominance, wand_of_orcus, command_tower,
+    dark_depths, faceless_haven, frost_marsh, frostwalk_bastion, ice_tunnel, mouth_of_ronom,
+    path_of_ancestry, scrying_sheets, shimmerdrift_vale, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_swamp, snow_covered_swamp,
+    snow_covered_swamp, snow_covered_swamp, snow_covered_swamp, snow_covered_swamp,
+    snow_covered_swamp, snow_covered_swamp, snow_covered_swamp, snow_covered_swamp,
+    snow_covered_swamp, snow_covered_swamp, snow_covered_swamp, snow_covered_swamp,
+    sunken_hollow, bladestitched_skaab, cemetery_reaper, champion_of_the_perished, death_baron,
+    diregraf_captain, diregraf_colossus, draugr_necromancer, frost_augur,
+    geralf_visionary_stitcher, gisa_and_geralf, gleaming_overseer, gravecrawler,
+    gray_merchant_of_asphodel, grim_draugr, headless_rider, hordewing_skaab, icebreaker_kraken,
+    lord_of_the_accursed, lord_of_the_undead, priest_of_the_haunted_edge, rimebound_dead,
+    shepherd_of_rot, tomb_tyrant, tormod_the_desecrator, undead_augur, undead_warchief,
+    wilhelt_the_rotcleaver, zombie_master, zul_ashur_lich_lord, endless_ranks_of_the_dead,
+    lilianas_mastery, marit_lages_slumber, necroduality, open_the_graves, rooftop_storm,
+    winters_rest, chill_of_the_grave, counterspell, dark_ritual, graven_lore, lazotep_plating,
+    negate, raise_the_draugr, rise_of_the_dread_marn, village_rites, liliana_deaths_majesty,
+    army_of_the_damned, blood_on_the_snow, dead_of_winter, distant_melody, feed_the_swarm,
+    reanimate, victimize, zombie_apocalypse,
+];
