@@ -1,5 +1,5 @@
 //! Commander: 2026-10-19 (`016Xh16H`) — two- and three-gap closers: Old Hob,
-//! Kang, Ultimo, Mila, Quickbeam, Elesh Norn, Elminster, Djeru, Tomik,
+//! Kang, Ultimo, Mila, Quickbeam, Elminster, Djeru, Tomik,
 //! Tobias Andrion. Tests in
 //! `tests/recent_b/cmdr_016x_a.rs`.
 
@@ -12,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::{draw, etb, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w, x};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
 use crate::sets::{dual_land_untyped, etb_gain_one, tapland_untyped};
 use std::sync::Arc;
 
@@ -390,71 +390,6 @@ pub fn lumberknot() -> CardDefinition {
             effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
         }],
         ..creature("Lumberknot", cost(&[generic(2), g(), g()]), vec![CreatureType::Treefolk], 1, 1)
-    }
-}
-
-// ── Elesh Norn ──────────────────────────────────────────────────────────────
-
-fn incubate(n: i32) -> Effect {
-    Effect::Incubate { who: PlayerRef::You, amount: Value::Const(n) }
-}
-
-/// Norn's Inquisitor — {1}{W} 1/1 Phyrexian Knight. ETB incubate 2; a
-/// permanent of yours transforming into a Phyrexian gets a +1/+1 counter.
-pub fn norns_inquisitor() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![
-            etb(incubate(2)),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Transformed, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::HasCreatureType(CreatureType::Phyrexian),
-                    },
-                ),
-                effect: Effect::AddCounter {
-                    what: Selector::TriggerSource,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            },
-        ],
-        ..creature("Norn's Inquisitor", cost(&[generic(1), w()]), vec![CreatureType::Phyrexian, CreatureType::Knight], 1, 1)
-    }
-}
-
-/// Progenitor Exarch — {X}{X}{W} 1/2 Phyrexian Cat Cleric. ETB incubate 3,
-/// X times; {T}: transform target Incubator token you control.
-pub fn progenitor_exarch() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![etb(Effect::Repeat { count: Value::XFromCost, body: Box::new(incubate(3)) })],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::Transform {
-                what: target_filtered(R::IsToken.and(R::HasName("Incubator".into())).and(R::ControlledByYou)),
-            },
-            ..Default::default()
-        }],
-        ..creature(
-            "Progenitor Exarch",
-            cost(&[x(), x(), w()]),
-            vec![CreatureType::Phyrexian, CreatureType::Cat, CreatureType::Cleric],
-            1,
-            2,
-        )
-    }
-}
-
-/// Tiller of Flesh — {3}{W} 2/4 Phyrexian Knight. Casting a spell that
-/// targets a permanent incubates 2.
-pub fn tiller_of_flesh() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellTargetsMatch(R::Permanent)),
-            effect: incubate(2),
-        }],
-        ..creature("Tiller of Flesh", cost(&[generic(3), w()]), vec![CreatureType::Phyrexian, CreatureType::Knight], 2, 4)
     }
 }
 

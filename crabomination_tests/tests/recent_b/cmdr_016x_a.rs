@@ -300,52 +300,7 @@ fn gideon_of_the_trials_emblem_needs_a_gideon() {
     assert!(g.players[0].eliminated, "no Gideon: the loss lands");
 }
 
-// ── Quickbeam, Elesh Norn ───────────────────────────────────────────────────
-
-/// Progenitor Exarch at X = 2 incubates 3 twice; transforming one with
-/// Norn's Inquisitor out gives the Phyrexian a +1/+1 counter (4 in all).
-#[test]
-fn progenitor_exarch_incubates_x_times_and_inquisitor_grows_the_phyrexian() {
-    use crabomination::card::CounterType;
-    let mut g = pod(2);
-    ready(&mut g, 0, catalog::norns_inquisitor());
-    let pe = g.add_card_to_hand(0, catalog::progenitor_exarch());
-    flood(&mut g, 0);
-    g.perform_action(GameAction::CastSpell { card_id: pe, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
-        .expect("cast");
-    drain_stack(&mut g);
-    let incs: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").map(|c| c.id).collect();
-    assert_eq!(incs.len(), 2);
-    g.clear_sickness(pe);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: pe,
-        ability_index: 0,
-        target: Some(Target::Permanent(incs[0])),
-        additional_targets: vec![],
-        x_value: None,
-        mode: None,
-    })
-    .expect("transform");
-    drain_stack(&mut g);
-    let p = g.battlefield_find(incs[0]).unwrap();
-    assert_eq!(p.counter_count(CounterType::PlusOnePlusOne), 4, "3 + the Inquisitor's 1");
-}
-
-/// Tiller of Flesh incubates on a spell targeting a permanent, not a player.
-#[test]
-fn tiller_of_flesh_incubates_on_permanent_targets() {
-    let mut g = pod(2);
-    ready(&mut g, 0, catalog::tiller_of_flesh());
-    let bear = ready(&mut g, 1, catalog::grizzly_bears());
-    flood(&mut g, 0);
-    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
-    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
-    let n = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
-    cast(&mut g, b1, Some(Target::Player(1))).expect("face");
-    assert_eq!(n(&g), 0);
-    cast(&mut g, b2, Some(Target::Permanent(bear))).expect("bear");
-    assert_eq!(n(&g), 1);
-}
+// ── Quickbeam ───────────────────────────────────────────────────
 
 /// Lumberknot grows on any creature's death.
 #[test]
@@ -443,4 +398,38 @@ fn awesome_presence_taxes_blockers_of_its_host() {
         let res = g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)]));
         assert_eq!(res.is_ok(), pay, "pay={pay}");
     }
+}
+
+/// CR 603.7 — a delayed "exile that token at the next end step" is bound to
+/// the token its resolution made, not to whatever token was made last
+/// (Cogwork Assembler, then a Treasure later in the turn).
+#[test]
+fn delayed_last_created_token_stays_bound_to_its_token() {
+    let mut g = pod(2);
+    let ca = ready(&mut g, 0, catalog::cogwork_assembler());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ca,
+        ability_index: 0,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("copy");
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Sol Ring").expect("copy").id;
+    let treasure = crabomination::effect::Effect::CreateToken {
+        who: crabomination::effect::PlayerRef::You,
+        count: crabomination::card::Value::ONE,
+        definition: std::sync::Arc::new(crabomination::game::effects::treasure_token()),
+    };
+    let evs = g.resolve_effect(&treasure, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    let tr = g.battlefield.iter().find(|c| c.definition.name == "Treasure").expect("treasure").id;
+    pass_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(copy).is_none(), "the copy is exiled");
+    assert!(g.battlefield_find(tr).is_some(), "the Treasure stays");
 }
