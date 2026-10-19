@@ -179,6 +179,33 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-19 (Commander run, `01DJHkWk`) — 90 closer cards, 48 seats, the Marvel Villain and LOTR Goblin clusters
+
+- **Method:** rank missing cards by decks they close *together* (`scripts/edhrec_rank_closers.py`: `Σ 1/missing` over Commander-legal decks,
+  every card in the 99 legal too), not one deck at a time. Two clusters fell out: the Marvel Villain
+  precon pool (Masters of Evil, Crossbones, Citizen V, Crimson Cowl, … ~20 decks) and the LOTR Goblins
+  (Azog, Goblin-town, …). Cards in `decks::cmdr_01dj_a`..`_g`, tests `recent_b/cmdr_01dj_a.rs` (76).
+- **Seats** 4228-4275: Wingnut, Nebuchadnezzar, Mathise, Maeve, Dennick, Shriek, Minotaur; Splinter
+  Radical Rat, Loki, Daredevil, Gabriel Angelfire, Venom Eddie Brock, Bob, Baron Strucker, Citizen V,
+  Crimson Cowl, Tombstone, Scorpion, Casey & Raph, Viper; Swordsman, Doc Ock Sinister Scientist, Scarlet
+  Spider, Venom Evil Unleashed, Iron Monger, Titania, Grendel; Uglúk, Grond, Killmonger, Azog, Crossbones,
+  Stilt-Man, Yellowjacket; Doctor Octopus Master Planner, Karolina Dean, Mauhúr, Prowler, Mysterio,
+  Leader, The Balrog of Moria, Atlas, The Masters of Evil, The Squadron Sinister, Madame Masque; Bolg
+  Erebor's Reckoning, Great Goblin, Tiger Shark.
+- **Primitive:** `WardCost::ManaOrDiscard` (Titania). Everything else composed from existing pieces.
+- **Gotchas found:** a `ChooseModesCast` mode numbers its targets from slot 0 (Decoy Ploy's second mode
+  read slot 1 and never resolved); a target named only inside `WithX { x }` is invisible to the target
+  walker — declare it in the body and read `Target(0)` in `x`; `Value::PowerOf` keeps LKI only for the
+  resolving source / trigger subject, so read a target's power *before* destroying it (Azog via
+  `WithX`); `remove_to_graveyard_with_triggers` fires only the dying card's own triggers (tests kill
+  through a spell); restricted mana is `mana_pool.restricted_total()`, not `total()`.
+- **Sweeps** (`overflow` build, seeds 9215-9242 + 9320-9442, 6,300 pod games at 4-7 seats over the new
+  seats): 0 panics, 0 stalls; 3 CR 104.4a draws (all-Villain burn pods).
+- **Released (each needs a primitive):** Cruel Alliance (target filter that depends on teamwork — 3
+  decks), The Ruinous Wrecking Crew ("choose up to X" with targeted modes — 2), Noggin Whack (reveal 3
+  choose 2), Draugr Necromancer (ice-counter exile + snow-as-any casting), Deification, Djeru /
+  Elspeth's Talent (Tomik).
+
 ## FIXED/OPEN 2026-10-18 night (Commander run, `015XaGkQ`) — 47 closer cards, 32 seats, three rules fixes
 
 - **Seats** 4183-4196, 4199-4200, 4205-4206, 4210-4223 (`decks::cmdr_015x_a`, tests `recent_b/cmdr_015x_a.rs`):
