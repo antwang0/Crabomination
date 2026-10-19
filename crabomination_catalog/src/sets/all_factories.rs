@@ -18144,6 +18144,11 @@ static DECKS: &[Factory] = &[
     super::decks::faridehs_fireball,
     super::decks::critical_hit,
     super::decks::slight_malfunction,
+    super::decks::wan_shi_tong_all_knowing,
+    super::decks::dutiful_knowledge_seeker,
+    super::decks::baboon_spirit,
+    super::decks::swat_away,
+    super::decks::synchronized_eviction,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
