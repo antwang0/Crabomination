@@ -26526,6 +26526,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_AMERICA_7_COMMANDERS,
             main: decks::CAPTAIN_AMERICA_7_MAIN,
         },
+        // Seat 4346: Rakka Mar's EDHREC average deck. `--pod-decks 4346`.
+        PodDeck {
+            name: "Rakka Mar (R)",
+            commanders: decks::RAKKA_MAR_COMMANDERS,
+            main: decks::RAKKA_MAR_MAIN,
+        },
+        // Seat 4347: Sidar Jabari's EDHREC average deck. `--pod-decks 4347`.
+        PodDeck {
+            name: "Sidar Jabari (W)",
+            commanders: decks::SIDAR_JABARI_COMMANDERS,
+            main: decks::SIDAR_JABARI_MAIN,
+        },
+        // Seat 4348: Starling, Aerial Ally's EDHREC average deck. `--pod-decks 4348`.
+        PodDeck {
+            name: "Starling, Aerial Ally (W)",
+            commanders: decks::STARLING_COMMANDERS,
+            main: decks::STARLING_MAIN,
+        },
+        // Seat 4349: Falcon, Winged Wonder's EDHREC average deck. `--pod-decks 4349`.
+        PodDeck {
+            name: "Falcon, Winged Wonder (U)",
+            commanders: decks::FALCON_2_COMMANDERS,
+            main: decks::FALCON_2_MAIN,
+        },
     ]
 }
 
@@ -32772,6 +32796,10 @@ mod tests {
             ("The Destined Warrior", &[0x1B0D]),
             ("Tazri, Beacon of Unity", &[0x1B0E]),
             ("Captain America, Unbowed", &[0x1B0F]),
+            ("Rakka Mar", &[0x1B10]),
+            ("Sidar Jabari", &[0x1B11]),
+            ("Starling, Aerial Ally", &[0x1B12]),
+            ("Falcon, Winged Wonder", &[0x1B13]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

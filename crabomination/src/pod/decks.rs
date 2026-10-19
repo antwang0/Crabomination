@@ -121922,3 +121922,111 @@ pub const CAPTAIN_AMERICA_7_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const RAKKA_MAR_COMMANDERS: &[CardFactory] = &[rakka_mar];
+
+/// **Rakka Mar**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Rakka Mar (EDHREC, fetched 2026-10-19).
+pub const RAKKA_MAR_MAIN: &[CardFactory] = &[
+    arcane_signet, battlemages_bracers, fire_diamond, hazorets_monument, heraldic_banner,
+    idol_of_oblivion, illusionists_bracers, magewrights_stone, patriars_seal, ruby_medallion,
+    skullclamp, sol_ring, sting_the_glinting_dagger, thornbite_staff, castle_embereth,
+    flamekin_village, forgotten_cave, myriad_landscape, valakut_the_molten_pinnacle, war_room,
+    archetype_of_aggression, brighthearth_banneret, champion_of_the_path, chandras_embercat,
+    flamebraider, flamekin_harbinger, grinning_ignus, incandescent_soulstoke, ingot_chewer,
+    lavakin_brawler, malignus, nova_chaser, purphoros_god_of_the_forge, pyre_rhymer,
+    rockslide_elemental, runaway_steam_kin, scampering_scorcher, smokebraider,
+    soulbright_flamekin, soulbright_seeker, stigma_lasher, tectonic_giant, thunderkin_awakener,
+    tilonallis_summoner, war_elemental, city_on_fire, elemental_mastery, ferocity_of_the_wilds,
+    impact_tremors, outpost_siege, rite_of_the_raging_storm, shared_animosity, warstorm_surge,
+    abrade, battle_hymn, chaos_warp, demand_answers, force_of_rage, lightning_bolt,
+    seething_song, thrill_of_possibility, chandra_flamecaller, chandra_novice_pyromancer,
+    blasphemous_act, chain_reaction, faithless_looting, jeskas_will, mana_geyser, molten_birth,
+    tempt_with_vengeance, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const SIDAR_JABARI_COMMANDERS: &[CardFactory] = &[sidar_jabari];
+
+/// **Sidar Jabari**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Sidar Jabari (EDHREC, fetched 2026-10-19).
+pub const SIDAR_JABARI_MAIN: &[CardFactory] = &[
+    arcane_signet, helm_of_chatzuk, heraldic_banner, icon_of_ancestry, jabaris_banner,
+    marble_diamond, mind_stone, oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots,
+    the_circle_of_loyalty, wayfarers_bauble, castle_ardenvale, emeria_the_sky_ruin, karoo_land,
+    path_of_ancestry, secluded_steppe, windbrisk_heights, acclaimed_contender, benalish_cavalry,
+    benalish_marshal, cartographers_hawk, cavalry_master, diamond_knight, esper_sentinel,
+    femeref_knight, gustcloak_cavalier, kinsbaile_cavalier, kjeldoran_knight, knight_exemplar,
+    knight_of_sursi, knight_of_valor, knight_of_the_holy_nimbus, knight_of_the_white_orchid,
+    mtenda_herder, outrider_en_kor, pentarch_paladin, riftmarked_knight, sun_titan,
+    valiant_knight, worthy_knight, zhalfirin_commander, zhalfirin_crusader, zhalfirin_knight,
+    always_watching, brave_the_sands, crackdown, dictate_of_heliod, glorious_anthem, knighthood,
+    land_tax, marshals_anthem, rally_the_ranks, true_conviction, aura_blast, dawn_charm,
+    disenchant, generous_gift, jabaris_influence, path_to_exile, reprieve, swords_to_plowshares,
+    unbreakable_formation, basri_ket, austere_command, blinding_light, cut_a_deal, mass_calcify,
+    secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const STARLING_COMMANDERS: &[CardFactory] = &[starling_aerial_ally];
+
+/// **Starling, Aerial Ally**'s EDHREC average deck, card for card:
+/// 63 nonbasic cards + 36 Plains = 99.
+/// Starling, Aerial Ally (EDHREC, fetched 2026-10-19).
+pub const STARLING_MAIN: &[CardFactory] = &[
+    adventurers_airship, arcane_signet, bagel_and_schmear, commanders_sphere, goldvein_pick,
+    infested_fleshcutter, sol_ring, thran_power_suit, myriad_landscape, the_seedcore,
+    armored_armadillo, basilica_shepherd, blinding_souleater, charging_griffin,
+    cloudbound_moogle, courier_griffin, custodi_squire, dawnglare_invoker, doomskar_oracle,
+    dune_mover, flensing_raptor, heavenly_blademaster, indoctrination_attendant,
+    jawbone_duelist, lantern_kami, leonin_skyhunter, pilgrim_of_the_ages, sanctum_spirit,
+    seraph_of_dawn, seven_tail_mentor, shepherd_of_the_clouds, shriek_raptor, skyhunter_cub,
+    steppe_lynx, sterling_keykeeper, stormwild_capridor, sword_dancer, tazeem_raptor,
+    trained_arynx, unruly_mob, war_screecher, wild_pack_squad, youthful_knight, arrest,
+    befriending_the_moths, gleaming_splendor, phyrexian_unlife, disenchant, expel,
+    eyes_in_the_skies, guiding_bolt, impeccable_timing, leap_of_faith, mighty_leap,
+    osseous_exhale, pay_no_heed, pressure_point, rally_the_ancestors, angelic_blessing,
+    divine_gambit, ionas_judgment, recruitment_drive, shoulder_to_shoulder,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const FALCON_2_COMMANDERS: &[CardFactory] = &[falcon_winged_wonder];
+
+/// **Falcon, Winged Wonder**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Falcon, Winged Wonder (EDHREC, fetched 2026-10-19).
+pub const FALCON_2_MAIN: &[CardFactory] = &[
+    arcane_signet, confession_dial, futurist_forge, heraldic_banner, lightning_greaves,
+    midnight_clock, s_h_i_e_l_d_helicarrier, sapphire_medallion, skullclamp, sky_diamond,
+    sol_ring, super_suit, thought_vessel, vibranium_energy_daggers, fabled_passage,
+    faerie_conclave, myriad_landscape, mystic_sanctuary, reliquary_tower, rivendell,
+    villainous_hideout, aim_synthoids, aerial_doombot, atlantean_cavalry, bold_biochemist,
+    consecrated_sphinx, dream_eater, faerie_mastermind, flying_drone, giant_sized_flying_ant,
+    haughty_djinn, hydroelectric_specimen, justice_vance_astrovik, ledger_shredder,
+    mischievous_mystic, octavia_living_thesis, ornithopter_of_paradise,
+    overlord_of_the_floodpits, rescue_pepper_potts, s_h_i_e_l_d_deployment_drone,
+    scourge_of_fleets, silver_myr, siren_stormtamer, sower_of_temptation, stitched_mangler,
+    tva_bureaucrat, ultron_drone, wiccan_rising_magician, windreader_sphinx,
+    case_of_the_shifting_visage, coastal_piracy, favorable_winds, gravitational_shift,
+    reconnaissance_mission, brainsurge, counterspell, depower, dismissive_denial,
+    essence_scatter, high_tide, i_am_iron_man, sink_into_stupor, unexplained_disappearance,
+    we_say_thee_nay, jace_memory_adept, karn_liberated, consuming_tide, faerie_slumber_party,
+    flood_of_tears, season_of_weaving, tempted_by_the_oriq, tricksters_stratagem,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
