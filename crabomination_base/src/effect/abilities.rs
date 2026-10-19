@@ -601,6 +601,11 @@ pub enum StaticEffect {
     /// by name across all players. Materialized in
     /// `gather_continuous_effects_inner` (scans the live battlefield).
     AllNonlandPermanentsAreLegendary,
+    /// CR 205.4 / 613.1d — "Permanents with [counter] counters on them are
+    /// [supertype]" (Rimefeather Owl's ice counters make permanents snow).
+    /// Materialized in `gather_continuous_effects_inner` beside the
+    /// Legendary scans.
+    PermanentsWithCounterHaveSupertype { counter: crate::card::CounterType, supertype: crate::card::Supertype },
     /// CR 205.4 / 613.1d — "Enchanted creature is legendary" (On Serra's
     /// Wings): the permanent this Aura or Equipment is attached to gains the
     /// Legendary supertype in layer 4. Materialized in
