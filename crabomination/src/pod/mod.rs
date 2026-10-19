@@ -26340,6 +26340,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHE_HULK_4_COMMANDERS,
             main: decks::SHE_HULK_4_MAIN,
         },
+        // Seat 4315: Elminster's EDHREC average deck. `--pod-decks 4315`.
+        PodDeck {
+            name: "Elminster (WU)",
+            commanders: decks::ELMINSTER_COMMANDERS,
+            main: decks::ELMINSTER_MAIN,
+        },
+        // Seat 4316: Djeru, With Eyes Open's EDHREC average deck. `--pod-decks 4316`.
+        PodDeck {
+            name: "Djeru, With Eyes Open (W)",
+            commanders: decks::DJERU_COMMANDERS,
+            main: decks::DJERU_MAIN,
+        },
+        // Seat 4317: Quickbeam, Upstart Ent's EDHREC average deck. `--pod-decks 4317`.
+        PodDeck {
+            name: "Quickbeam, Upstart Ent (G)",
+            commanders: decks::QUICKBEAM_COMMANDERS,
+            main: decks::QUICKBEAM_MAIN,
+        },
+        // Seat 4318: Tobias Andrion's EDHREC average deck. `--pod-decks 4318`.
+        PodDeck {
+            name: "Tobias Andrion (WU)",
+            commanders: decks::TOBIAS_ANDRION_COMMANDERS,
+            main: decks::TOBIAS_ANDRION_MAIN,
+        },
+        // Seat 4319: Tomik, Orzhov Lawmage's EDHREC average deck. `--pod-decks 4319`.
+        PodDeck {
+            name: "Tomik, Orzhov Lawmage (W)",
+            commanders: decks::TOMIK_4_COMMANDERS,
+            main: decks::TOMIK_4_MAIN,
+        },
     ]
 }
 
@@ -32555,6 +32585,11 @@ mod tests {
             ("Ultimo, Civilization's End", &[0x1AEE]),
             ("Elesh Norn", &[0x1AEF]),
             ("She-Hulk, Attorney-at-Law", &[0x1AF0]),
+            ("Elminster", &[0x1AF1]),
+            ("Djeru, With Eyes Open", &[0x1AF2]),
+            ("Quickbeam, Upstart Ent", &[0x1AF3]),
+            ("Tobias Andrion", &[0x1AF4]),
+            ("Tomik, Orzhov Lawmage", &[0x1AF5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

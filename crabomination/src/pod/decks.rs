@@ -121039,3 +121039,144 @@ pub const SHE_HULK_4_MAIN: &[CardFactory] = &[
     forest, forest, forest, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const ELMINSTER_COMMANDERS: &[CardFactory] = &[elminster];
+
+/// **Elminster**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 12 Islands + 8 Plains = 99.
+/// Elminster (EDHREC, fetched 2026-10-19).
+pub const ELMINSTER_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, crystal_ball, fellwar_stone, planetarium_of_wan_shi_tong,
+    sol_ring, talisman_of_progress, the_temporal_anchor, thought_vessel, adarkar_wastes,
+    azorius_chancery, castle_vantress, command_tower, deserted_beach, glacial_fortress,
+    hallowed_fountain, mystic_sanctuary, port_town, prairie_stream, reliquary_tower,
+    sea_of_clouds, skycloud_expanse, temple_of_enlightenment, zhalfirin_void, augury_owl,
+    cryptic_annelid, denzilore_fatehold, displacer_kitten, elvish_mariner, faerie_seer,
+    gandalf_white_rider, matoya_archon_elder, oji_the_exquisite_blade, sephara_skys_blade,
+    siani_eye_of_the_storm, sigiled_starfish, spark_double, talrand_sky_summoner, deification,
+    intangible_virtue, jaces_sanctum, lost_isle_calling, netherese_puzzle_ward, oath_of_teferi,
+    propaganda, an_offer_you_cant_refuse, arcane_denial, behold_the_multiverse, brainstorm,
+    brainsurge, counterspell, deliberate, dig_through_time, dovins_veto, elminsters_simulacrum,
+    generous_gift, mystical_tutor, negate, opt, path_to_exile, swords_to_plowshares,
+    jace_mirror_mage, teferi_time_raveler, aminatous_augury, approach_of_the_second_sun,
+    clone_legion, foresee, hour_of_reckoning, interpret_the_signs, mnemonic_deluge,
+    mystic_speculation, preordain, serum_visions, storm_herd, tamiyos_epiphany,
+    temporal_mastery, terminus, treasure_cruise, ugins_insight,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const DJERU_COMMANDERS: &[CardFactory] = &[djeru_with_eyes_open];
+
+/// **Djeru, With Eyes Open**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Plains = 99.
+/// Djeru, With Eyes Open (EDHREC, fetched 2026-10-19).
+pub const DJERU_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, gatewatch_beacon, gideons_memorial, honor_worn_shaku,
+    luxior_giadas_gift, marble_diamond, mind_stone, norns_annex, pearl_medallion, sol_ring,
+    the_chain_veil, castle_ardenvale, emeria_the_sky_ruin, interplanar_beacon, karns_bastion,
+    mistveil_plains, monumental_henge, myriad_landscape, nesting_grounds, nykthos_shrine_to_nyx,
+    war_room, archangel_of_tithes, archon_of_absolution, arena_rector, baird_steward_of_argive,
+    esper_sentinel, grateful_apparition, keeper_of_the_accord, knight_of_the_white_orchid,
+    laezel_vlaakiths_champion, loyal_warhound, mangara_the_diplomat, onakke_oathkeeper,
+    patrolling_peacemaker, solemn_simulacrum, the_peregrine_dynamo, tomik_orzhov_lawmage,
+    deification, elspeth_conquers_death, elspeths_talent, ghostly_prison, land_tax,
+    oath_of_gideon, urza_assembles_the_titans, way_of_the_mentor, comeuppance, generous_gift,
+    ignite_the_beacon, loyal_tutor, path_to_exile, semesters_end, stroke_of_midnight,
+    swords_to_plowshares, ajani_steadfast, archangel_elspeth, elspeth_tirel,
+    elspeth_knight_errant, elspeth_storm_slayer, elspeth_suns_champion, gideon_blackblade,
+    gideon_jura, gideon_of_the_trials, gideon_ally_of_zendikar, gideon_champion_of_justice,
+    teyo_geometric_tactician, the_eternal_wanderer, the_wanderer, austere_command,
+    call_the_gatewatch, deploy_the_gatewatch, farewell, triumphant_reckoning,
+    urzas_ruinous_blast,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const QUICKBEAM_COMMANDERS: &[CardFactory] = &[quickbeam_upstart_ent];
+
+/// **Quickbeam, Upstart Ent**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Quickbeam, Upstart Ent (EDHREC, fetched 2026-10-19).
+pub const QUICKBEAM_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, heralds_horn, rhonass_monument, sol_ring,
+    blighted_woodland, mosswort_bridge, myriad_landscape, path_of_ancestry, rogues_passage,
+    battlewand_oak, bosk_banneret, burlfist_oak, dauntless_dourbark, deadwood_treefolk,
+    dungrove_elder, everbark_shaman, ezzaroot_channeler, fangorn_tree_shepherd, generous_ent,
+    great_forest_druid, great_oak_guardian, heartwood_storyteller, kalonian_twingrove,
+    leaf_crowned_elder, llanowar_elves, lumberknot, orchard_strider, orchard_warden,
+    rootless_yew, scurry_oak, seedguide_ash, shriekwood_devourer, timber_protector,
+    timberland_ancient, treefolk_harbinger, ulvenwald_observer, unstoppable_ash,
+    verdeloth_the_ancient, wickerbough_elder, woodfall_primus, yedora_grave_gardener,
+    assemble_the_entmoot, dormant_grove, garruks_uprising, lignify, sapling_nursery,
+    treefolk_umbra, unnatural_growth, wild_growth, beast_within, entish_restoration, fog,
+    harrow, reach_of_branches, return_of_the_wildspeaker, return_to_nature, rootgrapple,
+    wrenn_and_seven, bushwhack, cultivate, ents_fury, harmonize, kodamas_reach,
+    last_march_of_the_ents, natures_lore, rampant_growth, tend_the_sprigs, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const TOBIAS_ANDRION_COMMANDERS: &[CardFactory] = &[tobias_andrion];
+
+/// **Tobias Andrion**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Islands + 12 Plains = 99.
+/// Tobias Andrion (EDHREC, fetched 2026-10-19).
+pub const TOBIAS_ANDRION_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, commanders_sphere, fellwar_stone, marble_diamond,
+    sky_diamond, sol_ring, talisman_of_progress, thought_vessel, adarkar_wastes,
+    azorius_chancery, command_tower, deserted_beach, glacial_fortress, hallowed_fountain,
+    path_of_ancestry, port_town, prairie_stream, reliquary_tower, temple_of_enlightenment,
+    azors_elocutors, campus_crier, droning_bureaucrats, kongming_sleeping_dragon,
+    minister_of_impediments, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, persistent_petitioners,
+    persistent_petitioners, persistent_petitioners, traveling_philosopher, awesome_presence,
+    enchanted_rivers_grasp, ghostly_prison, land_tax, mystic_remora, propaganda, rhystic_study,
+    smothering_tithe, witness_protection, absorb, arcane_denial, brainstorm, counterspell,
+    disenchant, dovins_veto, mana_drain, negate, opt, path_to_exile, swords_to_plowshares,
+    narset_parter_of_veils, divination, ponder, preordain, proteges_awakening,
+    return_to_the_light_realms, wrath_of_god,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const TOMIK_4_COMMANDERS: &[CardFactory] = &[tomik_orzhov_lawmage];
+
+/// **Tomik, Orzhov Lawmage**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Tomik, Orzhov Lawmage (EDHREC, fetched 2026-10-19).
+pub const TOMIK_4_MAIN: &[CardFactory] = &[
+    arcane_signet, gatewatch_beacon, gideons_memorial, luxior_giadas_gift, mind_stone,
+    pearl_medallion, sol_ring, the_aetherspark, the_chain_veil, thought_vessel,
+    emeria_the_sky_ruin, interplanar_beacon, karns_bastion, nykthos_shrine_to_nyx,
+    reliquary_tower, war_room, archon_of_absolution, arena_rector, baird_steward_of_argive,
+    djeru_with_eyes_open, enduring_innocence, esper_sentinel, grateful_apparition,
+    laezel_vlaakiths_champion, liliana_the_faultless, mangara_the_diplomat, metastatic_evangel,
+    norns_choirmaster, onakke_oathkeeper, patrolling_peacemaker, silent_arbiter,
+    welcoming_vampire, witch_enchanter, authority_of_the_consuls, elspeths_talent, land_tax,
+    oath_of_gideon, smothering_tithe, urza_assembles_the_titans, way_of_the_healer,
+    way_of_the_mentor, generous_gift, ignite_the_beacon, loyal_tutor, path_to_exile,
+    swords_to_plowshares, ajani_resolute, ajani_steadfast, ajani_adversary_of_tyrants,
+    ajani_outland_chaperone, ajani_strength_of_the_pride, archangel_elspeth, basri_ket,
+    elspeth_resplendent, elspeth_knight_errant, elspeth_storm_slayer, elspeth_suns_champion,
+    gideon_of_the_trials, gideon_ally_of_zendikar, serra_the_benevolent,
+    teyo_geometric_tactician, the_eternal_wanderer, the_wanderer, the_wandering_emperor,
+    worzel_the_protector, austere_command, call_the_gatewatch, deploy_the_gatewatch,
+    triumphant_reckoning,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
