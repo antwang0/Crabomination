@@ -26754,6 +26754,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WAR_MACHINE_3_COMMANDERS,
             main: decks::WAR_MACHINE_3_MAIN,
         },
+        // Seat 4384: Zhou Yu, Chief Commander's EDHREC average deck. `--pod-decks 4384`.
+        PodDeck {
+            name: "Zhou Yu, Chief Commander (U)",
+            commanders: decks::ZHOU_YU_COMMANDERS,
+            main: decks::ZHOU_YU_MAIN,
+        },
+        // Seat 4385: Beluna Grandsquall's EDHREC average deck. `--pod-decks 4385`.
+        PodDeck {
+            name: "Beluna Grandsquall (URG)",
+            commanders: decks::BELUNA_GRANDSQUALL_COMMANDERS,
+            main: decks::BELUNA_GRANDSQUALL_MAIN,
+        },
     ]
 }
 
@@ -33038,6 +33050,8 @@ mod tests {
             ("The Motherlode, Excavator", &[0x1B33]),
             ("Gorion, Wise Mentor", &[0x1B34]),
             ("War Machine, James Rhodes", &[0x1B35]),
+            ("Zhou Yu, Chief Commander", &[0x1B36]),
+            ("Beluna Grandsquall", &[0x1B37]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

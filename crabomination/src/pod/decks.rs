@@ -122975,3 +122975,57 @@ pub const WAR_MACHINE_3_MAIN: &[CardFactory] = &[
     island, island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ZHOU_YU_COMMANDERS: &[CardFactory] = &[zhou_yu_chief_commander];
+
+/// **Zhou Yu, Chief Commander**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Zhou Yu, Chief Commander (EDHREC, fetched 2026-10-19).
+pub const ZHOU_YU_MAIN: &[CardFactory] = &[
+    arcane_signet, forebears_blade, hedron_matrix, midnight_clock, mind_stone, mystic_compass,
+    quicksilver_fountain, sapphire_medallion, sol_ring, swiftfoot_boots, wayfarers_bauble,
+    winged_boots, ancient_tomb, myriad_landscape, mystic_sanctuary, otawara_soaring_city,
+    reliquary_tower, war_room, charix_the_raging_isle, chasm_skulker, dandan,
+    deepchannel_mentor, dream_thrush, eluge_the_shoreless_sea, floodchaser,
+    geist_of_saint_thalia, hammerhead_shark, harbinger_of_the_seas, inkwell_leviathan,
+    kukemssa_serpent, reef_shaman, scourge_of_fleets, sea_snidd, sealock_monster,
+    serpent_of_the_endless_sea, stormtide_leviathan, thada_adel_acquisitor, tidal_warrior,
+    tide_shaper, vedalken_plotter, wu_warship, coastal_piracy, fishliver_oil,
+    imprisoned_in_the_moon, lingering_mirage, phantasmal_terrain, rhystic_study, seas_claim,
+    spreading_seas, aetherize, brainstorm, counterspell, frantic_search, high_tide, jinx,
+    magical_hack, mind_bend, opt, rapid_hybridization, reality_shift, shimmering_mirage,
+    aquitects_will, curse_of_the_swine, flow_of_ideas, part_water, political_trickery,
+    ravenform, spectral_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const BELUNA_GRANDSQUALL_COMMANDERS: &[CardFactory] = &[beluna_grandsquall];
+
+/// **Beluna Grandsquall**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 7 Forests + 6 Islands + 5 Mountains = 99.
+/// Beluna Grandsquall (EDHREC, fetched 2026-10-19).
+pub const BELUNA_GRANDSQUALL_MAIN: &[CardFactory] = &[
+    arcane_signet, crystal_shard, glamdring_foe_hammer, lucky_clover, monster_manual, sol_ring,
+    two_handed_axe, bountiful_landscape, breeding_pool, cinder_glade, command_tower,
+    dreamroot_cascade, edgewall_inn, exotic_orchard, frontier_bivouac, hinterland_harbor,
+    jidoor_aristocratic_capital, ketria_triome, lindblum_industrial_regency, reliquary_tower,
+    rockfall_vale, rootbound_crag, stomping_ground, sulfur_falls, zanarkand_ancient_metropolis,
+    beanstalk_giant, beanstalk_wurm, belunas_gatekeeper, bonecrusher_giant, bramble_familiar,
+    brazen_borrower, brightcap_badger, chancellor_of_tales, doc_aurlock_grizzled_genius,
+    dread_linnorm, edgewall_innkeeper, elusive_otter, embereth_shieldbreaker, emerald_dragon,
+    faldorn_dread_wolf_herald, frolicking_familiar, galvanic_giant, gloin_the_mighty,
+    grabby_giant, hearth_elemental, horned_loch_whale, hypnotic_sprite, illithid_harvester,
+    kellan_inquisitive_prodigy, lozhan_dragons_legacy, moonshae_pixie, picnic_ruiner,
+    questing_druid, rosethorn_acolyte, sapphire_dragon, scalding_viper, sentinel_of_lost_lore,
+    stormkeld_vanguard, storyteller_pixie, sword_coast_serpent, tempest_hart, tlincalli_hunter,
+    two_headed_hunter, wild_magic_sorcerer, young_blue_dragon, extraordinary_journey,
+    passionate_archaeologist, temur_ascendancy, virtue_of_courage, virtue_of_knowledge,
+    virtue_of_strength, beast_within, counterspell, familiars_ruse, frantic_firebolt,
+    growth_spiral, candlekeep_inspiration, cultivate, farseek, kodamas_reach, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain,
+];
