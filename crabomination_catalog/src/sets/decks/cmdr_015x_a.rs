@@ -1156,7 +1156,7 @@ pub fn casey_and_raph_hotheads() -> CardDefinition {
 /// "When the `n`th plan counter is put on this, sacrifice it. When you do,
 /// `then`." — the Plan cycle's payoff (CR 603.12: `then` runs only when the
 /// sacrifice happened).
-fn plan_payoff(n: u32, then: Effect) -> TriggeredAbility {
+pub(super) fn plan_payoff(n: u32, then: Effect) -> TriggeredAbility {
     use crate::card::CounterType;
     TriggeredAbility {
         event: EventSpec::new(EventKind::CounterAdded(CounterType::Plan), EventScope::SelfSource)
@@ -1172,7 +1172,7 @@ fn plan_payoff(n: u32, then: Effect) -> TriggeredAbility {
     }
 }
 
-fn plan(name: &'static str, c: crate::mana::ManaCost, triggers: Vec<TriggeredAbility>) -> CardDefinition {
+pub(super) fn plan(name: &'static str, c: crate::mana::ManaCost, triggers: Vec<TriggeredAbility>) -> CardDefinition {
     CardDefinition {
         name,
         cost: c,
@@ -1183,7 +1183,7 @@ fn plan(name: &'static str, c: crate::mana::ManaCost, triggers: Vec<TriggeredAbi
     }
 }
 
-fn plan_counter() -> Effect {
+pub(super) fn plan_counter() -> Effect {
     Effect::AddCounter { what: Selector::This, kind: crate::card::CounterType::Plan, amount: Value::ONE }
 }
 

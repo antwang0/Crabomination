@@ -299,3 +299,769 @@ fn vraskas_final_mercy_destroys_or_empowers() {
     );
     assert_eq!(g.players[0].life, 16);
 }
+
+fn run(g: &mut GameState, effect: &crabomination::effect::Effect) {
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+fn lore(g: &mut GameState, saga: CardId) {
+    use crabomination::card::CounterType;
+    use crabomination::effect::{Effect, Selector, Value};
+    run(
+        g,
+        &Effect::AddCounter {
+            what: Selector::ExactObjects(vec![saga]),
+            kind: CounterType::Lore,
+            amount: Value::ONE,
+        },
+    );
+}
+
+fn flood(g: &mut GameState, seat: usize) {
+    for c in [
+        Color::White,
+        Color::Blue,
+        Color::Black,
+        Color::Red,
+        Color::Green,
+    ] {
+        g.players[seat].mana_pool.add(c, 6);
+    }
+}
+
+fn cast_targets(g: &mut GameState, card_id: CardId, targets: &[Target]) {
+    flood(g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id,
+        target: targets.first().cloned(),
+        additional_targets: targets.iter().skip(1).cloned().collect(),
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
+fn in_exile(g: &GameState, id: CardId) -> bool {
+    g.exile.iter().any(|c| c.id == id)
+}
+
+fn plus(g: &GameState, id: CardId) -> u32 {
+    g.battlefield_find(id).map_or(0, |c| {
+        c.counter_count(crabomination::card::CounterType::PlusOnePlusOne)
+    })
+}
+
+fn combat(g: &mut GameState, attacks: Vec<Attack>, blocks: Vec<(CardId, CardId)>) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(attacks))
+        .expect("attack");
+    drain_stack(g);
+    g.step = TurnStep::DeclareBlockers;
+    let defender = g.attacking.first().map_or(1, |a| match a.target {
+        AttackTarget::Player(p) => p,
+        _ => 1,
+    });
+    g.priority.player_with_priority = defender;
+    g.perform_action(GameAction::DeclareBlockers(blocks))
+        .expect("block");
+    drain_stack(g);
+}
+
+fn damage(g: &mut GameState) {
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// Fight to the Death destroys the blocker and the creature it blocked; the
+/// unblocked attacker and the creature that stayed home survive.
+#[test]
+fn fight_to_the_death_destroys_only_the_blocks() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let free = ready(&mut g, 0, catalog::grizzly_bears());
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    let home = ready(&mut g, 1, catalog::grizzly_bears());
+    let at = |attacker| Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    };
+    combat(&mut g, vec![at(a), at(free)], vec![(wall, a)]);
+    let spell = g.add_card_to_hand(0, catalog::fight_to_the_death());
+    cast_targets(&mut g, spell, &[]);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(wall).is_none());
+    assert!(g.battlefield_find(free).is_some() && g.battlefield_find(home).is_some());
+}
+
+/// The Super Hero Civil War: chapter I takes up to two creatures with total
+/// mana value 6 or less while the Saga stays; II pumps; after III's fight the
+/// Saga is sacrificed and the creatures go home.
+#[test]
+fn super_hero_civil_war_borrows_while_the_saga_remains() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::hill_giant());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let saga = g.add_card_to_hand(0, catalog::the_super_hero_civil_war());
+    cast_targets(&mut g, saga, &[Target::Permanent(a), Target::Permanent(b)]);
+    assert_eq!(g.battlefield_find(a).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(b).unwrap().controller, 0);
+    lore(&mut g, saga);
+    assert_eq!(
+        g.computed_permanent(mine).unwrap().power,
+        4,
+        "+1/+1 from chapter II"
+    );
+    lore(&mut g, saga);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(saga).is_none());
+    for id in [a, b] {
+        assert!(
+            g.battlefield_find(id).is_none_or(|c| c.controller == 1),
+            "back home once the Saga left"
+        );
+    }
+}
+
+/// Helm of Chatzuk grants banding until end of turn.
+#[test]
+fn helm_of_chatzuk_grants_banding() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let helm = ready(&mut g, 0, catalog::helm_of_chatzuk());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: helm,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("helm");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(bear)
+            .unwrap()
+            .keywords()
+            .contains(&Keyword::Banding)
+    );
+}
+
+/// CR 509.1c — Revenge of the Hunted: +6/+6, trample, and every creature able
+/// to block it must; declaring no blocks is illegal.
+#[test]
+fn revenge_of_the_hunted_lures_every_blocker() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let b1 = ready(&mut g, 1, catalog::grizzly_bears());
+    let b2 = ready(&mut g, 1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::revenge_of_the_hunted());
+    cast_targets(&mut g, spell, &[Target::Permanent(bear)]);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 8);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.clone()
+            .perform_action(GameAction::DeclareBlockers(vec![(b1, bear)]))
+            .is_err(),
+        "both must block"
+    );
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, bear), (b2, bear)]))
+        .expect("both block");
+}
+
+/// Crossover Collaboration exiles two to play until the end of your next
+/// turn; teamwork (tapping power 2) also makes a Treasure.
+#[test]
+fn crossover_collaboration_treasure_needs_teamwork() {
+    for team in [false, true] {
+        let mut g = pod(2);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, catalog::crossover_collaboration());
+        flood(&mut g, 0);
+        g.priority.player_with_priority = 0;
+        let (card_id, target, additional_targets, mode, x_value) =
+            (spell, None, vec![], None, None);
+        g.perform_action(if team {
+            GameAction::CastSpellKicked {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            }
+        } else {
+            GameAction::CastSpell {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            }
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.exile.len(), 2, "two exiled to play");
+        assert_eq!(named(&g, 0, "Treasure").len(), usize::from(team));
+        assert_eq!(g.battlefield_find(bear).unwrap().tapped, team);
+    }
+}
+
+/// Storm of Steel splits into 2 damage to each of two targets (CR 115.3).
+#[test]
+fn storm_of_steel_hits_two_targets() {
+    let mut g = pod(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::storm_of_steel());
+    cast_targets(&mut g, spell, &[Target::Permanent(bear), Target::Player(2)]);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[2].life, 18);
+}
+
+/// CR 702.190 — Karai sneaked in returns the creature card to the
+/// battlefield; cast normally and attacking, it goes to hand.
+#[test]
+fn karai_reanimates_only_when_sneaked() {
+    for sneaked in [true, false] {
+        let mut g = pod(2);
+        let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+        let karai = if sneaked {
+            let bear = ready(&mut g, 0, catalog::grizzly_bears());
+            let karai = g.add_card_to_hand(0, catalog::karai_future_of_the_foot());
+            g.attacking = vec![Attack {
+                attacker: bear,
+                target: AttackTarget::Player(1),
+            }];
+            g.step = TurnStep::DeclareBlockers;
+            flood(&mut g, 0);
+            g.perform_action(GameAction::CastSpellAlternative {
+                card_id: karai,
+                pitch_card: None,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+            .expect("sneak");
+            drain_stack(&mut g);
+            karai
+        } else {
+            let karai = ready(&mut g, 0, catalog::karai_future_of_the_foot());
+            combat(
+                &mut g,
+                vec![Attack {
+                    attacker: karai,
+                    target: AttackTarget::Player(1),
+                }],
+                vec![],
+            );
+            karai
+        };
+        assert!(g.attacking.iter().any(|a| a.attacker == karai));
+        damage(&mut g);
+        if sneaked {
+            assert!(
+                g.battlefield_find(giant).is_some(),
+                "sneaked: onto the battlefield"
+            );
+        } else {
+            assert!(
+                g.players[0].hand.iter().any(|c| c.id == giant),
+                "cast: to hand"
+            );
+        }
+    }
+}
+
+/// Turncoat Kunoichi cast normally holds its prisoner until it leaves; a
+/// sneaked one exiles for good.
+#[test]
+fn turncoat_kunoichi_exile_is_permanent_when_sneaked() {
+    for sneaked in [false, true] {
+        let mut g = pod(2);
+        let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+        let k = g.add_card_to_hand(0, catalog::turncoat_kunoichi());
+        if sneaked {
+            let bear = ready(&mut g, 0, catalog::grizzly_bears());
+            g.attacking = vec![Attack {
+                attacker: bear,
+                target: AttackTarget::Player(1),
+            }];
+            g.step = TurnStep::DeclareBlockers;
+            flood(&mut g, 0);
+            g.perform_action(GameAction::CastSpellAlternative {
+                card_id: k,
+                pitch_card: None,
+                target: Some(Target::Permanent(victim)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+            .expect("sneak");
+            drain_stack(&mut g);
+        } else {
+            cast_targets(&mut g, k, &[Target::Permanent(victim)]);
+        }
+        assert!(in_exile(&g, victim));
+        kill(&mut g, k);
+        assert_eq!(g.battlefield_find(victim).is_some(), !sneaked);
+    }
+}
+
+// ── Marvel Villains (`decks::cmdr_01dj_c`) ──────────────────────────────────
+
+fn power(g: &GameState, id: CardId) -> i32 {
+    g.computed_permanent(id).unwrap().power
+}
+
+/// The Masters of Evil pumps other Villains +2/+1 and, from hand, discards
+/// itself to tutor a Plan.
+#[test]
+fn masters_of_evil_pumps_villains_and_finds_a_plan() {
+    let mut g = pod(2);
+    let crossbones = ready(&mut g, 0, catalog::crossbones_malicious_mercenary());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let masters = ready(&mut g, 0, catalog::the_masters_of_evil());
+    assert_eq!(power(&g, crossbones), 5);
+    assert_eq!(power(&g, bear), 2);
+    assert_eq!(power(&g, masters), 5);
+    let plan = g.add_card_to_library(0, catalog::villainous_syndication());
+    let second = g.add_card_to_hand(0, catalog::the_masters_of_evil());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: second,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("discard to tutor");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == plan));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == second));
+}
+
+/// Crossbones: two Villains entering in one turn grow him once and burn each
+/// opponent once (CR 603.2h "only once each turn").
+#[test]
+fn crossbones_triggers_once_each_turn() {
+    let mut g = pod(3);
+    let cb = ready(&mut g, 0, catalog::crossbones_malicious_mercenary());
+    for _ in 0..2 {
+        let v = g.add_card_to_hand(0, catalog::red_room_recruit());
+        cast_targets(&mut g, v, &[]);
+    }
+    assert_eq!(plus(&g, cb), 1);
+    assert_eq!((g.players[1].life, g.players[2].life), (18, 18));
+}
+
+/// Citizen V's lifelink damage counts as a lifegain event: each Villain gets a
+/// counter, a non-Villain doesn't.
+#[test]
+fn citizen_v_counters_villains_on_lifegain() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = pod(2);
+    let zemo = ready(&mut g, 0, catalog::citizen_v_helmut_zemo());
+    let rec = ready(&mut g, 0, catalog::red_room_recruit());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    run(
+        &mut g,
+        &Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    assert_eq!((plus(&g, zemo), plus(&g, rec), plus(&g, bear)), (1, 1, 0));
+}
+
+/// Crimson Cowl makes one Villain per player its nontoken Villains attack:
+/// two defenders, two tokens; a lone token attacker makes none.
+#[test]
+fn crimson_cowl_makes_a_villain_per_attacked_player() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::crimson_cowl_master_of_evil());
+    let v1 = ready(&mut g, 0, catalog::red_room_recruit());
+    let v2 = ready(&mut g, 0, catalog::hydra_troopers());
+    let v3 = ready(&mut g, 0, catalog::red_room_recruit());
+    let before = named(&g, 0, "Villain").len();
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack {
+            attacker: v1,
+            target: AttackTarget::Player(1),
+        },
+        Attack {
+            attacker: v2,
+            target: AttackTarget::Player(1),
+        },
+        Attack {
+            attacker: v3,
+            target: AttackTarget::Player(2),
+        },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Villain").len(), before + 2);
+}
+
+/// Thunderbolts Conspiracy brings a dead Villain back with a finality counter
+/// as a Hero; the second death exiles it (CR 122.1h). A non-Villain stays dead.
+#[test]
+fn thunderbolts_conspiracy_returns_villains_once() {
+    use crabomination::card::{CounterType, CreatureType};
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::thunderbolts_conspiracy());
+    let v = ready(&mut g, 0, catalog::red_room_recruit());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    kill(&mut g, v);
+    let back = g.battlefield_find(v).expect("returned");
+    assert_eq!(back.counter_count(CounterType::Finality), 1);
+    assert!(
+        g.computed_permanent(v)
+            .unwrap()
+            .subtypes()
+            .creature_types
+            .contains(&CreatureType::Hero)
+    );
+    kill(&mut g, v);
+    assert!(in_exile(&g, v), "finality exiles it");
+    kill(&mut g, bear);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Scorpion connives a creature of yours at your end step only after a death
+/// this turn.
+#[test]
+fn scorpion_connives_after_a_death() {
+    for death in [false, true] {
+        let mut g = pod(2);
+        let sc = ready(&mut g, 0, catalog::scorpion_seething_striker());
+        g.players[0].hand.clear();
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+        if death {
+            let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            kill(&mut g, bear);
+        }
+        let hand = g.players[0].hand.len();
+        g.step = TurnStep::PostCombatMain;
+        while g.step != TurnStep::End && g.game_over.is_none() {
+            g.perform_action(GameAction::PassPriority).ok();
+        }
+        drain_stack(&mut g);
+        assert_eq!(
+            g.players[0].graveyard.len() > usize::from(death),
+            death,
+            "connive discards a card"
+        );
+        assert_eq!(g.players[0].hand.len(), hand);
+        let _ = sc;
+    }
+}
+
+/// HYDRA Troopers: two creature cards in your graveyard make a tapped Villain;
+/// fewer mill two.
+#[test]
+fn hydra_troopers_villain_or_mill() {
+    for stocked in [false, true] {
+        let mut g = pod(2);
+        if stocked {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+            g.add_card_to_graveyard(0, catalog::hill_giant());
+        }
+        let t = g.add_card_to_hand(0, catalog::hydra_troopers());
+        let lib = g.players[0].library.len();
+        cast_targets(&mut g, t, &[]);
+        let tokens = named(&g, 0, "Villain");
+        assert_eq!(tokens.len(), usize::from(stocked));
+        if stocked {
+            assert!(g.battlefield_find(tokens[0]).unwrap().tapped);
+        } else {
+            assert_eq!(g.players[0].library.len(), lib - 2);
+        }
+    }
+}
+
+/// Venom grows on any other creature's death and draws only for a Villain.
+#[test]
+fn venom_grows_and_draws_on_villains() {
+    let mut g = pod(3);
+    let venom = ready(&mut g, 0, catalog::venom_eddie_brock());
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let v = g.add_card_to_battlefield(1, catalog::red_room_recruit());
+    let hand = g.players[0].hand.len();
+    kill(&mut g, bear);
+    assert_eq!((plus(&g, venom), g.players[0].hand.len()), (1, hand));
+    kill(&mut g, v);
+    assert_eq!((plus(&g, venom), g.players[0].hand.len()), (2, hand + 1));
+}
+
+/// Criminal Enterprise makes a Villain and drains each opponent when one dies.
+#[test]
+fn criminal_enterprise_drains_on_villain_deaths() {
+    let mut g = pod(3);
+    let ce = g.add_card_to_hand(0, catalog::criminal_enterprise());
+    cast_targets(&mut g, ce, &[]);
+    let token = named(&g, 0, "Villain")[0];
+    kill(&mut g, token);
+    assert_eq!(
+        (g.players[0].life, g.players[1].life, g.players[2].life),
+        (21, 19, 19)
+    );
+}
+
+/// Mechanical Mobster exiles a graveyard card and connives a creature of
+/// yours.
+#[test]
+fn mechanical_mobster_exiles_and_connives() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_graveyard(1, catalog::hill_giant());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].hand.clear();
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let m = g.add_card_to_hand(0, catalog::mechanical_mobster());
+    cast_targets(&mut g, m, &[]);
+    let _ = bear;
+    assert!(in_exile(&g, theirs), "the graveyard card is exiled");
+    assert_eq!(g.players[0].hand.len(), 1, "drew one, discarded one");
+}
+
+/// Valentina makes other Villains Heroes and connives a Hero you control.
+#[test]
+fn valentina_turns_villains_into_heroes() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let val = ready(&mut g, 0, catalog::valentina_allegra_de_fontaine());
+    let v = ready(&mut g, 0, catalog::red_room_recruit());
+    assert!(
+        g.computed_permanent(v)
+            .unwrap()
+            .subtypes()
+            .creature_types
+            .contains(&CreatureType::Hero)
+    );
+    assert!(
+        !g.computed_permanent(val)
+            .unwrap()
+            .subtypes()
+            .creature_types
+            .contains(&CreatureType::Hero),
+        "other Villains only"
+    );
+    g.players[0].hand.clear();
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: val,
+        ability_index: 0,
+        target: Some(Target::Permanent(v)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("connive");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// MACH-1 surveils as it enters and once a turn on lifegain — but not on a
+/// lifegain the turn it entered (the once-a-turn trigger already fired).
+#[test]
+fn mach_1_surveils_once_each_turn() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let gain = Effect::GainLife {
+        who: Selector::You,
+        amount: Value::ONE,
+    };
+    let surveils = |g: &GameState| g.stack.len();
+    let mut g = pod(2);
+    let mach = g.add_card_to_hand(0, catalog::mach_1_swooping_scoundrel());
+    cast_targets(&mut g, mach, &[]);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&gain, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(surveils(&g), 0, "spent on entering");
+    g.battlefield_find_mut(mach).unwrap().entered_turn = None;
+    for want in [1, 1] {
+        let evs = g.resolve_effect(&gain, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        assert_eq!(surveils(&g), want, "once each turn");
+    }
+}
+
+/// Villainous Syndication: four Villain taps mill four and fill the plan; the
+/// fourth counter sacrifices it and returns a creature card.
+#[test]
+fn villainous_syndication_completes_its_plan() {
+    let mut g = pod(2);
+    let plan = ready(&mut g, 0, catalog::villainous_syndication());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    for _ in 0..4 {
+        ready(&mut g, 0, catalog::red_room_recruit());
+    }
+    for _ in 0..4 {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: plan,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap a Villain");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(plan).is_none(), "sacrificed at four");
+    assert!(
+        g.battlefield_find(giant).is_some(),
+        "the creature card came back"
+    );
+}
+
+/// Decoy Ploy returns a Villain and a Hero card with both modes.
+#[test]
+fn decoy_ploy_returns_a_villain_and_a_hero() {
+    let mut g = pod(2);
+    let v = g.add_card_to_graveyard(0, catalog::red_room_recruit());
+    let h = g.add_card_to_graveyard(0, catalog::black_widow_natasha_romanoff());
+    let spell = g.add_card_to_hand(0, catalog::decoy_ploy());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: spell,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(v)),
+        additional_targets: vec![Target::Permanent(h)],
+        x_value: None,
+    })
+    .expect("both modes");
+    drain_stack(&mut g);
+    for id in [v, h] {
+        assert!(g.players[0].hand.iter().any(|c| c.id == id));
+    }
+}
+
+/// Lethal Protection destroys a creature and may return one from your
+/// graveyard.
+#[test]
+fn lethal_protection_kills_and_recovers() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::lethal_protection());
+    cast_targets(
+        &mut g,
+        spell,
+        &[Target::Permanent(bear), Target::Permanent(giant)],
+    );
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant));
+}
+
+/// HYDRA Infiltration: two discards on entry; a lone attacker drains 1.
+#[test]
+fn hydra_infiltration_discards_and_drains_alone() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    let hand = g.players[1].hand.len();
+    let e = g.add_card_to_hand(0, catalog::hydra_infiltration());
+    cast_targets(&mut g, e, &[Target::Player(1)]);
+    assert_eq!(g.players[1].hand.len(), hand - 2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (21, 19));
+}
+
+/// Avengers: Under Siege — two Villains; 2 damage to non-Villains and each
+/// opponent; a Treasure per Villain.
+#[test]
+fn avengers_under_siege_chapters() {
+    let mut g = pod(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let saga = g.add_card_to_hand(0, catalog::avengers_under_siege());
+    cast_targets(&mut g, saga, &[]);
+    assert_eq!(named(&g, 0, "Villain").len(), 2);
+    lore(&mut g, saga);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(named(&g, 0, "Villain").len(), 2, "Villains are spared");
+    assert_eq!((g.players[1].life, g.players[2].life), (18, 18));
+    lore(&mut g, saga);
+    assert_eq!(named(&g, 0, "Treasure").len(), 2);
+}
+
+/// Mysterio makes an Illusion per nontoken Villain (himself included) and
+/// exiles exactly those when he leaves.
+#[test]
+fn mysterio_illusions_leave_with_him() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::red_room_recruit());
+    let m = g.add_card_to_hand(0, catalog::mysterio_master_of_illusion());
+    cast_targets(&mut g, m, &[]);
+    assert_eq!(named(&g, 0, "Illusion Villain").len(), 2);
+    kill(&mut g, m);
+    assert_eq!(named(&g, 0, "Illusion Villain").len(), 0);
+}
+
+/// Madame Masque connives as she enters (her first draw of the turn); the
+/// next draw is the turn's second and makes a Villain.
+#[test]
+fn madame_masque_rewards_the_second_draw() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = pod(2);
+    let mm = g.add_card_to_hand(0, catalog::madame_masque());
+    cast_targets(&mut g, mm, &[]);
+    assert_eq!(
+        named(&g, 0, "Villain").len(),
+        0,
+        "the connive draw was the first"
+    );
+    run(
+        &mut g,
+        &Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        },
+    );
+    assert_eq!(named(&g, 0, "Villain").len(), 1);
+}
+
+/// Doc Ock's Henchmen connive whenever they attack.
+#[test]
+fn doc_ocks_henchmen_connive_on_attack() {
+    let mut g = pod(2);
+    let h = ready(&mut g, 0, catalog::doc_ocks_henchmen());
+    g.players[0].hand.clear();
+    g.add_card_to_hand(0, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: h,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
