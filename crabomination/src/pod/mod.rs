@@ -26190,6 +26190,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELEKTRA_2_COMMANDERS,
             main: decks::ELEKTRA_2_MAIN,
         },
+        // Seat 4290: Dark Leo & Shredder's EDHREC average deck. `--pod-decks 4290`.
+        PodDeck {
+            name: "Dark Leo & Shredder (WB)",
+            commanders: decks::DARK_LEO_SHREDDER_COMMANDERS,
+            main: decks::DARK_LEO_SHREDDER_MAIN,
+        },
+        // Seat 4291: Karai, Future of the Foot's EDHREC average deck. `--pod-decks 4291`.
+        PodDeck {
+            name: "Karai, Future of the Foot (WB)",
+            commanders: decks::KARAI_COMMANDERS,
+            main: decks::KARAI_MAIN,
+        },
+        // Seat 4292: Kate Stewart's EDHREC average deck. `--pod-decks 4292`.
+        PodDeck {
+            name: "Kate Stewart (WUR)",
+            commanders: decks::KATE_STEWART_COMMANDERS,
+            main: decks::KATE_STEWART_MAIN,
+        },
+        // Seat 4293: Chong and Lily, Nomads's EDHREC average deck. `--pod-decks 4293`.
+        PodDeck {
+            name: "Chong and Lily, Nomads (R)",
+            commanders: decks::CHONG_AND_LILY_COMMANDERS,
+            main: decks::CHONG_AND_LILY_MAIN,
+        },
+        // Seat 4294: Bolg of the North's EDHREC average deck. `--pod-decks 4294`.
+        PodDeck {
+            name: "Bolg of the North (BR)",
+            commanders: decks::BOLG_OF_THE_NORTH_COMMANDERS,
+            main: decks::BOLG_OF_THE_NORTH_MAIN,
+        },
+        // Seat 4295: Shredder, Unrelenting's EDHREC average deck. `--pod-decks 4295`.
+        PodDeck {
+            name: "Shredder, Unrelenting (B)",
+            commanders: decks::SHREDDER_2_COMMANDERS,
+            main: decks::SHREDDER_2_MAIN,
+        },
     ]
 }
 
@@ -32380,6 +32416,12 @@ mod tests {
             ("MACH-1, Swooping Scoundrel", &[0x1AD5]),
             ("Splinter, Hamato Yoshi", &[0x1AD6]),
             ("Elektra, Femme Fatale", &[0x1AD7]),
+            ("Dark Leo & Shredder", &[0x1AD8]),
+            ("Karai, Future of the Foot", &[0x1AD9]),
+            ("Kate Stewart", &[0x1ADA]),
+            ("Chong and Lily, Nomads", &[0x1ADB]),
+            ("Bolg of the North", &[0x1ADC]),
+            ("Shredder, Unrelenting", &[0x1ADD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

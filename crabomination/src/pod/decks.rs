@@ -120339,3 +120339,174 @@ pub const ELEKTRA_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const DARK_LEO_SHREDDER_COMMANDERS: &[CardFactory] = &[dark_leo_shredder];
+
+/// **Dark Leo & Shredder**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Plains + 11 Swamps = 99.
+/// Dark Leo & Shredder (EDHREC, fetched 2026-10-19).
+pub const DARK_LEO_SHREDDER_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, foot_chopper, lightning_greaves, orzhov_signet,
+    quintessential_katana, skullclamp, sol_ring, swiftfoot_boots, talisman_of_hierarchy,
+    whispersilk_cloak, access_tunnel, caves_of_koilos, command_tower, escape_tunnel,
+    fetid_heath, foot_headquarters, godless_shrine, isolated_chapel, path_of_ancestry,
+    rogues_passage, secret_tunnel, shattered_sanctum, tainted_field, turtle_lair,
+    vault_of_champions, april_oneil_kunoichi_trainee, biting_palm_ninja,
+    bloodletter_of_aclazotz, changeling_outcast, dokuchi_silencer, foot_elite, foot_mystic,
+    foot_ninjas, ink_eyes_servant_of_oni, karai_future_of_the_foot, leonardo_big_brother,
+    leonardo_cutting_edge, leonardo_leader_in_blue, leonardo_sewer_samurai,
+    lita_little_orphan_amphibian, nashi_moon_sages_scion, nezumi_prowler,
+    oroku_saki_shredder_rising, prehistoric_pet, shark_shredder_killer_clone,
+    shredder_shadow_master, shredder_unrelenting, splinter_hamato_yoshi, splinter_the_mentor,
+    super_shredder, throat_slitter, throatseeker, turncoat_kunoichi, black_market_connections,
+    cover_of_darkness, duelists_heritage, endless_foot_assault, leaders_talent, ninja_teen,
+    uneasy_alliance, wound_reflection, anguished_unmaking, continue_card, dark_ritual,
+    deadly_rollick, despark, flawless_maneuver, pain_101, path_to_exile, swords_to_plowshares,
+    the_last_ronins_technique, damn, game_over, karais_technique, leonardos_technique,
+    shredders_revenge, shredders_technique, splinters_technique,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KARAI_COMMANDERS: &[CardFactory] = &[karai_future_of_the_foot];
+
+/// **Karai, Future of the Foot**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Plains + 12 Swamps = 99.
+/// Karai, Future of the Foot (EDHREC, fetched 2026-10-19).
+pub const KARAI_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, fellwar_stone, key_to_the_city, lightning_greaves,
+    orzhov_signet, quintessential_katana, sol_ring, talisman_of_hierarchy, access_tunnel,
+    bleachbone_verge, caves_of_koilos, command_tower, foot_headquarters, godless_shrine,
+    isolated_chapel, rogues_passage, shadowy_backstreet, shattered_sanctum, shineshadow_snarl,
+    tainted_field, turtle_lair, vault_of_champions, angel_of_the_ruins,
+    april_oneil_kunoichi_trainee, archon_of_cruelty, armaggon_future_shark, ashen_rider,
+    changeling_outcast, dark_leo_shredder, dokuchi_silencer, foot_elite, foot_mystic,
+    foot_ninjas, gingerbrute, ink_eyes_servant_of_oni, leonardo_big_brother, nurturing_pixie,
+    ornithopter, oroku_saki_shredder_rising, prehistoric_pet, priest_of_fell_rites,
+    shark_shredder_killer_clone, shredder_shadow_master, shredder_unrelenting,
+    soltari_foot_soldier, splinter_hamato_yoshi, stitchers_supplier, sun_titan, super_shredder,
+    tormented_soul, troll_of_khazad_dum, turncoat_kunoichi, twilight_diviner,
+    endless_foot_assault, leaders_talent, ninja_teen, ripples_of_undeath, tortured_existence,
+    uneasy_alliance, anguished_unmaking, dark_ritual, deadly_dispute, despark, entomb,
+    path_to_exile, stomped_by_the_foot, swords_to_plowshares, the_last_ronins_technique,
+    buried_alive, damn, karais_technique, leonardos_technique, reanimate, shredders_technique,
+    splinters_technique, unmarked_grave, victimize,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KATE_STEWART_COMMANDERS: &[CardFactory] = &[kate_stewart];
+
+/// **Kate Stewart**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Islands + 4 Mountains + 6 Plains = 99.
+/// Kate Stewart (EDHREC, fetched 2026-10-19).
+pub const KATE_STEWART_MAIN: &[CardFactory] = &[
+    arcane_signet, everflowing_chalice, hourglass_of_the_lost, infinite_hourglass,
+    lightning_greaves, rotating_fireplace, skullclamp, sol_ring, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, the_millennium_calendar, the_moment,
+    time_bomb, clifftop_retreat, command_tower, deserted_beach, exotic_orchard,
+    glacial_fortress, hallowed_fountain, karns_bastion, mystic_monastery, nesting_grounds,
+    path_of_ancestry, prairie_stream, raugrin_triome, sacred_foundry, sea_of_clouds,
+    steam_vents, stormcarved_coast, sulfur_falls, sundown_pass, training_center,
+    trenzalore_clocktower, chronozoa, commander_mustard, danny_pink, dreamtide_whale,
+    flesh_duplicate, flux_channeler, grateful_apparition, harbin_vanguard_aviator,
+    jhoiras_timebug, lavacore_elemental, lost_auramancers, metastatic_evangel,
+    overlord_of_the_floodpits, patrolling_peacemaker, rose_tyler, skystrike_officer,
+    soultether_golem, the_tenth_doctor, the_war_doctor, thrummingbird, tidewalker, time_beetle,
+    wilfred_mott, as_foretold, crack_in_time, four_knocks, inexorable_tide, out_of_time,
+    regenerations_restored, resourceful_defense, the_girl_in_the_fireplace,
+    the_parting_of_the_ways, clockspinning, counterspell, dust_of_moments, experimental_augury,
+    path_to_exile, radstorm, ripples_of_potential, swords_to_plowshares, timecrafting,
+    all_of_history_all_at_once, contentious_plan, inspiring_refrain, rousing_refrain,
+    tezzerets_gambit, the_wedding_of_river_song, wibbly_wobbly_timey_wimey,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains,
+];
+
+pub const CHONG_AND_LILY_COMMANDERS: &[CardFactory] = &[chong_and_lily_nomads];
+
+/// **Chong and Lily, Nomads**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Chong and Lily, Nomads (EDHREC, fetched 2026-10-19).
+pub const CHONG_AND_LILY_MAIN: &[CardFactory] = &[
+    arcane_signet, crystal_chimes, cursed_mirror, maskwood_nexus, power_conduit, ruby_medallion,
+    sol_ring, swiftfoot_boots, the_fire_crystal, abstergo_entertainment, access_tunnel,
+    karns_bastion, myriad_landscape, nesting_grounds, rogues_passage, secret_tunnel, urzas_saga,
+    valakut_the_molten_pinnacle, balin_loremaster, blazing_firesinger, bombur_gentle_dreamer,
+    bothersome_noisemaker, clive_ifrits_dominant, firbolg_flutist, fili_and_kili_joyous,
+    gloin_dwarf_emissary, insufferable_balladeer, merry_bards, moku_meandering_drummer,
+    raccoon_rallier, spellbinding_soprano, stirring_bard, summon_bahamut, summon_brynhildr,
+    summon_esper_ramuh, summon_esper_valigarmanda, summon_gf_cerberus, summon_gf_ifrit,
+    summon_kujata, taurean_mauler, the_mary_janes, valor_singer, book_of_mazarbul,
+    burn_burn_tree_and_fern, fable_of_the_mirror_breaker, founding_of_omashu,
+    korvold_and_the_noble_thief, kumano_faces_kakkazan, maximum_carnage,
+    origin_of_the_hidden_ones, ral_and_the_implicit_maze, the_akroan_war,
+    the_cave_of_two_lovers, the_elder_dragon_war, the_flux, the_legend_of_roku,
+    the_misty_mountains_cold, the_parting_of_the_ways, the_triumph_of_anax,
+    there_and_back_again, vault_21_house_gambit, abrade, big_score, chaos_warp,
+    unexpected_windfall, untimely_malfunction, volt_charge, blasphemous_act, faithless_looting,
+    sundering_eruption, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const BOLG_OF_THE_NORTH_COMMANDERS: &[CardFactory] = &[bolg_of_the_north];
+
+/// **Bolg of the North**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Mountains + 12 Swamps = 99.
+/// Bolg of the North (EDHREC, fetched 2026-10-19).
+pub const BOLG_OF_THE_NORTH_MAIN: &[CardFactory] = &[
+    arcane_signet, crude_bent_blade, giants_boulder, goblin_plate_mail, my_precious,
+    ragged_short_spear, rakdos_signet, skullclamp, sol_ring, talisman_of_indulgence,
+    blood_crypt, command_tower, dragonskull_summit, evolving_wilds, foreboding_ruins,
+    goblin_town, path_of_ancestry, rakdos_carnarium, smoldering_marsh, sulfurous_springs,
+    tainted_peak, azog_morias_ruin, boggart_cursecrafter, bolgs_company, bolg_erebors_reckoning,
+    bothersome_noisemaker, dreaded_bat_cloud, fearsome_goblin_pair, front_porch_sentries,
+    goblin_matron, goblin_town_flunkies, gollum_silent_slinker, great_goblin_foul_hearted,
+    great_ugly_looking_goblin, grishnakh_brash_instigator, gundabad_opportunist,
+    krenko_mob_boss, mauhur_uruk_hai_captain, misty_mountains_raider, morbid_opportunist,
+    orcish_siegemaster, ravening_warg, rhovanion_rampager, skirk_prospector, smaug_wicked_worm,
+    smaug_the_great_calamity, snowslope_hunter, stony_voiced_goblins, the_great_goblin,
+    ugluk_of_the_white_hand, along_the_crooked_way, boggart_mischief, burn_burn_tree_and_fern,
+    down_down_to_goblin_town, fall_of_cair_andros, march_from_the_black_gate, abrade,
+    bilbos_deadly_slice, chaos_warp, dark_ritual, deadly_dispute, pinecone_strike,
+    reverent_howl, smaugs_fury, terminate, blasphemous_act, feed_the_swarm, foray_of_orcs,
+    gathering_of_darkness, gnashing_of_teeth, rage_into_the_valley, stir_up_trouble,
+    tidings_of_war, victimize, widespread_brutality,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const SHREDDER_2_COMMANDERS: &[CardFactory] = &[shredder_unrelenting];
+
+/// **Shredder, Unrelenting**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Shredder, Unrelenting (EDHREC, fetched 2026-10-19).
+pub const SHREDDER_2_MAIN: &[CardFactory] = &[
+    arc_reactor, arcane_signet, diary_of_dreams, jet_medallion, lightning_greaves,
+    potioners_trove, shredders_armor, sol_ring, the_darkness_crystal, bojuka_bog, cabal_coffers,
+    reliquary_tower, rogues_passage, urborg_tomb_of_yawgmoth, witchs_cottage, adventurous_eater,
+    armaggon_future_shark, arnyn_deathbloom_botanist, biblioplex_tomekeeper, burrog_banemaker,
+    cheerful_osteomancer, crypt_ghast, dream_beavers, elektra_daughter_of_the_hand,
+    emeritus_of_woe, foot_mystic, forum_necroscribe, grave_researcher, lecturing_scornmage,
+    massacre_wurm, melancholic_poet, ninja_of_the_hand, ninja_of_the_new_moon,
+    oroku_saki_shredder_rising, poisoners_apprentice, postmortem_professor, scathing_shadelock,
+    shark_shredder_killer_clone, sneering_shadewriter, squirrelanoids, super_shredder,
+    the_dawning_archaic, tunnel_rats, undead_hand_ninja, black_market, ninja_teen,
+    the_cloning_of_shredder, aleshas_legacy, cabal_ritual, dark_ritual, death_in_the_family,
+    defile, dissection_practice, masterful_flourish, murder, pain_101, stomped_by_the_foot,
+    wander_off, cost_of_brilliance, feed_the_swarm, game_over, pox_plague, pull_from_the_grave,
+    send_in_the_pest, shredders_revenge, shredders_technique, smallpox, splinters_technique,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
