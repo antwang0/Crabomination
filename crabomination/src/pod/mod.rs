@@ -26640,6 +26640,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STORM_3_COMMANDERS,
             main: decks::STORM_3_MAIN,
         },
+        // Seat 4365: Pharaoh Rama-Tut's EDHREC average deck. `--pod-decks 4365`.
+        PodDeck {
+            name: "Pharaoh Rama-Tut (U)",
+            commanders: decks::PHARAOH_RAMA_TUT_COMMANDERS,
+            main: decks::PHARAOH_RAMA_TUT_MAIN,
+        },
     ]
 }
 
@@ -32905,6 +32911,7 @@ mod tests {
             ("Rex, Cyber-Hound", &[0x1B20]),
             ("Ezekiel Sims, Spider-Totem", &[0x1B21]),
             ("Storm, Shaker of Skies", &[0x1B22]),
+            ("Pharaoh Rama-Tut", &[0x1B23]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

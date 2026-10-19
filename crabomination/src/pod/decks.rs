@@ -122447,3 +122447,30 @@ pub const STORM_3_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const PHARAOH_RAMA_TUT_COMMANDERS: &[CardFactory] = &[pharaoh_rama_tut];
+
+/// **Pharaoh Rama-Tut**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Pharaoh Rama-Tut (EDHREC, fetched 2026-10-19).
+pub const PHARAOH_RAMA_TUT_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_holding, benders_waterskin, decanter_of_endless_water,
+    monument_to_endurance, sapphire_medallion, sky_diamond, sol_ring, thought_vessel,
+    drownyard_temple, geier_reach_sanitarium, mystic_sanctuary, rogues_passage,
+    chameleon_master_of_disguise, chasm_skulker, containment_construct, emrakuls_messenger,
+    faerie_vandal, glasspool_mimic, hydroelectric_specimen, leader_super_genius,
+    scrounging_skyray, serum_sovereign, sphinx_ambassador, sphinx_of_false_conclusions,
+    sphinx_of_the_final_word, umara_wizard, unesh_criosphinx_sovereign, drake_haven,
+    glorious_purpose, ominous_seas, profts_eidetic_memory, teferis_ageless_insight,
+    an_offer_you_cant_refuse, arcane_denial, beyeen_veil, brainstorm, broken_concentration,
+    circular_logic, consider, counterspell, high_tide, just_the_wind, jwari_disruption,
+    keep_watch, mindbreak_trap, negate, obsessive_search, opt, peek, rapid_hybridization,
+    reality_shift, ripples_of_potential, sink_into_stupor, slip_out_the_back, sphinxs_approach,
+    thought_scour, three_steps_ahead, unstable_experiment, visions_of_beyond, enter_the_enigma,
+    flow_state, gitaxian_probe, nagging_thoughts, ponder, preordain, pym_particles,
+    serum_visions, welcome_to_the_fold,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
