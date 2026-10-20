@@ -460,3 +460,71 @@ fn oketras_last_mercy_resets_life_and_skips_a_land_untap() {
     assert_eq!(g.players[0].life, g.players[0].starting_life);
     assert!(g.players[0].lands_dont_untap_next_untap > 0);
 }
+
+/// CR 700.2 — Sol'Kanar's "one that hasn't been chosen" walks its menu: four
+/// end steps, four different modes; the last donates it to an opponent as a
+/// new object, whose own record starts empty.
+#[test]
+fn cr_700_2_sol_kanar_walks_its_modes_then_leaves() {
+    let mut g = pod(3);
+    let sk = g.add_card_to_battlefield(0, catalog::sol_kanar_the_tainted());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    for pick in [0usize, 0, 0] {
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(pick)]));
+        g.step = TurnStep::PostCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        while g.step != TurnStep::End {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(sk).unwrap().modes_chosen.len(), 3);
+    assert!(g.battlefield_find(giant).is_none(), "the 3 damage mode");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let gone = g.battlefield_find(sk).expect("returned");
+    assert_ne!(gone.controller, 0, "an opponent controls it");
+    assert!(gone.modes_chosen.is_empty(), "a new object");
+}
+
+/// Greed's Gambit pays up front and charges it all back when it leaves.
+#[test]
+fn greeds_gambit_front_loads_and_back_charges() {
+    let mut g = pod(2);
+    let gambit = g.add_card_to_hand(0, catalog::greeds_gambit());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, gambit, None).expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "cast one, drew three");
+    assert_eq!(g.players[0].life, 26);
+    let bats = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Bat").count();
+    assert_eq!(bats(&g), 3);
+    let shatter = g.add_card_to_hand(0, catalog::disenchant());
+    flood(&mut g, 0);
+    cast(&mut g, shatter, Some(Target::Permanent(gambit))).expect("disenchant");
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(bats(&g), 0, "three creatures sacrificed");
+}
+
+/// Blim hands a permanent to the player it hit; then everyone pays per
+/// permanent they control but don't own — the damaged player one.
+#[test]
+fn blim_gives_a_gift_and_charges_for_it() {
+    let mut g = pod(2);
+    let blim = ready(&mut g, 0, catalog::blim_comedic_genius());
+    let rock = ready(&mut g, 0, catalog::sol_ring());
+    g.players[1].hand.clear();
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    attack(&mut g, blim, 1);
+    let rock = g.battlefield_find(rock).expect("still around");
+    assert_eq!(rock.controller, 1);
+    assert_eq!(g.players[1].life, 15, "4 combat damage, then 1 for the gift");
+    assert_eq!(g.players[1].hand.len(), 1);
+}

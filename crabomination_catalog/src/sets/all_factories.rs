@@ -18183,6 +18183,10 @@ static DECKS: &[Factory] = &[
     super::decks::enduring_angel,
     super::decks::exquisite_archangel,
     super::decks::oketras_last_mercy,
+    super::decks::sol_kanar_the_tainted,
+    super::decks::blim_comedic_genius,
+    super::decks::greeds_gambit,
+    super::decks::the_trickster_gods_heist,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
