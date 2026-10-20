@@ -713,7 +713,13 @@ impl GameState {
                 self.do_phasing();
                 let ap = self.active_player_idx;
                 let stun_stays = self.stun_counters_stay(ap);
-                for c in self.battlefield.iter_mut().filter(|c| c.controller == ap && c.tapped) {
+                let stuck: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ap && c.tapped && self.cant_become_untapped(c.id))
+                    .map(|c| c.id)
+                    .collect();
+                for c in self.battlefield.iter_mut().filter(|c| c.controller == ap && c.tapped && !stuck.contains(&c.id)) {
                     if c.counter_count(crate::card::CounterType::Stun) > 0 {
                         if !stun_stays {
                             c.remove_counters(crate::card::CounterType::Stun, 1);
@@ -4230,7 +4236,7 @@ impl GameState {
         use crate::card::CounterType;
         use crate::effect::{Selector, StaticEffect};
         let Some(card) = self.battlefield_find(card_id) else { return false };
-        if card.counter_count(CounterType::Stun) > 0 {
+        if card.counter_count(CounterType::Stun) > 0 || self.cant_become_untapped(card_id) {
             return true;
         }
         // Every other reason `do_untap` skips a permanent, so the client's
@@ -4446,6 +4452,7 @@ impl GameState {
                                     | StaticEffect::UntapOnlyChosenTypeWhileUntapped
                                     | StaticEffect::PreventUntap { .. }
                                     | StaticEffect::PreventUntapGlobal { .. }
+                                    | StaticEffect::CantBecomeUntapped { .. }
                                     | StaticEffect::MaxOneUntapPerStep { .. }
                                     | StaticEffect::MaxUntapsPerStep { .. }
                                     | StaticEffect::UntapSelfEachUntapStep
@@ -4612,6 +4619,8 @@ impl GameState {
                         // The global sibling reaches every seat and can be
                         // gated, so defer to the per-permanent walk.
                         StaticEffect::PreventUntapGlobal { .. } => global_prevent = true,
+                        // CR 701.26b — "can't become untapped" (Blossombind).
+                        StaticEffect::CantBecomeUntapped { .. } => global_prevent = true,
                         // Aura-anchored prevention ("enchanted creature doesn't
                         // untap" — Claustrophobia): block the permanent this
                         // source is attached to.

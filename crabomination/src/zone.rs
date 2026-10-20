@@ -1045,6 +1045,7 @@ fn static_effect_touches_untap(e: &crate::effect::StaticEffect) -> bool {
         | S::UntapOnlyChosenTypeWhileUntapped
         | S::PreventUntap { .. }
         | S::PreventUntapGlobal { .. }
+        | S::CantBecomeUntapped { .. }
         | S::MaxOneUntapPerStep { .. }
         | S::MaxUntapsPerStep { .. }
         | S::UntapSelfEachUntapStep

@@ -24618,7 +24618,8 @@ impl GameState {
                 .battlefield
                 .find_by_id(card_id)
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?;
-            if !perm.tapped {
+            // CR 614.17b — an untap that can't happen can't be paid.
+            if !perm.tapped || self.cant_become_untapped(card_id) {
                 return Err(GameError::CardIsTapped(card_id));
             }
         }
@@ -25033,6 +25034,8 @@ impl GameState {
                 .filter(|c| {
                     c.controller == p
                         && c.tapped
+                        // CR 614.17b — an untap that can't happen can't be paid.
+                        && !self.cant_become_untapped(c.id)
                         && self.evaluate_requirement_static(
                             filter,
                             &Target::Permanent(c.id),

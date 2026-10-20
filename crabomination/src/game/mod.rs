@@ -148,6 +148,7 @@ mod explore;
 mod same_defender;
 mod source_scoped_effects;
 mod blight_cost;
+mod object_locks;
 mod linked_exile_counter_cast;
 mod loyalty_twice_turn;
 mod zurs_weirding;
@@ -8357,6 +8358,10 @@ impl GameState {
         use crate::card::CounterType;
         use crate::effect::StaticEffect;
         let Some(c) = self.battlefield_find(cid) else { return base };
+        // CR 122.1 / 614.17 — "can't have counters put on it" (Melira's Keepers).
+        if base > 0 && self.counters_locked_on_object(cid) {
+            return 0;
+        }
         let ctrl = c.controller;
         let is_creature = self.computed_is_creature(c);
         let mut base = base;
@@ -35661,6 +35666,9 @@ fn static_effect_to_effects(
             // characteristic.
             | StaticEffect::PreventUntap { .. }
             | StaticEffect::PreventUntapGlobal { .. }
+            // Per-object "can't" locks (`game/object_locks.rs`).
+            | StaticEffect::CantBecomeUntapped { .. }
+            | StaticEffect::CantHaveCountersPutOn { .. }
             // SpellCostFloor (Trinisphere) — read at cast time by
             // `apply_spell_cost_floor`; no layer effect.
             | StaticEffect::SpellCostFloor { .. }

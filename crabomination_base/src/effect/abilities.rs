@@ -4065,6 +4065,15 @@ pub enum StaticEffect {
     /// placement is dropped. Powers Solemnity (the persist / Phyrexian
     /// Unlife combo enabler).
     CountersCantBePlaced,
+    /// CR 122.1 / 614.17 — "[it] can't have counters put on it": the per-object
+    /// sibling of `CountersCantBePlaced`. `applies_to` is `This` (Melira's
+    /// Keepers) or `AttachedTo(This)` (Blossombind); read by
+    /// `GameState::counters_locked_on`.
+    CantHaveCountersPutOn { applies_to: Selector },
+    /// CR 701.26b / 614.17 — "[it] can't become untapped": neither the untap step nor
+    /// an effect untaps it (Blossombind, Frozen in Ice). `applies_to` is
+    /// `This` or `AttachedTo(This)`; read by `GameState::cant_become_untapped`.
+    CantBecomeUntapped { applies_to: Selector },
     /// CR 614.6 — graveyard-hate replacement: "If a card would be put into
     /// a graveyard from anywhere, exile it instead." When `opponents_only`
     /// the redirect applies only to cards bound for a graveyard belonging to

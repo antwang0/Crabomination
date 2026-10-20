@@ -14235,10 +14235,11 @@ impl GameState {
                 let source = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
+                    let stuck = self.cant_become_untapped(cid);
                     if let Some(c) = self.battlefield_find_mut(cid)
                         && c.definition.is_creature()
                     {
-                        c.tapped = false;
+                        c.tapped &= stuck;
                         c.must_block = source;
                     }
                 }
@@ -20557,7 +20558,7 @@ impl GameState {
                         .map(|c| c.counter_count(*kind))
                         .unwrap_or(0);
                     let n = want.min(cap.saturating_sub(have));
-                    if n == 0 { continue; }
+                    if n == 0 || self.counters_locked_on_object(cid) { continue; }
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(*kind, n);
                         events.push(GameEvent::CounterAdded {
@@ -20614,6 +20615,7 @@ impl GameState {
                 if n == 0 { return Ok(()); }
                 for cid in targets {
                     let scaled = self.scaled_counter_count_on(cid, *kind, n);
+                    if scaled == 0 { continue; }
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     let before = c.counter_count(*kind);
                     c.add_counters(*kind, scaled);
@@ -22921,7 +22923,7 @@ impl GameState {
                 let mine: Vec<CardId> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
+                    .filter(|c| c.controller == seat && self.computed_is_creature(c) && !self.cant_become_untapped(c.id))
                     .map(|c| c.id)
                     .collect();
                 for cid in mine {
@@ -31625,8 +31627,9 @@ impl GameState {
                             installed: None,
                         });
                     }
+                    let stuck = self.cant_become_untapped(*cid);
                     if let Some(c) = self.battlefield_find_mut(*cid) {
-                        c.tapped = false;
+                        c.tapped &= stuck;
                     }
                 }
                 for (cid, _) in &swap {
@@ -45130,7 +45133,7 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> bool {
         let Some(c) = self.battlefield_find(cid) else { return false };
-        if !c.tapped {
+        if !c.tapped || self.cant_become_untapped(cid) {
             return false;
         }
         // Fear of Sleep Paralysis — the stun counter can't come off, so the
