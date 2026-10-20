@@ -175,3 +175,82 @@ fn cr_508_1g_flooded_woodlands_charges_a_land_per_green_attacker() {
     declare(&mut g, &[bears[0], knight]).expect("one green attacker, one land");
     assert!(g.battlefield_find(land).is_none(), "the Forest paid for the Bears");
 }
+
+fn cast_x(g: &mut GameState, id: CardId, x: u32) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(x) })
+        .expect("cast");
+    drain_stack(g);
+}
+
+/// The Celestial Toymaker counts each spell that grouped cards into piles
+/// this turn; at the end step every opponent loses 2 per spell.
+#[test]
+fn celestial_toymaker_drains_per_pile_spell_at_each_end_step() {
+    let mut g = main_phase(3);
+    stock_libraries(&mut g, 12);
+    g.add_card_to_battlefield(0, catalog::the_celestial_toymaker());
+    let epiphany = g.add_card_to_hand(0, catalog::epiphany_at_the_drownyard());
+    let truth = g.add_card_to_hand(0, catalog::truth_or_tale());
+    flood(&mut g, 0);
+    cast_x(&mut g, epiphany, 1);
+    cast_x(&mut g, truth, 0);
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, lives[0], "opponents only");
+    assert_eq!(g.players[1].life, lives[1] - 4, "two pile spells: 2 x 2");
+    assert_eq!(g.players[2].life, lives[2] - 4);
+}
+
+/// Truth or Tale: one card of the five reaches the hand, the other four go
+/// to the bottom — none stays on top (ruling 2006-09-25).
+#[test]
+fn truth_or_tale_keeps_one_and_bottoms_four() {
+    let mut g = main_phase(2);
+    stock_libraries(&mut g, 8);
+    let top5: Vec<CardId> = g.players[0].library.iter().take(5).map(|c| c.id).collect();
+    let truth = g.add_card_to_hand(0, catalog::truth_or_tale());
+    flood(&mut g, 0);
+    cast_x(&mut g, truth, 0);
+    let in_hand = top5.iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == **id)).count();
+    assert_eq!(in_hand, 1);
+    let lib: Vec<CardId> = g.players[0].library.iter().map(|c| c.id).collect();
+    assert_eq!(lib.len(), 7);
+    assert!(lib[..3].iter().all(|id| !top5.contains(id)), "the untouched three are now on top");
+}
+
+/// Phyrexian Portal: ten or more cards — one pile exiled, one card tutored,
+/// the rest shuffled back; nine cards — nothing happens.
+#[test]
+fn phyrexian_portal_needs_ten_cards() {
+    let mut g = main_phase(2);
+    let portal = g.add_card_to_battlefield(0, catalog::phyrexian_portal());
+    for _ in 0..9 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let activate = |g: &mut GameState| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: portal,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("activate");
+        drain_stack(g);
+    };
+    let hand = g.players[0].hand.len();
+    activate(&mut g);
+    assert_eq!((g.players[0].hand.len(), g.players[0].library.len()), (hand, 9), "nine: no split");
+    g.add_card_to_library(0, catalog::island());
+    activate(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one card tutored");
+    let exiled = g.exile.len();
+    assert_eq!(g.players[0].library.len() + exiled, 9, "one pile exiled, the rest shuffled back");
+}

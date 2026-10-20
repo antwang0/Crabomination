@@ -18219,6 +18219,12 @@ static DECKS: &[Factory] = &[
     super::decks::deathgrip,
     super::decks::flooded_woodlands,
     super::decks::natures_ruin,
+    // cmdr_01fn_c (session 01FnAVVR)
+    super::decks::the_celestial_toymaker,
+    super::decks::phyrexian_portal,
+    super::decks::sphinx_of_clear_skies,
+    super::decks::epiphany_at_the_drownyard,
+    super::decks::truth_or_tale,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
