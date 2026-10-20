@@ -12766,6 +12766,11 @@ impl CardInstance {
         if self.has_dealt_damage {
             self.has_dealt_damage = false;
         }
+        // CR 400.7 — so does "one that hasn't been chosen" (Sol'Kanar comes
+        // back from its own donation with a fresh menu).
+        if !self.modes_chosen.is_empty() {
+            self.modes_chosen.clear();
+        }
     }
 
     /// CR 122.2 — counters cease to exist as the object changes zones, unless
