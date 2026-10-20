@@ -629,3 +629,32 @@ fn consecrate_land_makes_the_land_indestructible() {
     cast(&mut g, aura, Some(Target::Permanent(land)));
     assert!(g.computed_permanent(land).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
+
+/// CR 702.167a — Throne of the Grim Captain crafts with one each of four
+/// types (a missing one refuses the craft); The Grim Captain's attack makes
+/// each opponent sacrifice and returns a crafted creature card attacking.
+#[test]
+fn cr_702_167a_throne_crafts_with_four_types_and_the_captain_attacks() {
+    let mut g = pod(3);
+    let throne = g.add_card_to_battlefield(0, catalog::throne_of_the_grim_captain());
+    g.add_token_to_battlefield(0, &body("Dinosaur", 3, CreatureType::Dinosaur));
+    g.add_token_to_battlefield(0, &body("Merfolk", 1, CreatureType::Merfolk));
+    let vampire = g.add_card_to_graveyard(0, catalog::vampire_nighthawk());
+    assert!(activate(&mut g, throne, 1, None).is_err(), "no Pirate: no craft");
+    g.add_card_to_graveyard(0, catalog::dinosaur_hunter()); // Human Pirate
+    activate(&mut g, throne, 1, None).expect("craft");
+    let captain = g.battlefield_find(throne).expect("returned transformed");
+    assert_eq!(captain.definition.name, "The Grim Captain");
+    let doomed = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let doomed2 = g.add_token_to_battlefield(2, &body("Bear", 2, CreatureType::Bear));
+    g.battlefield_find_mut(throne).unwrap().summoning_sick = false;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 4]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: throne, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(doomed).is_none() && g.battlefield_find(doomed2).is_none(), "each opponent sacrificed");
+    let back = g.battlefield_find(vampire).expect("the Vampire came back");
+    assert!(back.tapped && g.attacking.iter().any(|a| a.attacker == vampire), "tapped and attacking");
+}

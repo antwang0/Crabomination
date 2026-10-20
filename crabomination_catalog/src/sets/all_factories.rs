@@ -18325,6 +18325,7 @@ static DECKS: &[Factory] = &[
     super::decks::realm_razer,
     super::decks::out_of_bounds,
     super::decks::consecrate_land,
+    super::decks::throne_of_the_grim_captain,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

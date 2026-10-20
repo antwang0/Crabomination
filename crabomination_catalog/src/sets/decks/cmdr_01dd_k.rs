@@ -811,3 +811,72 @@ pub fn consecrate_land() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch five: craft with one of each ──────────────────────────────────────
+
+/// Throne of the Grim Captain // The Grim Captain — {2} legendary artifact.
+/// {T}: mill two. Craft with a Dinosaur, a Merfolk, a Pirate, and a Vampire
+/// {4}. Back: 7/7 legendary Skeleton Spirit Pirate with menace, trample,
+/// lifelink, hexproof; whenever it attacks, each opponent sacrifices a
+/// nonland permanent of their choice, then you may put an exiled creature
+/// card used to craft it onto the battlefield under your control tapped and
+/// attacking.
+pub fn throne_of_the_grim_captain() -> CardDefinition {
+    let kinds = [CreatureType::Dinosaur, CreatureType::Merfolk, CreatureType::Pirate, CreatureType::Vampire];
+    let captain = CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        keywords: vec![Keyword::Menace, Keyword::Trample, Keyword::Lifelink, Keyword::Hexproof],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Permanent.and(R::Not(Box::new(R::Land))),
+            },
+            Effect::MayDo {
+                description: "Put an exiled creature card used to craft The Grim Captain onto the battlefield tapped and attacking?".into(),
+                body: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Exile,
+                        filter: R::Creature.and(R::ExiledWithSource),
+                    },
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Seq(vec![
+                        Effect::ClearLastMoved,
+                        Effect::Move {
+                            what: Selector::SeparatedPile { chosen: true },
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        },
+                        Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                    ])),
+                    other: Box::new(Effect::Noop),
+                }),
+            },
+        ]))],
+        ..creature(
+            "The Grim Captain",
+            ManaCost::default(),
+            vec![CreatureType::Skeleton, CreatureType::Spirit, CreatureType::Pirate],
+            7,
+            7,
+        )
+    };
+    CardDefinition {
+        name: "Throne of the Grim Captain",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+            crate::effect::shortcut::craft_each(
+                cost(&[generic(4)]),
+                kinds.into_iter().map(R::HasCreatureType).collect(),
+            ),
+        ],
+        back_face: Some(Box::new(captain)),
+        ..Default::default()
+    }
+}
