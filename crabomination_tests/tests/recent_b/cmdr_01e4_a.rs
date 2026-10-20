@@ -1451,3 +1451,139 @@ fn cr_704_5q_a_curse_turned_creature_lets_go_of_its_player() {
     assert_eq!(copy.definition.name, "Grizzly Bears");
     assert_eq!(copy.attached_to_player, None);
 }
+
+/// CR 702.96 — Stirring Address's overload pumps every creature you control.
+#[test]
+fn cr_702_96_stirring_address_overloads() {
+    let mut g = pod(2);
+    let a = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let b = g.add_token_to_battlefield(0, &body("Wolf", 2, CreatureType::Wolf));
+    let theirs = g.add_token_to_battlefield(1, &body("Beast", 2, CreatureType::Beast));
+    let address = g.add_card_to_hand(0, catalog::stirring_address());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: address,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("overload");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, a), (4, 4));
+    assert_eq!(pt(&g, b), (4, 4));
+    assert_eq!(pt(&g, theirs), (2, 2));
+}
+
+/// Luxa River Shrine's big gain needs three brick counters.
+#[test]
+fn luxa_river_shrine_builds_to_two_life() {
+    let mut g = pod(2);
+    let shrine = g.add_card_to_battlefield(0, catalog::luxa_river_shrine());
+    assert!(activate(&mut g, shrine, 1).is_err(), "no bricks yet");
+    for _ in 0..3 {
+        activate(&mut g, shrine, 0).expect("brick");
+        g.battlefield_find_mut(shrine).unwrap().tapped = false;
+    }
+    let life = g.players[0].life;
+    activate(&mut g, shrine, 1).expect("three bricks");
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Scarab Feast's three targets come from one graveyard.
+#[test]
+fn scarab_feast_eats_from_a_single_graveyard() {
+    let mut g = pod(3);
+    let a = g.add_card_to_graveyard(1, catalog::island());
+    let b = g.add_card_to_graveyard(1, catalog::island());
+    let other = g.add_card_to_graveyard(2, catalog::island());
+    let feast = g.add_card_to_hand(0, catalog::scarab_feast());
+    flood(&mut g, 0);
+    assert!(
+        g.clone()
+            .perform_action(GameAction::CastSpell {
+                card_id: feast,
+                target: Some(Target::Permanent(a)),
+                additional_targets: vec![Target::Permanent(other)],
+                mode: None,
+                x_value: None,
+            })
+            .is_err(),
+        "two graveyards"
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: feast,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("one graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b));
+}
+
+/// Galvanic Juggernaut stays tapped until another creature dies.
+#[test]
+fn galvanic_juggernaut_wakes_on_a_death() {
+    let mut g = pod(2);
+    let jugg = g.add_card_to_battlefield(0, catalog::galvanic_juggernaut());
+    g.battlefield_find_mut(jugg).unwrap().tapped = true;
+    let bear = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(bear)));
+    assert!(!g.battlefield_find(jugg).unwrap().tapped);
+}
+
+/// Haunted Dead climbs back for two discards.
+#[test]
+fn haunted_dead_returns_for_two_discards() {
+    let mut g = pod(2);
+    let dead = g.add_card_to_graveyard(0, catalog::haunted_dead());
+    g.add_card_to_hand(0, catalog::island());
+    assert!(activate(&mut g, dead, 0).is_err(), "one card in hand");
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, dead, 0).expect("two cards");
+    let c = g.battlefield_find(dead).expect("back");
+    assert!(c.tapped);
+    assert!(g.players[0].hand.is_empty());
+}
+
+/// Castle Raptors is 3/5 untapped, 3/3 tapped.
+#[test]
+fn castle_raptors_stands_tall_untapped() {
+    let mut g = pod(2);
+    let raptors = g.add_card_to_battlefield(0, catalog::castle_raptors());
+    assert_eq!(pt(&g, raptors), (3, 5));
+    g.battlefield_find_mut(raptors).unwrap().tapped = true;
+    assert_eq!(pt(&g, raptors), (3, 3));
+}
+
+/// Skilled Animator makes an artifact a 5/5 only while it stays.
+#[test]
+fn skilled_animator_animates_while_it_stays() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let animator = g.add_card_to_hand(0, catalog::skilled_animator());
+    cast(&mut g, animator, Some(Target::Permanent(ring)));
+    assert_eq!(pt(&g, ring), (5, 5));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(animator)));
+    assert!(!g.computed_permanent(ring).unwrap().card_types().contains(&CardType::Creature));
+}
+
+/// See Red goes to the graveyard at an end step after no attack.
+#[test]
+fn see_red_demands_an_attack() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let red = g.add_card_to_hand(0, catalog::see_red());
+    cast(&mut g, red, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (4, 3));
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(red).is_none(), "no attack this turn");
+}

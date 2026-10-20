@@ -3312,3 +3312,390 @@ pub fn vivien_arkbow_ranger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch nine (four-gap decks) ─────────────────────────────────────────────
+
+/// Dawnstrike Paladin — {3}{W}{W} 2/4 Human Knight. Vigilance, lifelink.
+pub fn dawnstrike_paladin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        ..creature("Dawnstrike Paladin", cost(&[generic(3), w(), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 4)
+    }
+}
+
+/// Tocasia's Onulet — {5} 4/4 artifact creature Construct. When it leaves the
+/// battlefield, you gain 2 life. Unearth {3}{W}.
+pub fn tocasias_onulet() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        }],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(3), w()]))],
+        ..creature("Tocasia's Onulet", cost(&[generic(5)]), vec![CreatureType::Construct], 4, 4)
+    }
+}
+
+/// Resupply — {5}{W} instant. Gain 6 life. Draw a card.
+pub fn resupply() -> CardDefinition {
+    spell(
+        "Resupply",
+        cost(&[generic(5), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(6) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Spectral Reserves — {3}{W} sorcery. Two 1/1 white flying Spirit tokens;
+/// gain 2 life.
+pub fn spectral_reserves() -> CardDefinition {
+    let spirit = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Spirit", 1, 1, vec![Color::White], vec![CreatureType::Spirit])
+    };
+    spell(
+        "Spectral Reserves",
+        cost(&[generic(3), w()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![make(2, spirit), Effect::GainLife { who: Selector::You, amount: Value::Const(2) }]),
+    )
+}
+
+/// Luxa River Shrine — {3} artifact. {1}, {T}: gain 1 life and put a brick
+/// counter on it. {T}: gain 2 life; only with three or more brick counters.
+pub fn luxa_river_shrine() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::Brick, amount: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Brick },
+                    Value::Const(3),
+                )),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..spell("Luxa River Shrine", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Dragon's Presence — {2}{W} instant. 5 damage to target attacking or
+/// blocking creature.
+pub fn dragons_presence() -> CardDefinition {
+    spell(
+        "Dragon's Presence",
+        cost(&[generic(2), w()]),
+        CardType::Instant,
+        Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            amount: Value::Const(5),
+        },
+    )
+}
+
+/// Stirring Address — {1}{W} instant. Target creature you control gets +2/+2
+/// until end of turn. Overload {5}{W} (CR 702.96): each creature you control.
+pub fn stirring_address() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(5), w()]),
+            effect_override: Some(Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+            ..Default::default()
+        }),
+        ..spell(
+            "Stirring Address",
+            cost(&[generic(1), w()]),
+            CardType::Instant,
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+/// Cleansing Ray — {1}{W} sorcery. Choose one — destroy target Vampire; or
+/// destroy target enchantment.
+pub fn cleansing_ray() -> CardDefinition {
+    spell(
+        "Cleansing Ray",
+        cost(&[generic(1), w()]),
+        CardType::Sorcery,
+        Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Vampire))) },
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+        ]),
+    )
+}
+
+/// Scarab Feast — {B} instant. Exile up to three target cards from a single
+/// graveyard. Cycling {B}.
+pub fn scarab_feast() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[b()]))],
+        ..spell(
+            "Scarab Feast",
+            cost(&[b()]),
+            CardType::Instant,
+            Effect::ApplyToTargets {
+                max_targets: 3,
+                min_targets: 0,
+                filter: R::InGraveyard.and(R::SameGraveyardAsTargetSlot(0)),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+            },
+        )
+    }
+}
+
+/// Dead Drop — {9}{B} sorcery. Delve. Target player sacrifices two creatures.
+pub fn dead_drop() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Delve],
+        ..spell(
+            "Dead Drop",
+            cost(&[generic(9), b()]),
+            CardType::Sorcery,
+            Effect::Sacrifice { who: target_filtered(R::Player), count: Value::Const(2), filter: R::Creature },
+        )
+    }
+}
+
+/// Nature's Spiral — {1}{G} sorcery. Return target permanent card from your
+/// graveyard to your hand.
+pub fn natures_spiral() -> CardDefinition {
+    spell(
+        "Nature's Spiral",
+        cost(&[generic(1), g()]),
+        CardType::Sorcery,
+        Effect::Move { what: target_filtered(R::Permanent.from_your_graveyard()), to: ZoneDest::Hand(PlayerRef::You) },
+    )
+}
+
+/// Scout the Borders — {2}{G} sorcery. Reveal the top five cards; you may put
+/// a creature or land card among them into your hand, the rest into your
+/// graveyard.
+pub fn scout_the_borders() -> CardDefinition {
+    spell(
+        "Scout the Borders",
+        cost(&[generic(2), g()]),
+        CardType::Sorcery,
+        Effect::MillThenToHand { amount: Value::Const(5), filter: R::Creature.or(R::Land), otherwise: None },
+    )
+}
+
+/// Silent Dart — {1} artifact. {4}, {T}, sacrifice it: 3 damage to target
+/// creature.
+pub fn silent_dart() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..spell("Silent Dart", cost(&[generic(1)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Galvanic Juggernaut — {4} 5/5 artifact creature Juggernaut. Attacks each
+/// combat if able. Doesn't untap during your untap step. Whenever another
+/// creature dies, untap it.
+pub fn galvanic_juggernaut() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::MustAttack],
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::OtherThanSource,
+            }),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..creature("Galvanic Juggernaut", cost(&[generic(4)]), vec![CreatureType::Juggernaut], 5, 5)
+    }
+}
+
+/// Haunted Dead — {3}{B} 2/2 Zombie. When it enters, a 1/1 white flying
+/// Spirit token. {1}{B}, discard two cards: return it from your graveyard to
+/// the battlefield tapped.
+pub fn haunted_dead() -> CardDefinition {
+    let spirit = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Spirit", 1, 1, vec![Color::White], vec![CreatureType::Spirit])
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(make(1, spirit))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            discard_cost: Some((R::Any, 2)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..creature("Haunted Dead", cost(&[generic(3), b()]), vec![CreatureType::Zombie], 2, 2)
+    }
+}
+
+/// Salvaged Manaworker — {2} 1/3 artifact creature Construct. {1}: add one
+/// mana of any color; only once each turn.
+pub fn salvaged_manaworker() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            once_per_turn: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..creature("Salvaged Manaworker", cost(&[generic(2)]), vec![CreatureType::Construct], 1, 3)
+    }
+}
+
+/// Castle Raptors — {4}{W} 3/3 Bird Soldier. Flying. +0/+2 while untapped.
+pub fn castle_raptors() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is untapped, it gets +0/+2.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::Not(Box::new(Predicate::EntityMatches { what: Selector::This, filter: R::Tapped })),
+                power: 0,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..creature("Castle Raptors", cost(&[generic(4), w()]), vec![CreatureType::Bird, CreatureType::Soldier], 3, 3)
+    }
+}
+
+/// Gearsmith Guardian — {5} 3/5 artifact creature Construct. +2/+0 as long as
+/// you control a blue creature.
+pub fn gearsmith_guardian() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +2/+0 as long as you control a blue creature.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Creature.and(R::HasColor(Color::Blue)).and(R::ControlledByYou),
+                )),
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..creature("Gearsmith Guardian", cost(&[generic(5)]), vec![CreatureType::Construct], 3, 5)
+    }
+}
+
+/// Scrapdiver Serpent — {5}{U}{U} 5/5 Serpent. Can't be blocked as long as
+/// defending player controls an artifact (CR 702.14c's filtered walk).
+pub fn scrapdiver_serpent() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::LandwalkFiltered(Box::new(R::Artifact))],
+        ..creature("Scrapdiver Serpent", cost(&[generic(5), u(), u()]), vec![CreatureType::Serpent], 5, 5)
+    }
+}
+
+/// Skilled Animator — {2}{U} 1/3 Human Artificer. When it enters, target
+/// artifact you control becomes an artifact creature with base power and
+/// toughness 5/5 for as long as it remains on the battlefield.
+pub fn skilled_animator() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::BecomeCreature {
+            what: target_filtered(R::Artifact.and(R::ControlledByYou)),
+            power: Value::Const(5),
+            toughness: Value::Const(5),
+            creature_types: vec![],
+            keywords: vec![],
+            duration: Duration::WhileSourceOnBattlefield,
+        })],
+        ..creature("Skilled Animator", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Artificer], 1, 3)
+    }
+}
+
+/// Equestrian Skill — {3}{G} Aura. +3/+3; a Human has trample too.
+pub fn equestrian_skill() -> CardDefinition {
+    aura(
+        "Equestrian Skill",
+        cost(&[generic(3), g()]),
+        Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: R::HasCreatureType(CreatureType::Human),
+                keywords: vec![Keyword::Trample],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+    )
+}
+
+/// Lightning Talons — {2}{R} Aura. +3/+0 and first strike.
+pub fn lightning_talons() -> CardDefinition {
+    aura(
+        "Lightning Talons",
+        cost(&[generic(2), r()]),
+        Some(EquipBonus { power: 3, keywords: vec![Keyword::FirstStrike], ..Default::default() }),
+    )
+}
+
+/// See Red — {1}{R} Aura. +2/+1 and first strike. At the beginning of your
+/// end step, if you didn't attack with a creature this turn, sacrifice it.
+pub fn see_red() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                Predicate::Not(Box::new(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You })),
+            ),
+            effect: Effect::SacrificeSource,
+        }],
+        ..aura(
+            "See Red",
+            cost(&[generic(1), r()]),
+            Some(EquipBonus { power: 2, toughness: 1, keywords: vec![Keyword::FirstStrike], ..Default::default() }),
+        )
+    }
+}
+
+/// Spiteful Motives — {3}{R} Aura with flash. +3/+0 and first strike.
+pub fn spiteful_motives() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        ..aura(
+            "Spiteful Motives",
+            cost(&[generic(3), r()]),
+            Some(EquipBonus { power: 3, keywords: vec![Keyword::FirstStrike], ..Default::default() }),
+        )
+    }
+}
