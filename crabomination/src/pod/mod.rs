@@ -28302,6 +28302,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FUGITIVE_DOCTOR_15_COMMANDERS,
             main: decks::THE_FUGITIVE_DOCTOR_15_MAIN,
         },
+        // Seat 4642: Amber Gristle O'Maul and Raised by Giants's EDHREC average deck. `--pod-decks 4642`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Raised by Giants (RG)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_11_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_11_MAIN,
+        },
+        // Seat 4643: Kamahl, Heart of Krosa and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4643`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Rebbec, Architect of Ascension (WG)",
+            commanders: decks::KAMAHL_15_COMMANDERS,
+            main: decks::KAMAHL_15_MAIN,
+        },
+        // Seat 4644: The Fifth Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 4644`.
+        PodDeck {
+            name: "The Fifth Doctor and Rose Tyler (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_10_MAIN,
+        },
+        // Seat 4645: Falthis, Shadowcat Familiar and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 4645`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Ich-Tekik, Salvage Splicer (BG)",
+            commanders: decks::FALTHIS_23_COMMANDERS,
+            main: decks::FALTHIS_23_MAIN,
+        },
+        // Seat 4646: Halana, Kessig Ranger and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4646`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Numa, Joraga Chieftain (G)",
+            commanders: decks::HALANA_18_COMMANDERS,
+            main: decks::HALANA_18_MAIN,
+        },
+        // Seat 4647: Burakos, Party Leader and Scion of Halaster's EDHREC average deck. `--pod-decks 4647`.
+        PodDeck {
+            name: "Burakos, Party Leader and Scion of Halaster (B)",
+            commanders: decks::BURAKOS_14_COMMANDERS,
+            main: decks::BURAKOS_14_MAIN,
+        },
+        // Seat 4648: Alharu, Solemn Ritualist and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4648`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Vial Smasher the Fierce (WBR)",
+            commanders: decks::ALHARU_25_COMMANDERS,
+            main: decks::ALHARU_25_MAIN,
+        },
+        // Seat 4649: Ghost of Ramirez DePietro and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4649`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_24_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_24_MAIN,
+        },
+        // Seat 4650: Burakos, Party Leader and Inspiring Leader's EDHREC average deck. `--pod-decks 4650`.
+        PodDeck {
+            name: "Burakos, Party Leader and Inspiring Leader (WB)",
+            commanders: decks::BURAKOS_15_COMMANDERS,
+            main: decks::BURAKOS_15_MAIN,
+        },
+        // Seat 4651: Bruse Tarl, Boorish Herder and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4651`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Prava of the Steel Legion (WR)",
+            commanders: decks::BRUSE_TARL_20_COMMANDERS,
+            main: decks::BRUSE_TARL_20_MAIN,
+        },
+        // Seat 4652: Livio, Oathsworn Sentinel and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 4652`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Malcolm, Keen-Eyed Navigator (WU)",
+            commanders: decks::LIVIO_7_COMMANDERS,
+            main: decks::LIVIO_7_MAIN,
+        },
     ]
 }
 
@@ -34844,6 +34910,17 @@ mod tests {
             ("Ghost of Ramirez DePietro and Radiant, Serra Archangel", &[0x1C35]),
             ("Numa, Joraga Chieftain and Tormod, the Desecrator", &[0x1C36]),
             ("The Fugitive Doctor and Ryan Sinclair", &[0x1C37]),
+            ("Amber Gristle O'Maul and Raised by Giants", &[0x1C38]),
+            ("Kamahl, Heart of Krosa and Rebbec, Architect of Ascension", &[0x1C39]),
+            ("The Fifth Doctor and Rose Tyler", &[0x1C3A]),
+            ("Falthis, Shadowcat Familiar and Ich-Tekik, Salvage Splicer", &[0x1C3B]),
+            ("Halana, Kessig Ranger and Numa, Joraga Chieftain", &[0x1C3C]),
+            ("Burakos, Party Leader and Scion of Halaster", &[0x1C3D]),
+            ("Alharu, Solemn Ritualist and Vial Smasher the Fierce", &[0x1C3E]),
+            ("Ghost of Ramirez DePietro and Ludevic, Necro-Alchemist", &[0x1C3F]),
+            ("Burakos, Party Leader and Inspiring Leader", &[0x1C40]),
+            ("Bruse Tarl, Boorish Herder and Prava of the Steel Legion", &[0x1C41]),
+            ("Livio, Oathsworn Sentinel and Malcolm, Keen-Eyed Navigator", &[0x1C42]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
