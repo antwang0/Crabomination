@@ -684,8 +684,6 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast an instant or sorcery spell or a kicked
     /// spell" (Volshe Tideturner). Reads `SpellKind::kicked`.
     InstantSorceryOrKicked,
-    /// "Spend this mana only to cast kicked spells" (Throne of Makindi).
-    KickedOnly,
     /// "Spend this mana only to cast artifact spells or activate
     /// abilities of artifacts." (Power Depot, Mishra's Workshop kin.)
     ArtifactOnly,
@@ -974,7 +972,6 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOnly => "only instants and sorceries",
             SpendRestriction::InstantSorceryOrClassLevel => "only instants, sorceries and Class levels",
             SpendRestriction::InstantSorceryOrKicked => "only instants, sorceries and kicked spells",
-            SpendRestriction::KickedOnly => "only kicked spells",
             SpendRestriction::KickedSpellsOnly => "only kicked spells",
             SpendRestriction::PowerUpOnly => "only power-up abilities",
             SpendRestriction::NotSpellsFromHand => "not spells cast from hand",
@@ -1094,7 +1091,6 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::InstantSorceryOrClassLevel => kind.instant_or_sorcery || kind.class_level,
             SpendRestriction::InstantSorceryOrKicked => kind.instant_or_sorcery || kind.kicked,
-            SpendRestriction::KickedOnly => kind.kicked,
             SpendRestriction::KickedSpellsOnly => kind.kicked,
             SpendRestriction::PowerUpOnly => kind.power_up,
             SpendRestriction::NotSpellsFromHand => !kind.from_hand,

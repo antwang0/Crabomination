@@ -836,7 +836,7 @@ pub fn throne_of_makindi() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::Const(2))),
-                        crate::mana::SpendRestriction::KickedOnly,
+                        crate::mana::SpendRestriction::KickedSpellsOnly,
                     ),
                 },
                 ..Default::default()
