@@ -28626,6 +28626,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ESIOR_21_COMMANDERS,
             main: decks::ESIOR_21_MAIN,
         },
+        // Seat 4696: The Sixth Doctor and Tegan Jovanka's EDHREC average deck. `--pod-decks 4696`.
+        PodDeck {
+            name: "The Sixth Doctor and Tegan Jovanka (WUG)",
+            commanders: decks::THE_SIXTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_10_MAIN,
+        },
+        // Seat 4697: Sivriss, Nightmare Speaker and Dungeon Delver's EDHREC average deck. `--pod-decks 4697`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Dungeon Delver (UB)",
+            commanders: decks::SIVRISS_15_COMMANDERS,
+            main: decks::SIVRISS_15_MAIN,
+        },
     ]
 }
 
@@ -35222,6 +35234,8 @@ mod tests {
             ("Keleth, Sunmane Familiar and Sakashima of a Thousand Faces", &[0x1C6B]),
             ("Alena, Kessig Trapper and Esior, Wardwing Familiar", &[0x1C6C]),
             ("Esior, Wardwing Familiar and Kydele, Chosen of Kruphix", &[0x1C6D]),
+            ("The Sixth Doctor and Tegan Jovanka", &[0x1C6E]),
+            ("Sivriss, Nightmare Speaker and Dungeon Delver", &[0x1C6F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

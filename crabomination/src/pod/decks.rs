@@ -131669,3 +131669,60 @@ pub const ESIOR_21_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const THE_SIXTH_DOCTOR_10_COMMANDERS: &[CardFactory] = &[the_sixth_doctor, tegan_jovanka];
+
+/// **The Sixth Doctor and Tegan Jovanka**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 5 Forests + 5 Islands + 7 Plains = 98.
+/// The Sixth Doctor and Tegan Jovanka (EDHREC, fetched 2026-10-20).
+pub const THE_SIXTH_DOCTOR_10_MAIN: &[CardFactory] = &[
+    arcane_signet, crystal_skull_isu_spyglass, decanter_of_endless_water, lightning_greaves,
+    mithril_coat, shorikai_genesis_engine, sol_ring, sonic_screwdriver, tardis,
+    talisman_of_curiosity, talisman_of_progress, talisman_of_unity, the_great_henge,
+    the_indomitable, thought_vessel, weatherlight, bountiful_promenade, breeding_pool,
+    canopy_vista, command_tower, dreamroot_cascade, exotic_orchard, fortified_village,
+    glacial_fortress, hallowed_fountain, hinterland_harbor, overgrown_farmland,
+    path_of_ancestry, prairie_stream, seaside_citadel, sunpetal_grove, temple_garden,
+    temple_of_plenty, trenzalore_clocktower, turbulent_wilderness, adric_mathematical_genius,
+    alistair_the_brigadier, bugenhagen_wise_elder, everett_k_ross_hapless_attache,
+    flickering_hound, foundry_inspector, jamie_mccrimmon, k_9_mark_i, loran_of_the_third_path,
+    matt_murdock_justice_seeker, padeem_consul_of_innovation, raff_capashen_ships_mage,
+    romana_ii, she_hulk_jade_defender, shelinda_yevon_acolyte, solemn_simulacrum,
+    spider_man_to_the_rescue, spider_woman_stunning_savior, sram_senior_edificer,
+    summon_knights_of_round, the_eighth_doctor, the_fourth_doctor, the_second_doctor,
+    torgal_a_fine_hound, city_of_death, honest_work, kyoshi_island_plaza, southern_air_temple,
+    the_night_of_the_doctor, the_spirit_oasis, thopter_spy_network, trial_of_a_time_lord,
+    arcane_denial, beast_within, heroic_intervention, path_to_exile, reverse_the_polarity,
+    swords_to_plowshares, turtles_forever, cultivate, farseek, natures_lore, rampant_growth,
+    three_visits, time_wipe, traverse_eternity,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const SIVRISS_15_COMMANDERS: &[CardFactory] = &[sivriss_nightmare_speaker, dungeon_delver];
+
+/// **Sivriss, Nightmare Speaker and Dungeon Delver**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 11 Islands + 13 Swamps = 98.
+/// Sivriss, Nightmare Speaker and Dungeon Delver (EDHREC, fetched 2026-10-20).
+pub const SIVRISS_15_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, dungeon_map, dungeoneers_pack, eye_of_vecna,
+    fifty_feet_of_rope, hand_of_vecna, ichor_wellspring, sarevoks_tome, sol_ring,
+    talisman_of_dominance, the_book_of_vile_darkness, trailblazers_torch, wayfarers_bauble,
+    command_tower, dimir_aqueduct, drowned_catacomb, dungeon_descent, exotic_orchard,
+    gloomlake_verge, morphic_pool, shipwreck_marsh, sunken_hollow, tainted_isle,
+    turbulent_wetlands, watery_grave, aarakocra_sneak, acererak_the_archlich, archaeomancer,
+    avacyn_angel_of_horror, clattering_skeletons, clever_conjurer, displacer_beast,
+    eccentric_apprentice, feywild_caretaker, imoen_mystic_trickster, nine_lives_familiar,
+    passageway_seer, ravenloft_adventurer, reassembling_skeleton, rilsa_rael_kingpin,
+    safana_calimport_cutthroat, secret_door, shortcut_seeker, solemn_simulacrum,
+    syr_konrad_the_grim, tomb_of_horrors_adventurer, underdark_explorer, vicious_battlerager,
+    yuan_ti_fang_blade, yuan_ti_malison, zombie_ogre, agent_of_the_iron_throne, fly,
+    mechanized_production, precipitous_drop, rhystic_study, an_offer_you_cant_refuse,
+    bar_the_gate, counterspell, dark_ritual, dispel, go_for_the_throat, negate, power_word_kill,
+    resculpt, withering_torment, damnation, fates_reversal, from_the_catacombs, living_death,
+    reanimate, toxic_deluge, victimize,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
