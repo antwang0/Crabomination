@@ -35722,6 +35722,9 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
+            // Scheming Fence — read by the grant gather / grant scan.
+            | StaticEffect::HasActivatedAbilitiesOfChosenPermanent
+            | StaticEffect::ChosenPermanentAbilitiesCantBeActivated
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn
             | StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | StaticEffect::HasActivatedAbilitiesOfExiledWithCounter { .. }

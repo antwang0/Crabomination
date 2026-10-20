@@ -182,6 +182,10 @@ pub(crate) struct GrantScan<'a> {
     /// it lives, so the gather it was built against is the gather every
     /// reader of it sees.
     land_types_rewritten: Option<bool>,
+    /// Permanents whose activated abilities a live
+    /// `ChosenPermanentAbilitiesCantBeActivated` locks (Scheming Fence's
+    /// chosen permanent). Empty on nearly every board.
+    pub(crate) locked: Vec<CardId>,
     /// Does any permanent grant activated abilities to countered creatures
     /// (Agatha's Soul Cauldron)? Off the zone's lane, read lazily — only the
     /// first time the grants-nothing gate meets a permanent with counters —
@@ -1321,7 +1325,8 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::HasActivatedAbilitiesOfCounteredCreatures
             | SE::HasActivatedAbilitiesOfGraveyardLands
             | SE::HasActivatedAbilitiesOfBattlefieldLands
-            | SE::HasActivatedAbilitiesOfLibraryTop { .. } => flags |= mana_summary::SELF_GRANT,
+            | SE::HasActivatedAbilitiesOfLibraryTop { .. }
+            | SE::HasActivatedAbilitiesOfChosenPermanent => flags |= mana_summary::SELF_GRANT,
             SE::CounteredCreaturesHaveAbilitiesOfExiledWithSource => {
                 flags |= mana_summary::COUNTER_GRANT
             }
@@ -19435,6 +19440,11 @@ impl GameState {
             if only.is_some_and(|set| !set.contains(&c.id)) {
                 continue;
             }
+            // Scheming Fence's chosen permanent activates nothing, mana
+            // abilities included.
+            if !scan.locked.is_empty() && scan.locked.contains(&c.id) {
+                continue;
+            }
             // CR 302.6 — a summoning-sick creature's {T} mana abilities can't
             // be activated. Listed, the generic loop picked the Elf, its tap
             // failed and the loop gave up with Islands untapped.
@@ -20521,6 +20531,12 @@ impl GameState {
                     scan.exiled_with.push((filter, src.controller, src.id, lenders.as_ref()));
                     continue;
                 }
+                if matches!(inner, StaticEffect::ChosenPermanentAbilitiesCantBeActivated) {
+                    if let Some(chosen) = src.chosen_permanent {
+                        scan.locked.push(chosen);
+                    }
+                    continue;
+                }
                 let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } = inner
                 else {
                     continue;
@@ -20984,6 +21000,7 @@ impl GameState {
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
         let (mut drana, mut refractor, mut trazyn, mut robaran) = (false, false, false, false);
+        let mut fence = false;
         let mut gy_filters: Vec<&crate::card::SelectionRequirement> = Vec::new();
         let mut caged: Option<crate::card::CounterType> = None;
         let mut brained: Option<crate::card::CounterType> = None;
@@ -20991,6 +21008,7 @@ impl GameState {
             match sa.effect {
                 StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
                 | StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn => welder = true,
+                StaticEffect::HasActivatedAbilitiesOfChosenPermanent => fence = true,
                 StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { counter } => {
                     caged = Some(counter)
                 }
@@ -21047,6 +21065,11 @@ impl GameState {
             {
                 out.extend(imp.definition.activated_abilities.iter());
             }
+        }
+        // Scheming Fence — the chosen permanent's printed activated abilities
+        // (its loyalty abilities live apart and are never borrowed).
+        if fence && let Some(lent) = me.chosen_permanent.and_then(|id| self.battlefield_find(id)) {
+            out.extend(lent.definition.activated_abilities.iter());
         }
         // CR 804.2 — the deploy creatures option gives every creature
         // "{T}: Target teammate gains control of this creature. Activate
@@ -22301,6 +22324,20 @@ impl GameState {
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);
             }
+        }
+
+        // Scheming Fence — "activated abilities of the chosen permanent can't
+        // be activated", mana abilities too.
+        if self.battlefield.iter().any(|f| {
+            f.chosen_permanent == Some(card_id)
+                && f.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, f),
+                        Some(crate::effect::StaticEffect::ChosenPermanentAbilitiesCantBeActivated)
+                    )
+                })
+        }) {
+            return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
         // Hand to Hand — no non-mana activations during combat.

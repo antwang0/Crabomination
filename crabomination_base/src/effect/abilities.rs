@@ -3292,6 +3292,15 @@ pub enum StaticEffect {
     /// it" (Myr Welder). A self-static: `granted_abilities_for` folds in every
     /// activated ability printed on a card stamped `exiled_with = this`.
     HasActivatedAbilitiesOfExiledWithSelf,
+    /// "This creature has all activated abilities of the chosen permanent
+    /// except for loyalty abilities" (Scheming Fence): the printed activated
+    /// abilities of the permanent stamped on `chosen_permanent`, read live.
+    HasActivatedAbilitiesOfChosenPermanent,
+    /// "Activated abilities of the chosen permanent can't be activated"
+    /// (Scheming Fence) — mana abilities too. Gathered into `GrantScan` (so a
+    /// locked permanent drops out of the mana-source table) and checked at
+    /// activation.
+    ChosenPermanentAbilitiesCantBeActivated,
     /// `HasActivatedAbilitiesOfExiledWithSelf`, each borrowed ability only
     /// once each turn (CR 602.5b — Locus of Enlightenment, the cards used to
     /// craft it).
