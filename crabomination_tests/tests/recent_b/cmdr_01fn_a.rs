@@ -300,3 +300,44 @@ fn mardu_blazebringer_burns_out_after_combat() {
     }
     assert!(g.battlefield_find(ogre).is_none(), "sacrificed at end of combat");
 }
+
+/// So Tiny: -2/-0, or -6/-0 once the enchanted creature's CONTROLLER (not the
+/// Aura's) has seven or more cards in their graveyard.
+#[test]
+fn so_tiny_reads_the_enchanted_controllers_graveyard() {
+    let mut g = main_phase(2);
+    let dragon = g.add_card_to_battlefield(1, catalog::velukan_dragon());
+    let aura = g.add_card_to_hand(0, catalog::so_tiny());
+    flood(&mut g, 0);
+    cast_as(&mut g, 0, aura, Some(Target::Permanent(dragon))).expect("cast");
+    let power = |g: &GameState| g.computed_permanent(dragon).unwrap().power;
+    assert_eq!(power(&g), 3);
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    assert_eq!(power(&g), 3, "the Aura's controller's graveyard doesn't count");
+    for _ in 0..7 {
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    assert_eq!(power(&g), -1, "5 - 6: power may go negative");
+}
+
+/// Loathsome Troll's {3}{G} works only from the graveyard and always moves it
+/// somewhere: library top, hand, or the battlefield tapped.
+#[test]
+fn loathsome_troll_climbs_out_of_the_graveyard() {
+    let mut g = main_phase(2);
+    let troll = g.add_card_to_graveyard(0, catalog::loathsome_troll());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: troll,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate from the graveyard");
+    drain_stack(&mut g);
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == troll), "it left the graveyard");
+}
