@@ -85,6 +85,51 @@ pub(super) fn pick_creature_upgrade_transform(state: &GameState, seat: usize) ->
     None
 }
 
+/// Pods: a noncreature's "craft with one of each" (CR 702.167a — Throne of
+/// the Grim Captain) into a creature back face, when the board pieces the
+/// craft would exile are worth less than that creature (graveyard cards are
+/// free). A 40-game census of the three Throne seats never saw it crafted:
+/// no sink asked for a noncreature's exile-and-return. Commander games
+/// only, so two-player play is unchanged.
+pub(super) fn pick_craft_into_creature(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty() {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat && !state.computed_is_creature(c)) {
+        let Some(back) = card.definition.back_face.as_deref() else { continue };
+        if !back.is_creature() {
+            continue;
+        }
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.craft_exile_each.is_empty() || !matches!(ab.effect, Effect::ExileSelfReturnTransformed) {
+                continue;
+            }
+            let Some(picks) = state.craft_each_picks(seat, card.id, &ab.craft_exile_each) else { continue };
+            let spent: i32 = picks
+                .iter()
+                .filter(|(_, in_gy)| !in_gy)
+                .filter_map(|(id, _)| state.computed_permanent(*id))
+                .map(|cp| cp.power.max(0) + cp.toughness.max(0))
+                .sum();
+            if spent >= back.power + back.toughness {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
 /// The ability transforms its own source.
 pub(super) fn ability_transforms_self(e: &Effect) -> bool {
     matches!(e, Effect::Transform { what: Selector::This })
@@ -199,5 +244,24 @@ mod tests {
         let a = pick_flip_to_saga(&g, 0).expect("flip");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == ura));
     }
-}
 
+    /// Throne of the Grim Captain is crafted in a pod once a Dinosaur, a
+    /// Merfolk, a Pirate and a Vampire are at hand, graveyard cards first.
+    #[test]
+    fn throne_of_the_grim_captain_crafts_when_all_four_types_are_at_hand() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let throne = g.add_card_to_battlefield(0, crate::catalog::throne_of_the_grim_captain());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(4);
+        g.add_card_to_graveyard(0, crate::catalog::vampire_nighthawk());
+        g.add_card_to_graveyard(0, crate::catalog::dinosaur_hunter());
+        g.add_card_to_graveyard(0, crate::catalog::grim_giganotosaurus());
+        assert!(pick_craft_into_creature(&g, 0).is_none(), "no Merfolk yet");
+        g.add_card_to_graveyard(0, crate::catalog::silvergill_peddler());
+        let a = pick_craft_into_creature(&g, 0).expect("craft");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, ability_index: 1, .. } if card_id == throne));
+    }
+}

@@ -10768,6 +10768,9 @@ fn main_phase_action_with(
     if let Some(action) = super::transform_sink::pick_creature_upgrade_transform(state, seat) {
         return BotStep::plain(action);
     }
+    if let Some(action) = super::transform_sink::pick_craft_into_creature(state, seat) {
+        return BotStep::plain(action);
+    }
 
     // Spend "{X}, remove X counters" abilities (Marath) on their best mode
     // and size. Dry-run-scored against passing.
