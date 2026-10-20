@@ -539,3 +539,20 @@ fn cheering_fanatic_discounts_the_named_spell_for_everyone() {
     g.perform_action(GameAction::CastSpell { card_id: theirs, target: None, additional_targets: vec![], mode: None, x_value: None })
         .expect("Hill Giant for {2}{R}");
 }
+
+/// Evolving Door trades a mono-green creature for a two-colour one from the
+/// library, cast for its cost.
+#[test]
+fn evolving_door_climbs_one_color() {
+    let mut g = pod(2);
+    let door = g.add_card_to_battlefield(0, catalog::evolving_door());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::creeping_trailblazer());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility { card_id: door, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Creeping Trailblazer"), "the two-colour creature, cast");
+}

@@ -856,3 +856,38 @@ pub fn cheering_fanatic() -> CardDefinition {
         ..creature("Cheering Fanatic", cost(&[generic(1), r()]), vec![CreatureType::Goblin], 2, 2)
     }
 }
+
+/// Evolving Door — {2}{G} artifact. {1}, {T}, sacrifice a creature: search
+/// your library for a creature card exactly one more color than the
+/// sacrificed creature, exile it, then shuffle; you may cast it (paying its
+/// costs). Activate only as a sorcery.
+pub fn evolving_door() -> CardDefinition {
+    CardDefinition {
+        name: "Evolving Door",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Creature.and(R::ColorCountEqualsSacrificedPlus(1)),
+                    to: ZoneDest::ExileWithSourceStamp,
+                },
+                Effect::CastWithoutPayingImmediate {
+                    what: Selector::CardExiledWithSource,
+                    source_zone: Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: true,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

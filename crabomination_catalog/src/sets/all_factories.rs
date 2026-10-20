@@ -18380,6 +18380,7 @@ static DECKS: &[Factory] = &[
     super::decks::animate_artifact,
     super::decks::throne_of_makindi,
     super::decks::cheering_fanatic,
+    super::decks::evolving_door,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
