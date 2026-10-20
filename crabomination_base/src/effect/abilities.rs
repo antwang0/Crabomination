@@ -4370,6 +4370,9 @@ pub enum StaticEffect {
     /// library instead of putting it anywhere else" (Nephalia Academy). Read
     /// by `discard_card` beside Library of Leng; always taken.
     OpponentDiscardToLibraryTop,
+    /// CR 702.88 — "Instant and sorcery spells you control have rebound"
+    /// (Cast Through Time). Read where a resolving spell's rebound is checked.
+    YourInstantsAndSorceriesHaveRebound,
     /// Mistform Warchief — "Creature spells you cast that share a creature
     /// type with this creature cost `amount` less to cast."
     SharedCreatureTypeSpellCostReduction { amount: u32 },

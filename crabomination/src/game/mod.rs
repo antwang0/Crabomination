@@ -32427,7 +32427,14 @@ impl GameState {
         // re-runs the spell's effect with a fresh auto-target.
         if card.cast_from_hand
             && (card.definition.keywords.has_kw(&crate::card::Keyword::Rebound)
-                || self.rebound_granted_spells.contains(&card.id))
+                || self.rebound_granted_spells.contains(&card.id)
+                || ((card.definition.is_instant() || card.definition.is_sorcery())
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == caster
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(sa.effect, crate::effect::StaticEffect::YourInstantsAndSorceriesHaveRebound)
+                            })
+                    })))
         {
             use crate::game::types::{DelayedKind, DelayedTrigger};
             let source = card.id;
@@ -36011,6 +36018,7 @@ fn static_effect_to_effects(
             // DiscardToLibraryTop (Library of Leng) — read by `discard_card`.
             | StaticEffect::DiscardToLibraryTop
             | StaticEffect::OpponentDiscardToLibraryTop
+            | StaticEffect::YourInstantsAndSorceriesHaveRebound
             // TappedCreaturesCanBlock — consulted at block declaration via
             // `tapped_creatures_can_block`; no layer effect.
             | StaticEffect::TappedCreaturesCanBlock
