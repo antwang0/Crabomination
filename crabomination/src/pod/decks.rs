@@ -123477,3 +123477,109 @@ pub const SYGG_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const FBLTHP_4_COMMANDERS: &[CardFactory] = &[fblthp_impossibly_lost];
+
+/// **Fblthp, Impossibly Lost**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Fblthp, Impossibly Lost (EDHREC, fetched 2026-10-20).
+pub const FBLTHP_4_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, fellwar_stone, lightning_greaves, mind_stone,
+    mirror_of_fate, riverchurn_monument, sapphire_medallion, sol_ring, thought_vessel,
+    cephalid_coliseum, myriad_landscape, mystic_sanctuary, otawara_soaring_city,
+    reliquary_tower, rogues_passage, bilbo_luckwearer, chasm_skulker, enduring_curiosity,
+    faerie_mastermind, fblthp_lost_on_the_range, fblthp_the_lost, gudul_lurker,
+    homunculus_horde, invisible_stalker, laboratory_maniac, leveler, looter_il_kor,
+    mischievous_mystic, mist_cloaked_herald, psychosis_crawler, shoreline_looter,
+    silent_hallcreeper, slither_blade, tetsuko_umezawa_fugitive, triskaidekaphile,
+    triton_shorestalker, vnwxt_verbose_host, coastal_piracy, propaganda, reconnaissance_mission,
+    rhystic_study, teferis_ageless_insight, thought_lash, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, brainstorm, consider, counterspell, frantic_search, high_tide, mana_drain,
+    negate, opt, pongify, rapid_hybridization, reality_shift, snap, swan_song,
+    jace_wielder_of_mysteries, gitaxian_probe, paradigm_shift, ponder, preordain, traumatize,
+    treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const ERRANT_COMMANDERS: &[CardFactory] = &[errant_street_artist];
+
+/// **Errant, Street Artist**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Errant, Street Artist (EDHREC, fetched 2026-10-20).
+pub const ERRANT_MAIN: &[CardFactory] = &[
+    arcane_signet, illusionists_bracers, lithoform_engine, midnight_clock, mind_stone,
+    mindsplice_apparatus, mirari, primal_amulet, sapphire_medallion, sky_diamond, sol_ring,
+    thought_vessel, twinning_staff, castle_vantress, minamo_school_at_waters_edge, mirrorpool,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, sunken_palace, archaeomancer,
+    archmage_emeritus, baral_chief_of_compliance, deekah_fractal_theorist, echo_mage,
+    jin_gitaxias_progress_tyrant, kitsa_otterball_elite, meletis_charlatan,
+    mercurial_spelldancer, naru_meha_master_wizard, omen_hawker, sea_gate_stormcaller,
+    taigam_master_opportunist, talrand_sky_summoner, thunderclap_drake, wandering_archaic,
+    wizards_of_thay, curse_of_echoes, font_of_magic, propaganda, storm_of_saruman,
+    swarm_intelligence, the_mirari_conjecture, brainstorm, complete_the_circuit, counterspell,
+    dig_through_time, dramatic_reversal, flow_of_knowledge, frantic_search, high_tide,
+    insidious_will, mystical_tutor, narsets_reversal, opt, pongify, rapid_hybridization,
+    reality_shift, see_double, snap, twincast, echo_storm, eternal_dominion, flawless_forgery,
+    minds_desire, mnemonic_deluge, ponder, preordain, replication_technique, solve_the_equation,
+    treasure_cruise,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const HAKIM_COMMANDERS: &[CardFactory] = &[hakim_loreweaver];
+
+/// **Hakim, Loreweaver**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Hakim, Loreweaver (EDHREC, fetched 2026-10-20).
+pub const HAKIM_MAIN: &[CardFactory] = &[
+    arcane_signet, claws_of_gix, crown_of_the_ages, helm_of_the_gods, mind_stone,
+    sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots, cephalid_coliseum,
+    myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city,
+    reliquary_tower, riptide_laboratory, academy_researchers, barrin_master_wizard,
+    callaphe_beloved_of_the_sea, defiler_of_dreams, deranged_assistant, displacer_kitten,
+    dreamscape_artist, entity_tracker, iridescent_drake, protean_thaumaturge,
+    rayne_academy_chancellor, river_kelpie, rootwater_matriarch, rootwater_shaman,
+    sage_of_mysteries, abduction, aqueous_form, arcanum_wings, auramancers_guise,
+    cartouche_of_knowledge, combat_research, control_magic, corrupted_conscience, curiosity,
+    drake_umbra, eel_umbra, eldrazi_conscription, estrids_invocation, false_demise,
+    flight_of_fancy, illusory_gains, mirrormade, nerd_rage, octopus_umbra, rousing_read,
+    super_state, travelers_cloak, treachery, vanishing, abjure, aetherize, aura_finesse,
+    aura_graft, counterspell, enchantment_alteration, fact_or_fiction, frantic_search, fumble,
+    high_tide, rapid_hybridization, thirst_for_meaning, careful_study, chart_a_course, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const PROFT_2_COMMANDERS: &[CardFactory] = &[proft_sinister_mastermind];
+
+/// **Proft, Sinister Mastermind**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Swamps = 99.
+/// Proft, Sinister Mastermind (EDHREC, fetched 2026-10-20).
+pub const PROFT_2_MAIN: &[CardFactory] = &[
+    bonehoard, charcoal_diamond, crucible_of_worlds, gavel_of_the_righteous, key_to_the_city,
+    lightning_greaves, moonsilver_key, skullclamp, zephyr_boots, blast_zone, bojuka_bog,
+    crypt_of_agadeem, demolition_field, drownyard_temple, rogues_passage, urzas_saga,
+    alchemists_assistant, angel_of_suffering, archfiend_of_sorrows, boneyard_mycodrax,
+    bringer_of_the_last_gift, canoptek_tomb_sentinel, daring_fiendbonder, deathcap_marionette,
+    defiler_of_flesh, dogged_detective, grave_researcher, gray_merchant_of_asphodel, gray_slaad,
+    herald_of_torment, millikin, mire_triton, nighthowler, nirkana_revenant, qarsi_revenant,
+    rakshasa_debaser, rot_curse_rakshasa, scavenged_brawler, sinister_starfish,
+    souls_of_the_lost, stitchers_supplier, tyrannical_pitlord, undead_butler,
+    cemetery_tampering, circle_of_affliction, criminal_past, demonic_embrace, grasping_shadows,
+    out_of_the_tombs, ripples_of_undeath, astarions_thirst, consuming_corruption, dark_ritual,
+    force_of_despair, lethal_scheme, price_of_fame, rise_of_the_deathbringer,
+    songs_of_the_damned, ral_zarek_guest_lecturer, blasphemous_edict, exsanguinate,
+    gixs_command, grave_strength, season_of_loss, stitch_together, temporal_extortion,
+    toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

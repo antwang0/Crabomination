@@ -26862,6 +26862,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SYGG_2_COMMANDERS,
             main: decks::SYGG_2_MAIN,
         },
+        // Seat 4402: Fblthp, Impossibly Lost's EDHREC average deck. `--pod-decks 4402`.
+        PodDeck {
+            name: "Fblthp, Impossibly Lost (U)",
+            commanders: decks::FBLTHP_4_COMMANDERS,
+            main: decks::FBLTHP_4_MAIN,
+        },
+        // Seat 4403: Errant, Street Artist's EDHREC average deck. `--pod-decks 4403`.
+        PodDeck {
+            name: "Errant, Street Artist (U)",
+            commanders: decks::ERRANT_COMMANDERS,
+            main: decks::ERRANT_MAIN,
+        },
+        // Seat 4404: Hakim, Loreweaver's EDHREC average deck. `--pod-decks 4404`.
+        PodDeck {
+            name: "Hakim, Loreweaver (U)",
+            commanders: decks::HAKIM_COMMANDERS,
+            main: decks::HAKIM_MAIN,
+        },
+        // Seat 4405: Proft, Sinister Mastermind's EDHREC average deck. `--pod-decks 4405`.
+        PodDeck {
+            name: "Proft, Sinister Mastermind (B)",
+            commanders: decks::PROFT_2_COMMANDERS,
+            main: decks::PROFT_2_MAIN,
+        },
     ]
 }
 
@@ -33164,6 +33188,10 @@ mod tests {
             ("Monoxa, Midway Manager", &[0x1B45]),
             ("Henry Wu, InGen Geneticist", &[0x1B46]),
             ("Sygg, River Guide", &[0x1B47]),
+            ("Fblthp, Impossibly Lost", &[0x1B48]),
+            ("Errant, Street Artist", &[0x1B49]),
+            ("Hakim, Loreweaver", &[0x1B4A]),
+            ("Proft, Sinister Mastermind", &[0x1B4B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
