@@ -416,6 +416,14 @@ impl GameState {
         if kind.creature && bio > 0 {
             card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, bio));
         }
+        // Domri, Chaos Bringer — a funded creature spell gains riot: one
+        // queued instance per pip, read by `apply_riot` as it enters.
+        let riot = spent.spent_count(SpendRestriction::CreatureGainsRiot);
+        if kind.creature {
+            for _ in 0..riot {
+                self.pending_etb_keyword_grants.push((card.id, Keyword::Riot, crate::effect::Duration::Permanent));
+            }
+        }
         // Animal Attendant — the same, for a non-Human creature spell.
         let attendant = spent.spent_count(SpendRestriction::NonHumanCreatureCastCounter);
         if kind.creature

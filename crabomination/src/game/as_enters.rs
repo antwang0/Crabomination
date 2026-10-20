@@ -137,7 +137,16 @@ impl GameState {
     fn apply_riot(&mut self, card_id: CardId) {
         use crate::card::Keyword;
         let Some(ctrl) = self.battlefield.find_by_id(card_id).map(|c| c.controller) else { return };
-        for _ in 0..self.entering_keyword_count(card_id, &Keyword::Riot) {
+        // Riot a funding mana gave the spell (Domri, Chaos Bringer) rides the
+        // pending grants rather than the definition; take it here, so the
+        // keyword isn't granted again once it has entered.
+        let mut granted = 0;
+        if self.pending_etb_keyword_grants.iter().any(|(id, kw, _)| *id == card_id && *kw == Keyword::Riot) {
+            let before = self.pending_etb_keyword_grants.len();
+            self.pending_etb_keyword_grants.retain(|(id, kw, _)| !(*id == card_id && *kw == Keyword::Riot));
+            granted = before - self.pending_etb_keyword_grants.len();
+        }
+        for _ in 0..self.entering_keyword_count(card_id, &Keyword::Riot) + granted {
             let counter = if self.seat_prompts(ctrl) {
                 !self.riot_prefers_haste(card_id, ctrl)
             } else {

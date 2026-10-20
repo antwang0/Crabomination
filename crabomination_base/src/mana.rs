@@ -935,6 +935,10 @@ pub enum SpendRestriction {
     /// Attendant.) `CreatureCastCounter` for a creature spell that isn't a
     /// Human (a changeling is one); unrestricted spend.
     NonHumanCreatureCastCounter,
+    /// "If that mana is spent on a creature spell, it gains riot" (Domri,
+    /// Chaos Bringer's +1). Unrestricted spend; each funding pip queues one
+    /// riot instance on the cast card, read as it enters (CR 702.136a-b).
+    CreatureGainsRiot,
     /// "Spend this mana only to cast a [type] spell or activate an ability of
     /// a [type]" for either of two types (Gallifrey Council Chamber: Time
     /// Lord or Alien). Changelings and Kindred spells and sources count.
@@ -1049,6 +1053,7 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
             | SpendRestriction::NonHumanCreatureCastCounter
+            | SpendRestriction::CreatureGainsRiot
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
@@ -1242,6 +1247,7 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
             | SpendRestriction::NonHumanCreatureCastCounter
+            | SpendRestriction::CreatureGainsRiot
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
