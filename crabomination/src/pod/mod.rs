@@ -28536,6 +28536,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRINELIN_23_COMMANDERS,
             main: decks::BRINELIN_23_MAIN,
         },
+        // Seat 4681: Abdel Adrian, Gorion's Ward and Clan Crafter's EDHREC average deck. `--pod-decks 4681`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Clan Crafter (WU)",
+            commanders: decks::ABDEL_ADRIAN_12_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_12_MAIN,
+        },
+        // Seat 4682: Alora, Merry Thief and Cloakwood Hermit's EDHREC average deck. `--pod-decks 4682`.
+        PodDeck {
+            name: "Alora, Merry Thief and Cloakwood Hermit (UG)",
+            commanders: decks::ALORA_19_COMMANDERS,
+            main: decks::ALORA_19_MAIN,
+        },
     ]
 }
 
@@ -35117,6 +35129,8 @@ mod tests {
             ("Imoen, Mystic Trickster and Shameless Charlatan", &[0x1C5C]),
             ("Breeches, Brazen Plunderer and Tormod, the Desecrator", &[0x1C5D]),
             ("Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar", &[0x1C5E]),
+            ("Abdel Adrian, Gorion's Ward and Clan Crafter", &[0x1C5F]),
+            ("Alora, Merry Thief and Cloakwood Hermit", &[0x1C60]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

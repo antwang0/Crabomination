@@ -131247,3 +131247,61 @@ pub const BRINELIN_23_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ABDEL_ADRIAN_12_COMMANDERS: &[CardFactory] = &[abdel_adrian_gorions_ward, clan_crafter];
+
+/// **Abdel Adrian, Gorion's Ward and Clan Crafter**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 8 Islands + 9 Plains = 98.
+/// Abdel Adrian, Gorion's Ward and Clan Crafter (EDHREC, fetched 2026-10-20).
+pub const ABDEL_ADRIAN_12_MAIN: &[CardFactory] = &[
+    arcane_signet, chrome_mox, decanter_of_endless_water, hithlain_rope, lantern_of_revealing,
+    replicating_ring, sol_ring, talisman_of_progress, abandoned_campground, arcane_lighthouse,
+    azorius_chancery, command_tower, deserted_beach, idyllic_grange, inventors_fair,
+    nephalia_academy, prairie_stream, reliquary_tower, sea_of_clouds, seachrome_coast,
+    throne_of_makindi, tundra, urzas_saga, archaeomancer, archmage_of_runes, bronze_guardian,
+    crystal_barricade, deadeye_navigator, digsite_engineer, displacer_kitten, drowner_of_hope,
+    elesh_norn_grand_cenobite, etherium_sculptor, forensic_gadgeteer, high_fae_trickster,
+    hookblade_veteran, loyal_inventor, master_of_etherium, mistmeadow_witch,
+    ojer_taq_deepest_foundation, peregrine_drake, piper_wright_publick_reporter,
+    solemn_simulacrum, stonehorn_dignitary, tangletrove_kelp, thassa_deep_dwelling,
+    tidal_barracuda, unctus_grand_metatect, watcher_for_tomorrow, aegis_of_honor,
+    combat_research, curse_of_exhaustion, enchanted_evening, intruder_alarm, rest_in_peace,
+    smothering_tithe, teleportation_circle, thopter_spy_network, cloudshift,
+    disruption_protocol, enlightened_tutor, ephemerate, essence_flux, flicker_of_fate,
+    generous_gift, ghostly_flicker, justiciars_portal, momentary_blink, mystical_tutor,
+    planar_incision, pull_from_eternity, refute, stoic_rebuttal, stroke_of_midnight,
+    cleansing_ray, dance_of_the_manse, fabricate, farewell, idyllic_tutor, plea_for_guidance,
+    solve_the_equation,
+    // Basics
+    island, island, island, island, island, island, island, island, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const ALORA_19_COMMANDERS: &[CardFactory] = &[alora_merry_thief, cloakwood_hermit];
+
+/// **Alora, Merry Thief and Cloakwood Hermit**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 14 Forests + 9 Islands = 98.
+/// Alora, Merry Thief and Cloakwood Hermit (EDHREC, fetched 2026-10-20).
+pub const ALORA_19_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, crucible_of_worlds, evolving_door, loreseekers_stone,
+    phial_of_galadriel, simic_signet, sol_ring, boseiju_who_endures, command_tower, coral_atoll,
+    exotic_orchard, fabled_passage, ghost_quarter, ghost_town, mystic_sanctuary,
+    otawara_soaring_city, reliquary_tower, simic_growth_chamber, sodden_verdure,
+    waterlogged_grove, yavimaya_coast, alexi_zephyr_mage, arbor_elf, ashaya_soul_of_the_wild,
+    avenger_of_zendikar, boreal_druid, circle_of_dreams_druid, containment_construct,
+    curie_emergent_intelligence, dreamtail_heron, dryad_of_the_ilysian_grove, elvish_mystic,
+    fierce_empath, gemrazer, grazilaxx_illithid_scholar, harmonized_trio,
+    ivy_gleeful_spellthief, malcolm_alluring_scoundrel, migratory_greathorn, nut_collector,
+    oracle_of_mul_daya, pouncing_shoreshark, ramunap_excavator, roaming_throne,
+    scourge_of_fleets, shang_chi_master_of_kung_fu, sphinx_of_the_second_sun, watchful_radstag,
+    wayward_swordtooth, case_of_the_locked_hothouse, chamber_of_manipulation, exploration,
+    psychic_vortex, reconnaissance_mission, scuttletide, season_of_growth,
+    shadow_of_the_second_sun, spelunking, trade_routes, an_offer_you_cant_refuse, beast_within,
+    brainstorm, chord_of_calling, force_of_vigor, geistwave, growth_spiral, heroic_intervention,
+    negate, tolarian_winds, faerie_slumber_party, finale_of_devastation, flare_of_cultivation,
+    pull_through_the_weft, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, island, island, island, island, island, island, island, island,
+    island,
+];
