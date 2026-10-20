@@ -29351,11 +29351,15 @@ impl GameState {
         let extra_targets = self.auto_extra_targets_for(&ability.effect, card_id, p, target.clone());
         let all_targets: Vec<Target> =
             target.iter().cloned().chain(extra_targets.iter().cloned()).collect();
+        // CR 606.1 — a loyalty ability is an activated ability: "copy that
+        // ability" (Chandra's Regulator) and "counter target activated
+        // ability" find it on the stack.
         self.push_stack(
             TriggerPush::new(card_id, p, ability.effect)
                 .target(target)
                 .additional_targets(extra_targets)
                 .x_value(x)
+                .activated(true)
                 .build(),
         );
         // Jaya's Phoenix / Leori / Repeated Reverberation copies.
