@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 78 seats, 159 cards, two bug classes](#fixedopen-2026-10-20-commander-run-01e4rmul--78-seats-159-cards-two-bug-classes) | 8 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes](#fixedopen-2026-10-20-commander-run-01ddeutc--44-closer-cards-13-seats-two-engine-fixes) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes](#fixedopen-2026-10-19-commander-run-01gwrdkp--44-closer-cards-17-seats-six-engine-fixes) | 34 |
@@ -182,6 +183,14 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 78 seats, 159 cards, two bug classes
+
+- **Seats** 4530-4559, 4570-4585, 4594-4604, 4605-4625: **78 partner-pair decks from the TWO- and THREE-gap list** (the concurrent `01DDeUtc` worked the one-gap list), closed by 159 cards in `decks::cmdr_01e4_a` (seven batches; tests `recent_b/cmdr_01e4_a.rs`, 80). Two of batch three's cards (Lightning-Core Excavator, Slumbering Walker) landed first in `cmdr_01dd_k` and were dropped from mine. Primitive: `CreatureType::Shiar`.
+- **FIXED (CR 702.100b, bug class):** `shortcut::evolve_then` ran its "whenever this evolves" rider even when no counter landed. Under an opponent's Blightbeetle a 1/1 Watchful Radstag copied itself for every 2/2 copy that entered — 8-seat sweep seed 931184 drew a CR 104.4b "loop" with 403 Radstags. New `Predicate::CounterWouldLand { what, kind }` reads `counters_locked` + `scaled_counter_count_on`, the same path `AddCounter` takes; the replay now decides at turn 73.
+- **FIXED (CR 601.2c, bug class):** `R::OtherThanTargetSlot` inside a non-target selector excludes nothing (it reads the slots being chosen, vacuously true at resolution): Intimidation Bolt's "other creatures can't attack" grounded its own surviving target, Masterful Replication copied its target onto itself. Both now use `Selector::EachPermanentExceptTargets`; `structural_audit::no_board_selector_filters_on_a_target_slot` walks every definition's JSON for `EachPermanent` / `EachMatching` / `CardsInZone` carrying a slot filter.
+- **Sweeps (audit build):** seeds 9300 (2,451 games), 9301 (2,486), 9302 (2,500) over every deck at 4/6/8 seats — **0 panics**; undecided: the Radstag loop (fixed above), three CR 104.4a/b draws already known (Descent into Avernus at all seats, Earthquake at all seats, Ganax's true loop) and three board caps of known classes (Utvara Hellkite's doubling Dragon board under Sarkhan seed 931708 — the cap fired mid-resolution of a lethal 945-attacker swing; Mondrak + Romana II seed 932246; Calix seed 934454). New seats smoked in 4/6-seat groups × 20 (seeds 9310-9312, 580 games), all decided.
+- **Left on the 2/3-gap list** (each needs a primitive): Angelic Armaments (an additive colour on `EquipBonus` — only `set_colors` exists), Ray of Frost ("loses all abilities as long as it's red" — `ConditionalEquipBonus` has no `remove_abilities`), Monastery Raid (no "freerunning cost was paid" predicate), Splitting the Powerstone (no "the sacrificed artifact was legendary" for an additional cast cost), Spell Blast / Spell Burst (no `ManaValueEqualsX` target filter), Embodiment of Agonies (distinct mana costs in a graveyard), Black Hole (Attractions visited), Voracious Dragon (Goblins devoured), Flux (see `01FnAVVR`), Myth Realized, Three Bowls of Porridge, Worldpurge, Invasion of Arcavios (outside-the-game search).
 
 ## FIXED/OPEN 2026-10-20 (Commander run, `01FnAVVR`) — 70 seats, 76 cards, one N-seat fix, one audit widened
 
