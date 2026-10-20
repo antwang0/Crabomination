@@ -130996,3 +130996,115 @@ pub const GLACIAN_25_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ZELLIX_17_COMMANDERS: &[CardFactory] = &[zellix_sanity_flayer, passionate_archaeologist];
+
+/// **Zellix, Sanity Flayer and Passionate Archaeologist**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 9 Mountains = 98.
+/// Zellix, Sanity Flayer and Passionate Archaeologist (EDHREC, fetched 2026-10-20).
+pub const ZELLIX_17_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, brasss_tunnel_grinder, ghoulcallers_bell, izzet_signet,
+    mesmeric_orb, mindcrank, riverchurn_monument, skullclamp, sol_ring, talisman_of_creativity,
+    the_water_crystal, wand_of_wonder, ancient_tomb, command_tower, exotic_orchard,
+    frostboil_snarl, myriad_landscape, mystic_sanctuary, riverglide_pathway, shivan_reef,
+    steam_vents, stormcarved_coast, sulfur_falls, training_center, turbulent_springs,
+    urzas_saga, aboleth_spawn, agate_instigator, archmage_emeritus, bruvac_the_grandiloquent,
+    dazzling_sphinx, etali_primal_storm, hedron_crab, imperial_recruiter, keeper_of_secrets,
+    millikin, party_thrasher, ragavan_nimble_pilferer, riddlekeeper, ruin_crab, shadow_kin,
+    stitcher_geralf, the_mindskinner, undead_alchemist, urza_lord_high_artificer,
+    vexing_radgull, cast_through_time, court_of_cunning, descent_into_avernus, fraying_sanity,
+    jaces_erasure, psychic_corrosion, underworld_breach, arcane_denial, brainstorm, chaos_warp,
+    cyclonic_rift, deflecting_swat, delayed_blast_fireball, frantic_search, kitsunes_technique,
+    lightning_bolt, return_the_favor, untimely_malfunction, chandra_torch_of_defiance,
+    blasphemous_act, echocasting_symposium, expressive_iteration, faithless_looting,
+    fractured_sanity, jeskas_will, mizzixs_mastery, portent_of_calamity, psionic_ritual,
+    surge_to_victory, tashas_hideous_laughter, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const LIVIO_9_COMMANDERS: &[CardFactory] = &[livio_oathsworn_sentinel, tymna_the_weaver];
+
+/// **Livio, Oathsworn Sentinel and Tymna the Weaver**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 7 Plains + 7 Swamps = 98.
+/// Livio, Oathsworn Sentinel and Tymna the Weaver (EDHREC, fetched 2026-10-20).
+pub const LIVIO_9_MAIN: &[CardFactory] = &[
+    arcane_signet, helm_of_obedience, lotus_petal, orzhov_signet, panharmonicon, sol_ring,
+    talisman_of_hierarchy, wayfarers_bauble, bleachbone_verge, bloodstained_mire,
+    caves_of_koilos, command_tower, concealed_courtyard, flooded_strand, godless_shrine,
+    isolated_chapel, mana_confluence, marsh_flats, prismatic_vista, scrubland,
+    shadowy_backstreet, shattered_sanctum, silent_clearing, tainted_field, vault_of_champions,
+    verdant_catacombs, windswept_heath, anticausal_vestige, archivist_of_oghma,
+    archon_of_emeria, athreos_shroud_veiled, dark_confidant, dauthi_voidwalker,
+    delney_streetwise_lookout, drannith_magistrate, esper_sentinel, evangel_of_heliod,
+    fiend_hunter, flickerwisp, guide_of_souls, honored_knight_captain, karmic_guide,
+    knight_of_the_white_orchid, mangara_of_corondor, night_clubber, noxious_gearhulk,
+    ophiomancer, phelia_exuberant_shepherd, ravenloft_adventurer, ravenous_chupacabra,
+    recruiter_of_the_guard, rev_tithe_extractor, seasoned_dungeoneer, serra_ascendant,
+    skyclave_apparition, solemn_simulacrum, thalia_guardian_of_thraben, voice_of_victory,
+    white_plume_adventurer, witch_enchanter, animate_dead, blind_obedience, dance_of_the_dead,
+    necromancy, rest_in_peace, smothering_tithe, cloudshift, dark_ritual, deadly_rollick,
+    eerie_interlude, enlightened_tutor, ephemerate, fatal_push, flare_of_fortitude, get_lost,
+    path_to_exile, swords_to_plowshares, village_rites, austere_command, damn, demonic_tutor,
+    grim_tutor, toxic_deluge, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const LIVAAN_9_COMMANDERS: &[CardFactory] = &[livaan_cultist_of_tiamat, candlekeep_sage];
+
+/// **Livaan, Cultist of Tiamat and Candlekeep Sage**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Islands + 10 Mountains = 98.
+/// Livaan, Cultist of Tiamat and Candlekeep Sage (EDHREC, fetched 2026-10-20).
+pub const LIVAAN_9_MAIN: &[CardFactory] = &[
+    arcane_signet, astrologians_planisphere, cori_steel_cutter, glamdring_foe_hammer,
+    izzet_signet, red_mages_rapier, sol_ring, territory_forge, command_tower, frostboil_snarl,
+    reliquary_tower, riverpyre_verge, rogues_passage, shivan_reef, spirebluff_canal,
+    steam_vents, stormcarved_coast, sulfur_falls, temple_of_epiphany, temple_of_the_false_god,
+    bria_riptide_rogue, dirgur_focusmage, dour_port_mage, eon_frolicker, erratic_cyclops,
+    fear_of_isolation, gandalf_goblins_bane, goblin_electromancer, hope_ender_coatl,
+    marang_river_regent, pinnacle_monk, pompous_battlemage, queen_brahne, renegade_bull,
+    runescale_stormbrood, sanar_unfinished_genius, scion_of_stygia, skycoach_conductor,
+    tetsuko_umezawa_pursuer, variable_chaser, bitter_reunion, breaching_dragonstorm, contempt,
+    observed_stasis, spiteful_banditry, stormchasers_talent, sunbirds_invocation,
+    underworld_breach, aether_tradewinds, alchemists_retrieval, blur, chaos_warp, consider,
+    disappearing_act, familiars_ruse, frantic_search, geistwave, opt, paradoxical_outcome,
+    sink_into_stupor, sirens_ruse, snap, temur_battle_rage, this_town_aint_big_enough,
+    twinferno, unleash_fury, you_come_to_a_river, jaya_fiery_negotiator, aether_gale,
+    barals_expertise, blasphemous_act, faithless_looting, karns_temporal_sundering, preordain,
+    stock_up, wash_out,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const FACELESS_ONE_3_COMMANDERS: &[CardFactory] = &[faceless_one, clan_crafter];
+
+/// **Faceless One and Clan Crafter**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Islands = 98.
+/// Faceless One and Clan Crafter (EDHREC, fetched 2026-10-20).
+pub const FACELESS_ONE_3_MAIN: &[CardFactory] = &[
+    arcane_signet, contagion_clasp, diamond_kaleidoscope, dreamstone_hedron,
+    everflowing_chalice, genesis_chamber, golem_foundry, hornet_cannon, krark_clan_ironworks,
+    lux_artillery, matzalantli_the_great_door, sol_ring, staff_of_compleation,
+    strixhaven_stadium, summoning_station, thran_dynamo, throne_of_geth, uthros_research_craft,
+    ancient_tomb, buried_ruin, karns_bastion, minamo_school_at_waters_edge, nesting_grounds,
+    rogues_passage, temple_of_the_false_god, urzas_saga, automated_artificer, big_mother_mouser,
+    camera_launcher, cogwork_assembler, emry_lurker_of_the_loch, etherium_spinner,
+    gemini_engine, goldberry_river_daughter, golden_guardian, hangarback_walker,
+    kappa_cannoneer, lulu_stern_guardian, ornithopter_of_paradise, rikku_resourceful_guardian,
+    sai_master_thopterist, solarion, steel_overseer, surge_conductor, tekuthal_inquiry_dominus,
+    tester_of_the_tangential, threefold_thunderhulk, ultima_origin_of_oblivion, viral_drake,
+    wurmcoil_engine, animate_artifact, echoes_of_eternity, efficient_construction,
+    eldrazi_conscription, inexorable_tide, access_denied, brainstorm, cryptic_command,
+    desculpting_blast, pull_from_tomorrow, reject_imperfection, ripples_of_potential,
+    titans_presence, karn_scion_of_urza, all_is_dust, stock_up, tezzerets_gambit,
+    vivisurgeons_insight,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];

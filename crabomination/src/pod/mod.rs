@@ -28482,6 +28482,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GLACIAN_25_COMMANDERS,
             main: decks::GLACIAN_25_MAIN,
         },
+        // Seat 4672: Zellix, Sanity Flayer and Passionate Archaeologist's EDHREC average deck. `--pod-decks 4672`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Passionate Archaeologist (UR)",
+            commanders: decks::ZELLIX_17_COMMANDERS,
+            main: decks::ZELLIX_17_MAIN,
+        },
+        // Seat 4673: Livio, Oathsworn Sentinel and Tymna the Weaver's EDHREC average deck. `--pod-decks 4673`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Tymna the Weaver (WB)",
+            commanders: decks::LIVIO_9_COMMANDERS,
+            main: decks::LIVIO_9_MAIN,
+        },
+        // Seat 4674: Livaan, Cultist of Tiamat and Candlekeep Sage's EDHREC average deck. `--pod-decks 4674`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Candlekeep Sage (UR)",
+            commanders: decks::LIVAAN_9_COMMANDERS,
+            main: decks::LIVAAN_9_MAIN,
+        },
+        // Seat 4675: Faceless One and Clan Crafter's EDHREC average deck. `--pod-decks 4675`.
+        PodDeck {
+            name: "Faceless One and Clan Crafter (U)",
+            commanders: decks::FACELESS_ONE_3_COMMANDERS,
+            main: decks::FACELESS_ONE_3_MAIN,
+        },
     ]
 }
 
@@ -35054,6 +35078,10 @@ mod tests {
             ("Livaan, Cultist of Tiamat and Far Traveler", &[0x1C53]),
             ("The Thirteenth Doctor and Ace, Fearless Rebel", &[0x1C54]),
             ("Glacian, Powerstone Engineer and Krark, the Thumbless", &[0x1C55]),
+            ("Zellix, Sanity Flayer and Passionate Archaeologist", &[0x1C56]),
+            ("Livio, Oathsworn Sentinel and Tymna the Weaver", &[0x1C57]),
+            ("Livaan, Cultist of Tiamat and Candlekeep Sage", &[0x1C58]),
+            ("Faceless One and Clan Crafter", &[0x1C59]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
