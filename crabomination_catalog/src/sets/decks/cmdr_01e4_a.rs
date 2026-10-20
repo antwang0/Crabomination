@@ -5044,3 +5044,42 @@ pub fn thriving_rats() -> CardDefinition {
         ..creature("Thriving Rats", cost(&[generic(1), b()]), vec![CreatureType::Rat], 1, 2)
     }
 }
+
+// ── Batch fourteen (one-gap decks) ──────────────────────────────────────────
+
+/// Dire Fleet Warmonger — {1}{B}{R} 3/3 Orc Pirate. At the beginning of combat
+/// on your turn, you may sacrifice another creature; if you do, it gets +2/+2
+/// and gains trample until end of turn.
+pub fn dire_fleet_warmonger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice another creature for +2/+2 and trample?".into(),
+                filter: R::Creature.and(R::OtherThanSource),
+                count: Value::ONE,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                ])),
+                else_: None,
+            },
+        }],
+        ..creature("Dire Fleet Warmonger", cost(&[generic(1), b(), r()]), vec![CreatureType::Orc, CreatureType::Pirate], 3, 3)
+    }
+}
+
+/// Draconian Gate-Bot — {5} 4/2 artifact Robot. Its enters modes open an
+/// Attraction or destroy one; the engine has no Attractions (no Attraction
+/// deck, none on the battlefield), so both modes do nothing here.
+pub fn draconian_gate_bot() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..creature("Draconian Gate-Bot", cost(&[generic(5)]), vec![CreatureType::Robot], 4, 2)
+    }
+}

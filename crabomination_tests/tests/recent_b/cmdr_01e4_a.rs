@@ -2188,3 +2188,20 @@ fn thriving_rats_spends_energy_on_attack() {
     attack_with(&mut g, &[rats]);
     assert_eq!(g.battlefield_find(rats).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Dire Fleet Warmonger eats another creature at combat for +2/+2 and trample.
+#[test]
+fn dire_fleet_warmonger_eats_for_trample() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let orc = g.add_card_to_battlefield(0, catalog::dire_fleet_warmonger());
+    let snack = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    while g.step != TurnStep::BeginCombat {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(snack).is_none(), "sacrificed");
+    assert_eq!(pt(&g, orc), (5, 5));
+    assert!(g.computed_permanent(orc).unwrap().keywords().contains(&Keyword::Trample));
+}

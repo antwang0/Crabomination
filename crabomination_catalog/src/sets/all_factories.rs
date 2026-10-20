@@ -18644,6 +18644,8 @@ static DECKS: &[Factory] = &[
     super::decks::evolved_sleeper,
     super::decks::stallion_of_ashmouth,
     super::decks::thriving_rats,
+    super::decks::dire_fleet_warmonger,
+    super::decks::draconian_gate_bot,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
