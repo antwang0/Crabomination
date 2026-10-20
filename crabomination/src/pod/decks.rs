@@ -131498,3 +131498,61 @@ pub const WYLL_14_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const ICH_TEKIK_26_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, jeska_thrice_reborn];
+
+/// **Ich-Tekik, Salvage Splicer and Jeska, Thrice Reborn**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 8 Forests + 9 Mountains = 98.
+/// Ich-Tekik, Salvage Splicer and Jeska, Thrice Reborn (EDHREC, fetched 2026-10-20).
+pub const ICH_TEKIK_26_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, claws_of_gix, contagion_engine, darksteel_monolith,
+    guardian_idol, kaslems_stonetree, krark_clan_ironworks, monster_manual, sol_ring,
+    staff_of_compleation, swiftfoot_boots, throne_of_geth, wayfarers_bauble, karns_bastion,
+    reliquary_tower, rogues_passage, shimmerdrift_vale, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    stomping_ground, urzas_mine, urzas_power_plant, urzas_tower, blightsteel_colossus,
+    bosh_iron_golem, bottle_golems, boulderbranch_golem, campus_guide, cankerbloom,
+    colossus_of_akros, darksteel_colossus, evolution_sage, foundry_inspector, geode_golem,
+    gingerbrute, golden_guardian, grumgully_the_generous, howling_golem, icehide_golem,
+    lodestone_golem, maelstrom_colossus, meteor_golem, phyrexian_triniform,
+    pir_imaginative_rascal, precursor_golem, reflective_golem, roaming_throne,
+    solemn_simulacrum, tomb_trawler, triplicate_titan, wurmcoil_engine, doubling_season,
+    hardened_scales, kenriths_transformation, parallel_lives, utopia_sprawl, beast_within,
+    chaos_warp, crop_rotation, fog, guttural_response, lightning_bolt, carnivorous_canopy,
+    courage_in_crisis, cultivate, expand_the_sphere, farseek, kodamas_reach,
+    unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const THE_WAR_DOCTOR_10_COMMANDERS: &[CardFactory] = &[the_war_doctor, nardole_resourceful_cyborg];
+
+/// **The War Doctor and Nardole, Resourceful Cyborg**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 5 Islands + 2 Mountains + 3 Plains = 98.
+/// The War Doctor and Nardole, Resourceful Cyborg (EDHREC, fetched 2026-10-20).
+pub const THE_WAR_DOCTOR_10_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_orrery, darksteel_reactor, fraying_line, lightning_greaves,
+    lux_artillery, manifold_key, moxite_refinery, peter_parkers_camera, shorikai_genesis_engine,
+    sol_ring, staff_of_compleation, talisman_of_creativity, the_echoverse_fulcrum,
+    the_mightstone_and_weakstone, the_millennium_calendar, unwinding_clock, vexing_puzzlebox,
+    adarkar_wastes, arid_mesa, command_tower, deserted_beach, exotic_orchard, fiery_islet,
+    flooded_strand, glacial_fortress, hallowed_fountain, minamo_school_at_waters_edge,
+    mystic_monastery, path_of_ancestry, raugrin_triome, sacred_foundry, scalding_tarn,
+    sea_of_clouds, spectator_seating, steam_vents, stormcarved_coast, sundown_pass,
+    the_monumental_facade, training_center, trenzalore_clocktower, urzas_saga, agitator_ant,
+    arcbound_shikari, coretapper, displacer_kitten, dreamtide_whale, esper_sentinel,
+    filigree_vector, flux_channeler, geist_of_saint_thalia, goblin_engineer, orzhov_advokist,
+    oswald_fiddlebender, scholar_of_new_horizons, trinket_mage, urza_lord_protector,
+    vraska_soul_of_stone, all_will_be_one, noble_heritage, propaganda, resourceful_defense,
+    showdown_of_the_skalds, unstoppable_plan, whirlwind_of_thought, arcane_denial, capsize,
+    commanders_insight, enlightened_tutor, machine_over_matter, mystic_confluence,
+    path_to_exile, ripples_of_potential, sink_into_stupor, slip_out_the_back, spell_swindle,
+    swords_to_plowshares, teferis_protection, whir_of_invention, tezzeret_the_seeker,
+    the_theorist_jace_beleren, damning_verdict, dismantle, fabricate, farewell, jeskas_will,
+    lorien_revealed, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, mountain, mountain, plains, plains, plains,
+];

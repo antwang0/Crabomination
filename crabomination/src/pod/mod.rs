@@ -28590,6 +28590,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WYLL_14_COMMANDERS,
             main: decks::WYLL_14_MAIN,
         },
+        // Seat 4690: Ich-Tekik, Salvage Splicer and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 4690`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Jeska, Thrice Reborn (RG)",
+            commanders: decks::ICH_TEKIK_26_COMMANDERS,
+            main: decks::ICH_TEKIK_26_MAIN,
+        },
+        // Seat 4691: The War Doctor and Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 4691`.
+        PodDeck {
+            name: "The War Doctor and Nardole, Resourceful Cyborg (WUR)",
+            commanders: decks::THE_WAR_DOCTOR_10_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_10_MAIN,
+        },
     ]
 }
 
@@ -35180,6 +35192,8 @@ mod tests {
             ("Miara, Thorn of the Glade and Vial Smasher the Fierce", &[0x1C65]),
             ("Breeches, Brazen Plunderer and Falthis, Shadowcat Familiar", &[0x1C66]),
             ("Wyll, Blade of Frontiers and Street Urchin", &[0x1C67]),
+            ("Ich-Tekik, Salvage Splicer and Jeska, Thrice Reborn", &[0x1C68]),
+            ("The War Doctor and Nardole, Resourceful Cyborg", &[0x1C69]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
