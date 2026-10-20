@@ -1,5 +1,6 @@
 //! Choices an opponent makes on your spell's behalf ("of an opponent's
-//! choice"), and Scrap Mastery's table-wide artifact recycle.
+//! choice", Extrapolate the Impossible's pick of two), and Scrap Mastery's
+//! table-wide artifact recycle.
 
 use super::EffectContext;
 use crate::card::{CardId, CardInstance, SelectionRequirement};
@@ -208,6 +209,96 @@ impl GameState {
             }
         }
         self.check_state_based_actions_mid_resolution(events);
+        Ok(())
+    }
+
+    /// `Effect::WishPairOpponentChooses` (Extrapolate the Impossible) — the
+    /// controller may reveal exactly two differently named cards from their
+    /// sideboard ("outside the game"); an opponent chooses one and it goes to
+    /// the controller's hand, the other staying outside the game. Headless,
+    /// the controller shows its two costliest names and the opponent hands
+    /// over the cheaper.
+    pub(super) fn wish_pair_opponent_chooses(&mut self, effect: &Effect, ctx: &EffectContext) -> Result<(), GameError> {
+        use crate::game::types::Target;
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        // One copy per name: the two must have different names, and copies
+        // of one card are interchangeable.
+        let mut offer: Vec<(CardId, String, u32)> = Vec::new();
+        for c in self.players[me].sideboard.iter() {
+            if !offer.iter().any(|(_, n, _)| n.as_str() == &*c.definition.name) {
+                offer.push((c.id, c.definition.name.to_string(), c.definition.cost.cmc()));
+            }
+        }
+        if offer.len() < 2 {
+            self.clear_answer_log();
+            return Ok(());
+        }
+        let mut cursor = 0;
+        let mut costliest = offer.clone();
+        costliest.sort_by_key(|(id, _, mv)| (std::cmp::Reverse(*mv), id.0));
+        let auto: Vec<CardId> = costliest.iter().take(2).map(|c| c.0).collect();
+        let named: Vec<(CardId, String)> = offer.iter().map(|(id, n, _)| (*id, n.clone())).collect();
+        let Some(shown) = self.ask_seat_cards_logged(
+            &mut cursor,
+            me,
+            "Reveal two cards with different names from outside the game".into(),
+            source,
+            named,
+            0,
+            2,
+            PickValue::Gain,
+            effect,
+            auto,
+        ) else {
+            return Ok(());
+        };
+        // "Exactly two" — anything else is declining the reveal.
+        if shown.len() != 2 || shown[0] == shown[1] {
+            self.clear_answer_log();
+            return Ok(());
+        }
+        let Some(hostile) = self.default_hostile_opponent(me) else {
+            self.clear_answer_log();
+            return Ok(());
+        };
+        let opps: Vec<Target> = std::iter::once(hostile)
+            .chain(self.opponents_of(me).into_iter().filter(|&q| q != hostile))
+            .map(Target::Player)
+            .collect();
+        let asks = self.seat_prompts(me) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        let chooser = if opps.len() > 1 && asks {
+            match self.ask_seat_target_logged(&mut cursor, me, "Choose an opponent to choose".into(), source, opps, effect) {
+                None => return Ok(()),
+                Some(Target::Player(q)) => q,
+                Some(_) => hostile,
+            }
+        } else {
+            hostile
+        };
+        let pair: Vec<(CardId, String, u32)> = offer.into_iter().filter(|c| shown.contains(&c.0)).collect();
+        let cheaper = pair.iter().min_by_key(|c| (c.2, c.0.0)).map(|c| c.0);
+        let Some(picked) = self.ask_seat_cards_logged(
+            &mut cursor,
+            chooser,
+            "Choose the card your opponent puts into their hand".into(),
+            source,
+            pair.iter().map(|c| (c.0, c.1.clone())).collect(),
+            1,
+            1,
+            PickValue::Cost,
+            effect,
+            cheaper.into_iter().collect(),
+        ) else {
+            return Ok(());
+        };
+        self.clear_answer_log();
+        let Some(pick) = picked.first().copied().or(cheaper) else { return Ok(()) };
+        // Into the hand, not a draw (CR 121.1); a new object (CR 400.7).
+        if let Some(mut card) = Self::take_card(&mut self.players[me].sideboard, pick) {
+            card.may_play_until = None;
+            self.players[me].hand.push(card);
+        }
         Ok(())
     }
 }

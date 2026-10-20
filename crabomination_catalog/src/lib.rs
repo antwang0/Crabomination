@@ -77,6 +77,7 @@ pub use sets::decks::*;
 pub use sets::dgm::*;
 pub use sets::dis::*;
 pub use sets::eoe::*;
+pub use sets::fra::*;
 pub use sets::eoe2::*;
 pub use sets::fem::*;
 pub use sets::fin::*;

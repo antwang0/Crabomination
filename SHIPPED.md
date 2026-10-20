@@ -9,6 +9,16 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Reality Fracture complete** (FRA 280 / 280 non-basic, FRC 87 / 87 — the
+  last 42 in `sets::fra`; the rest shipped with the Commander decks that
+  needed them, `decks::cmdr_*`). Primitives:
+  `Value::NonlandCardsDiscardedThisEffectBy` (Garruk, Veiled Butcher's −3),
+  `Effect::WishPairOpponentChooses` (Extrapolate the Impossible),
+  `MayPlayDuration::WhileSourceOnBattlefieldWithThreshold` (Null Summoner).
+  Fixes the batch's tests found: next-spell-uncounterable grants never applied
+  (Insist, Overmaster), a + loyalty cost and a planeswalker's entering loyalty
+  now emit `CounterAdded`, Annihilating Fire's exile rider precedes its
+  damage. Tests in `recent_b/fra`.
 - **Urza block complete** — `set_gaps.py usg`, `ulg` and `uds` all at zero
   (`sets::usg`, `usg2`, `usg3`, 246 USG cards). The echo, cycling-land,
   verse-counter, Aura recursion, Rune-of-Protection and Opal/Hidden/Veiled

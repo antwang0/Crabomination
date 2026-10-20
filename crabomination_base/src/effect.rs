@@ -1366,6 +1366,13 @@ pub enum Value {
     /// produces the correct dynamic yield instead of the prior flat 7.
     /// Reset to 0 between independent resolutions.
     MaxCardsDiscardedThisEffectByAnyPlayer,
+    /// Nonland cards the players `who` resolves to discarded within the
+    /// current effect resolution, summed
+    /// (`scratch.nonland_cards_discarded_per_player_this_resolution`). The
+    /// count sibling of `Predicate::DiscardedNonlandThisEffect` — Garruk,
+    /// Veiled Butcher's "for each opponent who didn't discard two nonland
+    /// cards this way", judged per opponent under a `ForEach`.
+    NonlandCardsDiscardedThisEffectBy(PlayerRef),
     /// Number of *creature* cards discarded so far within the current
     /// effect resolution. Bumped alongside `CardsDiscardedThisEffect`
     /// whenever the discarded card has `CardType::Creature`. Used by
@@ -12084,6 +12091,13 @@ pub enum Effect {
     /// auto-picks the first sideboard match otherwise. A Commander game has
     /// no sideboard, so it finds nothing there.
     WishToHand { filter: SelectionRequirement },
+    /// "You may reveal exactly two cards you own with different names from
+    /// outside the game. An opponent chooses one of them. You put that card
+    /// into your hand." (Extrapolate the Impossible.) The pair comes from the
+    /// sideboard; with fewer than two names there the reveal can't be made
+    /// and nothing happens. The opponent is the caster's most hostile one (or
+    /// the caster's pick at 3+ seats); the other card stays outside the game.
+    WishPairOpponentChooses,
     /// `WishToHand`, "or choose a face-up [filter] card you own in exile"
     /// (Karn, the Great Creator's −2) — only that card reaches into exile.
     WishToHandOrFaceUpExile { filter: SelectionRequirement },

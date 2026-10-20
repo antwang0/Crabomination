@@ -1652,6 +1652,11 @@ impl GameState {
                 .copied()
                 .max()
                 .unwrap_or(0) as i32,
+            Value::NonlandCardsDiscardedThisEffectBy(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.nonland_discarded_this_resolution(p))
+                .sum::<u32>() as i32,
             Value::CreatureCardsDiscardedThisEffect => {
                 self.creature_cards_discarded_this_resolution as i32
             }

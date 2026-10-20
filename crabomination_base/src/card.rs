@@ -1372,6 +1372,13 @@ pub enum MayPlayDuration {
     /// turn"), a cast parks the source's other spell grants at
     /// [`MAY_PLAY_DORMANT`] until the next turn; land grants stay live.
     WhileSourceOnBattlefield { source: CardId, one_spell_a_turn: bool },
+    /// "Threshold — As long as there are seven or more cards in your
+    /// graveyard, you may cast the exiled card" (Null Summoner): a static
+    /// grant of `source`'s, so it ends as `source` leaves (CR 611.3a), and
+    /// usable only while the holder has threshold (CR 702.36) — checked as
+    /// the card is cast (`GameState::may_play_usable`). Printed with
+    /// `CardId(0)`; the grant binds the real source.
+    WhileSourceOnBattlefieldWithThreshold { source: CardId },
     /// "You may play lands and cast noncreature spells from among cards you
     /// exiled that have fetch counters on them" (Haldan, Avid Arcanist): live
     /// while `holder` controls a permanent with
@@ -1454,6 +1461,9 @@ impl MayPlayDuration {
         match (self, source) {
             (Self::WhileSourceOnBattlefield { one_spell_a_turn, .. }, Some(source)) => {
                 Self::WhileSourceOnBattlefield { source, one_spell_a_turn }
+            }
+            (Self::WhileSourceOnBattlefieldWithThreshold { .. }, Some(source)) => {
+                Self::WhileSourceOnBattlefieldWithThreshold { source }
             }
             (Self::HolderTurnsAfterNontokenSacrifice { holder, .. }, Some(source)) => {
                 Self::HolderTurnsAfterNontokenSacrifice { holder, source }

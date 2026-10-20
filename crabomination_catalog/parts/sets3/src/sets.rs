@@ -3,6 +3,8 @@
 
 pub use crabomination_catalog_core::sets::*;
 
+#[path = "../../../src/sets/fra.rs"]
+pub mod fra;
 #[path = "../../../src/sets/ody/mod.rs"]
 pub mod ody;
 #[path = "../../../src/sets/ogw/mod.rs"]

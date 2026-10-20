@@ -27120,6 +27120,7 @@ impl GameState {
             }
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, false),
+            Effect::WishPairOpponentChooses => self.wish_pair_opponent_chooses(effect, ctx),
             Effect::WishToHandOrFaceUpExile { filter } => self.resolve_wish_to_hand(filter, ctx, true),
 
             Effect::ExileThenBranchByController { what, theirs } => {

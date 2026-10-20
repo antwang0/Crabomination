@@ -150,6 +150,7 @@ impl GameState {
         matches!(
             perm.duration,
             MayPlayDuration::WhileSourceOnBattlefield { source: s, .. }
+                | MayPlayDuration::WhileSourceOnBattlefieldWithThreshold { source: s }
                 | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. }
                 | MayPlayDuration::HolderTurnsAfterOpponentLostLife { source: s, .. }
                 | MayPlayDuration::HolderTurnsWhileSource { source: s, .. } if s == source

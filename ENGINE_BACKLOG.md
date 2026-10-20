@@ -541,11 +541,21 @@ the handoff.
 - **OPEN, researched (each a missing primitive):** Aegar (no excess-damage event for combat damage or
   planeswalkers, no "a Giant, Wizard, or spell you controlled dealt damage to it" history); Deification (chosen planeswalker type + the all-but-one-loyalty replacement); Wee Champion (no
   sticker-placed event; the catalog's only sticker card is in `cmdr_etali`); Hogaak (can't-spend-mana +
-  convoke/delve-only payment from the graveyard, and a bot that assembles it); Garruk, Veiled
-  Butcher's −3 (per-opponent nonland-discard count); Extrapolate the Impossible (an opponent picks between two
-  revealed outside-game cards — a no-op in Commander, CR 903.11); combat damage to a **battle** has no
+  convoke/delve-only payment from the graveyard, and a bot that assembles it); combat damage to a **battle** has no
   `EventKind` (Rankle and Torbran joins Beamtown Beatstick's INCOMPLETE_CARDS row). Veiling Oddity (no "last time counter removed while exiled" event). Not attempted: Invasion of
   New Phyrexia, Wizard's Spellbook.
+- **LANDED (`sets::fra`, 2026-10-20):** Garruk, Veiled Butcher (the −3 reads
+  `Value::NonlandCardsDiscardedThisEffectBy`, the count beside Kroxa's
+  `DiscardedNonlandThisEffect`) and Extrapolate the Impossible
+  (`Effect::WishPairOpponentChooses` over the sideboard; a Commander game has
+  none, so it finds nothing there).
+- **FIXED (found by the `sets::fra` tests, 2026-10-20):** (1) "the next spell you cast this turn can't be
+  countered" never protected anything — `finalize_cast` consumed the grant before stamping the spell
+  uncounterable, and the stamp re-read the emptied list (Insist, Overmaster, Theorist's Proxy; the old test
+  only asked about the grant). (2) A + loyalty cost and a planeswalker's entering loyalty emitted no
+  `CounterAdded`, so "whenever loyalty counters are put on …" (Bioessence Hydra, Inspired Tethermage) missed
+  both (CR 606.4, 122.6). (3) `DealDamage` checks SBAs mid-resolution, so an `ExileIfWouldDieThisTurn` AFTER
+  the damage came too late — Annihilating Fire's kill went to the graveyard; the rider now goes first.
 - **Closed by `01HPYxiB` (bot):** The Brothers' War III's "slot 1 at its own controller" is the two-seat baseline
   profile's caster-first default with `hostile_player_targets` off; pods are hostile (its section has the reason).
 - **FIXED (bot, regression):** `59f063ed9`'s optional-hostile-slot rule also starved slots only your own objects can

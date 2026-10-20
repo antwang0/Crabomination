@@ -1472,6 +1472,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::WishToHand { .. } => false,
+            Effect::WishPairOpponentChooses => false,
             Effect::WishToHandOrFaceUpExile { .. } => false,
             Effect::SacrificeAllButOnePerType { who, .. }
             | Effect::SacrificeAllButOnePerTypeYouChoose { who } => sel_has_target(who),
