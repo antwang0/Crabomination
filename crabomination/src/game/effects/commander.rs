@@ -416,6 +416,15 @@ impl GameState {
         if kind.creature && bio > 0 {
             card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, bio));
         }
+        // Animal Attendant — the same, for a non-Human creature spell.
+        let attendant = spent.spent_count(SpendRestriction::NonHumanCreatureCastCounter);
+        if kind.creature
+            && attendant > 0
+            && !kind.changeling
+            && !kind.creature_types.contains(&CreatureType::Human)
+        {
+            card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, attendant));
+        }
         // Jade Orb of Dragonkind — a Dragon creature spell enters with a
         // counter per pip and hexproof until its caster's next turn.
         let dragon = kind.creature

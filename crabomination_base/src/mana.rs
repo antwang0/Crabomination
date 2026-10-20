@@ -930,6 +930,11 @@ pub enum SpendRestriction {
     /// spend; one counter per funding pip rides the cast card's
     /// `pending_etb_counters` (CR 106.6a).
     CreatureCastCounter,
+    /// "If that mana is spent to cast a non-Human creature spell, that
+    /// creature enters with an additional +1/+1 counter on it." (Animal
+    /// Attendant.) `CreatureCastCounter` for a creature spell that isn't a
+    /// Human (a changeling is one); unrestricted spend.
+    NonHumanCreatureCastCounter,
     /// "Spend this mana only to cast a [type] spell or activate an ability of
     /// a [type]" for either of two types (Gallifrey Council Chamber: Time
     /// Lord or Alien). Changelings and Kindred spells and sources count.
@@ -1043,6 +1048,7 @@ impl SpendRestriction {
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
+            | SpendRestriction::NonHumanCreatureCastCounter
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
@@ -1235,6 +1241,7 @@ impl SpendRestriction {
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
+            | SpendRestriction::NonHumanCreatureCastCounter
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
