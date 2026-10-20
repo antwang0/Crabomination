@@ -28230,6 +28230,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IMOEN_26_COMMANDERS,
             main: decks::IMOEN_26_MAIN,
         },
+        // Seat 4630: Falthis, Shadowcat Familiar and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 4630`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Kraum, Ludevic's Opus (UBR)",
+            commanders: decks::FALTHIS_22_COMMANDERS,
+            main: decks::FALTHIS_22_MAIN,
+        },
+        // Seat 4631: Livio, Oathsworn Sentinel and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4631`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Sengir, the Dark Baron (WB)",
+            commanders: decks::LIVIO_6_COMMANDERS,
+            main: decks::LIVIO_6_MAIN,
+        },
+        // Seat 4632: Jeska, Thrice Reborn and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4632`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Slurrk, All-Ingesting (RG)",
+            commanders: decks::JESKA_9_COMMANDERS,
+            main: decks::JESKA_9_MAIN,
+        },
+        // Seat 4633: Ellyn Harbreeze, Busybody and Hardy Outlander's EDHREC average deck. `--pod-decks 4633`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Hardy Outlander (WG)",
+            commanders: decks::ELLYN_HARBREEZE_14_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_14_MAIN,
+        },
+        // Seat 4634: The Tenth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 4634`.
+        PodDeck {
+            name: "The Tenth Doctor and Ian Chesterton (WUR)",
+            commanders: decks::THE_TENTH_DOCTOR_13_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_13_MAIN,
+        },
+        // Seat 4635: Alora, Merry Thief and Veteran Soldier's EDHREC average deck. `--pod-decks 4635`.
+        PodDeck {
+            name: "Alora, Merry Thief and Veteran Soldier (WU)",
+            commanders: decks::ALORA_17_COMMANDERS,
+            main: decks::ALORA_17_MAIN,
+        },
     ]
 }
 
@@ -34760,6 +34796,12 @@ mod tests {
             ("Jaheira, Friend of the Forest and Flaming Fist", &[0x1C29]),
             ("Alharu, Solemn Ritualist and Kamahl, Heart of Krosa", &[0x1C2A]),
             ("Imoen, Mystic Trickster and Tavern Brawler", &[0x1C2B]),
+            ("Falthis, Shadowcat Familiar and Kraum, Ludevic's Opus", &[0x1C2C]),
+            ("Livio, Oathsworn Sentinel and Sengir, the Dark Baron", &[0x1C2D]),
+            ("Jeska, Thrice Reborn and Slurrk, All-Ingesting", &[0x1C2E]),
+            ("Ellyn Harbreeze, Busybody and Hardy Outlander", &[0x1C2F]),
+            ("The Tenth Doctor and Ian Chesterton", &[0x1C30]),
+            ("Alora, Merry Thief and Veteran Soldier", &[0x1C31]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
