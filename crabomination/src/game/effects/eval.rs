@@ -2322,6 +2322,20 @@ impl GameState {
             }
             Value::CardsInHandMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
+                // "Cards with the same name as that permanent" (The End):
+                // concretize against the first target's name, as Pack Hunt's
+                // search does.
+                let named;
+                let filter = if filter.mentions_target_name() {
+                    let target_name = ctx.targets.iter().find_map(|t| match t {
+                        crate::game::Target::Permanent(id) => self.find_card_anywhere(*id).map(|c| c.definition.name),
+                        _ => None,
+                    });
+                    named = filter.resolve_target_name(target_name);
+                    &named
+                } else {
+                    filter
+                };
                 let ids: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
                 ids.into_iter()
                     .filter(|id| {
