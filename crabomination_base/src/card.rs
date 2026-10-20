@@ -3419,6 +3419,10 @@ pub enum SelectionRequirement {
     /// Shares a colour with the permanent sacrificed to pay this spell's
     /// additional cost (Mind Extraction). False with nothing sacrificed.
     SharesColorWithSacrificed,
+    /// "A creature card that's exactly that many colors plus `n`" — the
+    /// card's printed colour count against the sacrificed permanent's
+    /// (Evolving Door). Off-battlefield card walk only; elsewhere, false.
+    ColorCountEqualsSacrificedPlus(u32),
     /// Shares a creature type with *every* permanent tapped to pay the
     /// resolving ability's `tap_n_filter` cost (Cryptic Gateway). Vacuously
     /// false when nothing was tapped this way.

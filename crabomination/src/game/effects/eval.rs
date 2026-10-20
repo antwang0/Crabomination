@@ -7781,6 +7781,10 @@ impl GameState {
                     .as_ref()
                     .is_some_and(|cs| cs.iter().any(|c| colors.contains(c)))
             }
+            R::ColorCountEqualsSacrificedPlus(n) => self
+                .sacrificed_colors
+                .as_ref()
+                .is_some_and(|cs| card.definition.printed_colors().len() == cs.len() + *n as usize),
             // Endemic Plague — "share a creature type with the sacrificed
             // creature". Changeling matches everything (CR 702.73a).
             R::SharesCreatureTypeWithSacrificed => {
