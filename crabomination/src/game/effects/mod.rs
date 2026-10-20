@@ -36985,6 +36985,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CastHandSpellsFreeThisTurn => {
+                self.players[ctx.controller].cast_hand_free_this_turn = true;
+                Ok(())
+            }
+
             Effect::OpponentsCreaturesEnterTappedUntilYourNextTurn => {
                 self.players[ctx.controller].opponents_creatures_enter_tapped = true;
                 Ok(())

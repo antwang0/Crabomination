@@ -982,6 +982,7 @@ impl Effect {
             | Effect::SetSourceChosenNumber(_)
             | Effect::ChooseLetterForSource
             | Effect::YourLandsEnterTappedThisTurn
+            | Effect::CastHandSpellsFreeThisTurn
             | Effect::OpponentsCreaturesEnterTappedUntilYourNextTurn
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }

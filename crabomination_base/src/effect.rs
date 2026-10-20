@@ -12843,6 +12843,9 @@ pub enum Effect {
     /// "Lands you control enter tapped this turn" (Nahiri's Lithoforming) —
     /// the controller-scoped, land-only sibling.
     YourLandsEnterTappedThisTurn,
+    /// "Until end of turn, you may cast spells from your hand without paying
+    /// their mana costs" (Chandra, Flame's Catalyst): Omniscience for the turn.
+    CastHandSpellsFreeThisTurn,
     /// "Until your next turn, creatures your opponents control enter tapped"
     /// (Cone of Cold) — a replacement (CR 614.1c) on the controller's seat.
     OpponentsCreaturesEnterTappedUntilYourNextTurn,

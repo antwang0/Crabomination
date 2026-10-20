@@ -5782,6 +5782,9 @@ impl GameState {
             if pl.lands_enter_tapped_this_turn {
                 pl.lands_enter_tapped_this_turn = false;
             }
+            if pl.cast_hand_free_this_turn {
+                pl.cast_hand_free_this_turn = false;
+            }
         }
         self.additional_end_steps = 0;
         self.end_steps_this_turn = 0;

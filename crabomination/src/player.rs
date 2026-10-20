@@ -400,6 +400,11 @@ pub struct PlayerCold {
     /// Read by `apply_enters_tapped_replacement`; cleared at the turn's end.
     #[serde(default)]
     pub lands_enter_tapped_this_turn: bool,
+    /// "Until end of turn, you may cast spells from your hand without paying
+    /// their mana costs" (Chandra, Flame's Catalyst's −8): the turn-scoped
+    /// `StaticEffect::CastHandSpellsFree`. Cleared with the flag above.
+    #[serde(default)]
+    pub cast_hand_free_this_turn: bool,
     /// "Until your next turn, creatures your opponents control enter tapped"
     /// (Cone of Cold's 20). Read by `apply_enters_tapped_replacement`;
     /// cleared as this player's next turn begins.

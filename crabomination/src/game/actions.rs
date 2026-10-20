@@ -3222,9 +3222,11 @@ impl crate::game::GameState {
             }
             _ => false,
         };
-        self.battlefield
-            .iter()
-            .any(|c| c.controller == player && c.definition.static_abilities.iter().any(grants))
+        self.players[player].cast_hand_free_this_turn
+            || self
+                .battlefield
+                .iter()
+                .any(|c| c.controller == player && c.definition.static_abilities.iter().any(grants))
             // CR 114.4 — an emblem's static works from the command zone
             // (Tamiyo, Field Researcher's −7).
             || self.players[player].emblems.iter().any(|em| em.statics.iter().any(grants))
