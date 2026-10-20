@@ -27840,6 +27840,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FUGITIVE_DOCTOR_14_COMMANDERS,
             main: decks::THE_FUGITIVE_DOCTOR_14_MAIN,
         },
+        // Seat 4565: Rasaad yn Bashir and Scion of Halaster's EDHREC average deck. `--pod-decks 4565`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Scion of Halaster (WB)",
+            commanders: decks::RASAAD_YN_BASHIR_24_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_24_MAIN,
+        },
+        // Seat 4566: Francisco, Fowl Marauder and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 4566`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Kamahl, Heart of Krosa (BG)",
+            commanders: decks::FRANCISCO_21_COMMANDERS,
+            main: decks::FRANCISCO_21_MAIN,
+        },
+        // Seat 4567: Zellix, Sanity Flayer and Hardy Outlander's EDHREC average deck. `--pod-decks 4567`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Hardy Outlander (UG)",
+            commanders: decks::ZELLIX_16_COMMANDERS,
+            main: decks::ZELLIX_16_MAIN,
+        },
+        // Seat 4568: Alena, Kessig Trapper and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4568`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Rebbec, Architect of Ascension (WR)",
+            commanders: decks::ALENA_23_COMMANDERS,
+            main: decks::ALENA_23_MAIN,
+        },
+        // Seat 4569: Anara, Wolvid Familiar and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 4569`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Francisco, Fowl Marauder (BG)",
+            commanders: decks::ANARA_21_COMMANDERS,
+            main: decks::ANARA_21_MAIN,
+        },
     ]
 }
 
@@ -34305,6 +34335,11 @@ mod tests {
             ("Ravos, Soultender and Vial Smasher the Fierce", &[0x1BE8]),
             ("Zellix, Sanity Flayer and Far Traveler", &[0x1BE9]),
             ("The Fugitive Doctor and Rose Tyler", &[0x1BEA]),
+            ("Rasaad yn Bashir and Scion of Halaster", &[0x1BEB]),
+            ("Francisco, Fowl Marauder and Kamahl, Heart of Krosa", &[0x1BEC]),
+            ("Zellix, Sanity Flayer and Hardy Outlander", &[0x1BED]),
+            ("Alena, Kessig Trapper and Rebbec, Architect of Ascension", &[0x1BEE]),
+            ("Anara, Wolvid Familiar and Francisco, Fowl Marauder", &[0x1BEF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

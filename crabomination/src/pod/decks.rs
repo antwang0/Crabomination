@@ -128022,3 +128022,141 @@ pub const THE_FUGITIVE_DOCTOR_14_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain, plains,
     plains,
 ];
+
+pub const RASAAD_YN_BASHIR_24_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, scion_of_halaster];
+
+/// **Rasaad yn Bashir and Scion of Halaster**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 15 Plains + 10 Swamps = 98.
+/// Rasaad yn Bashir and Scion of Halaster (EDHREC, fetched 2026-10-20).
+pub const RASAAD_YN_BASHIR_24_MAIN: &[CardFactory] = &[
+    arcane_signet, dungeoneers_pack, mind_stone, sarevoks_tome, skeleton_key, sol_ring,
+    thieves_tools, trailblazers_torch, access_tunnel, ash_barrens, basilisk_gate,
+    caves_of_koilos, citadel_gate, command_tower, evolving_wilds, godless_shrine, gond_gate,
+    isolated_chapel, orzhov_guildgate, armored_armadillo, baldin_century_herdmaster,
+    beloved_beggar, disowned_ancestor, essence_of_antiquity, giant_ox, god_pharaohs_faithful,
+    goliath_paladin, indomitable_ancients, lagonna_band_trailblazer, lightning_core_excavator,
+    maccready_lamplight_mayor, market_gnome, mentor_of_the_meek, nyx_fleece_ram, ornithopter,
+    passageway_seer, ravenloft_adventurer, seasoned_dungeoneer, sinister_starfish,
+    slumbering_walker, tasseled_dromedary, tomb_trawler, underdark_explorer, unhallowed_phalanx,
+    vicious_battlerager, wall_of_omens, white_plume_adventurer, yoked_ox, assemble_the_players,
+    behind_the_scenes, eland_umbra, flaming_fist, phyrexian_arena, stoneskin, undercellar_sweep,
+    anguished_unmaking, bar_the_door, corrupted_conviction, despark, dire_tactics, disenchant,
+    mortify, path_to_exile, swords_to_plowshares, village_rites, your_temple_is_under_attack,
+    destined_confrontation, dusk_dawn, fell_the_mighty, from_the_catacombs,
+    reunion_of_the_house, slaughter_the_strong, unearth,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const FRANCISCO_21_COMMANDERS: &[CardFactory] = &[francisco_fowl_marauder, kamahl_heart_of_krosa];
+
+/// **Francisco, Fowl Marauder and Kamahl, Heart of Krosa**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Forests + 8 Swamps = 98.
+/// Francisco, Fowl Marauder and Kamahl, Heart of Krosa (EDHREC, fetched 2026-10-20).
+pub const FRANCISCO_21_MAIN: &[CardFactory] = &[
+    matzalantli_the_great_door, the_ozolith, ancient_tomb, arena, arid_archway, ba_sing_se,
+    blast_zone, bojuka_bog, captivating_cave, chocobo_camp, command_tower, darkmoss_bridge,
+    festering_thicket, ghost_town, golgari_rot_farm, gond_gate, heap_gate, hidden_nursery,
+    llanowar_reborn, maze_of_ith, mazes_end, misty_rainforest, okina_temple_to_the_grandfathers,
+    planar_nexus, rumble_arena, secret_tunnel, snow_covered_forest, snow_covered_forest,
+    snow_covered_swamp, soulstone_sanctuary, the_black_gate, turbulent_fen, tyrite_sanctum,
+    urzas_cave, vernal_fen, vesuva, windswept_heath, zanarkand_ancient_metropolis,
+    zoetic_cavern, allosaurus_rider, changeling_outcast, deadeye_tracker, demolisher_spawn,
+    drana_the_last_bloodchief, evolution_witness, graveshifter, hagra_constrictor,
+    insidious_fungus, jadelight_ranger, jadelight_spelunker, littjara_glade_warden,
+    lurking_chupacabra, masked_vandal, merfolk_branchwalker, rampaging_spiketail, vorinclex,
+    wayward_swordtooth, yahenni_undying_partisan, criminal_past, garruks_uprising,
+    guardian_project, hardened_scales, path_of_discovery, rite_of_passage, sylvan_scavenging,
+    twists_and_turns, awakening_of_vitu_ghazi, fanatical_offering, in_the_presence_of_ages,
+    return_of_the_wildspeaker, snakeskin_veil, tear_asunder, culling_ritual, edge_of_autumn,
+    farseek, gaze_of_granite, kodamas_reach, over_the_edge, terror_tide, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ZELLIX_16_COMMANDERS: &[CardFactory] = &[zellix_sanity_flayer, hardy_outlander];
+
+/// **Zellix, Sanity Flayer and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Forests + 11 Islands = 98.
+/// Zellix, Sanity Flayer and Hardy Outlander (EDHREC, fetched 2026-10-20).
+pub const ZELLIX_16_MAIN: &[CardFactory] = &[
+    arcane_signet, codex_shredder, contagion_engine, grindstone, millstone, mindcrank,
+    riverchurn_monument, simic_signet, vexing_bauble, botanical_sanctum, breeding_pool,
+    command_tower, evolving_wilds, exotic_orchard, hedge_maze, rogues_passage,
+    temple_of_mystery, temple_of_the_false_god, terramorphic_expanse, thornwood_falls,
+    turbulent_wilderness, vineglimmer_snarl, yavimaya_cradle_of_growth, aberrant_researcher,
+    chained_throatseeker, drownyard_amalgam, elvish_mystic, elvish_spirit_guide,
+    glissas_courier, hedron_crab, ichorspit_basilisk, llanowar_elves, lurking_roper,
+    moldgraf_millipede, mycosynth_fiend, putrefax, ruin_crab, stitched_mangler,
+    studious_first_year, tainted_observer, tangleclaw_werewolf, the_mindskinner, thrummingbird,
+    undergrowth_scavenger, viral_drake, walking_ballista, fraying_sanity, garruks_uprising,
+    glacierwood_siege, utopia_sprawl, virtue_of_strength, wild_growth, wizard_class,
+    an_offer_you_cant_refuse, brainstorm, consider, decisive_denial, frantic_search,
+    gift_of_the_viper, growth_spiral, keep_safe, mental_misstep, obsessive_search,
+    prologue_to_phyresis, snakeskin_veil, spell_pierce, thought_scour, birthday_escape,
+    careful_study, creeping_corrosion, cultivate, enter_the_enigma, explore, fabricate, farseek,
+    rampant_growth, serum_visions,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const ALENA_23_COMMANDERS: &[CardFactory] = &[alena_kessig_trapper, rebbec_architect_of_ascension];
+
+/// **Alena, Kessig Trapper and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 92 nonbasic cards + 3 Mountains + 3 Plains = 98.
+/// Alena, Kessig Trapper and Rebbec, Architect of Ascension (EDHREC, fetched 2026-10-20).
+pub const ALENA_23_MAIN: &[CardFactory] = &[
+    darksteel_forge, expedition_map, eye_of_vecna, forsaken_monument, hammer_of_purphoros,
+    hedron_archive, mirage_mirror, mystic_forge, prototype_portal, sculpting_steel, sol_ring,
+    talisman_of_conviction, thousand_moons_smithy, weatherlight, ancient_den, buried_ruin,
+    cascading_cataracts, clifftop_retreat, darksteel_citadel, field_of_ruin, great_furnace,
+    guildless_commons, hall_of_tagsin, inventors_fair, mistveil_plains, path_of_ancestry,
+    plateau, reliquary_tower, rustvale_bridge, sacred_foundry, scavenger_grounds,
+    sequestered_stash, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    spectator_seating, sunbaked_canyon, the_great_mound, the_mycosynth_gardens, urzas_mine,
+    urzas_power_plant, urzas_saga, urzas_tower, altar_golem, ancient_stone_idol,
+    bronze_guardian, combustible_gearhulk, darksteel_gargoyle, darksteel_juggernaut,
+    esper_sentinel, goblin_welder, golden_guardian, ironsoul_enforcer, karn_legacy_reforged,
+    liberator_urzas_battlethopter, lion_sash, lita_mechanical_engineer, metalwork_colossus,
+    metalworker, mycosynth_golem, oltec_matterweaver, ornithopter_of_paradise, palladium_myr,
+    platoon_dispenser, ruin_grinder, shambling_suit, solemn_simulacrum, steel_hellkite,
+    stonecoil_serpent, su_chi_cave_guard, treasure_keeper, voyager_quickwelder, wurmcoil_engine,
+    aggravated_assault, smothering_tithe, dispatch, forge_armor, make_a_stand, path_to_exile,
+    pull_from_eternity, thrill_of_possibility, unbreakable_formation, wear_tear,
+    karn_scion_of_urza, brilliant_restoration, repair_and_recharge, wake_the_past,
+    wheel_of_misfortune,
+    // Basics
+    mountain, mountain, mountain, plains, plains, plains,
+];
+
+pub const ANARA_21_COMMANDERS: &[CardFactory] = &[anara_wolvid_familiar, francisco_fowl_marauder];
+
+/// **Anara, Wolvid Familiar and Francisco, Fowl Marauder**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 10 Forests + 18 Swamps = 98.
+/// Anara, Wolvid Familiar and Francisco, Fowl Marauder (EDHREC, fetched 2026-10-20).
+pub const ANARA_21_MAIN: &[CardFactory] = &[
+    animation_module, arcane_signet, arm_mounted_anchor, glowcap_lantern, golgari_signet,
+    pirates_cutlass, shadowed_caravel, sol_ring, talisman_of_resilience,
+    throne_of_the_grim_captain, bayou, cavern_of_souls, command_tower, exotic_orchard,
+    lake_of_the_dead, maze_of_ith, overgrown_tomb, underground_mortuary, archfiend_of_despair,
+    boneyard_desecrator, charred_graverobber, corpsejack_menace, deadeye_tormentor,
+    deadeye_tracker, dinosaur_hunter, dire_fleet_interloper, dire_fleet_poisoner,
+    dire_fleet_ravager, emperors_vanguard, fathom_fleet_boarder, fathom_fleet_captain,
+    forerunner_of_the_coalition, forgotten_ancient, khabal_ghoul, kitesail_freebooter,
+    legion_vanguard, opposition_agent, pitiless_plunderer, ruin_raider, seeker_of_sunlight,
+    skeleton_crew, wanted_scoundrels, branching_evolution, drop_of_honey, garruks_uprising,
+    on_the_trail, path_of_discovery, rites_of_flourishing, twists_and_turns, unnatural_growth,
+    utopia_sprawl, wild_growth, beast_within, dark_ritual, deadly_rollick, go_for_the_throat,
+    imps_mischief, legolass_quick_reflexes, natural_selection, shoot_the_sheriff,
+    windswift_slice, withering_boon, blood_money, demonic_tutor, farseek, finale_of_devastation,
+    grim_captains_call, imperial_seal, march_of_the_drowned, over_the_edge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
