@@ -13943,6 +13943,9 @@ impl GameState {
 
             Effect::Venture | Effect::VentureInto { .. } => {
                 let p = ctx.controller;
+                if !self.begin_venture(p) {
+                    return Ok(());
+                }
                 let forced = match effect {
                     Effect::VentureInto { dungeon } => Some(dungeon.clone()),
                     _ => None,

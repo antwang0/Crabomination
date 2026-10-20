@@ -206,6 +206,7 @@ mod move_spell;
 mod quest_copy;
 mod discard_pick;
 mod growth_loop;
+mod venture_limit;
 mod copy_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
@@ -35253,6 +35254,8 @@ fn static_effect_to_effects(
             // `effective_ability_mana_cost`; no continuous-layer effect.
             | StaticEffect::OpponentActivityCostsMoreOnYourTurn { .. }
             | StaticEffect::ControllerHasHexproof
+            // Keen-Eared Sentry — read at the venture site (`venture_limit.rs`).
+            | StaticEffect::OpponentsVentureOncePerTurn
             | StaticEffect::ControllerHasWard(_)
             | StaticEffect::ControllerHasShroud
             // Mistform Warchief / Grip of Chaos / Parallel Thoughts — read at

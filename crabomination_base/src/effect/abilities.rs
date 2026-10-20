@@ -1141,6 +1141,10 @@ pub enum StaticEffect {
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
     ControllerHasHexproof,
+    /// "Each opponent can't venture into the dungeon more than once each
+    /// turn" (Keen-Eared Sentry). Read at the venture site
+    /// (`game/venture_limit.rs`); no layer effect.
+    OpponentsVentureOncePerTurn,
     /// CR 702.21a — "you have ward [cost]" (Unsettled Mariner's "whenever you
     /// … become the target of a spell or ability an opponent controls, counter
     /// it unless its controller pays"): the source's controller is warded as a
