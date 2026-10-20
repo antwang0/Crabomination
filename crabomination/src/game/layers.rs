@@ -1414,6 +1414,8 @@ fn compute_permanent_pass(
                 CounterType::PlusTwoPlusZero => (2, 0),
                 CounterType::PlusZeroPlusTwo => (0, 2),
                 CounterType::PlusTwoPlusTwo => (2, 2),
+                CounterType::PlusOnePlusTwo => (1, 2),
+                CounterType::MinusTwoMinusOne => (-2, -1),
                 _ => continue,
             };
             dp += p * n;

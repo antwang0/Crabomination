@@ -637,6 +637,10 @@ pub enum CounterType {
     PlusZeroPlusTwo,
     /// +2/+2 counter (Baron Sengir).
     PlusTwoPlusTwo,
+    /// +1/+2 counter (Armor Thrull).
+    PlusOnePlusTwo,
+    /// -2/-1 counter (Contagion).
+    MinusTwoMinusOne,
     /// Currency counter (Trade Caravan) — pure bookkeeping, no P/T effect.
     Currency,
     /// -0/-2 counter (Spirit Shackle).
@@ -11796,9 +11800,10 @@ impl CardInstance {
         for (ct, n) in self.counters.iter() {
             let n = *n as i32;
             p = p.saturating_add(match ct {
-                CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => n,
+                CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero | CounterType::PlusOnePlusTwo => n,
                 CounterType::MinusOneMinusOne | CounterType::MinusOneMinusZero => -n,
                 CounterType::PlusTwoPlusZero | CounterType::PlusTwoPlusTwo => 2 * n,
+                CounterType::MinusTwoMinusOne => -2 * n,
                 _ => 0,
             });
         }
@@ -11815,9 +11820,9 @@ impl CardInstance {
             let n = *n as i32;
             t = t.saturating_add(match ct {
                 CounterType::PlusOnePlusOne | CounterType::PlusZeroPlusOne => n,
-                CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne => -n,
+                CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne | CounterType::MinusTwoMinusOne => -n,
                 CounterType::MinusZeroMinusTwo => -2 * n,
-                CounterType::PlusZeroPlusTwo | CounterType::PlusTwoPlusTwo => 2 * n,
+                CounterType::PlusZeroPlusTwo | CounterType::PlusTwoPlusTwo | CounterType::PlusOnePlusTwo => 2 * n,
                 _ => 0,
             });
         }
