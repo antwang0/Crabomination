@@ -839,3 +839,77 @@ fn sengir_nosferatu_becomes_a_bat_and_returns() {
     assert!(g.battlefield_find(vampire).is_some(), "the Nosferatu is back");
     assert!(g.battlefield_find(bat).is_none(), "the Bat was sacrificed");
 }
+
+/// Slumbering Walker trades a counter for a small creature at your end step.
+#[test]
+fn slumbering_walker_reanimates_for_a_counter() {
+    let mut g = pod(2);
+    let walker = g.add_card_to_hand(0, catalog::slumbering_walker());
+    cast(&mut g, walker, None);
+    assert_eq!(pt(&g, walker), (2, 5), "two -1/-1 counters");
+    let small = g.add_card_to_graveyard(0, catalog::nectar_faerie());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 2]));
+    to_end_step(&mut g);
+    assert_eq!(pt(&g, walker), (3, 6), "one counter removed");
+    assert!(g.battlefield_find(small).is_some(), "the Faerie came back");
+}
+
+/// Mournwhelk evoked: target player discards two, the Whelk is sacrificed.
+#[test]
+fn mournwhelk_evoked_strips_two_cards() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    let whelk = g.add_card_to_hand(0, catalog::mournwhelk());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: whelk,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("evoke");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "two discarded");
+    assert!(g.battlefield_find(whelk).is_none(), "evoked");
+}
+
+/// Grindclock winds up and mills by its charge counters.
+#[test]
+fn grindclock_mills_by_charge_counters() {
+    let mut g = pod(2);
+    let clock = g.add_card_to_battlefield(0, catalog::grindclock());
+    for _ in 0..3 {
+        g.battlefield_find_mut(clock).unwrap().tapped = false;
+        activate(&mut g, clock, 0, None).expect("wind");
+    }
+    g.battlefield_find_mut(clock).unwrap().tapped = false;
+    let lib = g.players[1].library.len();
+    activate(&mut g, clock, 1, Some(Target::Player(1))).expect("mill");
+    assert_eq!(g.players[1].library.len(), lib - 3);
+}
+
+/// Shade of Trokair pumps for {W}.
+#[test]
+fn shade_of_trokair_pumps() {
+    let mut g = pod(2);
+    let shade = g.add_card_to_battlefield(0, catalog::shade_of_trokair());
+    activate(&mut g, shade, 0, None).expect("pump");
+    assert_eq!(pt(&g, shade), (2, 3));
+}
+
+/// Precognition Field casts an instant off the top of the library.
+#[test]
+fn precognition_field_casts_from_the_top() {
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_battlefield(0, catalog::precognition_field());
+    let life = g.players[1].life;
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 3);
+}

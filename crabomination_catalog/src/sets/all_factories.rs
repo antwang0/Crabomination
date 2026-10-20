@@ -18333,6 +18333,11 @@ static DECKS: &[Factory] = &[
     super::decks::dash_hopes,
     super::decks::the_end,
     super::decks::sengir_nosferatu,
+    super::decks::slumbering_walker,
+    super::decks::mournwhelk,
+    super::decks::grindclock,
+    super::decks::shade_of_trokair,
+    super::decks::precognition_field,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

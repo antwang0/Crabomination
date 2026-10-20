@@ -1135,3 +1135,132 @@ pub fn sengir_nosferatu() -> CardDefinition {
         ..creature("Sengir Nosferatu", cost(&[generic(3), b(), b()]), vec![CreatureType::Vampire], 4, 4)
     }
 }
+
+// ── Batch eight ─────────────────────────────────────────────────────────────
+
+/// Slumbering Walker — {3}{W}{W} 4/7 Giant Warrior; enters with two -1/-1
+/// counters. At the beginning of your end step, you may remove a counter
+/// from it; when you do, return target creature card with power 2 or less
+/// from your graveyard to the battlefield.
+pub fn slumbering_walker() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(2))),
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::TotalCountersOn { what: Box::new(Selector::This) }, Value::ONE),
+                then: Box::new(Effect::MayDo {
+                    description: "Remove a counter from Slumbering Walker to return a small creature card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCountersUpTo { what: Selector::This, amount: Value::ONE },
+                        Effect::Reflexive {
+                            body: Box::new(Effect::Move {
+                                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::PowerAtMost(2))),
+                                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            }),
+                        },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature(
+            "Slumbering Walker",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Giant, CreatureType::Warrior],
+            4,
+            7,
+        )
+    }
+}
+
+/// Mournwhelk — {6}{B} 3/3 Elemental, evoke {3}{B}. ETB: target player
+/// discards two cards.
+pub fn mournwhelk() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(3), b()]))),
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: target_filtered(R::Player),
+            amount: Value::Const(2),
+            random: false,
+        })],
+        ..creature("Mournwhelk", cost(&[generic(6), b()]), vec![CreatureType::Elemental], 3, 3)
+    }
+}
+
+/// Grindclock — {2} artifact. {T}: a charge counter on it. {T}: target player
+/// mills X, X = the charge counters on it.
+pub fn grindclock() -> CardDefinition {
+    CardDefinition {
+        name: "Grindclock",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Mill {
+                    who: target_filtered(R::Player),
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shade of Trokair — {3}{W} 1/2 Shade. {W}: +1/+1 until end of turn.
+/// Suspend 3—{W}.
+pub fn shade_of_trokair() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(3, cost(&[w()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Shade of Trokair", cost(&[generic(3), w()]), vec![CreatureType::Shade], 1, 2)
+    }
+}
+
+/// Precognition Field — {3}{U} enchantment. You may look at the top card of
+/// your library any time; you may cast instant and sorcery spells from the
+/// top of your library. {3}: exile the top card of your library.
+pub fn precognition_field() -> CardDefinition {
+    CardDefinition {
+        name: "Precognition Field",
+        cost: cost(&[generic(3), crate::mana::u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                description: "You may cast instant and sorcery spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Move {
+                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
