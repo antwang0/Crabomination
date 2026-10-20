@@ -8257,7 +8257,7 @@ pub fn karn_scion_of_urza() -> CardDefinition {
         },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::RevealTopOpponentChoosesToHand {
@@ -8267,14 +8267,14 @@ pub fn karn_scion_of_urza() -> CardDefinition {
                     counter: Some(CounterType::Silver),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -1,
                 effect: Effect::ReturnFromExileWithCounter {
                     counter: CounterType::Silver,
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::CreateToken {
@@ -8327,7 +8327,7 @@ pub fn vivien_reid() -> CardDefinition {
         },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand(Box::new(LookPick {
@@ -8341,7 +8341,7 @@ pub fn vivien_reid() -> CardDefinition {
     ..Default::default()
 })),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Destroy {
@@ -8353,7 +8353,7 @@ pub fn vivien_reid() -> CardDefinition {
                     ),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -8,
                 effect: Effect::CreateEmblem {
@@ -8444,7 +8444,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
             },
         }],
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 0,
                 effect: Effect::Seq(vec![
@@ -8469,7 +8469,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Search {
@@ -8479,7 +8479,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
@@ -12443,7 +12443,7 @@ pub fn saheeli_rai() -> CardDefinition {
         },
         base_loyalty: 3,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
@@ -12466,7 +12466,7 @@ pub fn saheeli_rai() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -2,
                 effect: copy_friendly(),
@@ -12475,7 +12475,7 @@ pub fn saheeli_rai() -> CardDefinition {
             // put them onto the battlefield. Three sequential searches; the
             // second and third exclude already-fetched names
             // (`NameDiffersFromLastMoved`).
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::Seq(vec![
@@ -12949,7 +12949,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
         },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 2,
                 effect: Effect::CreateToken {
@@ -12958,7 +12958,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
                     definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 // "… becomes a green Elk creature with base power and
@@ -12983,7 +12983,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -5,
                 effect: Effect::ExchangeControl {
@@ -20256,7 +20256,7 @@ pub fn urza_planeswalker() -> CardDefinition {
         base_loyalty: 7,
         loyalty_twice_each_turn: true,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 2,
                 effect: Effect::Seq(vec![
                     Effect::SpellsCostLessThisTurn {
@@ -20270,7 +20270,7 @@ pub fn urza_planeswalker() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::Draw {
@@ -20285,7 +20285,7 @@ pub fn urza_planeswalker() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
@@ -20304,14 +20304,14 @@ pub fn urza_planeswalker() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -3,
                 effect: Effect::Exile {
                     what: target_filtered(SelectionRequirement::Nonland),
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -10,
                 effect: Effect::Seq(vec![
                     Effect::GrantKeyword {
@@ -21437,7 +21437,7 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
             },
         )),
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Surveil {
@@ -21445,14 +21445,14 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Exile {
                     what: target_filtered(SelectionRequirement::Creature),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -6,
                 effect: Effect::PutFromHandOrGraveyardOntoBattlefield {
@@ -29035,7 +29035,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
                 max: 1,
             },
         }],
-        loyalty_abilities: vec![LoyaltyAbility {
+        loyalty_abilities: vec![LoyaltyAbility { condition: None,
             x_cost: false,
             loyalty_cost: -2,
             effect: Effect::LookPickToHand(Box::new(LookPick {
@@ -29070,7 +29070,7 @@ pub fn liliana_of_the_veil() -> CardDefinition {
         },
         base_loyalty: 3,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Discard {
@@ -29079,7 +29079,7 @@ pub fn liliana_of_the_veil() -> CardDefinition {
                     random: false,
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Sacrifice {
@@ -29088,7 +29088,7 @@ pub fn liliana_of_the_veil() -> CardDefinition {
                     filter: SelectionRequirement::Creature,
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -6,
                 // You split; that player sacrifices the pile they choose.
@@ -29135,7 +29135,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
         },
         base_loyalty: 3,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::PumpPT {
@@ -29145,7 +29145,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                     duration: Duration::UntilNextTurn,
                 }) },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Seq(vec![
@@ -29170,7 +29170,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
@@ -29221,7 +29221,7 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
         },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 // "Draw a card. At the beginning of the next end step, untap
@@ -29247,7 +29247,7 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Move {
@@ -29258,7 +29258,7 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
                     },
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -8,
                 effect: Effect::CreateEmblem {
@@ -50177,7 +50177,7 @@ pub fn garruk_wildspeaker() -> CardDefinition {
         },
         base_loyalty: 3,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 // "Untap two target lands" — any two lands (CR 115.1).
                 effect: Effect::ApplyToTargets {
@@ -50188,7 +50188,7 @@ pub fn garruk_wildspeaker() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -1,
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
@@ -50208,7 +50208,7 @@ pub fn garruk_wildspeaker() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -4,
                 effect: Effect::Seq(vec![
                     Effect::PumpPT {
@@ -50270,7 +50270,7 @@ pub fn jace_wielder_of_mysteries() -> CardDefinition {
             effect: StaticEffect::WinInsteadOfDrawFromEmpty,
         }],
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::Mill {
                     who: target_filtered(SelectionRequirement::Player),
@@ -50278,7 +50278,7 @@ pub fn jace_wielder_of_mysteries() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -8,
                 effect: Effect::Draw {
                     who: Selector::You,
@@ -54083,7 +54083,7 @@ pub fn ugin_the_spirit_dragon() -> CardDefinition {
                 },
                 ..Default::default()
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::ForEach {

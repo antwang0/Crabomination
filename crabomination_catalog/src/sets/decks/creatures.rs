@@ -803,14 +803,14 @@ pub fn teferi_time_raveler() -> CardDefinition {
         ],
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::GrantSorceriesAsFlash {
                     who: PlayerRef::You,
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![

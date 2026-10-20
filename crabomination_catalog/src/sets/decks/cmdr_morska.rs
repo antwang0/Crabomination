@@ -518,7 +518,7 @@ pub fn tezzeret_betrayer_of_flesh() -> CardDefinition {
             effect: StaticEffect::FirstArtifactAbilityEachTurnCostsLess { amount: 2 },
         }],
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::Draw { who: Selector::You, amount: Value::Const(2) },
@@ -526,7 +526,7 @@ pub fn tezzeret_betrayer_of_flesh() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -2,
                 effect: Effect::If {
                     cond: Predicate::EntityMatches {
@@ -545,7 +545,7 @@ pub fn tezzeret_betrayer_of_flesh() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -6,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,

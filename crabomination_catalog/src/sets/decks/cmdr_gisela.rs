@@ -81,7 +81,7 @@ pub fn ajani_strength_of_the_pride() -> CardDefinition {
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani], ..Default::default() },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::GainLife {
                     who: Selector::You,
@@ -92,12 +92,12 @@ pub fn ajani_strength_of_the_pride() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -2,
                 effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: pridemate },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 effect: Effect::If {
                     cond: fifteen_over_start(),

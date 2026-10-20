@@ -316,7 +316,7 @@ pub fn ironwill_forger() -> CardDefinition {
 /// Kaya, Geist Hunter — +1 deathtouch and a counter on a token; −2 doubles
 /// your tokens this turn; −6 exiles every graveyard for a Spirit apiece.
 pub fn kaya_geist_hunter() -> CardDefinition {
-    let ability = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { x_cost: false, loyalty_cost, effect };
+    let ability = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { condition: None, x_cost: false, loyalty_cost, effect };
     CardDefinition {
         name: "Kaya, Geist Hunter",
         cost: cost(&[generic(1), w(), b()]),

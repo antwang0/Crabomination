@@ -196,12 +196,12 @@ pub fn grist_the_hunger_tide() -> CardDefinition {
         base_loyalty: 3,
         creature_off_battlefield: true,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::GristPlusOne,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::MaySacrifice {
@@ -216,7 +216,7 @@ pub fn grist_the_hunger_tide() -> CardDefinition {
                     else_: None,
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -5,
                 effect: Effect::LoseLife {

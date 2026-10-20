@@ -119,12 +119,17 @@ pub fn fblthp_knows_the_way() -> CardDefinition {
                 toughness: Value::Const(2),
             },
         }],
-        triggered_abilities: vec![etb(Effect::SearchUpToN {
-            who: PlayerRef::You,
-            filter: R::IsBasicLand,
-            to: ZoneDest::Hand(PlayerRef::You),
-            count: Value::XFromCost,
-        })],
+        // "with different names": each pick differs from the ones before it,
+        // which are this resolution's moved cards once the list is cleared.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand.and(R::NameDiffersFromLastMoved),
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::XFromCost,
+            },
+        ]))],
         ..legend(
             "Fblthp, Knows the Way",
             cost(&[x(), g(), g()]),

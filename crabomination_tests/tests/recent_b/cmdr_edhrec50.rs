@@ -87,3 +87,21 @@ fn fblthp_knows_the_way_fetches_x_basics() {
     cast_x(&mut g, f, Some(2)).expect("X=2");
     assert_eq!(g.computed_permanent(f).unwrap().power, 2, "Forest and Island");
 }
+
+/// Fblthp's basics must have different names: two Forests and an Island in
+/// the library, X = 2, fetch one of each.
+#[test]
+fn fblthp_knows_the_way_fetches_different_names() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for land in [catalog::forest(), catalog::forest(), catalog::island()] {
+        g.add_card_to_library(0, land);
+    }
+    g.players[0].hand.clear();
+    let f = g.add_card_to_hand(0, catalog::fblthp_knows_the_way());
+    g.decider = Box::new(ScriptedDecider::new([]));
+    cast_x(&mut g, f, Some(2)).expect("X=2");
+    let mut names: Vec<&str> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    names.sort();
+    assert_eq!(names, ["Forest", "Island"]);
+}

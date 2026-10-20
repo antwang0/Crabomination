@@ -135,8 +135,8 @@ pub fn garruk_cursed_huntsman() -> CardDefinition {
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Garruk], ..Default::default() },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility { loyalty_cost: 0, effect: make(Value::Const(2), wolf), x_cost: false },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None, loyalty_cost: 0, effect: make(Value::Const(2), wolf), x_cost: false },
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -3,
                 effect: Effect::Seq(vec![
                     Effect::Destroy { what: target_filtered(R::Creature) },
@@ -144,7 +144,7 @@ pub fn garruk_cursed_huntsman() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -6,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,

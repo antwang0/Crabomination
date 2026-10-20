@@ -2031,10 +2031,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
 | 🟡 Gandalf the White | only an *entering* legendary permanent or artifact doubles triggers; a leaving one doesn't | `DoubleControllerEtbTriggers` has no leave-the-battlefield half |
 | 🟡 Jade Monolith | redirects the next damage from any source, not one of your choice | `RedirectNextDamageTo` has no source filter |
-| 🟡 Shared Summons | the two creature cards needn't have different names | `SearchUpToN` has no distinct-name constraint |
 | 🟡 Lochmere Serpent | "exile five target cards" takes up to five | `ApplyToTargets { min_targets: 0 }` |
 | 🟡 Mystic Reflection | a token model that left the battlefield before the entries copies nothing (a card model copies from its new zone, which is its printed self) | `Effect::NextEntriesEnterAsCopy` stores the model's id, not its last-known copiable values |
-| 🟡 Emrakul, the Exigent Doom | the land loses the granted `{T}: Add {C}{C}` when the card is cast from any zone, not only exile (it can reach another zone only by leaving exile uncast) | `Duration::UntilSourceCast` ends on any cast of the source |
 | 🟡 Angel of Jubilation | also bars a Phyrexian pip's life in a non-cast payment (a ward "pay {U/P}"), which the printed "to cast spells or activate abilities" doesn't | `cost_life_payable` gates the shared Phyrexian payment ladder |
 | 🟡 Fatal Grudge | at three or more seats, after the first opponent sacrifices, the next ones match that permanent's card types rather than the cost's (only differs for a multi-type sacrifice, e.g. an artifact creature) | `SharesCardTypeWithFirstSacrificed` reads the resolution's first sacrifice once there is one; the cost's card is its fallback |
 | 🟡 Heartwood Storyteller | the opponents always draw ("may draw" isn't offered) | `Effect::Draw` over `OpponentOf(Triggerer)` |
@@ -2060,7 +2058,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kang the Conqueror | "During that turn, power-up abilities can't be activated" is not modelled — the extra turn allows other power-ups | no turn-scoped power-up lock |
 | 🟡 Kid Loki | hexproof goes to each creature you control that gained any counter this turn and has a +1/+1 counter — not only one you put a +1/+1 counter on | the per-turn counter record does not keep who placed which kind |
 | 🟡 Treasure Keeper | the dies walk exiles the cards it passes (cascade's walk) rather than revealing them | no reveal-until-cast-free effect without the exile |
-| 🟡 Fblthp, Knows the Way | its X basic lands needn't have different names | `SearchUpToN` doesn't enforce the rider |
 | 🟡 Gorm the Great | "must be blocked by two or more creatures if able" is only "must be blocked if able" | no minimum-blockers requirement |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
@@ -2123,7 +2120,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
 | 🟡 Dino DNA | the copied card is chosen at resolution among those it exiled, not targeted | `ChooseOneAmong` over `R::ExiledWithSource` |
 | 🟡 Experimental Overload | the returned instant or sorcery is the engine's pick (the priciest) | `Selector::take_priciest` |
-| 🟡 Jace, Reality Sculptor | the 0 can be activated under 25 loyalty among your Jaces and does nothing then ("activate only if" is checked at resolution) | `LoyaltyAbility` has no condition field |
 | 🟡 The Misty Mountains Cold | "if you do" reads the Saga still being on the battlefield, not the sacrifice's outcome | `SelectorExists(This)` gate |
 | 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
@@ -2161,7 +2157,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Loki Laufeyson | an instant or sorcery above Loki's power spends the watch without a copy instead of leaving it armed | `OnYourNextInstantSorceryThisTurn` |
 | 🟡 Wanda's Vision | the free cast stays open until end of turn rather than only as the trigger resolves | `ExileTopUntilNonlandMayPlay { EndOfThisTurn }` |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
-| 🟡 Jiang Yanggu, Alone | an attack alone on a planeswalker or battle triggers too, not only one on a player | `R::IsAttackingAlone` |
 | 🟡 Impossible Man | the copy takes the copied permanent's name rather than keeping "Impossible Man" | `BecomeCopyOfFor { EndOfTurn }` |
 | 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |
 | 🟡 Arachne, Psionic Weaver | the look at an opponent's hand that informs the type choice isn't modelled | `ChooseCardTypeFromForSource` |

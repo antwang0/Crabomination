@@ -1263,7 +1263,7 @@ pub fn ashiok_wicked_manipulator() -> CardDefinition {
             effect: StaticEffect::PayLifeExilesLibraryTopInstead,
         }],
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::LookTopExileOneOfN { who: PlayerRef::You, count: Value::Const(2) },
@@ -1274,12 +1274,12 @@ pub fn ashiok_wicked_manipulator() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -2,
                 effect: make(nightmare, Value::Const(2)),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -7,
                 effect: Effect::ExileTopOfLibrary {
                     who: Selector::Player(PlayerRef::Target(0)),

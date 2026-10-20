@@ -57,7 +57,7 @@ pub fn chandra_flamecaller() -> CardDefinition {
                 ]),
                 ..Default::default()
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::DealDamage {

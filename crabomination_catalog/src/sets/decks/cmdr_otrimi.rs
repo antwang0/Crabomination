@@ -273,19 +273,19 @@ pub fn nissa_steward_of_elements() -> CardDefinition {
         // CR 306.5b — X loyalty rides in as loyalty counters.
         enters_with_counters: Some((CounterType::Loyalty, Value::XFromCost)),
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 2,
                 x_cost: false,
                 effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: false,
                 effect: Effect::LookTopMayPutLandOrCreatureMvAtMost {
                     max_mv: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Loyalty },
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -6,
                 x_cost: false,
                 effect: Effect::ApplyToTargets {

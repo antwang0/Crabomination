@@ -290,3 +290,18 @@ fn liliana_vess_ultimate_raises_the_dead() {
     assert_eq!(g.battlefield_find(a).map(|c| c.controller), Some(0));
     assert!(g.battlefield_find(b).is_some());
 }
+
+/// Shared Summons searches for two creature cards with different names.
+#[test]
+fn shared_summons_fetches_different_names() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for c in [catalog::grizzly_bears(), catalog::grizzly_bears(), catalog::hill_giant()] {
+        g.add_card_to_library(0, c);
+    }
+    let ss = g.add_card_to_hand(0, catalog::shared_summons());
+    cast(&mut g, ss, &[]).expect("cast");
+    let mut names: Vec<&str> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    names.sort();
+    assert_eq!(names, ["Grizzly Bears", "Hill Giant"]);
+}

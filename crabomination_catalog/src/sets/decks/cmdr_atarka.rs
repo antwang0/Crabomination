@@ -418,7 +418,7 @@ pub fn sarkhan_the_dragonspeaker() -> CardDefinition {
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Sarkhan], ..Default::default() },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
                     what: Selector::This,
@@ -430,12 +430,12 @@ pub fn sarkhan_the_dragonspeaker() -> CardDefinition {
                 }, &[crate::mana::Color::Red]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -3,
                 effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -6,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,

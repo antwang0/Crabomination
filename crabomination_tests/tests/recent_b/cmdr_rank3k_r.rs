@@ -150,6 +150,25 @@ fn jiang_yanggu_loots_for_a_lone_attacker() {
     assert_eq!(g.players[0].graveyard.len(), 1);
 }
 
+/// Jiang Yanggu, Alone wants a lone attacker on a PLAYER: one attacking a
+/// planeswalker alone doesn't loot.
+#[test]
+fn jiang_yanggu_ignores_a_lone_attack_on_a_planeswalker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::jiang_yanggu_alone());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let walker = ready(&mut g, 1, catalog::jace_reality_sculptor());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Planeswalker(walker) }]))
+        .expect("attack the planeswalker");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, bear), 0);
+    assert!(g.players[0].graveyard.is_empty(), "no loot");
+}
+
 /// CR 122.1b — Super-Adaptoid counts legends and borrows keywords as counters.
 #[test]
 fn super_adaptoid_copies_keyword_counters() {

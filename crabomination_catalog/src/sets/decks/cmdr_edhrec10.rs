@@ -2462,7 +2462,7 @@ pub fn huatli_warrior_poet() -> CardDefinition {
                 amount: Value::PowerOf(Box::new(Selector::GreatestPowerYouControl)),
             }),
             loyalty(0, make(PlayerRef::You, Value::ONE, dino)),
-            LoyaltyAbility { loyalty_cost: 0, effect: Effect::Seq(minus_x), x_cost: true },
+            LoyaltyAbility { condition: None, loyalty_cost: 0, effect: Effect::Seq(minus_x), x_cost: true },
         ],
     )
 }

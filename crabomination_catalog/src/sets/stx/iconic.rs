@@ -1392,7 +1392,7 @@ pub fn professor_onyx() -> CardDefinition {
             // +1: "You lose 1 life. Look at the top three cards of your
             // library. Put one of them into your hand and the rest into
             // your graveyard."
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
@@ -1410,7 +1410,7 @@ pub fn professor_onyx() -> CardDefinition {
             },
             // −3: "Each opponent sacrifices a creature with the greatest
             // power among creatures that player controls."
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Sacrifice {
@@ -1428,7 +1428,7 @@ pub fn professor_onyx() -> CardDefinition {
             // Seven independent Punisher rounds: each opponent discards
             // when able (the punisher heuristic), and a decliner is
             // singled out via `PlayerRef::Triggerer` for the 3 loss.
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -8,
                 effect: Effect::Repeat {

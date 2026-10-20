@@ -1178,7 +1178,7 @@ pub fn chandra_ablaze() -> CardDefinition {
         },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
@@ -1197,7 +1197,7 @@ pub fn chandra_ablaze() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Seq(vec![
@@ -1212,7 +1212,7 @@ pub fn chandra_ablaze() -> CardDefinition {
                     },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::CastAnyOrderWithoutPaying {
@@ -1247,7 +1247,7 @@ pub fn nissa_revane() -> CardDefinition {
         },
         base_loyalty: 2,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Search {
@@ -1256,7 +1256,7 @@ pub fn nissa_revane() -> CardDefinition {
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::GainLife {
@@ -1269,7 +1269,7 @@ pub fn nissa_revane() -> CardDefinition {
                     ),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::SearchUpToN {
@@ -1297,7 +1297,7 @@ pub fn sorin_markov() -> CardDefinition {
         },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 2,
                 effect: Effect::Seq(vec![
@@ -1305,7 +1305,7 @@ pub fn sorin_markov() -> CardDefinition {
                     Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::SetLifeTotal {
@@ -1313,7 +1313,7 @@ pub fn sorin_markov() -> CardDefinition {
                     amount: Value::Const(10),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::ControlPlayerNextTurn { who: PlayerRef::Target(0) },

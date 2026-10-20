@@ -29240,6 +29240,11 @@ impl GameState {
             .get(ability_index)
             .cloned()
             .ok_or(GameError::AbilityIndexOutOfBounds)?;
+        if let Some(cond) = &ability.condition
+            && !self.evaluate_predicate(cond, &crate::game::effects::EffectContext::for_ability(card_id, p, None))
+        {
+            return Err(GameError::AbilityConditionNotMet);
+        }
 
         // CR 606.5 — a `-X` ability's X is chosen on activation. A
         // hand-playing seat that didn't send one picks it via a

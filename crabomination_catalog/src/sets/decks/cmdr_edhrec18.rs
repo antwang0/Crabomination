@@ -449,7 +449,7 @@ pub fn chandra_hopes_beacon() -> CardDefinition {
                 ]),
                 ..Default::default()
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![x_damage(0), x_damage(1)])) },

@@ -5334,6 +5334,11 @@ pub struct LoyaltyAbility {
     /// `Value::XFromCost`. `loyalty_cost` is ignored when set. — Kasmina.
     #[serde(default)]
     pub x_cost: bool,
+    /// CR 602.5b — "Activate only if …": checked as the ability is
+    /// activated, before any loyalty is paid (Jace, Reality Sculptor's 0 with
+    /// twenty-five loyalty among your Jaces).
+    #[serde(default)]
+    pub condition: Option<Predicate>,
 }
 
 /// The cards a `StaticEffect::GainKeywordsOfCards` reads.

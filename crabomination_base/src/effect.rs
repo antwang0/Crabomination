@@ -3273,7 +3273,8 @@ pub enum Duration {
     Permanent,
     /// "until this card is cast from exile" (Emrakul, the Exigent Doom's land
     /// grant): an activated-ability grant that `finalize_cast` strips when the
-    /// source card is next cast (CR 611.2b).
+    /// source card is next cast from exile (CR 611.2b) — not from any other
+    /// zone, which it can reach only by leaving exile uncast.
     UntilSourceCast,
     /// CR 708.8 — "until this creature is turned face down" (Vesuvan
     /// Shapeshifter's copy): ends as `Effect::TurnFaceDown` turns it, so the

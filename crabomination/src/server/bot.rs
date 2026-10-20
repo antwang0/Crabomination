@@ -22219,7 +22219,7 @@ mod tests {
             base_loyalty: 3,
             loyalty_abilities: vec![
                 // Highest loyalty, but needs a creature target (none exist).
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     x_cost: false,
                     loyalty_cost: 2,
                     effect: Effect::DealDamage {
@@ -22228,7 +22228,7 @@ mod tests {
                     },
                 },
                 // Lower loyalty, no target — the bot should fall through here.
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     x_cost: false,
                     loyalty_cost: 1,
                     effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -22433,7 +22433,7 @@ mod tests {
             static_abilities: vec![StaticAbility {
                 description: "Planeswalkers you control have +1: draw a card.",
                 effect: StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
-                    abilities: vec![LoyaltyAbility {
+                    abilities: vec![LoyaltyAbility { condition: None,
                         x_cost: false,
                         loyalty_cost: 1,
                         effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -30968,12 +30968,12 @@ mod stack_response_tests {
             card_types: vec![CardType::Planeswalker],
             base_loyalty: 1,
             loyalty_abilities: vec![
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     x_cost: false,
                     loyalty_cost: 1,
                     effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
                 },
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     x_cost: false,
                     loyalty_cost: -1,
                     effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
@@ -31014,12 +31014,12 @@ mod stack_response_tests {
             card_types: vec![CardType::Planeswalker],
             base_loyalty: 2,
             loyalty_abilities: vec![
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     x_cost: false,
                     loyalty_cost: 1,
                     effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
                 },
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     x_cost: false,
                     loyalty_cost: -2,
                     effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },

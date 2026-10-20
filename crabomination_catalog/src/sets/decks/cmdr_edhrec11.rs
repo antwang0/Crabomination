@@ -640,7 +640,16 @@ pub fn shared_summons() -> CardDefinition {
         "Shared Summons",
         cost(&[generic(3), g(), g()]),
         CardType::Instant,
-        Effect::SearchUpToN { who: PlayerRef::You, filter: R::Creature, to: ZoneDest::Hand(PlayerRef::You), count: Value::Const(2) },
+        // "with different names" — the second pick differs from the first.
+        Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::NameDiffersFromLastMoved),
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::Const(2),
+            },
+        ]),
     )
 }
 

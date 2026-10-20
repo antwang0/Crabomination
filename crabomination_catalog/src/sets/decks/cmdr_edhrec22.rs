@@ -387,16 +387,14 @@ pub fn jace_reality_sculptor() -> CardDefinition {
                 },
                 ..Default::default()
             },
+            // CR 602.5b — "activate only if", so it can't be activated under 25.
             LoyaltyAbility {
                 loyalty_cost: 0,
-                effect: Effect::If {
-                    cond: Predicate::ValueAtLeast(
-                        Value::CountersOn { what: Box::new(jaces), kind: CounterType::Loyalty },
-                        Value::Const(25),
-                    ),
-                    then: Box::new(Effect::ExileLibraryExceptBottom { who: PlayerRef::EachOpponent, keep: Value::ONE }),
-                    else_: Box::new(Effect::Noop),
-                },
+                effect: Effect::ExileLibraryExceptBottom { who: PlayerRef::EachOpponent, keep: Value::ONE },
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(jaces), kind: CounterType::Loyalty },
+                    Value::Const(25),
+                )),
                 ..Default::default()
             },
         ],

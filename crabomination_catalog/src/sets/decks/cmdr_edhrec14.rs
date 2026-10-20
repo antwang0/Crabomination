@@ -1945,7 +1945,7 @@ pub fn tamiyo_compleated_sage() -> CardDefinition {
                     ])),
                 },
             ),
-            crate::card::LoyaltyAbility {
+            crate::card::LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::Seq(vec![

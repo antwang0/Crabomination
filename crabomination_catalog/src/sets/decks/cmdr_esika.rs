@@ -925,7 +925,7 @@ pub fn liliana_heretical_healer() -> CardDefinition {
         3,
         vec![
             loyalty(2, Effect::Discard { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE, random: false }),
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::Move {

@@ -300,7 +300,7 @@ pub fn tezzeret_the_seeker() -> CardDefinition {
                 }) },
                 ..Default::default()
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: true,
                 loyalty_cost: 0,
                 effect: Effect::Search {

@@ -199,8 +199,9 @@ fn champion_of_the_path_beholds_and_burns() {
     assert_eq!((g.players[1].life, g.players[2].life), (13, 13), "7 to each opponent");
 }
 
-/// Jace, Reality Sculptor: +1 empowers a Jace token by Islands; the 0 does
-/// nothing short of 25 loyalty among your Jaces.
+/// Jace, Reality Sculptor: +1 empowers a Jace token by Islands; the 0 can't
+/// be activated short of 25 loyalty among your Jaces (CR 602.5b), and with
+/// 25 it exiles all but the bottom card of each opponent's library.
 #[test]
 fn jace_reality_sculptor_empowers_and_gates() {
     let mut g = pod(2);
@@ -219,8 +220,11 @@ fn jace_reality_sculptor_empowers_and_gates() {
         g2.add_card_to_library(1, catalog::island());
     }
     let jace = ready(&mut g2, 0, catalog::jace_reality_sculptor());
-    loyalty(&mut g2, jace, 2).expect("0");
-    assert_eq!(g2.players[1].library.len(), 5, "under 25 loyalty");
+    assert!(loyalty(&mut g2, jace, 2).is_err(), "under 25 loyalty");
+    assert_eq!(g2.players[1].library.len(), 5);
+    g2.battlefield_find_mut(jace).unwrap().counters.insert(CounterType::Loyalty, 25);
+    loyalty(&mut g2, jace, 2).expect("the refused attempt used no activation");
+    assert_eq!(g2.players[1].library.len(), 1, "all but the bottom card");
 }
 
 /// Zuko gains first strike from a noncreature spell.

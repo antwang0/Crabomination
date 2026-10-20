@@ -169,7 +169,7 @@ pub fn liliana_death_mage() -> CardDefinition {
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana], ..Default::default() },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::ApplyToTargets {
@@ -179,7 +179,7 @@ pub fn liliana_death_mage() -> CardDefinition {
                     effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Seq(vec![
@@ -190,7 +190,7 @@ pub fn liliana_death_mage() -> CardDefinition {
                     Effect::Destroy { what: Selector::Target(0) },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::LoseLife {

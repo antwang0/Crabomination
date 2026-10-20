@@ -564,7 +564,7 @@ pub fn dyfed_the_guiding_hand() -> CardDefinition {
         can_be_commander: true,
         loyalty_abilities: vec![
             LoyaltyAbility { loyalty_cost: 1, effect: make(Value::Const(2), powerstone()), ..Default::default() },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::CapTargetsAtX {

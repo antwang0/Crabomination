@@ -160,7 +160,7 @@ pub fn chandra_awakened_inferno() -> CardDefinition {
                         amount: Value::Const(3),
                     },
                 ),
-                LoyaltyAbility {
+                LoyaltyAbility { condition: None,
                     loyalty_cost: 0,
                     x_cost: true,
                     effect: Effect::Seq(vec![

@@ -186,6 +186,40 @@ fn emrakul_grants_a_land_two_colorless_until_cast_from_exile() {
     assert!(!l.tapped, "the cast trigger untapped the land");
 }
 
+/// CR 400.7 — Emrakul's land grant lasts "until this card is cast from
+/// exile": once it has left exile uncast, a cast from hand leaves the land its
+/// {T}: Add {C}{C}.
+#[test]
+fn emrakul_grant_outlives_a_cast_from_hand() {
+    let mut g = pod(4);
+    let land = ready(&mut g, 0, catalog::wastes());
+    let emrakul = g.add_card_to_hand(0, catalog::emrakul_the_exigent_doom());
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: emrakul,
+        ability_index: 0,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("hand ability");
+    drain_stack(&mut g);
+    let back = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::ExactObjects(vec![emrakul]),
+        to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::You),
+    };
+    g.resolve_effect(&back, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == emrakul), "back in hand, uncast");
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell { card_id: emrakul, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast from hand");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(emrakul).is_some());
+    assert_eq!(g.battlefield_find(land).unwrap().granted_activated_abilities.len(), 1, "the grant stays");
+}
+
 /// Mystic Reflection (CR 707.2, 614.12; rulings 2021-02-05): every creature in
 /// the next batch of entries enters as a copy of the chosen creature — both
 /// Raise the Alarm tokens become Grizzly Bears — and a later entry doesn't.

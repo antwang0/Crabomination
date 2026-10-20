@@ -620,7 +620,7 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
         },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 2,
                 effect: Effect::MayDo {
                     description: "Discard a card. If you do, draw a card.".into(),
@@ -638,7 +638,7 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -2,
                 effect: Effect::Exile {
                     what: target_filtered(
@@ -649,7 +649,7 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -8,
                 // "It gains haste. Return it to your hand at the beginning of
                 // the next end step."

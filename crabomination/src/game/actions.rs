@@ -13367,7 +13367,9 @@ impl GameState {
         from_hand: bool,
     ) {
         let mut card = card;
-        if !self.grants_until_cast.is_empty() {
+        // "until this card is cast FROM EXILE": a cast from anywhere else is a
+        // new object (CR 400.7) that never made the grant, which stays.
+        if !self.grants_until_cast.is_empty() && card.cast_from_exile {
             self.end_grants_until_cast(card.id);
         }
         // CR 406.3 — a card cast out of face-down exile is a face-up spell; a

@@ -405,7 +405,7 @@ pub fn liliana_deaths_majesty() -> CardDefinition {
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana], ..Default::default() },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     make(Value::ONE, zombie),
@@ -413,7 +413,7 @@ pub fn liliana_deaths_majesty() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -3,
                 effect: Effect::Seq(vec![
                     Effect::Move {
@@ -434,7 +434,7 @@ pub fn liliana_deaths_majesty() -> CardDefinition {
                 ]),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -7,
                 effect: Effect::Destroy {
                     what: Selector::EachPermanent(

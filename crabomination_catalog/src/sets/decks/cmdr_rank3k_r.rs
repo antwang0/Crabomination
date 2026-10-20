@@ -86,7 +86,8 @@ pub fn jiang_yanggu_alone() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::IsAttackingAlone,
+                    // "attacks a player alone" — not a planeswalker or battle.
+                    filter: R::IsAttackingAlone.and(R::IsAttackingOpponentPlayer),
                 },
             ),
             effect: Effect::Seq(vec![

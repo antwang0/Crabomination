@@ -134,7 +134,7 @@ pub fn ajani_unyielding() -> CardDefinition {
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani], ..Default::default() },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 2,
                 x_cost: false,
                 effect: Effect::RevealTopTakeMatchingToHand {
@@ -144,7 +144,7 @@ pub fn ajani_unyielding() -> CardDefinition {
                     distinct_powers: false,
                 },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -2,
                 x_cost: false,
                 effect: Effect::Seq(vec![
@@ -155,7 +155,7 @@ pub fn ajani_unyielding() -> CardDefinition {
                     Effect::Exile { what: Selector::Target(0) },
                 ]),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -9,
                 x_cost: false,
                 effect: Effect::Seq(vec![

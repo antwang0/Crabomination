@@ -1266,7 +1266,7 @@ the handoff.
   `EventKind`'s mask is full), Zevlor (copy-per-other-opponent next spell), Herald of Leshrac
   (cumulative upkeep paid by stealing a land), Defiler of Dreams (optional life-for-{U} cost),
   Leonardo da Vinci, Mirrormind
-  Crown; Jace, Reality Sculptor's "activate only if" (no `LoyaltyAbility` condition field).
+  Crown. (Jace, Reality Sculptor's "activate only if" FIXED 2026-10-20: `LoyaltyAbility.condition`.)
   Whtz and Maular are Rulebreakers (not Commander-legal) — never seat them.
 
 ## FIXED/OPEN 2026-10-12 (Commander run, `01NRsiVW`, cmdr_edhrec15) — 80 EDHREC seats from ranks 1001-1500's two-card gaps

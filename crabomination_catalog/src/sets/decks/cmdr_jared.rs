@@ -82,12 +82,12 @@ pub fn jared_carthalion() -> CardDefinition {
         base_loyalty: 5,
         can_be_commander: true,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 x_cost: false,
                 effect: mint(token("Kavu", WUBRG.to_vec(), CreatureType::Kavu, 3, 3, vec![Keyword::Trample])),
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -3,
                 x_cost: false,
                 effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ApplyToTargets {
@@ -101,7 +101,7 @@ pub fn jared_carthalion() -> CardDefinition {
                     }),
                 }) },
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -6,
                 x_cost: false,
                 effect: Effect::Seq(vec![

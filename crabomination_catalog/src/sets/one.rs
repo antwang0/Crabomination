@@ -6255,7 +6255,7 @@ pub fn jace_the_perfected_mind() -> CardDefinition {
                 ]),
                 ..Default::default()
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 x_cost: true,
                 effect: Effect::Mill {

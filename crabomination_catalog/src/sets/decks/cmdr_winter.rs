@@ -643,7 +643,7 @@ pub fn wrenn_and_seven() -> CardDefinition {
         },
         base_loyalty: 5,
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::RevealTopTakeMatchingRestToGraveyard {
                     who: PlayerRef::You,
@@ -652,14 +652,14 @@ pub fn wrenn_and_seven() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 0,
                 effect: Effect::PutLandsFromHandOntoBattlefieldTapped {
                     count: Value::HandSizeOf(PlayerRef::You),
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -3,
                 effect: make(
                     1,
@@ -675,7 +675,7 @@ pub fn wrenn_and_seven() -> CardDefinition {
                 ),
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -8,
                 effect: Effect::Seq(vec![
                     Effect::Move {

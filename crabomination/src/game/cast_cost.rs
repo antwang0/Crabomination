@@ -133,9 +133,9 @@ impl GameState {
 }
 
 impl GameState {
-    /// CR 611.2b — `source` was cast: each `Duration::UntilSourceCast` grant it
-    /// made ends (Emrakul, the Exigent Doom's "until this card is cast from
-    /// exile"; the card can only be cast from exile once it made one).
+    /// CR 611.2b — `source` was cast from exile: each `Duration::UntilSourceCast`
+    /// grant it made ends (Emrakul, the Exigent Doom's "until this card is cast
+    /// from exile"). `finalize_cast` asks only for a cast from exile.
     pub(crate) fn end_grants_until_cast(&mut self, source: crate::card::CardId) {
         let (ended, kept): (Vec<_>, Vec<_>) =
             std::mem::take(&mut self.grants_until_cast).into_iter().partition(|(_, s, _)| *s == source);

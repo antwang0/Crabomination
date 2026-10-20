@@ -160,7 +160,7 @@ pub fn quintorius_history_chaser() -> CardDefinition {
         can_be_commander: true,
         triggered_abilities: vec![left_your_graveyard(make_spirit())],
         loyalty_abilities: vec![
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: 1,
                 effect: Effect::MayDiscard {
                     description: "Discard a card to draw two, then mill one?".into(),
@@ -173,7 +173,7 @@ pub fn quintorius_history_chaser() -> CardDefinition {
                 },
                 x_cost: false,
             },
-            LoyaltyAbility {
+            LoyaltyAbility { condition: None,
                 loyalty_cost: -4,
                 effect: Effect::Seq(vec![
                     Effect::GrantKeyword { what: spirits_you_control(), keyword: Keyword::DoubleStrike, duration: Duration::EndOfTurn },
