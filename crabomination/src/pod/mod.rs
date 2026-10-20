@@ -27516,6 +27516,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VHAL_14_COMMANDERS,
             main: decks::VHAL_14_MAIN,
         },
+        // Seat 4511: Lae'zel, Vlaakith's Champion and Dungeon Delver's EDHREC average deck. `--pod-decks 4511`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Dungeon Delver (WU)",
+            commanders: decks::LAEZEL_9_COMMANDERS,
+            main: decks::LAEZEL_9_MAIN,
+        },
+        // Seat 4512: Livaan, Cultist of Tiamat and Criminal Past's EDHREC average deck. `--pod-decks 4512`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Criminal Past (BR)",
+            commanders: decks::LIVAAN_6_COMMANDERS,
+            main: decks::LIVAAN_6_MAIN,
+        },
+        // Seat 4513: Bruse Tarl, Boorish Herder and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4513`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Slurrk, All-Ingesting (WRG)",
+            commanders: decks::BRUSE_TARL_19_COMMANDERS,
+            main: decks::BRUSE_TARL_19_MAIN,
+        },
+        // Seat 4514: Rebbec, Architect of Ascension and The Prismatic Piper's EDHREC average deck. `--pod-decks 4514`.
+        PodDeck {
+            name: "Rebbec, Architect of Ascension and The Prismatic Piper (W)",
+            commanders: decks::REBBEC_7_COMMANDERS,
+            main: decks::REBBEC_7_MAIN,
+        },
+        // Seat 4515: Safana, Calimport Cutthroat and Inspiring Leader's EDHREC average deck. `--pod-decks 4515`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Inspiring Leader (WB)",
+            commanders: decks::SAFANA_19_COMMANDERS,
+            main: decks::SAFANA_19_MAIN,
+        },
+        // Seat 4516: Breeches, Brazen Plunderer and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 4516`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Gilanra, Caller of Wirewood (RG)",
+            commanders: decks::BREECHES_23_COMMANDERS,
+            main: decks::BREECHES_23_MAIN,
+        },
     ]
 }
 
@@ -33927,6 +33963,12 @@ mod tests {
             ("Akroma, Vision of Ixidor and Sidar Kondo of Jamuraa", &[0x1BB2]),
             ("Kamahl, Heart of Krosa and Sengir, the Dark Baron", &[0x1BB3]),
             ("Vhal, Candlekeep Researcher and Inspiring Leader", &[0x1BB4]),
+            ("Lae'zel, Vlaakith's Champion and Dungeon Delver", &[0x1BB5]),
+            ("Livaan, Cultist of Tiamat and Criminal Past", &[0x1BB6]),
+            ("Bruse Tarl, Boorish Herder and Slurrk, All-Ingesting", &[0x1BB7]),
+            ("Rebbec, Architect of Ascension and The Prismatic Piper", &[0x1BB8]),
+            ("Safana, Calimport Cutthroat and Inspiring Leader", &[0x1BB9]),
+            ("Breeches, Brazen Plunderer and Gilanra, Caller of Wirewood", &[0x1BBA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
