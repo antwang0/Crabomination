@@ -1011,3 +1011,30 @@ fn cr_106_6a_animal_attendant_counts_non_humans_only() {
         assert_eq!(g.battlefield_find(creature).unwrap().counter_count(CounterType::PlusOnePlusOne), expect);
     }
 }
+
+/// Enshrouding Mist untaps a renowned creature only.
+#[test]
+fn enshrouding_mist_untaps_only_a_renowned_creature() {
+    for renowned in [false, true] {
+        let mut g = pod(2);
+        let hierarch = g.add_card_to_battlefield(0, catalog::honored_hierarch());
+        let c = g.battlefield_find_mut(hierarch).unwrap();
+        c.tapped = true;
+        c.renowned = renowned;
+        let mist = g.add_card_to_hand(0, catalog::enshrouding_mist());
+        cast(&mut g, mist, Some(Target::Permanent(hierarch)));
+        assert_eq!(g.battlefield_find(hierarch).unwrap().tapped, !renowned);
+    }
+}
+
+/// CR 702.62a — Cyclical Evolution exiles itself suspended as it resolves.
+#[test]
+fn cr_702_62a_cyclical_evolution_suspends_itself() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let evo = g.add_card_to_hand(0, catalog::cyclical_evolution());
+    cast(&mut g, evo, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (5, 5));
+    let exiled = g.exile.iter().find(|c| c.id == evo).expect("exiled");
+    assert_eq!(exiled.counter_count(CounterType::Time), 3);
+}

@@ -1414,3 +1414,51 @@ pub fn animal_attendant() -> CardDefinition {
         ..creature("Animal Attendant", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Citizen], 2, 2)
     }
 }
+
+/// Enshrouding Mist — {W} instant. Target creature gets +1/+1 until end of
+/// turn; prevent all damage that would be dealt to it this turn; if it's
+/// renowned, untap it.
+pub fn enshrouding_mist() -> CardDefinition {
+    spell(
+        "Enshrouding Mist",
+        cost(&[w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PreventAllDamageThisTurn { target: Selector::Target(0), redirect_to: None },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsRenowned },
+                then: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Cyclical Evolution — {3}{G}{G} sorcery. Target creature gets +3/+3 until
+/// end of turn; exile Cyclical Evolution with three time counters on it.
+/// Suspend 3—{2}{G}.
+pub fn cyclical_evolution() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(3, cost(&[generic(2), g()]))],
+        ..spell(
+            "Cyclical Evolution",
+            cost(&[generic(3), g(), g()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::ExileSelfSuspended,
+            ]),
+        )
+    }
+}
