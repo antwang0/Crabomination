@@ -28266,6 +28266,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALORA_17_COMMANDERS,
             main: decks::ALORA_17_MAIN,
         },
+        // Seat 4636: Armix, Filigree Thrasher and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 4636`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Keleth, Sunmane Familiar (WB)",
+            commanders: decks::ARMIX_19_COMMANDERS,
+            main: decks::ARMIX_19_MAIN,
+        },
+        // Seat 4637: Abdel Adrian, Gorion's Ward and Flaming Fist's EDHREC average deck. `--pod-decks 4637`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Flaming Fist (W)",
+            commanders: decks::ABDEL_ADRIAN_11_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_11_MAIN,
+        },
+        // Seat 4638: Alharu, Solemn Ritualist and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 4638`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Falthis, Shadowcat Familiar (WB)",
+            commanders: decks::ALHARU_24_COMMANDERS,
+            main: decks::ALHARU_24_MAIN,
+        },
+        // Seat 4639: Ghost of Ramirez DePietro and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4639`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Radiant, Serra Archangel (WU)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_23_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_23_MAIN,
+        },
+        // Seat 4640: Numa, Joraga Chieftain and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4640`.
+        PodDeck {
+            name: "Numa, Joraga Chieftain and Tormod, the Desecrator (BG)",
+            commanders: decks::NUMA_9_COMMANDERS,
+            main: decks::NUMA_9_MAIN,
+        },
+        // Seat 4641: The Fugitive Doctor and Ryan Sinclair's EDHREC average deck. `--pod-decks 4641`.
+        PodDeck {
+            name: "The Fugitive Doctor and Ryan Sinclair (RG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_15_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_15_MAIN,
+        },
     ]
 }
 
@@ -34802,6 +34838,12 @@ mod tests {
             ("Ellyn Harbreeze, Busybody and Hardy Outlander", &[0x1C2F]),
             ("The Tenth Doctor and Ian Chesterton", &[0x1C30]),
             ("Alora, Merry Thief and Veteran Soldier", &[0x1C31]),
+            ("Armix, Filigree Thrasher and Keleth, Sunmane Familiar", &[0x1C32]),
+            ("Abdel Adrian, Gorion's Ward and Flaming Fist", &[0x1C33]),
+            ("Alharu, Solemn Ritualist and Falthis, Shadowcat Familiar", &[0x1C34]),
+            ("Ghost of Ramirez DePietro and Radiant, Serra Archangel", &[0x1C35]),
+            ("Numa, Joraga Chieftain and Tormod, the Desecrator", &[0x1C36]),
+            ("The Fugitive Doctor and Ryan Sinclair", &[0x1C37]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
