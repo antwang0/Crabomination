@@ -464,6 +464,18 @@ marker only at a word start), and **104 are real**: the audit's output is the
 list, each doc names its gap. One was a body bug and is fixed (Expressive
 Iteration bottomed an unseen card). Whole catalog: 841 → 795 rows.
 
+## Commander additions of session `01NkAE5B` (2026-10-20) — the approximations named
+
+Open 🟡 rows (each card plays; the clause named is approximated):
+
+| Card | Gap |
+| --- | --- |
+| 🟡 Cheering Fanatic | "Choose a card name" offers only the nonland cards in its controller's hand (the names its discount can pay off for them); an arbitrary name — an opponent's card — can't be chosen. |
+| 🟡 Animate Artifact | "As long as enchanted artifact isn't a creature" reads the host's **printed** card; an artifact animated by another effect (a crewed Vehicle) still gets MV/MV (the CR 613.8 dependency is not modeled). |
+| 🟡 Nephalia Academy | The "may reveal" is always taken, and no reveal event is emitted. |
+| 🟡 Evolving Door | Counts the sacrificed creature's **printed** colours (`sacrificed_colors`), not its last-known computed ones. |
+| 🟡 Sphere of Annihilation | Exiles the creatures, planeswalkers and graveyard cards one at a time, then itself — not simultaneously. |
+
 ## Commander additions of session `015BCEt5` (2026-09-26) — the approximations named
 
 `decks::cmdr_top1000` and `decks::cmdr_legends` add 27 COMMANDER_BACKLOG cards

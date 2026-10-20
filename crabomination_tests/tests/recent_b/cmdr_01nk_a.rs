@@ -556,3 +556,51 @@ fn evolving_door_climbs_one_color() {
     assert!(g.battlefield_find(bears).is_none(), "sacrificed");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Creeping Trailblazer"), "the two-colour creature, cast");
 }
+
+/// Stormfront Riders returning itself (the only creature you control) still
+/// sees its own return and makes a Soldier.
+#[test]
+fn stormfront_riders_sees_its_own_return() {
+    let mut g = pod(2);
+    let riders = g.add_card_to_hand(0, catalog::stormfront_riders());
+    cast(&mut g, riders, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == riders), "it bounced itself");
+    let soldiers = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 1);
+}
+
+/// Kaslem's Stonetree drops a land from the top six onto the battlefield
+/// tapped.
+#[test]
+fn kaslems_stonetree_puts_a_land_from_the_top_six() {
+    let mut g = pod(2);
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let st = g.add_card_to_hand(0, catalog::kaslems_stonetree());
+    cast(&mut g, st, None);
+    let lands: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).collect();
+    assert_eq!(lands.len(), lands_before + 1);
+    assert!(lands.iter().all(|c| c.tapped));
+}
+
+/// Fraying Line: a player who doesn't pay at their upkeep loses every creature
+/// without a rope counter, and the Line goes too.
+#[test]
+fn fraying_line_exiles_unroped_creatures_when_unpaid() {
+    let mut g = pod(2);
+    let roped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let line = g.add_card_to_hand(0, catalog::fraying_line());
+    cast(&mut g, line, Some(Target::Permanent(roped)));
+    assert_eq!(g.battlefield_find(roped).unwrap().counter_count(CounterType::Rope), 1);
+    let loose = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Seat 1's upkeep with no mana to pay.
+    g.players[1].mana_pool = Default::default();
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == loose), "unroped, exiled");
+    assert!(g.exile.iter().any(|c| c.id == line));
+    assert_eq!(g.battlefield_find(roped).map(|c| c.counter_count(CounterType::Rope)), Some(0), "kept, rope removed");
+}

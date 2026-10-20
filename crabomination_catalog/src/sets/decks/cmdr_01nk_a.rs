@@ -155,9 +155,7 @@ pub fn timeline_inquiry() -> CardDefinition {
 /// Stormfront Riders — {4}{W} 4/3 flying Human Soldier. When it enters,
 /// return two creatures you control to their owner's hand. Whenever a
 /// creature is returned to your hand from the battlefield, create a 1/1
-/// white Soldier. (A Riders returning itself is seen only while another
-/// copy is on the battlefield — leaves-the-battlefield look-back for this
-/// event kind is not modeled.)
+/// white Soldier — its own return included (CR 603.10a).
 pub fn stormfront_riders() -> CardDefinition {
     let soldier = TokenDefinition {
         name: "Soldier".into(),
@@ -888,6 +886,89 @@ pub fn evolving_door() -> CardDefinition {
             ]),
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Kaslem's Stonetree // Kaslem's Strider — {2}{G} artifact. When it enters,
+/// look at the top six cards of your library; you may put a land card from
+/// among them onto the battlefield tapped, the rest on the bottom in a random
+/// order. Craft with Cave {5}{G}. Back: a 5/5 Golem artifact creature.
+pub fn kaslems_stonetree() -> CardDefinition {
+    let strider = CardDefinition {
+        name: "Kaslem's Strider",
+        color_indicator: vec![Color::Green],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kaslem's Stonetree",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::LookTopPutMatchingOntoBattlefield {
+            count: Value::Const(6),
+            filter: R::Land,
+            then: None,
+            max: Some(1),
+            tapped: true,
+            exile_rest: false,
+            rest_to_graveyard: false,
+            mandatory: false,
+        })],
+        activated_abilities: vec![crate::effect::shortcut::craft(cost(&[generic(5), g()]), R::HasLandType(LandType::Cave), 1)],
+        back_face: Some(Box::new(strider)),
+        ..Default::default()
+    }
+}
+
+/// Fraying Line — {4} artifact. When it enters, put a rope counter on target
+/// creature you control. At the beginning of each player's upkeep, that
+/// player may pay {2}; if they do, they put a rope counter on a creature they
+/// control. Otherwise, exile this artifact and each creature without a rope
+/// counter on it, then remove all rope counters from all creatures.
+pub fn fraying_line() -> CardDefinition {
+    let roped = || R::WithCounter(CounterType::Rope);
+    CardDefinition {
+        name: "Fraying Line",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::Rope,
+                amount: Value::ONE,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+                effect: Effect::MayPayBy {
+                    who: PlayerRef::ActivePlayer,
+                    description: "Pay {2} to put a rope counter on a creature you control?".into(),
+                    mana_cost: cost(&[generic(2)]),
+                    body: Box::new(Effect::ChooseOneAmong {
+                        what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::AddCounter {
+                            what: Selector::SeparatedPile { chosen: true },
+                            kind: CounterType::Rope,
+                            amount: Value::ONE,
+                        }),
+                        other: Box::new(Effect::Noop),
+                    }),
+                    else_: Some(Box::new(Effect::Seq(vec![
+                        Effect::Exile { what: Selector::This },
+                        Effect::Exile { what: Selector::EachPermanent(R::Creature.and(roped().negate())) },
+                        Effect::RemoveCounter {
+                            what: Selector::EachPermanent(R::Creature.and(roped())),
+                            kind: CounterType::Rope,
+                            amount: Value::Const(i32::MAX),
+                        },
+                    ]))),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

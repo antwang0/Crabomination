@@ -18381,6 +18381,8 @@ static DECKS: &[Factory] = &[
     super::decks::throne_of_makindi,
     super::decks::cheering_fanatic,
     super::decks::evolving_door,
+    super::decks::kaslems_stonetree,
+    super::decks::fraying_line,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
