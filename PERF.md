@@ -3158,6 +3158,12 @@ pods (release)   seed 9268, 1,000 games at each of 2..8 seats: 7,000 decided, ev
                  TDFC back faces stopped being castable for free), 64.23 -> 68.47; the curve above is
                  the reference now.
 pods (debug)     seeds 9264-9269 over seats 4400-4412 at 4/6 seats: 222 games, all decided
+sweep (debug)    seed 9270, every deck at 4 and 6 seats: 1,839 games, 0 panics, 2 board caps
+after the persist/undying-as-trigger fix (`06e734205`), release:
+--bench          196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; thread_determinism ok;
+                 253.99 games/s; peak_rss_mib 42.1. cube/sos/sealed at 9256: 2,400 / 1,500 / 3,600, 0 undecided
+pods (release)   seed 9271, 500 at each of 2..8 seats: 3,500 decided; 19.38 / 32.67 / 45.74 / 58.50 /
+                 68.69 / 82.62 / 96.35
 ```
 
 ### 2026-10-19 evening (Commander run, `01GwrDKP`) — guardrail; 44 cards, 17 seats, nine primitives, six engine fixes

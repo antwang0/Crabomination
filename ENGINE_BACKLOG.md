@@ -207,8 +207,11 @@ the handoff.
 - **Fixes:** CR 606.1 — a loyalty ability went on the stack without `TriggerPush::activated`, so "copy that
   ability" and "counter target activated ability" could not see it (Chandra's Regulator found it); CR 400.7 —
   `leave_battlefield_state` now clears `modes_chosen`, so a blinked "choose one that hasn't been chosen"
-  permanent starts a fresh menu (Sol'Kanar's own donation). Doc: `Effect::MayPay` auto-taps (the pool-only note
-  was stale).
+  permanent starts a fresh menu (Sol'Kanar's own donation); CR 702.79a / 702.93a — persist and undying returned
+  the creature *inline* in the death funnels, so a mandatory loop spun inside one SBA sweep while its death
+  triggers piled up unresolved (sweep seed 931016: Butcher Ghoul + Solemnity + M.O.D.O.K. capped at 8,192
+  Bastion of Remembrance triggers); the return is `Effect::PersistUndyingReturn` on the stack now, and
+  Hushbringer-style statics stop it. Doc: `Effect::MayPay` auto-taps (the pool-only note was stale).
 - **OPEN:** Panglacial Wurm is offered only by the generic search arm (`Effect::Search` / `SearchPickedBy` /
   `SearchZones`) and never to a prompting seat; the other eight search resolvers each mark the search
   themselves (`searched_library_this_turn = true` × 9) — one `note_library_searched` helper would make the
