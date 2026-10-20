@@ -18352,6 +18352,11 @@ static DECKS: &[Factory] = &[
     super::decks::scheming_fence,
     // cmdr_01nk_a (session 01NkAE5B)
     super::decks::blossombind,
+    super::decks::purity,
+    super::decks::creeping_trailblazer,
+    super::decks::mantle_of_leadership,
+    super::decks::timeline_inquiry,
+    super::decks::stormfront_riders,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
