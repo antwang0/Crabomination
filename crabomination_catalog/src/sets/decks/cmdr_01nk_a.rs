@@ -716,3 +716,18 @@ pub fn storm_of_memories() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cast Through Time — {4}{U}{U}{U} enchantment. Instant and sorcery spells
+/// you control have rebound.
+pub fn cast_through_time() -> CardDefinition {
+    CardDefinition {
+        name: "Cast Through Time",
+        cost: cost(&[generic(4), u(), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you control have rebound.",
+            effect: StaticEffect::YourInstantsAndSorceriesHaveRebound,
+        }],
+        ..Default::default()
+    }
+}

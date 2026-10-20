@@ -440,3 +440,15 @@ fn storm_of_memories_recasts_from_the_graveyard() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "exiled after the free cast");
     assert_eq!((g.players[0].life, g.players[1].life), (life, life - 3), "the Bolt hit an opponent");
 }
+
+/// CR 702.88 — under Cast Through Time an instant cast from hand is exiled as
+/// it resolves (rebound) instead of going to the graveyard.
+#[test]
+fn cr_702_88_cast_through_time_grants_rebound() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::cast_through_time());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == bolt), "rebounded into exile");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bolt));
+}
