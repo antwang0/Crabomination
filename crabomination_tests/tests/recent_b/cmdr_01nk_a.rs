@@ -409,3 +409,34 @@ fn visions_of_dread_takes_an_opponents_creature_card() {
     assert_eq!(g.battlefield_find(dead).map(|c| c.controller), Some(0));
     assert_eq!(g.players[1].graveyard.len(), 1, "the untargeted opponent keeps theirs");
 }
+
+/// Uncage the Menagerie tutors X creature cards of mana value X, all with
+/// different names.
+#[test]
+fn uncage_the_menagerie_fetches_distinct_names_at_x() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::impelled_giant());
+    g.add_card_to_library(0, catalog::creeping_trailblazer());
+    let u = g.add_card_to_hand(0, catalog::uncage_the_menagerie());
+    let before = g.players[0].hand.len();
+    cast_with(&mut g, u, None, vec![], Some(2), None);
+    let got: Vec<_> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert_eq!(got.len(), before - 1 + 2, "{got:?}");
+    assert!(got.contains(&"Grizzly Bears") && got.contains(&"Creeping Trailblazer"), "one Bears, not two: {got:?}");
+}
+
+/// Storm of Memories casts a random cheap instant from the graveyard for free,
+/// then exiles it.
+#[test]
+fn storm_of_memories_recasts_from_the_graveyard() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let som = g.add_card_to_hand(0, catalog::storm_of_memories());
+    let life = g.players[1].life;
+    cast(&mut g, som, None);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled after the free cast");
+    assert_eq!((g.players[0].life, g.players[1].life), (life, life - 3), "the Bolt hit an opponent");
+}

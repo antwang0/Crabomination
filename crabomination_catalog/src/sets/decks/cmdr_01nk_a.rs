@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
     LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement as R, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Zone,
 };
 use crate::effect::shortcut::{blocks, discard, draw, emerge, etb, on_attack, on_cast, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest, ZoneRef};
@@ -663,6 +663,56 @@ pub fn visions_of_dread() -> CardDefinition {
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             }),
         },
+        ..Default::default()
+    }
+}
+
+/// Uncage the Menagerie — {X}{G}{G} sorcery. Search your library for up to X
+/// creature cards with different names that each have mana value X, reveal
+/// them, put them into your hand, then shuffle.
+pub fn uncage_the_menagerie() -> CardDefinition {
+    CardDefinition {
+        name: "Uncage the Menagerie",
+        cost: cost(&[x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::ManaValueExactlyXFromCost).and(R::NameDiffersFromLastMoved),
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::XFromCost,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Storm of Memories — {2}{R}{R}{R} sorcery, storm. Exile an instant or
+/// sorcery card with mana value 3 or less from your graveyard at random; you
+/// may cast it without paying its mana cost, and it's exiled instead of going
+/// to a graveyard.
+pub fn storm_of_memories() -> CardDefinition {
+    CardDefinition {
+        name: "Storm of Memories",
+        cost: cost(&[generic(2), r(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::Seq(vec![
+            Effect::ExileRandomFromGraveyardWithSource {
+                who: PlayerRef::You,
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::ManaValueAtMost(3)),
+            },
+            // The free cast asks its own "may".
+            Effect::CastWithoutPayingImmediate {
+                what: Selector::CardExiledWithSource,
+                source_zone: Zone::Exile,
+                exile_after: true,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+        ]),
         ..Default::default()
     }
 }
