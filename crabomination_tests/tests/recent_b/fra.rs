@@ -9,6 +9,8 @@ use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnS
 use crabomination::game::*;
 use crabomination::mana::Color;
 
+type Factory = fn() -> CardDefinition;
+
 fn pod(n: usize) -> GameState {
     let mut g = multi_player_game(n);
     g.active_player_idx = 0;
@@ -125,7 +127,8 @@ fn empowering_spells_resolve_both_halves() {
         g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne) == 1
             && g.permanent_has_keyword(b, &Keyword::Vigilance)
     };
-    let rows: [(fn() -> CardDefinition, bool, u32, fn(&GameState, CardId) -> bool); 3] = [
+    type Check = fn(&GameState, CardId) -> bool;
+    let rows: [(Factory, bool, u32, Check); 3] = [
         (catalog::academic_ascent, true, 2, bear_up),
         (catalog::no_admittance, false, 1, face),
         (catalog::tams_resistance, true, 4, counter),
@@ -147,7 +150,7 @@ fn empowering_spells_resolve_both_halves() {
 #[test]
 fn color_hosers_take_only_their_colors() {
     // (card, a legal creature, an illegal one, exiled rather than dead)
-    let rows: [(fn() -> CardDefinition, fn() -> CardDefinition, fn() -> CardDefinition, bool); 3] = [
+    let rows: [(Factory, Factory, Factory, bool); 3] = [
         (catalog::refute_destiny, catalog::grizzly_bears, catalog::hill_giant, true),
         (catalog::terminal_criticism, catalog::hill_giant, catalog::grizzly_bears, false),
         (catalog::essence_burn, catalog::grizzly_bears, catalog::hill_giant, true),
