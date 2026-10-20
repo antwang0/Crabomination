@@ -374,6 +374,7 @@ mod cmdr_017u_a;
 mod cmdr_01gw_a;
 mod cmdr_01dd_a;
 mod cmdr_01dd_b;
+mod cmdr_01nk_a;
 mod cmdr_01e4_a;
 mod cmdr_01fn_a;
 mod fra;

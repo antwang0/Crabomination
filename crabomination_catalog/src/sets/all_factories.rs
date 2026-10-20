@@ -18350,6 +18350,8 @@ static DECKS: &[Factory] = &[
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,
+    // cmdr_01nk_a (session 01NkAE5B)
+    super::decks::blossombind,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
