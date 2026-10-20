@@ -2974,6 +2974,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Move { .. } => "Move permanent",
         Effect::DealDamage { .. } => "Deal damage",
         Effect::Fight { .. } => "Fight",
+        Effect::DealDamageToEachOther { .. } => "Deal damage",
         Effect::Draw { .. } => "Draw cards",
         Effect::Discard { .. } => "Discard",
         Effect::Destroy { .. } => "Destroy permanent",

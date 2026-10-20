@@ -9649,6 +9649,30 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 120.3 / 704.3 — both hits are read up front and land before
+            // state-based actions look at either creature.
+            Effect::DealDamageToEachOther { first, second, first_amount, second_amount } => {
+                let pick = |g: &Self, sel: &Selector| {
+                    g.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                };
+                let (Some(a), Some(b)) = (pick(self, first), pick(self, second)) else {
+                    return Ok(());
+                };
+                let a_amount = self.evaluate_value(first_amount, ctx);
+                let b_amount = self.evaluate_value(second_amount, ctx);
+                if a_amount > 0 {
+                    self.deal_damage_to_from(EntityRef::Permanent(b), a_amount as u32, Some(a), events);
+                }
+                if b_amount > 0 {
+                    self.deal_damage_to_from(EntityRef::Permanent(a), b_amount as u32, Some(b), events);
+                }
+                self.check_state_based_actions_mid_resolution(events);
+                Ok(())
+            }
+
             // CR 120.3 — each dealer is the source of its own hit.
             Effect::EachDealsDamage { dealers, to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;

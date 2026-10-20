@@ -1798,6 +1798,12 @@ impl Effect {
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
+            Effect::DealDamageToEachOther { first, second, first_amount, second_amount } => {
+                sel_has_target(first)
+                    || sel_has_target(second)
+                    || value_has_target(first_amount)
+                    || value_has_target(second_amount)
+            }
             Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_has_target(target),
             Effect::CreateTokensToFightEach { .. } => false,
             Effect::DealDamageEqualToPower { source, target } => {
@@ -2870,6 +2876,7 @@ impl Effect {
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
+            Effect::DealDamageToEachOther { first, second, .. } => sel_filter(first).or_else(|| sel_filter(second)),
             Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_filter(target),
             // Either slot can be the target: Feral Contest picks the attacker,
             // Turntimber Basilisk's landfall picks the lured blocker.
@@ -3747,6 +3754,7 @@ impl Effect {
                 | Effect::ExileUntilSourceLeaves { .. }
                 | Effect::DealDamage { .. }
                 | Effect::Fight { .. }
+                | Effect::DealDamageToEachOther { .. }
                 | Effect::TapMatchingDealPowerAndTakeDivided { .. }
                 | Effect::SacrificePermanent { .. }
                 | Effect::GainControl { .. }
@@ -4357,7 +4365,9 @@ impl Effect {
             Effect::MoveSpellToZone { .. } => "move target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
-            Effect::DealDamageFrom { .. } | Effect::EachDealsDamage { .. } => "deal damage".into(),
+            Effect::DealDamageFrom { .. } | Effect::EachDealsDamage { .. } | Effect::DealDamageToEachOther { .. } => {
+                "deal damage".into()
+            }
             Effect::DealDamageEqualToPowerToEach { .. }
             | Effect::EachDealsDamageEqualToPower { .. } => {
                 "deal damage equal to power to each".into()
@@ -4888,6 +4898,7 @@ impl Effect {
             | Effect::ExchangeControlChoosing { .. }
             | Effect::DealDamageEqualToPowerToEach { .. }
             | Effect::TapMatchingDealPowerAndTakeDivided { .. }
+            | Effect::DealDamageToEachOther { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -5473,6 +5484,9 @@ impl Effect {
                 Effect::PutIntoLibraryBeneathTop { what, .. } => sel_find(what, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
+                }
+                Effect::DealDamageToEachOther { first, second, .. } => {
+                    sel_find(first, slot).or_else(|| sel_find(second, slot))
                 }
                 Effect::SwitchBlockers { first, second } => sel_find(first, slot).or_else(|| sel_find(second, slot)),
                 Effect::TapMatchingDealPowerAndTakeDivided { target, .. } => sel_find(target, slot),

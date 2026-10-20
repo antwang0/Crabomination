@@ -5561,6 +5561,13 @@ pub enum Effect {
     /// the Masterless: "each Dragon you control deals 1 damage to that
     /// creature." The filtered sibling of `EachControlledCreatureDealsDamage`.
     EachDealsDamage { dealers: Selector, to: Selector, amount: Value },
+    /// `first` and `second` each deal damage to the other at once — `first`
+    /// deals `first_amount`, `second` deals `second_amount`, both read before
+    /// either hit lands, and state-based actions wait for both (CR 120.3,
+    /// 704.3). Not a fight (CR 701.14): Grim Contest's "each of those
+    /// creatures deals damage equal to its toughness to the other". No-ops
+    /// when either side resolves to no permanent.
+    DealDamageToEachOther { first: Selector, second: Selector, first_amount: Value, second_amount: Value },
     /// CR 701.12 — Exchange control of the two permanents the selectors
     /// resolve to (one each). A permanent control swap (Vedalken Plotter,
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent
