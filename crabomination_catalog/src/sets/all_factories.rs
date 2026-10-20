@@ -18329,6 +18329,7 @@ static DECKS: &[Factory] = &[
     super::decks::narset_transcendent,
     super::decks::elite_arcanist,
     super::decks::minion_reflector,
+    super::decks::phyrexian_devourer,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

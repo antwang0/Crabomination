@@ -1012,3 +1012,27 @@ pub fn minion_reflector() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Phyrexian Devourer — {6} 1/1 artifact creature — Phyrexian Construct.
+/// When its power is 7 or greater, sacrifice it (CR 603.8). Exile the top
+/// card of your library: put X +1/+1 counters on it, where X is the exiled
+/// card's mana value.
+pub fn phyrexian_devourer() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        state_trigger: Some(crate::card::StateTriggeredAbility {
+            condition: Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::This)), Value::Const(7)),
+            effect: Effect::SacrificeSource,
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            exile_top_cost: 1,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ExiledForCostManaValue,
+            },
+            ..Default::default()
+        }],
+        ..creature("Phyrexian Devourer", cost(&[generic(6)]), vec![CreatureType::Phyrexian, CreatureType::Construct], 1, 1)
+    }
+}

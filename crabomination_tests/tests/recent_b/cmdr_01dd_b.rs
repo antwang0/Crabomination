@@ -750,3 +750,19 @@ fn minion_reflector_copies_an_entering_creature() {
     let copies = g.battlefield.iter().filter(|c| c.definition.name == "Timber Wolves").count();
     assert_eq!(copies, 1, "the copy is sacrificed at the end step");
 }
+
+/// CR 603.8 — Phyrexian Devourer grows by the exiled card's mana value and is
+/// sacrificed once its power reaches 7.
+#[test]
+fn cr_603_8_phyrexian_devourer_grows_then_sacrifices_itself() {
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_library(0, catalog::lightning_bolt()); // mana value 1
+    g.add_card_to_library(0, catalog::apocalypse_demon()); // mana value 6
+    let devourer = g.add_card_to_battlefield(0, catalog::phyrexian_devourer());
+    activate(&mut g, devourer, 0, None).expect("exile the Bolt");
+    assert_eq!(pt(&g, devourer), (2, 2));
+    activate(&mut g, devourer, 0, None).expect("exile the Demon");
+    assert!(g.battlefield_find(devourer).is_none(), "power 8: sacrificed");
+}
