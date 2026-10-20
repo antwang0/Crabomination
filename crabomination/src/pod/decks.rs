@@ -129387,3 +129387,141 @@ pub const BREECHES_24_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const SHADOWHEART_14_COMMANDERS: &[CardFactory] = &[shadowheart_dark_justiciar, hardy_outlander];
+
+/// **Shadowheart, Dark Justiciar and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 14 Forests + 10 Swamps = 98.
+/// Shadowheart, Dark Justiciar and Hardy Outlander (EDHREC, fetched 2026-10-20).
+pub const SHADOWHEART_14_MAIN: &[CardFactory] = &[
+    arcane_signet, avacyns_collar, blackblade_reforged, bladed_bracers, haunted_cloak,
+    short_bow, sol_ring, swiftfoot_boots, sword_of_vengeance, tarrians_soulcleaver,
+    true_faith_censer, command_tower, deathcap_glade, evolving_wilds, llanowar_wastes,
+    overgrown_tomb, reliquary_tower, rogues_passage, undergrowth_stadium, vernal_fen,
+    viridescent_bog, woodland_cemetery, ancient_bronze_dragon, birds_of_paradise, blood_artist,
+    boreal_druid, copperhorn_scout, craterhoof_behemoth, daemogoth_woe_eater,
+    dionus_elvish_archdruid, disciple_of_freyalise, dwynen_gilt_leaf_daen, elves_of_deep_shadow,
+    elvish_archdruid, elvish_mystic, fyndhorn_elves, ghalta_primal_hunger, hunted_bonebrute,
+    kalakscion_hunger_tyrant, lathril_blade_of_the_elves, llanowar_elves, lupine_prototype,
+    poison_tip_archer, psychosis_crawler, pugnacious_hammerskull, reclamation_sage,
+    rotting_regisaur, sakura_tribe_elder, selvala_heart_of_the_wilds, shakedown_heavy,
+    yargle_and_multani, yargle_glutton_of_urborg, bastion_of_remembrance, black_market,
+    phyrexian_arena, pride_of_the_perfect, unnatural_growth, wild_growth, abrupt_decay,
+    assassins_trophy, beast_within, heroic_intervention, putrefy, revitalizing_repast,
+    supernatural_stamina, beseech_the_queen, cultivate, farseek, kodamas_reach, natures_lore,
+    overwhelming_stampede, rampant_growth, season_of_gathering, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const FALTHIS_21_COMMANDERS: &[CardFactory] = &[falthis_shadowcat_familiar, radiant_serra_archangel];
+
+/// **Falthis, Shadowcat Familiar and Radiant, Serra Archangel**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 18 Plains + 10 Swamps = 98.
+/// Falthis, Shadowcat Familiar and Radiant, Serra Archangel (EDHREC, fetched 2026-10-20).
+pub const FALTHIS_21_MAIN: &[CardFactory] = &[
+    arcane_signet, bladed_bracers, everflowing_chalice, hedron_archive, leyline_axe,
+    orzhov_signet, pearl_medallion, sol_ring, wayfarers_bauble, wedding_ring, bojuka_bog,
+    brightclimb_pathway, command_tower, goldmire_bridge, isolated_chapel, orzhov_basilica,
+    rogues_passage, seraph_sanctuary, shineshadow_snarl, temple_of_silence,
+    invasion_of_dominaria, angel_of_condemnation, angel_of_destiny, angel_of_invention,
+    angel_of_the_ruins, angelic_arbiter, angelic_field_marshal, angelic_guardian,
+    dauthi_trapper, exemplar_of_light, firja_judge_of_valor, giada_font_of_hope,
+    guardian_of_ghirapur, healers_hawk, herald_of_war, krav_the_unredeemed,
+    liesa_shroud_of_dusk, lyra_archangel_of_dawn, magus_of_the_disk, selenia_the_cursed_heart,
+    sephara_skys_blade, seraph_of_dawn, seraph_of_the_scales, serra_angel,
+    sustainer_of_the_realm, vanguard_seraph, windshaper_planetar, youthful_valkyrie,
+    agent_of_the_iron_throne, angelic_destiny, elspeth_conquers_death, firjas_retribution,
+    glasswing_grace, meticulous_excavation, rampage_of_the_valkyries, the_creation_of_avacyn,
+    uneasy_alliance, angelic_ascension, crib_swap, destroy_evil, mortify, murder, path_to_exile,
+    swords_to_plowshares, unexpectedly_absent, village_rites, gift_of_estates, lingering_souls,
+    sevinnes_reclamation, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LUDEVIC_13_COMMANDERS: &[CardFactory] = &[ludevic_necro_alchemist, miara_thorn_of_the_glade];
+
+/// **Ludevic, Necro-Alchemist and Miara, Thorn of the Glade**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 5 Islands + 3 Mountains + 5 Swamps = 98.
+/// Ludevic, Necro-Alchemist and Miara, Thorn of the Glade (EDHREC, fetched 2026-10-20).
+pub const LUDEVIC_13_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cauldron_of_souls, icon_of_ancestry, lightning_greaves,
+    sol_ring, swiftfoot_boots, talisman_of_creativity, talisman_of_dominance, thought_vessel,
+    barren_moor, blood_crypt, command_tower, crumbling_necropolis, dragonskull_summit,
+    drowned_catacomb, fabled_passage, forgotten_cave, haunted_ridge, lonely_sandbar,
+    memorial_to_folly, reliquary_tower, shadowblood_ridge, shipwreck_marsh, smoldering_marsh,
+    steam_vents, stormcarved_coast, sulfur_falls, temple_of_deceit, temple_of_epiphany,
+    temple_of_malice, witchs_cottage, ayara_first_of_locthwain, elrond_lord_of_rivendell,
+    furystoke_giant, gravelgill_axeshark, haunt_of_the_dead_marshes, lesser_masticore,
+    lingering_tormentor, metallic_mimic, murderous_redcap, padeem_consul_of_innovation,
+    puppeteer_clique, putrid_goblin, river_kelpie, skemfar_shadowsage, thornmantle_striker,
+    tishanas_tidebinder, transit_mage, tribute_mage, triskaidekaphile, trophy_mage,
+    bastion_of_remembrance, cool_but_rude, grave_pact, haunted_one, impact_tremors,
+    necropotence, palace_siege, prowess_of_the_fair, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, brainstorm, censor, consign_to_memory, counterflux, counterspell,
+    countersquall, cryptic_command, deadly_dispute, disallow, impulse, spell_pierce,
+    tezzeret_the_seeker, blasphemous_act, command_the_dreadhorde, fabricate, feed_the_swarm,
+    improvisation_capstone, jeskas_will, kindred_dominance, past_in_flames, steal_the_show,
+    torment_of_hailfire,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const MALCOLM_14_COMMANDERS: &[CardFactory] = &[malcolm_keen_eyed_navigator, miara_thorn_of_the_glade];
+
+/// **Malcolm, Keen-Eyed Navigator and Miara, Thorn of the Glade**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 14 Islands + 15 Swamps = 98.
+/// Malcolm, Keen-Eyed Navigator and Miara, Thorn of the Glade (EDHREC, fetched 2026-10-20).
+pub const MALCOLM_14_MAIN: &[CardFactory] = &[
+    arcane_signet, ashes_of_the_fallen, coldsteel_heart, dimir_signet, mask_of_the_schemer,
+    maskwood_nexus, minds_eye, mistvein_borderpost, runed_stalactite, talisman_of_dominance,
+    wayfarers_bauble, bojuka_bog, clearwater_pathway, command_tower, darkwater_catacombs,
+    exotic_orchard, fabled_passage, memorial_to_folly, mistvault_bridge, myriad_landscape,
+    tainted_isle, azami_lady_of_scrolls, baleful_ammit, baleful_strix, bloodline_pretender,
+    dream_devourer, ghostly_changeling, gisa_and_geralf, graveshifter, gravespawn_sovereign,
+    herald_of_torment, ingenious_infiltrator, malcolm_alluring_scoundrel, malevolent_hermit,
+    marut, master_of_etherium, mastermind_plum, mausoleum_wanderer, memnarch, mindwrack_demon,
+    mistwalker, moonglove_changeling, mothdust_changeling, myr_enforcer, ramses_assassin_lord,
+    shapesharer, siren_stormtamer, soulstinger, stonybrook_banneret, stratus_dancer,
+    talions_messenger, tidehollow_strix, vodalian_hexcatcher, lilianas_contract,
+    mechanized_production, propaganda, concerted_defense, countersquall, deadly_alliance,
+    frantic_search, keep_safe, mirror_match, muddle_the_mixture, negate, chart_a_course,
+    diabolic_tutor, monumental_corruption, patriarchs_bidding, razakeths_rite,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const VICONIA_19_COMMANDERS: &[CardFactory] = &[viconia_drow_apostate, veteran_soldier];
+
+/// **Viconia, Drow Apostate and Veteran Soldier**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 17 Plains + 11 Swamps = 98.
+/// Viconia, Drow Apostate and Veteran Soldier (EDHREC, fetched 2026-10-20).
+pub const VICONIA_19_MAIN: &[CardFactory] = &[
+    altar_of_bhaal, arcane_signet, ashnods_altar, inherited_envelope,
+    matzalantli_the_great_door, replicating_ring, skullclamp, sol_ring, brightclimb_pathway,
+    cabal_coffers, concealed_courtyard, high_market, minas_tirith, orzhov_basilica,
+    phyrexian_tower, restless_fortress, invasion_of_new_capenna, adeline_resplendent_cathar,
+    archpriest_of_shadows, beskir_shieldmate, blood_artist, company_commander, cruel_celebrant,
+    dimir_house_guard, elas_il_kor_sadistic_pilgrim, foulmire_knight, frontline_medic,
+    gollum_scheming_guide, knight_of_the_white_orchid, ojer_taq_deepest_foundation,
+    outlaw_medic, pitiless_plunderer, reliquary_monk, roaming_throne,
+    shadowheart_dark_justiciar, sun_titan, syr_alin_the_lions_claw, syr_konrad_the_grim,
+    teysa_karlov, teysa_envoy_of_ghosts, teysa_orzhov_scion, troll_of_khazad_dum,
+    welcoming_vampire, anointed_procession, black_market, curse_of_oblivion,
+    flowering_of_the_white_tree, land_tax, planar_disruption, smothering_tithe,
+    tocasias_welcome, call_the_coppercoats, doom_blade, fracture, holy_day, inkshield,
+    malakir_rebirth, silence, slip_on_the_ring, soul_shatter, swords_to_plowshares,
+    davriel_rogue_shadowmage, elspeth_knight_errant, elspeth_suns_champion, claim_the_precious,
+    demonic_tutor, diabolic_tutor, exsanguinate, sams_desperate_rescue, tragic_arrogance,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];

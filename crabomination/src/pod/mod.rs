@@ -28134,6 +28134,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREECHES_24_COMMANDERS,
             main: decks::BREECHES_24_MAIN,
         },
+        // Seat 4614: Shadowheart, Dark Justiciar and Hardy Outlander's EDHREC average deck. `--pod-decks 4614`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Hardy Outlander (BG)",
+            commanders: decks::SHADOWHEART_14_COMMANDERS,
+            main: decks::SHADOWHEART_14_MAIN,
+        },
+        // Seat 4615: Falthis, Shadowcat Familiar and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4615`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Radiant, Serra Archangel (WB)",
+            commanders: decks::FALTHIS_21_COMMANDERS,
+            main: decks::FALTHIS_21_MAIN,
+        },
+        // Seat 4616: Ludevic, Necro-Alchemist and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4616`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Miara, Thorn of the Glade (UBR)",
+            commanders: decks::LUDEVIC_13_COMMANDERS,
+            main: decks::LUDEVIC_13_MAIN,
+        },
+        // Seat 4617: Malcolm, Keen-Eyed Navigator and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4617`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Miara, Thorn of the Glade (UB)",
+            commanders: decks::MALCOLM_14_COMMANDERS,
+            main: decks::MALCOLM_14_MAIN,
+        },
+        // Seat 4618: Viconia, Drow Apostate and Veteran Soldier's EDHREC average deck. `--pod-decks 4618`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Veteran Soldier (WB)",
+            commanders: decks::VICONIA_19_COMMANDERS,
+            main: decks::VICONIA_19_MAIN,
+        },
     ]
 }
 
@@ -34648,6 +34678,11 @@ mod tests {
             ("Alena, Kessig Trapper and Ich-Tekik, Salvage Splicer", &[0x1C19]),
             ("The Seventh Doctor and Bill Potts", &[0x1C1A]),
             ("Breeches, Brazen Plunderer and Ludevic, Necro-Alchemist", &[0x1C1B]),
+            ("Shadowheart, Dark Justiciar and Hardy Outlander", &[0x1C1C]),
+            ("Falthis, Shadowcat Familiar and Radiant, Serra Archangel", &[0x1C1D]),
+            ("Ludevic, Necro-Alchemist and Miara, Thorn of the Glade", &[0x1C1E]),
+            ("Malcolm, Keen-Eyed Navigator and Miara, Thorn of the Glade", &[0x1C1F]),
+            ("Viconia, Drow Apostate and Veteran Soldier", &[0x1C20]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
