@@ -27810,6 +27810,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARMIX_18_COMMANDERS,
             main: decks::ARMIX_18_MAIN,
         },
+        // Seat 4560: The Twelfth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 4560`.
+        PodDeck {
+            name: "The Twelfth Doctor and K-9, Mark I (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_20_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_20_MAIN,
+        },
+        // Seat 4561: Rasaad yn Bashir and Street Urchin's EDHREC average deck. `--pod-decks 4561`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Street Urchin (WR)",
+            commanders: decks::RASAAD_YN_BASHIR_23_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_23_MAIN,
+        },
+        // Seat 4562: Ravos, Soultender and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4562`.
+        PodDeck {
+            name: "Ravos, Soultender and Vial Smasher the Fierce (WBR)",
+            commanders: decks::RAVOS_4_COMMANDERS,
+            main: decks::RAVOS_4_MAIN,
+        },
+        // Seat 4563: Zellix, Sanity Flayer and Far Traveler's EDHREC average deck. `--pod-decks 4563`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Far Traveler (WU)",
+            commanders: decks::ZELLIX_15_COMMANDERS,
+            main: decks::ZELLIX_15_MAIN,
+        },
+        // Seat 4564: The Fugitive Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 4564`.
+        PodDeck {
+            name: "The Fugitive Doctor and Rose Tyler (WRG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_14_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_14_MAIN,
+        },
     ]
 }
 
@@ -34270,6 +34300,11 @@ mod tests {
             ("Vhal, Candlekeep Researcher and Veteran Soldier", &[0x1BE3]),
             ("Alharu, Solemn Ritualist and Malcolm, Keen-Eyed Navigator", &[0x1BE4]),
             ("Armix, Filigree Thrasher and Miara, Thorn of the Glade", &[0x1BE5]),
+            ("The Twelfth Doctor and K-9, Mark I", &[0x1BE6]),
+            ("Rasaad yn Bashir and Street Urchin", &[0x1BE7]),
+            ("Ravos, Soultender and Vial Smasher the Fierce", &[0x1BE8]),
+            ("Zellix, Sanity Flayer and Far Traveler", &[0x1BE9]),
+            ("The Fugitive Doctor and Rose Tyler", &[0x1BEA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

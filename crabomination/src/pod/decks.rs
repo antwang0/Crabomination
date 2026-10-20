@@ -127883,3 +127883,142 @@ pub const ARMIX_18_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_TWELFTH_DOCTOR_20_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, k_9_mark_i];
+
+/// **The Twelfth Doctor and K-9, Mark I**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 8 Mountains = 98.
+/// The Twelfth Doctor and K-9, Mark I (EDHREC, fetched 2026-10-20).
+pub const THE_TWELFTH_DOCTOR_20_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, resonating_lute, sol_ring, tablet_of_discovery,
+    talisman_of_creativity, thought_vessel, twinning_staff, cascade_bluffs, command_tower,
+    exotic_orchard, ferrous_lake, fiery_islet, frostboil_snarl, hidden_cataract, hidden_volcano,
+    izzet_boilerworks, scalding_tarn, scorched_geyser, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, temple_of_epiphany, training_center, turbulent_springs,
+    alania_divergent_storm, archmage_emeritus, eruth_tormented_prophet, etali_primal_storm,
+    fblthp_lost_on_the_range, goblin_electromancer, laelia_the_blade_reforged,
+    melek_izzet_paragon, party_thrasher, sanar_unfinished_genius, storm_kiln_artist,
+    stormcatch_mentor, the_emperor_of_palamecia, the_reality_chip, thunderclap_drake,
+    veyran_voice_of_duality, charred_foyer_warped_space, fortune_tellers_talent,
+    possibility_storm, precognition_field, share_the_spoils, thousand_year_storm,
+    an_offer_you_cant_refuse, brainstorm, chaos_warp, dual_strike, expansion_explosion,
+    sos_flashback_instant, frantic_search, galvanic_iteration, glorious_end, mission_briefing,
+    narsets_reversal, pact_of_negation, return_the_favor, seething_song,
+    chandra_torch_of_defiance, abstract_performance, blasphemous_act, expressive_iteration,
+    faithless_looting, grapeshot, hex_magic, improvisation_capstone, into_the_time_vortex,
+    jeskas_will, mana_geyser, mizzixs_mastery, ponder, preordain, ravenform, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const RASAAD_YN_BASHIR_23_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, street_urchin];
+
+/// **Rasaad yn Bashir and Street Urchin**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 12 Mountains + 19 Plains = 98.
+/// Rasaad yn Bashir and Street Urchin (EDHREC, fetched 2026-10-20).
+pub const RASAAD_YN_BASHIR_23_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, chromatic_lantern, dungeoneers_pack, marble_diamond, meekstone,
+    mirror_shield, pearl_medallion, quietus_spike, robe_of_stars, sarevoks_tome, slagwurm_armor,
+    sol_ring, wayfarers_bauble, ash_barrens, command_tower, idyllic_grange, myriad_landscape,
+    sundown_pass, warped_landscape, agate_instigator, archetype_of_aggression, basilica_guards,
+    blazing_bomb, coruscation_mage, escarpment_fortress, firebrand_archer, gearbane_orangutan,
+    giant_ox, god_eternal_oketra, goliath_paladin, indomitable_ancients, irencrag_pyromancer,
+    kami_of_old_stone, mindsparker, mysidian_elder, nyx_fleece_ram, ornithopter_of_paradise,
+    rhox_faithmender, seasoned_dungeoneer, simian_spirit_guide, slumbering_walker,
+    stirring_bard, tasseled_dromedary, veteran_armorer, vile_aggregate, weaver_of_lightning,
+    welcoming_vampire, white_plume_adventurer, brave_the_sands, loot_dispute, prayer_of_binding,
+    prison_term, stoneskin, afterlife, bar_the_door, fateful_absence, generous_gift,
+    hexgold_slash, smite_the_monstrous, stoke_the_flames, swords_to_plowshares, thunder_magic,
+    elspeth_suns_champion, fell_the_mighty, pursue_the_past, wave_of_reckoning,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const RAVOS_4_COMMANDERS: &[CardFactory] = &[ravos_soultender, vial_smasher_the_fierce];
+
+/// **Ravos, Soultender and Vial Smasher the Fierce**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 5 Mountains + 5 Plains + 6 Swamps = 98.
+/// Ravos, Soultender and Vial Smasher the Fierce (EDHREC, fetched 2026-10-20).
+pub const RAVOS_4_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, chromatic_lantern, orzhov_signet, rakdos_signet, sol_ring,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, battlefield_forge,
+    blood_crypt, bloodstained_mire, bojuka_bog, caves_of_koilos, clifftop_retreat,
+    command_tower, dragonskull_summit, exotic_orchard, godless_shrine, isolated_chapel,
+    luxury_suite, nomad_outpost, sacred_foundry, savai_triome, smoldering_marsh,
+    spectator_seating, sulfurous_springs, vault_of_champions, angraths_marauders, ankle_shanker,
+    avacyn_angel_of_horror, blood_artist, brash_taunter, burnished_hart, catharsis,
+    elas_il_kor_sadistic_pilgrim, emptiness, esper_sentinel, florian_voldaren_scion, fury,
+    gisela_blade_of_goldnight, ingot_chewer, kaervek_the_merciless, kambal_consul_of_allocation,
+    krenko_mob_boss, mayhem_devil, morbid_opportunist, mournwhelk, selfless_spirit, shriekmaw,
+    solemn_simulacrum, solphim_mayhem_dominus, spitebellows, the_lord_of_pain, wispmare,
+    black_market_connections, dictate_of_the_twin_gods, ghostly_prison, gratuitous_violence,
+    impact_tremors, painful_quandary, phyrexian_arena, smothering_tithe, anguished_unmaking,
+    blood_for_the_blood_god, boros_charm, chaos_warp, crackling_doom, dark_ritual,
+    path_to_exile, rakdos_charm, swords_to_plowshares, village_rites, elspeth_suns_champion,
+    blasphemous_act, damn, demonic_tutor, faithless_looting, jeskas_will, nights_whisper,
+    painful_truths, ruinous_ultimatum,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ZELLIX_15_COMMANDERS: &[CardFactory] = &[zellix_sanity_flayer, far_traveler];
+
+/// **Zellix, Sanity Flayer and Far Traveler**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 14 Islands + 8 Plains = 98.
+/// Zellix, Sanity Flayer and Far Traveler (EDHREC, fetched 2026-10-20).
+pub const ZELLIX_15_MAIN: &[CardFactory] = &[
+    altar_of_dementia, altar_of_the_brood, arcane_signet, azorius_signet, codex_shredder,
+    grindclock, mesmeric_orb, mindcrank, riverchurn_monument, skullclamp, sol_ring,
+    talisman_of_progress, the_water_crystal, thought_vessel, azorius_chancery, command_tower,
+    deserted_beach, flooded_strand, glacial_fortress, hallowed_fountain, inventors_fair,
+    port_town, prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse, archaeomancer,
+    archaeomender, bruvac_the_grandiloquent, cathartic_adept, dreamborn_muse,
+    emry_lurker_of_the_loch, esper_sentinel, felidar_guardian, fleet_swallower,
+    foundry_inspector, hedron_crab, jaces_mindseeker, liliana_the_faultless, manic_scribe,
+    overwhelmed_apprentice, phyrexian_revoker, riddlekeeper, ruin_crab, shadow_kin, spellseeker,
+    sun_titan, the_mindskinner, trinket_mage, wall_of_lost_thoughts, welcoming_vampire,
+    court_of_cunning, memory_erosion, mystic_remora, psychic_corrosion, rhystic_study,
+    sphinxs_tutelage, teferis_tutelage, an_offer_you_cant_refuse, counterspell, dovins_veto,
+    drown_in_dreams, enlightened_tutor, ephemerate, ghostly_flicker, mana_drain, path_to_exile,
+    sphinxs_approach, swords_to_plowshares, thought_collapse, whir_of_invention, fabricate,
+    fractured_sanity, maddening_cacophony, sevinnes_reclamation, space_time_anomaly,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const THE_FUGITIVE_DOCTOR_14_COMMANDERS: &[CardFactory] = &[the_fugitive_doctor, rose_tyler];
+
+/// **The Fugitive Doctor and Rose Tyler**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 8 Forests + 2 Mountains + 2 Plains = 98.
+/// The Fugitive Doctor and Rose Tyler (EDHREC, fetched 2026-10-20).
+pub const THE_FUGITIVE_DOCTOR_14_MAIN: &[CardFactory] = &[
+    arcane_signet, hourglass_of_the_lost, infinite_hourglass, locket_of_yesterdays,
+    mox_tantalite, ozolith_the_shattered_spire, rotating_fireplace, sol_ring, sol_talisman,
+    the_ozolith, ancient_tomb, boros_garrison, bountiful_promenade, cabaretti_courtyard,
+    clifftop_retreat, command_tower, conservatory, dining_room, exotic_orchard, gruul_turf,
+    hall, karns_bastion, karplusan_forest, mosswort_bridge, ominous_cemetery, path_of_ancestry,
+    plateau, rogues_passage, savannah, selesnya_sanctuary, spectator_seating, spire_garden,
+    taiga, three_tree_city, thriving_heath, aeve_progenitor_ooze, aragorn_hornburg_hero,
+    elmar_ulvenwald_informant, judoon_enforcers, knight_of_old_benalia, kodama_of_the_west_tree,
+    park_heights_maverick, sarah_jane_smith, seedborn_muse, shade_of_trokair,
+    sibylline_soothsayer, the_war_doctor, tireless_tracker, wilfred_mott, branching_evolution,
+    chaosphere, concordant_crossroads, court_of_garenbrig, dazzling_theater_prop_room,
+    hardened_scales, innkeepers_talent, stocking_the_pantry, the_parting_of_the_ways,
+    dust_of_moments, ephemerate, fury_charm, heroic_intervention, return_of_the_wildspeaker,
+    quintorius_history_chaser, chronomantic_escape, fangs_of_kalonia, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, slime_against_humanity,
+    slime_against_humanity, slime_against_humanity, the_wedding_of_river_song, venture_forth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain, plains,
+    plains,
+];
