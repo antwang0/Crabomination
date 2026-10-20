@@ -671,7 +671,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | PartySpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | KnightOrEquipmentSpells | DwarfEquipmentOrSagaSpells | CreatureSpellWithNoAbilities | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter | NonHumanCreatureCastCounter | CreatureGainsRiot
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
-                | SpellsOnly | TypeSpellOrItsAbility(_) | KickedSpellsOnly | PowerUpOnly | NotSpellsFromHand => {}
+                | SpellsOnly | TypeSpellOrItsAbility(_) | KickedSpellsOnly | KickedOnly | PowerUpOnly | NotSpellsFromHand => {}
             }
         }
         use SpendRestriction::*;
@@ -680,6 +680,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryOrClassLevel,
             InstantSorceryOrKicked,
             KickedSpellsOnly,
+            KickedOnly,
             PowerUpOnly,
             NotSpellsFromHand,
             ArtifactOnly,
