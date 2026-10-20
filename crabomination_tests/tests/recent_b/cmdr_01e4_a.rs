@@ -1587,3 +1587,87 @@ fn see_red_demands_an_attack() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(red).is_none(), "no attack this turn");
 }
+
+/// Grim Contest: each creature deals damage equal to its toughness to the
+/// other.
+#[test]
+fn grim_contest_trades_toughness_damage() {
+    let mut g = pod(2);
+    let mine = g.add_token_to_battlefield(0, &body("Beast", 4, CreatureType::Beast));
+    let theirs = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let contest = g.add_card_to_hand(0, catalog::grim_contest());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: contest,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "4 damage to the 2/2");
+    assert_eq!(g.battlefield_find(mine).expect("survives").damage, 2);
+}
+
+/// CR 603.2 — Phantasmal Dragon is sacrificed when it becomes a target.
+#[test]
+fn cr_603_2_phantasmal_dragon_dies_to_a_target() {
+    let mut g = pod(2);
+    let dragon = g.add_card_to_battlefield(1, catalog::phantasmal_dragon());
+    let familiar = g.add_card_to_battlefield(0, catalog::pseudodragon_familiar());
+    activate_on(&mut g, familiar, 0, Some(Target::Permanent(dragon))).expect("activate");
+    assert!(g.battlefield_find(dragon).is_none());
+}
+
+/// Infernal Reckoning exiles a colorless creature and gains its power.
+#[test]
+fn infernal_reckoning_exiles_colorless_for_life() {
+    let mut g = pod(2);
+    let golem = g.add_token_to_battlefield(1, &body("Golem", 4, CreatureType::Golem));
+    let life = g.players[0].life;
+    let reckoning = g.add_card_to_hand(0, catalog::infernal_reckoning());
+    cast(&mut g, reckoning, Some(Target::Permanent(golem)));
+    assert!(g.battlefield_find(golem).is_none());
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Evershrike's Gift returns from the graveyard by blighting 2.
+#[test]
+fn evershrikes_gift_returns_for_a_blight() {
+    let mut g = pod(2);
+    let beast = g.add_token_to_battlefield(0, &body("Beast", 4, CreatureType::Beast));
+    let gift = g.add_card_to_graveyard(0, catalog::evershrikes_gift());
+    activate(&mut g, gift, 0).expect("activate");
+    assert!(g.players[0].hand.iter().any(|c| c.id == gift));
+    assert_eq!(g.battlefield_find(beast).unwrap().counter_count(CounterType::MinusOneMinusOne), 2);
+}
+
+/// Consecrated by Blood regenerates its host for two other creatures.
+#[test]
+fn consecrated_by_blood_regenerates_for_two() {
+    let mut g = pod(2);
+    let host = g.add_token_to_battlefield(0, &body("Beast", 4, CreatureType::Beast));
+    let a = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let b = g.add_token_to_battlefield(0, &body("Wolf", 2, CreatureType::Wolf));
+    let aura = g.add_card_to_hand(0, catalog::consecrated_by_blood());
+    cast(&mut g, aura, Some(Target::Permanent(host)));
+    assert_eq!(pt(&g, host), (6, 6));
+    activate(&mut g, host, 0).expect("regenerate");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(host)));
+    assert!(g.battlefield_find(host).is_some(), "regenerated");
+}
+
+/// Midnight Scavengers returns a small creature card.
+#[test]
+fn midnight_scavengers_returns_a_small_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let beetle = g.add_card_to_graveyard(0, catalog::dune_beetle());
+    let scav = g.add_card_to_hand(0, catalog::midnight_scavengers());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, scav, Some(Target::Permanent(beetle)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == beetle));
+}

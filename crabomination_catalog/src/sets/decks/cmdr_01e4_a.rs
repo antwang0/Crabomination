@@ -3699,3 +3699,270 @@ pub fn spiteful_motives() -> CardDefinition {
         )
     }
 }
+
+// ── Batch ten (four-gap decks) ──────────────────────────────────────────────
+
+/// Midnight Scavengers — {4}{B} 3/3 Human Rogue. When it enters, you may
+/// return target creature card with mana value 3 or less from your graveyard
+/// to your hand. (Its meld with Graf Rats is not modelled: no seat runs both.)
+pub fn midnight_scavengers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return a creature card with mana value 3 or less?".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        ..creature("Midnight Scavengers", cost(&[generic(4), b()]), vec![CreatureType::Human, CreatureType::Rogue], 3, 3)
+    }
+}
+
+/// Ancestral Vengeance — {B}{B} Aura. When it enters, put a +1/+1 counter on
+/// target creature you control. Enchanted creature gets -1/-1.
+pub fn ancestral_vengeance() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..aura("Ancestral Vengeance", cost(&[b(), b()]), Some(EquipBonus { power: -1, toughness: -1, ..Default::default() }))
+    }
+}
+
+/// Consecrated by Blood — {2}{B}{B} Aura. +2/+2, flying, and "Sacrifice two
+/// other creatures: regenerate this creature."
+pub fn consecrated_by_blood() -> CardDefinition {
+    aura(
+        "Consecrated by Blood",
+        cost(&[generic(2), b(), b()]),
+        Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Flying],
+            activated_abilities: vec![ActivatedAbility {
+                sac_other_filter: Some((R::Creature.and(R::ControlledByYou).and(R::OtherThanSource), 2)),
+                effect: Effect::Regenerate { what: Selector::This },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+    )
+}
+
+/// Agonizing Syphon — {3}{B} sorcery. 3 damage to any target; gain 3 life.
+pub fn agonizing_syphon() -> CardDefinition {
+    spell(
+        "Agonizing Syphon",
+        cost(&[generic(3), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+    )
+}
+
+/// Hemlock Vial — {1}{B} artifact. When it enters, draw a card and lose 1
+/// life. {B}, {T}, sacrifice it: each equipped creature and Equipment you
+/// control gains deathtouch until end of turn.
+pub fn hemlock_vial() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    R::ControlledByYou.and(R::HasArtifactSubtype(ArtifactSubtype::Equipment).or(R::Creature.and(R::IsEquipped))),
+                ),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..spell("Hemlock Vial", cost(&[generic(1), b()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Myrkul's Invoker — {2}{B} 2/3 Cat Rogue. Psychic Blades — {8}: creatures
+/// you control get +2/+0 and gain menace until end of turn.
+pub fn myrkuls_invoker() -> CardDefinition {
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: team(), power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: team(), keyword: Keyword::Menace, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Myrkul's Invoker", cost(&[generic(2), b()]), vec![CreatureType::Cat, CreatureType::Rogue], 2, 3)
+    }
+}
+
+/// Final Flourish — {1}{B} instant. Kicker — sacrifice an artifact or
+/// creature. Target creature gets -2/-2 until end of turn, -6/-6 if kicked.
+pub fn final_flourish() -> CardDefinition {
+    let shrink = |n: i32| Effect::PumpPT {
+        what: target_filtered(R::Creature),
+        power: Value::Const(-n),
+        toughness: Value::Const(-n),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Artifact.or(R::Creature).and(R::ControlledByYou),
+            count: 1,
+        }),
+        ..spell(
+            "Final Flourish",
+            cost(&[generic(1), b()]),
+            CardType::Instant,
+            Effect::If { cond: Predicate::SpellWasKicked, then: Box::new(shrink(6)), else_: Box::new(shrink(2)) },
+        )
+    }
+}
+
+/// Infernal Reckoning — {B} instant. Exile target colorless creature; gain
+/// life equal to its power.
+pub fn infernal_reckoning() -> CardDefinition {
+    spell(
+        "Infernal Reckoning",
+        cost(&[b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::PowerOf(Box::new(Selector::Target(0))) },
+            Effect::Move { what: target_filtered(R::Creature.and(R::Colorless)), to: ZoneDest::Exile },
+        ]),
+    )
+}
+
+/// Ballista Charger — {5} 6/6 Vehicle. Whenever it attacks, it deals 1 damage
+/// to any target. Crew 3.
+pub fn ballista_charger() -> CardDefinition {
+    CardDefinition {
+        name: "Ballista Charger",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Crew(3)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phantasmal Dragon — {2}{U}{U} 5/5 Dragon Illusion. Flying. When it becomes
+/// the target of a spell or ability, sacrifice it.
+pub fn phantasmal_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::SacrificeSource,
+        }],
+        ..creature("Phantasmal Dragon", cost(&[generic(2), u(), u()]), vec![CreatureType::Dragon, CreatureType::Illusion], 5, 5)
+    }
+}
+
+/// Pseudodragon Familiar — {2}{U} 2/1 Dragon. Flying. {2}{U}: target creature
+/// gains flying until end of turn.
+pub fn pseudodragon_familiar() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Pseudodragon Familiar", cost(&[generic(2), u()]), vec![CreatureType::Dragon], 2, 1)
+    }
+}
+
+/// Evershrike's Gift — {W} Aura. +1/+0 and flying. {1}{W}, blight 2: return
+/// it from your graveyard to your hand. Sorcery speed.
+pub fn evershrikes_gift() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            from_graveyard: true,
+            blight_cost: 2,
+            sorcery_speed: true,
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..aura("Evershrike's Gift", cost(&[w()]), Some(EquipBonus { power: 1, keywords: vec![Keyword::Flying], ..Default::default() }))
+    }
+}
+
+/// Dune Beetle — {1}{B} 1/4 Insect.
+pub fn dune_beetle() -> CardDefinition {
+    creature("Dune Beetle", cost(&[generic(1), b()]), vec![CreatureType::Insect], 1, 4)
+}
+
+/// Hinterland Logger // Timber Shredder — {1}{G} 2/1 Human Werewolf; back a
+/// 4/2 trampling Werewolf (CR 701.28 werewolf transforms).
+pub fn hinterland_logger() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let shredder = CardDefinition {
+        name: "Timber Shredder",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(shredder)),
+        ..creature("Hinterland Logger", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Werewolf], 2, 1)
+    }
+}
+
+/// Intrepid Provisioner — {3}{G} 3/3 Human Scout. Trample. When it enters,
+/// another target Human you control gets +2/+2 until end of turn.
+pub fn intrepid_provisioner() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                R::Creature.and(R::HasCreatureType(CreatureType::Human)).and(R::ControlledByYou).and(R::OtherThanSource),
+            ),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Intrepid Provisioner", cost(&[generic(3), g()]), vec![CreatureType::Human, CreatureType::Scout], 3, 3)
+    }
+}
+
+/// Grim Contest — {1}{B}{G} instant. Target creature you control and target
+/// creature an opponent controls each deal damage equal to its toughness to
+/// the other.
+pub fn grim_contest() -> CardDefinition {
+    spell(
+        "Grim Contest",
+        cost(&[generic(1), b(), g()]),
+        CardType::Instant,
+        Effect::DealDamageToEachOther {
+            first: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            second: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            first_amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            second_amount: Value::ToughnessOf(Box::new(Selector::Target(1))),
+        },
+    )
+}
