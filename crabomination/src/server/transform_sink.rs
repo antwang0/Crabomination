@@ -105,13 +105,13 @@ pub(super) fn pick_craft_into_creature(state: &GameState, seat: usize) -> Option
                 continue;
             }
             let Some(picks) = state.craft_each_picks(seat, card.id, &ab.craft_exile_each) else { continue };
-            let spent: i32 = picks
+            let spent: i64 = picks
                 .iter()
                 .filter(|(_, in_gy)| !in_gy)
                 .filter_map(|(id, _)| state.computed_permanent(*id))
-                .map(|cp| cp.power.max(0) + cp.toughness.max(0))
-                .sum();
-            if spent >= back.power + back.toughness {
+                .map(|cp| i64::from(cp.power.max(0)) + i64::from(cp.toughness.max(0)))
+                .sum::<i64>();
+            if spent >= i64::from(back.power) + i64::from(back.toughness) {
                 continue;
             }
             let action = GameAction::ActivateAbility {
