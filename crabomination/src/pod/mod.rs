@@ -27630,6 +27630,90 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELIGETH_25_COMMANDERS,
             main: decks::ELIGETH_25_MAIN,
         },
+        // Seat 4530: Volo, Itinerant Scholar and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4530`.
+        PodDeck {
+            name: "Volo, Itinerant Scholar and Acolyte of Bahamut (UG)",
+            commanders: decks::VOLO_11_COMMANDERS,
+            main: decks::VOLO_11_MAIN,
+        },
+        // Seat 4531: Esior, Wardwing Familiar and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 4531`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Jeska, Thrice Reborn (UR)",
+            commanders: decks::ESIOR_19_COMMANDERS,
+            main: decks::ESIOR_19_MAIN,
+        },
+        // Seat 4532: Falthis, Shadowcat Familiar and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 4532`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Francisco, Fowl Marauder (B)",
+            commanders: decks::FALTHIS_19_COMMANDERS,
+            main: decks::FALTHIS_19_MAIN,
+        },
+        // Seat 4533: Jaheira, Friend of the Forest and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4533`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Acolyte of Bahamut (G)",
+            commanders: decks::JAHEIRA_10_COMMANDERS,
+            main: decks::JAHEIRA_10_MAIN,
+        },
+        // Seat 4534: Akroma, Vision of Ixidor and Brinelin, the Moon Kraken's EDHREC average deck. `--pod-decks 4534`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Brinelin, the Moon Kraken (WU)",
+            commanders: decks::AKROMA_20_COMMANDERS,
+            main: decks::AKROMA_20_MAIN,
+        },
+        // Seat 4535: Alharu, Solemn Ritualist and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 4535`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Ishai, Ojutai Dragonspeaker (WU)",
+            commanders: decks::ALHARU_17_COMMANDERS,
+            main: decks::ALHARU_17_MAIN,
+        },
+        // Seat 4536: Brinelin, the Moon Kraken and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4536`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Nadier, Agent of the Duskenel (UB)",
+            commanders: decks::BRINELIN_21_COMMANDERS,
+            main: decks::BRINELIN_21_MAIN,
+        },
+        // Seat 4537: Halsin, Emerald Archdruid and Dragon Cultist's EDHREC average deck. `--pod-decks 4537`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Dragon Cultist (RG)",
+            commanders: decks::HALSIN_11_COMMANDERS,
+            main: decks::HALSIN_11_MAIN,
+        },
+        // Seat 4538: Alharu, Solemn Ritualist and Brinelin, the Moon Kraken's EDHREC average deck. `--pod-decks 4538`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Brinelin, the Moon Kraken (WU)",
+            commanders: decks::ALHARU_18_COMMANDERS,
+            main: decks::ALHARU_18_MAIN,
+        },
+        // Seat 4539: Eligeth, Crossroads Augur and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4539`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Nadier, Agent of the Duskenel (UB)",
+            commanders: decks::ELIGETH_26_COMMANDERS,
+            main: decks::ELIGETH_26_MAIN,
+        },
+        // Seat 4540: Keskit, the Flesh Sculptor and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4540`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Miara, Thorn of the Glade (B)",
+            commanders: decks::KESKIT_11_COMMANDERS,
+            main: decks::KESKIT_11_MAIN,
+        },
+        // Seat 4541: Alharu, Solemn Ritualist and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 4541`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Jeska, Thrice Reborn (WR)",
+            commanders: decks::ALHARU_19_COMMANDERS,
+            main: decks::ALHARU_19_MAIN,
+        },
+        // Seat 4542: Imoen, Mystic Trickster and Cloakwood Hermit's EDHREC average deck. `--pod-decks 4542`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Cloakwood Hermit (UG)",
+            commanders: decks::IMOEN_25_COMMANDERS,
+            main: decks::IMOEN_25_MAIN,
+        },
+        // Seat 4543: Halsin, Emerald Archdruid and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4543`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Acolyte of Bahamut (G)",
+            commanders: decks::HALSIN_12_COMMANDERS,
+            main: decks::HALSIN_12_MAIN,
+        },
     ]
 }
 
@@ -34060,6 +34144,20 @@ mod tests {
             ("Sivriss, Nightmare Speaker and Dragon Cultist", &[0x1BC5]),
             ("Armix, Filigree Thrasher and Francisco, Fowl Marauder", &[0x1BC6]),
             ("Eligeth, Crossroads Augur and Keskit, the Flesh Sculptor", &[0x1BC7]),
+            ("Volo, Itinerant Scholar and Acolyte of Bahamut", &[0x1BC8]),
+            ("Esior, Wardwing Familiar and Jeska, Thrice Reborn", &[0x1BC9]),
+            ("Falthis, Shadowcat Familiar and Francisco, Fowl Marauder", &[0x1BCA]),
+            ("Jaheira, Friend of the Forest and Acolyte of Bahamut", &[0x1BCB]),
+            ("Akroma, Vision of Ixidor and Brinelin, the Moon Kraken", &[0x1BCC]),
+            ("Alharu, Solemn Ritualist and Ishai, Ojutai Dragonspeaker", &[0x1BCD]),
+            ("Brinelin, the Moon Kraken and Nadier, Agent of the Duskenel", &[0x1BCE]),
+            ("Halsin, Emerald Archdruid and Dragon Cultist", &[0x1BCF]),
+            ("Alharu, Solemn Ritualist and Brinelin, the Moon Kraken", &[0x1BD0]),
+            ("Eligeth, Crossroads Augur and Nadier, Agent of the Duskenel", &[0x1BD1]),
+            ("Keskit, the Flesh Sculptor and Miara, Thorn of the Glade", &[0x1BD2]),
+            ("Alharu, Solemn Ritualist and Jeska, Thrice Reborn", &[0x1BD3]),
+            ("Imoen, Mystic Trickster and Cloakwood Hermit", &[0x1BD4]),
+            ("Halsin, Emerald Archdruid and Acolyte of Bahamut", &[0x1BD5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
