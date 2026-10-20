@@ -269,3 +269,34 @@ fn death_or_glory_one_opponent_chooses_at_three_seats() {
     let exiled = bears.iter().filter(|id| g.exile.iter().any(|c| c.id == **id)).count();
     assert_eq!(back + exiled, 3, "every creature card went to one pile or the other");
 }
+
+fn attack_one(g: &mut GameState, attacker: CardId) {
+    g.clear_sickness(attacker);
+    declare(g, &[attacker]).expect("attack");
+    drain_stack(g);
+}
+
+/// Velukan Dragon's attack roll: +X/+0 with X the d6 result minus 1, so its
+/// power lands in 5..=10.
+#[test]
+fn velukan_dragon_rolls_for_power() {
+    let mut g = main_phase(2);
+    let dragon = g.add_card_to_battlefield(0, catalog::velukan_dragon());
+    attack_one(&mut g, dragon);
+    let power = g.computed_permanent(dragon).expect("on the battlefield").power;
+    assert!((5..=10).contains(&power), "power {power}");
+}
+
+/// Mardu Blazebringer is sacrificed at end of combat after it attacks.
+#[test]
+fn mardu_blazebringer_burns_out_after_combat() {
+    let mut g = main_phase(2);
+    let ogre = g.add_card_to_battlefield(0, catalog::mardu_blazebringer());
+    attack_one(&mut g, ogre);
+    assert!(g.battlefield_find(ogre).is_some(), "still attacking");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(ogre).is_none(), "sacrificed at end of combat");
+}
