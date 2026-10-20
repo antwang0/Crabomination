@@ -128609,3 +128609,114 @@ pub const FRANCISCO_22_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const KELETH_17_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, silas_renn_seeker_adept];
+
+/// **Keleth, Sunmane Familiar and Silas Renn, Seeker Adept**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Islands + 7 Plains + 4 Swamps = 98.
+/// Keleth, Sunmane Familiar and Silas Renn, Seeker Adept (EDHREC, fetched 2026-10-20).
+pub const KELETH_17_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, damocles_base_sword_of_kang, dimir_signet,
+    illvoi_light_jammer, lightning_greaves, orzhov_signet, prismatic_lens,
+    rocket_powered_goblin_glider, royal_talon_fighter_jet, senseis_divining_top, sol_ring,
+    strixhaven_skycoach, the_arkenstone, the_fantasticar, the_thanos_copter, thought_vessel,
+    web_shooters, adarkar_wastes, arcane_sanctum, caves_of_koilos, command_tower,
+    deserted_beach, drowned_catacomb, eclipsed_steppe, glacial_fortress, godless_shrine,
+    hallowed_fountain, isolated_chapel, port_town, prairie_stream, raffines_tower,
+    seat_of_the_synod, spire_of_industry, sunken_hollow, tainted_field, underground_river,
+    watery_grave, breaching_hippocamp, captain_america_living_legend, caustic_bronco,
+    chrome_steed, codecracker_hound, common_crook, crested_sunmare, deranged_assistant,
+    esper_sentinel, etherium_sculptor, fugitive_droid, highspire_bell_ringer,
+    krang_utrom_warlord, loch_mare, mechan_assembler, padeem_consul_of_innovation,
+    phantom_steed, sai_master_thopterist, shield_mare, surge_conductor, technodrome,
+    undead_butler, watcher_of_the_wayside, wavebreak_hippocamp, monologue_tax, polluted_bonds,
+    resourceful_defense, smothering_tithe, soul_snare, timely_ward, wingspan_stride,
+    an_offer_you_cant_refuse, anguished_unmaking, counterspell, dispatch, enshrouding_mist,
+    path_to_exile, swan_song, swords_to_plowshares, diabolic_vision, fix_whats_broken, ponder,
+    redress_fate,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
+
+pub const ANARA_23_COMMANDERS: &[CardFactory] = &[anara_wolvid_familiar, ghost_of_ramirez_depietro];
+
+/// **Anara, Wolvid Familiar and Ghost of Ramirez DePietro**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Forests + 10 Islands = 98.
+/// Anara, Wolvid Familiar and Ghost of Ramirez DePietro (EDHREC, fetched 2026-10-20).
+pub const ANARA_23_MAIN: &[CardFactory] = &[
+    arcane_signet, collectors_vault, emerald_medallion, goggles_of_night, lightning_greaves,
+    matzalantli_the_great_door, moss_diamond, perpetual_timepiece, potioners_trove,
+    ring_of_evos_isle, simic_signet, sky_diamond, sol_ring, ash_barrens, bant_panorama,
+    breeding_pool, command_tower, gond_gate, ipnu_rivulet, kitchen, lonely_sandbar,
+    misty_rainforest, remote_isle, rogues_passage, temple_of_mystery, tranquil_thicket,
+    turbulent_wilderness, yavimaya_coast, aftermath_analyst, animal_attendant,
+    archmage_of_runes, badgermole_cub, birds_of_paradise, cephalid_sage, colossal_skyturtle,
+    elvish_mystic, eternal_witness, fauna_shaman, fugitive_wizard, generous_ent,
+    ghostly_pilferer, kaho_minamo_historian, kishla_skimmer, llanowar_elves, mirrorshell_crab,
+    omen_hawker, tempting_licid, wayward_swordtooth, wonder, world_shaper, court_of_cunning,
+    impostor_syndrome, pedantic_learning, spelunking, talons_of_wildwood, tectonic_split,
+    the_bath_song, zephyr_charge, an_offer_you_cant_refuse, counterspell, dive_down,
+    familiars_ruse, fog, frantic_search, galadhrim_ambush, heroic_intervention, negate,
+    obsessive_search, snakeskin_veil, worldly_tutor, applied_geometry, beneath_the_sands,
+    divination, ember_island_production, ghastly_discovery, kodamas_reach, lorien_revealed,
+    ravenform, splendid_reclamation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const ALHARU_21_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, halana_kessig_ranger];
+
+/// **Alharu, Solemn Ritualist and Halana, Kessig Ranger**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 15 Forests + 12 Plains = 98.
+/// Alharu, Solemn Ritualist and Halana, Kessig Ranger (EDHREC, fetched 2026-10-20).
+pub const ALHARU_21_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, elixir_of_immortality, selesnya_signet, skullclamp, sol_ring,
+    the_earth_crystal, the_ozolith, abandoned_air_temple, gavony_township, karns_bastion,
+    llanowar_reborn, nesting_grounds, opal_palace, path_of_ancestry, selesnya_sanctuary,
+    sungrass_prairie, animal_attendant, arbor_elf, badgermole, badgermole_cub,
+    birds_of_paradise, champion_of_lambholt, conclave_mentor, dyadrine_synthesis_amalgam,
+    earth_kingdom_general, eternal_witness, farhaven_elf, forgotten_ancient,
+    good_fortune_unicorn, gyre_sage, hamza_guardian_of_arashin, hornet_queen, incubation_druid,
+    kessig_recluse, lurking_roper, mikaeus_the_lunarch, momo_friendly_flier, momo_playful_pet,
+    oakgnarl_warrior, phelia_exuberant_shepherd, selfless_savior, solemn_simulacrum,
+    the_earth_king, valorous_steed, cathars_crusade, hardened_scales, master_chef, primal_vigor,
+    resourceful_defense, sigardas_summons, smile_at_death, together_forever,
+    tribute_to_the_world_tree, burst_of_strength, cloudshift, dromokas_command,
+    enlightened_tutor, ephemerate, fog, giant_growth, inspiring_call, path_to_exile,
+    teferis_protection, tower_defense, jiang_yanggu_wildcrafter, cultivate, damning_verdict,
+    secret_rendezvous, swallow_whole, true_ancestry, united_front,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const THE_THIRTEENTH_DOCTOR_10_COMMANDERS: &[CardFactory] = &[the_thirteenth_doctor, amy_pond];
+
+/// **The Thirteenth Doctor and Amy Pond**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 5 Forests + 6 Islands + 7 Mountains = 98.
+/// The Thirteenth Doctor and Amy Pond (EDHREC, fetched 2026-10-20).
+pub const THE_THIRTEENTH_DOCTOR_10_MAIN: &[CardFactory] = &[
+    arcane_signet, lotus_bloom, mox_tantalite, rotating_fireplace, sol_ring, sol_talisman,
+    talisman_of_creativity, talisman_of_curiosity, talisman_of_impulse, transmutation_font,
+    ancient_tomb, blighted_woodland, breeding_pool, command_tower, exotic_orchard, fiery_islet,
+    misty_rainforest, myriad_landscape, rockfall_vale, steam_vents, stomping_ground, taiga,
+    academy_manufactor, aeon_chronicler, animar_soul_of_elements, arcanis_the_omnipotent,
+    clara_oswald, danny_pink, deep_sea_kraken, etali_primal_storm, fblthp_lost_on_the_range,
+    flaming_tyrannosaurus, graham_obrien, greater_gargadon, incubation_druid,
+    iraxxa_empress_of_mars, jhoira_of_the_ghitu, kami_of_whispered_hopes, martha_jones,
+    memory_worm, rift_elemental, rift_sower, rishkar_peema_renegade, ryan_sinclair,
+    shivan_sand_mage, sibylline_soothsayer, sisterhood_of_karn, the_ninth_doctor,
+    the_tenth_doctor, watcher_of_hours, yasmin_khan, elven_chorus, fae_offering,
+    passionate_archaeologist, rhystic_study, the_parting_of_the_ways, ancient_grudge,
+    clockspinning, decaying_time_loop, fog, heroic_intervention, saw_it_coming,
+    surge_of_brilliance, all_of_history_all_at_once, ancestral_vision, arc_blade,
+    cyclical_evolution, ecstatic_beauty, farseek, hypergenesis, inevitable_betrayal,
+    inspiring_refrain, quantum_misalignment, rousing_refrain, search_for_tomorrow,
+    shivan_meteor, twice_upon_a_time, venture_forth, wheel_of_fate, wibbly_wobbly_timey_wimey,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

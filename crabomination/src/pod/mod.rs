@@ -27966,6 +27966,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FRANCISCO_22_COMMANDERS,
             main: decks::FRANCISCO_22_MAIN,
         },
+        // Seat 4586: Keleth, Sunmane Familiar and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 4586`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Silas Renn, Seeker Adept (WUB)",
+            commanders: decks::KELETH_17_COMMANDERS,
+            main: decks::KELETH_17_MAIN,
+        },
+        // Seat 4587: Anara, Wolvid Familiar and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 4587`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Ghost of Ramirez DePietro (UG)",
+            commanders: decks::ANARA_23_COMMANDERS,
+            main: decks::ANARA_23_MAIN,
+        },
+        // Seat 4588: Alharu, Solemn Ritualist and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 4588`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Halana, Kessig Ranger (WG)",
+            commanders: decks::ALHARU_21_COMMANDERS,
+            main: decks::ALHARU_21_MAIN,
+        },
+        // Seat 4589: The Thirteenth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4589`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Amy Pond (URG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_10_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_10_MAIN,
+        },
     ]
 }
 
@@ -34452,6 +34476,10 @@ mod tests {
             ("Sidar Kondo of Jamuraa and Slurrk, All-Ingesting", &[0x1BFD]),
             ("Eligeth, Crossroads Augur and Ich-Tekik, Salvage Splicer", &[0x1BFE]),
             ("Francisco, Fowl Marauder and Numa, Joraga Chieftain", &[0x1BFF]),
+            ("Keleth, Sunmane Familiar and Silas Renn, Seeker Adept", &[0x1C00]),
+            ("Anara, Wolvid Familiar and Ghost of Ramirez DePietro", &[0x1C01]),
+            ("Alharu, Solemn Ritualist and Halana, Kessig Ranger", &[0x1C02]),
+            ("The Thirteenth Doctor and Amy Pond", &[0x1C03]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
