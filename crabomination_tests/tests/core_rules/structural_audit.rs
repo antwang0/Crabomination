@@ -1981,3 +1981,46 @@ fn every_sneak_keyword_has_its_alternative_cost() {
     bad.dedup();
     assert!(bad.is_empty(), "sneak keyword without its alt cost: {bad:?}");
 }
+
+/// CR 601.2c — `OtherThanTargetSlot` is a targeting-time filter (it reads the
+/// slots being chosen and is vacuously true otherwise), so inside a
+/// non-target selector it excludes nothing: Intimidation Bolt's "other
+/// creatures can't attack" also stopped its own target, and Sigil Blessing's
+/// "other creatures you control" pumped it twice. Exclude a resolved target
+/// with `Selector::EachPermanentExceptTargets`. Bug fix.
+#[test]
+fn no_board_selector_filters_on_a_target_slot() {
+    fn has_slot(v: &serde_json::Value) -> bool {
+        match v {
+            serde_json::Value::Object(m) => m.contains_key("OtherThanTargetSlot") || m.values().any(has_slot),
+            serde_json::Value::Array(a) => a.iter().any(has_slot),
+            _ => false,
+        }
+    }
+    fn walk(v: &serde_json::Value, hit: &mut bool) {
+        match v {
+            serde_json::Value::Object(m) => {
+                for (k, sub) in m {
+                    if matches!(k.as_str(), "EachPermanent" | "EachMatching" | "CardsInZone") && has_slot(sub) {
+                        *hit = true;
+                    }
+                    walk(sub, hit);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|x| walk(x, hit)),
+            _ => {}
+        }
+    }
+    let mut bad = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        let mut hit = false;
+        walk(&serde_json::to_value(&def).expect("CardDefinition serializes"), &mut hit);
+        if hit {
+            bad.push(def.name);
+        }
+    }
+    bad.sort_unstable();
+    bad.dedup();
+    assert!(bad.is_empty(), "a board selector reads a target slot: {bad:?}");
+}

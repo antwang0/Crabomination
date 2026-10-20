@@ -251,9 +251,7 @@ pub fn masterful_replication() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: Arc::new(golem) },
             Effect::BecomeCopyOfFor {
-                what: Selector::EachPermanent(
-                    R::Artifact.and(R::ControlledByYou).and(R::OtherThanTargetSlot(0)),
-                ),
+                what: Selector::EachPermanentExceptTargets(R::Artifact.and(R::ControlledByYou)),
                 source: target_filtered(R::Artifact.and(R::ControlledByYou)),
                 duration: Duration::EndOfTurn,
                 non_legendary: false,

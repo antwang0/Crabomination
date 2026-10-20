@@ -225,7 +225,7 @@ pub fn intimidation_bolt() -> CardDefinition {
         Effect::Seq(vec![
             Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
             Effect::CantAttackThisTurn {
-                what: Selector::EachPermanent(R::Creature.and(R::OtherThanTargetSlot(0))),
+                what: Selector::EachPermanentExceptTargets(R::Creature),
             },
         ]),
     )

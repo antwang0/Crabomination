@@ -174,6 +174,21 @@ fn intimidation_bolt_grounds_the_rest() {
     assert!(r.is_err(), "the bear can't attack this turn");
 }
 
+/// Intimidation Bolt's "other creatures" spares its own target: a survivor
+/// may still attack (bug fix — the board selector read the target slot).
+#[test]
+fn intimidation_bolt_lets_a_surviving_target_attack() {
+    let mut g = pod(2);
+    let wall = ready(&mut g, 0, catalog::webweaver_changeling());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::intimidation_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(wall)]).expect("cast");
+    g.step = TurnStep::DeclareAttackers;
+    let attack = |a| vec![Attack { attacker: a, target: AttackTarget::Player(1) }];
+    assert!(g.clone().perform_action(GameAction::DeclareAttackers(attack(bear))).is_err());
+    g.perform_action(GameAction::DeclareAttackers(attack(wall))).expect("the target may attack");
+}
+
 /// Justice Strike: the creature hits itself for its power.
 #[test]
 fn justice_strike_self_damage() {
