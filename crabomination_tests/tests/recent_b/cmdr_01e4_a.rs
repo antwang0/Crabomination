@@ -945,3 +945,129 @@ fn bestial_fury_rages_when_blocked() {
     assert_eq!(pt(&g, bear), (6, 2));
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
 }
+
+/// Spell mastery — Send to Sleep's targets skip their next untap only with
+/// two instants/sorceries in your graveyard.
+#[test]
+fn send_to_sleep_needs_spell_mastery_to_hold_them_down() {
+    for mastery in [false, true] {
+        let mut g = pod(2);
+        let a = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+        if mastery {
+            g.add_card_to_graveyard(0, catalog::lightning_bolt());
+            g.add_card_to_graveyard(0, catalog::demons_due());
+        }
+        let sleep = g.add_card_to_hand(0, catalog::send_to_sleep());
+        cast(&mut g, sleep, Some(Target::Permanent(a)));
+        let c = g.battlefield_find(a).unwrap();
+        assert!(c.tapped);
+        assert_eq!(c.skip_next_untap, mastery, "mastery {mastery}");
+    }
+}
+
+/// Glacial Grasp mills the tapped creature's controller, not the caster.
+#[test]
+fn glacial_grasp_mills_the_creatures_controller() {
+    let mut g = pod(3);
+    let theirs = g.add_token_to_battlefield(2, &body("Bear", 2, CreatureType::Bear));
+    let (mine, others) = (g.players[0].library.len(), g.players[2].library.len());
+    let grasp = g.add_card_to_hand(0, catalog::glacial_grasp());
+    cast(&mut g, grasp, Some(Target::Permanent(theirs)));
+    assert_eq!(g.players[2].library.len(), others - 2);
+    assert_eq!(g.players[0].library.len(), mine - 1, "the caster drew one");
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Kathari Bomber trades itself for two Goblins when it connects.
+#[test]
+fn kathari_bomber_drops_goblins_and_goes() {
+    let mut g = pod(2);
+    let bomber = g.add_card_to_battlefield(0, catalog::kathari_bomber());
+    attack_with(&mut g, &[bomber]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat && g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(bomber).is_none(), "sacrificed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count(), 2);
+}
+
+/// Dose of Dawnglow blights 2 only outside your main phase.
+#[test]
+fn dose_of_dawnglow_blights_off_the_main_phase() {
+    for main in [true, false] {
+        let mut g = pod(2);
+        let bears = g.add_card_to_graveyard(0, catalog::webweaver_changeling());
+        if !main {
+            g.step = TurnStep::End;
+        }
+        let dose = g.add_card_to_hand(0, catalog::dose_of_dawnglow());
+        cast(&mut g, dose, Some(Target::Permanent(bears)));
+        let counters = g.battlefield_find(bears).map_or(0, |c| c.counter_count(CounterType::MinusOneMinusOne));
+        assert_eq!(counters, if main { 0 } else { 2 }, "main phase {main}");
+    }
+}
+
+/// Embereth Skyblazer flies only on its controller's turn and pumps by the
+/// number of opponents.
+#[test]
+fn embereth_skyblazer_counts_opponents() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    let blazer = g.add_card_to_battlefield(0, catalog::embereth_skyblazer());
+    assert!(g.computed_permanent(blazer).unwrap().keywords().contains(&Keyword::Flying));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(blazer).unwrap().keywords().contains(&Keyword::Flying));
+    g.active_player_idx = 0;
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack_with(&mut g, &[blazer]);
+    assert_eq!(pt(&g, blazer), (6, 3), "two opponents");
+}
+
+/// Vicious Offering: -2/-2, or -5/-5 when kicked by a sacrifice.
+#[test]
+fn vicious_offering_kicked_by_a_sacrifice() {
+    let mut g = pod(2);
+    let fodder = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let big = g.add_token_to_battlefield(1, &body("Beast", 5, CreatureType::Beast));
+    let offering = g.add_card_to_hand(0, catalog::vicious_offering());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: offering,
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "the kicker's sacrifice");
+    assert!(g.battlefield_find(big).is_none(), "-5/-5");
+}
+
+/// Blitz Leech strips every counter from its target.
+#[test]
+fn blitz_leech_strips_counters() {
+    let mut g = pod(2);
+    let theirs = g.add_token_to_battlefield(1, &body("Beast", 3, CreatureType::Beast));
+    g.battlefield_find_mut(theirs).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    let leech = g.add_card_to_hand(0, catalog::blitz_leech());
+    cast(&mut g, leech, Some(Target::Permanent(theirs)));
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(pt(&g, theirs), (1, 1));
+}
+
+/// Excavation Explosion leaves a tapped Powerstone.
+#[test]
+fn excavation_explosion_leaves_a_tapped_powerstone() {
+    let mut g = pod(2);
+    let explosion = g.add_card_to_hand(0, catalog::excavation_explosion());
+    cast(&mut g, explosion, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, g.players[0].life - 3);
+    let stone = g.battlefield.iter().find(|c| c.definition.name == "Powerstone").expect("a Powerstone");
+    assert!(stone.tapped);
+}

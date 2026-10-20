@@ -2082,3 +2082,391 @@ pub fn imposing_visage() -> CardDefinition {
         Some(EquipBonus { keywords: vec![Keyword::Menace], ..Default::default() }),
     )
 }
+
+// ── Batch five ──────────────────────────────────────────────────────────────
+
+fn pump_self(p: i32, t: i32) -> Effect {
+    Effect::PumpPT { what: Selector::This, power: Value::Const(p), toughness: Value::Const(t), duration: Duration::EndOfTurn }
+}
+
+/// Feral Ridgewolf — {2}{R} 1/2 Wolf. Trample. {1}{R}: +2/+0 until end of
+/// turn.
+pub fn feral_ridgewolf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: pump_self(2, 0),
+            ..Default::default()
+        }],
+        ..creature("Feral Ridgewolf", cost(&[generic(2), r()]), vec![CreatureType::Wolf], 1, 2)
+    }
+}
+
+/// Kessig Wolf — {2}{R} 3/1 Wolf. {1}{R}: first strike until end of turn.
+pub fn kessig_wolf() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Kessig Wolf", cost(&[generic(2), r()]), vec![CreatureType::Wolf], 3, 1)
+    }
+}
+
+/// Wolf Pack — {6}{G}{G} 7/6 Wolf. It may assign its combat damage as though
+/// it weren't blocked.
+pub fn wolf_pack() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::AssignsDamageAsThoughUnblocked],
+        ..creature("Wolf Pack", cost(&[generic(6), g(), g()]), vec![CreatureType::Wolf], 7, 6)
+    }
+}
+
+/// Artful Maneuver — {1}{W} instant. Target creature gets +2/+2 until end of
+/// turn. Rebound.
+pub fn artful_maneuver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Rebound],
+        ..spell(
+            "Artful Maneuver",
+            cost(&[generic(1), w()]),
+            CardType::Instant,
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+/// Taigam's Strike — {3}{U} sorcery. Target creature gets +2/+0 until end of
+/// turn and can't be blocked this turn. Rebound.
+pub fn taigams_strike() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Rebound],
+        ..spell(
+            "Taigam's Strike",
+            cost(&[generic(3), u()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+            ]),
+        )
+    }
+}
+
+/// Galestrike — {2}{U} instant. Return target tapped creature to its owner's
+/// hand. Draw a card.
+pub fn galestrike() -> CardDefinition {
+    spell(
+        "Galestrike",
+        cost(&[generic(2), u()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Creature.and(R::Tapped)), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Glacial Grasp — {2}{U} instant. Tap target creature; its controller mills
+/// two; it doesn't untap during its controller's next untap step. Draw a
+/// card.
+pub fn glacial_grasp() -> CardDefinition {
+    spell(
+        "Glacial Grasp",
+        cost(&[generic(2), u()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(2),
+            },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Send to Sleep — {1}{U} instant. Tap up to two target creatures. Spell
+/// mastery — they don't untap during their controllers' next untap steps.
+pub fn send_to_sleep() -> CardDefinition {
+    spell(
+        "Send to Sleep",
+        cost(&[generic(1), u()]),
+        CardType::Instant,
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::If {
+                    cond: crate::effect::shortcut::spell_mastery_gate(),
+                    then: Box::new(Effect::SkipNextUntap { what: Selector::Target(0) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        },
+    )
+}
+
+/// Artificer's Dragon — {6} 4/4 artifact creature Dragon. Flying. {R}:
+/// artifact creatures you control get +1/+0 until end of turn. Unearth
+/// {3}{R}{R}.
+pub fn artificers_dragon() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Artifact.and(R::Creature).and(R::ControlledByYou)),
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            crate::effect::shortcut::unearth(cost(&[generic(3), r(), r()])),
+        ],
+        ..creature("Artificer's Dragon", cost(&[generic(6)]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Excavation Explosion — {2}{R} sorcery. 3 damage to any target. Create a
+/// tapped Powerstone token.
+pub fn excavation_explosion() -> CardDefinition {
+    let powerstone = TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() };
+    spell(
+        "Excavation Explosion",
+        cost(&[generic(2), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+            make(1, powerstone),
+        ]),
+    )
+}
+
+/// Kathari Bomber — {1}{B}{R} 2/2 Bird Shaman. Flying. When it deals combat
+/// damage to a player, create two 1/1 red Goblin tokens and sacrifice it.
+/// Unearth {3}{B}{R}.
+pub fn kathari_bomber() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                make(2, token("Goblin", 1, 1, vec![Color::Red], vec![CreatureType::Goblin])),
+                Effect::SacrificeSource,
+            ]),
+        }],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(3), b(), r()]))],
+        ..creature("Kathari Bomber", cost(&[generic(1), b(), r()]), vec![CreatureType::Bird, CreatureType::Shaman], 2, 2)
+    }
+}
+
+/// Dose of Dawnglow — {4}{B} instant. Return target creature card from your
+/// graveyard to the battlefield; then, if it isn't your main phase, blight 2.
+pub fn dose_of_dawnglow() -> CardDefinition {
+    spell(
+        "Dose of Dawnglow",
+        cost(&[generic(4), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.from_your_graveyard()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::If {
+                cond: Predicate::YourMainPhase,
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Blight { n: Value::Const(2) }),
+            },
+        ]),
+    )
+}
+
+/// Lurking Crocodile — {2}{G} 2/2 Crocodile. Bloodthirst 1. Islandwalk.
+pub fn lurking_crocodile() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bloodthirst(1), Keyword::Landwalk(LandType::Island)],
+        ..creature("Lurking Crocodile", cost(&[generic(2), g()]), vec![CreatureType::Crocodile], 2, 2)
+    }
+}
+
+/// Lost in the Spirit World — {2}{U} sorcery. Return up to one target
+/// creature to its owner's hand. Create a 1/1 colorless Spirit token that
+/// can't block or be blocked by non-Spirit creatures.
+pub fn lost_in_the_spirit_world() -> CardDefinition {
+    let spirit = TokenDefinition {
+        keywords: vec![
+            Keyword::CantBlockMatching(Box::new(R::HasCreatureType(CreatureType::Spirit).negate())),
+            Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(CreatureType::Spirit))),
+        ],
+        ..token("Spirit", 1, 1, vec![], vec![CreatureType::Spirit])
+    };
+    spell(
+        "Lost in the Spirit World",
+        cost(&[generic(2), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![bounce_up_to(1), make(1, spirit)]),
+    )
+}
+
+/// Deadeye Rig-Hauler — {3}{U} 3/2 Human Pirate. Raid — when it enters, if
+/// you attacked this turn, you may return target creature to its owner's
+/// hand.
+pub fn deadeye_rig_hauler() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            effect: Effect::MayDo {
+                description: "Return target creature to its owner's hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+        }],
+        ..creature("Deadeye Rig-Hauler", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Pirate], 3, 2)
+    }
+}
+
+/// Embereth Skyblazer — {3}{R} 4/3 Human Knight. Flying during your turn.
+/// Whenever it attacks, you may pay {2}{R}; if you do, creatures you control
+/// get +X/+0 until end of turn, X the number of opponents you have.
+pub fn embereth_skyblazer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, this creature has flying.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Flying,
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {2}{R} to pump your creatures?".into(),
+                mana_cost: cost(&[generic(2), r()]),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: Value::OpponentCount,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: None,
+            },
+        }],
+        ..creature("Embereth Skyblazer", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Knight], 4, 3)
+    }
+}
+
+/// Youthful Scholar — {3}{U} 2/2 Human Wizard. When it dies, draw two cards.
+pub fn youthful_scholar() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        ..creature("Youthful Scholar", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Vicious Offering — {1}{B} instant. Kicker — sacrifice a creature. Target
+/// creature gets -2/-2 until end of turn, -5/-5 instead if kicked.
+pub fn vicious_offering() -> CardDefinition {
+    let shrink = |n: i32| Effect::PumpPT {
+        what: target_filtered(R::Creature),
+        power: Value::Const(-n),
+        toughness: Value::Const(-n),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::ControlledByYou),
+            count: 1,
+        }),
+        ..spell(
+            "Vicious Offering",
+            cost(&[generic(1), b()]),
+            CardType::Instant,
+            Effect::If { cond: Predicate::SpellWasKicked, then: Box::new(shrink(5)), else_: Box::new(shrink(2)) },
+        )
+    }
+}
+
+/// Cragsmasher Yeti — {4}{R}{R} 4/2 Yeti. Mountaincycling {2}. Backup 2.
+/// Trample.
+pub fn cragsmasher_yeti() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain)],
+        triggered_abilities: vec![crate::effect::shortcut::backup(2, vec![Keyword::Trample])],
+        ..creature("Cragsmasher Yeti", cost(&[generic(4), r(), r()]), vec![CreatureType::Yeti], 4, 2)
+    }
+}
+
+/// Igneous Pouncer — {4}{B}{R} 5/1 Elemental. Haste. Swampcycling {2},
+/// mountaincycling {2}.
+pub fn igneous_pouncer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Haste,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp),
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain),
+        ],
+        ..creature("Igneous Pouncer", cost(&[generic(4), b(), r()]), vec![CreatureType::Elemental], 5, 1)
+    }
+}
+
+/// Blitz Leech — {5}{B} 5/2 Leech with flash. When it enters, target creature
+/// an opponent controls gets -2/-2 until end of turn; remove all counters
+/// from it.
+pub fn blitz_leech() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::RemoveAllCounters { what: Selector::Target(0) },
+        ]))],
+        ..creature("Blitz Leech", cost(&[generic(5), b()]), vec![CreatureType::Leech], 5, 2)
+    }
+}
+
+/// Ravenous Gigamole — {3}{B} 2/3 Mole Horror. When it enters, mill three;
+/// you may put a creature card milled this way into your hand, else a +1/+1
+/// counter on it.
+pub fn ravenous_gigamole() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MillThenToHand {
+            amount: Value::Const(3),
+            filter: R::Creature,
+            otherwise: Some(Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            })),
+        })],
+        ..creature("Ravenous Gigamole", cost(&[generic(3), b()]), vec![CreatureType::Mole, CreatureType::Horror], 2, 3)
+    }
+}
