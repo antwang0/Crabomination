@@ -674,3 +674,48 @@ fn selective_snare_bounces_x_of_one_type() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == a) && g.players[1].hand.iter().any(|c| c.id == b));
 }
+
+/// Wanderwine Farewell's tokens count what it returned, and only with a
+/// Merfolk on your side once the returns are done.
+#[test]
+fn wanderwine_farewell_counts_returned_permanents() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::judge_of_currents());
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::sol_ring());
+    let wf = g.add_card_to_hand(0, catalog::wanderwine_farewell());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wf,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.iter().filter(|c| c.id == a || c.id == b).count(), 2);
+    let tokens = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Merfolk").count();
+    assert_eq!(tokens, 2);
+}
+
+/// Vivid — Shinestriker draws one card per color among your permanents (it
+/// counts itself: green, red and blue is three), and Wildvine Pummeler costs
+/// {1} less per color.
+#[test]
+fn vivid_counts_colors_among_your_permanents() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::hill_giant());
+    let ss = g.add_card_to_hand(0, catalog::shinestriker());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, ss, None).expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
+    let wp = g.add_card_to_hand(0, catalog::wildvine_pummeler());
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, wp, None).expect("{3}{G} with three colors");
+    assert!(g.battlefield_find(wp).is_some());
+}

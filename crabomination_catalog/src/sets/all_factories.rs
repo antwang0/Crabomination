@@ -18195,6 +18195,14 @@ static DECKS: &[Factory] = &[
     super::decks::phantasmal_mount,
     super::decks::surge_mare,
     super::decks::selective_snare,
+    super::decks::merrow_skyswimmer,
+    super::decks::silvergill_peddler,
+    super::decks::wanderwine_farewell,
+    super::decks::glister_bairn,
+    super::decks::prismabasher,
+    super::decks::shinestriker,
+    super::decks::wildvine_pummeler,
+    super::decks::rime_chill,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
