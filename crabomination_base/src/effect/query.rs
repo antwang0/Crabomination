@@ -2144,6 +2144,7 @@ impl Effect {
             Effect::SetCardTypesTo { what, .. }
             | Effect::SetCardTypesFor { what, .. }
             | Effect::AmendCopiableValues { what, .. }
+            | Effect::AddCopiableStaticAbilities { what, .. }
             | Effect::BecomeFoodArtifact { what }
             | Effect::BecomeNamed { what, .. } => sel_has_target(what),
             Effect::GrantKeyword { what, .. }
@@ -3117,6 +3118,7 @@ impl Effect {
             | Effect::SetCardTypesTo { what, .. }
             | Effect::SetCardTypesFor { what, .. }
             | Effect::AmendCopiableValues { what, .. }
+            | Effect::AddCopiableStaticAbilities { what, .. }
             | Effect::BecomeFoodArtifact { what }
             | Effect::BecomeNamed { what, .. } => sel_filter(what),
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
@@ -4867,6 +4869,7 @@ impl Effect {
             | Effect::SetCardTypesTo { .. }
             | Effect::SetCardTypesFor { .. }
             | Effect::AmendCopiableValues { .. }
+            | Effect::AddCopiableStaticAbilities { .. }
             | Effect::BecomeFoodArtifact { .. }
             | Effect::GrantKeywordToMatchingThisTurn { .. }
             | Effect::AnimateAsCreature { .. }
@@ -5810,6 +5813,7 @@ impl Effect {
                 | Effect::SetCardTypesTo { what, .. }
             | Effect::SetCardTypesFor { what, .. }
                 | Effect::AmendCopiableValues { what, .. }
+                | Effect::AddCopiableStaticAbilities { what, .. }
                 | Effect::BecomeFoodArtifact { what }
                 | Effect::BecomeNamed { what, .. }
                 | Effect::SpellEntersWithCounters { what, .. } => sel_find(what, slot),

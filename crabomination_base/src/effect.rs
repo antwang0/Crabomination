@@ -10409,6 +10409,11 @@ pub enum Effect {
     /// Food ability added, its other abilities kept. Written into its
     /// copiable values (CR 707.9b).
     BecomeFoodArtifact { what: Selector },
+    /// CR 707.9b — "… and it has '[static ability]'" as a copy exception:
+    /// written into the copiable values of each permanent `what` names, beside
+    /// `AmendCopiableValues` (Dollhouse of Horrors' "This token gets +1/+1 for
+    /// each Construct you control").
+    AddCopiableStaticAbilities { what: Selector, statics: Vec<crate::card::StaticAbility> },
     /// CR 707.9b — a copy exception written into the copiable values of each
     /// permanent `what` names, so a copy of it carries it too: "except its
     /// name is …" (Mishra's Warform), "except it's a … Zombie" (creature types

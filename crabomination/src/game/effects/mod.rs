@@ -13846,6 +13846,17 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::AddCopiableStaticAbilities { what, statics } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let mut def = (*c.definition.arc()).clone();
+                        def.static_abilities.extend(statics.iter().cloned());
+                        c.set_copiable_definition(std::sync::Arc::new(def));
+                    }
+                }
+                Ok(())
+            }
             Effect::CasterCopiesSpellForEachOtherMatchingTarget { what, filter } => {
                 self.caster_copies_spell_for_each_other_matching_target(what, filter, ctx, events)
             }
