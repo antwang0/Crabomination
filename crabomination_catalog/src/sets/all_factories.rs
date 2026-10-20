@@ -18307,6 +18307,16 @@ static DECKS: &[Factory] = &[
     super::decks::dinosaur_hunter,
     super::decks::pack_attack,
     super::decks::return_from_extinction,
+    super::decks::caravan_escort,
+    super::decks::timber_wolves,
+    super::decks::elegant_entourage,
+    super::decks::jodahs_codex,
+    super::decks::timely_interference,
+    super::decks::magus_of_the_jar,
+    super::decks::grim_giganotosaurus,
+    super::decks::emptiness,
+    super::decks::flitting_guerrilla,
+    super::decks::jaces_mindseeker,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

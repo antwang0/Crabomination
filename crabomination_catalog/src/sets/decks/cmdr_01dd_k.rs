@@ -423,3 +423,238 @@ pub fn return_from_extinction() -> CardDefinition {
         ]),
     )
 }
+
+// ── Batch two ───────────────────────────────────────────────────────────────
+
+/// Caravan Escort — {W} 1/1 Human Knight, level up {2}. LEVEL 1-4: 2/2.
+/// LEVEL 5+: 5/5 first strike.
+pub fn caravan_escort() -> CardDefinition {
+    CardDefinition {
+        level_bands: vec![
+            crate::card::LevelBand { min: 1, max: Some(4), power: 2, toughness: 2, keywords: vec![] },
+            crate::card::LevelBand { min: 5, max: None, power: 5, toughness: 5, keywords: vec![Keyword::FirstStrike] },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Level, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Caravan Escort", cost(&[w()]), vec![CreatureType::Human, CreatureType::Knight], 1, 1)
+    }
+}
+
+/// Timber Wolves — {G} 1/1 Wolf with banding (CR 702.22).
+pub fn timber_wolves() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Banding],
+        ..creature("Timber Wolves", cost(&[g()]), vec![CreatureType::Wolf], 1, 1)
+    }
+}
+
+/// Elegant Entourage — {3}{G} 4/4 Elf Druid. Alliance — whenever another
+/// creature you control enters, target creature other than this one gets
+/// +1/+1 and gains trample until end of turn.
+pub fn elegant_entourage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..creature("Elegant Entourage", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Druid], 4, 4)
+    }
+}
+
+/// Jodah's Codex — {5} artifact — Book. Domain — {5}, {T}: draw a card; costs
+/// {1} less for each basic land type among lands you control.
+pub fn jodahs_codex() -> CardDefinition {
+    CardDefinition {
+        name: "Jodah's Codex",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Book], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(5)]),
+            cost_reduction_value: Some(Value::DomainCount(PlayerRef::You)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Timely Interference — {U} instant, kicker {1}{R}. Target creature gets
+/// -1/-0 until end of turn; kicked, it also blocks this turn if able. Draw a
+/// card.
+pub fn timely_interference() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), r()]))],
+        ..spell(
+            "Timely Interference",
+            cost(&[crate::mana::u()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(-1),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::MustBlock,
+                        duration: Duration::EndOfTurn,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        )
+    }
+}
+
+/// Magus of the Jar — {3}{U}{U} 3/3 Human Wizard. {T}, sacrifice it: each
+/// player exiles their hand face down and draws seven; at the next end step
+/// each discards their hand and gets the exiled cards back (Memory Jar).
+pub fn magus_of_the_jar() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::EachPlayerExilesHandDrawsSeven,
+            ..Default::default()
+        }],
+        ..creature(
+            "Magus of the Jar",
+            cost(&[generic(3), crate::mana::u(), crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            3,
+        )
+    }
+}
+
+/// Grim Giganotosaurus — {5}{B}{G} 10/10 Dinosaur. {10}{B}{G}: monstrosity
+/// 10, costing {1} less per creature with power 4 or greater your opponents
+/// control. When it becomes monstrous, destroy all other artifacts and
+/// creatures.
+pub fn grim_giganotosaurus() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            cost_reduction_value: Some(Value::count(Selector::EachPermanent(
+                R::Creature.and(R::ControlledByOpponent).and(R::PowerAtLeast(4)),
+            ))),
+            ..crate::effect::shortcut::monstrosity(cost(&[generic(10), b(), g()]), 10)
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::on_becomes_monstrous(Effect::Destroy {
+            what: Selector::EachPermanent(R::Artifact.or(R::Creature).and(R::OtherThanSource)),
+        })],
+        ..creature("Grim Giganotosaurus", cost(&[generic(5), b(), g()]), vec![CreatureType::Dinosaur], 10, 10)
+    }
+}
+
+/// Emptiness — {4}{W/B}{W/B} 3/5 Elemental Incarnation, evoke {W/B}{W/B}.
+/// ETB, if {W}{W} was spent: return target creature card with mana value 3
+/// or less from your graveyard to the battlefield. ETB, if {B}{B} was spent:
+/// three -1/-1 counters on up to one target creature.
+pub fn emptiness() -> CardDefinition {
+    use crate::mana::hybrid;
+    let wb = || hybrid(Color::White, Color::Black);
+    let spent = |color: Color| Predicate::SourceCastWithColorSpent { color, at_least: 2 };
+    CardDefinition {
+        alternative_cost: Some(crate::effect::shortcut::evoke(ManaCost::new(vec![wb(), wb()]))),
+        triggered_abilities: vec![
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(spent(Color::White)),
+                effect: Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3))),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(spent(Color::Black)),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::AddCounter {
+                        what: target_filtered(R::Creature),
+                        kind: CounterType::MinusOneMinusOne,
+                        amount: Value::Const(3),
+                    }),
+                },
+            },
+        ],
+        ..creature(
+            "Emptiness",
+            ManaCost::new(vec![generic(4), wb(), wb()]),
+            vec![CreatureType::Elemental, CreatureType::Incarnation],
+            3,
+            5,
+        )
+    }
+}
+
+/// Flitting Guerrilla — {2}{B} 2/2 flying Faerie Rogue. When it dies, each
+/// player mills two; then you may exile this card, and when you do, put
+/// target creature or battle card from your graveyard on top of your library.
+pub fn flitting_guerrilla() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) },
+            Effect::MayDo {
+                description: "Exile Flitting Guerrilla to put a creature or battle card on top of your library?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+                    Effect::Reflexive {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(R::Creature.or(R::HasCardType(CardType::Battle)).and(R::InYourGraveyard)),
+                            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+                        }),
+                    },
+                ])),
+            },
+        ]))],
+        ..creature("Flitting Guerrilla", cost(&[generic(2), b()]), vec![CreatureType::Faerie, CreatureType::Rogue], 2, 2)
+    }
+}
+
+/// Jace's Mindseeker — {4}{U}{U} 4/4 flying Fish Illusion. ETB: target
+/// opponent mills five; you may cast an instant or sorcery spell from among
+/// them without paying its mana cost.
+pub fn jaces_mindseeker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::Mill { who: target_filtered(R::OpponentPlayer), amount: Value::Const(5) },
+            Effect::CastAnyOrderWithoutPaying {
+                what: Selector::LastMoved,
+                source_zone: crate::card::Zone::Graveyard,
+                filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                cap: Some(Value::ONE),
+                total_mana_value: None,
+            },
+        ]))],
+        ..creature(
+            "Jace's Mindseeker",
+            cost(&[generic(4), crate::mana::u(), crate::mana::u()]),
+            vec![CreatureType::Fish, CreatureType::Illusion],
+            4,
+            4,
+        )
+    }
+}
