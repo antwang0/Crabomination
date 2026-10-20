@@ -4302,6 +4302,14 @@ impl GameState {
                 // CR 701.59 — true iff this spell's "collect evidence" cost was paid.
                 ctx.cast_collected_evidence
             }
+            Predicate::CounterWouldLand { what, kind } => {
+                !self.counters_locked()
+                    && self
+                        .resolve_selector(what, ctx)
+                        .into_iter()
+                        .filter_map(|e| e.as_permanent_id())
+                        .any(|cid| self.battlefield_find(cid).is_some() && self.scaled_counter_count_on(cid, *kind, 1) > 0)
+            }
             Predicate::SourceDoneThisTurn => ctx
                 .source
                 .is_some_and(|s| self.triggered_once_per_turn_used.contains(&(s, crate::game::DONE_THIS_TURN_SLOT))),

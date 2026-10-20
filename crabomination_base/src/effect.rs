@@ -1936,6 +1936,10 @@ pub enum Predicate {
     /// (Mindbreak Trap, Guul Draz Specter). A single-player predicate handed
     /// `EachOpponent` reads only the first seat (CR 800.4); this asks each.
     ForAnyPlayer { who: PlayerRef, pred: Box<Predicate> },
+    /// A `kind` counter put on `what` (one permanent) now would land: no
+    /// Solemnity lock and no restriction (Blightbeetle) zeroes it. CR
+    /// 702.100b — a creature evolves only if the counter was put.
+    CounterWouldLand { what: Selector, kind: crate::card::CounterType },
     /// At least one entity matches the selector.
     SelectorExists(Selector),
     /// Selector resolves to at least `n` entities.

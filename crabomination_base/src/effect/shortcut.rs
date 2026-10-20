@@ -737,9 +737,16 @@ pub fn evolve() -> TriggeredAbility {
 /// parallel trigger on the entering creature fired before the counter landed,
 /// and a Watchful Radstag smaller than its own 2/2 copies copied itself
 /// without end.
+/// A counter that can't be put (Blightbeetle) is no evolution, so the rider
+/// is gated on it landing: a 1/1 Radstag under Blightbeetle copied itself for
+/// every 2/2 copy that entered (8-seat sweep seed 931184, 403 Radstags).
 pub fn evolve_then(rider: Effect) -> TriggeredAbility {
     let mut t = evolve();
-    t.effect = Effect::Seq(vec![t.effect, rider]);
+    let landed = Predicate::CounterWouldLand { what: Selector::This, kind: crate::card::CounterType::PlusOnePlusOne };
+    t.effect = Effect::Seq(vec![
+        t.effect,
+        Effect::If { cond: landed, then: Box::new(rider), else_: Box::new(Effect::Noop) },
+    ]);
     t
 }
 

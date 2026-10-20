@@ -756,3 +756,41 @@ fn cr_702_100a_watchful_radstag_copies_once_per_evolve() {
     assert_eq!(radstags, 2, "the original and one copy");
     assert!(g.game_over.is_none());
 }
+
+/// CR 702.100a / 707.2 — Radstags of different sizes: each evolves once for a
+/// bigger arrival and each copy is a fresh 2/2, so nothing re-evolves
+/// (sweep seed 931184).
+#[test]
+fn cr_702_100a_uneven_radstags_settle() {
+    let mut g = pod(2);
+    let big = g.add_card_to_battlefield(0, catalog::watchful_radstag());
+    g.battlefield_find_mut(big).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_battlefield(0, catalog::watchful_radstag());
+    let beast = g.add_card_to_hand(0, catalog::webweaver_changeling());
+    cast(&mut g, beast, None);
+    let radstags: Vec<(i32, i32)> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Watchful Radstag")
+        .map(|c| pt(&g, c.id))
+        .collect();
+    assert_eq!(radstags.len(), 4, "two evolved originals and two copies: {radstags:?}");
+    assert!(g.game_over.is_none());
+}
+
+/// CR 702.100b — a creature evolves only when its evolve ability puts the
+/// counter. Under an opponent's Blightbeetle no +1/+1 counter lands, so
+/// Watchful Radstag never evolves and makes no copy (bug fix: 8-seat sweep
+/// seed 931184 drew a CR 104.4b loop with 403 Radstags).
+#[test]
+fn cr_702_100b_no_counter_no_evolution_under_blightbeetle() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::blightbeetle());
+    let radstag = g.add_card_to_battlefield(0, catalog::watchful_radstag());
+    let beast = g.add_card_to_hand(0, catalog::webweaver_changeling());
+    cast(&mut g, beast, None);
+    assert_eq!(g.battlefield_find(radstag).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    let radstags = g.battlefield.iter().filter(|c| c.definition.name == "Watchful Radstag").count();
+    assert_eq!(radstags, 1, "no counter, no evolution, no copy");
+    assert!(g.game_over.is_none());
+}
