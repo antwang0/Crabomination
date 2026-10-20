@@ -845,3 +845,14 @@ pub fn throne_of_makindi() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cheering Fanatic — {1}{R} 2/2 Goblin. Whenever it attacks, choose a card
+/// name; spells with the chosen name cost {1} less to cast this turn. (The
+/// name is chosen among the nonland cards in your hand — see
+/// `Effect::NameSpellsCostLessThisTurn`.)
+pub fn cheering_fanatic() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::NameSpellsCostLessThisTurn { amount: 1 })],
+        ..creature("Cheering Fanatic", cost(&[generic(1), r()]), vec![CreatureType::Goblin], 2, 2)
+    }
+}

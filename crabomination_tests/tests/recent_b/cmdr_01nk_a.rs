@@ -523,3 +523,19 @@ fn throne_of_makindi_mana_only_casts_kicked_spells() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 16);
 }
+
+/// Cheering Fanatic's discount reaches every player's spells with the name.
+#[test]
+fn cheering_fanatic_discounts_the_named_spell_for_everyone() {
+    let mut g = pod(2);
+    g.add_card_to_hand(0, catalog::hill_giant());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::NameSpellsCostLessThisTurn { amount: 1 }, &ctx).unwrap();
+    let theirs = g.add_card_to_hand(1, catalog::hill_giant());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: theirs, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Hill Giant for {2}{R}");
+}
