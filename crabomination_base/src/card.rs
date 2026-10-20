@@ -1126,6 +1126,8 @@ pub enum CounterType {
     Hatching,
     /// Smoldering Egg's ember counters (seven transform it).
     Ember,
+    /// Fraying Line's rope counters (a creature without one is exiled).
+    Rope,
 }
 
 /// Every zone a card can occupy.
