@@ -10,6 +10,7 @@
 mod distinct_mv_return;
 mod mill_until;
 mod all_but_one;
+mod any_player_sacrifice;
 mod energy_sweep;
 mod among;
 mod may_cost;
@@ -24757,6 +24758,9 @@ impl GameState {
 
             Effect::AnyPlayerMayPayLifeToCounterThis { life } => {
                 self.any_player_may_pay_life_to_counter_this(*life, ctx, effect, events)
+            }
+            Effect::AnyPlayerMaySacrificeToTopdeckSource { filter } => {
+                self.any_player_may_sacrifice_to_topdeck_source(filter, effect, ctx, events)
             }
 
             Effect::CounterSpell { what } => {

@@ -14322,6 +14322,11 @@ pub enum Effect {
     /// SelfSource` trigger. Only a seat that can pay is asked (CR 119.4);
     /// `game/effects/punisher_counter.rs` has the headless policy.
     AnyPlayerMayPayLifeToCounterThis { life: u32 },
+    /// "Any player may sacrifice a [filter] of their choice. If a player
+    /// does, put this creature on top of its owner's library" (Shivan
+    /// Wumpus) — asked in turn order from the controller; the first
+    /// sacrifice ends it.
+    AnyPlayerMaySacrificeToTopdeckSource { filter: SelectionRequirement },
 
     AnyPlayerMayAccept {
         who: PlayerRef,
