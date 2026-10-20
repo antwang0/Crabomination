@@ -424,6 +424,11 @@ pub struct PlayerCold {
     /// guarded, at the turn boundary.
     #[serde(default)]
     pub ventured_this_turn: bool,
+    /// "The next creature card you play this turn can be played as though it
+    /// had flash" (Scout's Warning, `Effect::NextCreatureSpellHasFlashThisTurn`):
+    /// spent by the next creature spell cast, cleared at the turn boundary.
+    #[serde(default)]
+    pub next_creature_spell_flash_this_turn: bool,
     /// CR 702.131b — a permanent with ascend has entered under this player's
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]

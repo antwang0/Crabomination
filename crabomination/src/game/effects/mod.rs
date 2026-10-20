@@ -42049,6 +42049,10 @@ impl GameState {
                 self.players[ctx.controller].next_spell_flash_this_turn = true;
                 Ok(())
             }
+            Effect::NextCreatureSpellHasFlashThisTurn => {
+                self.players[ctx.controller].next_creature_spell_flash_this_turn = true;
+                Ok(())
+            }
             Effect::NextSpellOfChosenTypeHasFlashThisTurn => {
                 if let Some(ct) =
                     ctx.source.and_then(|s| self.find_card_anywhere(s)).and_then(|c| c.chosen_creature_type)

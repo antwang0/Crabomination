@@ -14106,6 +14106,10 @@ pub enum Effect {
     /// "The next spell you cast this turn can be cast as though it had flash"
     /// (Ride the Avalanche). Spent by that cast.
     NextSpellHasFlashThisTurn,
+    /// "The next creature card you play this turn can be played as though it
+    /// had flash" (Scout's Warning). Spent by that creature's cast; a
+    /// noncreature spell in between leaves it armed.
+    NextCreatureSpellHasFlashThisTurn,
     /// "The next spell of the chosen type you cast this turn can be cast as
     /// though it had flash" (Progenitor's Icon) — the source's chosen
     /// creature type, read at resolution. Spent by the first spell of that

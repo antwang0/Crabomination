@@ -12062,6 +12062,9 @@ impl GameState {
         if self.players[p].next_spell_flash_this_turn {
             self.players[p].next_spell_flash_this_turn = false;
         }
+        if self.players[p].next_creature_spell_flash_this_turn && self.computed_is_creature(&card) {
+            self.players[p].next_creature_spell_flash_this_turn = false;
+        }
         if !self.players[p].next_typed_spell_flash_this_turn.is_empty()
             && let Some(i) = self.players[p]
                 .next_typed_spell_flash_this_turn
@@ -18242,6 +18245,7 @@ impl GameState {
                 || self.players[p].creature_flash_until_your_turn)
                 && self.computed_is_creature(card))
             || self.players[p].next_spell_flash_this_turn
+            || (self.players[p].next_creature_spell_flash_this_turn && self.computed_is_creature(card))
             || self.players[p]
                 .next_typed_spell_flash_this_turn
                 .iter()
