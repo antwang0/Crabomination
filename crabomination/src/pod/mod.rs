@@ -26904,6 +26904,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LEORI_COMMANDERS,
             main: decks::LEORI_MAIN,
         },
+        // Seat 4409: Bill Ferny, Bree Swindler's EDHREC average deck. `--pod-decks 4409`.
+        PodDeck {
+            name: "Bill Ferny, Bree Swindler (U)",
+            commanders: decks::BILL_FERNY_COMMANDERS,
+            main: decks::BILL_FERNY_MAIN,
+        },
     ]
 }
 
@@ -33213,6 +33219,7 @@ mod tests {
             ("Selenia, Dark Angel", &[0x1B4C]),
             ("Sol'Kanar the Tainted", &[0x1B4D]),
             ("Leori, Sparktouched Hunter", &[0x1B4E]),
+            ("Bill Ferny, Bree Swindler", &[0x1B4F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

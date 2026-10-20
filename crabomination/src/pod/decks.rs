@@ -123668,3 +123668,29 @@ pub const LEORI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     plains, plains, plains, plains,
 ];
+
+pub const BILL_FERNY_COMMANDERS: &[CardFactory] = &[bill_ferny_bree_swindler];
+
+/// **Bill Ferny, Bree Swindler**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Bill Ferny, Bree Swindler (EDHREC, fetched 2026-10-20).
+pub const BILL_FERNY_MAIN: &[CardFactory] = &[
+    arcane_signet, birthing_boughs, firdoch_core, grappling_hook, infiltration_lens,
+    magnetic_web, maskwood_nexus, nemesis_mask, quietus_spike, sapphire_medallion, sol_ring,
+    stalactite_dagger, swiftfoot_boots, the_masamune, thought_vessel, archway_of_innovation,
+    homeward_path, maze_of_ith, myriad_landscape, mystic_sanctuary, reliquary_tower, war_room,
+    academy_manufactor, akroan_horse, amoeboid_changeling, bloodline_pretender,
+    breaching_hippocamp, changeling_wayfinder, chrome_steed, cobbled_lancer, cosmos_charger,
+    courtly_provocateur, coveted_falcon, diamond_mare, imagecrafter, loch_mare,
+    mothdust_changeling, omni_changeling, phantasmal_mount, phantom_steed, rust_elemental,
+    shapesharer, shimmer_dragon, steel_golem, surge_mare, troop_of_ponies, universal_automaton,
+    wavebreak_hippocamp, arcane_adaptation, leyline_of_transformation, mechanized_production,
+    propaganda, reflections_of_littjara, unnatural_selection, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, counterspell, get_out, high_tide, negate, pongify,
+    run_away_together, snap, unsummon, fabricate, modify_memory, rise_and_shine,
+    selective_snare, shifting_grift, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
