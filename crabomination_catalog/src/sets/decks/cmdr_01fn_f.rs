@@ -196,17 +196,23 @@ pub fn snow_fortress() -> CardDefinition {
 /// Divine Smite — {1}{W} instant. Target creature or planeswalker an
 /// opponent controls phases out; a black one is exiled instead.
 pub fn divine_smite() -> CardDefinition {
+    let smite_target = || R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent);
     spell(
         "Divine Smite",
         cost(&[generic(1), w()]),
         CardType::Instant,
+        // The filter rides the branches, not the condition: the cast-time
+        // target walk doesn't read an `If`'s predicate (CR 601.2c).
         Effect::If {
             cond: Predicate::EntityMatches {
-                what: target_filtered(R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent)),
+                what: Selector::Target(0),
                 filter: R::HasColor(Color::Black),
             },
-            then: Box::new(Effect::Exile { what: Selector::Target(0) }),
-            else_: Box::new(Effect::PhaseOut { what: Selector::Target(0), until_source_leaves: false }),
+            then: Box::new(Effect::Exile { what: target_filtered(smite_target()) }),
+            else_: Box::new(Effect::PhaseOut {
+                what: target_filtered(smite_target()),
+                until_source_leaves: false,
+            }),
         },
     )
 }
