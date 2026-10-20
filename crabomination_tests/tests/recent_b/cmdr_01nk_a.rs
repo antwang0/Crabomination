@@ -658,3 +658,18 @@ fn secret_invasion_copies_and_holds_a_creature() {
     assert_eq!(g.computed_permanent(mine).unwrap().power, 2, "back to a Bear");
     assert!(g.battlefield_find(theirs).is_some(), "the Giant returns");
 }
+
+/// Shivan Wumpus goes back on top of its owner's library when an opponent
+/// with lands to spare sacrifices one (seat 1, with none, passes).
+#[test]
+fn shivan_wumpus_is_topdecked_by_a_land_sacrifice() {
+    let mut g = pod(3);
+    for _ in 0..7 {
+        g.add_card_to_battlefield(2, catalog::plains());
+    }
+    let w = g.add_card_to_hand(0, catalog::shivan_wumpus());
+    cast(&mut g, w, None);
+    assert_eq!(g.players[0].library[0].id, w, "on top of its owner's library");
+    let lands = g.battlefield.iter().filter(|c| c.controller == 2 && c.definition.is_land()).count();
+    assert_eq!(lands, 6, "seat 2 sacrificed one");
+}

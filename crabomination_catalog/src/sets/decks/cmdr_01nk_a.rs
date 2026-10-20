@@ -1024,3 +1024,14 @@ pub fn secret_invasion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Shivan Wumpus — {3}{R} 6/6 trample Beast. When it enters, any player may
+/// sacrifice a land of their choice; if a player does, put it on top of its
+/// owner's library.
+pub fn shivan_wumpus() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::AnyPlayerMaySacrificeToTopdeckSource { filter: R::Land })],
+        ..creature("Shivan Wumpus", cost(&[generic(3), r()]), vec![CreatureType::Beast], 6, 6)
+    }
+}
