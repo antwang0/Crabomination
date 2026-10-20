@@ -27312,6 +27312,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FALTHIS_18_COMMANDERS,
             main: decks::FALTHIS_18_MAIN,
         },
+        // Seat 4477: Reyhan, Last of the Abzan and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 4477`.
+        PodDeck {
+            name: "Reyhan, Last of the Abzan and Tana, the Bloodsower (BRG)",
+            commanders: decks::REYHAN_2_COMMANDERS,
+            main: decks::REYHAN_2_MAIN,
+        },
+        // Seat 4478: Burakos, Party Leader and Tavern Brawler's EDHREC average deck. `--pod-decks 4478`.
+        PodDeck {
+            name: "Burakos, Party Leader and Tavern Brawler (BR)",
+            commanders: decks::BURAKOS_12_COMMANDERS,
+            main: decks::BURAKOS_12_MAIN,
+        },
+        // Seat 4479: The Seventh Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 4479`.
+        PodDeck {
+            name: "The Seventh Doctor and Yasmin Khan (WUR)",
+            commanders: decks::THE_SEVENTH_DOCTOR_7_COMMANDERS,
+            main: decks::THE_SEVENTH_DOCTOR_7_MAIN,
+        },
+        // Seat 4480: Burakos, Party Leader and Dragon Cultist's EDHREC average deck. `--pod-decks 4480`.
+        PodDeck {
+            name: "Burakos, Party Leader and Dragon Cultist (BR)",
+            commanders: decks::BURAKOS_13_COMMANDERS,
+            main: decks::BURAKOS_13_MAIN,
+        },
+        // Seat 4481: Alharu, Solemn Ritualist and Eligeth, Crossroads Augur's EDHREC average deck. `--pod-decks 4481`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Eligeth, Crossroads Augur (WU)",
+            commanders: decks::ALHARU_15_COMMANDERS,
+            main: decks::ALHARU_15_MAIN,
+        },
+        // Seat 4482: Miara, Thorn of the Glade and Tymna the Weaver's EDHREC average deck. `--pod-decks 4482`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Tymna the Weaver (WB)",
+            commanders: decks::MIARA_10_COMMANDERS,
+            main: decks::MIARA_10_MAIN,
+        },
     ]
 }
 
@@ -33689,6 +33725,12 @@ mod tests {
             ("The Fugitive Doctor and Amy Pond", &[0x1B90]),
             ("Imoen, Mystic Trickster and Flaming Fist", &[0x1B91]),
             ("Falthis, Shadowcat Familiar and Rebbec, Architect of Ascension", &[0x1B92]),
+            ("Reyhan, Last of the Abzan and Tana, the Bloodsower", &[0x1B93]),
+            ("Burakos, Party Leader and Tavern Brawler", &[0x1B94]),
+            ("The Seventh Doctor and Yasmin Khan", &[0x1B95]),
+            ("Burakos, Party Leader and Dragon Cultist", &[0x1B96]),
+            ("Alharu, Solemn Ritualist and Eligeth, Crossroads Augur", &[0x1B97]),
+            ("Miara, Thorn of the Glade and Tymna the Weaver", &[0x1B98]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
