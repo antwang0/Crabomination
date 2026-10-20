@@ -601,3 +601,76 @@ fn way_of_the_cryomancer_makes_a_jace_with_a_copy_ability() {
     cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
     assert_eq!(g.players[1].life, 14, "the bolt was copied");
 }
+
+/// CR 603.4 — Phantasmal Mount's two links: killing the Mount sacrifices the
+/// creature it boosted.
+#[test]
+fn phantasmal_mount_links_both_ways() {
+    let mut g = pod(2);
+    let mount = ready(&mut g, 0, catalog::phantasmal_mount());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mount,
+        ability_index: 0,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bolt, Some(Target::Permanent(mount))).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mount).is_none());
+    assert!(g.battlefield_find(bears).is_none(), "sacrificed with the Mount");
+}
+
+/// Bill Ferny's second mode: blocked, it gives a Horse to the target
+/// opponent, leaves combat, and makes three Treasures.
+#[test]
+fn bill_ferny_trades_a_horse_for_treasure() {
+    let mut g = pod(2);
+    let bill = ready(&mut g, 0, catalog::bill_ferny_bree_swindler());
+    let horse = ready(&mut g, 0, catalog::phantasmal_mount());
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bill,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bill)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(horse).unwrap().controller, 1);
+    assert_eq!(treasures(&g, 0), 3);
+    assert!(g.battlefield_find(bill).is_some(), "removed from combat, not killed");
+}
+
+/// Selective Snare returns X creatures sharing a creature type.
+#[test]
+fn selective_snare_bounces_x_of_one_type() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::grizzly_bears());
+    let snare = g.add_card_to_hand(0, catalog::selective_snare());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: snare,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == a) && g.players[1].hand.iter().any(|c| c.id == b));
+}

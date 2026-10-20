@@ -18191,6 +18191,10 @@ static DECKS: &[Factory] = &[
     super::decks::way_of_the_cryomancer,
     super::decks::chandra_flames_catalyst,
     super::decks::chandra_flames_fury,
+    super::decks::bill_ferny_bree_swindler,
+    super::decks::phantasmal_mount,
+    super::decks::surge_mare,
+    super::decks::selective_snare,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -2286,3 +2286,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Resolute Veggiesaur | when one roll of several dice spans your third die, every die of that roll reads the turn's count after the roll, so it can trigger more than once | `Value::DiceRolledThisTurn` |
 | 🟡 Xenosquirrels | the counter-for-a-shift choice is the headless pick for every seat (it only ever raises a die into a better arm or onto a named threshold; never lowers) | `StaticEffect::RemoveCounterToShiftDie` |
 | 🟡 Bamboozling Beeble | the ignored die is chosen by rule, not asked: an opponent's best face, a friendly roll's worst | `Effect::NextRollExtraDieThisTurn` |
+| 🟡 Selective Snare | "the creature type of your choice" is read off the targets: each must share a creature type with the first, not one type common to all | `SharesCreatureTypeWithTargetSlot(0)` |
+| 🟡 Illusory Gains | "you control enchanted creature" is an ETB/re-attach trigger holding the steal while attached (Control Magic's shape), not a layer-2 static | `GainControlWhileSourceAttached` |
+| 🟡 Enduring Angel | its transform inside the life funnel dispatches no `Transformed` event ("whenever a permanent transforms" watchers miss it) | `StaticEffect::LifeToZeroTransformsSelf` |
+| 🟡 Sol'Kanar the Tainted | the donation's opponent is the engine's ranked hostile opponent, not asked | `GainControl { to: HostileOpponent }` |
+| 🟡 Tyrannical Pitlord | the leaves trigger sacrifices the chosen creature by whoever controls it (a stolen one is the thief's sacrifice, where the printed "you" does nothing) | `SacrificePermanent { ChosenPermanentOfSource }` |
