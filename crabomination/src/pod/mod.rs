@@ -28602,6 +28602,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_WAR_DOCTOR_10_COMMANDERS,
             main: decks::THE_WAR_DOCTOR_10_MAIN,
         },
+        // Seat 4692: Ishai, Ojutai Dragonspeaker and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4692`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Prava of the Steel Legion (WU)",
+            commanders: decks::ISHAI_9_COMMANDERS,
+            main: decks::ISHAI_9_MAIN,
+        },
+        // Seat 4693: Keleth, Sunmane Familiar and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 4693`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Sakashima of a Thousand Faces (WU)",
+            commanders: decks::KELETH_20_COMMANDERS,
+            main: decks::KELETH_20_MAIN,
+        },
+        // Seat 4694: Alena, Kessig Trapper and Esior, Wardwing Familiar's EDHREC average deck. `--pod-decks 4694`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Esior, Wardwing Familiar (UR)",
+            commanders: decks::ALENA_30_COMMANDERS,
+            main: decks::ALENA_30_MAIN,
+        },
+        // Seat 4695: Esior, Wardwing Familiar and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4695`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Kydele, Chosen of Kruphix (UG)",
+            commanders: decks::ESIOR_21_COMMANDERS,
+            main: decks::ESIOR_21_MAIN,
+        },
     ]
 }
 
@@ -35194,6 +35218,10 @@ mod tests {
             ("Wyll, Blade of Frontiers and Street Urchin", &[0x1C67]),
             ("Ich-Tekik, Salvage Splicer and Jeska, Thrice Reborn", &[0x1C68]),
             ("The War Doctor and Nardole, Resourceful Cyborg", &[0x1C69]),
+            ("Ishai, Ojutai Dragonspeaker and Prava of the Steel Legion", &[0x1C6A]),
+            ("Keleth, Sunmane Familiar and Sakashima of a Thousand Faces", &[0x1C6B]),
+            ("Alena, Kessig Trapper and Esior, Wardwing Familiar", &[0x1C6C]),
+            ("Esior, Wardwing Familiar and Kydele, Chosen of Kruphix", &[0x1C6D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

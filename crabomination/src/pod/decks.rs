@@ -131556,3 +131556,116 @@ pub const THE_WAR_DOCTOR_10_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, island, island, mountain, mountain, plains, plains, plains,
 ];
+
+pub const ISHAI_9_COMMANDERS: &[CardFactory] = &[ishai_ojutai_dragonspeaker, prava_of_the_steel_legion];
+
+/// **Ishai, Ojutai Dragonspeaker and Prava of the Steel Legion**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 10 Islands + 13 Plains = 98.
+/// Ishai, Ojutai Dragonspeaker and Prava of the Steel Legion (EDHREC, fetched 2026-10-20).
+pub const ISHAI_9_MAIN: &[CardFactory] = &[
+    arcane_signet, assimilation_aegis, azorius_signet, forcefield, mind_stone, sol_ring,
+    swiftfoot_boots, talisman_of_progress, thought_vessel, wayfarers_bauble, adarkar_wastes,
+    azorius_chancery, command_tower, glacial_fortress, myriad_landscape, port_town,
+    prairie_stream, seachrome_coast, skycloud_expanse, temple_of_enlightenment, academy_rector,
+    adarkar_valkyrie, adeline_resplendent_cathar, ancient_gold_dragon, aven_wind_guide,
+    denry_klin_editor_in_chief, echo_perceptive_prodigy, errant_and_giada, glasspool_mimic,
+    godhead_of_awe, grand_arbiter_augustin_iv, heliod_god_of_the_sun, hullbreaker_horror,
+    hydroelectric_specimen, isperia_supreme_judge, luminous_broodmoth, mondrak_glory_dominus,
+    ocelot_pride, ojer_taq_deepest_foundation, summon_good_king_mog_xii,
+    summon_knights_of_round, vedalken_mastermind, witch_enchanter, ajanis_last_stand,
+    blind_obedience, darksteel_mutation, divine_visitation, grasp_of_fate, nine_lives,
+    phyrexian_unlife, rule_of_law, sigil_of_the_empty_throne, unstoppable_plan,
+    utter_insignificance, counterspell, dawn_charm, flare_of_fortitude, generous_gift,
+    hindering_light, jwari_disruption, kabira_takedown, mana_leak, mana_tithe, mystical_tutor,
+    razorgrass_ambush, silundi_vision, spell_pierce, sphinxs_revelation, three_steps_ahead,
+    elspeth_suns_champion, makindi_stampede, mana_severance, sunfall, supreme_verdict,
+    vanquish_the_horde,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const KELETH_20_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, sakashima_of_a_thousand_faces];
+
+/// **Keleth, Sunmane Familiar and Sakashima of a Thousand Faces**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 8 Plains = 98.
+/// Keleth, Sunmane Familiar and Sakashima of a Thousand Faces (EDHREC, fetched 2026-10-20).
+pub const KELETH_20_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, arcane_signet, azorius_cluestone, blade_of_selves, fellwar_stone,
+    helm_of_the_host, lightning_greaves, mirror_box, shadowspear, sol_ring, swiftfoot_boots,
+    the_arkenstone, the_ozolith, adarkar_wastes, azorius_chancery, command_tower,
+    eiganjo_seat_of_the_empire, flooded_strand, glacial_fortress, hallowed_fountain,
+    hengegate_pathway, minamo_school_at_waters_edge, mystic_gate, otawara_soaring_city,
+    port_town, sea_of_clouds, skycloud_expanse, tundra, urzas_saga, aardvark_sloth,
+    auton_soldier, changeling_wayfinder, clever_impersonator, clone_card, copycrook,
+    esper_sentinel, flesh_duplicate, gigantoplasm, glasspool_mimic, kid_loki,
+    loki_lord_of_misrule, loyal_drake, mirror_image, phantasmal_image, phyrexian_metamorph,
+    pirated_copy, sakashima_the_impostor, spark_double, stunt_double, walls_of_ba_sing_se,
+    undercover_operative, vexilus_praetor, vizier_of_many_faces, all_that_glitters,
+    copy_artifact, extravagant_replication, flaming_fist, flowering_of_the_white_tree,
+    impostor_syndrome, imprisoned_in_the_moon, mirrormade, secret_invasion, akromas_will,
+    arcane_denial, cackling_counterpart, counterspell, flawless_maneuver, frantic_search,
+    mana_drain, path_to_exile, slip_out_the_back, swords_to_plowshares,
+    teyo_geometric_tactician, echocasting_symposium, ponder, quasiduplicate, relms_sketching,
+    restoration_seminar, rite_of_replication,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ALENA_30_COMMANDERS: &[CardFactory] = &[alena_kessig_trapper, esior_wardwing_familiar];
+
+/// **Alena, Kessig Trapper and Esior, Wardwing Familiar**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 11 Islands + 13 Mountains = 98.
+/// Alena, Kessig Trapper and Esior, Wardwing Familiar (EDHREC, fetched 2026-10-20).
+pub const ALENA_30_MAIN: &[CardFactory] = &[
+    arcane_signet, coldsteel_heart, fellwar_stone, izzet_signet, lightning_greaves,
+    liquimetal_torque, mind_stone, sol_ring, swiftfoot_boots, umbral_mantle, cascade_bluffs,
+    command_tower, fiery_islet, flamekin_village, frostboil_snarl, hanweir_battlements,
+    izzet_boilerworks, minamo_school_at_waters_edge, myriad_landscape, shivan_reef,
+    stormcarved_coast, sulfur_falls, aphetto_alchemist, cavalier_of_flame, cavalier_of_gales,
+    combustible_gearhulk, cosmic_larva, crashing_drawbridge, dragonhawk_fates_tempest,
+    dreamtide_whale, emeritus_of_ideation, etali_primal_storm, hamletback_goliath,
+    hellkite_tyrant, ilharg_the_raze_boar, inferno_titan, inferno_of_the_star_mounts, iron_myr,
+    iymrith_desert_doom, kazuul_tyrant_of_the_cliffs, niv_mizzet_the_firemind, shivan_wumpus,
+    slash_reptile_rampager, starwinder, terror_of_the_peaks, the_unagi_of_kyoshi_island,
+    thunderblust, aggravated_assault, breaching_dragonstorm, frostcliff_siege,
+    rising_of_the_day, sunbirds_invocation, abrade, comet_storm, counterspell, desperate_ritual,
+    mana_leak, negate, pongify, pull_from_tomorrow, rapid_hybridization, seething_song,
+    thirst_for_discovery, blasphemous_act, finale_of_revelation, ignite_the_future,
+    imposing_grandeur, ponder, portent_of_calamity, pyretic_charge, reforge_the_soul, tidings,
+    vandalblast, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const ESIOR_21_COMMANDERS: &[CardFactory] = &[esior_wardwing_familiar, kydele_chosen_of_kruphix];
+
+/// **Esior, Wardwing Familiar and Kydele, Chosen of Kruphix**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 10 Forests + 13 Islands = 98.
+/// Esior, Wardwing Familiar and Kydele, Chosen of Kruphix (EDHREC, fetched 2026-10-20).
+pub const ESIOR_21_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_orrery, energy_refractor, gemstone_array, lightning_greaves,
+    simic_signet, sol_ring, staff_of_domination, swiftfoot_boots, talisman_of_curiosity,
+    umbral_mantle, breeding_pool, command_tower, flooded_grove, hinterland_harbor,
+    rejuvenating_springs, reliquary_tower, simic_growth_chamber, sodden_verdure,
+    vineglimmer_snarl, waterlogged_grove, yavimaya_coast, aesi_tyrant_of_gyre_strait,
+    birds_of_paradise, elvish_mystic, emrakul_the_exigent_doom, faerie_mastermind,
+    fyndhorn_elves, hydroid_krasis, kioras_follower, laboratory_maniac, llanowar_elves,
+    nezahal_primal_tide, prismite, psychosis_crawler, sakura_tribe_elder,
+    samut_tyrant_of_naktamun, solemn_simulacrum, tamiyo_inquisitive_student,
+    tatyova_benthic_druid, variable_chaser, vizier_of_tumbling_sands, exploration,
+    mystic_remora, profts_eidetic_memory, sylvan_library, wizard_class,
+    an_offer_you_cant_refuse, arcane_denial, beast_within, blue_suns_zenith, brainstorm,
+    brainsurge, counterspell, dramatic_reversal, frantic_search, growth_spiral, mana_drain,
+    negate, pull_from_tomorrow, rapid_hybridization, stroke_of_genius, tolarian_winds,
+    kiora_behemoth_beckoner, ancestral_vision, cultivate, explore, farseek,
+    finale_of_revelation, flux, kodamas_reach, mathemagics, preordain, rampant_growth, windfall,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
