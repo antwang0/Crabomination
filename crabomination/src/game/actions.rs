@@ -16938,21 +16938,27 @@ impl GameState {
     /// True when an opponent of `player` controls an
     /// `OpponentsCantCastMatching` static whose filter matches `card`
     /// (Llawan, Cephalid Empress — "your opponents can't cast blue creature
-    /// spells").
+    /// spells"), on a permanent or on an emblem (CR 114.4 — Narset
+    /// Transcendent's "Your opponents can't cast noncreature spells").
     pub(crate) fn opponent_locks_cast_of(
         &self,
         player: usize,
         card: &crate::card::CardInstance,
     ) -> bool {
         use crate::effect::StaticEffect;
+        let locks = |sa: &crate::card::StaticAbility| {
+            matches!(
+                &sa.effect,
+                StaticEffect::OpponentsCantCastMatching { filter }
+                    if self.evaluate_requirement_on_card(filter, card, player)
+            )
+        };
         self.battlefield.iter().any(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    &sa.effect,
-                    StaticEffect::OpponentsCantCastMatching { filter }
-                        if self.evaluate_requirement_on_card(filter, card, player)
-                )
-            }) && !self.same_team(c.controller, player)
+            c.definition.static_abilities.iter().any(locks) && !self.same_team(c.controller, player)
+        }) || self.players.iter().enumerate().any(|(q, pl)| {
+            !pl.emblems.is_empty()
+                && !self.same_team(q, player)
+                && pl.emblems.iter().any(|e| e.statics.iter().any(locks))
         })
     }
 
