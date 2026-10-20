@@ -18357,6 +18357,11 @@ static DECKS: &[Factory] = &[
     super::decks::mantle_of_leadership,
     super::decks::timeline_inquiry,
     super::decks::stormfront_riders,
+    super::decks::impelled_giant,
+    super::decks::doubling_chant,
+    super::decks::dichotomancy,
+    super::decks::sphere_of_annihilation,
+    super::decks::tarnation_vista,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

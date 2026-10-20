@@ -177,3 +177,84 @@ fn stormfront_riders_bounces_two_and_makes_soldiers() {
     let soldiers = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Soldier").count();
     assert_eq!(soldiers, 2);
 }
+
+/// Impelled Giant taps another red creature for +X/+0, X its power.
+#[test]
+fn impelled_giant_borrows_a_red_creatures_power() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::impelled_giant());
+    let other = g.add_card_to_battlefield(0, catalog::impelled_giant());
+    g.battlefield_find_mut(other).unwrap().summoning_sick = false;
+    g.perform_action(GameAction::ActivateAbility { card_id: giant, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("tap the other giant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(other).unwrap().tapped);
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 6);
+}
+
+/// Doubling Chant fetches a same-name copy for each creature you control.
+#[test]
+fn doubling_chant_fetches_a_copy_per_creature() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let chant = g.add_card_to_hand(0, catalog::doubling_chant());
+    cast(&mut g, chant, None);
+    let bears = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2);
+}
+
+/// Dichotomancy steals a same-name copy for each tapped nonland permanent.
+#[test]
+fn dichotomancy_steals_copies_of_tapped_permanents() {
+    let mut g = pod(3);
+    let t = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(t).unwrap().tapped = true;
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::hill_giant());
+    let d = g.add_card_to_hand(0, catalog::dichotomancy());
+    cast(&mut g, d, Some(Target::Player(1)));
+    let mine: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.definition.name).collect();
+    assert_eq!(mine, vec!["Grizzly Bears"], "only the tapped one's name");
+}
+
+/// Sphere of Annihilation exiles itself, small creatures and graveyard
+/// creature cards at your upkeep; bigger ones stay.
+#[test]
+fn sphere_of_annihilation_exiles_by_void_counters() {
+    let mut g = pod(2);
+    let sphere = g.add_card_to_hand(0, catalog::sphere_of_annihilation());
+    cast_with(&mut g, sphere, None, vec![], Some(2), None);
+    assert_eq!(g.battlefield_find(sphere).unwrap().counter_count(CounterType::Void), 2);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    assert!(g.exile.iter().any(|c| c.id == dead));
+    assert!(g.exile.iter().any(|c| c.id == sphere));
+    assert!(g.battlefield_find(giant).is_some(), "mana value 4 survives");
+}
+
+/// Tarnation Vista's second ability adds one mana per colour among
+/// monocolored permanents only.
+#[test]
+fn tarnation_vista_counts_monocolored_permanents() {
+    let mut g = pod(2);
+    let vista = g.add_card_to_battlefield(0, catalog::tarnation_vista());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::creeping_trailblazer());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility { card_id: vista, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .unwrap();
+    drain_stack(&mut g);
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::Green), 1, "the green Bears");
+    assert_eq!(pool.amount(Color::Red), 0, "the R/G Trailblazer is multicolored");
+}
