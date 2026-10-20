@@ -658,3 +658,95 @@ fn cr_702_167a_throne_crafts_with_four_types_and_the_captain_attacks() {
     let back = g.battlefield_find(vampire).expect("the Vampire came back");
     assert!(back.tapped && g.attacking.iter().any(|a| a.attacker == vampire), "tapped and attacking");
 }
+
+fn loyalty(g: &mut GameState, id: CardId, index: usize) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: id, ability_index: index, target: None, x_value: None })
+        .expect("loyalty");
+    drain_stack(g);
+}
+
+/// Narset Transcendent's +1 takes a noncreature, nonland top card and leaves a
+/// land on top.
+#[test]
+fn narset_transcendent_plus_one_takes_a_spell_not_a_land() {
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    let narset = g.add_card_to_battlefield(0, catalog::narset_transcendent());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 2]));
+    let hand = g.players[0].hand.len();
+    loyalty(&mut g, narset, 0);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the Bolt");
+    g.battlefield_find_mut(narset).unwrap().loyalty_uses_this_turn = 0; // a new turn
+    loyalty(&mut g, narset, 0);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a land stays on top");
+    assert_eq!(g.players[0].library.len(), 1);
+}
+
+/// CR 114.4 — Narset's emblem stops opponents' noncreature spells, not
+/// creature spells, and not its owner's.
+#[test]
+fn cr_114_4_narset_emblem_locks_opponents_noncreature_spells() {
+    let mut g = pod(3);
+    let narset = g.add_card_to_battlefield(0, catalog::narset_transcendent());
+    g.battlefield_find_mut(narset).unwrap().add_counters(CounterType::Loyalty, 3);
+    loyalty(&mut g, narset, 2);
+    let try_cast = |g: &mut GameState, seat: usize, def: crabomination::card::CardDefinition, target: Option<Target>| {
+        let id = g.add_card_to_hand(seat, def);
+        flood(g, seat);
+        g.priority.player_with_priority = seat;
+        g.active_player_idx = seat;
+        let r = g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None });
+        drain_stack(g);
+        r.is_ok()
+    };
+    assert!(!try_cast(&mut g, 1, catalog::lightning_bolt(), Some(Target::Player(2))), "a noncreature spell");
+    assert!(try_cast(&mut g, 1, catalog::timber_wolves(), None), "a creature spell");
+    assert!(try_cast(&mut g, 0, catalog::lightning_bolt(), Some(Target::Player(2))), "its owner");
+}
+
+/// Elite Arcanist stores an instant and casts copies of it for X = its mana
+/// value.
+#[test]
+fn elite_arcanist_casts_copies_of_its_instant() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let arcanist = g.add_card_to_hand(0, catalog::elite_arcanist());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 4]));
+    cast(&mut g, arcanist, None);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the Bolt is exiled");
+    g.battlefield_find_mut(arcanist).unwrap().summoning_sick = false;
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: arcanist,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1}: X is the Bolt's mana value");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "a copy of the Bolt");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the card stays exiled");
+}
+
+/// Minion Reflector copies an entering nontoken creature for {2}.
+#[test]
+fn minion_reflector_copies_an_entering_creature() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::minion_reflector());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 2]));
+    let wolves = g.add_card_to_hand(0, catalog::timber_wolves());
+    cast(&mut g, wolves, None);
+    let copies = g.battlefield.iter().filter(|c| c.definition.name == "Timber Wolves").count();
+    assert_eq!(copies, 2, "the card and its token copy");
+    to_end_step(&mut g);
+    let copies = g.battlefield.iter().filter(|c| c.definition.name == "Timber Wolves").count();
+    assert_eq!(copies, 1, "the copy is sacrificed at the end step");
+}

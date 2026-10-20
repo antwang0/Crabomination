@@ -880,3 +880,134 @@ pub fn throne_of_the_grim_captain() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch six ───────────────────────────────────────────────────────────────
+
+/// Narset Transcendent — {2}{W}{U} planeswalker, loyalty 6. +1: look at the
+/// top card of your library; a noncreature, nonland card may be revealed and
+/// put into your hand. −2: when you next cast an instant or sorcery spell
+/// from your hand this turn, it gains rebound. −9: an emblem with "Your
+/// opponents can't cast noncreature spells."
+pub fn narset_transcendent() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let spell_kind = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Narset Transcendent",
+        cost: cost(&[generic(2), w(), crate::mana::u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Narset], ..Default::default() },
+        base_loyalty: 6,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: top(),
+                        filter: R::Not(Box::new(R::Creature)).and(R::Not(Box::new(R::Land))),
+                    },
+                    then: Box::new(Effect::MayDo {
+                        description: "Reveal it and put it into your hand?".into(),
+                        body: Box::new(Effect::Move { what: top(), to: ZoneDest::Hand(PlayerRef::You) }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ),
+            loyalty(
+                -2,
+                Effect::OnYourNextSpellMatchingThisTurn {
+                    filter: spell_kind().and(R::WasCastFromHand),
+                    body: Box::new(Effect::GrantReboundToSpell { what: Selector::TriggerSource }),
+                },
+            ),
+            loyalty(
+                -9,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Narset Transcendent".into(),
+                    triggered: vec![],
+                    statics: vec![StaticAbility {
+                        description: "Your opponents can't cast noncreature spells.",
+                        effect: StaticEffect::OpponentsCantCastMatching { filter: R::Not(Box::new(R::Creature)) },
+                    }],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Elite Arcanist — {3}{U} 1/1 Human Wizard. ETB: you may exile an instant
+/// card from your hand. {X}, {T}: copy the exiled card and you may cast the
+/// copy without paying its mana cost; X is the exiled card's mana value.
+pub fn elite_arcanist() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseOneAmong {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Hand,
+                filter: R::HasCardType(CardType::Instant),
+            },
+            chooser: PlayerRef::You,
+            chosen: Box::new(Effect::Move {
+                what: Selector::SeparatedPile { chosen: true },
+                to: ZoneDest::ExileWithSourceStamp,
+            }),
+            other: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost_increase: Some(Value::ManaValueOf(Box::new(Selector::CardExiledWithSource))),
+            condition: Some(Predicate::SelectorCountAtLeast { sel: Selector::CardExiledWithSource, n: Value::ONE }),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::CardExiledWithSource,
+                source_zone: crate::card::Zone::Exile,
+                exile_after: false,
+                copy: true,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Elite Arcanist",
+            cost(&[generic(3), crate::mana::u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Minion Reflector — {5} artifact. Whenever a nontoken creature you control
+/// enters, you may pay {2}; if you do, create a token copy of it with haste,
+/// sacrificed at the beginning of the next end step.
+pub fn minion_reflector() -> CardDefinition {
+    CardDefinition {
+        name: "Minion Reflector",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::Not(Box::new(R::IsToken))),
+                },
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2} to copy it?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::CreateTokenCopiesHasteSac {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::TriggerSource,
+                    exile: false,
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
