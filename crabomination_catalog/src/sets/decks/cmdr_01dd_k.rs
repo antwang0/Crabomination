@@ -1462,3 +1462,71 @@ pub fn cyclical_evolution() -> CardDefinition {
         )
     }
 }
+
+/// Domri, Chaos Bringer — {2}{R}{G} planeswalker, loyalty 5. +1: add {R} or
+/// {G}; if that mana is spent on a creature spell, it gains riot. −3: look at
+/// the top four cards; up to two creature cards to hand, the rest on the
+/// bottom in a random order. −8: an emblem with "At the beginning of each end
+/// step, create a 4/4 red and green Beast creature token with trample."
+pub fn domri_chaos_bringer() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype, TokenDefinition, TriggeredAbility};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let beast = TokenDefinition {
+        name: "Beast".into(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Domri, Chaos Bringer",
+        cost: cost(&[generic(2), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Domri], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::ONE)),
+                        crate::mana::SpendRestriction::CreatureGainsRiot,
+                    ),
+                },
+            ),
+            loyalty(
+                -3,
+                Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    pick_filter: Some(R::Creature),
+                    take: Some(Value::Const(2)),
+                    optional: true,
+                    ..Default::default()
+                })),
+            ),
+            loyalty(
+                -8,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Domri, Chaos Bringer".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+                        effect: Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: std::sync::Arc::new(beast),
+                        },
+                    }],
+                    statics: vec![],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

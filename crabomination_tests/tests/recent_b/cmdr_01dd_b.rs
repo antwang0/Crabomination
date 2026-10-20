@@ -1038,3 +1038,19 @@ fn cr_702_62a_cyclical_evolution_suspends_itself() {
     let exiled = g.exile.iter().find(|c| c.id == evo).expect("exiled");
     assert_eq!(exiled.counter_count(CounterType::Time), 3);
 }
+
+/// CR 702.136a — Domri, Chaos Bringer's +1 mana gives the creature spell it
+/// pays for riot: here the +1/+1 counter.
+#[test]
+fn cr_702_136a_domri_mana_gives_a_creature_riot() {
+    let mut g = pod(2);
+    let domri = g.add_card_to_battlefield(0, catalog::domri_chaos_bringer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green), DecisionAnswer::Mode(1)]));
+    loyalty(&mut g, domri, 0);
+    let wolves = g.add_card_to_hand(0, catalog::timber_wolves());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: wolves, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast with Domri's mana");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wolves).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "riot: a +1/+1 counter");
+}
