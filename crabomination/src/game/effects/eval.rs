@@ -6593,6 +6593,7 @@ impl GameState {
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
                     // CR 701.60 — suspected.
                     R::IsSuspected => card.suspected,
+                    R::IsRenowned => card.renowned,
                     R::IsGoaded => self.is_goaded(card),
                     R::HadToAttackThisCombat => self.had_to_attack.contains(cid),
                     // CR 702.103 — on the battlefield as a bestowed Aura.
@@ -8215,6 +8216,7 @@ impl GameState {
             }),
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
+            R::IsRenowned => card.renowned,
             R::IsGoaded => self.is_goaded(card),
             R::HadToAttackThisCombat => self.had_to_attack.contains(&card.id),
             // Answerable off live state even for a card that has left the

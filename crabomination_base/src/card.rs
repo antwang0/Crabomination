@@ -3677,6 +3677,9 @@ pub enum SelectionRequirement {
     /// `suspected` flag). Powers "Sacrifice a suspected creature" costs
     /// (Rune-Brand Juggler) and suspected-creature payoffs.
     IsSuspected,
+    /// CR 702.112b — true once the candidate creature has become renowned
+    /// (the `renowned` flag). Enshrouding Mist's "if it's renowned".
+    IsRenowned,
     /// CR 701.15 — goaded by anyone, by any of `GameState::goaders`' three
     /// sources (Hot Pursuit, Vengeful Ancestor).
     IsGoaded,
