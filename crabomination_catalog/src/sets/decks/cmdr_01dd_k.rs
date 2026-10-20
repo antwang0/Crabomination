@@ -825,6 +825,7 @@ pub fn throne_of_the_grim_captain() -> CardDefinition {
     let kinds = [CreatureType::Dinosaur, CreatureType::Merfolk, CreatureType::Pirate, CreatureType::Vampire];
     let captain = CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
+        color_indicator: vec![Color::Black],
         keywords: vec![Keyword::Menace, Keyword::Trample, Keyword::Lifelink, Keyword::Hexproof],
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
             Effect::Sacrifice {
