@@ -28206,6 +28206,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DARGO_17_COMMANDERS,
             main: decks::DARGO_17_MAIN,
         },
+        // Seat 4626: Halsin, Emerald Archdruid and Raised by Giants's EDHREC average deck. `--pod-decks 4626`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Raised by Giants (G)",
+            commanders: decks::HALSIN_17_COMMANDERS,
+            main: decks::HALSIN_17_MAIN,
+        },
+        // Seat 4627: Jaheira, Friend of the Forest and Flaming Fist's EDHREC average deck. `--pod-decks 4627`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Flaming Fist (WG)",
+            commanders: decks::JAHEIRA_11_COMMANDERS,
+            main: decks::JAHEIRA_11_MAIN,
+        },
+        // Seat 4628: Alharu, Solemn Ritualist and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 4628`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Kamahl, Heart of Krosa (WG)",
+            commanders: decks::ALHARU_23_COMMANDERS,
+            main: decks::ALHARU_23_MAIN,
+        },
+        // Seat 4629: Imoen, Mystic Trickster and Tavern Brawler's EDHREC average deck. `--pod-decks 4629`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Tavern Brawler (UR)",
+            commanders: decks::IMOEN_26_COMMANDERS,
+            main: decks::IMOEN_26_MAIN,
+        },
     ]
 }
 
@@ -34732,6 +34756,10 @@ mod tests {
             ("The Third Doctor and Amy Pond", &[0x1C25]),
             ("Breeches, Brazen Plunderer and Esior, Wardwing Familiar", &[0x1C26]),
             ("Dargo, the Shipwrecker and Numa, Joraga Chieftain", &[0x1C27]),
+            ("Halsin, Emerald Archdruid and Raised by Giants", &[0x1C28]),
+            ("Jaheira, Friend of the Forest and Flaming Fist", &[0x1C29]),
+            ("Alharu, Solemn Ritualist and Kamahl, Heart of Krosa", &[0x1C2A]),
+            ("Imoen, Mystic Trickster and Tavern Brawler", &[0x1C2B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

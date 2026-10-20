@@ -129716,3 +129716,111 @@ pub const DARGO_17_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const HALSIN_17_COMMANDERS: &[CardFactory] = &[halsin_emerald_archdruid, raised_by_giants];
+
+/// **Halsin, Emerald Archdruid and Raised by Giants**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 28 Forests = 98.
+/// Halsin, Emerald Archdruid and Raised by Giants (EDHREC, fetched 2026-10-20).
+pub const HALSIN_17_MAIN: &[CardFactory] = &[
+    buster_sword, chimil_the_inner_sun, commanders_plate, conduit_of_worlds, emerald_medallion,
+    ring_of_kalonia, sol_ring, staff_of_domination, throne_of_eldraine,
+    argoth_sanctum_of_nature, blighted_woodland, rogues_passage, the_shire, wirewood_lodge,
+    attended_socialite, avenger_of_zendikar, awakener_druid, beorn_the_fierce,
+    circle_of_dreams_druid, circle_of_the_moon_druid, druid_of_the_emerald_grove,
+    dryad_of_the_ilysian_grove, dwynens_elite, elfsworn_giant, elvish_archdruid, elvish_mystic,
+    evolution_sage, fanatic_of_rhonas, garruks_harbinger, gigantic_big_bear, glittermonger,
+    gnarlid_colony, goreclaw_terror_of_qal_sisma, gyre_sage, jaheira_friend_of_the_forest,
+    kamahl_fist_of_krosa, little_bear, llanowar_elves, owlbear_shepherd, priest_of_titania,
+    surrak_and_goreclaw, tireless_provisioner, titania_voice_of_gaea, triskelion, bear_umbra,
+    beorns_hospitality, dancing_from_dark_to_dawn, doubling_season, forced_adaptation,
+    garruks_uprising, guardian_project, leyline_of_abundance, archdruids_charm, beast_within,
+    chord_of_calling, gaeas_gift, heroic_intervention, krosan_grip, second_harvest,
+    wrap_in_vigor, garruk_unleashed, nissa_vital_force, cultivate, genesis_wave, harmonize,
+    natures_lore, overrun, overwhelming_stampede, return_from_the_wilds, turntimber_symbiosis,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
+
+pub const JAHEIRA_11_COMMANDERS: &[CardFactory] = &[jaheira_friend_of_the_forest, flaming_fist];
+
+/// **Jaheira, Friend of the Forest and Flaming Fist**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 17 Forests + 11 Plains = 98.
+/// Jaheira, Friend of the Forest and Flaming Fist (EDHREC, fetched 2026-10-20).
+pub const JAHEIRA_11_MAIN: &[CardFactory] = &[
+    aeronauts_wings, anduril_flame_of_the_west, angelic_armaments, avarice_amulet,
+    behemoth_sledge, bladed_bracers, caduceus_staff_of_hermes, chariot_of_victory,
+    diviners_wand, glimmer_lens, haunted_cloak, heart_piercer_bow, heros_blade, hookblade,
+    kaldra_compleat, kor_halberd, loxodon_warhammer, mask_of_avacyn, maul_of_the_skyclaves,
+    sanctuary_blade, swiftfoot_boots, sword_of_kaldra, sword_of_light_and_shadow,
+    sword_of_vengeance, zephyr_boots, command_tower, terramorphic_expanse, avenger_of_zendikar,
+    elvish_mystic, farmer_cotton, fyndhorn_elves, jacked_rabbit, llanowar_elves,
+    rampaging_baloths, rhys_the_redeemed, riftsweeper, rumor_gatherer, wolverine_riders,
+    wood_elves, abundant_growth, anointed_procession, assemble_the_entmoot, awakening_zone,
+    battle_for_bretagard, dawn_of_hope, doubling_season, druids_call, parallel_lives,
+    primal_vigor, quest_for_the_holy_relic, virtue_of_strength, wild_growth, archdruids_charm,
+    aura_mutation, elven_ambush, second_harvest, secure_the_wastes, ajani_adversary_of_tyrants,
+    archangel_elspeth, acorn_harvest, cultivate, devout_invocation, elvish_promenade,
+    for_the_common_good, gelatinous_genesis, nomads_assembly, parallel_evolution,
+    rampant_growth, regrowth, steelshapers_gift,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const ALHARU_23_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, kamahl_heart_of_krosa];
+
+/// **Alharu, Solemn Ritualist and Kamahl, Heart of Krosa**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 15 Forests + 7 Plains = 98.
+/// Alharu, Solemn Ritualist and Kamahl, Heart of Krosa (EDHREC, fetched 2026-10-20).
+pub const ALHARU_23_MAIN: &[CardFactory] = &[
+    arcane_signet, behemoth_sledge, caged_sun, cloudstone_curio, lifecrafters_bestiary,
+    mana_vault, moss_diamond, ozolith_the_shattered_spire, sol_ring, arctic_treeline,
+    blossoming_sands, canopy_vista, command_tower, exotic_orchard, fortified_village,
+    hall_of_heliods_generosity, myriad_landscape, radiant_grove, scattered_groves,
+    sungrass_prairie, sunpetal_grove, terramorphic_expanse, abzan_battle_priest,
+    adarkar_valkyrie, aegis_automaton, aerial_responder, alert_heedbonder, arbor_elf,
+    arcbound_javelineer, archangel_of_thune, avacyn_angel_of_hope, azusa_lost_but_seeking,
+    basris_lieutenant, circle_of_dreams_druid, dust_elemental, elvish_mystic, enduring_vitality,
+    erinis_gloom_stalker, essence_warden, fanatic_of_rhonas, fangren_firstborn,
+    forgotten_ancient, god_eternal_oketra, greenweaver_druid, ilysian_caryatid, llanowar_elves,
+    multani_yavimayas_avatar, noxious_newt, renata_called_to_the_hunt, sylvan_caryatid,
+    tender_wildguide, beastmaster_ascension, branching_evolution, gaeas_anthem, gravity_well,
+    lifelink, smothering_tithe, tranquil_grove, alabaster_potion, archdruids_charm,
+    faiths_reward, fog, heroic_intervention, jaheiras_respite, krosan_grip, path_to_exile,
+    wrap_in_vigor, vivien_arkbow_ranger, cultivate, farseek, overrun, overwhelming_stampede,
+    preposterous_proportions, rampant_growth, skyshroud_claim, threats_undetected,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const IMOEN_26_COMMANDERS: &[CardFactory] = &[imoen_mystic_trickster, tavern_brawler];
+
+/// **Imoen, Mystic Trickster and Tavern Brawler**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 15 Islands + 8 Mountains = 98.
+/// Imoen, Mystic Trickster and Tavern Brawler (EDHREC, fetched 2026-10-20).
+pub const IMOEN_26_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, decanter_of_endless_water, dungeon_map, dungeoneers_pack,
+    izzet_signet, midnight_clock, sapphire_medallion, sarevoks_tome, sol_ring, swiftfoot_boots,
+    trailblazers_torch, command_tower, ferrous_lake, frostboil_snarl, izzet_boilerworks,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, rogues_passage, shivan_reef,
+    sulfur_falls, temple_of_the_false_god, aarakocra_sneak, archaeomancer, bloodboil_sorcerer,
+    briarberry_cohort, caves_of_chaos_adventurer, displacer_beast, displacer_kitten,
+    eccentric_apprentice, fblthp_lost_on_the_range, feywild_caretaker, izzet_guildmage,
+    jaxis_the_troublemaker, living_lore, niv_mizzet_parun, octavia_living_thesis,
+    ornithopter_of_paradise, pink_horror, shortcut_seeker, siren_stormtamer, slither_blade,
+    sphinx_of_the_second_sun, starfield_vocalist, stirring_bard, the_reality_chip,
+    tomb_of_horrors_adventurer, vanguard_suppressor, yuan_ti_malison, aether_tunnel,
+    aqueous_form, dungeon_delver, fly, imprisoned_in_the_moon, loot_dispute, wizard_class,
+    bar_the_gate, brainstorm, chaos_warp, diminish, disdainful_stroke, disruption_protocol,
+    familiars_ruse, frantic_search, ghostly_flicker, negate, pongify, rapid_hybridization,
+    spell_blast, spell_burst, blaze, gitaxian_probe, ponder, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
