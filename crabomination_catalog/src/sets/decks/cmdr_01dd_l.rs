@@ -62,3 +62,36 @@ pub fn dollhouse_of_horrors() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Scheming Fence — {W}{U} 2/3 Human Citizen. As it enters, you may choose a
+/// nonland permanent: that permanent's activated abilities can't be
+/// activated, and this creature has all of them except loyalty abilities.
+/// (Its "spend mana as though it were mana of any color to activate those
+/// abilities" is not modeled: a borrowed ability is paid as printed.)
+pub fn scheming_fence() -> CardDefinition {
+    CardDefinition {
+        name: "Scheming Fence",
+        cost: cost(&[crate::mana::w(), crate::mana::u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        as_enters_effect: Some(Effect::ChoosePermanentForSource {
+            filter: R::Permanent.and(R::Not(Box::new(R::Land))).and(R::HasActivatedAbility),
+        }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Activated abilities of the chosen permanent can't be activated.",
+                effect: StaticEffect::ChosenPermanentAbilitiesCantBeActivated,
+            },
+            StaticAbility {
+                description: "This creature has all activated abilities of the chosen permanent except for loyalty abilities.",
+                effect: StaticEffect::HasActivatedAbilitiesOfChosenPermanent,
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -1070,3 +1070,28 @@ fn cr_707_9b_dollhouse_of_horrors_makes_a_construct_copy() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying), "a copy keeps its abilities");
     assert!(g.players[0].graveyard.is_empty(), "the card was exiled");
 }
+
+/// Scheming Fence locks the chosen permanent's activated abilities — mana
+/// abilities included — and activates them itself.
+#[test]
+fn scheming_fence_borrows_and_locks_a_permanents_abilities() {
+    let mut g = pod(2);
+    let clock = g.add_card_to_battlefield(1, catalog::grindclock());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![clock])]));
+    let fence = g.add_card_to_hand(0, catalog::scheming_fence());
+    cast(&mut g, fence, None);
+    assert_eq!(g.battlefield_find(fence).unwrap().chosen_permanent, Some(clock));
+    g.priority.player_with_priority = 1;
+    let locked = g.perform_action(GameAction::ActivateAbility {
+        card_id: clock,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(locked.is_err(), "the Grindclock's abilities are locked");
+    g.battlefield_find_mut(fence).unwrap().summoning_sick = false;
+    activate(&mut g, fence, 0, None).expect("the Fence winds itself");
+    assert_eq!(g.battlefield_find(fence).unwrap().counter_count(CounterType::Charge), 1);
+}
