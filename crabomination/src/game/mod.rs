@@ -15456,7 +15456,8 @@ impl GameState {
                     else {
                         continue;
                     };
-                    let ctx = crate::game::effects::EffectContext::for_ability(card.id, 0, None);
+                    // CR 109.5 — "you" is the permanent's controller.
+                    let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
                     if !self.evaluate_predicate(condition, &ctx) {
                         continue;
                     }

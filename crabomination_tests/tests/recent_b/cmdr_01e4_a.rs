@@ -1842,3 +1842,15 @@ fn mystery_key_draws_three_on_a_hit() {
     assert!(g.battlefield_find(key).is_none(), "sacrificed");
     assert_eq!(g.players[0].hand.len(), hand + 3);
 }
+
+/// CR 109.5 — a keyword-while static reads "you" as its controller, not seat
+/// 0: Faithful Pikemaster strikes first on its own controller's turn.
+#[test]
+fn cr_109_5_pikemaster_reads_its_own_controller() {
+    let mut g = pod(3);
+    let pike = g.add_card_to_battlefield(2, catalog::faithful_pikemaster());
+    g.active_player_idx = 2;
+    assert!(g.computed_permanent(pike).unwrap().keywords().contains(&Keyword::FirstStrike));
+    g.active_player_idx = 0;
+    assert!(!g.computed_permanent(pike).unwrap().keywords().contains(&Keyword::FirstStrike));
+}
