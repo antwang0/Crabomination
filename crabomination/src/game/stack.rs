@@ -5927,6 +5927,9 @@ impl GameState {
         if self.damage_to_players_bonus_this_turn != 0 {
             self.damage_to_players_bonus_this_turn = 0;
         }
+        if self.pile_or_guess_effects_this_turn != 0 {
+            self.pile_or_guess_effects_this_turn = 0;
+        }
         clear_cold!(self.combat_damage_prevented_to_players_this_turn);
         clear_cold!(self.combat_damage_prevented_to_walkers_this_turn);
         clear_cold!(self.auras_at_death);

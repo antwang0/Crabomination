@@ -1815,11 +1815,18 @@ impl GameState {
             return Ok(());
         };
         self.clear_answer_log();
+        self.note_pile_or_guess();
         self.separated_piles =
             if take_first { (first, second) } else { (second, first) };
         self.run_piles_then_clear(chosen, other, ctx, events)
     }
 
+
+    /// The Celestial Toymaker's tally — called past a pile/guess effect's last
+    /// replayable ask, so a resumed resolution doesn't count twice.
+    pub(crate) fn note_pile_or_guess(&mut self) {
+        self.pile_or_guess_effects_this_turn = self.pile_or_guess_effects_this_turn.saturating_add(1);
+    }
 
     /// Run a pile split's two halves, then drop the piles.
     ///
@@ -23407,6 +23414,7 @@ impl GameState {
             }
 
             Effect::EachPlayerSplitsAndSacrificesRandomPile { piles } => {
+                self.note_pile_or_guess();
                 use rand::seq::SliceRandom;
                 use rand::RngExt;
                 let n = (*piles).max(1) as usize;
@@ -23762,6 +23770,7 @@ impl GameState {
                     }
                 };
                 self.clear_answer_log();
+                self.note_pile_or_guess();
                 let up: Vec<CardId> = up.iter().map(|t| t.0).collect();
                 for id in down.iter().chain(up.iter()) {
                     self.move_card_to(*id, &ZoneDest::Exile, ctx, events);
@@ -29230,6 +29239,7 @@ impl GameState {
             }
 
             Effect::LiarsPendulum => {
+                self.note_pile_or_guess();
                 // Name a card, the targeted opponent guesses whether it's in
                 // your hand, and a wrong guess draws you a card. The naming
                 // auto-picks the hand's first card name (a bluff is a bot
@@ -29271,6 +29281,7 @@ impl GameState {
             }
 
             Effect::GuessTopCardKind { right, wrong } => {
+                self.note_pile_or_guess();
                 use crate::decision::{Decision, DecisionAnswer};
                 let land = rand::RngExt::random::<bool>(&mut self.rng.draw());
                 let kind = if land { "land" } else { "nonland" };
@@ -36859,6 +36870,7 @@ impl GameState {
             }
 
             Effect::FactOrFiction { count, to_bottom } => {
+                self.note_pile_or_guess();
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let n = (self.evaluate_value(count, ctx).max(0) as usize)
@@ -41064,6 +41076,7 @@ impl GameState {
                 let guess = n.max(1);
                 let color = self.best_color_for_hand(ctx.controller);
                 self.clear_answer_log();
+                self.note_pile_or_guess();
                 if !self.hands_revealed_to.contains(&(victim, ctx.controller)) {
                     self.hands_revealed_to.push((victim, ctx.controller));
                 }
@@ -42103,6 +42116,7 @@ impl GameState {
 
             Effect::GuessManaValueAgainstValue { who, threshold, otherwise } => {
                 let line = self.evaluate_value(threshold, ctx).max(0) as u32;
+                self.note_pile_or_guess();
                 if !self.guess_mana_value_then_cast(who, line, ctx, events) {
                     self.run_effect(otherwise, ctx, events)?;
                 }

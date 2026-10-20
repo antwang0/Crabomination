@@ -2085,6 +2085,10 @@ pub struct ColdState {
     /// Torbran). Summed per resolution; cleared at cleanup. Cold: only that card writes it.
     #[serde(default)]
     pub(crate) damage_to_players_bonus_this_turn: u32,
+    /// Spells and abilities that made a player guess or group cards into
+    /// piles this turn (The Celestial Toymaker). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) pile_or_guess_effects_this_turn: u32,
     /// Kukemssa Pirates — creatures that assign no combat damage for the rest
     /// of the turn (CR 510.1a). Cleared at cleanup.
     #[serde(default)]

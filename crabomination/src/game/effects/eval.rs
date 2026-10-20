@@ -1022,6 +1022,7 @@ impl GameState {
                 .max()
                 .unwrap_or(0),
             Value::GreatestManaValueNotedForSource => self.noted_exiled_mana_value(ctx.source) as i32,
+            Value::PileOrGuessEffectsThisTurn => self.pile_or_guess_effects_this_turn as i32,
             Value::SpellsCastThisTurnTotal => {
                 self.players.iter().map(|p| p.spells_cast_this_game_turn as i32).sum()
             }

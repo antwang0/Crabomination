@@ -1028,6 +1028,9 @@ pub enum Value {
     /// spell of a turn"). The summed sibling of `SpellsCastThisTurn`, which
     /// takes the max over the resolved seats.
     SpellsCastThisTurnTotal,
+    /// Spells and abilities that caused a player to guess or to group cards
+    /// or permanents into a pile this turn (The Celestial Toymaker).
+    PileOrGuessEffectsThisTurn,
     /// The greatest mana value the source permanent itself noted this turn as
     /// cards were put into exile while it was on the battlefield (Bell Borca,
     /// Spectral Sergeant: "noted **for it**"). Backed by `CardCold::exile_note`.
