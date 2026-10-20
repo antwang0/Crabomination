@@ -488,3 +488,16 @@ fn territory_forge_borrows_an_exiled_lands_ability() {
         .expect("the Academy's {T}: add {C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), before + 1);
 }
+
+/// Animate Artifact makes a noncreature artifact an MV/MV creature, keeping
+/// it an artifact creature.
+#[test]
+fn animate_artifact_animates_a_noncreature_artifact() {
+    let mut g = pod(2);
+    let helm = g.add_card_to_battlefield(0, catalog::helm_of_obedience());
+    let aa = g.add_card_to_hand(0, catalog::animate_artifact());
+    cast(&mut g, aa, Some(Target::Permanent(helm)));
+    let cp = g.computed_permanent(helm).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}

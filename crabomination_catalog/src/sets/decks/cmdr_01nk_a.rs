@@ -798,3 +798,18 @@ pub fn territory_forge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Animate Artifact — {3}{U} Aura, enchant artifact. As long as enchanted
+/// artifact isn't a creature, it's an artifact creature with power and
+/// toughness each equal to its mana value.
+pub fn animate_artifact() -> CardDefinition {
+    CardDefinition {
+        name: "Animate Artifact",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Artifact) },
+        equipped_bonus: Some(EquipBonus { animate_noncreature_mv: true, ..Default::default() }),
+        ..Default::default()
+    }
+}
