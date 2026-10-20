@@ -18173,6 +18173,9 @@ static DECKS: &[Factory] = &[
     super::decks::mirror_of_fate,
     super::decks::sea_gate_stormcaller,
     super::decks::insidious_will,
+    super::decks::crown_of_the_ages,
+    super::decks::drake_umbra,
+    super::decks::illusory_gains,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

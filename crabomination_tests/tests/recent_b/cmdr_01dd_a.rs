@@ -297,3 +297,49 @@ fn insidious_will_copies_an_instant() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 14);
 }
+
+/// CR 613.1b — Illusory Gains' steal follows the Aura: a creature entering
+/// under an opponent takes the Aura, and the first host goes home.
+#[test]
+fn illusory_gains_moves_to_the_newest_opposing_creature() {
+    let mut g = pod(3);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let gains = g.add_card_to_hand(0, catalog::illusory_gains());
+    flood(&mut g, 0);
+    cast(&mut g, gains, Some(Target::Permanent(bears))).expect("cast");
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0, "stolen");
+    let giant = g.add_card_to_hand(2, catalog::hill_giant());
+    flood(&mut g, 2);
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    cast(&mut g, giant, None).expect("cast giant");
+    assert_eq!(g.battlefield_find(giant).unwrap().controller, 0, "the newcomer is stolen");
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 1, "the old host went home");
+}
+
+/// Crown of the Ages moves an Aura between creatures: Drake Umbra's +3/+3
+/// leaves the first creature for the second.
+#[test]
+fn crown_of_the_ages_moves_an_aura() {
+    let mut g = pod(2);
+    let crown = ready(&mut g, 0, catalog::crown_of_the_ages());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let vanguard = ready(&mut g, 0, catalog::elite_vanguard());
+    let umbra = g.add_card_to_hand(0, catalog::drake_umbra());
+    flood(&mut g, 0);
+    cast(&mut g, umbra, Some(Target::Permanent(bears))).expect("cast");
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crown,
+        ability_index: 0,
+        target: Some(Target::Permanent(umbra)),
+        additional_targets: vec![Target::Permanent(vanguard)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 2);
+    assert_eq!(g.computed_permanent(vanguard).unwrap().power, 5);
+    assert!(g.computed_permanent(vanguard).unwrap().keywords().contains(&crabomination::card::Keyword::Flying));
+}
