@@ -4572,6 +4572,7 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.battlefield.iter().any(|c| c.controller == p && card_is_outlaw(c))
             }
+            Predicate::FirstSpellYouCastThisGame => !self.players[ctx.controller].cast_a_spell_this_game,
             Predicate::NoPermanentLeftBattlefieldThisTurn => {
                 !self.players.iter().any(|pl| pl.permanent_left_battlefield_this_turn)
             }

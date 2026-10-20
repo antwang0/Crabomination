@@ -13410,6 +13410,9 @@ impl GameState {
             let me = &mut *self.players[p];
             me.spells_cast_this_turn += 1;
             me.spells_cast_this_game_turn += 1;
+            if !me.cast_a_spell_this_game {
+                me.cast_a_spell_this_game = true;
+            }
             // Marshland Bloodcaster's option covers the next spell only.
             if me.life_alt_next_spell_this_turn {
                 me.life_alt_next_spell_this_turn = false;

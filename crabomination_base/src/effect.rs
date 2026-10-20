@@ -2327,6 +2327,11 @@ pub enum Predicate {
     /// (Sarevok, Deathbringer) — every player's
     /// `permanent_left_battlefield_this_turn` is clear.
     NoPermanentLeftBattlefieldThisTurn,
+    /// The context's controller has cast no spell yet this game — read by a
+    /// spell's own alternative cost before its cast is counted, so it is "this
+    /// is the first spell you've cast this game" (Once Upon a Time). Backed by
+    /// `Player.cast_a_spell_this_game`.
+    FirstSpellYouCastThisGame,
     /// A creature left the battlefield under `who`'s control this turn (Tale
     /// of Momo's cost reduction). Backed by
     /// `Player.creature_left_battlefield_this_turn`.

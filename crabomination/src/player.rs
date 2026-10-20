@@ -413,6 +413,17 @@ pub struct PlayerCold {
     /// Night Shift of the Living Dead's once-each-turn die shift is spent.
     #[serde(default)]
     pub die_shift_used_this_turn: bool,
+    /// This player has cast a spell this game — set once, by the first cast
+    /// (`Predicate::FirstSpellYouCastThisGame`: Once Upon a Time). Never
+    /// cleared, so it costs one cold write a game.
+    #[serde(default)]
+    pub cast_a_spell_this_game: bool,
+    /// This player ventured into the dungeon this turn (CR 701.49) — read by
+    /// an opponent's `StaticEffect::OpponentsVentureOncePerTurn` (Keen-Eared
+    /// Sentry). Set only while such a static is on the battlefield; cleared,
+    /// guarded, at the turn boundary.
+    #[serde(default)]
+    pub ventured_this_turn: bool,
     /// CR 702.131b — a permanent with ascend has entered under this player's
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]
