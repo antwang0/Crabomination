@@ -1035,3 +1035,15 @@ pub fn shivan_wumpus() -> CardDefinition {
         ..creature("Shivan Wumpus", cost(&[generic(3), r()]), vec![CreatureType::Beast], 6, 6)
     }
 }
+
+/// Flux — {2}{U} sorcery. Each player discards any number of cards, then
+/// draws that many cards. Draw a card.
+pub fn flux() -> CardDefinition {
+    CardDefinition {
+        name: "Flux",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![Effect::EachPlayerDiscardsAnyThenDrawsThatMany, draw(1)]),
+        ..Default::default()
+    }
+}

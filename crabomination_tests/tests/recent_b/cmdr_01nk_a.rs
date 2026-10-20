@@ -673,3 +673,24 @@ fn shivan_wumpus_is_topdecked_by_a_land_sacrifice() {
     let lands = g.battlefield.iter().filter(|c| c.controller == 2 && c.definition.is_land()).count();
     assert_eq!(lands, 6, "seat 2 sacrificed one");
 }
+
+/// Flux: each player draws as many as THEY discarded (never a pooled count),
+/// and the caster draws one more.
+#[test]
+fn flux_draws_each_players_own_discard_count() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    let a = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let b = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(2, catalog::grizzly_bears());
+    let flux = g.add_card_to_hand(0, catalog::flux());
+    // APNAP from the caster: seat 0 (empty hand after casting — skipped),
+    // seat 1 discards two, seat 2 none.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b]), DecisionAnswer::Cards(vec![])]));
+    let (h0, h1, h2) = (g.players[0].hand.len(), g.players[1].hand.len(), g.players[2].hand.len());
+    cast(&mut g, flux, None);
+    assert_eq!(g.players[1].hand.len(), h1, "two out, two in");
+    assert_eq!(g.players[2].hand.len(), h2);
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 1, "Flux itself out, one drawn");
+    assert_eq!(g.players[1].graveyard.len(), 2);
+}
