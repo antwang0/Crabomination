@@ -28080,6 +28080,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SKANOS_DRAGONHEART_19_COMMANDERS,
             main: decks::SKANOS_DRAGONHEART_19_MAIN,
         },
+        // Seat 4605: Viconia, Drow Apostate and Tavern Brawler's EDHREC average deck. `--pod-decks 4605`.
+        PodDeck {
+            name: "Viconia, Drow Apostate and Tavern Brawler (BR)",
+            commanders: decks::VICONIA_18_COMMANDERS,
+            main: decks::VICONIA_18_MAIN,
+        },
+        // Seat 4606: Alena, Kessig Trapper and Anara, Wolvid Familiar's EDHREC average deck. `--pod-decks 4606`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Anara, Wolvid Familiar (RG)",
+            commanders: decks::ALENA_26_COMMANDERS,
+            main: decks::ALENA_26_MAIN,
+        },
+        // Seat 4607: Brinelin, the Moon Kraken and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4607`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Tormod, the Desecrator (UB)",
+            commanders: decks::BRINELIN_22_COMMANDERS,
+            main: decks::BRINELIN_22_MAIN,
+        },
+        // Seat 4608: Ludevic, Necro-Alchemist and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4608`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Nadier, Agent of the Duskenel (UBR)",
+            commanders: decks::LUDEVIC_12_COMMANDERS,
+            main: decks::LUDEVIC_12_MAIN,
+        },
+        // Seat 4609: Sivriss, Nightmare Speaker and Guild Artisan's EDHREC average deck. `--pod-decks 4609`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Guild Artisan (BR)",
+            commanders: decks::SIVRISS_14_COMMANDERS,
+            main: decks::SIVRISS_14_MAIN,
+        },
+        // Seat 4610: Ghost of Ramirez DePietro and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4610`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Kydele, Chosen of Kruphix (UG)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_22_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_22_MAIN,
+        },
+        // Seat 4611: Alena, Kessig Trapper and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 4611`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Ich-Tekik, Salvage Splicer (RG)",
+            commanders: decks::ALENA_27_COMMANDERS,
+            main: decks::ALENA_27_MAIN,
+        },
+        // Seat 4612: The Seventh Doctor and Bill Potts's EDHREC average deck. `--pod-decks 4612`.
+        PodDeck {
+            name: "The Seventh Doctor and Bill Potts (WUR)",
+            commanders: decks::THE_SEVENTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_SEVENTH_DOCTOR_8_MAIN,
+        },
+        // Seat 4613: Breeches, Brazen Plunderer and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4613`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::BREECHES_24_COMMANDERS,
+            main: decks::BREECHES_24_MAIN,
+        },
     ]
 }
 
@@ -34585,6 +34639,15 @@ mod tests {
             ("Alharu, Solemn Ritualist and Miara, Thorn of the Glade", &[0x1C10]),
             ("Falthis, Shadowcat Familiar and Nadier, Agent of the Duskenel", &[0x1C11]),
             ("Skanos Dragonheart and Veteran Soldier", &[0x1C12]),
+            ("Viconia, Drow Apostate and Tavern Brawler", &[0x1C13]),
+            ("Alena, Kessig Trapper and Anara, Wolvid Familiar", &[0x1C14]),
+            ("Brinelin, the Moon Kraken and Tormod, the Desecrator", &[0x1C15]),
+            ("Ludevic, Necro-Alchemist and Nadier, Agent of the Duskenel", &[0x1C16]),
+            ("Sivriss, Nightmare Speaker and Guild Artisan", &[0x1C17]),
+            ("Ghost of Ramirez DePietro and Kydele, Chosen of Kruphix", &[0x1C18]),
+            ("Alena, Kessig Trapper and Ich-Tekik, Salvage Splicer", &[0x1C19]),
+            ("The Seventh Doctor and Bill Potts", &[0x1C1A]),
+            ("Breeches, Brazen Plunderer and Ludevic, Necro-Alchemist", &[0x1C1B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
