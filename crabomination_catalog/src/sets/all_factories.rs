@@ -18278,6 +18278,16 @@ static DECKS: &[Factory] = &[
     super::decks::spiral_into_solitude,
     super::decks::skullmulcher,
     super::decks::screaming_swarm,
+    // cmdr_01fn_g (session 01FnAVVR)
+    super::decks::wanted_scoundrels,
+    super::decks::overcome,
+    super::decks::hells_thunder,
+    super::decks::preyseizer_dragon,
+    super::decks::conservatory,
+    super::decks::packs_disdain,
+    super::decks::roar_of_the_crowd,
+    super::decks::ravagers_mace,
+    super::decks::basris_aegis,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

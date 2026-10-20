@@ -358,3 +358,21 @@ fn divine_smite_exiles_black_and_phases_out_the_rest() {
     assert!(!g.exile.iter().any(|c| c.id == red), "red: phased out, not exiled");
     assert!(g.battlefield_find(red).is_none(), "a phased-out permanent is treated as though it doesn't exist");
 }
+
+/// Pack's Disdain counts permanents of the type chosen as it resolves.
+#[test]
+fn packs_disdain_scales_with_the_chosen_type() {
+    let mut g = main_phase(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::lys_alana_bowmaster());
+    }
+    let dragon = g.add_card_to_battlefield(1, catalog::velukan_dragon());
+    let spell = g.add_card_to_hand(0, catalog::packs_disdain());
+    flood(&mut g, 0);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::CreatureType(crabomination::card::CreatureType::Elf),
+    ]));
+    cast_as(&mut g, 0, spell, Some(Target::Permanent(dragon))).expect("cast");
+    let cp = g.computed_permanent(dragon).expect("5/5 survives -3/-3");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "three Elves");
+}
