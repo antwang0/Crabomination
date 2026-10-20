@@ -1981,6 +1981,27 @@ impl GameState {
                 })
                 .max()
                 .unwrap_or(0),
+            Value::DistinctManaCostsInGraveyard(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| {
+                    let mut costs: Vec<Vec<String>> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| !c.definition.is_land() && !c.definition.cost.symbols.is_empty())
+                        .map(|c| {
+                            let mut syms: Vec<String> =
+                                c.definition.cost.symbols.iter().map(|s| format!("{s:?}")).collect();
+                            syms.sort();
+                            syms
+                        })
+                        .collect();
+                    costs.sort();
+                    costs.dedup();
+                    costs.len() as i32
+                })
+                .max()
+                .unwrap_or(0),
             Value::CreatureCardsPutIntoGraveyardThisTurn(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()

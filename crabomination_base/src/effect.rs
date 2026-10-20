@@ -979,6 +979,11 @@ pub enum Value {
     /// (`Player.creature_cards_to_graveyard_this_turn`) — Raphael, Fiendish
     /// Savior's end-step gate.
     CreatureCardsPutIntoGraveyardThisTurn(PlayerRef),
+    /// The number of different mana costs among nonland cards in `who`'s
+    /// graveyard (max over resolved players) — Embodiment of Agonies. {2}{B}
+    /// and {1}{B}{B} differ; a card with no mana cost has none and isn't
+    /// counted.
+    DistinctManaCostsInGraveyard(PlayerRef),
     /// Cards put into `who`'s graveyard from their hand (discarded) or
     /// library (milled) this turn — Welcome the Dead's X. Surveil isn't
     /// counted.
