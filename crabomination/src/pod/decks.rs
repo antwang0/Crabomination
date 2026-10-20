@@ -131108,3 +131108,142 @@ pub const FACELESS_ONE_3_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const ELIGETH_30_COMMANDERS: &[CardFactory] = &[eligeth_crossroads_augur, falthis_shadowcat_familiar];
+
+/// **Eligeth, Crossroads Augur and Falthis, Shadowcat Familiar**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 10 Islands + 5 Swamps = 98.
+/// Eligeth, Crossroads Augur and Falthis, Shadowcat Familiar (EDHREC, fetched 2026-10-20).
+pub const ELIGETH_30_MAIN: &[CardFactory] = &[
+    arcane_signet, champions_helm, charcoal_diamond, crystal_ball, decanter_of_endless_water,
+    dimir_keyrune, dimir_signet, midnight_clock, mind_stone, scroll_rack, sky_diamond, sol_ring,
+    swiftfoot_boots, talisman_of_dominance, thought_vessel, trailblazers_boots, buried_ruin,
+    clearwater_pathway, creeping_tar_pit, darkslick_shores, darkwater_catacombs,
+    demolition_field, dimir_aqueduct, evolving_wilds, exotic_orchard, fetid_pools,
+    ghost_quarter, myriad_landscape, mystic_sanctuary, reliquary_tower, river_of_tears,
+    shipwreck_marsh, temple_of_deceit, underground_river, aberrant_mind_sorcerer, augury_owl,
+    body_of_knowledge, brass_squire, bronze_walrus, chasm_skulker, contraband_kingpin,
+    cryptic_annelid, curator_of_mysteries, geist_of_the_archives, ghostly_pilferer,
+    haunt_of_the_dead_marshes, krydle_of_baldurs_gate, lightfoot_rogue, snapcaster_mage,
+    soulknife_spy, thassa_god_of_the_sea, the_reality_chip, treasure_mage, aqueous_form,
+    counterbalance, molting_snakeskin, nerd_rage, omen_of_the_sea, ominous_seas, ray_of_frost,
+    tamiyos_compleation, teferis_ageless_insight, brainstorm, condescend, councils_deliberation,
+    countersquall, cryptic_command, deliberate, dissolve, gifts_ungiven, lose_focus, mana_drain,
+    price_of_fame, sublime_epiphany, wash_away, jace_wielder_of_mysteries, blood_money,
+    decree_of_pain, feed_the_swarm, finale_of_revelation, mystic_speculation, notion_rain,
+    serum_visions,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const KELETH_18_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, rebbec_architect_of_ascension];
+
+/// **Keleth, Sunmane Familiar and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Plains = 98.
+/// Keleth, Sunmane Familiar and Rebbec, Architect of Ascension (EDHREC, fetched
+/// 2026-10-20).
+pub const KELETH_18_MAIN: &[CardFactory] = &[
+    automated_assembly_line, brotherhood_vertibird, caged_sun, commanders_sphere,
+    dollhouse_of_horrors, forsaken_monument, golden_argosy, halo_fountain, hedron_archive,
+    horizon_stone, liquimetal_coating, liquimetal_torque, loreseekers_stone, marble_diamond,
+    meteor_sword, mind_stone, plate_armor, sol_ring, stonespeaker_crystal, ancient_den,
+    arch_of_orazca, darksteel_citadel, path_of_ancestry, reliquary_tower, the_fair_basilica,
+    zhalfirin_void, chief_of_the_foundry, clockwork_drawbridge, cosmogrand_zenith,
+    digsite_engineer, dockworker_drone, ellyn_harbreeze_busybody, foreboding_statue,
+    foundry_inspector, golden_guardian, illustrious_wanderglyph, ingenious_smith,
+    luxknight_breacher, marut, meteor_golem, myrel_shield_of_argive, myrsmith,
+    oltec_matterweaver, razorfield_rhino, siege_veteran, sojourners_companion, stone_golem,
+    threefold_thunderhulk, treasure_keeper, flowering_of_the_white_tree, leyline_of_sanctity,
+    tempered_steel, crumb_and_get_it, dawns_truce, fight_as_one, focus_fire,
+    heliods_intervention, lens_flare, path_to_exile, reroute_systems, take_up_the_shield,
+    zukos_exile, elspeth_knight_errant, elspeth_suns_champion, chaplains_blessing,
+    divine_reckoning, profound_journey, sunfall,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const IMOEN_27_COMMANDERS: &[CardFactory] = &[imoen_mystic_trickster, shameless_charlatan];
+
+/// **Imoen, Mystic Trickster and Shameless Charlatan**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 24 Islands = 98.
+/// Imoen, Mystic Trickster and Shameless Charlatan (EDHREC, fetched 2026-10-20).
+pub const IMOEN_27_MAIN: &[CardFactory] = &[
+    aether_spellbomb, arcane_signet, bag_of_holding, buried_treasure, chaos_wand,
+    charmed_pendant, coldsteel_heart, component_pouch, dungeon_map, endurance_bobblehead,
+    intelligence_bobblehead, nimblewright_schematic, robe_of_the_archmagi, sol_ring,
+    sphinx_bone_wand, staff_of_nin, staff_of_the_mind_magus, the_everflowing_well,
+    treasure_chest, treasure_map, arid_archway, blighted_cataract, buried_ruin, coral_atoll,
+    remote_isle, riptide_laboratory, terramorphic_expanse, tolaria_west, treasure_vault,
+    aetherjacket, ancient_stone_idol, artisan_of_kozilek, bane_of_bala_ged, body_double,
+    clone_card, deceiver_of_form, deep_sea_kraken, eccentric_apprentice, experimental_aviator,
+    fog_bank, frost_titan, gigantoplasm, ingenious_prodigy, pathrazer_of_ulamog, pilgrims_eye,
+    relic_runner, solemn_simulacrum, tomorrow_azamis_familiar, whirler_rogue,
+    extravagant_replication, omniscience, the_mirari_conjecture, treasure_trove, wizard_class,
+    brainstorm, deny_the_divine, displace, familiars_ruse, frantic_search, machine_over_matter,
+    negate, pongify, prying_eyes, rapid_hybridization, reject_imperfection, suit_up,
+    jace_architect_of_thought, blue_suns_twilight, exhaustion, flawless_forgery, game_plan,
+    modify_memory, treasure_hunt, void_snare,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const BREECHES_26_COMMANDERS: &[CardFactory] = &[breeches_brazen_plunderer, tormod_the_desecrator];
+
+/// **Breeches, Brazen Plunderer and Tormod, the Desecrator**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 6 Mountains + 7 Swamps = 98.
+/// Breeches, Brazen Plunderer and Tormod, the Desecrator (EDHREC, fetched 2026-10-20).
+pub const BREECHES_26_MAIN: &[CardFactory] = &[
+    arcane_signet, aunties_hovel, bloodfell_caves, command_tower, crypt_of_agadeem,
+    field_of_the_dead, graven_cairns, molten_slagheap, path_of_ancestry, rakdos_carnarium,
+    rakdos_guildgate, rocky_tar_pit, smoldering_marsh, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_swamp, snow_covered_swamp, snow_covered_swamp, snow_covered_swamp,
+    snow_covered_swamp, archghoul_of_thraben, breeches_eager_pillager, captain_lannery_storm,
+    captain_ripley_vance, carrion_feeder, cemetery_reaper, coercive_recruiter,
+    dire_fleet_daredevil, emberwilde_captain, enterprising_scallywag, gravecrawler,
+    headless_rider, kari_zev_skyship_raider, lord_of_the_accursed, plague_belcher, port_razer,
+    reassembling_skeleton, tomb_tyrant, undead_butler, undead_warchief, vengeful_dead,
+    vile_entomber, wily_goblin, xorn, zul_ashur_lich_lord, lilianas_mastery,
+    necromancers_stockpile, rain_of_riches, shared_animosity, tortured_existence,
+    vances_blasting_cannons, abrade, big_score, chaos_warp, corpse_churn, corrupted_conviction,
+    deadly_plot, demand_answers, laughing_mad, rise_of_the_dread_marn, tibalts_trickery,
+    unexpected_windfall, valakut_awakening, village_rites, angrath_minotaur_pirate,
+    liliana_deaths_majesty, angraths_fury, army_of_the_damned, bloodsoaked_insight,
+    brasss_bounty, cemetery_recruitment, dread_return, gamble, insurrection, mass_mutiny,
+    pirates_pillage, reanimate, tormenting_voice, unearth, vandalblast, victimize,
+    zombie_apocalypse,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const BRINELIN_23_COMMANDERS: &[CardFactory] = &[brinelin_the_moon_kraken, kediss_emberclaw_familiar];
+
+/// **Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar**'s EDHREC average deck, card for card:
+/// 60 nonbasic cards + 21 Islands + 17 Mountains = 98.
+/// Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar (EDHREC, fetched 2026-10-20).
+pub const BRINELIN_23_MAIN: &[CardFactory] = &[
+    bloodforged_battle_axe, commanders_sphere, cursed_mirror, dollhouse_of_horrors,
+    dreamstone_hedron, haunted_cloak, helm_of_the_host, jalum_tome, sisays_ring,
+    spectral_searchlight, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    agate_instigator, artisan_of_forms, aven_surveyor, body_double, burnished_hart,
+    chandras_pyreling, clone_card, dacks_duplicate, dutiful_replicator, fathom_fleet_swordjack,
+    horizon_scholar, jaxis_the_troublemaker, kitesail_corsair, ludevics_test_subject,
+    maelstrom_colossus, mirror_image, mirrorhall_mimic, ripscale_predator, scholar_of_the_ages,
+    scrapdiver_serpent, skaab_goliath, skilled_animator, sparktongue_dragon, steampath_charger,
+    aqueous_form, court_of_ire, double_vision, endless_evil, extravagant_replication,
+    fiery_emancipation, flameshadow_conjuring, molten_echoes, rhystic_study, splinter_twin,
+    undying_rage, vesuvan_duplimancy, elminsters_simulacrum, galestrike, prying_eyes,
+    run_away_together, electroduplicate, flood_of_recollection, hate_mirage, heat_shimmer,
+    portent_of_betrayal, soulfire_eruption,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

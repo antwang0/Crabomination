@@ -28506,6 +28506,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FACELESS_ONE_3_COMMANDERS,
             main: decks::FACELESS_ONE_3_MAIN,
         },
+        // Seat 4676: Eligeth, Crossroads Augur and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 4676`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Falthis, Shadowcat Familiar (UB)",
+            commanders: decks::ELIGETH_30_COMMANDERS,
+            main: decks::ELIGETH_30_MAIN,
+        },
+        // Seat 4677: Keleth, Sunmane Familiar and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4677`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Rebbec, Architect of Ascension (W)",
+            commanders: decks::KELETH_18_COMMANDERS,
+            main: decks::KELETH_18_MAIN,
+        },
+        // Seat 4678: Imoen, Mystic Trickster and Shameless Charlatan's EDHREC average deck. `--pod-decks 4678`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Shameless Charlatan (U)",
+            commanders: decks::IMOEN_27_COMMANDERS,
+            main: decks::IMOEN_27_MAIN,
+        },
+        // Seat 4679: Breeches, Brazen Plunderer and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4679`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Tormod, the Desecrator (BR)",
+            commanders: decks::BREECHES_26_COMMANDERS,
+            main: decks::BREECHES_26_MAIN,
+        },
+        // Seat 4680: Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 4680`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar (UR)",
+            commanders: decks::BRINELIN_23_COMMANDERS,
+            main: decks::BRINELIN_23_MAIN,
+        },
     ]
 }
 
@@ -35082,6 +35112,11 @@ mod tests {
             ("Livio, Oathsworn Sentinel and Tymna the Weaver", &[0x1C57]),
             ("Livaan, Cultist of Tiamat and Candlekeep Sage", &[0x1C58]),
             ("Faceless One and Clan Crafter", &[0x1C59]),
+            ("Eligeth, Crossroads Augur and Falthis, Shadowcat Familiar", &[0x1C5A]),
+            ("Keleth, Sunmane Familiar and Rebbec, Architect of Ascension", &[0x1C5B]),
+            ("Imoen, Mystic Trickster and Shameless Charlatan", &[0x1C5C]),
+            ("Breeches, Brazen Plunderer and Tormod, the Desecrator", &[0x1C5D]),
+            ("Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar", &[0x1C5E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
