@@ -981,3 +981,33 @@ fn natural_selection_rearranges_a_players_top_three() {
     cast(&mut g, spell, Some(Target::Player(1)));
     assert_eq!(g.players[1].library.len(), lib);
 }
+
+/// CR 106.6a — Animal Attendant's mana puts a +1/+1 counter on a non-Human
+/// creature it pays for, and none on a Human.
+#[test]
+fn cr_106_6a_animal_attendant_counts_non_humans_only() {
+    for (def, color, expect) in [(catalog::timber_wolves(), Color::Green, 1), (catalog::dinosaur_hunter(), Color::Black, 0)] {
+        let mut g = pod(2);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(color)]));
+        let attendant = g.add_card_to_battlefield(0, catalog::animal_attendant());
+        g.battlefield_find_mut(attendant).unwrap().summoning_sick = false;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: attendant,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("mana");
+        let creature = g.add_card_to_hand(0, def);
+        if expect == 0 {
+            g.players[0].mana_pool.add_colorless(1);
+        }
+        g.perform_action(GameAction::CastSpell { card_id: creature, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(creature).unwrap().counter_count(CounterType::PlusOnePlusOne), expect);
+    }
+}

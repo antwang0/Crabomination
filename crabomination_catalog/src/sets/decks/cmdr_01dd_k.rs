@@ -1394,3 +1394,23 @@ pub fn natural_selection() -> CardDefinition {
         ]),
     )
 }
+
+/// Animal Attendant — {1}{G} 2/2 Human Citizen. {T}: add one mana of any
+/// color; spent on a non-Human creature spell, that creature enters with an
+/// additional +1/+1 counter.
+pub fn animal_attendant() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Restricted(
+                    Box::new(crate::effect::ManaPayload::AnyOneColor(Value::ONE)),
+                    crate::mana::SpendRestriction::NonHumanCreatureCastCounter,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature("Animal Attendant", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Citizen], 2, 2)
+    }
+}

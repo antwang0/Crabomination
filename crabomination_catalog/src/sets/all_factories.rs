@@ -18343,6 +18343,7 @@ static DECKS: &[Factory] = &[
     super::decks::allosaurus_rider,
     super::decks::altar_golem,
     super::decks::natural_selection,
+    super::decks::animal_attendant,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
