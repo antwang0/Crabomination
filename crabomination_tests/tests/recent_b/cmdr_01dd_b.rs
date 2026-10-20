@@ -1054,3 +1054,19 @@ fn cr_702_136a_domri_mana_gives_a_creature_riot() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wolves).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "riot: a +1/+1 counter");
 }
+
+/// CR 707.9b — Dollhouse of Horrors' copy is a 0/0 Construct artifact with
+/// "+1/+1 for each Construct you control" and haste.
+#[test]
+fn cr_707_9b_dollhouse_of_horrors_makes_a_construct_copy() {
+    let mut g = pod(2);
+    let house = g.add_card_to_battlefield(0, catalog::dollhouse_of_horrors());
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    activate(&mut g, house, 0, None).expect("activate");
+    let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Serra Angel").map(|c| c.id).expect("a copy");
+    let cp = g.computed_permanent(token).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "0/0 plus one Construct (itself)");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying), "a copy keeps its abilities");
+    assert!(g.players[0].graveyard.is_empty(), "the card was exiled");
+}
