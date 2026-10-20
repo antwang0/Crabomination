@@ -123694,3 +123694,85 @@ pub const BILL_FERNY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const SYGG_3_COMMANDERS: &[CardFactory] = &[sygg_wanderwine_wisdom];
+
+/// **Sygg, Wanderwine Wisdom**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Islands + 9 Plains = 99.
+/// Sygg, Wanderwine Wisdom (EDHREC, fetched 2026-10-20).
+pub const SYGG_3_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, dawn_blessed_pennant, gathering_stone,
+    sol_ring, springleaf_drum, swiftfoot_boots, talisman_of_progress, thought_vessel,
+    adarkar_wastes, command_tower, deserted_beach, eclipsed_realms, floodfarm_verge,
+    glacial_fortress, hallowed_fountain, path_of_ancestry, port_town, prairie_stream,
+    reliquary_tower, sea_of_clouds, temple_of_enlightenment, wanderwine_hub, adept_watershaper,
+    champions_of_the_shoal, deepchannel_duelist, deepway_navigator, disruptor_of_currents,
+    eclipsed_merrow, emperor_mihail_ii, judge_of_currents, kopala_warden_of_waves,
+    lord_of_atlantis, master_of_the_pearl_trident, meanders_guide, merfolk_sovereign,
+    merrow_harbinger, merrow_reejerey, merrow_skyswimmer, seafloor_oracle, silvergill_mentor,
+    silvergill_peddler, stonybrook_banneret, stonybrook_schoolmaster, summon_leviathan,
+    svyelun_of_sea_and_sky, sygg_river_guide, tishanas_tidebinder, vodalian_hexcatcher,
+    vodalian_wave_knight, wanderbrine_preacher, wanderbrine_trapper, wanderwine_prophets,
+    deeproot_pilgrimage, deeproot_waters, kindred_discovery, merrow_commerce, propaganda,
+    reconnaissance_mission, reflections_of_littjara, an_offer_you_cant_refuse, arcane_denial,
+    counterspell, dovins_veto, generous_gift, harmonized_crescendo, negate, path_to_exile,
+    sink_into_stupor, swords_to_plowshares, unexpected_assistance, distant_melody,
+    summon_the_school, syggs_command, wanderwine_farewell, winnowing,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const TAM_3_COMMANDERS: &[CardFactory] = &[tam_mindful_first_year];
+
+/// **Tam, Mindful First-Year**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 10 Forests + 10 Islands = 99.
+/// Tam, Mindful First-Year (EDHREC, fetched 2026-10-20).
+pub const TAM_3_MAIN: &[CardFactory] = &[
+    arcane_signet, conquerors_flail, distorting_lens, dragonfire_blade, simic_signet, sol_ring,
+    swiftfoot_boots, alchemists_refuge, breeding_pool, command_tower, dreamroot_cascade,
+    exotic_orchard, flooded_grove, hinterland_harbor, rejuvenating_springs, reliquary_tower,
+    simic_growth_chamber, sodden_verdure, temple_of_mystery, vineglimmer_snarl,
+    willowrush_verge, yavimaya_coast, aurora_awakener, beast_whisperer, birds_of_paradise,
+    blind_seer, bloom_tender, cold_eyed_selkie, elvish_mystic, eternal_witness,
+    fallaji_wayfarer, formidable_speaker, glister_bairn, ioreth_of_the_healing_house,
+    kioras_follower, llanowar_elves, llawan_cephalid_empress, marvin_murderous_mimic,
+    murkfiend_liege, painters_servant, prismabasher, progenitor_mimic, scion_of_draco,
+    scuttlemutt, seedborn_muse, shinestriker, spark_double, tidal_visionary,
+    vizier_of_tumbling_sands, wildvine_pummeler, wistfulness, ana_sanctuary,
+    case_of_the_shattered_pact, ceta_sanctuary, compost, prismatic_undercurrents, shifting_sky,
+    well_laid_plans, beast_within, counterspell, first_family, growth_spiral,
+    heroic_intervention, jaded_response, might_of_the_nephilim, negate, pongify, quickchange,
+    rapid_hybridization, rime_chill, sway_of_illusion, cultivate, elemental_spectacle, farseek,
+    kodamas_reach, natures_lore, rampant_growth, three_visits, wash_out,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const BARU_2_COMMANDERS: &[CardFactory] = &[baru_wurmspeaker];
+
+/// **Baru, Wurmspeaker**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Baru, Wurmspeaker (EDHREC, fetched 2026-10-20).
+pub const BARU_2_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, heralds_horn, rhonass_monument, sol_ring, the_great_henge,
+    urzas_incubator, castle_garenbrig, mosswort_bridge, myriad_landscape, nykthos_shrine_to_nyx,
+    reliquary_tower, rogues_passage, balustrade_wurm, beanstalk_wurm, bellowing_tanglewurm,
+    bookwurm, bramble_wurm, colossal_rattlewurm, defiler_of_vigor, dirtcowl_wurm,
+    elderscale_wurm, elfhame_wurm, elvish_mystic, emergent_woodwurm, engulfing_slagwurm,
+    fanatic_of_rhonas, greater_sandwurm, grothama_all_devouring, impervious_greatwurm,
+    karametras_acolyte, llanowar_elves, ouroboroid, panglacial_wurm, pelakka_wurm,
+    penumbra_wurm, plated_slagwurm, quilled_greatwurm, sifter_wurm, soul_swallower,
+    symbiotic_wurm, worldspine_wurm, wurmcoil_engine, colossal_majesty, elemental_bond,
+    garruks_uprising, monstrous_vortex, sandwurm_convergence, unnatural_growth,
+    up_the_beanstalk, wild_growth, beast_within, entish_restoration, heroic_intervention,
+    krosan_grip, momentous_fall, ram_through, return_of_the_wildspeaker, return_to_nature,
+    garruk_primal_hunter, crush_of_wurms, cultivate, kodamas_reach, natures_lore,
+    overwhelming_stampede, rampant_growth, rishkars_expertise, skyshroud_claim, three_visits,
+    traverse_the_outlands,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];

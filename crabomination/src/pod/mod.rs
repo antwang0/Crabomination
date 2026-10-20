@@ -26910,6 +26910,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BILL_FERNY_COMMANDERS,
             main: decks::BILL_FERNY_MAIN,
         },
+        // Seat 4410: Sygg, Wanderwine Wisdom's EDHREC average deck. `--pod-decks 4410`.
+        PodDeck {
+            name: "Sygg, Wanderwine Wisdom (WU)",
+            commanders: decks::SYGG_3_COMMANDERS,
+            main: decks::SYGG_3_MAIN,
+        },
+        // Seat 4411: Tam, Mindful First-Year's EDHREC average deck. `--pod-decks 4411`.
+        PodDeck {
+            name: "Tam, Mindful First-Year (UG)",
+            commanders: decks::TAM_3_COMMANDERS,
+            main: decks::TAM_3_MAIN,
+        },
+        // Seat 4412: Baru, Wurmspeaker's EDHREC average deck. `--pod-decks 4412`.
+        PodDeck {
+            name: "Baru, Wurmspeaker (G)",
+            commanders: decks::BARU_2_COMMANDERS,
+            main: decks::BARU_2_MAIN,
+        },
     ]
 }
 
@@ -33220,6 +33238,9 @@ mod tests {
             ("Sol'Kanar the Tainted", &[0x1B4D]),
             ("Leori, Sparktouched Hunter", &[0x1B4E]),
             ("Bill Ferny, Bree Swindler", &[0x1B4F]),
+            ("Sygg, Wanderwine Wisdom", &[0x1B50]),
+            ("Tam, Mindful First-Year", &[0x1B51]),
+            ("Baru, Wurmspeaker", &[0x1B52]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
