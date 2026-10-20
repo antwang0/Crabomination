@@ -18236,7 +18236,6 @@ static DECKS: &[Factory] = &[
     super::decks::mardu_blazebringer,
     super::decks::screeching_phoenix,
     super::decks::clachan_festival,
-    super::decks::stingerquill_charm,
     super::decks::fathom_fleet_cutthroat,
     super::decks::escarpment_fortress,
     super::decks::moonlit_lamenter,
@@ -18265,7 +18264,6 @@ static DECKS: &[Factory] = &[
     super::decks::lys_alana_bowmaster,
     super::decks::medicine_runner,
     super::decks::clockwork_hydra,
-    super::decks::theoretical_necromancer,
     super::decks::guardians_of_koilos,
 ];
 static DGM: &[Factory] = &[

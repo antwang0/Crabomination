@@ -23,10 +23,6 @@ fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32
     }
 }
 
-fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
-}
-
 fn pump(what: Selector, p: Value, t: Value) -> Effect {
     Effect::PumpPT { what, power: p, toughness: t, duration: Duration::EndOfTurn }
 }
@@ -191,26 +187,6 @@ pub fn clachan_festival() -> CardDefinition {
         }],
         ..Default::default()
     }
-}
-
-/// Stingerquill Charm — {B}{R} instant. Choose one: 3 damage to any target;
-/// target creature gains first strike and deathtouch; or a 2/2 colorless
-/// Wizard Soldier named Cadet with haste until end of turn.
-pub fn stingerquill_charm() -> CardDefinition {
-    let cadet = token("Cadet", 2, 2, vec![], vec![CreatureType::Wizard, CreatureType::Soldier]);
-    spell(
-        "Stingerquill Charm",
-        cost(&[b(), r()]),
-        CardType::Instant,
-        Effect::ChooseMode(vec![
-            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
-            Effect::Seq(vec![
-                Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
-                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
-            ]),
-            crate::effect::shortcut::tokens_gain_until_eot(mint_token(cadet, 1), &[Keyword::Haste]),
-        ]),
-    )
 }
 
 /// Fathom Fleet Cutthroat — {3}{B} 3/3 Human Pirate. ETB: destroy target

@@ -429,25 +429,6 @@ pub fn clockwork_hydra() -> CardDefinition {
     }
 }
 
-/// Theoretical Necromancer — {2}{B} 4/1 Vampire Warlock. {3}{B}, exile it
-/// from your graveyard: return another target creature card from your
-/// graveyard to your hand.
-pub fn theoretical_necromancer() -> CardDefinition {
-    CardDefinition {
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3), b()]),
-            from_graveyard: true,
-            exile_self_cost: true,
-            effect: Effect::Move {
-                what: target_filtered(R::Creature.from_your_graveyard().and(R::OtherThanSource)),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            ..Default::default()
-        }],
-        ..creature("Theoretical Necromancer", cost(&[generic(2), b()]), vec![CreatureType::Vampire, CreatureType::Warlock], 4, 1)
-    }
-}
-
 /// Guardians of Koilos — {5} 4/4 Construct artifact creature. ETB: you may
 /// return another target historic permanent you control to its owner's hand.
 pub fn guardians_of_koilos() -> CardDefinition {
