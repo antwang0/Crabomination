@@ -1432,3 +1432,22 @@ fn vivien_arkbow_ranger_plus_one_on_one_target() {
     assert_eq!(g.battlefield_find(beast).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Trample));
 }
+
+/// CR 704.5q — a Curse that Mirrorform turns into a copy of a creature is no
+/// longer an Aura: it stops enchanting its player and stays on the
+/// battlefield (bug fix: 4-seat sweep seed 934364 kept the Owlbear "attached"
+/// to a seat that had left).
+#[test]
+fn cr_704_5q_a_curse_turned_creature_lets_go_of_its_player() {
+    let mut g = pod(3);
+    let curse = g.add_card_to_hand(0, catalog::curse_of_opulence());
+    cast(&mut g, curse, Some(Target::Player(1)));
+    assert_eq!(g.battlefield_find(curse).unwrap().attached_to_player, Some(1));
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mirror = g.add_card_to_hand(0, catalog::mirrorform());
+    cast(&mut g, mirror, Some(Target::Permanent(bears)));
+    g.check_state_based_actions();
+    let copy = g.battlefield_find(curse).expect("the copy stays on the battlefield");
+    assert_eq!(copy.definition.name, "Grizzly Bears");
+    assert_eq!(copy.attached_to_player, None);
+}

@@ -7027,6 +7027,11 @@ impl GameState {
                     flags |= 1 << SBA_OTHER_ATTACHED;
                 }
             }
+            // CR 704.5q — a non-Aura on a player (a Curse Mirrorform made an
+            // Owlbear) is unattached by the sweep below.
+            if c.attached_to_player.is_some() && !c.definition.is_aura() {
+                flags |= 1 << SBA_OTHER_ATTACHED;
+            }
             flags |= (c.bestowed as u64) << SBA_BESTOWED;
             flags |= (c.soulbond_partner.is_some() as u64) << SBA_SOULBOND;
             flags |= (c.sector.is_some() as u64) << SBA_SECTOR_SET;
@@ -8849,6 +8854,24 @@ impl GameState {
             })
             .collect()
         };
+        // CR 704.5q — a permanent that is no longer an Aura stops enchanting
+        // the player it was on and stays on the battlefield: Mirrorform made
+        // a Curse of Opulence an Owlbear that kept a departed seat as its
+        // host (4-seat sweep seed 934364).
+        if scan.other_attached {
+            let off_players: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to_player.is_some() && !c.definition.is_aura())
+                .map(|c| c.id)
+                .collect();
+            for id in off_players {
+                if let Some(c) = self.battlefield.find_by_id_mut(id) {
+                    c.attached_to_player = None;
+                    events.push(GameEvent::AttachmentMoved { attachment: id, attached_to: None });
+                }
+            }
+        }
         for id in stale_equipment_links {
             if let Some(c) = self.battlefield.find_by_id_mut(id)
                 && let Some(host) = c.attached_to.take()
