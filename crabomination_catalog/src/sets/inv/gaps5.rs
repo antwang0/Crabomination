@@ -69,7 +69,9 @@ pub fn death_or_glory() -> CardDefinition {
                 filter: R::Creature,
             },
             splitter: PlayerRef::You,
-            chooser: PlayerRef::EachOpponent,
+            // "An opponent's choice" is ONE opponent: `EachOpponent` here
+            // tripped `resolve_player`'s fan-out assert at three seats.
+            chooser: PlayerRef::HostileOpponent,
             chosen: Box::new(Effect::Move { what: chosen_pile(), to: ZoneDest::Exile }),
             other: Box::new(Effect::Move {
                 what: other_pile(),

@@ -254,3 +254,18 @@ fn phyrexian_portal_needs_ten_cards() {
     let exiled = g.exile.len();
     assert_eq!(g.players[0].library.len() + exiled, 9, "one pile exiled, the rest shuffled back");
 }
+
+/// Bug fix (pod seed 9273): Death or Glory's "pile of an opponent's choice"
+/// is ONE opponent — its `EachOpponent` chooser tripped `resolve_player`'s
+/// fan-out assert at three seats (CR 800 multiplayer wording).
+#[test]
+fn death_or_glory_one_opponent_chooses_at_three_seats() {
+    let mut g = main_phase(3);
+    let bears: Vec<CardId> = (0..3).map(|_| g.add_card_to_graveyard(0, catalog::grizzly_bears())).collect();
+    let spell = g.add_card_to_hand(0, catalog::death_or_glory());
+    flood(&mut g, 0);
+    cast_as(&mut g, 0, spell, None).expect("cast");
+    let back = bears.iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+    let exiled = bears.iter().filter(|id| g.exile.iter().any(|c| c.id == **id)).count();
+    assert_eq!(back + exiled, 3, "every creature card went to one pile or the other");
+}
