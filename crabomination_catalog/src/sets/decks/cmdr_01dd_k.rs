@@ -1036,3 +1036,19 @@ pub fn phyrexian_devourer() -> CardDefinition {
         ..creature("Phyrexian Devourer", cost(&[generic(6)]), vec![CreatureType::Phyrexian, CreatureType::Construct], 1, 1)
     }
 }
+
+/// Dash Hopes — {B}{B} instant. When you cast this spell, any player may pay
+/// 5 life; if a player does, counter Dash Hopes. Counter target spell.
+pub fn dash_hopes() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::AnyPlayerMayPayLifeToCounterThis {
+            life: 5,
+        })],
+        ..spell(
+            "Dash Hopes",
+            cost(&[b(), b()]),
+            CardType::Instant,
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        )
+    }
+}

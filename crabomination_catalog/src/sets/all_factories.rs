@@ -18330,6 +18330,7 @@ static DECKS: &[Factory] = &[
     super::decks::elite_arcanist,
     super::decks::minion_reflector,
     super::decks::phyrexian_devourer,
+    super::decks::dash_hopes,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

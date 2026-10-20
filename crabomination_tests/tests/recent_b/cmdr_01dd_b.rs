@@ -766,3 +766,45 @@ fn cr_603_8_phyrexian_devourer_grows_then_sacrifices_itself() {
     activate(&mut g, devourer, 0, None).expect("exile the Demon");
     assert!(g.battlefield_find(devourer).is_none(), "power 8: sacrificed");
 }
+
+/// CR 119.4 — Dash Hopes: the targeted spell's caster pays 5 life to counter
+/// it when it can spare the life; at 7 life it cannot keep its margin, and
+/// Dash Hopes resolves.
+#[test]
+fn cr_119_4_dash_hopes_is_countered_by_a_life_payment() {
+    for (life, countered) in [(20, true), (7, false)] {
+        let mut g = pod(3);
+        g.players[1].life = life;
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(2)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+        let hopes = g.add_card_to_hand(0, catalog::dash_hopes());
+        flood(&mut g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: hopes,
+            target: Some(Target::Permanent(bolt)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("dash hopes");
+        let seat2 = g.players[2].life;
+        drain_stack(&mut g);
+        if countered {
+            assert_eq!(g.players[1].life, life - 5, "paid 5 life");
+            assert_eq!(g.players[2].life, seat2 - 3, "Dash Hopes was countered; the Bolt resolved");
+        } else {
+            assert_eq!(g.players[1].life, life);
+            assert_eq!(g.players[2].life, seat2, "the Bolt was countered");
+        }
+    }
+}
