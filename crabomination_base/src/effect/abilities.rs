@@ -1109,6 +1109,10 @@ pub enum StaticEffect {
     /// the damage is still dealt (triggers fire), only the life change is
     /// clamped.
     DamageWontReduceControllerLifeBelowOne { requires_creature: bool },
+    /// CR 614 — "As long as you have `floor` or more life, damage that would
+    /// reduce your life total to less than `floor` reduces it to `floor`
+    /// instead" (Elderscale Wurm). Read beside the floor-of-one statics.
+    DamageWontReduceControllerLifeBelowWhileAtLeast { floor: u32 },
     /// CR 120.3a / 614 — "damage doesn't cause you to lose life" (Archon of
     /// Coronation, gated on being the monarch through `WhileCondition`). The
     /// damage is still dealt — combat damage still makes its dealer's

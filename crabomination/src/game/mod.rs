@@ -12585,18 +12585,30 @@ impl GameState {
                     })
             )
         };
-        let floored = self.players[seat].damage_floor_this_turn
-            || self.battlefield.iter().any(|src| {
-                src.controller == seat && src.definition.static_abilities.iter().any(floors)
-            })
-            // CR 114.4 — an emblem's static works from the command zone
-            // (Serra the Benevolent's Worship emblem).
-            || self.players[seat].emblems.iter().any(|em| em.statics.iter().any(floors));
-        if floored {
-            amount.min(self.effective_life(seat).saturating_sub(1).max(0) as u32)
-        } else {
-            amount
+        // One walk for both shapes: the floor of one, and Elderscale Wurm's
+        // higher floor that holds only while life is at or above it.
+        let mut floored = self.players[seat].damage_floor_this_turn;
+        let mut floor_n: Option<i32> = None;
+        for sa in self.battlefield.iter().filter(|src| src.controller == seat).flat_map(|src| src.definition.static_abilities.iter()) {
+            floored = floored || floors(sa);
+            if let StaticEffect::DamageWontReduceControllerLifeBelowWhileAtLeast { floor } = sa.effect {
+                floor_n = floor_n.max(Some(floor as i32));
+            }
         }
+        // CR 114.4 — an emblem's static works from the command zone
+        // (Serra the Benevolent's Worship emblem).
+        floored = floored || self.players[seat].emblems.iter().any(|em| em.statics.iter().any(floors));
+        let life = self.effective_life(seat);
+        let mut amount = amount;
+        if floored {
+            amount = amount.min(life.saturating_sub(1).max(0) as u32);
+        }
+        if let Some(f) = floor_n
+            && life >= f
+        {
+            amount = amount.min((life - f) as u32);
+        }
+        amount
     }
 
     /// CR 705.3 — coin-flip advantage for `seat` from active
@@ -36190,6 +36202,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayersCantPayLifeOrSacrificeNonlandForCosts
             // Consulted at the damage-to-player life sites.
             | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
+            | StaticEffect::DamageWontReduceControllerLifeBelowWhileAtLeast { .. }
             | StaticEffect::DamageDoesntCauseControllerLifeLoss
             | StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName
             | StaticEffect::OneSpellPerTurn
