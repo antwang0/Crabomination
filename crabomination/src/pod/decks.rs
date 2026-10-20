@@ -131305,3 +131305,142 @@ pub const ALORA_19_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const RAVOS_5_COMMANDERS: &[CardFactory] = &[ravos_soultender, tevesh_szat_doom_of_fools];
+
+/// **Ravos, Soultender and Tevesh Szat, Doom of Fools**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Plains + 11 Swamps = 98.
+/// Ravos, Soultender and Tevesh Szat, Doom of Fools (EDHREC, fetched 2026-10-20).
+pub const RAVOS_5_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, jet_medallion, orzhov_keyrune, orzhov_signet, phyrexian_altar,
+    skullclamp, sol_ring, talisman_of_hierarchy, thought_vessel, bojuka_bog, cabal_coffers,
+    caves_of_koilos, command_tower, fetid_heath, godless_shrine, isolated_chapel,
+    orzhov_basilica, phyrexian_tower, shattered_sanctum, shineshadow_snarl, tainted_field,
+    urborg_tomb_of_yawgmoth, vault_of_champions, absolver_thrull, armor_thrull,
+    athreos_god_of_passage, basal_thrull, blood_artist, blood_pet, blood_vassal, carrion_feeder,
+    cruel_celebrant, dutiful_thrull, elas_il_kor_sadistic_pilgrim, elenda_the_dusk_rose,
+    endrek_sahr_master_breeder, kingpins_pet, maw_of_the_obzedat, mindstab_thrull,
+    mirkwood_bats, mondrak_glory_dominus, mourning_thrull, pitiless_plunderer,
+    priest_of_forgotten_gods, teysa_karlov, teysa_orzhov_scion, thrull_champion,
+    thrull_parasite, thrull_surgeon, treasury_thrull, yawgmoth_thran_physician,
+    zulaport_cutthroat, anointed_procession, bastion_of_remembrance, black_market,
+    black_market_connections, dictate_of_erebos, grave_pact, phyrexian_arena, smothering_tithe,
+    dark_ritual, deadly_dispute, despark, mortify, path_to_exile, swords_to_plowshares,
+    szats_will, village_rites, elspeth_suns_champion, liliana_dreadhorde_general, damn,
+    demonic_tutor, diabolic_intent, reanimate, soul_exchange, victimize, vindicate,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const REYHAN_4_COMMANDERS: &[CardFactory] = &[reyhan_last_of_the_abzan, sidar_kondo_of_jamuraa];
+
+/// **Reyhan, Last of the Abzan and Sidar Kondo of Jamuraa**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Forests + 6 Plains + 5 Swamps = 98.
+/// Reyhan, Last of the Abzan and Sidar Kondo of Jamuraa (EDHREC, fetched 2026-10-20).
+pub const REYHAN_4_MAIN: &[CardFactory] = &[
+    abzan_banner, arcane_signet, commanders_sphere, crucible_of_worlds, defense_grid,
+    golgari_signet, selesnya_signet, sol_ring, the_ozolith, urzas_bauble, brushland,
+    caves_of_koilos, city_of_brass, command_tower, desert_of_the_glorified, desert_of_the_true,
+    evendo_waking_haven, exotic_orchard, gemstone_mine, godless_shrine, indatha_triome,
+    llanowar_wastes, marsh_flats, overgrown_tomb, path_of_ancestry, reliquary_tower,
+    sandsteppe_citadel, temple_garden, verdant_catacombs, windswept_heath, abzan_battle_priest,
+    abzan_falconer, adeline_resplendent_cathar, beast_whisperer, birds_of_paradise,
+    blood_artist, changeling_sentinel, dion_bahamuts_dominant, endrek_sahr_master_breeder,
+    felisa_fang_of_silverquill, fiendslayer_paladin, forgotten_ancient, game_trail_changeling,
+    kambal_consul_of_allocation, keeper_of_the_accord, llanowar_elves, marvin_murderous_mimic,
+    mikaeus_the_unhallowed, scrawling_crawler, solitary_camel, summon_knights_of_round,
+    tasseled_dromedary, timber_wolves, veteran_beastrider, worthy_knight,
+    zhao_zilong_tiger_general, abzan_ascendancy, branching_evolution, cathars_crusade,
+    from_beyond, guardian_project, hardened_scales, phyrexian_arena, sadistic_glee,
+    smothering_tithe, anguished_unmaking, biosynthic_burst, inspiring_call, nameless_inversion,
+    path_to_exile, solidarity_of_heroes, swords_to_plowshares, jiang_yanggu_wildcrafter,
+    black_hole, bubbling_muck, culling_ritual, cultivate, duneblast, kodamas_reach,
+    martial_coup, skyshroud_claim,
+    // Basics
+    forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const AKIRI_17_COMMANDERS: &[CardFactory] = &[akiri_line_slinger, sengir_the_dark_baron];
+
+/// **Akiri, Line-Slinger and Sengir, the Dark Baron**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Mountains + 5 Plains + 6 Swamps = 98.
+/// Akiri, Line-Slinger and Sengir, the Dark Baron (EDHREC, fetched 2026-10-20).
+pub const AKIRI_17_MAIN: &[CardFactory] = &[
+    aces_baseball_bat, arcane_signet, fellwar_stone, lightning_greaves, luxa_river_shrine,
+    rakdos_signet, sanguine_statuette, silverskin_armor, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, wedding_ring,
+    bojuka_bog, cactus_preserve, city_of_brass, clifftop_retreat, command_tower,
+    dragonskull_summit, exotic_orchard, hanweir_battlements, isolated_chapel, luxury_suite,
+    radiant_summit, reliquary_tower, rogues_passage, slayers_stronghold, smoldering_marsh,
+    spectator_seating, tainted_peak, windswept_heath, anje_maid_of_dishonor,
+    bloodtithe_harvester, crossway_troublemakers, edgar_charmed_groom, falkenrath_celebrants,
+    fearful_villager, firebending_student, harvesttide_infiltrator, hexing_squelcher,
+    indulgent_aristocrat, kamber_the_plunderer, mayhem_devil, olivias_attendants,
+    olivia_crimson_bride, simian_spirit_guide, stromkirk_captain, sun_warriors, tataru_taru,
+    tuktuk_rubblefort, twilight_prophet, voldaren_bloodcaster, voldaren_epicure,
+    welcoming_vampire, call_of_the_full_moon, dance_of_the_dead, gleaming_splendor,
+    the_birth_of_meletis, together_forever, wedding_announcement, boros_charm, cabal_ritual,
+    dark_ritual, entomb, family_reunion, orims_chant, path_to_exile, redirect_lightning,
+    savage_alliance, swords_to_plowshares, terminate, vampires_vengeance, vampiric_fury,
+    blasphemous_act, imperial_seal, jeskas_will, romantic_rendezvous, ruinous_ultimatum,
+    vampires_kiss, wheel_of_misfortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KELETH_19_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, ravos_soultender];
+
+/// **Keleth, Sunmane Familiar and Ravos, Soultender**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Plains + 11 Swamps = 98.
+/// Keleth, Sunmane Familiar and Ravos, Soultender (EDHREC, fetched 2026-10-20).
+pub const KELETH_19_MAIN: &[CardFactory] = &[
+    arcane_signet, buster_sword, chimil_the_inner_sun, coat_of_arms, decoction_module,
+    everflowing_chalice, mirror_box, patchwork_banner, pearl_medallion, peter_parkers_camera,
+    ratchet_bomb, sol_ring, the_immortal_sun, adagia_windswept_bastion, command_tower,
+    forlorn_flats, insomnia_crown_city, ishgard_the_holy_see, myriad_landscape, orzhov_basilica,
+    orzhov_guildgate, reliquary_tower, scrubland, susur_secundi_void_altar, swarmyard,
+    urborg_tomb_of_yawgmoth, vibrant_cityscape, caustic_bronco, essence_channeler,
+    evolved_sleeper, gollum_riddle_master, hexgold_slith, jawbone_duelist,
+    judge_magister_gabranth, lightless_evangel, matt_murdock_justice_seeker, relentless_rats,
+    relentless_rats, relentless_rats, relentless_rats, relentless_rats, relentless_rats,
+    relentless_rats, relentless_rats, relentless_rats, relentless_rats, relentless_rats,
+    relentless_rats, relentless_rats, relentless_rats, relentless_rats, relentless_rats,
+    relentless_rats, relentless_rats, stallion_of_ashmouth, thriving_rats,
+    thurid_mare_of_destiny, amazing_alliance, graduation_day, in_the_trenches,
+    intermediate_chirography, leaders_talent, legion_loyalty, remembrance, aura_blast,
+    dark_ritual, deadly_rollick, resupply, rootborn_defenses, subtle_strike, ajani_resolute,
+    honor, insatiable_avarice, victimize, wake_the_reflections, wrath_of_the_skies,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const MIARA_14_COMMANDERS: &[CardFactory] = &[miara_thorn_of_the_glade, vial_smasher_the_fierce];
+
+/// **Miara, Thorn of the Glade and Vial Smasher the Fierce**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 11 Mountains + 19 Swamps = 98.
+/// Miara, Thorn of the Glade and Vial Smasher the Fierce (EDHREC, fetched 2026-10-20).
+pub const MIARA_14_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, commanders_sphere, heraldic_banner, maskwood_nexus,
+    prismatic_lens, rakdos_signet, sol_ring, talisman_of_indulgence, command_tower,
+    dragonskull_summit, path_of_ancestry, sulfurous_springs, temple_of_malice,
+    ayara_first_of_locthwain, baeloth_barrityl_entertainer, blood_artist, changeling_outcast,
+    compleated_huntmaster, delina_wild_mage, elderfang_disciple, elderfang_ritualist,
+    elvish_doomsayer, elvish_dreadlord, gray_merchant_of_asphodel, infestation_sage,
+    lys_alana_scarblade, massacre_wurm, moonglove_winnower, nadiers_nightblade,
+    nightshade_harvester, ruthless_winnower, skemfar_avenger, skemfar_shadowsage,
+    taurean_mauler, viconia_drow_apostate, viscera_seer, zulaport_cutthroat,
+    agent_of_the_iron_throne, bastion_of_remembrance, goblin_bombardment, prowess_of_the_fair,
+    altars_reap, blood_pact, contagion, dark_ritual, deadly_dispute, force_of_rage,
+    go_for_the_throat, hurl_through_hell, kazuuls_fury, lightning_axe, lilianas_triumph,
+    mogg_salvage, plumb_the_forbidden, ravenous_trap, reckoners_bargain, rending_volley,
+    snuff_out, village_rites, ancient_craving, bone_shards, damnation, diabolic_tutor,
+    faithless_looting, living_death, massacre, read_the_bones,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

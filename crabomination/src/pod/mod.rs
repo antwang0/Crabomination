@@ -28548,6 +28548,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALORA_19_COMMANDERS,
             main: decks::ALORA_19_MAIN,
         },
+        // Seat 4683: Ravos, Soultender and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4683`.
+        PodDeck {
+            name: "Ravos, Soultender and Tevesh Szat, Doom of Fools (WB)",
+            commanders: decks::RAVOS_5_COMMANDERS,
+            main: decks::RAVOS_5_MAIN,
+        },
+        // Seat 4684: Reyhan, Last of the Abzan and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4684`.
+        PodDeck {
+            name: "Reyhan, Last of the Abzan and Sidar Kondo of Jamuraa (WBG)",
+            commanders: decks::REYHAN_4_COMMANDERS,
+            main: decks::REYHAN_4_MAIN,
+        },
+        // Seat 4685: Akiri, Line-Slinger and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4685`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Sengir, the Dark Baron (WBR)",
+            commanders: decks::AKIRI_17_COMMANDERS,
+            main: decks::AKIRI_17_MAIN,
+        },
+        // Seat 4686: Keleth, Sunmane Familiar and Ravos, Soultender's EDHREC average deck. `--pod-decks 4686`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Ravos, Soultender (WB)",
+            commanders: decks::KELETH_19_COMMANDERS,
+            main: decks::KELETH_19_MAIN,
+        },
+        // Seat 4687: Miara, Thorn of the Glade and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4687`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Vial Smasher the Fierce (BR)",
+            commanders: decks::MIARA_14_COMMANDERS,
+            main: decks::MIARA_14_MAIN,
+        },
     ]
 }
 
@@ -35131,6 +35161,11 @@ mod tests {
             ("Brinelin, the Moon Kraken and Kediss, Emberclaw Familiar", &[0x1C5E]),
             ("Abdel Adrian, Gorion's Ward and Clan Crafter", &[0x1C5F]),
             ("Alora, Merry Thief and Cloakwood Hermit", &[0x1C60]),
+            ("Ravos, Soultender and Tevesh Szat, Doom of Fools", &[0x1C61]),
+            ("Reyhan, Last of the Abzan and Sidar Kondo of Jamuraa", &[0x1C62]),
+            ("Akiri, Line-Slinger and Sengir, the Dark Baron", &[0x1C63]),
+            ("Keleth, Sunmane Familiar and Ravos, Soultender", &[0x1C64]),
+            ("Miara, Thorn of the Glade and Vial Smasher the Fierce", &[0x1C65]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
