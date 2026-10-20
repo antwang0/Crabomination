@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 32 closer cards, 10 seats, two engine fixes](#fixedopen-2026-10-20-commander-run-01ddeutc--32-closer-cards-10-seats-two-engine-fixes) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes](#fixedopen-2026-10-19-commander-run-01gwrdkp--44-closer-cards-17-seats-six-engine-fixes) | 34 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 168 closer cards, 37 seats, step-trigger / Adventure-copy / snow-payment bugs](#fixedopen-2026-10-19-commander-run-016xh16h--168-closer-cards-37-seats-step-trigger--adventure-copy--snow-payment-bugs) | 47 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
@@ -180,6 +181,36 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 32 closer cards, 10 seats, two engine fixes
+
+- **Seats** 4400-4409: Henry Wu, Sygg River Guide, Fblthp Impossibly Lost, Errant Street Artist, Hakim
+  Loreweaver, Proft Sinister Mastermind, Selenia Dark Angel, Sol'Kanar the Tainted, Leori Sparktouched Hunter,
+  Bill Ferny Bree Swindler — every legal unseated two- and three-card gap, then four of the four-card gaps.
+  Cards in `decks::cmdr_01dd_a`..`_i`, tests `recent_b/cmdr_01dd_a.rs`. The 2026-10-20 rescan (6,801 EDHREC
+  commanders) left **42 legal unseated decks**; after this run 32, the nearest Baru (Panglacial Wurm only) and
+  Myra (Attractions), then five-gap The Celestial Toymaker / The Most Dangerous Gamer / Sygg Wanderwine Wisdom /
+  Tam, Mindful First-Year.
+- **Primitives:** `GameEvent::Exploited` carries the exploited creature's LKI power (event amount), Human-ness
+  and token-ness, with `KeywordAct::ExploitedNonHuman` / `ExploitedNontoken` (CR 702.110b; Henry Wu, Skull
+  Skaab); `CumulativeUpkeepCost::ExileTop(n)` (CR 702.24a; Thought Lash);
+  `Effect::ExileLibraryThenTopFromExile` (Mirror of Fate); `EventScope::SourceDamagedYou` and the dealer gate
+  concretizing `HasChosenColorOfSource` for a departed dealer (Circle of Affliction); a static's `applies_to`
+  may name `Selector::ChosenPermanentOfSource` (Tyrannical Pitlord); `StaticEffect::LifeToZeroTransformsSelf`
+  read in `adjust_life` behind the life-static lane (CR 614 / 119.5; Enduring Angel) and
+  `ReplaceControllerLossWithExileSelfAtStartingLife` (Exquisite Archangel); `Effect::CastHandSpellsFreeThisTurn`
+  (Chandra, Flame's Catalyst); `Effect::SacrificeEachWhenOtherLeavesThisTurn` (CR 603.4; Phantasmal Mount).
+- **Fixes:** CR 606.1 — a loyalty ability went on the stack without `TriggerPush::activated`, so "copy that
+  ability" and "counter target activated ability" could not see it (Chandra's Regulator found it); CR 400.7 —
+  `leave_battlefield_state` now clears `modes_chosen`, so a blinked "choose one that hasn't been chosen"
+  permanent starts a fresh menu (Sol'Kanar's own donation). Doc: `Effect::MayPay` auto-taps (the pool-only note
+  was stale).
+- **OPEN:** Panglacial Wurm ("while you're searching your library, you may cast this card from your library")
+  needs one hook in the library-search funnel — the ~9 `searched_library_this_turn = true` sites want a single
+  `note_library_searched` helper first (a bug class: each marks the search itself), then the offer, which must
+  survive the search arms' suspend/replay. ⚠ **Don't edit `crabomination_base` while an optimized build of the
+  engine is compiling**: the base crate compiles first, the engine later reads the newer sources, and the build
+  fails (E0599) half an hour in.
 
 ## FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes
 

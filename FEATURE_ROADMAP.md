@@ -171,6 +171,8 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 502.4 no priority in the untap step: a trigger there waits for the upkeep | ✅ *since 2026-10-17 (`01Htv6cF`)* | `stack.rs::leave_untap_step` advances to the upkeep instead of resolving the stack top (a phased-in permanent's trigger resolved in the untap step; sweep 9810 found it in 2 of 1,455 pod games) |
 | CR 601.2c an Adventure's / Omen's own targets obey their filters | ✅ *since 2026-10-17 (`01Htv6cF`)* | `actions.rs::half_targets_violate` (both halves were cast with their slots unchecked; Burglar's Plot's `SharesCardTypeWithTargetSlot`) |
 | CR 603.10 a leaves-the-battlefield trigger's *filter* reads last-known P/T | ✅ *since 2026-10-17 (`01Htv6cF`)* | `effects/eval.rs::trigger_subject_lki` — `Value::PowerOf`/`ToughnessOf` in a `CreatureDied` filter read `leaves_bf_lki` (Deathknell Berserker read the graveyard card's printed power) |
+| CR 606.1 a loyalty ability is an activated ability on the stack (copiable, counterable as one) | ✅ *since 2026-10-20 (`01DDeUtc`)* | `game/mod.rs::activate_loyalty_ability` pushes with `TriggerPush::activated(true)`; Chandra's Regulator copies it (`recent_b/cmdr_01dd_a.rs::chandras_regulator_copies_a_chandra_ability`) |
+| CR 400.7 a blinked permanent forgets its "one that hasn't been chosen" record | ✅ *since 2026-10-20 (`01DDeUtc`)* | `CardInstance::leave_battlefield_state` clears `modes_chosen`; `cr_700_2_sol_kanar_walks_its_modes_then_leaves` |
 
 ### Commander-variant mechanics
 | Feature | State | Where |
