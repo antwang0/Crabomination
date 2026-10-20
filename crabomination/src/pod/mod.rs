@@ -28428,6 +28428,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALHARU_26_COMMANDERS,
             main: decks::ALHARU_26_MAIN,
         },
+        // Seat 4663: Alora, Merry Thief and Guild Artisan's EDHREC average deck. `--pod-decks 4663`.
+        PodDeck {
+            name: "Alora, Merry Thief and Guild Artisan (UR)",
+            commanders: decks::ALORA_18_COMMANDERS,
+            main: decks::ALORA_18_MAIN,
+        },
+        // Seat 4664: Gale, Waterdeep Prodigy and Far Traveler's EDHREC average deck. `--pod-decks 4664`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Far Traveler (WU)",
+            commanders: decks::GALE_19_COMMANDERS,
+            main: decks::GALE_19_MAIN,
+        },
+        // Seat 4665: Alena, Kessig Trapper and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4665`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Prava of the Steel Legion (WR)",
+            commanders: decks::ALENA_29_COMMANDERS,
+            main: decks::ALENA_29_MAIN,
+        },
+        // Seat 4666: Ikra Shidiqi, the Usurper and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4666`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Siani, Eye of the Storm (UBG)",
+            commanders: decks::IKRA_SHIDIQI_8_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_8_MAIN,
+        },
+        // Seat 4667: The First Doctor and Sarah Jane Smith's EDHREC average deck. `--pod-decks 4667`.
+        PodDeck {
+            name: "The First Doctor and Sarah Jane Smith (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_13_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_13_MAIN,
+        },
+        // Seat 4668: Bruse Tarl, Boorish Herder and Eligeth, Crossroads Augur's EDHREC average deck. `--pod-decks 4668`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Eligeth, Crossroads Augur (WUR)",
+            commanders: decks::BRUSE_TARL_21_COMMANDERS,
+            main: decks::BRUSE_TARL_21_MAIN,
+        },
+        // Seat 4669: Livaan, Cultist of Tiamat and Far Traveler's EDHREC average deck. `--pod-decks 4669`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Far Traveler (WR)",
+            commanders: decks::LIVAAN_8_COMMANDERS,
+            main: decks::LIVAAN_8_MAIN,
+        },
+        // Seat 4670: The Thirteenth Doctor and Ace, Fearless Rebel's EDHREC average deck. `--pod-decks 4670`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Ace, Fearless Rebel (UG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_11_MAIN,
+        },
+        // Seat 4671: Glacian, Powerstone Engineer and Krark, the Thumbless's EDHREC average deck. `--pod-decks 4671`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Krark, the Thumbless (UR)",
+            commanders: decks::GLACIAN_25_COMMANDERS,
+            main: decks::GLACIAN_25_MAIN,
+        },
     ]
 }
 
@@ -34991,6 +35045,15 @@ mod tests {
             ("Safana, Calimport Cutthroat and Haunted One", &[0x1C4A]),
             ("Safana, Calimport Cutthroat and Hardy Outlander", &[0x1C4B]),
             ("Alharu, Solemn Ritualist and Glacian, Powerstone Engineer", &[0x1C4C]),
+            ("Alora, Merry Thief and Guild Artisan", &[0x1C4D]),
+            ("Gale, Waterdeep Prodigy and Far Traveler", &[0x1C4E]),
+            ("Alena, Kessig Trapper and Prava of the Steel Legion", &[0x1C4F]),
+            ("Ikra Shidiqi, the Usurper and Siani, Eye of the Storm", &[0x1C50]),
+            ("The First Doctor and Sarah Jane Smith", &[0x1C51]),
+            ("Bruse Tarl, Boorish Herder and Eligeth, Crossroads Augur", &[0x1C52]),
+            ("Livaan, Cultist of Tiamat and Far Traveler", &[0x1C53]),
+            ("The Thirteenth Doctor and Ace, Fearless Rebel", &[0x1C54]),
+            ("Glacian, Powerstone Engineer and Krark, the Thumbless", &[0x1C55]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
