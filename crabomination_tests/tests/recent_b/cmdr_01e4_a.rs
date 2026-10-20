@@ -1071,3 +1071,109 @@ fn excavation_explosion_leaves_a_tapped_powerstone() {
     let stone = g.battlefield.iter().find(|c| c.definition.name == "Powerstone").expect("a Powerstone");
     assert!(stone.tapped);
 }
+
+fn equip(g: &mut GameState, equipment: CardId, host: CardId) {
+    flood(g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment, target: host }).expect("equip");
+    drain_stack(g);
+}
+
+/// Soulstinger's death passes on as many -1/-1 counters as it carried.
+#[test]
+fn soulstinger_passes_its_counters_on() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let stinger = g.add_card_to_hand(0, catalog::soulstinger());
+    cast(&mut g, stinger, None);
+    assert_eq!(pt(&g, stinger), (2, 3), "it put its two counters on itself");
+    let theirs = g.add_token_to_battlefield(1, &body("Beast", 4, CreatureType::Beast));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(stinger)));
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::MinusOneMinusOne), 2);
+}
+
+/// Bladed Bracers grant vigilance to a Human or Angel only; True-Faith Censer
+/// gives a Human an extra +1/+0.
+#[test]
+fn human_matters_equipment() {
+    let mut g = pod(2);
+    let human = g.add_token_to_battlefield(0, &body("Soldier", 2, CreatureType::Human));
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let bracers_h = g.add_card_to_battlefield(0, catalog::bladed_bracers());
+    let bracers_b = g.add_card_to_battlefield(0, catalog::bladed_bracers());
+    equip(&mut g, bracers_h, human);
+    equip(&mut g, bracers_b, bear);
+    let vig = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance);
+    assert!(vig(&g, human) && !vig(&g, bear));
+    let censer = g.add_card_to_battlefield(0, catalog::true_faith_censer());
+    equip(&mut g, censer, human);
+    assert_eq!(pt(&g, human), (5, 4), "2/2 + bracers 1/1 + censer 1/1 + Human 1/0");
+}
+
+/// Avacyn's Collar leaves a Spirit only when the Human it equipped dies.
+#[test]
+fn avacyns_collar_remembers_a_human() {
+    for human in [false, true] {
+        let mut g = pod(2);
+        let kind = if human { CreatureType::Human } else { CreatureType::Bear };
+        let host = g.add_token_to_battlefield(0, &body("Host", 2, kind));
+        let collar = g.add_card_to_battlefield(0, catalog::avacyns_collar());
+        equip(&mut g, collar, host);
+        let murder = g.add_card_to_hand(0, catalog::murder());
+        cast(&mut g, murder, Some(Target::Permanent(host)));
+        let spirits = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
+        assert_eq!(spirits, usize::from(human), "human {human}");
+    }
+}
+
+/// Invasion of Dominaria enters for 4 life and a card.
+#[test]
+fn invasion_of_dominaria_gains_and_draws() {
+    let mut g = pod(2);
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    let invasion = g.add_card_to_hand(0, catalog::invasion_of_dominaria());
+    cast(&mut g, invasion, Some(Target::Player(1)));
+    assert_eq!(g.players[0].life, life + 4);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Mindwrack Demon costs 4 life each upkeep until delirium.
+#[test]
+fn mindwrack_demon_charges_without_delirium() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::mindwrack_demon());
+    let life = g.players[0].life;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::End;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 4);
+}
+
+/// Furystoke Giant arms the rest of the team with a 2-damage tap ability.
+#[test]
+fn furystoke_giant_arms_the_team() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let giant = g.add_card_to_hand(0, catalog::furystoke_giant());
+    cast(&mut g, giant, None);
+    let before = g.players[1].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the granted ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 2);
+}

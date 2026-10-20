@@ -2470,3 +2470,290 @@ pub fn ravenous_gigamole() -> CardDefinition {
         ..creature("Ravenous Gigamole", cost(&[generic(3), b()]), vec![CreatureType::Mole, CreatureType::Horror], 2, 3)
     }
 }
+
+// ── Batch six ───────────────────────────────────────────────────────────────
+
+/// Furystoke Giant — {3}{R}{R} 3/3 Giant Warrior. When it enters, other
+/// creatures you control gain "{T}: This creature deals 2 damage to any
+/// target" until end of turn. Persist.
+pub fn furystoke_giant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Persist],
+        triggered_abilities: vec![etb(Effect::GrantActivatedAbilityToMatching {
+            filter: R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+            ability: Box::new(ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
+                ..Default::default()
+            }),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Furystoke Giant", cost(&[generic(3), r(), r()]), vec![CreatureType::Giant, CreatureType::Warrior], 3, 3)
+    }
+}
+
+/// Gravelgill Axeshark — {4}{U/B} 3/3 Merfolk Soldier. Persist.
+pub fn gravelgill_axeshark() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Persist],
+        ..creature(
+            "Gravelgill Axeshark",
+            cost(&[generic(4), hybrid(Color::Blue, Color::Black)]),
+            vec![CreatureType::Merfolk, CreatureType::Soldier],
+            3,
+            3,
+        )
+    }
+}
+
+/// Lingering Tormentor — {3}{B} 2/2 Spirit. Fear. Persist.
+pub fn lingering_tormentor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Fear, Keyword::Persist],
+        ..creature("Lingering Tormentor", cost(&[generic(3), b()]), vec![CreatureType::Spirit], 2, 2)
+    }
+}
+
+/// Mistvein Borderpost — {1}{U}{B} artifact. You may pay {1} and return a
+/// basic land you control to its owner's hand rather than pay its mana cost.
+/// Enters tapped. {T}: {U} or {B}.
+pub fn mistvein_borderpost() -> CardDefinition {
+    CardDefinition {
+        name: "Mistvein Borderpost",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Artifact],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(1)]),
+            return_to_hand: Some((R::IsBasicLand, 1)),
+            ..Default::default()
+        }),
+        static_abilities: vec![crate::sets::enters_tapped()],
+        activated_abilities: vec![crate::sets::tap_add(Color::Blue), crate::sets::tap_add(Color::Black)],
+        ..Default::default()
+    }
+}
+
+/// Mindwrack Demon — {2}{B}{B} 4/5 Demon. Flying, trample. When it enters,
+/// mill four. Delirium — at the beginning of your upkeep, you lose 4 life
+/// unless there are four or more card types among cards in your graveyard.
+pub fn mindwrack_demon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![
+            etb(Effect::Mill { who: Selector::You, amount: Value::Const(4) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::DeliriumActive { who: PlayerRef::You },
+                    then: Box::new(Effect::Noop),
+                    else_: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(4) }),
+                },
+            },
+        ],
+        ..creature("Mindwrack Demon", cost(&[generic(2), b(), b()]), vec![CreatureType::Demon], 4, 5)
+    }
+}
+
+/// Soulstinger — {3}{B} 4/5 Scorpion Demon. When it enters, put two -1/-1
+/// counters on target creature you control. When it dies, you may put a
+/// -1/-1 counter on target creature for each -1/-1 counter on it.
+pub fn soulstinger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(2),
+            }),
+            crate::effect::shortcut::on_dies(Effect::MayDo {
+                description: "Move Soulstinger's -1/-1 counters onto target creature?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::MinusOneMinusOne,
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::MinusOneMinusOne },
+                }),
+            }),
+        ],
+        ..creature("Soulstinger", cost(&[generic(3), b()]), vec![CreatureType::Scorpion, CreatureType::Demon], 4, 5)
+    }
+}
+
+fn equipment(name: &'static str, mana: ManaCost, equip: ManaCost, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+/// Avacyn's Collar — {1} Equipment. Equipped creature gets +1/+0 and has
+/// vigilance. Whenever it dies, if it was a Human, create a 1/1 white flying
+/// Spirit token. Equip {2}.
+pub fn avacyns_collar() -> CardDefinition {
+    let spirit = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Spirit", 1, 1, vec![Color::White], vec![CreatureType::Spirit])
+    };
+    equipment(
+        "Avacyn's Collar",
+        cost(&[generic(1)]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            power: 1,
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource).with_filter(
+                    Predicate::EntityMatches { what: Selector::This, filter: R::HasCreatureType(CreatureType::Human) },
+                ),
+                effect: make(1, spirit),
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Bladed Bracers — {1} Equipment. Equipped creature gets +1/+1; as long as
+/// it's a Human or an Angel, it has vigilance. Equip {2}.
+pub fn bladed_bracers() -> CardDefinition {
+    equipment(
+        "Bladed Bracers",
+        cost(&[generic(1)]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            power: 1,
+            toughness: 1,
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: R::HasCreatureType(CreatureType::Human).or(R::HasCreatureType(CreatureType::Angel)),
+                keywords: vec![Keyword::Vigilance],
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// True-Faith Censer — {2} Equipment. Equipped creature gets +1/+1 and has
+/// vigilance; a Human gets an additional +1/+0. Equip {2}.
+pub fn true_faith_censer() -> CardDefinition {
+    equipment(
+        "True-Faith Censer",
+        cost(&[generic(2)]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Vigilance],
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: R::HasCreatureType(CreatureType::Human),
+                power: 1,
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Invasion of Dominaria // Serra Faithkeeper — {2}{W} Siege, defense 5.
+/// When it enters, you gain 4 life and draw a card. Back: a 4/4 white Angel
+/// with flying and vigilance.
+pub fn invasion_of_dominaria() -> CardDefinition {
+    let faithkeeper = CardDefinition {
+        color_indicator: vec![Color::White],
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        ..creature("Serra Faithkeeper", ManaCost::default(), vec![CreatureType::Angel], 4, 4)
+    };
+    CardDefinition {
+        name: "Invasion of Dominaria",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![crate::card::BattleSubtype::Siege], ..Default::default() },
+        defense: 5,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]))],
+        back_face: Some(Box::new(faithkeeper)),
+        ..Default::default()
+    }
+}
+
+/// Invasion of New Capenna // Holy Frazzle-Cannon — {W}{B} Siege, defense 4.
+/// When it enters, you may sacrifice an artifact or creature; when you do,
+/// exile target artifact or creature an opponent controls. Back: an
+/// Equipment — whenever equipped creature attacks, a +1/+1 counter on it and
+/// on each other creature you control that shares a creature type with it.
+/// Equip {1}.
+pub fn invasion_of_new_capenna() -> CardDefinition {
+    let cannon = CardDefinition {
+        name: "Holy Frazzle-Cannon",
+        card_types: vec![CardType::Artifact],
+        color_indicator: vec![Color::White, Color::Black],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::SharesCreatureTypeWithSource.or(R::IsSource)),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of New Capenna",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![crate::card::BattleSubtype::Siege], ..Default::default() },
+        defense: 4,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Sacrifice an artifact or creature to exile an opponent's?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Artifact.or(R::Creature) },
+                Effect::If {
+                    cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(R::Artifact.or(R::Creature).and(R::ControlledByOpponent)),
+                            to: ZoneDest::Exile,
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
+        back_face: Some(Box::new(cannon)),
+        ..Default::default()
+    }
+}
+
+/// Curse of Oblivion — {3}{B} Aura Curse. Enchant player. At the beginning
+/// of enchanted player's upkeep, that player exiles two cards from their
+/// graveyard.
+pub fn curse_of_oblivion() -> CardDefinition {
+    CardDefinition {
+        name: "Curse of Oblivion",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Curse],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Player) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::EnchantedPlayer)),
+            effect: Effect::ExileFromGraveyard { who: PlayerRef::EnchantedPlayer, count: Value::Const(2), filter: R::Any },
+        }],
+        ..Default::default()
+    }
+}

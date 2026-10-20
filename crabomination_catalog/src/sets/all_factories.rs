@@ -18487,6 +18487,18 @@ static DECKS: &[Factory] = &[
     super::decks::igneous_pouncer,
     super::decks::blitz_leech,
     super::decks::ravenous_gigamole,
+    super::decks::furystoke_giant,
+    super::decks::gravelgill_axeshark,
+    super::decks::lingering_tormentor,
+    super::decks::mistvein_borderpost,
+    super::decks::mindwrack_demon,
+    super::decks::soulstinger,
+    super::decks::avacyns_collar,
+    super::decks::bladed_bracers,
+    super::decks::true_faith_censer,
+    super::decks::invasion_of_dominaria,
+    super::decks::invasion_of_new_capenna,
+    super::decks::curse_of_oblivion,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
