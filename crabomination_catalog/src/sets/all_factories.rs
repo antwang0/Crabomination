@@ -18203,6 +18203,10 @@ static DECKS: &[Factory] = &[
     super::decks::shinestriker,
     super::decks::wildvine_pummeler,
     super::decks::rime_chill,
+    super::decks::panglacial_wurm,
+    super::decks::elfhame_wurm,
+    super::decks::elderscale_wurm,
+    super::decks::soul_swallower,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

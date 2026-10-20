@@ -214,3 +214,59 @@ pub fn rime_chill() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Baru, Wurmspeaker ───────────────────────────────────────────────────────
+
+/// Panglacial Wurm — {5}{G}{G} 9/5 Wurm, trample. While you're searching your
+/// library, you may cast it from your library (the generic library search
+/// offers it before anything is found).
+pub fn panglacial_wurm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "While you're searching your library, you may cast this card from your library.",
+            effect: StaticEffect::CastFromLibraryWhileSearching,
+        }],
+        ..creature("Panglacial Wurm", cost(&[generic(5), g(), g()]), vec![CreatureType::Wurm], 9, 5)
+    }
+}
+
+/// Elfhame Wurm — {4}{G} 5/4 Wurm, vigilance, trample.
+pub fn elfhame_wurm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        ..creature("Elfhame Wurm", cost(&[generic(4), g()]), vec![CreatureType::Wurm], 5, 4)
+    }
+}
+
+/// Elderscale Wurm — {4}{G}{G}{G} 7/7 Wurm, trample. ETB: if your life total
+/// is less than 7, it becomes 7. As long as you have 7 or more life, damage
+/// that would reduce your life total below 7 reduces it to 7 instead.
+pub fn elderscale_wurm() -> CardDefinition {
+    let mut etb_seven = etb(Effect::SetLifeTotal { who: Selector::You, amount: Value::Const(7) });
+    etb_seven.event.filter = Some(Predicate::PlayerLifeAtMost { who: PlayerRef::You, life: 6 });
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb_seven],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you have 7 or more life, damage that would reduce your life total to less than 7 reduces it to 7 instead.",
+            effect: StaticEffect::DamageWontReduceControllerLifeBelowWhileAtLeast { floor: 7 },
+        }],
+        ..creature("Elderscale Wurm", cost(&[generic(4), g(), g(), g()]), vec![CreatureType::Wurm], 7, 7)
+    }
+}
+
+/// Soul Swallower — {2}{G}{G} 3/3 Wurm, trample. Delirium — at the beginning
+/// of your upkeep, with four or more card types in your graveyard, three
+/// +1/+1 counters on it.
+pub fn soul_swallower() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(3) },
+        }],
+        ..creature("Soul Swallower", cost(&[generic(2), g(), g()]), vec![CreatureType::Wurm], 3, 3)
+    }
+}

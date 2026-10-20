@@ -719,3 +719,51 @@ fn vivid_counts_colors_among_your_permanents() {
     cast(&mut g, wp, None).expect("{3}{G} with three colors");
     assert!(g.battlefield_find(wp).is_some());
 }
+
+/// Panglacial Wurm (2006-07-15 rulings) — cast from the library while a
+/// search resolves, before anything is found, paying its own cost; the
+/// search then finishes and the Wurm resolves.
+#[test]
+fn panglacial_wurm_is_cast_from_the_library_mid_search() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let wurm = g.add_card_to_library(0, catalog::panglacial_wurm());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let growth = g.add_card_to_hand(0, catalog::rampant_growth());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Search(Some(forest))]));
+    cast(&mut g, growth, None).expect("cast");
+    assert!(g.battlefield_find(wurm).is_some(), "cast and resolved");
+    assert!(g.battlefield_find(forest).is_some(), "the search still found the Forest");
+}
+
+/// CR 614 — Elderscale Wurm holds a life total of 7 or more at 7 against
+/// damage, and raises a lower one to 7 as it enters.
+#[test]
+fn elderscale_wurm_floors_damage_at_seven() {
+    let mut g = pod(2);
+    g.players[0].life = 3;
+    let wurm = g.add_card_to_hand(0, catalog::elderscale_wurm());
+    flood(&mut g, 0);
+    cast(&mut g, wurm, None).expect("cast");
+    assert_eq!(g.players[0].life, 7);
+    g.players[0].life = 9;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bolt, Some(Target::Player(0))).expect("bolt");
+    assert_eq!(g.players[0].life, 7, "9 - 3 stops at 7");
+}
+
+/// Delirium — Soul Swallower grows at your upkeep with four card types in
+/// your graveyard.
+#[test]
+fn soul_swallower_grows_with_delirium() {
+    let mut g = pod(2);
+    let ss = g.add_card_to_battlefield(0, catalog::soul_swallower());
+    for c in [catalog::forest(), catalog::lightning_bolt(), catalog::grizzly_bears(), catalog::sol_ring()] {
+        g.add_card_to_graveyard(0, c);
+    }
+    into_upkeep(&mut g);
+    assert_eq!(g.battlefield_find(ss).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 3);
+}
