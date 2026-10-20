@@ -1671,3 +1671,174 @@ fn midnight_scavengers_returns_a_small_creature() {
     cast(&mut g, scav, Some(Target::Permanent(beetle)));
     assert!(g.players[0].hand.iter().any(|c| c.id == beetle));
 }
+
+/// Embodiment of Agonies counts different mana costs, not cards: two Murders
+/// count once, a land never.
+#[test]
+fn embodiment_of_agonies_counts_distinct_costs() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::murder());
+    g.add_card_to_graveyard(0, catalog::murder());
+    g.add_card_to_graveyard(0, catalog::sol_ring());
+    g.add_card_to_graveyard(0, catalog::island());
+    let demon = g.add_card_to_hand(0, catalog::embodiment_of_agonies());
+    cast(&mut g, demon, None);
+    assert_eq!(g.battlefield_find(demon).expect("alive").counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Rakshasa Deathdealer regenerates out of a Murder.
+#[test]
+fn rakshasa_deathdealer_regenerates() {
+    let mut g = pod(2);
+    let demon = g.add_card_to_battlefield(0, catalog::rakshasa_deathdealer());
+    activate(&mut g, demon, 0).expect("pump");
+    assert_eq!(pt(&g, demon), (4, 4));
+    activate(&mut g, demon, 1).expect("regenerate");
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(demon)));
+    assert!(g.battlefield_find(demon).is_some());
+}
+
+/// Faithful Pikemaster has first strike only on its controller's turn.
+#[test]
+fn faithful_pikemaster_strikes_first_on_your_turn() {
+    let mut g = pod(2);
+    let pike = g.add_card_to_battlefield(0, catalog::faithful_pikemaster());
+    assert!(g.computed_permanent(pike).unwrap().keywords().contains(&Keyword::FirstStrike));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(pike).unwrap().keywords().contains(&Keyword::FirstStrike));
+}
+
+/// Judge Unworthy hits an attacker for the revealed card's mana value.
+#[test]
+fn judge_unworthy_reveals_for_damage() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::murder());
+    }
+    let beast = g.add_token_to_battlefield(0, &body("Beast", 3, CreatureType::Beast));
+    attack_with(&mut g, &[beast]);
+    let judge = g.add_card_to_hand(0, catalog::judge_unworthy());
+    cast(&mut g, judge, Some(Target::Permanent(beast)));
+    assert!(g.battlefield_find(beast).is_none(), "3 damage from a Murder on top");
+}
+
+/// Myth Realized gathers lore and stands up at its lore count.
+#[test]
+fn myth_realized_animates_at_its_lore_count() {
+    let mut g = pod(2);
+    let myth = g.add_card_to_battlefield(0, catalog::myth_realized());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring, None);
+    activate(&mut g, myth, 0).expect("lore");
+    assert_eq!(g.battlefield_find(myth).unwrap().counter_count(CounterType::Lore), 2);
+    activate(&mut g, myth, 1).expect("animate");
+    let c = g.computed_permanent(myth).unwrap();
+    assert!(c.card_types().contains(&CardType::Creature));
+    assert_eq!((c.power, c.toughness), (2, 2));
+}
+
+/// CR 702.148 — Lantern Flare counts creatures; cleaved, it reads X.
+#[test]
+fn cr_702_148_lantern_flare_cleaves_to_x() {
+    let mut g = pod(2);
+    g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let big = g.add_token_to_battlefield(1, &body("Beast", 4, CreatureType::Beast));
+    let life = g.players[0].life;
+    let flare = g.add_card_to_hand(0, catalog::lantern_flare());
+    cast(&mut g, flare, Some(Target::Permanent(big)));
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 1);
+    assert_eq!(g.players[0].life, life + 1);
+    let flare = g.add_card_to_hand(0, catalog::lantern_flare());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: flare,
+        pitch_card: None,
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cleave");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "1 + 3 damage");
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Nantuko Shaman draws only when no land you control is tapped.
+#[test]
+fn nantuko_shaman_needs_untapped_lands() {
+    for tapped in [false, true] {
+        let mut g = pod(2);
+        let land = g.add_card_to_battlefield(0, catalog::forest());
+        g.battlefield_find_mut(land).unwrap().tapped = tapped;
+        let shaman = g.add_card_to_hand(0, catalog::nantuko_shaman());
+        let hand = g.players[0].hand.len();
+        cast(&mut g, shaman, None);
+        assert_eq!(g.players[0].hand.len(), hand - 1 + usize::from(!tapped), "tapped land {tapped}");
+    }
+}
+
+/// Surge Engine sheds defender, turns blue at 5/4, then draws three once.
+#[test]
+fn surge_engine_climbs_its_ladder() {
+    let mut g = pod(2);
+    let engine = g.add_card_to_battlefield(0, catalog::surge_engine());
+    assert!(activate(&mut g, engine, 1).is_err(), "still has defender");
+    activate(&mut g, engine, 0).expect("lose defender");
+    let c = g.computed_permanent(engine).unwrap();
+    let kws = c.keywords();
+    assert!(!kws.contains(&Keyword::Defender) && kws.contains(&Keyword::Unblockable));
+    assert!(activate(&mut g, engine, 2).is_err(), "not blue yet");
+    activate(&mut g, engine, 1).expect("become blue");
+    let c = g.computed_permanent(engine).unwrap();
+    assert!(c.colors.contains(&Color::Blue));
+    assert_eq!((c.power, c.toughness), (5, 4));
+    let hand = g.players[0].hand.len();
+    activate(&mut g, engine, 2).expect("draw");
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+    assert!(activate(&mut g, engine, 2).is_err(), "only once");
+}
+
+/// Inner-Flame Igniter's third resolution adds first strike.
+#[test]
+fn inner_flame_igniter_third_time_strikes_first() {
+    let mut g = pod(2);
+    let igniter = g.add_card_to_battlefield(0, catalog::inner_flame_igniter());
+    for n in 1..=3 {
+        activate(&mut g, igniter, 0).expect("pump");
+        let fs = g.computed_permanent(igniter).unwrap().keywords().contains(&Keyword::FirstStrike);
+        assert_eq!(fs, n == 3, "resolution {n}");
+    }
+    assert_eq!(pt(&g, igniter), (5, 2));
+}
+
+/// Fatehold Chronologist enters prepared.
+#[test]
+fn fatehold_chronologist_enters_prepared() {
+    let mut g = pod(2);
+    let bird = g.add_card_to_hand(0, catalog::fatehold_chronologist());
+    cast(&mut g, bird, None);
+    assert_eq!(g.battlefield_find(bird).unwrap().counter_count(CounterType::Prepared), 1);
+}
+
+/// Mystery Key cashes itself in for three cards on combat damage.
+#[test]
+fn mystery_key_draws_three_on_a_hit() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let key = g.add_card_to_battlefield(0, catalog::mystery_key());
+    equip(&mut g, key, bear);
+    let hand = g.players[0].hand.len();
+    attack_with(&mut g, &[bear]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat && g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(key).is_none(), "sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+}

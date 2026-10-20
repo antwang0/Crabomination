@@ -3966,3 +3966,388 @@ pub fn grim_contest() -> CardDefinition {
         },
     )
 }
+
+// ── Batch eleven (two-gap decks) ────────────────────────────────────────────
+
+/// Embodiment of Agonies — {1}{B}{B} 0/0 Demon. Flying, deathtouch. Enters
+/// with a +1/+1 counter for each different mana cost among nonland cards in
+/// your graveyard.
+pub fn embodiment_of_agonies() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::DistinctManaCostsInGraveyard(PlayerRef::You))),
+        ..creature("Embodiment of Agonies", cost(&[generic(1), b(), b()]), vec![CreatureType::Demon], 0, 0)
+    }
+}
+
+/// Rakshasa Deathdealer — {B}{G} 2/2 Demon. {B}{G}: +2/+2 until end of turn.
+/// {B}{G}: regenerate it.
+pub fn rakshasa_deathdealer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b(), g()]),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[b(), g()]),
+                effect: Effect::Regenerate { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..creature("Rakshasa Deathdealer", cost(&[b(), g()]), vec![CreatureType::Demon], 2, 2)
+    }
+}
+
+/// Faithful Pikemaster — {3}{W} 3/4 Rhino Monk Soldier. When it enters, scry
+/// 2. First strike during your turn.
+pub fn faithful_pikemaster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        static_abilities: vec![StaticAbility {
+            description: "As long as it's your turn, this creature has first strike.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::FirstStrike,
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+            },
+        }],
+        ..creature(
+            "Faithful Pikemaster",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Rhino, CreatureType::Monk, CreatureType::Soldier],
+            3,
+            4,
+        )
+    }
+}
+
+/// Judge Unworthy — {1}{W} instant. Choose target attacking or blocking
+/// creature. Scry 3, then reveal the top card of your library; deal damage
+/// equal to its mana value to that creature.
+pub fn judge_unworthy() -> CardDefinition {
+    spell(
+        "Judge Unworthy",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            Effect::RevealTopOfLibrary { who: PlayerRef::You },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                amount: Value::ManaValueOf(Box::new(Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE })),
+            },
+        ]),
+    )
+}
+
+/// Myth Realized — {W} enchantment. Whenever you cast a noncreature spell, put
+/// a lore counter on it. {2}{W}: put a lore counter on it. {W}: until end of
+/// turn it becomes a Monk Avatar creature with power and toughness each equal
+/// to its lore counters.
+pub fn myth_realized() -> CardDefinition {
+    let lore = || Effect::AddCounter { what: Selector::This, kind: CounterType::Lore, amount: Value::ONE };
+    let count = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Lore };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Not(Box::new(R::Creature)),
+            }),
+            effect: lore(),
+        }],
+        activated_abilities: vec![
+            ActivatedAbility { mana_cost: cost(&[generic(2), w()]), effect: lore(), ..Default::default() },
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                effect: Effect::Seq(vec![
+                    Effect::AnimateAsCreature { what: Selector::This, duration: Duration::EndOfTurn },
+                    Effect::AddCreatureTypes {
+                        what: Selector::This,
+                        creature_types: vec![CreatureType::Monk, CreatureType::Avatar],
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        // The granted "power and toughness are each equal to …" only matters
+        // while it is a creature, so it rides as a standing CDA.
+        static_abilities: vec![StaticAbility {
+            description: "Its power and toughness are each equal to the number of lore counters on it.",
+            effect: StaticEffect::SelfBasePtFromValue { power: count(), toughness: count() },
+        }],
+        ..spell("Myth Realized", cost(&[w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Lantern Flare — {1}{W} instant. Cleave {X}{R}{W}. X damage to target
+/// creature or planeswalker and you gain X life [where X is the number of
+/// creatures you control].
+pub fn lantern_flare() -> CardDefinition {
+    let flare = |x: Value| {
+        Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature.or(R::Planeswalker)), amount: x.clone() },
+            Effect::GainLife { who: Selector::You, amount: x },
+        ])
+    };
+    let creatures = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
+        filter: R::Any,
+    };
+    CardDefinition {
+        // CR 702.148 — the cleave cast drops the bracketed X definition.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[x(), r(), w()]),
+            effect_override: Some(flare(Value::XFromCost)),
+            ..Default::default()
+        }),
+        ..spell("Lantern Flare", cost(&[generic(1), w()]), CardType::Instant, flare(creatures))
+    }
+}
+
+/// Giant Dustwasp — {3}{G}{G} 3/3 Insect. Flying. Suspend 4—{1}{G}.
+pub fn giant_dustwasp() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Suspend(4, cost(&[generic(1), g()]))],
+        ..creature("Giant Dustwasp", cost(&[generic(3), g(), g()]), vec![CreatureType::Insect], 3, 3)
+    }
+}
+
+/// Nantuko Shaman — {2}{G} 3/2 Insect Shaman. When it enters, if you control
+/// no tapped lands, draw a card. Suspend 1—{2}{G}{G}.
+pub fn nantuko_shaman() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(1, cost(&[generic(2), g(), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::Not(
+                Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Land.and(R::Tapped).and(R::ControlledByYou),
+                ))),
+            )),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..creature("Nantuko Shaman", cost(&[generic(2), g()]), vec![CreatureType::Insect, CreatureType::Shaman], 3, 2)
+    }
+}
+
+/// Altar of the Lost — {3} artifact. Enters tapped. {T}: add two mana in any
+/// combination of colors; spend it only on spells with flashback cast from a
+/// graveyard (approximated as any spell cast from your graveyard).
+pub fn altar_of_the_lost() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![crate::sets::enters_tapped()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyColors(Value::Const(2))),
+                    crate::mana::SpendRestriction::SpellFromGraveyard,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..spell("Altar of the Lost", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Sentinel of the Pearl Trident — {4}{U} 3/3 Merfolk Soldier. Flash. When it
+/// enters, you may exile target historic permanent you control; return it at
+/// the beginning of the next end step.
+pub fn sentinel_of_the_pearl_trident() -> CardDefinition {
+    let historic = R::Artifact
+        .or(R::HasSupertype(crate::card::Supertype::Legendary))
+        .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga));
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Exile a historic permanent until the next end step?".into(),
+            body: Box::new(Effect::ExileReturnToOwnerNextEndStep {
+                what: target_filtered(historic.and(R::ControlledByYou)),
+                tapped: false,
+            }),
+        })],
+        ..creature(
+            "Sentinel of the Pearl Trident",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Soldier],
+            3,
+            3,
+        )
+    }
+}
+
+/// Barricade Breaker — {7} 7/5 artifact Juggernaut. Improvise. Attacks each
+/// combat if able.
+pub fn barricade_breaker() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Improvise, Keyword::MustAttack],
+        ..creature("Barricade Breaker", cost(&[generic(7)]), vec![CreatureType::Juggernaut], 7, 5)
+    }
+}
+
+/// Surge Engine — {2} 3/2 artifact Construct. Defender. {U}: it loses
+/// defender and gains "can't be blocked". {2}{U}: it becomes blue with base
+/// power and toughness 5/4 (only without defender). {4}{U}{U}: draw three
+/// cards (only if it's blue, and only once).
+pub fn surge_engine() -> CardDefinition {
+    let this_is = |f: R| Some(Predicate::EntityMatches { what: Selector::This, filter: f });
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                effect: Effect::Seq(vec![
+                    Effect::LoseKeyword { what: Selector::This, keyword: Keyword::Defender, duration: Duration::Permanent },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Unblockable, duration: Duration::Permanent },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), u()]),
+                condition: this_is(R::Not(Box::new(R::HasKeyword(Keyword::Defender)))),
+                effect: Effect::Seq(vec![
+                    Effect::BecomeColor {
+                        what: Selector::This,
+                        colors: vec![Color::Blue],
+                        duration: Duration::Permanent,
+                        additive: false,
+                    },
+                    Effect::SetBasePT {
+                        what: Selector::This,
+                        power: Value::Const(5),
+                        toughness: Value::Const(4),
+                        duration: Duration::Permanent,
+                    },
+                ]),
+                ..Default::default()
+            },
+            // "Activate only once" rides the exhaust flag (CR 702.177a).
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), u(), u()]),
+                condition: this_is(R::HasColor(Color::Blue)),
+                exhaust: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
+        ..creature("Surge Engine", cost(&[generic(2)]), vec![CreatureType::Construct], 3, 2)
+    }
+}
+
+/// Blaring Recruiter — {3}{W} 2/2 Elf Warrior. Partner with Blaring Captain.
+/// {2}{W}: create a 1/1 white Warrior token.
+pub fn blaring_recruiter() -> CardDefinition {
+    let warrior = TokenDefinition {
+        name: "Warrior".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Blaring Captain".into())],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search("Blaring Captain")],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(warrior) },
+            ..Default::default()
+        }],
+        ..creature("Blaring Recruiter", cost(&[generic(3), w()]), vec![CreatureType::Elf, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Inner-Flame Igniter — {2}{R} 2/2 Elemental Warrior. {2}{R}: creatures you
+/// control get +1/+0 until end of turn; the third resolution this turn also
+/// gives them first strike.
+pub fn inner_flame_igniter() -> CardDefinition {
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: team(),
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::NthResolutionThisTurn {
+                    branches: vec![
+                        Effect::Noop,
+                        Effect::Noop,
+                        Effect::GrantKeyword { what: team(), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+                    ],
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Inner-Flame Igniter", cost(&[generic(2), r()]), vec![CreatureType::Elemental, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Fatehold Chronologist // Peer Review — {1}{W/U} 1/2 flying Bird Wizard
+/// that enters prepared. Peer Review ({2}{W/U} sorcery): a 2/2 colorless
+/// Wizard Soldier token named Cadet; surveil 1.
+pub fn fatehold_chronologist() -> CardDefinition {
+    let wu = || hybrid(Color::White, Color::Blue);
+    let cadet = TokenDefinition {
+        name: "Cadet".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        prepare_spell: Some(Arc::new(CardDefinition {
+            name: "Peer Review",
+            cost: cost(&[generic(2), wu()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(cadet) },
+                Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        })),
+        ..creature("Fatehold Chronologist", cost(&[generic(1), wu()]), vec![CreatureType::Bird, CreatureType::Wizard], 1, 2)
+    }
+}
+
+/// Mystery Key — {1}{U} Equipment. When equipped creature deals combat damage
+/// to a player, sacrifice this Equipment; if you do, draw three cards.
+/// Equip {1}.
+pub fn mystery_key() -> CardDefinition {
+    equipment(
+        "Mystery Key",
+        cost(&[generic(1), u()]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::SourceOnBattlefield,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::SacrificeSource,
+                        Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            }],
+            triggers_on_equipment: true,
+            ..Default::default()
+        },
+    )
+}
