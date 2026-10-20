@@ -990,3 +990,37 @@ pub fn forcefield() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Secret Invasion — {1}{U}{U} Aura, enchant creature you control. When it
+/// enters, exile up to one target creature other than enchanted creature
+/// until this Aura leaves the battlefield; enchanted creature becomes a copy
+/// of it for as long as this Aura remains. Enchanted creature has ward {2}.
+pub fn secret_invasion() -> CardDefinition {
+    CardDefinition {
+        name: "Secret Invasion",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::Creature.and(R::IsHostOfSource.negate()),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::ExileUntilSourceLeaves { what: Selector::Target(0), return_to: crate::card::ExileReturnZone::Battlefield },
+                Effect::BecomeCopyOfFor {
+                    what: enchanted(),
+                    source: Selector::CardExiledWithSource,
+                    // While attached = until the Aura leaves (it can't move).
+                    duration: Duration::WhileSourceAttached,
+                    non_legendary: false,
+                },
+            ])),
+        })],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

@@ -634,3 +634,27 @@ fn cr_615_7_forcefield_prevents_all_but_one() {
     }
     assert_eq!(g.players[1].life, life - 1);
 }
+
+/// Secret Invasion exiles another creature until it leaves and makes the
+/// enchanted creature a copy of it; when the Aura goes, both revert.
+#[test]
+fn secret_invasion_copies_and_holds_a_creature() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let si = g.add_card_to_hand(0, catalog::secret_invasion());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: si, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    // Resolve the Aura; its ETB trigger then targets the other creature.
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == theirs), "the Giant is held");
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "a Hill Giant copy");
+    assert!(cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Ward(_))));
+    g.resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &EffectContext::for_spell(1, Some(Target::Permanent(si)), 1, 0))
+        .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 2, "back to a Bear");
+    assert!(g.battlefield_find(theirs).is_some(), "the Giant returns");
+}
