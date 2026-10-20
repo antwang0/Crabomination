@@ -73,7 +73,8 @@ pub(crate) fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::man
         | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
-        | ManaPayload::OneOfEachColorAmongYourPermanents => *set = crate::mana::ColorSet::all(),
+        | ManaPayload::OneOfEachColorAmongYourPermanents
+        | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents => *set = crate::mana::ColorSet::all(),
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)
                     | ManaPayload::RestrictedToChosenTypeOrAbility(inner)

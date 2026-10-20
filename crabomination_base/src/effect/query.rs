@@ -2002,7 +2002,8 @@ impl Effect {
                     | ManaPayload::AnyTypeSacrificedLandProduces
                     | ManaPayload::AnyColorAmongExiledWithSource
                     | ManaPayload::AnyColorAmongYourPermanents
-                    | ManaPayload::OneOfEachColorAmongYourPermanents => false,
+                    | ManaPayload::OneOfEachColorAmongYourPermanents
+                    | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)

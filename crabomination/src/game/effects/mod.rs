@@ -14795,8 +14795,10 @@ impl GameState {
                     // below so the two readings of "among permanents you
                     // control" cannot drift; they differ only in what they do
                     // with the set.
-                    ManaPayload::OneOfEachColorAmongYourPermanents => {
-                        for col in self.colors_among_your_permanents(p) {
+                    ManaPayload::OneOfEachColorAmongYourPermanents
+                    | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents => {
+                        let mono = matches!(pool, ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents);
+                        for col in self.colors_among_your_permanents_where(p, mono) {
                             self.players[p].mana_pool.add(col, mult);
                             events.push(GameEvent::ManaAdded {
                                 player: p,

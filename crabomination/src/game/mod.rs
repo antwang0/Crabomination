@@ -7243,11 +7243,20 @@ impl GameState {
     /// Computed, not printed: a permanent made another colour by an effect
     /// counts as that colour.
     pub(crate) fn colors_among_your_permanents(&self, p: usize) -> Vec<crate::mana::Color> {
+        self.colors_among_your_permanents_where(p, false)
+    }
+
+    /// [`Self::colors_among_your_permanents`], over only the monocolored ones
+    /// when `mono` (Tarnation Vista).
+    pub(crate) fn colors_among_your_permanents_where(&self, p: usize, mono: bool) -> Vec<crate::mana::Color> {
         let mut out: Vec<crate::mana::Color> = Vec::new();
         let mine: Vec<CardId> =
             self.battlefield.iter().filter(|c| c.controller == p).map(|c| c.id).collect();
         for id in mine {
             if let Some(cp) = self.computed_permanent(id) {
+                if mono && cp.colors.len() != 1 {
+                    continue;
+                }
                 for col in cp.colors {
                     if !out.contains(&col) {
                         out.push(col);

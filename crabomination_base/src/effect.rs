@@ -3584,6 +3584,9 @@ pub enum ManaPayload {
     /// choice to make, so no seat is asked. A colourless board produces
     /// nothing.
     OneOfEachColorAmongYourPermanents,
+    /// "For each color among monocolored permanents you control, add one mana
+    /// of that color" (Tarnation Vista): Vivid's set over monocolored ones.
+    OneOfEachColorAmongYourMonocoloredPermanents,
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,
