@@ -24287,8 +24287,11 @@ impl GameState {
                         .sacrificed_lki_this_resolution
                         .last()
                         .map(|c| {
-                            let human = c.definition.has_creature_type(crate::card::CreatureType::Human)
-                                || c.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                            let human = crate::game::layers::requirement_matches_card(
+                                &crate::card::SelectionRequirement::HasCreatureType(crate::card::CreatureType::Human),
+                                c,
+                                c.controller,
+                            );
                             (c.power(), human, c.is_token)
                         })
                         .unwrap_or((0, false, false));
