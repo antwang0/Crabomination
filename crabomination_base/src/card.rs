@@ -6982,6 +6982,12 @@ pub struct EquipBonus {
     /// Recomputed each layer pass, so it tracks life changes live.
     #[serde(default)]
     pub set_base_pt_controller_life: bool,
+    /// "As long as enchanted artifact isn't a creature, it's an artifact
+    /// creature with power and toughness each equal to its mana value"
+    /// (Animate Artifact): layer 4 adds Creature, 7b sets P/T to its mana
+    /// value, while the host's printed card isn't a creature.
+    #[serde(default)]
+    pub animate_noncreature_mv: bool,
     #[serde(default)]
     pub set_card_types: Option<Vec<CardType>>,
     #[serde(default)]
@@ -8106,7 +8112,7 @@ impl CardDefinition {
             || self
                 .equipped_bonus
                 .as_ref()
-                .is_some_and(|e| e.set_card_types.is_some() || !e.add_card_types.is_empty())
+                .is_some_and(|e| e.set_card_types.is_some() || !e.add_card_types.is_empty() || e.animate_noncreature_mv)
         {
             m |= b::ATTACHED;
         }

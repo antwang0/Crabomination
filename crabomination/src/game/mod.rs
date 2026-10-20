@@ -15103,6 +15103,15 @@ impl GameState {
                 push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
                     Modification::SetPowerToughness(x, x));
             }
+            // Animate Artifact — read off the printed card (the 613.8
+            // dependency on other animations is not modeled).
+            if bonus.animate_noncreature_mv
+                && self.battlefield_find(target).is_some_and(|h| !h.definition.is_creature())
+            {
+                push_mod(&mut all_effects, Layer::L4Type, None, Modification::AddCardType(CardType::Creature));
+                push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
+                    Modification::SetPowerToughnessToManaValue);
+            }
             if let Some(types) = &bonus.set_card_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::SetCardTypes(types.clone()));
@@ -34306,6 +34315,7 @@ pub(crate) fn card_can_reduce_toughness(card: &CardInstance) -> bool {
             || b.scale.as_ref().is_some_and(|s| s.per_toughness < 0)
             || b.set_base_pt.is_some()
             || b.set_base_pt_controller_life
+            || b.animate_noncreature_mv
             || b.conditional
                 .iter()
                 .any(|c| c.toughness < 0 || c.set_base_pt.is_some()))
