@@ -1087,7 +1087,8 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
         // (one rare card; the lane word has no field to spare, see below).
         | S::ChosenColorEverywhere
         | S::OpponentLifeLossDoubledDuringYourTurn
-        | S::PayLifeExilesLibraryTopInstead => true,
+        | S::PayLifeExilesLibraryTopInstead
+        | S::LifeToZeroTransformsSelf { .. } => true,
         _ => false,
     }
 }

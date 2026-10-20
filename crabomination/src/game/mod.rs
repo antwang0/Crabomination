@@ -7095,6 +7095,15 @@ impl GameState {
             delta
         };
         let delta = if delta < 0 { delta.saturating_mul(self.life_loss_multiplier_now(seat)) } else { delta };
+        // CR 614 — Enduring Angel replaces a reduction to 0 or less.
+        let delta = if delta < 0 && self.battlefield.has_life_static() {
+            self.life_to_zero_replacement(seat, delta)
+        } else {
+            delta
+        };
+        if delta == 0 {
+            return self.effective_life(seat);
+        }
         let team_idx = self
             .teams
             .iter()
@@ -35206,6 +35215,9 @@ fn static_effect_to_effects(
             // `apply_loss_reset` (Lich's Mirror); no layer effect.
             | StaticEffect::ReplaceControllerLossWithReset
             | StaticEffect::ReplaceControllerLossWithExileSelf
+            | StaticEffect::ReplaceControllerLossWithExileSelfAtStartingLife
+            // Read by `adjust_life` (`life_to_zero_replacement`).
+            | StaticEffect::LifeToZeroTransformsSelf { .. }
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.
             | StaticEffect::ArtifactActivatedAbilitiesLocked

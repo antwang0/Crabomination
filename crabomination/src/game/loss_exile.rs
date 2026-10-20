@@ -17,21 +17,54 @@ impl GameState {
         let id = self
             .battlefield
             .iter()
-            .find(|c| {
-                c.controller == p
-                    && c.definition
-                        .static_abilities
-                        .iter()
-                        .any(|sa| matches!(sa.effect, StaticEffect::ReplaceControllerLossWithExileSelf))
-            })
-            .map(|c| c.id)?;
+            .find_map(|c| {
+                (c.controller == p).then_some(())?;
+                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                    StaticEffect::ReplaceControllerLossWithExileSelf => Some((c.id, 1)),
+                    StaticEffect::ReplaceControllerLossWithExileSelfAtStartingLife => {
+                        Some((c.id, self.players[p].starting_life))
+                    }
+                    _ => None,
+                })
+            });
+        let (id, life) = id?;
         self.remove_from_battlefield_to_exile(id);
         self.players[p].pending_deck_loss = false;
-        // CR 119.5 — "your life total becomes 1" is a gain of the difference,
+        // CR 119.5 — "your life total becomes N" is a gain of the difference,
         // through the CR 119 funnel.
-        let delta = 1 - self.effective_life(p);
+        let delta = life - self.effective_life(p);
         self.adjust_life_applied(p, delta);
         Some(id)
+    }
+
+    /// CR 614 — Enduring Angel: a life reduction of `delta` that would leave
+    /// `seat` at 0 or less instead transforms the Angel and makes the life
+    /// total `life`; returns the delta that gets there (or `delta` untouched).
+    /// An Angel that can't transform (a copy with no back face) still sets the
+    /// life total, then its controller loses the game.
+    pub(crate) fn life_to_zero_replacement(&mut self, seat: usize, delta: i32) -> i32 {
+        let before = self.effective_life(seat);
+        if before.saturating_add(delta) > 0 {
+            return delta;
+        }
+        let Some((id, life)) = self.battlefield.iter().find_map(|c| {
+            (c.controller == seat).then_some(())?;
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+                Some(StaticEffect::LifeToZeroTransformsSelf { life }) => Some((c.id, *life)),
+                _ => None,
+            })
+        }) else {
+            return delta;
+        };
+        let was = self.battlefield_find(id).map(|c| c.transformed);
+        // The Angel's own faces carry no transform trigger; the event is not
+        // dispatched (the funnel has no event channel, as for Nefarious Lich).
+        let mut events = Vec::new();
+        self.transform_permanent(id, &mut events);
+        if self.battlefield_find(id).map(|c| c.transformed) == was && !self.player_cant_lose_game(seat) {
+            self.players[seat].eliminated = true;
+        }
+        life - before
     }
 
     /// CR 614 / 104.3 — Stunning Reversal: "the next time you would lose the

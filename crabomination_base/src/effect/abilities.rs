@@ -1485,6 +1485,16 @@ pub enum StaticEffect {
     /// loss state that survives the life reset (poison, commander damage)
     /// ends the game at the next check.
     ReplaceControllerLossWithExileSelf,
+    /// [`ReplaceControllerLossWithExileSelf`](Self::ReplaceControllerLossWithExileSelf)
+    /// whose life total becomes the controller's starting life total
+    /// (Exquisite Archangel).
+    ReplaceControllerLossWithExileSelfAtStartingLife,
+    /// CR 614 — "If your life total would be reduced to 0 or less, instead
+    /// transform this creature and your life total becomes `life`. Then if
+    /// this creature didn't transform this way, you lose the game" (Enduring
+    /// Angel). Applied in the CR 119 funnel (`adjust_life`), so the life total
+    /// never reads 0.
+    LifeToZeroTransformsSelf { life: i32 },
     /// "As long as [a donor card] has [keyword], this has [keyword]" (Death-Mask
     /// Duplicant, Cairn Wanderer, Rayami). Each listed entry is answered by
     /// `Keyword::answers_listed`, so `Protection(White)` / `Landwalk(Island)`
