@@ -972,3 +972,21 @@ pub fn fraying_line() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Forcefield — {3} artifact. {1}: the next time an unblocked creature of
+/// your choice would deal combat damage to you this turn, prevent all but 1
+/// of that damage. (The shield reads any damage from the chosen creature
+/// this turn — in practice its combat damage.)
+pub fn forcefield() -> CardDefinition {
+    CardDefinition {
+        name: "Forcefield",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::PreventAllButOneFromChosenSource { filter: R::Creature.and(R::IsUnblocked) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

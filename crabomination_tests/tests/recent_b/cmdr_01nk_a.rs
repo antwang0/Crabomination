@@ -604,3 +604,33 @@ fn fraying_line_exiles_unroped_creatures_when_unpaid() {
     assert!(g.exile.iter().any(|c| c.id == line));
     assert_eq!(g.battlefield_find(roped).map(|c| c.counter_count(CounterType::Rope)), Some(0), "kept, rope removed");
 }
+
+/// CR 615.7 — Forcefield lets 1 of a chosen unblocked attacker's combat
+/// damage through.
+#[test]
+fn cr_615_7_forcefield_prevents_all_but_one() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.clear_sickness(giant);
+    let ff = g.add_card_to_battlefield(1, catalog::forcefield());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    let shield = Effect::PreventAllButOneFromChosenSource {
+        filter: crabomination::card::SelectionRequirement::Creature.and(crabomination::card::SelectionRequirement::IsUnblocked),
+    };
+    g.resolve_effect(&shield, &EffectContext::for_ability(ff, 1, None)).unwrap();
+    let life = g.players[1].life;
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[1].life, life - 1);
+}

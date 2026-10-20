@@ -18383,6 +18383,7 @@ static DECKS: &[Factory] = &[
     super::decks::evolving_door,
     super::decks::kaslems_stonetree,
     super::decks::fraying_line,
+    super::decks::forcefield,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
