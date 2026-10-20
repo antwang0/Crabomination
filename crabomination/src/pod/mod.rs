@@ -27600,6 +27600,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FRANCISCO_19_COMMANDERS,
             main: decks::FRANCISCO_19_MAIN,
         },
+        // Seat 4525: Ardenn, Intrepid Archaeologist and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 4525`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Silas Renn, Seeker Adept (WUB)",
+            commanders: decks::ARDENN_19_COMMANDERS,
+            main: decks::ARDENN_19_MAIN,
+        },
+        // Seat 4526: Ludevic, Necro-Alchemist and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4526`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Sengir, the Dark Baron (UBR)",
+            commanders: decks::LUDEVIC_11_COMMANDERS,
+            main: decks::LUDEVIC_11_MAIN,
+        },
+        // Seat 4527: Sivriss, Nightmare Speaker and Dragon Cultist's EDHREC average deck. `--pod-decks 4527`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Dragon Cultist (BR)",
+            commanders: decks::SIVRISS_13_COMMANDERS,
+            main: decks::SIVRISS_13_MAIN,
+        },
+        // Seat 4528: Armix, Filigree Thrasher and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 4528`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Francisco, Fowl Marauder (B)",
+            commanders: decks::ARMIX_17_COMMANDERS,
+            main: decks::ARMIX_17_MAIN,
+        },
+        // Seat 4529: Eligeth, Crossroads Augur and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 4529`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Keskit, the Flesh Sculptor (UB)",
+            commanders: decks::ELIGETH_25_COMMANDERS,
+            main: decks::ELIGETH_25_MAIN,
+        },
     ]
 }
 
@@ -34025,6 +34055,11 @@ mod tests {
             ("Francisco, Fowl Marauder and Ich-Tekik, Salvage Splicer", &[0x1BC0]),
             ("Francisco, Fowl Marauder and Rebbec, Architect of Ascension", &[0x1BC1]),
             ("Francisco, Fowl Marauder and Nadier, Agent of the Duskenel", &[0x1BC2]),
+            ("Ardenn, Intrepid Archaeologist and Silas Renn, Seeker Adept", &[0x1BC3]),
+            ("Ludevic, Necro-Alchemist and Sengir, the Dark Baron", &[0x1BC4]),
+            ("Sivriss, Nightmare Speaker and Dragon Cultist", &[0x1BC5]),
+            ("Armix, Filigree Thrasher and Francisco, Fowl Marauder", &[0x1BC6]),
+            ("Eligeth, Crossroads Augur and Keskit, the Flesh Sculptor", &[0x1BC7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
