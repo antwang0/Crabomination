@@ -18166,6 +18166,9 @@ static DECKS: &[Factory] = &[
     super::decks::henry_wu_ingen_geneticist,
     super::decks::silumgar_sorcerer,
     super::decks::skull_skaab,
+    super::decks::harpoon_sniper,
+    super::decks::judge_of_currents,
+    super::decks::sygg_wanderwine_wisdom,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

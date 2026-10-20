@@ -1335,3 +1335,6 @@ pub use cmdr_016x_s::*;
 #[path = "../../../src/sets/decks/cmdr_01dd_a.rs"]
 mod cmdr_01dd_a;
 pub use cmdr_01dd_a::*;
+#[path = "../../../src/sets/decks/cmdr_01dd_b.rs"]
+mod cmdr_01dd_b;
+pub use cmdr_01dd_b::*;
