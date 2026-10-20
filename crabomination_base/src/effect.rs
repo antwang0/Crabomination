@@ -13057,6 +13057,11 @@ pub enum Effect {
     /// (Runesword's sacrifice rider). Expires at cleanup.
     WhenTargetLeavesBattlefieldThisTurn { what: Selector, body: Box<Effect> },
 
+    /// CR 603.4 — "When `a` leaves the battlefield this turn, sacrifice `b`.
+    /// When `b` leaves the battlefield this turn, sacrifice `a`" (Phantasmal
+    /// Mount): two delayed triggers, each bound to the other permanent.
+    SacrificeEachWhenOtherLeavesThisTurn { a: Selector, b: Selector },
+
     /// CR 614 — "As this enters, exile `count` creature cards from your
     /// graveyard. If you can't, put this into its owner's graveyard instead.
     /// For each card exiled this way, this enters with a +2/+0, +1/+1, or

@@ -2104,6 +2104,7 @@ impl Effect {
             | Effect::CounterUnless { what, .. }
             | Effect::DestroyThenVictimControllersMakeToken { what, .. }
             | Effect::MakeSpellUncounterable { what } => sel_has_target(what),
+            Effect::SacrificeEachWhenOtherLeavesThisTurn { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_has_target(blocker) || sel_has_target(attacker)
             }
@@ -3021,6 +3022,7 @@ impl Effect {
             | Effect::BounceStealAttachmentsReattach { what }
             | Effect::AddMusicCounterGrantUpkeepToll { what }
             | Effect::RemoveBlockerThenReblock { what } => sel_filter(what),
+            Effect::SacrificeEachWhenOtherLeavesThisTurn { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
             Effect::LookExileAnyNumberRestBack { who, .. }
             | Effect::PutTopOnBottom { who }
             | Effect::LookAtHandCastFree { who, .. } => sel_filter(who),
@@ -5645,6 +5647,7 @@ impl Effect {
                 | Effect::Suspect { what }
                 | Effect::ClearSuspected { what }
                 | Effect::ReplaceCreatureTypeText { what, .. } => sel_find(what, slot),
+                Effect::SacrificeEachWhenOtherLeavesThisTurn { a, b } => sel_find(a, slot).or_else(|| sel_find(b, slot)),
                 // `to: Target(n)` declares slot `n` as a player target — the
                 // recipient's only mention (Risky Move's "that opponent gains
                 // control of that creature").

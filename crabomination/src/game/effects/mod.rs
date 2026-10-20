@@ -39020,6 +39020,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeEachWhenOtherLeavesThisTurn { a, b } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let first = |sel: &Selector, g: &Self| g.resolve_selector(sel, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                let (Some(a), Some(b)) = (first(a, self), first(b, self)) else { return Ok(()) };
+                for (watched, victim) in [(a, b), (b, a)] {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: crate::game::types::DelayedKind::WhenCardLeavesBattlefieldThisTurn(watched),
+                        effect: Effect::SacrificePermanent { what: Selector::Target(0) },
+                        target: Some(Target::Permanent(victim)),
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::EnterExilingGraveyardCreaturesForCounters { count } => {
                 // Frankenstein's Monster. Runs on the as-enters hop, so the
                 // "instead of onto the battlefield" fallback is modelled by
