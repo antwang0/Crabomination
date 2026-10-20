@@ -4512,6 +4512,10 @@ pub enum EventScope {
     /// do, return this card from your graveyard" — Asgardian Inspiration).
     /// "You" is the graveyard owner.
     FromYourGraveyardSourceDamagedOpponent,
+    /// [`OpponentSourceDamagedYou`](Self::OpponentSourceDamagedYou) from ANY
+    /// source, yours included ("whenever a source of the chosen color deals
+    /// damage to you" — Circle of Affliction). The dealer is the subject.
+    SourceDamagedYou,
 }
 
 impl EventScope {

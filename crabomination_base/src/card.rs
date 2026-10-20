@@ -4596,6 +4596,23 @@ impl SelectionRequirement {
         }
     }
 
+    /// Concretize `HasChosenColorOfSource` against the source's stamped colour
+    /// (`HasColor(c)`, or "matches nothing" when unchosen), recursing through
+    /// And/Or/Not — for a walker that has no source (a departed damage dealer
+    /// read by Circle of Affliction).
+    pub fn resolve_chosen_color(&self, chosen: Option<crate::mana::Color>) -> Self {
+        match self {
+            Self::HasChosenColorOfSource => match chosen {
+                Some(c) => Self::HasColor(c),
+                None => Self::Not(Box::new(Self::Any)),
+            },
+            Self::And(a, b) => Self::And(Box::new(a.resolve_chosen_color(chosen)), Box::new(b.resolve_chosen_color(chosen))),
+            Self::Or(a, b) => Self::Or(Box::new(a.resolve_chosen_color(chosen)), Box::new(b.resolve_chosen_color(chosen))),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_chosen_color(chosen))),
+            other => other.clone(),
+        }
+    }
+
     /// Replace X-dependent atoms with concrete values
     /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
     /// through And/Or/Not. Called by `Effect::Search` with the resolving

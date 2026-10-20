@@ -819,7 +819,12 @@ fn event_matches_spec_rest(
         // creature that died in the same combat) is read as it last existed.
         let gone = state.battlefield_find(*from).is_none();
         let matched = match gone.then(|| state.leaves_bf_lki.get(from).or_else(|| state.find_card_anywhere(*from))) {
-            Some(Some(last)) => state.evaluate_requirement_on_card(dealer, last, source.controller),
+            // The card walker has no source, so "the chosen color" is fixed first.
+            Some(Some(last)) => state.evaluate_requirement_on_card(
+                &dealer.resolve_chosen_color(source.chosen_color),
+                last,
+                source.controller,
+            ),
             _ => state.evaluate_requirement_static(
                 dealer,
                 &crate::game::types::Target::Permanent(*from),
@@ -1216,6 +1221,10 @@ fn event_matches_spec_rest(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
                 if *p == source.controller && !state.same_team(*fc, source.controller)
+        ),
+        EventScope::SourceDamagedYou => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), .. } if *p == source.controller
         ),
         EventScope::OpponentSourceDamagedYourPermanent => match event {
             GameEvent::DamageDealt { to_card: Some(c), from_controller: Some(fc), .. } => {
@@ -1835,6 +1844,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourSourceDamagedOpponent
         | EventScope::YourSourceDamagedAnyPlayer
         | EventScope::OpponentSourceDamagedYou
+        | EventScope::SourceDamagedYou
         | EventScope::OpponentSourceDamagedYourPermanent
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent
