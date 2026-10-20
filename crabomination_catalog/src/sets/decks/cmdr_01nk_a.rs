@@ -779,3 +779,22 @@ pub fn helm_of_obedience() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Territory Forge — {4}{R} artifact. When it enters, if you cast it, exile
+/// target artifact or land. It has all activated abilities of the exiled card.
+pub fn territory_forge() -> CardDefinition {
+    CardDefinition {
+        name: "Territory Forge",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::SourceWasCast),
+            effect: Effect::ExileWithSource { what: target_filtered(R::Artifact.or(R::Land)) },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact has all activated abilities of the exiled card.",
+            effect: StaticEffect::HasActivatedAbilitiesOfExiledWithSelf,
+        }],
+        ..Default::default()
+    }
+}

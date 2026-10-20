@@ -474,3 +474,17 @@ fn helm_of_obedience_mills_to_a_creature_and_takes_it() {
     assert!(g.battlefield_find(helm).is_none(), "sacrificed");
     assert_eq!(g.players[1].library.len(), 3 - 1 - top.iter().position(|n| *n == "Hill Giant").unwrap());
 }
+
+/// Territory Forge exiles a land on entering and taps for its mana.
+#[test]
+fn territory_forge_borrows_an_exiled_lands_ability() {
+    let mut g = pod(2);
+    let land = g.add_card_to_battlefield(1, catalog::nephalia_academy());
+    let forge = g.add_card_to_hand(0, catalog::territory_forge());
+    cast(&mut g, forge, Some(Target::Permanent(land)));
+    assert!(g.exile.iter().any(|c| c.id == land && c.exiled_with == Some(forge)));
+    let before = g.players[0].mana_pool.colorless_amount();
+    g.perform_action(GameAction::ActivateAbility { card_id: forge, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("the Academy's {T}: add {C}");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), before + 1);
+}
