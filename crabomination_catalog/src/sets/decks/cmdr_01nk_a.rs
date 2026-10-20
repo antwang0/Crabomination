@@ -1069,3 +1069,78 @@ pub fn turtles_forever() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn vile_darkness_zombie_trigger() -> TriggeredAbility {
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+            Predicate::ValueAtLeast(Value::LifeLostThisTurn(PlayerRef::You), Value::Const(2)),
+        ),
+        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(zombie) },
+    }
+}
+
+/// The Book of Vile Darkness — {B}{B}{B} legendary artifact — Book. At the
+/// beginning of your end step, if you lost 2 or more life this turn, create a
+/// 2/2 black Zombie. {T}, exile it and artifacts you control named Eye of
+/// Vecna and Hand of Vecna: create Vecna, a legendary 8/8 black Zombie God
+/// token with indestructible and all triggered abilities of the exiled cards
+/// (their printed ones; Hand of Vecna's pump reads Vecna itself). The Eye and
+/// the Hand are exiled as the ability resolves, gated on both being there —
+/// a battlefield exile cost exists only for graveyard cards.
+pub fn the_book_of_vile_darkness() -> CardDefinition {
+    let mut triggers = vec![vile_darkness_zombie_trigger()];
+    triggers.extend(super::eye_of_vecna().triggered_abilities);
+    triggers.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::HandSizeOf(PlayerRef::You),
+            toughness: Value::HandSizeOf(PlayerRef::You),
+            duration: Duration::EndOfTurn,
+        },
+    });
+    let vecna = TokenDefinition {
+        name: "Vecna".into(),
+        power: 8,
+        toughness: 8,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie, CreatureType::God], ..Default::default() },
+        keywords: vec![Keyword::Indestructible],
+        triggered_abilities: triggers,
+        ..Default::default()
+    };
+    let piece = |name: &str| R::Artifact.and(R::ControlledByYou).and(R::HasName(name.into()));
+    CardDefinition {
+        name: "The Book of Vile Darkness",
+        cost: cost(&[b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Book], ..Default::default() },
+        triggered_abilities: vec![vile_darkness_zombie_trigger()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_self_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::SelectorExists(Selector::EachPermanent(piece("Eye of Vecna"))),
+                Predicate::SelectorExists(Selector::EachPermanent(piece("Hand of Vecna"))),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: Selector::EachPermanent(piece("Eye of Vecna").or(piece("Hand of Vecna"))) },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(vecna) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

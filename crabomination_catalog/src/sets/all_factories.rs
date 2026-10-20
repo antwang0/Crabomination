@@ -18388,6 +18388,7 @@ static DECKS: &[Factory] = &[
     super::decks::shivan_wumpus,
     super::decks::flux,
     super::decks::turtles_forever,
+    super::decks::the_book_of_vile_darkness,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

@@ -712,3 +712,25 @@ fn turtles_forever_gets_the_two_the_opponent_picks() {
     assert!(names.contains(&"Hanna, Ship's Navigator") && names.contains(&"Judith, the Scourge Diva"), "the two smallest: {names:?}");
     assert_eq!(g.players[0].library.len(), lib - 2);
 }
+
+/// The Book of Vile Darkness assembles Vecna from the Eye and the Hand; Vecna
+/// carries the Eye's enters trigger (it draws and loses 2 as it enters).
+#[test]
+fn the_book_of_vile_darkness_assembles_vecna() {
+    let mut g = pod(2);
+    let book = g.add_card_to_battlefield(0, catalog::the_book_of_vile_darkness());
+    let eye = g.add_card_to_battlefield(0, catalog::eye_of_vecna());
+    let hand = g.add_card_to_battlefield(0, catalog::hand_of_vecna());
+    let (life, cards) = (g.players[0].life, g.players[0].hand.len());
+    g.perform_action(GameAction::ActivateAbility { card_id: book, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("assemble");
+    drain_stack(&mut g);
+    for id in [book, eye, hand] {
+        assert!(g.exile.iter().any(|c| c.id == id));
+    }
+    let vecna = g.battlefield.iter().find(|c| c.definition.name == "Vecna").expect("Vecna").id;
+    let cp = g.computed_permanent(vecna).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
+    assert_eq!((g.players[0].life, g.players[0].hand.len()), (life - 2, cards + 1), "the Eye's trigger, on Vecna");
+}
