@@ -813,3 +813,35 @@ pub fn animate_artifact() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Throne of Makindi — land. {T}: add {C}. {1}, {T}: put a charge counter on
+/// it. {T}, remove a charge counter: add two mana of any one color, spendable
+/// only on kicked spells.
+pub fn throne_of_makindi() -> CardDefinition {
+    CardDefinition {
+        name: "Throne of Makindi",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                remove_counter_cost: Some((CounterType::Charge, 1)),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::Const(2))),
+                        crate::mana::SpendRestriction::KickedOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

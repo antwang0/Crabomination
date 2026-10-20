@@ -18378,6 +18378,7 @@ static DECKS: &[Factory] = &[
     super::decks::helm_of_obedience,
     super::decks::territory_forge,
     super::decks::animate_artifact,
+    super::decks::throne_of_makindi,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

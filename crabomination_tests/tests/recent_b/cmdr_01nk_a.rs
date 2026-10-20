@@ -501,3 +501,25 @@ fn animate_artifact_animates_a_noncreature_artifact() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
+
+/// Throne of Makindi's stored mana pays only for kicked spells.
+#[test]
+fn throne_of_makindi_mana_only_casts_kicked_spells() {
+    let mut g = pod(2);
+    let throne = g.add_card_to_battlefield(0, catalog::throne_of_makindi());
+    g.battlefield_find_mut(throne).unwrap().add_counters(CounterType::Charge, 1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Color(Color::Red)]));
+    g.perform_action(GameAction::ActivateAbility { card_id: throne, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .unwrap();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).is_err(),
+        "an unkicked spell can't spend it"
+    );
+    let burst = g.add_card_to_hand(0, catalog::burst_lightning());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellKicked { card_id: burst, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("kicked Burst Lightning spends it");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16);
+}
