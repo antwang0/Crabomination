@@ -3159,6 +3159,7 @@ pods (release)   seed 9268, 1,000 games at each of 2..8 seats: 7,000 decided, ev
                  the reference now.
 pods (debug)     seeds 9264-9269 over seats 4400-4412 at 4/6 seats: 222 games, all decided
 sweep (debug)    seed 9270, every deck at 4 and 6 seats: 1,839 games, 0 panics, 2 board caps
+                 seed 9272 at 3/5/8 seats: 2,907 games, 0 panics, 1 board cap, 4 CR 104.4a draws
 after the persist/undying-as-trigger fix (`06e734205`), release:
 --bench          196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; thread_determinism ok;
                  253.99 games/s; peak_rss_mib 42.1. cube/sos/sealed at 9256: 2,400 / 1,500 / 3,600, 0 undecided
