@@ -1009,6 +1009,7 @@ impl Effect {
             | Effect::EachPlayerChoosesOpponentPermanentExile { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::NextCreatureSpellHasFlashThisTurn
+            | Effect::AnyPlayerMayPayLifeToCounterThis { .. }
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

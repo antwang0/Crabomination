@@ -65,6 +65,7 @@ mod sculpted_sunburst;
 mod fumble;
 mod threats_undetected;
 mod search_cast;
+mod punisher_counter;
 mod music;
 mod reblock;
 mod spell_copy_others;
@@ -24669,6 +24670,10 @@ impl GameState {
                 let player = card.controller;
                 events.push(GameEvent::ClassLevelReached { source: src, player, level });
                 Ok(())
+            }
+
+            Effect::AnyPlayerMayPayLifeToCounterThis { life } => {
+                self.any_player_may_pay_life_to_counter_this(*life, ctx, effect, events)
             }
 
             Effect::CounterSpell { what } => {

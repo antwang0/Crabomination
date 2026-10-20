@@ -14275,6 +14275,12 @@ pub enum Effect {
     /// `accepted` (with that seat readable as [`PlayerRef::AcceptingPlayer`])
     /// and stops; `otherwise` runs only when every seat declines. Book Burning,
     /// Breaking Point, Dwarven Driller, Dwarven Scorcher, Distant Memories.
+    /// "When you cast this spell, any player may pay `life` life. If a player
+    /// does, counter [this spell]" (Dash Hopes) — rides a `SpellCast /
+    /// SelfSource` trigger. Only a seat that can pay is asked (CR 119.4);
+    /// `game/effects/punisher_counter.rs` has the headless policy.
+    AnyPlayerMayPayLifeToCounterThis { life: u32 },
+
     AnyPlayerMayAccept {
         who: PlayerRef,
         prompt: String,
