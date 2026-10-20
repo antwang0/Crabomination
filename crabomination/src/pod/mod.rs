@@ -27462,6 +27462,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SKANOS_DRAGONHEART_16_COMMANDERS,
             main: decks::SKANOS_DRAGONHEART_16_MAIN,
         },
+        // Seat 4502: Kydele, Chosen of Kruphix and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4502`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Sengir, the Dark Baron (UBG)",
+            commanders: decks::KYDELE_6_COMMANDERS,
+            main: decks::KYDELE_6_MAIN,
+        },
+        // Seat 4503: The Eleventh Doctor and Vislor Turlough's EDHREC average deck. `--pod-decks 4503`.
+        PodDeck {
+            name: "The Eleventh Doctor and Vislor Turlough (WUB)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_12_MAIN,
+        },
+        // Seat 4504: The First Doctor and Bill Potts's EDHREC average deck. `--pod-decks 4504`.
+        PodDeck {
+            name: "The First Doctor and Bill Potts (WUR)",
+            commanders: decks::THE_FIRST_DOCTOR_12_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_12_MAIN,
+        },
+        // Seat 4505: Kamahl, Heart of Krosa and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 4505`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Keleth, Sunmane Familiar (WG)",
+            commanders: decks::KAMAHL_13_COMMANDERS,
+            main: decks::KAMAHL_13_MAIN,
+        },
+        // Seat 4506: Zellix, Sanity Flayer and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 4506`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Agent of the Shadow Thieves (UB)",
+            commanders: decks::ZELLIX_14_COMMANDERS,
+            main: decks::ZELLIX_14_MAIN,
+        },
+        // Seat 4507: Gut, True Soul Zealot and Flaming Fist's EDHREC average deck. `--pod-decks 4507`.
+        PodDeck {
+            name: "Gut, True Soul Zealot and Flaming Fist (WR)",
+            commanders: decks::GUT_13_COMMANDERS,
+            main: decks::GUT_13_MAIN,
+        },
+        // Seat 4508: Akroma, Vision of Ixidor and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4508`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::AKROMA_19_COMMANDERS,
+            main: decks::AKROMA_19_MAIN,
+        },
+        // Seat 4509: Kamahl, Heart of Krosa and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4509`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Sengir, the Dark Baron (BG)",
+            commanders: decks::KAMAHL_14_COMMANDERS,
+            main: decks::KAMAHL_14_MAIN,
+        },
+        // Seat 4510: Vhal, Candlekeep Researcher and Inspiring Leader's EDHREC average deck. `--pod-decks 4510`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Inspiring Leader (WU)",
+            commanders: decks::VHAL_14_COMMANDERS,
+            main: decks::VHAL_14_MAIN,
+        },
     ]
 }
 
@@ -33864,6 +33918,15 @@ mod tests {
             ("Alharu, Solemn Ritualist and Tana, the Bloodsower", &[0x1BA9]),
             ("Miara, Thorn of the Glade and Silas Renn, Seeker Adept", &[0x1BAA]),
             ("Skanos Dragonheart and Agent of the Iron Throne", &[0x1BAB]),
+            ("Kydele, Chosen of Kruphix and Sengir, the Dark Baron", &[0x1BAC]),
+            ("The Eleventh Doctor and Vislor Turlough", &[0x1BAD]),
+            ("The First Doctor and Bill Potts", &[0x1BAE]),
+            ("Kamahl, Heart of Krosa and Keleth, Sunmane Familiar", &[0x1BAF]),
+            ("Zellix, Sanity Flayer and Agent of the Shadow Thieves", &[0x1BB0]),
+            ("Gut, True Soul Zealot and Flaming Fist", &[0x1BB1]),
+            ("Akroma, Vision of Ixidor and Sidar Kondo of Jamuraa", &[0x1BB2]),
+            ("Kamahl, Heart of Krosa and Sengir, the Dark Baron", &[0x1BB3]),
+            ("Vhal, Candlekeep Researcher and Inspiring Leader", &[0x1BB4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
