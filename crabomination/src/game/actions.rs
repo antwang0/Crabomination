@@ -25322,13 +25322,16 @@ impl GameState {
 
         // Exile-top-of-library-as-cost (CR 602.5b — Arc-Slogger). Paid after
         // tap/mana, before the ability resolves; a short library exiles what
-        // it has.
+        // it has. The last exiled card's mana value rides
+        // `Value::ExiledForCostManaValue` (Phyrexian Devourer's "X is the
+        // exiled card's mana value").
         if ability.exile_top_cost > 0 {
             for _ in 0..ability.exile_top_cost {
                 if self.players[p].library.is_empty() {
                     break;
                 }
                 let card = self.players[p].library.remove(0);
+                self.exiled_for_cost_mana_value = Some(card.definition.cost.cmc() as i32);
                 self.place_card_in_dest(card, p, &crate::effect::ZoneDest::Exile, events);
             }
         }
