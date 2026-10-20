@@ -123776,3 +123776,29 @@ pub const BARU_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const BLIM_COMMANDERS: &[CardFactory] = &[blim_comedic_genius];
+
+/// **Blim, Comedic Genius**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Mountains + 12 Swamps = 99.
+/// Blim, Comedic Genius (EDHREC, fetched 2026-10-20).
+pub const BLIM_MAIN: &[CardFactory] = &[
+    arcane_signet, bucknards_everfull_purse, fellwar_stone, geths_grimoire, hithlain_rope,
+    immortal_coil, lightning_greaves, mind_stone, pendant_of_prosperity, rakdos_signet,
+    sol_ring, swiftfoot_boots, talisman_of_indulgence, whispersilk_cloak, wishclaw_talisman,
+    blood_crypt, bojuka_bog, command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge,
+    luxury_suite, rakdos_carnarium, rogues_passage, shadowblood_ridge, smoldering_marsh,
+    sulfurous_springs, tainted_peak, temple_of_malice, abyssal_persecutor, akroan_horse,
+    alexios_deimos_of_kosmos, archfiend_of_the_dross, bazaar_trader, demonic_taskmaster,
+    ebon_drake, goldnight_castigator, grid_monitor, humble_defector, kardur_doomscourge,
+    kharn_the_betrayer, plague_reaver, priest_of_the_blood_rite, rust_elemental, silent_arbiter,
+    sleeper_agent, steel_golem, wretched_anurid, xantcha_sleeper_agent, aggressive_mining,
+    blood_funnel, captive_audience, colfenors_plans, curse_of_opulence, demonic_lore,
+    demonic_pact, forbidden_crypt, greeds_gambit, lichs_mastery, midnight_oil, nefarious_lich,
+    waste_not, bedevil, bolt_bend, chaos_warp, chefs_kiss, dark_ritual, rakdos_charm, terminate,
+    untimely_malfunction, blasphemous_act, disrupt_decorum, fateful_handoff, feed_the_swarm,
+    harmless_offering, read_the_bones, sign_in_blood, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

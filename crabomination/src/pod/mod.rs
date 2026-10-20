@@ -26928,6 +26928,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BARU_2_COMMANDERS,
             main: decks::BARU_2_MAIN,
         },
+        // Seat 4413: Blim, Comedic Genius's EDHREC average deck. `--pod-decks 4413`.
+        PodDeck {
+            name: "Blim, Comedic Genius (BR)",
+            commanders: decks::BLIM_COMMANDERS,
+            main: decks::BLIM_MAIN,
+        },
     ]
 }
 
@@ -33241,6 +33247,7 @@ mod tests {
             ("Sygg, Wanderwine Wisdom", &[0x1B50]),
             ("Tam, Mindful First-Year", &[0x1B51]),
             ("Baru, Wurmspeaker", &[0x1B52]),
+            ("Blim, Comedic Genius", &[0x1B53]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
