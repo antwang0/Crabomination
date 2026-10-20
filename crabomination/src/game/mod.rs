@@ -19195,6 +19195,19 @@ impl GameState {
         })
     }
 
+    /// CR 615 — Purity: noncombat damage to player `p` is prevented and `p`
+    /// gains that much life. True when one of `p`'s statics applies.
+    pub(crate) fn noncombat_damage_to_you_becomes_life(&self, p: usize) -> bool {
+        !self.prevention_off()
+            && self.battlefield.has_damage_shield(card_can_shield_damage)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::PreventNoncombatDamageToYouGainLife)
+                    })
+            })
+    }
+
     /// CR 615 — Emmara Tandris: "prevent all damage that would be dealt to
     /// creature tokens you control." True when `target` is a token creature
     /// whose controller has the static. Consulted on both damage paths.
@@ -34330,6 +34343,7 @@ fn static_effect_shields_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::PreventNoncombatDamageToMatching { .. }
         | SE::PreventNoncombatDamageToYouAndYourPermanents
         | SE::PreventNoncombatDamageToYou
+        | SE::PreventNoncombatDamageToYouGainLife
         | SE::PreventAllDamageToYourCreatureTokens
         | SE::PreventAllDamageToYourCreatures
         | SE::PreventAllDamageToCreatures
@@ -36319,6 +36333,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventNoncombatDamageToMatching { .. }
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventNoncombatDamageToYou
+            | StaticEffect::PreventNoncombatDamageToYouGainLife
             | StaticEffect::PreventAllDamageToYourCreatureTokens
             | StaticEffect::PreventAllDamageToYourCreatures
             | StaticEffect::PreventAllDamageToCreatures

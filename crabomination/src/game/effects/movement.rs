@@ -1681,6 +1681,14 @@ impl GameState {
         if self.noncombat_damage_to_you_and_permanents_prevented(ent) {
             return;
         }
+        // CR 615 — Purity: prevented, and that much life gained instead.
+        if let EntityRef::Player(p) = ent
+            && amount > 0
+            && self.noncombat_damage_to_you_becomes_life(p)
+        {
+            self.adjust_life_emit(p, crate::game::life_amount(amount), events);
+            return;
+        }
         // CR 615 — Emmara-Tandris-style "prevent all damage to creature tokens
         // you control" (both damage paths; combat is gated in combat.rs).
         if let EntityRef::Permanent(tgt) = ent

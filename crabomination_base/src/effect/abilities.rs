@@ -3758,6 +3758,10 @@ pub enum StaticEffect {
     /// `PreventNoncombatDamageToYourCreatures`). The player-only sibling of
     /// `PreventNoncombatDamageToYouAndYourPermanents`, read at the same check.
     PreventNoncombatDamageToYou,
+    /// CR 615 — "If noncombat damage would be dealt to you, prevent that
+    /// damage. You gain life equal to the damage prevented this way" (Purity).
+    /// Read at the noncombat funnel beside `PreventNoncombatDamageToYou`.
+    PreventNoncombatDamageToYouGainLife,
     /// CR 615 — "Prevent all damage that would be dealt to creature tokens you
     /// control" (Emmara Tandris). Consulted on both the combat and noncombat
     /// damage paths for token creatures controlled by this static's controller.
