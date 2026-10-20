@@ -27258,6 +27258,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALENA_21_COMMANDERS,
             main: decks::ALENA_21_MAIN,
         },
+        // Seat 4468: Falthis, Shadowcat Familiar and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4468`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Vial Smasher the Fierce (BR)",
+            commanders: decks::FALTHIS_17_COMMANDERS,
+            main: decks::FALTHIS_17_MAIN,
+        },
+        // Seat 4469: Nadier, Agent of the Duskenel and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4469`.
+        PodDeck {
+            name: "Nadier, Agent of the Duskenel and Slurrk, All-Ingesting (BG)",
+            commanders: decks::NADIER_9_COMMANDERS,
+            main: decks::NADIER_9_MAIN,
+        },
+        // Seat 4470: Alora, Merry Thief and Hardy Outlander's EDHREC average deck. `--pod-decks 4470`.
+        PodDeck {
+            name: "Alora, Merry Thief and Hardy Outlander (UG)",
+            commanders: decks::ALORA_16_COMMANDERS,
+            main: decks::ALORA_16_MAIN,
+        },
+        // Seat 4471: Zellix, Sanity Flayer and Folk Hero's EDHREC average deck. `--pod-decks 4471`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Folk Hero (WU)",
+            commanders: decks::ZELLIX_13_COMMANDERS,
+            main: decks::ZELLIX_13_MAIN,
+        },
+        // Seat 4472: Livio, Oathsworn Sentinel and Ravos, Soultender's EDHREC average deck. `--pod-decks 4472`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Ravos, Soultender (WB)",
+            commanders: decks::LIVIO_5_COMMANDERS,
+            main: decks::LIVIO_5_MAIN,
+        },
+        // Seat 4473: Alharu, Solemn Ritualist and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4473`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Ludevic, Necro-Alchemist (WUR)",
+            commanders: decks::ALHARU_14_COMMANDERS,
+            main: decks::ALHARU_14_MAIN,
+        },
+        // Seat 4474: The Fugitive Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4474`.
+        PodDeck {
+            name: "The Fugitive Doctor and Amy Pond (RG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_12_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_12_MAIN,
+        },
+        // Seat 4475: Imoen, Mystic Trickster and Flaming Fist's EDHREC average deck. `--pod-decks 4475`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Flaming Fist (WU)",
+            commanders: decks::IMOEN_24_COMMANDERS,
+            main: decks::IMOEN_24_MAIN,
+        },
+        // Seat 4476: Falthis, Shadowcat Familiar and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4476`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Rebbec, Architect of Ascension (WB)",
+            commanders: decks::FALTHIS_18_COMMANDERS,
+            main: decks::FALTHIS_18_MAIN,
+        },
     ]
 }
 
@@ -33626,6 +33680,15 @@ mod tests {
             ("The Fourth Doctor and Bill Potts", &[0x1B87]),
             ("The Fourth Doctor and Rose Tyler", &[0x1B88]),
             ("Alena, Kessig Trapper and Alharu, Solemn Ritualist", &[0x1B89]),
+            ("Falthis, Shadowcat Familiar and Vial Smasher the Fierce", &[0x1B8A]),
+            ("Nadier, Agent of the Duskenel and Slurrk, All-Ingesting", &[0x1B8B]),
+            ("Alora, Merry Thief and Hardy Outlander", &[0x1B8C]),
+            ("Zellix, Sanity Flayer and Folk Hero", &[0x1B8D]),
+            ("Livio, Oathsworn Sentinel and Ravos, Soultender", &[0x1B8E]),
+            ("Alharu, Solemn Ritualist and Ludevic, Necro-Alchemist", &[0x1B8F]),
+            ("The Fugitive Doctor and Amy Pond", &[0x1B90]),
+            ("Imoen, Mystic Trickster and Flaming Fist", &[0x1B91]),
+            ("Falthis, Shadowcat Familiar and Rebbec, Architect of Ascension", &[0x1B92]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -2294,3 +2294,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Celestial Toymaker | the attack trigger's face-down pile is face down to no one: a headless defender reads its names when picking | a hidden-pile option in `run_separate_into_piles` |
 | 🟡 Phyrexian Portal | the opponent's two piles are face down, but the headless exile pick reads their names | the same hidden-pile option |
 | 🟡 Immortal Coil | the Coil exiles the graveyard's top cards per point (not a choice); its state trigger, like every `state_trigger`, re-arms only once the graveyard has been non-empty (ruling 2008-10-01: it re-triggers at once under Platinum Angel) | an `ExileChosenFromGraveyard` cost-free pick |
+| 🟡 Venser's Diffusion | "or suspended card" is not offered as a target — nonland permanents only | a suspended-card target leaf |
+| 🟡 Moonlit Lamenter / Burdened Stoneback | "remove a counter from this creature" pays only with -1/-1 counters (the kind each enters with); a +1/+1 or other counter can't pay | an any-kind `remove_counter_cost` |
