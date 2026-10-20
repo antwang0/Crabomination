@@ -595,9 +595,9 @@ pub fn into_the_fire() -> CardDefinition {
 // ── Sergeant John Benton ─────────────────────────────────────────────────────
 
 /// Hand of Vecna — {3} legendary Equipment. At the beginning of combat on your
-/// turn, equipped creature gets +X/+X until end of turn (X = cards in your
-/// hand; "or a creature named Vecna" isn't modelled). Equip — pay 1 life per
-/// card in your hand. Equip {2}.
+/// turn, equipped creature — or, unequipped, a creature you control named
+/// Vecna — gets +X/+X until end of turn (X = cards in your hand). Equip — pay
+/// 1 life per card in your hand. Equip {2}.
 pub fn hand_of_vecna() -> CardDefinition {
     CardDefinition {
         name: "Hand of Vecna",
@@ -608,7 +608,15 @@ pub fn hand_of_vecna() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
-            effect: pump(Selector::AttachedTo(Box::new(Selector::This)), Value::HandSizeOf(PlayerRef::You)),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::AttachedTo(Box::new(Selector::This))),
+                then: Box::new(pump(Selector::AttachedTo(Box::new(Selector::This)), Value::HandSizeOf(PlayerRef::You))),
+                // Legendary, so at most one Vecna.
+                else_: Box::new(pump(
+                    Selector::EachPermanent(R::HasName("Vecna".into()).and(R::ControlledByYou)),
+                    Value::HandSizeOf(PlayerRef::You),
+                )),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             sorcery_speed: true,
