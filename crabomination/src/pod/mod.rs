@@ -27714,6 +27714,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HALSIN_12_COMMANDERS,
             main: decks::HALSIN_12_MAIN,
         },
+        // Seat 4544: Francisco, Fowl Marauder and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 4544`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Kediss, Emberclaw Familiar (BR)",
+            commanders: decks::FRANCISCO_20_COMMANDERS,
+            main: decks::FRANCISCO_20_MAIN,
+        },
+        // Seat 4545: Wilson, Refined Grizzly and Far Traveler's EDHREC average deck. `--pod-decks 4545`.
+        PodDeck {
+            name: "Wilson, Refined Grizzly and Far Traveler (WG)",
+            commanders: decks::WILSON_11_COMMANDERS,
+            main: decks::WILSON_11_MAIN,
+        },
+        // Seat 4546: Eligeth, Crossroads Augur and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4546`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Tevesh Szat, Doom of Fools (UB)",
+            commanders: decks::ELIGETH_27_COMMANDERS,
+            main: decks::ELIGETH_27_MAIN,
+        },
+        // Seat 4547: Keleth, Sunmane Familiar and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4547`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Prava of the Steel Legion (W)",
+            commanders: decks::KELETH_13_COMMANDERS,
+            main: decks::KELETH_13_MAIN,
+        },
+        // Seat 4548: Skanos Dragonheart and Noble Heritage's EDHREC average deck. `--pod-decks 4548`.
+        PodDeck {
+            name: "Skanos Dragonheart and Noble Heritage (WG)",
+            commanders: decks::SKANOS_DRAGONHEART_17_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_17_MAIN,
+        },
+        // Seat 4549: Esior, Wardwing Familiar and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4549`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Nadier, Agent of the Duskenel (UB)",
+            commanders: decks::ESIOR_20_COMMANDERS,
+            main: decks::ESIOR_20_MAIN,
+        },
+        // Seat 4550: Ravos, Soultender and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4550`.
+        PodDeck {
+            name: "Ravos, Soultender and Rebbec, Architect of Ascension (WB)",
+            commanders: decks::RAVOS_3_COMMANDERS,
+            main: decks::RAVOS_3_MAIN,
+        },
+        // Seat 4551: Eligeth, Crossroads Augur and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 4551`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Halana, Kessig Ranger (UG)",
+            commanders: decks::ELIGETH_28_COMMANDERS,
+            main: decks::ELIGETH_28_MAIN,
+        },
+        // Seat 4552: Rasaad yn Bashir and Haunted One's EDHREC average deck. `--pod-decks 4552`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Haunted One (WB)",
+            commanders: decks::RASAAD_YN_BASHIR_22_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_22_MAIN,
+        },
+        // Seat 4553: Skanos Dragonheart and Master Chef's EDHREC average deck. `--pod-decks 4553`.
+        PodDeck {
+            name: "Skanos Dragonheart and Master Chef (G)",
+            commanders: decks::SKANOS_DRAGONHEART_18_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_18_MAIN,
+        },
+        // Seat 4554: Gilanra, Caller of Wirewood and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4554`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Prava of the Steel Legion (WG)",
+            commanders: decks::GILANRA_19_COMMANDERS,
+            main: decks::GILANRA_19_MAIN,
+        },
+        // Seat 4555: Halsin, Emerald Archdruid and Flaming Fist's EDHREC average deck. `--pod-decks 4555`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Flaming Fist (WG)",
+            commanders: decks::HALSIN_13_COMMANDERS,
+            main: decks::HALSIN_13_MAIN,
+        },
+        // Seat 4556: Safana, Calimport Cutthroat and Cloakwood Hermit's EDHREC average deck. `--pod-decks 4556`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Cloakwood Hermit (BG)",
+            commanders: decks::SAFANA_20_COMMANDERS,
+            main: decks::SAFANA_20_MAIN,
+        },
+        // Seat 4557: Vhal, Candlekeep Researcher and Veteran Soldier's EDHREC average deck. `--pod-decks 4557`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Veteran Soldier (WU)",
+            commanders: decks::VHAL_16_COMMANDERS,
+            main: decks::VHAL_16_MAIN,
+        },
+        // Seat 4558: Alharu, Solemn Ritualist and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 4558`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Malcolm, Keen-Eyed Navigator (WU)",
+            commanders: decks::ALHARU_20_COMMANDERS,
+            main: decks::ALHARU_20_MAIN,
+        },
+        // Seat 4559: Armix, Filigree Thrasher and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4559`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Miara, Thorn of the Glade (B)",
+            commanders: decks::ARMIX_18_COMMANDERS,
+            main: decks::ARMIX_18_MAIN,
+        },
     ]
 }
 
@@ -34158,6 +34254,22 @@ mod tests {
             ("Alharu, Solemn Ritualist and Jeska, Thrice Reborn", &[0x1BD3]),
             ("Imoen, Mystic Trickster and Cloakwood Hermit", &[0x1BD4]),
             ("Halsin, Emerald Archdruid and Acolyte of Bahamut", &[0x1BD5]),
+            ("Francisco, Fowl Marauder and Kediss, Emberclaw Familiar", &[0x1BD6]),
+            ("Wilson, Refined Grizzly and Far Traveler", &[0x1BD7]),
+            ("Eligeth, Crossroads Augur and Tevesh Szat, Doom of Fools", &[0x1BD8]),
+            ("Keleth, Sunmane Familiar and Prava of the Steel Legion", &[0x1BD9]),
+            ("Skanos Dragonheart and Noble Heritage", &[0x1BDA]),
+            ("Esior, Wardwing Familiar and Nadier, Agent of the Duskenel", &[0x1BDB]),
+            ("Ravos, Soultender and Rebbec, Architect of Ascension", &[0x1BDC]),
+            ("Eligeth, Crossroads Augur and Halana, Kessig Ranger", &[0x1BDD]),
+            ("Rasaad yn Bashir and Haunted One", &[0x1BDE]),
+            ("Skanos Dragonheart and Master Chef", &[0x1BDF]),
+            ("Gilanra, Caller of Wirewood and Prava of the Steel Legion", &[0x1BE0]),
+            ("Halsin, Emerald Archdruid and Flaming Fist", &[0x1BE1]),
+            ("Safana, Calimport Cutthroat and Cloakwood Hermit", &[0x1BE2]),
+            ("Vhal, Candlekeep Researcher and Veteran Soldier", &[0x1BE3]),
+            ("Alharu, Solemn Ritualist and Malcolm, Keen-Eyed Navigator", &[0x1BE4]),
+            ("Armix, Filigree Thrasher and Miara, Thorn of the Glade", &[0x1BE5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
