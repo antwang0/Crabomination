@@ -28014,6 +28014,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HALSIN_16_COMMANDERS,
             main: decks::HALSIN_16_MAIN,
         },
+        // Seat 4594: Reyhan, Last of the Abzan and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 4594`.
+        PodDeck {
+            name: "Reyhan, Last of the Abzan and Rograkh, Son of Rohgahh (BRG)",
+            commanders: decks::REYHAN_3_COMMANDERS,
+            main: decks::REYHAN_3_MAIN,
+        },
+        // Seat 4595: Kydele, Chosen of Kruphix and Ravos, Soultender's EDHREC average deck. `--pod-decks 4595`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Ravos, Soultender (WUBG)",
+            commanders: decks::KYDELE_7_COMMANDERS,
+            main: decks::KYDELE_7_MAIN,
+        },
+        // Seat 4596: Anara, Wolvid Familiar and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 4596`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Kamahl, Heart of Krosa (G)",
+            commanders: decks::ANARA_24_COMMANDERS,
+            main: decks::ANARA_24_MAIN,
+        },
+        // Seat 4597: Anara, Wolvid Familiar and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 4597`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Halana, Kessig Ranger (G)",
+            commanders: decks::ANARA_25_COMMANDERS,
+            main: decks::ANARA_25_MAIN,
+        },
+        // Seat 4598: Lulu, Loyal Hollyphant and Hardy Outlander's EDHREC average deck. `--pod-decks 4598`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Hardy Outlander (WG)",
+            commanders: decks::LULU_18_COMMANDERS,
+            main: decks::LULU_18_MAIN,
+        },
+        // Seat 4599: Alena, Kessig Trapper and Armix, Filigree Thrasher's EDHREC average deck. `--pod-decks 4599`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Armix, Filigree Thrasher (BR)",
+            commanders: decks::ALENA_25_COMMANDERS,
+            main: decks::ALENA_25_MAIN,
+        },
+        // Seat 4600: Miara, Thorn of the Glade and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4600`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Slurrk, All-Ingesting (BG)",
+            commanders: decks::MIARA_13_COMMANDERS,
+            main: decks::MIARA_13_MAIN,
+        },
+        // Seat 4601: Kediss, Emberclaw Familiar and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4601`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::KEDISS_13_COMMANDERS,
+            main: decks::KEDISS_13_MAIN,
+        },
+        // Seat 4602: Alharu, Solemn Ritualist and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4602`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Miara, Thorn of the Glade (WB)",
+            commanders: decks::ALHARU_22_COMMANDERS,
+            main: decks::ALHARU_22_MAIN,
+        },
+        // Seat 4603: Falthis, Shadowcat Familiar and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4603`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Nadier, Agent of the Duskenel (B)",
+            commanders: decks::FALTHIS_20_COMMANDERS,
+            main: decks::FALTHIS_20_MAIN,
+        },
+        // Seat 4604: Skanos Dragonheart and Veteran Soldier's EDHREC average deck. `--pod-decks 4604`.
+        PodDeck {
+            name: "Skanos Dragonheart and Veteran Soldier (WG)",
+            commanders: decks::SKANOS_DRAGONHEART_19_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_19_MAIN,
+        },
     ]
 }
 
@@ -34508,6 +34574,17 @@ mod tests {
             ("Alena, Kessig Trapper and Kamahl, Heart of Krosa", &[0x1C05]),
             ("Halsin, Emerald Archdruid and Haunted One", &[0x1C06]),
             ("Halsin, Emerald Archdruid and Agent of the Shadow Thieves", &[0x1C07]),
+            ("Reyhan, Last of the Abzan and Rograkh, Son of Rohgahh", &[0x1C08]),
+            ("Kydele, Chosen of Kruphix and Ravos, Soultender", &[0x1C09]),
+            ("Anara, Wolvid Familiar and Kamahl, Heart of Krosa", &[0x1C0A]),
+            ("Anara, Wolvid Familiar and Halana, Kessig Ranger", &[0x1C0B]),
+            ("Lulu, Loyal Hollyphant and Hardy Outlander", &[0x1C0C]),
+            ("Alena, Kessig Trapper and Armix, Filigree Thrasher", &[0x1C0D]),
+            ("Miara, Thorn of the Glade and Slurrk, All-Ingesting", &[0x1C0E]),
+            ("Kediss, Emberclaw Familiar and Ludevic, Necro-Alchemist", &[0x1C0F]),
+            ("Alharu, Solemn Ritualist and Miara, Thorn of the Glade", &[0x1C10]),
+            ("Falthis, Shadowcat Familiar and Nadier, Agent of the Duskenel", &[0x1C11]),
+            ("Skanos Dragonheart and Veteran Soldier", &[0x1C12]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
