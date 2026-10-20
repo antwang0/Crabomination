@@ -18375,6 +18375,7 @@ static DECKS: &[Factory] = &[
     super::decks::uncage_the_menagerie,
     super::decks::storm_of_memories,
     super::decks::cast_through_time,
+    super::decks::helm_of_obedience,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

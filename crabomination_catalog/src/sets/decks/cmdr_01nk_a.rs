@@ -731,3 +731,51 @@ pub fn cast_through_time() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helm of Obedience — {4} artifact. {X}, {T}: target opponent mills a card,
+/// then repeats until a creature card or X cards have been put into their
+/// graveyard this way. If a creature card was, sacrifice this artifact and
+/// put it onto the battlefield under your control. X can't be 0.
+pub fn helm_of_obedience() -> CardDefinition {
+    CardDefinition {
+        name: "Helm of Obedience",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[x()]),
+            x_nonzero: true,
+            effect: Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::MillUntilMatching {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        filter: R::Creature,
+                        max: Value::XFromCost,
+                    },
+                    // Milling stops at the first creature card, so at most one.
+                    Effect::ForEach {
+                        selector: Selector::LastMoved,
+                        body: Box::new(Effect::If {
+                            cond: Predicate::EntityMatches {
+                                what: Selector::TriggerSource,
+                                filter: R::Creature.and(R::InGraveyard),
+                            },
+                            then: Box::new(Effect::Seq(vec![
+                                Effect::SacrificeSource,
+                                Effect::Move {
+                                    what: Selector::TriggerSource,
+                                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                                },
+                            ])),
+                            else_: Box::new(Effect::Noop),
+                        }),
+                    },
+                ])),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -452,3 +452,25 @@ fn cr_702_88_cast_through_time_grants_rebound() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "rebounded into exile");
     assert!(g.players[0].graveyard.iter().all(|c| c.id != bolt));
 }
+
+/// Helm of Obedience mills until a creature card and steals it, sacrificing
+/// itself; with none in reach it mills X and stays.
+#[test]
+fn helm_of_obedience_mills_to_a_creature_and_takes_it() {
+    let mut g = pod(2);
+    let helm = g.add_card_to_battlefield(0, catalog::helm_of_obedience());
+    g.players[1].library.clear();
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::hill_giant());
+    g.add_card_to_library(1, catalog::island());
+    // library order: index 0 is the top.
+    let top: Vec<_> = g.players[1].library.iter().map(|c| c.definition.name).collect();
+    let giant = g.players[1].library.iter().find(|c| c.definition.name == "Hill Giant").unwrap().id;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility { card_id: helm, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: Some(5), mode: None })
+        .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(giant).map(|c| c.controller), Some(0), "{top:?}");
+    assert!(g.battlefield_find(helm).is_none(), "sacrificed");
+    assert_eq!(g.players[1].library.len(), 3 - 1 - top.iter().position(|n| *n == "Hill Giant").unwrap());
+}
