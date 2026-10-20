@@ -694,3 +694,21 @@ fn flux_draws_each_players_own_discard_count() {
     assert_eq!(g.players[0].hand.len(), h0 - 1 + 1, "Flux itself out, one drawn");
     assert_eq!(g.players[1].graveyard.len(), 2);
 }
+
+/// Turtles Forever: four differently named legends are found; the opponent
+/// hands the caster the two weakest and the rest shuffle back.
+#[test]
+fn turtles_forever_gets_the_two_the_opponent_picks() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::hanna_ships_navigator());
+    g.add_card_to_library(0, catalog::sigarda_host_of_herons());
+    g.add_card_to_library(0, catalog::sigarda_host_of_herons());
+    g.add_card_to_library(0, catalog::tatyova_benthic_druid());
+    g.add_card_to_library(0, catalog::judith_the_scourge_diva());
+    let t = g.add_card_to_hand(0, catalog::turtles_forever());
+    let lib = g.players[0].library.len();
+    cast(&mut g, t, None);
+    let names: Vec<_> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert!(names.contains(&"Hanna, Ship's Navigator") && names.contains(&"Judith, the Scourge Diva"), "the two smallest: {names:?}");
+    assert_eq!(g.players[0].library.len(), lib - 2);
+}

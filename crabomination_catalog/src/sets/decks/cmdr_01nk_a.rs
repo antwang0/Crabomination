@@ -1047,3 +1047,25 @@ pub fn flux() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Turtles Forever — {3}{W} instant. Search your library (and outside the
+/// game — nothing, in Commander: CR 903.11) for four legendary creature
+/// cards with different names and reveal them; an opponent chooses two, you
+/// put those into your hand and shuffle the rest into your library.
+pub fn turtles_forever() -> CardDefinition {
+    CardDefinition {
+        name: "Turtles Forever",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SearchSplitWithOpponent {
+            count: 4,
+            filter: R::Creature.and(R::HasSupertype(Supertype::Legendary)),
+            mv_at_most_x: false,
+            graveyard: false,
+            denied: ZoneDest::Hand(PlayerRef::You),
+            rest: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Shuffled },
+            denied_smallest: true,
+        },
+        ..Default::default()
+    }
+}
