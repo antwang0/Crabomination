@@ -658,3 +658,65 @@ pub fn jaces_mindseeker() -> CardDefinition {
         )
     }
 }
+
+// ── Batch three: the two new primitives and an alternative cost ─────────────
+
+/// Keen-Eared Sentry — {1}{W} 2/1 Human Soldier. You have hexproof. Each
+/// opponent can't venture into the dungeon more than once each turn.
+pub fn keen_eared_sentry() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility { description: "You have hexproof.", effect: StaticEffect::ControllerHasHexproof },
+            StaticAbility {
+                description: "Each opponent can't venture into the dungeon more than once each turn.",
+                effect: StaticEffect::OpponentsVentureOncePerTurn,
+            },
+        ],
+        ..creature("Keen-Eared Sentry", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 1)
+    }
+}
+
+/// Once Upon a Time — {1}{G} instant. Free if it's the first spell you've
+/// cast this game. Look at the top five cards of your library; you may put a
+/// creature or land card from among them into your hand, the rest on the
+/// bottom in a random order.
+pub fn once_upon_a_time() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: ManaCost::default(),
+            condition: Some(Predicate::FirstSpellYouCastThisGame),
+            ..Default::default()
+        }),
+        ..spell(
+            "Once Upon a Time",
+            cost(&[generic(1), g()]),
+            CardType::Instant,
+            Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(5),
+                pick_filter: Some(R::Creature.or(R::Land)),
+                optional: true,
+                ..Default::default()
+            })),
+        )
+    }
+}
+
+/// Veinfire Borderpost — {1}{B}{R} artifact. You may pay {1} and return a
+/// basic land you control to its owner's hand rather than pay its mana cost.
+/// Enters tapped; {T}: {B} or {R}.
+pub fn veinfire_borderpost() -> CardDefinition {
+    CardDefinition {
+        name: "Veinfire Borderpost",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Artifact],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(1)]),
+            return_to_hand: Some((R::IsBasicLand, 1)),
+            ..Default::default()
+        }),
+        static_abilities: vec![enters_tapped()],
+        activated_abilities: vec![tap_add(Color::Black), tap_add(Color::Red)],
+        ..Default::default()
+    }
+}

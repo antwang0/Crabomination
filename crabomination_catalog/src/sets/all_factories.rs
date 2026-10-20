@@ -18317,6 +18317,9 @@ static DECKS: &[Factory] = &[
     super::decks::emptiness,
     super::decks::flitting_guerrilla,
     super::decks::jaces_mindseeker,
+    super::decks::keen_eared_sentry,
+    super::decks::once_upon_a_time,
+    super::decks::veinfire_borderpost,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

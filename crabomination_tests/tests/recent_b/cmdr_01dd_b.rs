@@ -450,3 +450,82 @@ fn jaces_mindseeker_casts_a_milled_instant() {
     assert_eq!(g.players[1].library.len(), 2, "milled five");
     assert!(g.battlefield_find(victim).is_none() || g.players[1].life < life, "the Bolt was cast");
 }
+
+/// CR 701.49 — under an opponent's Keen-Eared Sentry a player ventures once a
+/// turn; the Sentry's own controller is not limited, and the limit resets.
+#[test]
+fn cr_701_49_keen_eared_sentry_limits_opponents_to_one_venture_a_turn() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(1, catalog::keen_eared_sentry());
+    let room = |g: &GameState, seat: usize| g.players[seat].dungeon.as_ref().map(|(_, at)| *at);
+    for _ in 0..2 {
+        let apprentice = g.add_card_to_hand(0, catalog::eccentric_apprentice());
+        cast(&mut g, apprentice, None);
+    }
+    assert_eq!(room(&g, 0), Some(0), "the second venture this turn was refused");
+    g.players[0].ventured_this_turn = false; // a new turn
+    let apprentice = g.add_card_to_hand(0, catalog::eccentric_apprentice());
+    cast(&mut g, apprentice, None);
+    assert_eq!(room(&g, 0), Some(1), "next turn: ventures again");
+}
+
+/// Keen-Eared Sentry gives its controller hexproof against opponents.
+#[test]
+fn keen_eared_sentry_gives_you_hexproof() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::keen_eared_sentry());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "seat 1 has hexproof");
+}
+
+/// Once Upon a Time is free only as the first spell you cast this game.
+#[test]
+fn once_upon_a_time_is_free_only_as_the_first_spell() {
+    let mut g = pod(2);
+    let first = g.add_card_to_hand(0, catalog::once_upon_a_time());
+    let second = g.add_card_to_hand(0, catalog::once_upon_a_time());
+    g.priority.player_with_priority = 0;
+    let free = |g: &mut GameState, id: CardId| {
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id: id,
+            pitch_card: None,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    free(&mut g, first).expect("first spell this game: free");
+    drain_stack(&mut g);
+    assert!(free(&mut g, second).is_err(), "no longer the first spell");
+}
+
+/// Veinfire Borderpost's alternative cost: {1} and a basic land back to hand.
+#[test]
+fn veinfire_borderpost_returns_a_basic_for_its_alternative_cost() {
+    let mut g = pod(2);
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    let post = g.add_card_to_hand(0, catalog::veinfire_borderpost());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: post,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{1} and a basic land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == swamp), "the Swamp went home");
+    assert!(g.battlefield_find(post).unwrap().tapped, "enters tapped");
+}
