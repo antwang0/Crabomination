@@ -26886,6 +26886,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PROFT_2_COMMANDERS,
             main: decks::PROFT_2_MAIN,
         },
+        // Seat 4406: Selenia, Dark Angel's EDHREC average deck. `--pod-decks 4406`.
+        PodDeck {
+            name: "Selenia, Dark Angel (WB)",
+            commanders: decks::SELENIA_2_COMMANDERS,
+            main: decks::SELENIA_2_MAIN,
+        },
+        // Seat 4407: Sol'Kanar the Tainted's EDHREC average deck. `--pod-decks 4407`.
+        PodDeck {
+            name: "Sol'Kanar the Tainted (UBR)",
+            commanders: decks::SOLKANAR_THE_TAINTED_COMMANDERS,
+            main: decks::SOLKANAR_THE_TAINTED_MAIN,
+        },
+        // Seat 4408: Leori, Sparktouched Hunter's EDHREC average deck. `--pod-decks 4408`.
+        PodDeck {
+            name: "Leori, Sparktouched Hunter (WUR)",
+            commanders: decks::LEORI_COMMANDERS,
+            main: decks::LEORI_MAIN,
+        },
     ]
 }
 
@@ -33192,6 +33210,9 @@ mod tests {
             ("Errant, Street Artist", &[0x1B49]),
             ("Hakim, Loreweaver", &[0x1B4A]),
             ("Proft, Sinister Mastermind", &[0x1B4B]),
+            ("Selenia, Dark Angel", &[0x1B4C]),
+            ("Sol'Kanar the Tainted", &[0x1B4D]),
+            ("Leori, Sparktouched Hunter", &[0x1B4E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

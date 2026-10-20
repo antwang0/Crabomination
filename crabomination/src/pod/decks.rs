@@ -123583,3 +123583,88 @@ pub const PROFT_2_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SELENIA_2_COMMANDERS: &[CardFactory] = &[selenia_dark_angel];
+
+/// **Selenia, Dark Angel**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Plains + 11 Swamps = 99.
+/// Selenia, Dark Angel (EDHREC, fetched 2026-10-20).
+pub const SELENIA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, fellwar_stone, mind_stone, orzhov_signet, pact_weapon,
+    sol_ring, soul_conduit, tainted_sigil, talisman_of_hierarchy, thought_vessel,
+    wayfarers_bauble, bojuka_bog, cabal_coffers, caves_of_koilos, command_tower, fetid_heath,
+    godless_shrine, isolated_chapel, marsh_flats, orzhov_basilica, reliquary_tower,
+    shattered_sanctum, silent_clearing, tainted_field, temple_of_silence,
+    urborg_tomb_of_yawgmoth, vault_of_champions, children_of_korlis, crypt_ghast,
+    enduring_angel, enduring_tenacity, exquisite_archangel, grand_abolisher,
+    krrik_son_of_yawgmoth, lotho_corrupt_shirriff, magus_of_the_mirror, mister_negative,
+    platinum_angel, resolute_archangel, tree_of_perdition, vilis_broker_of_blood,
+    vito_thorn_of_the_dusk_rose, vizkopa_guildmage, wall_of_blood, axis_of_mortality,
+    black_market_connections, exquisite_blood, font_of_agonies, greed, near_death_experience,
+    necropotence, phyrexian_arena, phyrexian_unlife, sanguine_bond, ad_nauseam, angels_grace,
+    anguished_unmaking, dark_ritual, despark, generous_gift, necrologia, path_to_exile,
+    stunning_reversal, swords_to_plowshares, teferis_protection, damn, debt_to_the_deathless,
+    demonic_tutor, exsanguinate, nights_whisper, oketras_last_mercy, profane_transfusion,
+    read_the_bones, repay_in_kind, reverse_the_sands, sign_in_blood, toxic_deluge,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SOLKANAR_THE_TAINTED_COMMANDERS: &[CardFactory] = &[sol_kanar_the_tainted];
+
+/// **Sol'Kanar the Tainted**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 7 Islands + 5 Mountains + 6 Swamps = 99.
+/// Sol'Kanar the Tainted (EDHREC, fetched 2026-10-20).
+pub const SOLKANAR_THE_TAINTED_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, dimir_signet, fellwar_stone, izzet_signet, rakdos_signet,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence,
+    wishclaw_talisman, blood_crypt, bojuka_bog, command_tower, crumbling_necropolis,
+    dragonskull_summit, drowned_catacomb, evolving_wilds, exotic_orchard, homeward_path,
+    reliquary_tower, seething_landscape, shivan_reef, smoldering_marsh, steam_vents,
+    sulfur_falls, sunken_hollow, watery_grave, xanders_lounge, abyssal_persecutor, akroan_horse,
+    alexios_deimos_of_kosmos, archfiend_of_the_dross, baleful_strix, bazaar_trader,
+    blim_comedic_genius, coveted_falcon, djinn_of_infinite_deceits, ertai_resurrected,
+    humble_defector, jon_irenicus_shattered_one, kain_traitorous_dragoon, kardur_doomscourge,
+    kharn_the_betrayer, nightscape_familiar, perplexing_chimera, plague_reaver, sleeper_agent,
+    solemn_simulacrum, xantcha_sleeper_agent, zuko_conflicted, candlekeep_sage,
+    captive_audience, demonic_pact, greeds_gambit, propaganda, pucas_mischief,
+    the_trickster_gods_heist, witch_hunt, arcane_denial, bedevil, chaos_warp, counterspell,
+    ghostly_flicker, planar_incision, rakdos_charm, reins_of_power, sudden_substitution,
+    terminate, wrong_turn, geyadrone_dihada, blasphemous_act, disrupt_decorum, donate,
+    fateful_handoff, feed_the_swarm, harmless_offering, last_one_standing, modify_memory,
+    role_reversal, shifting_grift,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LEORI_COMMANDERS: &[CardFactory] = &[leori_sparktouched_hunter];
+
+/// **Leori, Sparktouched Hunter**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 5 Islands + 5 Mountains + 4 Plains = 99.
+/// Leori, Sparktouched Hunter (EDHREC, fetched 2026-10-20).
+pub const LEORI_MAIN: &[CardFactory] = &[
+    arcane_signet, chandras_regulator, fellwar_stone, gatewatch_beacon, ichormoon_gauntlet,
+    izzet_signet, sol_ring, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, the_chain_veil, arid_mesa, cascade_bluffs, clifftop_retreat,
+    command_tower, exotic_orchard, glacial_fortress, hallowed_fountain, interplanar_beacon,
+    karns_bastion, mystic_monastery, prairie_stream, raugrin_triome, reliquary_tower,
+    rugged_prairie, sacred_foundry, sea_of_clouds, spectator_seating, steam_vents, sulfur_falls,
+    training_center, deepglow_skate, dreamtide_whale, flux_channeler, gold_forged_thopteryx,
+    grateful_apparition, jayas_phoenix, laezel_vlaakiths_champion, mila_crafty_companion,
+    onakke_oathkeeper, patrolling_peacemaker, pramikon_sky_rampart, silent_arbiter,
+    spark_double, thrummingbird, deification, oath_of_gideon, oath_of_jace, oath_of_teferi,
+    way_of_the_cryomancer, way_of_the_pyromancer, whirlwind_of_thought, counterspell,
+    experimental_augury, jaces_machinations, loyal_tutor, path_to_exile, ripples_of_potential,
+    semesters_end, swords_to_plowshares, chandra_acolyte_of_flame, chandra_awakened_inferno,
+    chandra_bold_pyromancer, chandra_chill_of_compliance, chandra_dressed_to_kill,
+    chandra_fire_artisan, chandra_flames_catalyst, chandra_flames_fury, chandra_flamecaller,
+    chandra_flameshaper, chandra_hopes_beacon, chandra_legacy_of_fire,
+    chandra_torch_of_defiance, commodore_guff, elspeth_suns_champion, narset_of_the_ancient_way,
+    teferi_master_of_time, teferi_temporal_archmage, vronos_masked_inquisitor, blasphemous_act,
+    deploy_the_gatewatch, farewell, promise_of_loyalty, tezzerets_gambit, urzas_ruinous_blast,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains,
+];
