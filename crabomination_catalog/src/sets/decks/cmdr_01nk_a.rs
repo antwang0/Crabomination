@@ -8,7 +8,7 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{blocks, discard, draw, emerge, etb, on_attack, on_cast, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneRef};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 use std::sync::Arc;
@@ -545,6 +545,124 @@ pub fn jace_cunning_castaway() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Experimental Frenzy — {3}{R} enchantment. You may look at the top card of
+/// your library any time, and play lands and cast spells from it; you can't
+/// play lands or cast spells from your hand. {3}{R}: destroy this enchantment.
+pub fn experimental_frenzy() -> CardDefinition {
+    CardDefinition {
+        name: "Experimental Frenzy",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                description: "You may play lands and cast spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Any },
+            },
+            StaticAbility {
+                description: "You can't play lands or cast spells from your hand.",
+                effect: StaticEffect::ControllerCantPlayFromHand,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            effect: Effect::Destroy { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nephalia Academy — land. An opponent's spell or ability making you discard
+/// a card puts it on top of your library instead (revealed). {T}: add {C}.
+pub fn nephalia_academy() -> CardDefinition {
+    CardDefinition {
+        name: "Nephalia Academy",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "If a spell or ability an opponent controls causes you to discard a card, you may reveal that card and put it on top of your library instead of putting it anywhere else.",
+            effect: StaticEffect::OpponentDiscardToLibraryTop,
+        }],
+        activated_abilities: vec![crate::sets::tap_add_colorless()],
+        ..Default::default()
+    }
+}
+
+fn instant_or_sorcery_cast() -> EventSpec {
+    EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+        what: Selector::TriggerSource,
+        filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+    })
+}
+
+/// Smoldering Egg // Ashmouth Dragon — {1}{R} 0/4 defender Dragon Egg.
+/// Whenever you cast an instant or sorcery spell, put ember counters on it
+/// equal to the mana spent to cast that spell; then at seven or more, remove
+/// them and transform it. Back: a 4/4 flying Dragon — whenever you cast an
+/// instant or sorcery spell, it deals 2 damage to any target.
+pub fn smoldering_egg() -> CardDefinition {
+    let dragon = CardDefinition {
+        color_indicator: vec![Color::Red],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: instant_or_sorcery_cast(),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
+        }],
+        ..creature("Ashmouth Dragon", ManaCost::default(), vec![CreatureType::Dragon], 4, 4)
+    };
+    let embers = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Ember };
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: instant_or_sorcery_cast(),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Ember, amount: Value::CastSpellManaSpent },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(embers(), Value::Const(7)),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter { what: Selector::This, kind: CounterType::Ember, amount: embers() },
+                        Effect::Transform { what: Selector::This },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(dragon)),
+        ..creature("Smoldering Egg", cost(&[generic(1), r()]), vec![CreatureType::Dragon, CreatureType::Egg], 0, 4)
+    }
+}
+
+/// Visions of Dread — {2}{B} sorcery. Target opponent puts a creature card of
+/// their choice from their graveyard onto the battlefield under your control.
+/// Flashback {8}{B}{B}, {X} less where X is the greatest mana value of a
+/// commander you own on the battlefield or in the command zone.
+pub fn visions_of_dread() -> CardDefinition {
+    CardDefinition {
+        name: "Visions of Dread",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(8), b(), b()]))],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast this way, where X is the greatest mana value of a commander you own on the battlefield or in the command zone.",
+            effect: StaticEffect::SelfFlashbackCostsLess {
+                amount: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
+            },
+        }],
+        effect: Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::PlayerChoosesFromGraveyard {
+                who: PlayerRef::Target(0),
+                filter: R::Creature,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        },
         ..Default::default()
     }
 }

@@ -349,3 +349,63 @@ fn jace_cunning_castaway_copies_itself() {
     let jaces = g.battlefield.iter().filter(|c| c.definition.name == "Jace, Cunning Castaway").count();
     assert_eq!(jaces, 3, "the original survives the legend rule beside two non-legendary copies");
 }
+
+/// CR 101.2 — under Experimental Frenzy no land or spell comes from the hand,
+/// while the top of the library plays.
+#[test]
+fn cr_101_2_experimental_frenzy_locks_the_hand_and_opens_the_top() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::experimental_frenzy());
+    let in_hand = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::plains());
+    flood(&mut g, 0);
+    let cast_hand = g.perform_action(GameAction::CastSpell { card_id: in_hand, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(cast_hand.is_err(), "no spell from the hand");
+    assert!(g.perform_action(GameAction::PlayLand(land)).is_err(), "no land from the hand");
+    let top = g.players[0].library[0].id;
+    g.perform_action(GameAction::PlayLand(top)).expect("the top card plays");
+    assert!(g.battlefield_find(top).is_some());
+}
+
+/// CR 614 — Nephalia Academy puts a card an opponent's spell makes you
+/// discard on top of your library; your own discards still go to the
+/// graveyard.
+#[test]
+fn nephalia_academy_saves_an_opponents_discard() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::nephalia_academy());
+    let card = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let duress = g.add_card_to_hand(0, catalog::mind_rot());
+    cast(&mut g, duress, Some(Target::Player(1)));
+    assert_eq!(g.players[1].library[0].id, card, "back on top");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != card));
+}
+
+/// Smoldering Egg banks the mana spent on instants and sorceries as ember
+/// counters and hatches at seven.
+#[test]
+fn smoldering_egg_hatches_at_seven_embers() {
+    let mut g = pod(2);
+    let egg = g.add_card_to_battlefield(0, catalog::smoldering_egg());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.battlefield_find(egg).unwrap().counter_count(CounterType::Ember), 1);
+    g.battlefield_find_mut(egg).unwrap().add_counters(CounterType::Ember, 5);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.battlefield_find(egg).unwrap().definition.name, "Ashmouth Dragon");
+    assert_eq!(g.battlefield_find(egg).unwrap().counter_count(CounterType::Ember), 0);
+}
+
+/// Visions of Dread: the target opponent picks a creature card from their own
+/// graveyard and you get it.
+#[test]
+fn visions_of_dread_takes_an_opponents_creature_card() {
+    let mut g = pod(3);
+    let dead = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::hill_giant());
+    let v = g.add_card_to_hand(0, catalog::visions_of_dread());
+    cast(&mut g, v, Some(Target::Player(2)));
+    assert_eq!(g.battlefield_find(dead).map(|c| c.controller), Some(0));
+    assert_eq!(g.players[1].graveyard.len(), 1, "the untargeted opponent keeps theirs");
+}

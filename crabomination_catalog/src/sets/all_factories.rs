@@ -18368,6 +18368,10 @@ static DECKS: &[Factory] = &[
     super::decks::ajanis_last_stand,
     super::decks::veterans_armaments,
     super::decks::jace_cunning_castaway,
+    super::decks::experimental_frenzy,
+    super::decks::nephalia_academy,
+    super::decks::smoldering_egg,
+    super::decks::visions_of_dread,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
