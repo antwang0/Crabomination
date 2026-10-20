@@ -128777,3 +128777,60 @@ pub const ALENA_24_MAIN: &[CardFactory] = &[
     forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const HALSIN_15_COMMANDERS: &[CardFactory] = &[halsin_emerald_archdruid, haunted_one];
+
+/// **Halsin, Emerald Archdruid and Haunted One**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 14 Forests + 10 Swamps = 98.
+/// Halsin, Emerald Archdruid and Haunted One (EDHREC, fetched 2026-10-20).
+pub const HALSIN_15_MAIN: &[CardFactory] = &[
+    arcane_signet, bitterthorn_nissas_animus, cauldron_of_essence, dollhouse_of_horrors,
+    esikas_chariot, sol_ring, command_tower, exotic_orchard, gilt_leaf_palace, llanowar_wastes,
+    mirkwood, necroblossom_snarl, overgrown_tomb, tainted_wood, temple_of_malady, turbulent_fen,
+    twilight_mire, viridescent_bog, woodland_cemetery, abomination_of_llanowar, beast_whisperer,
+    boughside_wanderers, disciple_of_freyalise, dwynens_elite, dwynen_gilt_leaf_daen,
+    eccentric_pestfinder, elfsworn_giant, elves_of_deep_shadow, elvish_mystic, elvish_warmaster,
+    exquisite_huntmaster, fyndhorn_elves, galion_elvenkings_butler, guardian_of_the_halls,
+    high_perfect_morcant, imperious_perfect, lathril_blade_of_the_elves, llanowar_dead,
+    llanowar_elves, lluwen_exchange_student, lys_alana_huntmaster, marwyn_the_nurturer,
+    priest_of_titania, reclamation_sage, ribtruss_roaster, the_chief_warg, wolverine_riders,
+    woodland_weavemaster, city_of_death, doubling_season, down_in_the_valley, greater_good,
+    presence_of_gond, prowess_of_the_fair, assassins_trophy, beast_within, fell_the_profane,
+    galadhrim_ambush, infernal_grasp, quarrel, reverent_howl, revitalizing_repast, warg_tactics,
+    freyalise_llanowars_fury, bogslithers_embrace, cultivate, feed_the_swarm, final_act,
+    natures_lore, patriarchs_bidding, rootcast_apprenticeship, three_visits,
+    through_the_forest_gate, toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const HALSIN_16_COMMANDERS: &[CardFactory] = &[halsin_emerald_archdruid, agent_of_the_shadow_thieves];
+
+/// **Halsin, Emerald Archdruid and Agent of the Shadow Thieves**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 6 Forests + 6 Swamps = 98.
+/// Halsin, Emerald Archdruid and Agent of the Shadow Thieves (EDHREC, fetched 2026-10-20).
+pub const HALSIN_16_MAIN: &[CardFactory] = &[
+    bitterthorn_nissas_animus, commanders_sphere, dollhouse_of_horrors, portcullis, sol_ring,
+    bojuka_bog, boseiju_who_endures, command_tower, darkbore_pathway, demolition_field,
+    exotic_orchard, fountainport, llanowar_wastes, nurturing_peatland, overgrown_tomb,
+    shifting_woodland, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_swamp, spymasters_vault, takenuma_abandoned_mire,
+    talon_gates_of_madara, the_shire, underground_mortuary, undergrowth_stadium,
+    verdant_catacombs, woodland_cemetery, yavimaya_cradle_of_growth, academy_manufactor,
+    boggart_trawler, braids_arisen_nightmare, bristlebud_farmer, converter_beast,
+    emissary_green, generous_ent, glissa_herald_of_predation, gothmog_morgul_lieutenant,
+    hazel_of_the_rootbloom, hazels_brewmaster, herald_of_anguish, innocuous_researcher,
+    jaheira_friend_of_the_forest, kamber_the_plunderer, moonstone_eulogist, old_gnawbone,
+    orcish_bowmasters, pippin_warden_of_isengard, rev_tithe_extractor, sakura_tribe_elder,
+    spider_ham_peter_porker, the_earth_king, tireless_tracker, undercity_scrounger,
+    unlucky_cabbage_merchant, wreck_hunter, black_market_connections, carpet_of_flowers,
+    city_of_death, lure, night_of_the_sweets_revenge, obsessive_pursuit, tangled_skyline,
+    utopia_sprawl, wild_growth, abrupt_decay, archdruids_charm, beast_within, deadly_dispute,
+    harrow, heroic_intervention, legolass_quick_reflexes, revitalizing_repast, tyvar_kell,
+    blood_money, bridgeworks_battle, bushwhack, cultivate, damnation, final_act,
+    for_the_common_good, glistening_dawn, kodamas_reach, rootcast_apprenticeship,
+    search_for_tomorrow,
+    // Basics
+    forest, forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp, swamp, swamp,
+];

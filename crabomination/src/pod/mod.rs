@@ -28002,6 +28002,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALENA_24_COMMANDERS,
             main: decks::ALENA_24_MAIN,
         },
+        // Seat 4592: Halsin, Emerald Archdruid and Haunted One's EDHREC average deck. `--pod-decks 4592`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Haunted One (BG)",
+            commanders: decks::HALSIN_15_COMMANDERS,
+            main: decks::HALSIN_15_MAIN,
+        },
+        // Seat 4593: Halsin, Emerald Archdruid and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 4593`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Agent of the Shadow Thieves (BG)",
+            commanders: decks::HALSIN_16_COMMANDERS,
+            main: decks::HALSIN_16_MAIN,
+        },
     ]
 }
 
@@ -34494,6 +34506,8 @@ mod tests {
             ("The Thirteenth Doctor and Amy Pond", &[0x1C03]),
             ("Wyll, Blade of Frontiers and Acolyte of Bahamut", &[0x1C04]),
             ("Alena, Kessig Trapper and Kamahl, Heart of Krosa", &[0x1C05]),
+            ("Halsin, Emerald Archdruid and Haunted One", &[0x1C06]),
+            ("Halsin, Emerald Archdruid and Agent of the Shadow Thieves", &[0x1C07]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
