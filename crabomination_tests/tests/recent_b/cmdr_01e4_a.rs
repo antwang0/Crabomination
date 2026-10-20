@@ -794,3 +794,154 @@ fn cr_702_100b_no_counter_no_evolution_under_blightbeetle() {
     assert_eq!(radstags, 1, "no counter, no evolution, no copy");
     assert!(g.game_over.is_none());
 }
+
+/// Infernal Scarring's granted death trigger draws for the creature's
+/// controller.
+#[test]
+fn infernal_scarring_draws_when_its_host_dies() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let scarring = g.add_card_to_hand(0, catalog::infernal_scarring());
+    cast(&mut g, scarring, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (4, 2));
+    let hand = g.players[0].hand.len();
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(bear)));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Murder left the hand, the trigger drew one");
+}
+
+/// Goremand's cast costs a creature, and every opponent sacrifices one.
+#[test]
+fn goremand_eats_one_and_makes_each_opponent_feed_it() {
+    let mut g = pod(3);
+    let fodder = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let a = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let b = g.add_token_to_battlefield(2, &body("Bear", 2, CreatureType::Bear));
+    let goremand = g.add_card_to_hand(0, catalog::goremand());
+    cast(&mut g, goremand, None);
+    assert!(g.battlefield_find(fodder).is_none(), "the additional cost");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(goremand).is_some());
+}
+
+/// Rakshasa Gravecaller's two Zombies only follow an exploited creature.
+#[test]
+fn rakshasa_gravecaller_needs_an_exploit() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let gravecaller = g.add_card_to_hand(0, catalog::rakshasa_gravecaller());
+    cast(&mut g, gravecaller, None);
+    let zombies = g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count();
+    assert_eq!(zombies, 2);
+}
+
+/// Sharpshooter Elf counts your creatures and shoots an opposing flier for
+/// that much.
+#[test]
+fn sharpshooter_elf_shoots_for_its_power() {
+    let mut g = pod(2);
+    g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let flier = g.add_card_to_battlefield(1, catalog::scion_of_ugin());
+    let elf = g.add_card_to_hand(0, catalog::sharpshooter_elf());
+    cast(&mut g, elf, Some(Target::Permanent(flier)));
+    assert_eq!(pt(&g, elf), (2, 2), "the Bear and itself");
+    assert_eq!(g.battlefield_find(flier).unwrap().damage, 2);
+}
+
+/// Wolfrider's Saddle arrives riding its own 2/2 Wolf.
+#[test]
+fn wolfriders_saddle_comes_with_a_wolf() {
+    let mut g = pod(2);
+    let saddle = g.add_card_to_hand(0, catalog::wolfriders_saddle());
+    cast(&mut g, saddle, None);
+    let wolf = g.battlefield.iter().find(|c| c.definition.name == "Wolf").expect("a Wolf").id;
+    assert_eq!(g.battlefield_find(saddle).unwrap().attached_to, Some(wolf));
+    assert_eq!(pt(&g, wolf), (3, 3));
+}
+
+/// Morselhoarder pays mana out of its -1/-1 counters, growing as it does.
+#[test]
+fn morselhoarder_spends_its_counters_for_mana() {
+    let mut g = pod(2);
+    let hoarder = g.add_card_to_hand(0, catalog::morselhoarder());
+    cast(&mut g, hoarder, None);
+    assert_eq!(pt(&g, hoarder), (4, 2));
+    activate(&mut g, hoarder, 0).expect("mana");
+    activate(&mut g, hoarder, 0).expect("mana");
+    assert_eq!(pt(&g, hoarder), (6, 4));
+    assert!(activate(&mut g, hoarder, 0).is_err(), "no counter left");
+}
+
+/// Bridge from Below makes a Zombie from your graveyard for your nontoken
+/// creature's death and exiles itself on an opponent's.
+#[test]
+fn bridge_from_below_works_from_the_graveyard() {
+    let mut g = pod(2);
+    let bridge = g.add_card_to_graveyard(0, catalog::bridge_from_below());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(mine)));
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(theirs)));
+    assert!(g.exile.iter().any(|c| c.id == bridge), "an opponent's creature died");
+}
+
+/// Sigil of the Nayan Gods counts every creature you control.
+#[test]
+fn sigil_of_the_nayan_gods_counts_your_creatures() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    g.add_token_to_battlefield(0, &body("Wolf", 2, CreatureType::Wolf));
+    g.add_token_to_battlefield(1, &body("Beast", 2, CreatureType::Beast));
+    let sigil = g.add_card_to_hand(0, catalog::sigil_of_the_nayan_gods());
+    cast(&mut g, sigil, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (4, 4));
+}
+
+/// Frontier Mastodon's ferocious counter needs a power-4 creature already
+/// in play.
+#[test]
+fn frontier_mastodon_is_ferocious_beside_a_big_creature() {
+    for big in [false, true] {
+        let mut g = pod(2);
+        if big {
+            g.add_token_to_battlefield(0, &body("Beast", 4, CreatureType::Beast));
+        }
+        let mastodon = g.add_card_to_hand(0, catalog::frontier_mastodon());
+        cast(&mut g, mastodon, None);
+        assert_eq!(g.battlefield_find(mastodon).unwrap().counter_count(CounterType::PlusOnePlusOne), u32::from(big));
+    }
+}
+
+/// Esper Sojourners taps a permanent when it dies.
+#[test]
+fn esper_sojourners_taps_on_death() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let sojourners = g.add_card_to_battlefield(0, catalog::esper_sojourners());
+    let theirs = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(sojourners)));
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Bestial Fury: +4/+0 and trample when its host becomes blocked.
+#[test]
+fn bestial_fury_rages_when_blocked() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let wall = g.add_token_to_battlefield(1, &body("Wall", 5, CreatureType::Wall));
+    let fury = g.add_card_to_hand(0, catalog::bestial_fury());
+    cast(&mut g, fury, Some(Target::Permanent(bear)));
+    attack_with(&mut g, &[bear]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (6, 2));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
+}

@@ -1666,3 +1666,419 @@ pub fn elvish_branchbender() -> CardDefinition {
         ..creature("Elvish Branchbender", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Druid], 2, 2)
     }
 }
+
+// ── Batch four ──────────────────────────────────────────────────────────────
+
+/// Infernal Scarring — {1}{B} Aura. Enchanted creature gets +2/+0 and has
+/// "When this creature dies, draw a card."
+pub fn infernal_scarring() -> CardDefinition {
+    aura(
+        "Infernal Scarring",
+        cost(&[generic(1), b()]),
+        Some(EquipBonus {
+            power: 2,
+            triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            })],
+            ..Default::default()
+        }),
+    )
+}
+
+/// Blood Price — {3}{B} sorcery. Look at the top four cards of your library,
+/// put two into your hand and the rest on the bottom. You lose 2 life.
+pub fn blood_price() -> CardDefinition {
+    spell(
+        "Blood Price",
+        cost(&[generic(3), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                take: Some(Value::Const(2)),
+                ..Default::default()
+            })),
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+    )
+}
+
+/// Soul Salvage — {2}{B} sorcery. Return up to two target creature cards
+/// from your graveyard to your hand.
+pub fn soul_salvage() -> CardDefinition {
+    spell(
+        "Soul Salvage",
+        cost(&[generic(2), b()]),
+        CardType::Sorcery,
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature.and(R::InGraveyard).and(R::OwnedByYou),
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+        },
+    )
+}
+
+/// Heavyweight Demolisher — {7} 8/6 artifact creature Construct. Menace. At
+/// the beginning of your upkeep, tap it unless you pay {3}. Unearth {6}{R}{R}.
+pub fn heavyweight_demolisher() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {3} or tap Heavyweight Demolisher?".into(),
+                mana_cost: cost(&[generic(3)]),
+                body: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::Tap { what: Selector::This })),
+            },
+        }],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(6), r(), r()]))],
+        ..creature("Heavyweight Demolisher", cost(&[generic(7)]), vec![CreatureType::Construct], 8, 6)
+    }
+}
+
+/// Goremand — {4}{B}{B} 5/5 Demon. As an additional cost, sacrifice a
+/// creature. Flying, trample. When it enters, each opponent sacrifices a
+/// creature.
+pub fn goremand() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::ControlledByYou),
+            count: 1,
+        }],
+        triggered_abilities: vec![etb(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::ONE,
+            filter: R::Creature,
+        })],
+        ..creature("Goremand", cost(&[generic(4), b(), b()]), vec![CreatureType::Demon], 5, 5)
+    }
+}
+
+/// Rakshasa Gravecaller — {4}{B} 3/6 Demon. Exploit. When it exploits a
+/// creature, create two 2/2 black Zombie tokens.
+pub fn rakshasa_gravecaller() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::exploit(make(
+            2,
+            token("Zombie", 2, 2, vec![Color::Black], vec![CreatureType::Zombie]),
+        ))],
+        ..creature("Rakshasa Gravecaller", cost(&[generic(4), b()]), vec![CreatureType::Demon], 3, 6)
+    }
+}
+
+/// Sharpshooter Elf — {2}{G} */2 Elf Ranger. Reach. Its power is the number
+/// of creatures you control. When it enters, it deals damage equal to its
+/// power to target creature with flying an opponent controls.
+pub fn sharpshooter_elf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        dynamic_pt: Some(crate::card::DynamicPt::CreaturesYouControl { base_t: 2 }),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying)).and(R::ControlledByOpponent)),
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        ..creature("Sharpshooter Elf", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Ranger], 0, 2)
+    }
+}
+
+/// Enlarge — {3}{G}{G} sorcery. Target creature gets +7/+7 and gains trample
+/// until end of turn. It must be blocked this turn if able.
+pub fn enlarge() -> CardDefinition {
+    let grant = |keyword| Effect::GrantKeyword { what: Selector::Target(0), keyword, duration: Duration::EndOfTurn };
+    spell(
+        "Enlarge",
+        cost(&[generic(3), g(), g()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(7),
+                toughness: Value::Const(7),
+                duration: Duration::EndOfTurn,
+            },
+            grant(Keyword::Trample),
+            grant(Keyword::MustBeBlocked),
+        ]),
+    )
+}
+
+/// Wolfrider's Saddle — {3}{G} Equipment. When it enters, create a 2/2 green
+/// Wolf token and attach this to it. Equipped creature gets +1/+1 and can't be
+/// blocked by more than one creature. Equip {3}.
+pub fn wolfriders_saddle() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            make(1, token("Wolf", 2, 2, vec![Color::Green], vec![CreatureType::Wolf])),
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedTokens },
+        ]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::CantBeBlockedByMoreThanOne],
+            ..Default::default()
+        }),
+        ..spell("Wolfrider's Saddle", cost(&[generic(3), g()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Briarpack Alpha — {3}{G} 3/3 Wolf with flash. When it enters, target
+/// creature gets +2/+2 until end of turn.
+pub fn briarpack_alpha() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Briarpack Alpha", cost(&[generic(3), g()]), vec![CreatureType::Wolf], 3, 3)
+    }
+}
+
+/// Morselhoarder — {4}{R/G}{R/G} 6/4 Elemental. Enters with two -1/-1
+/// counters. Remove a -1/-1 counter from it: add one mana of any color.
+pub fn morselhoarder() -> CardDefinition {
+    let rg = || hybrid(Color::Red, Color::Green);
+    CardDefinition {
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..creature("Morselhoarder", cost(&[generic(4), rg(), rg()]), vec![CreatureType::Elemental], 6, 4)
+    }
+}
+
+/// Bridge from Below — {B}{B}{B} enchantment that works from your graveyard:
+/// a nontoken creature put into your graveyard from the battlefield makes a
+/// 2/2 black Zombie; a creature put into an opponent's graveyard from the
+/// battlefield exiles this card.
+pub fn bridge_from_below() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyardAnyPlayer).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken.and(R::OwnedByYou) },
+                ),
+                effect: make(1, token("Zombie", 2, 2, vec![Color::Black], vec![CreatureType::Zombie])),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyardAnyPlayer).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Not(Box::new(R::OwnedByYou)) },
+                ),
+                effect: Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+            },
+        ],
+        ..spell("Bridge from Below", cost(&[b(), b(), b()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Sumala Rumblers — {2}{G/W}{G/W} */4 Wurm. Power equal to the number of
+/// creatures you control. Myriad.
+pub fn sumala_rumblers() -> CardDefinition {
+    let gw = || hybrid(Color::Green, Color::White);
+    CardDefinition {
+        dynamic_pt: Some(crate::card::DynamicPt::CreaturesYouControl { base_t: 4 }),
+        triggered_abilities: vec![crate::effect::shortcut::myriad()],
+        ..creature("Sumala Rumblers", cost(&[generic(2), gw(), gw()]), vec![CreatureType::Wurm], 0, 4)
+    }
+}
+
+/// Sigil of the Nayan Gods — {1}{G}{W} Aura. Enchanted creature gets +1/+1
+/// for each creature you control. Cycling {G/W}.
+pub fn sigil_of_the_nayan_gods() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[hybrid(Color::Green, Color::White)]))],
+        ..aura(
+            "Sigil of the Nayan Gods",
+            cost(&[generic(1), g(), w()]),
+            Some(EquipBonus {
+                scale: Some(crate::card::EquipScale {
+                    filter: R::Creature,
+                    per_power: 1,
+                    per_toughness: 1,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+        )
+    }
+}
+
+/// Excavation Elephant — {4}{W} 3/5 Elephant. Kicker {1}{W}. When it enters,
+/// if it was kicked, return target artifact card from your graveyard to your
+/// hand.
+pub fn excavation_elephant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SpellWasKicked),
+            effect: Effect::Move {
+                what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..creature("Excavation Elephant", cost(&[generic(4), w()]), vec![CreatureType::Elephant], 3, 5)
+    }
+}
+
+/// Frontier Mastodon — {2}{G} 3/2 Elephant. Ferocious — enters with a +1/+1
+/// counter if you control a creature with power 4 or greater.
+pub fn frontier_mastodon() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)).and(R::OtherThanSource),
+                ))),
+                then: Box::new(Value::ONE),
+                else_: Box::new(Value::Const(0)),
+            },
+        )),
+        ..creature("Frontier Mastodon", cost(&[generic(2), g()]), vec![CreatureType::Elephant], 3, 2)
+    }
+}
+
+/// Mosstodon — {4}{G} 5/3 Plant Elephant. {1}: target creature with power 5
+/// or greater gains trample until end of turn.
+pub fn mosstodon() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::PowerAtLeast(5))),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Mosstodon", cost(&[generic(4), g()]), vec![CreatureType::Plant, CreatureType::Elephant], 5, 3)
+    }
+}
+
+/// Howlgeist — {5}{G} 4/2 Spirit Wolf. Creatures with power less than its
+/// power can't block it. Undying.
+pub fn howlgeist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedByPowerLess, Keyword::Undying],
+        ..creature("Howlgeist", cost(&[generic(5), g()]), vec![CreatureType::Spirit, CreatureType::Wolf], 4, 2)
+    }
+}
+
+/// Lone Wolf — {2}{G} 2/2 Wolf. It may assign its combat damage as though it
+/// weren't blocked.
+pub fn lone_wolf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::AssignsDamageAsThoughUnblocked],
+        ..creature("Lone Wolf", cost(&[generic(2), g()]), vec![CreatureType::Wolf], 2, 2)
+    }
+}
+
+/// Wandering Wolf — {1}{G} 2/1 Wolf. Creatures with power less than its power
+/// can't block it.
+pub fn wandering_wolf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedByPowerLess],
+        ..creature("Wandering Wolf", cost(&[generic(1), g()]), vec![CreatureType::Wolf], 2, 1)
+    }
+}
+
+/// Esper Sojourners — {W}{U}{B} 2/3 artifact creature Vedalken Wizard. When
+/// you cycle it and when it dies, you may tap or untap target permanent.
+/// Cycling {2}{U}.
+pub fn esper_sojourners() -> CardDefinition {
+    let tap_or_untap = || {
+        Effect::ChooseMode(vec![
+            Effect::Tap { what: target_filtered(R::Permanent) },
+            Effect::Untap { what: target_filtered(R::Permanent), up_to: None },
+        ])
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource), effect: tap_or_untap() },
+            crate::effect::shortcut::on_dies(tap_or_untap()),
+        ],
+        ..creature(
+            "Esper Sojourners",
+            cost(&[w(), u(), b()]),
+            vec![CreatureType::Vedalken, CreatureType::Wizard],
+            2,
+            3,
+        )
+    }
+}
+
+/// Pale Recluse — {4}{G}{W} 4/5 Spider. Reach. Forestcycling {2},
+/// plainscycling {2}.
+pub fn pale_recluse() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Reach,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Forest),
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains),
+        ],
+        ..creature("Pale Recluse", cost(&[generic(4), g(), w()]), vec![CreatureType::Spider], 4, 5)
+    }
+}
+
+/// Akki War Paint — {R} Aura. Enchant artifact or creature; as long as the
+/// enchanted permanent is a creature, it gets +2/+1.
+pub fn akki_war_paint() -> CardDefinition {
+    CardDefinition {
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Artifact.or(R::Creature)) },
+        ..aura("Akki War Paint", cost(&[r()]), Some(EquipBonus { power: 2, toughness: 1, ..Default::default() }))
+    }
+}
+
+/// Bestial Fury — {2}{R} Aura. When it enters, draw a card at the beginning
+/// of the next turn's upkeep. Whenever enchanted creature becomes blocked, it
+/// gets +4/+0 and gains trample until end of turn.
+pub fn bestial_fury() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AtNextTurnsUpkeep {
+            body: Box::new(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE }),
+        })],
+        ..aura(
+            "Bestial Fury",
+            cost(&[generic(2), r()]),
+            Some(EquipBonus {
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                    effect: Effect::Seq(vec![
+                        Effect::PumpPT {
+                            what: Selector::This,
+                            power: Value::Const(4),
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                    ]),
+                }],
+                ..Default::default()
+            }),
+        )
+    }
+}
+
+/// Imposing Visage — {R} Aura. Enchanted creature has menace.
+pub fn imposing_visage() -> CardDefinition {
+    aura(
+        "Imposing Visage",
+        cost(&[r()]),
+        Some(EquipBonus { keywords: vec![Keyword::Menace], ..Default::default() }),
+    )
+}
