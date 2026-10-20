@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes](#fixedopen-2026-10-20-commander-run-01ddeutc--44-closer-cards-13-seats-two-engine-fixes) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes](#fixedopen-2026-10-19-commander-run-01gwrdkp--44-closer-cards-17-seats-six-engine-fixes) | 34 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 168 closer cards, 37 seats, step-trigger / Adventure-copy / snow-payment bugs](#fixedopen-2026-10-19-commander-run-016xh16h--168-closer-cards-37-seats-step-trigger--adventure-copy--snow-payment-bugs) | 47 |
@@ -189,6 +190,39 @@ the handoff.
 - **Flooded Woodlands** needed no engine code: a `GrantKeyword` of Leviathan's `AttackCostSacrifice(Land, 1)` to every green creature; combat and the attack picker read computed keywords.
 - **Robustness:** debug (assertion-on) pods over every new seat in groups of four (24 games each, seeds 9285-9287) and a release pass (groups of four, 200 games each, seed 9291: 3,600 games) — 3,597 decided, 3 CR 104.4a draws, 0 panics, every other `undecided_by` zero. Release 2..8-seat pods (seed 9290, 400 each, the default field) all decided. ⚠ A 25-seat game (`--pod-decks` with 25 entries) takes minutes in debug: `check_commanders` / `duplicate_zone_id` run per action and scale with object count — fine at ≤ 8 seats.
 - **Dropped rather than shipped wrong:** Flux (`Value::CardsDiscardedThisEffect` accumulates across `EachPlayerDoes` seats within one resolution, so a later seat would draw for an earlier seat's discards); Mystery Key (no Equipment-sourced "equipped creature deals combat damage" trigger that can sacrifice the Equipment itself).
+
+## FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives
+
+- **Seats** 4483-4529, 4560-4569, 4586-4593: partner-pair EDHREC averages whose ONE missing card this run wrote
+  (`decks::cmdr_01dd_k`, `_l`; tests `recent_b/cmdr_01dd_b.rs`). Dropped at the legality gate: three Prismatic
+  Piper / Faceless One pairs (chosen-color mix) and Zellix // Raised by Giants (a 97-card average). Every group of
+  four smoked 20+ debug games at seeds 9290-9303, all decided.
+- **Primitives:** `Predicate::FirstSpellYouCastThisGame` (cold `Player.cast_a_spell_this_game`, set once; Once
+  Upon a Time); `StaticEffect::OpponentsVentureOncePerTurn` (`game/venture_limit.rs`, CR 701.49; Keen-Eared
+  Sentry); `Effect::NextCreatureSpellHasFlashThisTurn` (Scout's Warning); `ActivatedAbility::craft_exile_each` +
+  `shortcut::craft_each` (`game/craft_each.rs`, CR 702.167a: one distinct object per requirement, matched by
+  backtracking; Throne of the Grim Captain); an emblem's `OpponentsCantCastMatching` locks opponents' casts (CR
+  114.4; Narset Transcendent); an `exile_top_cost` stamps `Value::ExiledForCostManaValue` (Phyrexian Devourer);
+  `Effect::AnyPlayerMayPayLifeToCounterThis` (`game/effects/punisher_counter.rs`, CR 119.4; Dash Hopes);
+  `Value::CardsInHandMatching` concretizes `SameNameAsTarget` (The End); `SpendRestriction::
+  NonHumanCreatureCastCounter` (Animal Attendant) and `CreatureGainsRiot` (CR 702.136, read by `apply_riot` off
+  `pending_etb_keyword_grants`; Domri, Chaos Bringer); `SelectionRequirement::IsRenowned` (Enshrouding Mist);
+  `Effect::AddCopiableStaticAbilities` (CR 707.9b; Dollhouse of Horrors).
+- **Bot:** `transform_sink::pick_craft_into_creature` crafts a noncreature into its creature back when the board
+  pieces it exiles are worth less (a 40-game census of the Throne seats never crafted before).
+- **Fixes:** the growth watch drew a draining fan-out from a shallow chain (CR 104.4b; eight-seat seed 930232,
+  ~1,800 Agate Instigator pings at stack depth 1,622 over floor 2) — a deep-only resolution counts against a
+  deep floor only; Divine Smite's filter sat in an `If` predicate the cast-time walk can't read (CR 601.2c).
+- **Sweeps:** debug 2/4/7 seats seed 9273 (timed out at 7,000 s in the 2-seat block: 0 panics, two CR 104.4a
+  draws, both seats at 0 or less together); debug, seats 4400-4600 only: 4/6 seats seed 9301, 219 games, and 3/5/8
+  seats seed 9304, 258 games — 0 bad in either.
+- **OPEN (one-gap closers left, each a primitive):** Scheming Fence (a chosen permanent's abilities: lock +
+  borrow + any-color spend), Vedalken Squirrel-Whacker (d6 exchange replacement), Experimental Frenzy (can't play
+  from hand — the hand-cast path has no zone lock), Blossombind (can't have counters put on it), Shivan Wumpus
+  (an any-player land sacrifice with a headless policy), Invasion of Gobakhan (a cast-from-exile grant with a
+  {2} tax), Invasion of New Phyrexia's Teferi back, Fatehold Chronologist (prepared), Turtles Forever, Soul
+  Echo, Fraying Line, Mystery Key, The Book of Vile Darkness. ⚠ Out of Bounds (assist), Consecrate Land (the
+  other-Auras clause), Realm Razer (one until-leaves exile) and The End (owner's zones) carry INCOMPLETE rows.
 
 ## FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes
 
