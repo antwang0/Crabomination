@@ -123802,3 +123802,30 @@ pub const BLIM_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const DROMAR_COMMANDERS: &[CardFactory] = &[dromar_the_banisher];
+
+/// **Dromar, the Banisher**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Islands + 5 Plains + 5 Swamps = 99.
+/// Dromar, the Banisher (EDHREC, fetched 2026-10-20).
+pub const DROMAR_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, dimir_signet, distorting_lens, lightning_greaves, sol_ring,
+    swiftfoot_boots, talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress,
+    adarkar_wastes, arcane_sanctum, bojuka_bog, caves_of_koilos, command_tower, dromars_cavern,
+    drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress, godless_shrine,
+    hallowed_fountain, isolated_chapel, prairie_stream, raffines_tower, reliquary_tower,
+    sunken_hollow, watery_grave, baleful_strix, blind_seer, eastern_paladin,
+    eight_and_a_half_tails, ersatz_gnomes, llawan_cephalid_empress, mother_of_runes,
+    northern_paladin, order_of_the_sacred_torch, painters_servant, pentarch_paladin,
+    scuttlemutt, solemn_simulacrum, southern_paladin, stormscape_familiar, stromgald_cabal,
+    tidal_visionary, tsabos_assassin, vodalian_mystic, western_paladin,
+    circle_of_protection_green, darkest_hour, deathgrip, dissipation_field, douse,
+    flooded_woodlands, insight, rhystic_study, shifting_sky, swirl_the_mists, teferis_moat,
+    warped_devotion, alter_reality, arcane_denial, counterspell, dovins_veto, dromars_charm,
+    glamerdye, hibernation, mind_bend, path_to_exile, sleight_of_mind, spectral_shift,
+    sway_of_illusion, swords_to_plowshares, void_rend, whim_of_volrath, demonic_tutor,
+    govern_the_guildless, natures_ruin, perish, trait_doctoring, vindicate, wash_out,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp,
+];

@@ -26934,6 +26934,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLIM_COMMANDERS,
             main: decks::BLIM_MAIN,
         },
+        // Seat 4414: Dromar, the Banisher's EDHREC average deck. `--pod-decks 4414`.
+        PodDeck {
+            name: "Dromar, the Banisher (WUB)",
+            commanders: decks::DROMAR_COMMANDERS,
+            main: decks::DROMAR_MAIN,
+        },
     ]
 }
 
@@ -33248,6 +33254,7 @@ mod tests {
             ("Tam, Mindful First-Year", &[0x1B51]),
             ("Baru, Wurmspeaker", &[0x1B52]),
             ("Blim, Comedic Genius", &[0x1B53]),
+            ("Dromar, the Banisher", &[0x1B54]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
