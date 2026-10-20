@@ -24,6 +24,13 @@ use crate::card::{
 use crate::mana::{Color, ColorSet};
 use serde::{Deserialize, Serialize};
 
+/// Animate Artifact's "as long as enchanted artifact isn't a creature", read
+/// inside the layer pass off the printed card: the computed type is what is
+/// being built (the CR 613.8 dependency on other animations is not modeled).
+pub(crate) fn printed_noncreature(card: &crate::card::CardInstance) -> bool {
+    !card.definition.is_creature()
+}
+
 // ── Duration ──────────────────────────────────────────────────────────────────
 
 /// How long a continuous effect persists.

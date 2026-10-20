@@ -15103,10 +15103,8 @@ impl GameState {
                 push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
                     Modification::SetPowerToughness(x, x));
             }
-            // Animate Artifact — read off the printed card (the 613.8
-            // dependency on other animations is not modeled).
             if bonus.animate_noncreature_mv
-                && self.battlefield_find(target).is_some_and(|h| !h.definition.is_creature())
+                && self.battlefield_find(target).is_some_and(crate::game::layers::printed_noncreature)
             {
                 push_mod(&mut all_effects, Layer::L4Type, None, Modification::AddCardType(CardType::Creature));
                 push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
