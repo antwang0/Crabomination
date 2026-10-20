@@ -1177,3 +1177,144 @@ fn furystoke_giant_arms_the_team() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, before - 2);
 }
+
+/// Lose Calm borrows a creature with haste and menace.
+#[test]
+fn lose_calm_borrows_with_menace() {
+    let mut g = pod(3);
+    let theirs = g.add_token_to_battlefield(2, &body("Beast", 3, CreatureType::Beast));
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    let calm = g.add_card_to_hand(0, catalog::lose_calm());
+    cast(&mut g, calm, Some(Target::Permanent(theirs)));
+    let c = g.computed_permanent(theirs).unwrap();
+    assert_eq!(c.controller, 0);
+    assert!(c.keywords().contains(&Keyword::Menace) && c.keywords().contains(&Keyword::Haste));
+    assert!(!g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Formidable — Dragon Whisperer makes a Dragon only with 8 total power.
+#[test]
+fn dragon_whisperer_needs_formidable() {
+    let mut g = pod(2);
+    let whisperer = g.add_card_to_battlefield(0, catalog::dragon_whisperer());
+    assert!(activate(&mut g, whisperer, 2).is_err(), "2 power");
+    g.add_token_to_battlefield(0, &body("Beast", 6, CreatureType::Beast));
+    activate(&mut g, whisperer, 2).expect("8 power");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Dragon"));
+}
+
+/// Lapis Lazuli Talisman answers an opponent's blue spell with an untap.
+#[test]
+fn lapis_lazuli_talisman_untaps_on_any_blue_spell() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::lapis_lazuli_talisman());
+    let mine = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let blue = g.add_card_to_hand(1, catalog::hydrolash());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: blue, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("a blue spell");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(mine).unwrap().tapped);
+}
+
+/// Riddleform becomes a 3/3 flying Sphinx when you cast a noncreature spell.
+#[test]
+fn riddleform_wakes_on_a_noncreature_spell() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let form = g.add_card_to_battlefield(0, catalog::riddleform());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let due = g.add_card_to_hand(0, catalog::demons_due());
+    cast(&mut g, due, None);
+    assert_eq!(pt(&g, form), (3, 3));
+    assert!(g.computed_permanent(form).unwrap().keywords().contains(&Keyword::Flying));
+}
+
+/// Pyrrhic Blast hits for the sacrificed creature's power and draws.
+#[test]
+fn pyrrhic_blast_flings_and_draws() {
+    let mut g = pod(2);
+    g.add_token_to_battlefield(0, &body("Beast", 5, CreatureType::Beast));
+    let life = g.players[1].life;
+    let hand = g.players[0].hand.len();
+    let blast = g.add_card_to_hand(0, catalog::pyrrhic_blast());
+    cast(&mut g, blast, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 5);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Kithkin Mourncaller draws for an attacking Elf's death, not an idle one.
+#[test]
+fn kithkin_mourncaller_mourns_attackers() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::kithkin_mourncaller());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    attack_with(&mut g, &[elf]);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(elf)));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the Bolt left, the draw came in");
+}
+
+/// Hold for Questioning taps, investigates, and shuts the host's abilities
+/// off.
+#[test]
+fn hold_for_questioning_locks_activated_abilities() {
+    let mut g = pod(2);
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let hold = g.add_card_to_hand(0, catalog::hold_for_questioning());
+    cast(&mut g, hold, Some(Target::Permanent(elf)));
+    assert!(g.battlefield_find(elf).unwrap().tapped);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Clue"));
+    assert!(g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::CantActivateAbilities));
+}
+
+/// Winterflame may both tap one creature and burn another.
+#[test]
+fn winterflame_takes_both_modes() {
+    let mut g = pod(2);
+    let a = g.add_token_to_battlefield(1, &body("Beast", 3, CreatureType::Beast));
+    let b = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let flame = g.add_card_to_hand(0, catalog::winterflame());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: flame,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        x_value: None,
+    })
+    .expect("both modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped);
+    assert!(g.battlefield_find(b).is_none());
+}
+
+/// Heart-Piercer Bow pings a defender's creature from the Equipment.
+#[test]
+fn heart_piercer_bow_pings_a_blocker_to_be() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let theirs = g.add_token_to_battlefield(1, &body("Beast", 3, CreatureType::Beast));
+    let bow = g.add_card_to_battlefield(0, catalog::heart_piercer_bow());
+    equip(&mut g, bow, bear);
+    attack_with(&mut g, &[bear]);
+    assert_eq!(g.battlefield_find(theirs).unwrap().damage, 1);
+}
+
+/// Protomatter Powder returns an artifact card from your graveyard.
+#[test]
+fn protomatter_powder_returns_an_artifact() {
+    let mut g = pod(2);
+    let powder = g.add_card_to_battlefield(0, catalog::protomatter_powder());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    activate_on(&mut g, powder, 0, Some(Target::Permanent(ring))).expect("activate");
+    assert!(g.battlefield_find(ring).is_some());
+}

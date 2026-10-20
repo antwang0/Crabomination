@@ -2757,3 +2757,349 @@ pub fn curse_of_oblivion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch seven ─────────────────────────────────────────────────────────────
+
+/// Lose Calm — {3}{R} sorcery. Gain control of target creature until end of
+/// turn, untap it; it gains haste and menace until end of turn.
+pub fn lose_calm() -> CardDefinition {
+    let grant = |keyword| Effect::GrantKeyword { what: Selector::Target(0), keyword, duration: Duration::EndOfTurn };
+    spell(
+        "Lose Calm",
+        cost(&[generic(3), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            grant(Keyword::Haste),
+            grant(Keyword::Menace),
+        ]),
+    )
+}
+
+/// Dragon Whisperer — {R}{R} 2/2 Human Shaman. {R}: flying until end of
+/// turn. {1}{R}: +1/+0 until end of turn. Formidable — {4}{R}{R}: a 4/4 red
+/// flying Dragon token; only if your creatures' total power is 8 or greater.
+pub fn dragon_whisperer() -> CardDefinition {
+    let dragon = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Dragon", 4, 4, vec![Color::Red], vec![CreatureType::Dragon])
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+            ActivatedAbility { mana_cost: cost(&[generic(1), r()]), effect: pump_self(1, 0), ..Default::default() },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), r(), r()]),
+                condition: Some(Predicate::FormidableActive { who: PlayerRef::You }),
+                effect: make(1, dragon),
+                ..Default::default()
+            },
+        ],
+        ..creature("Dragon Whisperer", cost(&[r(), r()]), vec![CreatureType::Human, CreatureType::Shaman], 2, 2)
+    }
+}
+
+/// Lapis Lazuli Talisman — {2} artifact. Whenever a player casts a blue
+/// spell, you may pay {3}; if you do, untap target permanent.
+pub fn lapis_lazuli_talisman() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::CastSpellMatches(R::HasColor(Color::Blue))),
+            effect: Effect::MayPay {
+                description: "Pay {3} to untap target permanent?".into(),
+                mana_cost: cost(&[generic(3)]),
+                body: Box::new(Effect::Untap { what: target_filtered(R::Permanent), up_to: None }),
+                else_: None,
+            },
+        }],
+        ..spell("Lapis Lazuli Talisman", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Riddleform — {1}{U} enchantment. Whenever you cast a noncreature spell,
+/// you may have it become a 3/3 flying Sphinx creature in addition to its
+/// other types until end of turn. {2}{U}: scry 1.
+pub fn riddleform() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Not(Box::new(R::Creature)))),
+            effect: Effect::MayDo {
+                description: "Have Riddleform become a 3/3 flying Sphinx?".into(),
+                body: Box::new(Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Sphinx],
+                    keywords: vec![Keyword::Flying],
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..spell("Riddleform", cost(&[generic(1), u()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Pyrrhic Blast — {3}{R} instant. As an additional cost, sacrifice a
+/// creature. Damage equal to its power to any target. Draw a card.
+pub fn pyrrhic_blast() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::ControlledByYou),
+            count: 1,
+        }],
+        ..spell(
+            "Pyrrhic Blast",
+            cost(&[generic(3), r()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::SacrificedPower },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        )
+    }
+}
+
+/// Kithkin Mourncaller — {2}{G} 2/2 Kithkin Scout. Whenever an attacking
+/// Kithkin or Elf is put into your graveyard from the battlefield, you may
+/// draw a card.
+pub fn kithkin_mourncaller() -> CardDefinition {
+    let kin = R::HasCreatureType(CreatureType::Kithkin).or(R::HasCreatureType(CreatureType::Elf));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: kin.and(R::IsAttacking).and(R::OwnedByYou),
+            }),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..creature("Kithkin Mourncaller", cost(&[generic(2), g()]), vec![CreatureType::Kithkin, CreatureType::Scout], 2, 2)
+    }
+}
+
+/// Obelisk of Bant — {3} artifact. {T}: {G}, {W} or {U}.
+pub fn obelisk_of_bant() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(vec![Color::Green, Color::White, Color::Blue], Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..spell("Obelisk of Bant", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Protomatter Powder — {2}{U} artifact. {4}{W}, {T}, sacrifice it: return
+/// target artifact card from your graveyard to the battlefield.
+pub fn protomatter_powder() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..spell("Protomatter Powder", cost(&[generic(2), u()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Hold for Questioning — {3}{U} Aura. Enchant creature or planeswalker.
+/// When it enters, tap enchanted permanent and investigate. It doesn't untap
+/// and its activated abilities can't be activated.
+pub fn hold_for_questioning() -> CardDefinition {
+    CardDefinition {
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.or(R::Planeswalker)) },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: Selector::attached_to(Selector::This) },
+            crate::effect::shortcut::investigate(1),
+        ]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted permanent doesn't untap during its controller's untap step.",
+                effect: StaticEffect::PreventUntap { applies_to: Selector::attached_to(Selector::This) },
+            },
+            StaticAbility {
+                description: "Enchanted permanent's activated abilities can't be activated.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::attached_to(Selector::This),
+                    keyword: Keyword::CantActivateAbilities,
+                },
+            },
+        ],
+        ..aura("Hold for Questioning", cost(&[generic(3), u()]), None)
+    }
+}
+
+/// Sleek Schooner — {3} 4/3 Vehicle. Crew 1.
+pub fn sleek_schooner() -> CardDefinition {
+    CardDefinition {
+        name: "Sleek Schooner",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Crew(1)],
+        ..Default::default()
+    }
+}
+
+/// Molten Blast — {2}{R} instant. Choose one — 2 damage to target creature
+/// or planeswalker; or destroy target artifact.
+pub fn molten_blast() -> CardDefinition {
+    spell(
+        "Molten Blast",
+        cost(&[generic(2), r()]),
+        CardType::Instant,
+        Effect::ChooseMode(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature.or(R::Planeswalker)), amount: Value::Const(2) },
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+        ]),
+    )
+}
+
+/// Winterflame — {1}{U}{R} instant. Choose one or both — tap target creature;
+/// 2 damage to target creature.
+pub fn winterflame() -> CardDefinition {
+    spell(
+        "Winterflame",
+        cost(&[generic(1), u(), r()]),
+        CardType::Instant,
+        Effect::ChooseModesCast {
+            modes: vec![
+                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(2) },
+            ],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+        },
+    )
+}
+
+/// Throne of Empires — {4} artifact. {1}, {T}: a 1/1 white Soldier token;
+/// five instead if you control artifacts named Crown of Empires and Scepter
+/// of Empires.
+pub fn throne_of_empires() -> CardDefinition {
+    let have = |name: &str| {
+        Predicate::SelectorExists(Selector::EachPermanent(
+            R::Artifact.and(R::ControlledByYou).and(R::HasName(name.into())),
+        ))
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::IfPred {
+                    pred: Box::new(Predicate::All(vec![have("Crown of Empires"), have("Scepter of Empires")])),
+                    then: Box::new(Value::Const(5)),
+                    else_: Box::new(Value::ONE),
+                },
+                definition: Arc::new(token("Soldier", 1, 1, vec![Color::White], vec![CreatureType::Soldier])),
+            },
+            ..Default::default()
+        }],
+        ..spell("Throne of Empires", cost(&[generic(4)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Guardian Shield-Bearer — {1}{G} 2/1 Human Soldier. Megamorph {3}{G}. When
+/// it's turned face up, put a +1/+1 counter on another target creature you
+/// control.
+pub fn guardian_shield_bearer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Megamorph(cost(&[generic(3), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature("Guardian Shield-Bearer", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 1)
+    }
+}
+
+/// Infiltrator il-Kor — {4}{U} 3/1 Kor Rogue. Shadow. Suspend 2—{1}{U}.
+pub fn infiltrator_il_kor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Shadow, Keyword::Suspend(2, cost(&[generic(1), u()]))],
+        ..creature("Infiltrator il-Kor", cost(&[generic(4), u()]), vec![CreatureType::Kor, CreatureType::Rogue], 3, 1)
+    }
+}
+
+/// Viscerid Deepwalker — {4}{U} 2/3 Homarid Warrior. {U}: +1/+0 until end of
+/// turn. Suspend 4—{U}.
+pub fn viscerid_deepwalker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(4, cost(&[u()]))],
+        activated_abilities: vec![ActivatedAbility { mana_cost: cost(&[u()]), effect: pump_self(1, 0), ..Default::default() }],
+        ..creature("Viscerid Deepwalker", cost(&[generic(4), u()]), vec![CreatureType::Homarid, CreatureType::Warrior], 2, 3)
+    }
+}
+
+/// Petrified Plating — {2}{G} Aura. Enchanted creature gets +2/+2. Suspend
+/// 2—{G}.
+pub fn petrified_plating() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(2, cost(&[g()]))],
+        ..aura("Petrified Plating", cost(&[generic(2), g()]), Some(EquipBonus { power: 2, toughness: 2, ..Default::default() }))
+    }
+}
+
+/// Aeronaut's Wings — {2} Equipment. Equipped creature gets +1/+0 and has
+/// flying. Equip {2}.
+pub fn aeronauts_wings() -> CardDefinition {
+    equipment(
+        "Aeronaut's Wings",
+        cost(&[generic(2)]),
+        cost(&[generic(2)]),
+        EquipBonus { power: 1, keywords: vec![Keyword::Flying], ..Default::default() },
+    )
+}
+
+/// Heart-Piercer Bow — {2} Equipment. Whenever equipped creature attacks,
+/// this Equipment deals 1 damage to target creature defending player
+/// controls. Equip {1}.
+pub fn heart_piercer_bow() -> CardDefinition {
+    equipment(
+        "Heart-Piercer Bow",
+        cost(&[generic(2)]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                    amount: Value::ONE,
+                },
+            }],
+            triggers_on_equipment: true,
+            ..Default::default()
+        },
+    )
+}
