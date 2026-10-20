@@ -3233,6 +3233,10 @@ pub enum StaticEffect {
     /// `GameState::player_casts_hand_spells_free`, which lets
     /// `CastFromZoneWithoutPaying` resolve a hand spell free of charge.
     CastHandSpellsFree,
+    /// "While you're searching your library, you may cast this card from your
+    /// library" (Panglacial Wurm): a marker read off the card in the library by
+    /// the generic search (`offer_casts_while_searching`), never a layer effect.
+    CastFromLibraryWhileSearching,
     /// Like `CastHandSpellsFree` but restricted to hand spells matching
     /// `filter` — "You may cast Dragon spells without paying their mana costs"
     /// (Dracogenesis). Consulted by `player_casts_hand_spells_free`.

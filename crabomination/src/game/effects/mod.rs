@@ -64,6 +64,7 @@ mod reveal_cast_types;
 mod sculpted_sunburst;
 mod fumble;
 mod threats_undetected;
+mod search_cast;
 mod music;
 mod reblock;
 mod spell_copy_others;
@@ -27568,6 +27569,8 @@ impl GameState {
                     // Trap) and the search itself is an event (Ob Nixilis).
                     self.players[p].searched_library_this_turn = true;
                     events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                    // Panglacial Wurm — cast before anything is found.
+                    self.offer_casts_while_searching(p, ctx, events);
                 }
                 // CR 701.19a — the picker (when distinct) makes the pick;
                 // the searched library is still `p`'s.

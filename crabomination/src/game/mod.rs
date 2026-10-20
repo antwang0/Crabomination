@@ -35586,6 +35586,8 @@ fn static_effect_to_effects(
             // CastHandSpellsFree (Omniscience) — read by the free-cast
             // action via `player_casts_hand_spells_free`; no layer effect.
             | StaticEffect::CastHandSpellsFree
+            // Read off a library card by the generic search (`search_cast.rs`).
+            | StaticEffect::CastFromLibraryWhileSearching
             | StaticEffect::CastFilteredSpellsFree { .. }
             | StaticEffect::CastHandSpellsForCollectEvidence { .. }
             // AnyoneCastsCheapCreaturesFree (Aluren) — read by the free-cast
