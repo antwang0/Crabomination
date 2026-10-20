@@ -528,3 +528,76 @@ fn blim_gives_a_gift_and_charges_for_it() {
     assert_eq!(g.players[1].life, 15, "4 combat damage, then 1 for the gift");
     assert_eq!(g.players[1].hand.len(), 1);
 }
+
+fn loyalty(g: &mut GameState, pw: CardId, index: usize, target: Option<Target>) {
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: pw, ability_index: index, target, x_value: None })
+        .expect("loyalty");
+    drain_stack(g);
+}
+
+/// CR 606 / 707.10 — Chandra's Regulator pays {1} to copy a Chandra's
+/// loyalty ability: Flame's Fury's +1 hits twice.
+#[test]
+fn chandras_regulator_copies_a_chandra_ability() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::chandras_regulator());
+    let fury = ready(&mut g, 0, catalog::chandra_flames_fury());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    loyalty(&mut g, fury, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 16, "2 damage, copied");
+}
+
+/// Chandra, Flame's Fury's −2 hits the creature and its controller.
+#[test]
+fn chandra_flames_fury_minus_two_hits_both() {
+    let mut g = pod(3);
+    let fury = ready(&mut g, 0, catalog::chandra_flames_fury());
+    let giant = ready(&mut g, 2, catalog::hill_giant());
+    loyalty(&mut g, fury, 1, Some(Target::Permanent(giant)));
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.players[2].life, 18);
+    assert_eq!(g.players[1].life, 20);
+}
+
+/// Chandra, Flame's Catalyst's −8 refills the hand and makes it free for the
+/// turn; the flag is gone at the next turn's start.
+#[test]
+fn chandra_flames_catalyst_ultimate_casts_for_free() {
+    let mut g = pod(2);
+    let cat = ready(&mut g, 0, catalog::chandra_flames_catalyst());
+    g.battlefield_find_mut(cat).unwrap().counters.insert(crabomination::card::CounterType::Loyalty, 8);
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::hill_giant());
+    }
+    g.players[0].library.rotate_right(7);
+    loyalty(&mut g, cat, 2, None);
+    assert_eq!(g.players[0].hand.len(), 7);
+    let giant = g.players[0].hand[0].id;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: giant,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some());
+}
+
+/// Way of the Cryomancer empowers a Jace and gives it the copy ability.
+#[test]
+fn way_of_the_cryomancer_makes_a_jace_with_a_copy_ability() {
+    let mut g = pod(2);
+    let way = g.add_card_to_hand(0, catalog::way_of_the_cryomancer());
+    flood(&mut g, 0);
+    cast(&mut g, way, None).expect("cast");
+    let jace = g.battlefield.iter().find(|c| c.definition.name.contains("Jace")).expect("a Jace token").id;
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 5);
+    // The granted −3 is the index past Jace's own two.
+    loyalty(&mut g, jace, 2, None);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+    assert_eq!(g.players[1].life, 14, "the bolt was copied");
+}

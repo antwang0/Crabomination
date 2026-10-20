@@ -18187,6 +18187,10 @@ static DECKS: &[Factory] = &[
     super::decks::blim_comedic_genius,
     super::decks::greeds_gambit,
     super::decks::the_trickster_gods_heist,
+    super::decks::chandras_regulator,
+    super::decks::way_of_the_cryomancer,
+    super::decks::chandra_flames_catalyst,
+    super::decks::chandra_flames_fury,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
