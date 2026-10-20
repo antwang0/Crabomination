@@ -33782,6 +33782,8 @@ fn event_amount(event: &GameEvent) -> u32 {
         // result-gated triggers (`Predicate::DieResultAtLeast`).
         GameEvent::DiceRolled { high, .. } => *high as u32,
         GameEvent::DieResult { result, .. } => *result as u32,
+        // The exploited creature's last-known power (Henry Wu's "power 3 or greater").
+        GameEvent::Exploited { power, .. } => (*power).max(0) as u32,
         GameEvent::AbilityActivated { paid, .. } => *paid,
         _ => 0,
     }

@@ -297,6 +297,8 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::Investigated { first_only }, GameEvent::Investigated { first_this_turn, .. }) => {
             !first_only || *first_this_turn
         }
+        (A::ExploitedNonHuman, GameEvent::Exploited { human, .. }) => !human,
+        (A::ExploitedNontoken, GameEvent::Exploited { token, .. }) => !token,
         (A::Exploited, GameEvent::Exploited { .. })
         | (A::Enlisted, GameEvent::Enlisted { .. })
         | (A::BecameRenowned, GameEvent::BecameRenowned { .. })
@@ -2072,7 +2074,7 @@ mod tests {
             E::Foraged { player: 0 },
             E::Bent { player: 0, kind: crate::effect::BendKind::Earth },
             E::Investigated { player: 0, first_this_turn: true },
-            E::Exploited { card_id: c, controller: 0 },
+            E::Exploited { card_id: c, controller: 0, power: 0, human: false, token: false },
             E::Enlisted { card_id: c, controller: 0 },
             E::BecameRenowned { card_id: c, controller: 0 },
             E::EvidenceCollected { player: 0 },
@@ -2244,6 +2246,8 @@ mod tests {
             K::Foraged,
             K::Performed(crate::effect::KeywordAct::Investigated { first_only: true }),
             K::Performed(crate::effect::KeywordAct::Exploited),
+            K::Performed(crate::effect::KeywordAct::ExploitedNonHuman),
+            K::Performed(crate::effect::KeywordAct::ExploitedNontoken),
             K::Performed(crate::effect::KeywordAct::Enlisted),
             K::Performed(crate::effect::KeywordAct::BecameRenowned),
             K::Performed(crate::effect::KeywordAct::DieResult),

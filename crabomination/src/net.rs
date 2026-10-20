@@ -3153,7 +3153,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::Foraged { player } => GameEventWire::Foraged { player: *player },
             GameEvent::Bent { player, kind } => GameEventWire::Bent { player: *player, kind: *kind },
             GameEvent::Investigated { player, .. } => GameEventWire::Investigated { player: *player },
-            GameEvent::Exploited { card_id, controller } => {
+            GameEvent::Exploited { card_id, controller, .. } => {
                 GameEventWire::Exploited { card_id: *card_id, controller: *controller }
             }
             GameEvent::Enlisted { card_id, controller } => {

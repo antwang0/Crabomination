@@ -4222,8 +4222,15 @@ pub enum KeywordAct {
     /// Illuminator), counted whether or not the listener was there for it.
     Investigated { first_only: bool },
     /// CR 702.110b — a creature exploited a creature (its exploit trigger
-    /// sacrificed one); the exploiter is the subject (Colonel Autumn).
+    /// sacrificed one); the exploiter is the subject (Colonel Autumn), the
+    /// exploited creature's last-known power the event amount.
     Exploited,
+    /// [`Exploited`](Self::Exploited) where the exploited creature wasn't a
+    /// Human (Henry Wu, InGen Geneticist).
+    ExploitedNonHuman,
+    /// [`Exploited`](Self::Exploited) where the exploited creature wasn't a
+    /// token (Skull Skaab).
+    ExploitedNontoken,
     /// CR 702.154c — an attacking creature enlisted a creature; the attacker
     /// is the subject (Aradesh, the Founder).
     Enlisted,

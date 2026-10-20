@@ -24280,8 +24280,19 @@ impl GameState {
             }
 
             Effect::NoteExploited => {
+                // The exploit's sacrifice is this resolution's latest one.
                 if let Some(src) = ctx.source {
-                    events.push(GameEvent::Exploited { card_id: src, controller: ctx.controller });
+                    let (power, human, token) = self
+                        .scratch
+                        .sacrificed_lki_this_resolution
+                        .last()
+                        .map(|c| {
+                            let human = c.definition.has_creature_type(crate::card::CreatureType::Human)
+                                || c.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                            (c.power(), human, c.is_token)
+                        })
+                        .unwrap_or((0, false, false));
+                    events.push(GameEvent::Exploited { card_id: src, controller: ctx.controller, power, human, token });
                 }
                 Ok(())
             }

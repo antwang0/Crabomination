@@ -2989,8 +2989,10 @@ pub enum GameEvent {
     /// `first_this_turn` marks their first investigation of the turn.
     Investigated { player: usize, first_this_turn: bool },
     /// CR 702.110b — `card_id` exploited a creature (its exploit trigger
-    /// sacrificed one). `controller` is the exploiter's.
-    Exploited { card_id: CardId, controller: usize },
+    /// sacrificed one). `controller` is the exploiter's; the exploited
+    /// creature's last-known power (the event amount), Human-ness and token-ness
+    /// ride along for "exploits a non-Human / nontoken creature" (Henry Wu).
+    Exploited { card_id: CardId, controller: usize, power: i32, human: bool, token: bool },
     /// CR 702.154c — attacking `card_id` enlisted a creature.
     Enlisted { card_id: CardId, controller: usize },
     /// CR 702.112b — `card_id` became renowned (it wasn't before).
