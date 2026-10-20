@@ -39,7 +39,8 @@ def legality(cache):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    argv = sys.argv[1:]
+    args = [a for i, a in enumerate(argv) if not a.startswith("--") and (i == 0 or argv[i - 1] != "--max")]
     cache = args[0] if args else "/tmp/crab_commander"
     legal_only = "--legal" in sys.argv
     cap = int(sys.argv[sys.argv.index("--max") + 1]) if "--max" in sys.argv else 99
