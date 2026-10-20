@@ -18176,6 +18176,10 @@ static DECKS: &[Factory] = &[
     super::decks::crown_of_the_ages,
     super::decks::drake_umbra,
     super::decks::illusory_gains,
+    super::decks::proft_sinister_mastermind,
+    super::decks::tyrannical_pitlord,
+    super::decks::circle_of_affliction,
+    super::decks::grave_strength,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

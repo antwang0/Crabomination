@@ -343,3 +343,73 @@ fn crown_of_the_ages_moves_an_aura() {
     assert_eq!(g.computed_permanent(vanguard).unwrap().power, 5);
     assert!(g.computed_permanent(vanguard).unwrap().keywords().contains(&crabomination::card::Keyword::Flying));
 }
+
+/// CR 702.143 (threshold-style cast restriction) — Proft can't be cast with
+/// six cards in your graveyard and can with seven.
+#[test]
+fn proft_needs_seven_cards_in_your_graveyard() {
+    let mut g = pod(2);
+    let proft = g.add_card_to_hand(0, catalog::proft_sinister_mastermind());
+    for _ in 0..6 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    flood(&mut g, 0);
+    assert!(cast(&mut g, proft, None).is_err(), "six cards");
+    g.add_card_to_graveyard(0, catalog::island());
+    cast(&mut g, proft, None).expect("seven cards");
+    assert!(g.battlefield_find(proft).is_some());
+}
+
+/// Tyrannical Pitlord's chosen creature gets +3/+3 and flying, and is
+/// sacrificed when the Pitlord leaves.
+#[test]
+fn tyrannical_pitlord_links_the_chosen_creature() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let pitlord = g.add_card_to_hand(0, catalog::tyrannical_pitlord());
+    flood(&mut g, 0);
+    cast(&mut g, pitlord, None).expect("cast");
+    let cp = g.computed_permanent(bears).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast(&mut g, murder, Some(Target::Permanent(pitlord))).expect("murder");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pitlord).is_none());
+    assert!(g.battlefield_find(bears).is_none(), "the chosen creature was sacrificed");
+}
+
+/// Circle of Affliction drains when a source of the chosen color damages you.
+#[test]
+fn circle_of_affliction_drains_off_chosen_color_damage() {
+    let mut g = pod(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    let circle = g.add_card_to_hand(0, catalog::circle_of_affliction());
+    flood(&mut g, 0);
+    cast(&mut g, circle, None).expect("cast");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bolt, Some(Target::Player(0))).expect("bolt");
+    assert_eq!(g.players[0].life, 18, "3 damage, then gained 1");
+    assert_eq!(g.players[1].life, 19, "drained");
+}
+
+/// Grave Strength counts creature cards in your graveyard after its mill.
+#[test]
+fn grave_strength_counts_creatures_after_milling() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let gs = g.add_card_to_hand(0, catalog::grave_strength());
+    flood(&mut g, 0);
+    cast(&mut g, gs, Some(Target::Permanent(bears))).expect("cast");
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 4);
+}
