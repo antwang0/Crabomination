@@ -5271,13 +5271,9 @@ pub enum Effect {
     /// {W/B} to return from gy", and any other "may pay X to do Y"
     /// rider where the cost is pure mana.
     ///
-    /// Cost evaluation walks the controller's *pool* (already-floated
-    /// mana) — the engine doesn't tap lands automatically inside an
-    /// `Effect::MayPay`, matching MTG's "you can't activate mana
-    /// abilities mid-resolution unless the rules let you." Tests that
-    /// want to exercise the paid path should pre-float the mana
-    /// (`game.players[c].mana_pool.add_colored(...)`) and feed
-    /// `DecisionAnswer::Bool(true)` to the scripted decider.
+    /// Payment takes the floating pool first, then the controller's
+    /// untapped sources (CR 605.3a — mana abilities may be activated while
+    /// paying a cost mid-resolution).
     ///
     /// X-cost variants (where the optional cost has its own X prompt)
     /// are out of scope here — those should land as a sibling
