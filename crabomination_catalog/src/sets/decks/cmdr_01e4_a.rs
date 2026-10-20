@@ -3,8 +3,8 @@
 //! Tests in `tests/recent_b/cmdr_01e4_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, PlaneswalkerSubtype, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, WardCost, Zone,
 };
 use crate::effect::shortcut::{etb, target_filtered};
@@ -991,5 +991,726 @@ pub fn bristlebane_outrider() -> CardDefinition {
             3,
             5,
         )
+    }
+}
+
+// ── Batch three ─────────────────────────────────────────────────────────────
+
+/// Safehold Sentry — {1}{W} 2/2 Elf Warrior. {2}{W}, {Q}: +0/+2 until end of
+/// turn.
+pub fn safehold_sentry() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            untap_self_cost: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(0),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Safehold Sentry", cost(&[generic(1), w()]), vec![CreatureType::Elf, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Scarblade Elite — {B}{B} 2/2 Elf Assassin. {T}, exile an Assassin card
+/// from your graveyard: destroy target creature.
+pub fn scarblade_elite() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_other_filter: Some((R::HasCreatureType(CreatureType::Assassin), 1)),
+            effect: Effect::Destroy { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature("Scarblade Elite", cost(&[b(), b()]), vec![CreatureType::Elf, CreatureType::Assassin], 2, 2)
+    }
+}
+
+/// Bone Pit Brute — {4}{R}{R} 4/5 Cyclops. Menace. When it enters, target
+/// creature gets +4/+0 until end of turn.
+pub fn bone_pit_brute() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(4),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Bone Pit Brute", cost(&[generic(4), r(), r()]), vec![CreatureType::Cyclops], 4, 5)
+    }
+}
+
+/// Orazca Raptor — {2}{R}{R} 3/4 Dinosaur.
+pub fn orazca_raptor() -> CardDefinition {
+    creature("Orazca Raptor", cost(&[generic(2), r(), r()]), vec![CreatureType::Dinosaur], 3, 4)
+}
+
+/// Thrash of Raptors — {3}{R} 3/3 Dinosaur. As long as you control another
+/// Dinosaur, it gets +2/+0 and has trample.
+pub fn thrash_of_raptors() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control another Dinosaur, this gets +2/+0 and has trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Dinosaur).and(R::ControlledByYou).and(R::OtherThanSource),
+                )),
+                power: 2,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..creature("Thrash of Raptors", cost(&[generic(3), r()]), vec![CreatureType::Dinosaur], 3, 3)
+    }
+}
+
+/// Sigil Blessing — {G}{W} instant. Until end of turn, target creature you
+/// control gets +3/+3 and other creatures you control get +1/+1.
+pub fn sigil_blessing() -> CardDefinition {
+    spell(
+        "Sigil Blessing",
+        cost(&[g(), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::EachPermanentExceptTargets(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Spawning Breath — {1}{R} instant. 1 damage to any target; create a 0/1
+/// Eldrazi Spawn token.
+pub fn spawning_breath() -> CardDefinition {
+    spell(
+        "Spawning Breath",
+        cost(&[generic(1), r()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(crabomination_base::tokens::eldrazi_spawn_token()),
+            },
+        ]),
+    )
+}
+
+/// Accomplished Automaton — {7} 5/7 artifact creature Construct. Fabricate 1.
+pub fn accomplished_automaton() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![crate::effect::shortcut::fabricate(1)],
+        ..creature("Accomplished Automaton", cost(&[generic(7)]), vec![CreatureType::Construct], 5, 7)
+    }
+}
+
+/// Ajani's Comrade — {1}{G} 2/2 Elf Soldier. Trample. At the beginning of
+/// combat on your turn, if you control an Ajani planeswalker, put a +1/+1
+/// counter on it.
+pub fn ajanis_comrade() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl).with_filter(
+                Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasPlaneswalkerType(PlaneswalkerSubtype::Ajani).and(R::ControlledByYou),
+                )),
+            ),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..creature("Ajani's Comrade", cost(&[generic(1), g()]), vec![CreatureType::Elf, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Aurora Champion — {2}{W} 3/2 Elf Warrior. Whenever it attacks, if your
+/// team controls another Warrior, tap target creature.
+pub fn aurora_champion() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::SelectorExists(
+                Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Warrior).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+            )),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+        }],
+        ..creature("Aurora Champion", cost(&[generic(2), w()]), vec![CreatureType::Elf, CreatureType::Warrior], 3, 2)
+    }
+}
+
+/// Incremental Growth — {3}{G}{G} sorcery. One, two and three +1/+1 counters
+/// on three different target creatures.
+pub fn incremental_growth() -> CardDefinition {
+    let slot = |n: u8, filter: R| Selector::TargetFiltered { slot: n, filter };
+    let grow = |what: Selector, n: i32| Effect::AddCounter { what, kind: CounterType::PlusOnePlusOne, amount: Value::Const(n) };
+    spell(
+        "Incremental Growth",
+        cost(&[generic(3), g(), g()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            grow(target_filtered(R::Creature), 1),
+            grow(slot(1, R::Creature.and(R::OtherThanTargetSlot(0))), 2),
+            grow(slot(2, R::Creature.and(R::OtherThanTargetSlot(0)).and(R::OtherThanTargetSlot(1))), 3),
+        ]),
+    )
+}
+
+/// Inspiring Roar — {3}{W} sorcery. A +1/+1 counter on each creature you
+/// control.
+pub fn inspiring_roar() -> CardDefinition {
+    spell(
+        "Inspiring Roar",
+        cost(&[generic(3), w()]),
+        CardType::Sorcery,
+        Effect::AddCounter {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+    )
+}
+
+/// Lightning-Core Excavator — {1} 0/3 artifact creature Golem. {5}, {T},
+/// sacrifice it: 3 damage to any target.
+pub fn lightning_core_excavator() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..creature("Lightning-Core Excavator", cost(&[generic(1)]), vec![CreatureType::Golem], 0, 3)
+    }
+}
+
+/// Slumbering Walker — {3}{W}{W} 4/7 Giant Warrior. Enters with two -1/-1
+/// counters. At the beginning of your end step, you may remove a counter from
+/// it; when you do, return target creature card with power 2 or less from
+/// your graveyard to the battlefield (CR 603.12 reflexive trigger).
+pub fn slumbering_walker() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(2))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::This, filter: R::WithAnyCounter },
+            ),
+            effect: Effect::MayDo {
+                description: "Remove a counter from Slumbering Walker?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::MinusOneMinusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(R::Creature.and(R::PowerAtMost(2)).from_your_graveyard()),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    },
+                ])),
+            },
+        }],
+        ..creature("Slumbering Walker", cost(&[generic(3), w(), w()]), vec![CreatureType::Giant, CreatureType::Warrior], 4, 7)
+    }
+}
+
+/// Exuberant Wolfbear — {3}{G} 4/4 Wolf Bear. Whenever it attacks, you may
+/// have the base power and toughness of target Human you control become equal
+/// to its power and toughness until end of turn.
+pub fn exuberant_wolfbear() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Make a Human as big as Exuberant Wolfbear?".into(),
+                body: Box::new(Effect::SetBasePT {
+                    what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Human)).and(R::ControlledByYou)),
+                    power: Value::PowerOf(Box::new(Selector::This)),
+                    toughness: Value::ToughnessOf(Box::new(Selector::This)),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..creature("Exuberant Wolfbear", cost(&[generic(3), g()]), vec![CreatureType::Wolf, CreatureType::Bear], 4, 4)
+    }
+}
+
+/// Razorclaw Bear — {2}{G}{G} 3/3 Bear. Whenever it becomes blocked, it gets
+/// +2/+2 until end of turn.
+pub fn razorclaw_bear() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Razorclaw Bear", cost(&[generic(2), g(), g()]), vec![CreatureType::Bear], 3, 3)
+    }
+}
+
+/// Awaken the Bear — {2}{G} instant. Target creature gets +3/+3 and gains
+/// trample until end of turn.
+pub fn awaken_the_bear() -> CardDefinition {
+    spell(
+        "Awaken the Bear",
+        cost(&[generic(2), g()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+        ]),
+    )
+}
+
+/// Golgari Locket — {3} artifact. {T}: {B} or {G}. {B/G}{B/G}{B/G}{B/G},
+/// {T}, sacrifice it: draw two cards.
+pub fn golgari_locket() -> CardDefinition {
+    let bg = || hybrid(Color::Black, Color::Green);
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![Color::Black, Color::Green], Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[bg(), bg(), bg(), bg()]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..spell("Golgari Locket", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Elvish Eulogist — {G} 1/1 Elf Shaman. Sacrifice it: gain 1 life for each
+/// Elf card in your graveyard.
+pub fn elvish_eulogist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: R::HasCreatureType(CreatureType::Elf),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Elvish Eulogist", cost(&[g()]), vec![CreatureType::Elf, CreatureType::Shaman], 1, 1)
+    }
+}
+
+/// Shi'ar Soldier — {1}{U} 1/3 Shi'ar Soldier. Flying. {U}, {T}: return
+/// another target permanent you control to its owner's hand. Activate only
+/// during your turn.
+pub fn shiar_soldier() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..creature("Shi'ar Soldier", cost(&[generic(1), u()]), vec![CreatureType::Shiar, CreatureType::Soldier], 1, 3)
+    }
+}
+
+/// Hard Cover — {U} Aura. Enchanted creature gets +0/+2 and has "{T}: Draw a
+/// card, then discard a card."
+pub fn hard_cover() -> CardDefinition {
+    aura(
+        "Hard Cover",
+        cost(&[u()]),
+        Some(EquipBonus {
+            toughness: 2,
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+    )
+}
+
+/// School Daze — {3}{U}{U} instant. Choose one — draw three cards; or counter
+/// target spell and draw a card.
+pub fn school_daze() -> CardDefinition {
+    spell(
+        "School Daze",
+        cost(&[generic(3), u(), u()]),
+        CardType::Instant,
+        Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Seq(vec![
+                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        ]),
+    )
+}
+
+/// Great Hall of Starnheim — land, enters tapped. {T}: {B}. {W}{W}{B}, {T},
+/// sacrifice it and a creature you control: a 4/4 white flying, vigilant
+/// Angel Warrior token. Sorcery speed.
+pub fn great_hall_of_starnheim() -> CardDefinition {
+    let angel = TokenDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        ..token("Angel Warrior", 4, 4, vec![Color::White], vec![CreatureType::Angel, CreatureType::Warrior])
+    };
+    CardDefinition {
+        name: "Great Hall of Starnheim",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Black),
+            ActivatedAbility {
+                mana_cost: cost(&[w(), w(), b()]),
+                tap_cost: true,
+                sac_cost: true,
+                sac_other_filter: Some((R::Creature.and(R::ControlledByYou), 1)),
+                sorcery_speed: true,
+                effect: make(1, angel),
+                ..Default::default()
+            },
+        ],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        ..Default::default()
+    }
+}
+
+/// Revelation of Power — {1}{W} instant. Target creature gets +2/+2 until
+/// end of turn; if it has a counter on it, it also gains flying and lifelink.
+pub fn revelation_of_power() -> CardDefinition {
+    let grant = |keyword| Effect::GrantKeyword { what: Selector::Target(0), keyword, duration: Duration::EndOfTurn };
+    spell(
+        "Revelation of Power",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::WithAnyCounter },
+                then: Box::new(Effect::Seq(vec![grant(Keyword::Flying), grant(Keyword::Lifelink)])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Llanowar Augur — {G} 0/3 Elf Shaman. Sacrifice it: target creature gets
+/// +3/+3 and gains trample until end of turn. Activate only during your
+/// upkeep.
+pub fn llanowar_augur() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Llanowar Augur", cost(&[g()]), vec![CreatureType::Elf, CreatureType::Shaman], 0, 3)
+    }
+}
+
+/// Oashra Cultivator — {G} 0/3 Human Druid. {2}{G}, {T}, sacrifice it: search
+/// your library for a basic land card and put it onto the battlefield tapped.
+pub fn oashra_cultivator() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..creature("Oashra Cultivator", cost(&[g()]), vec![CreatureType::Human, CreatureType::Druid], 0, 3)
+    }
+}
+
+/// Sultai Flayer — {3}{G} 3/4 Snake Shaman. Whenever a creature you control
+/// with toughness 4 or greater dies, you gain 4 life.
+pub fn sultai_flayer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ToughnessAtLeast(4) },
+            ),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        }],
+        ..creature("Sultai Flayer", cost(&[generic(3), g()]), vec![CreatureType::Snake, CreatureType::Shaman], 3, 4)
+    }
+}
+
+/// Saddle of the Cavalier — {2}{G} Equipment. Equipped creature gets +3/+3
+/// and can't be blocked by creatures with power 3 or less. Equip {3}.
+pub fn saddle_of_the_cavalier() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::PowerAtMost(3)))],
+            ..Default::default()
+        }),
+        ..spell("Saddle of the Cavalier", cost(&[generic(2), g()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Ahn-Crop Champion — {2}{G}{W} 4/4 Human Warrior. You may exert it as it
+/// attacks; when you do, untap all other creatures you control.
+pub fn ahn_crop_champion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![crate::effect::shortcut::on_exert(Effect::Untap {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            up_to: None,
+        })],
+        ..creature("Ahn-Crop Champion", cost(&[generic(2), g(), w()]), vec![CreatureType::Human, CreatureType::Warrior], 4, 4)
+    }
+}
+
+/// Paladin of the Bloodstained — {3}{W} 3/2 Vampire Knight. When it enters,
+/// create a 1/1 white Vampire token with lifelink.
+pub fn paladin_of_the_bloodstained() -> CardDefinition {
+    let vampire = TokenDefinition {
+        keywords: vec![Keyword::Lifelink],
+        ..token("Vampire", 1, 1, vec![Color::White], vec![CreatureType::Vampire])
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(make(1, vampire))],
+        ..creature(
+            "Paladin of the Bloodstained",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Vampire, CreatureType::Knight],
+            3,
+            2,
+        )
+    }
+}
+
+/// Loxodon Lifechanter — {5}{W} 4/6 Elephant Cleric. When it enters, you may
+/// have your life total become the total toughness of creatures you control.
+/// {5}{W}: +X/+X until end of turn, X your life total.
+pub fn loxodon_lifechanter() -> CardDefinition {
+    let life = || Value::LifeOf(PlayerRef::You);
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Have your life total become the total toughness of your creatures?".into(),
+            body: Box::new(Effect::SetLifeTotal { who: Selector::You, amount: Value::TotalToughnessControlled }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), w()]),
+            effect: Effect::PumpPT { what: Selector::This, power: life(), toughness: life(), duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature(
+            "Loxodon Lifechanter",
+            cost(&[generic(5), w()]),
+            vec![CreatureType::Elephant, CreatureType::Cleric],
+            4,
+            6,
+        )
+    }
+}
+
+/// Sandsteppe Mastodon — {5}{G}{G} 5/5 Elephant. Reach. When it enters,
+/// bolster 5.
+pub fn sandsteppe_mastodon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(crate::effect::shortcut::bolster(5))],
+        ..creature("Sandsteppe Mastodon", cost(&[generic(5), g(), g()]), vec![CreatureType::Elephant], 5, 5)
+    }
+}
+
+/// Aquitect's Defenses — {1}{U} Aura with flash. Enchant creature you
+/// control. When it enters, enchanted creature gains hexproof until end of
+/// turn. Enchanted creature gets +1/+2.
+pub fn aquitects_defenses() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: Selector::attached_to(Selector::This),
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        })],
+        ..aura(
+            "Aquitect's Defenses",
+            cost(&[generic(1), u()]),
+            Some(EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        )
+    }
+}
+
+/// Grasp of the Hieromancer — {1}{W} Aura. Enchanted creature gets +1/+1 and
+/// has "Whenever this creature attacks, tap target creature defending player
+/// controls."
+pub fn grasp_of_the_hieromancer() -> CardDefinition {
+    aura(
+        "Grasp of the Hieromancer",
+        cost(&[generic(1), w()]),
+        Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)) },
+            }],
+            ..Default::default()
+        }),
+    )
+}
+
+/// Park Heights Pegasus — {G}{W} 2/1 Pegasus. Flying, trample. Whenever it
+/// deals combat damage to a player, draw a card if you had two or more
+/// creatures enter under your control this turn.
+pub fn park_heights_pegasus() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::CreaturesEnteredThisTurn(PlayerRef::You), Value::Const(2)),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Park Heights Pegasus", cost(&[g(), w()]), vec![CreatureType::Pegasus], 2, 1)
+    }
+}
+
+/// Vine Mare — {2}{G}{G} 5/3 Elemental Horse. Hexproof. Can't be blocked by
+/// black creatures.
+pub fn vine_mare() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Hexproof, Keyword::CantBeBlockedBy(Box::new(R::HasColor(Color::Black)))],
+        ..creature("Vine Mare", cost(&[generic(2), g(), g()]), vec![CreatureType::Elemental, CreatureType::Horse], 5, 3)
+    }
+}
+
+/// Legion's Judgment — {2}{W} sorcery. Destroy target creature with power 4
+/// or greater.
+pub fn legions_judgment() -> CardDefinition {
+    spell(
+        "Legion's Judgment",
+        cost(&[generic(2), w()]),
+        CardType::Sorcery,
+        Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+    )
+}
+
+/// Bloodbriar — {2}{G} 2/3 Plant Elemental. Whenever you sacrifice another
+/// permanent, put a +1/+1 counter on it.
+pub fn bloodbriar() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource },
+            ),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..creature("Bloodbriar", cost(&[generic(2), g()]), vec![CreatureType::Plant, CreatureType::Elemental], 2, 3)
+    }
+}
+
+/// Illicit Shipment — {3}{B}{B} sorcery. Casualty 3. Search your library for
+/// a card and put it into your hand.
+pub fn illicit_shipment() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Casualty(3)],
+        ..spell(
+            "Illicit Shipment",
+            cost(&[generic(3), b(), b()]),
+            CardType::Sorcery,
+            Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Hand(PlayerRef::You) },
+        )
+    }
+}
+
+/// Elvish Branchbender — {2}{G} 2/2 Elf Druid. {T}: until end of turn, target
+/// Forest becomes an X/X Treefolk creature in addition to its other types, X
+/// the number of Elves you control.
+pub fn elvish_branchbender() -> CardDefinition {
+    let elves = || Value::count(Selector::EachPermanent(R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou)));
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeCreature {
+                what: target_filtered(R::HasLandType(LandType::Forest)),
+                power: elves(),
+                toughness: elves(),
+                creature_types: vec![CreatureType::Treefolk],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Elvish Branchbender", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Druid], 2, 2)
     }
 }
