@@ -182,6 +182,14 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-20 (Commander run, `01FnAVVR`) — 70 seats, 76 cards, one N-seat fix, one audit widened
+
+- **Primitives:** `StaticEffect::ReplaceDrawWithGraveyardReturn` (a `DrawDig` arm: a chosen graveyard card via `ChooseOneAmong`, or `LoseGame` on an empty graveyard — Forbidden Crypt); `PreventDamageToYouExileFromGraveyard` (CR 615, off under "can't be prevented" — Immortal Coil); `ControllerOneSpellPerTurn` on the `ONE_SPELL` cast lock (Colfenor's Plans); `Value::PileOrGuessEffectsThisTurn`, a `ColdState` tally bumped by every pile/guess arm **past its last replayable ask** (a resumed resolution re-runs the arm) — The Celestial Toymaker.
+- **FIXED (N-seat):** Death or Glory's "pile of an opponent's choice" used `chooser: EachOpponent` and tripped `resolve_player`'s fan-out assert at three seats (4-seat pod seed 9273). `scripts/audit_singular_fanout.py` read only `who`; it now reads **every** `PlayerRef` field an arm (or a helper the arm hands the field to by name) resolves singularly — 126 arms — at the effect's own nesting depth (dropping the Cemetery Illuminator false positive). 0 sites at the tip; it would have caught Death or Glory.
+- **Flooded Woodlands** needed no engine code: a `GrantKeyword` of Leviathan's `AttackCostSacrifice(Land, 1)` to every green creature; combat and the attack picker read computed keywords.
+- **Robustness:** debug (assertion-on) pods over every new seat in groups of four (24 games each, seeds 9285-9287) and a release pass (groups of four, 200 games each, seed 9291: 3,600 games) — 3,597 decided, 3 CR 104.4a draws, 0 panics, every other `undecided_by` zero. Release 2..8-seat pods (seed 9290, 400 each, the default field) all decided. ⚠ A 25-seat game (`--pod-decks` with 25 entries) takes minutes in debug: `check_commanders` / `duplicate_zone_id` run per action and scale with object count — fine at ≤ 8 seats.
+- **Dropped rather than shipped wrong:** Flux (`Value::CardsDiscardedThisEffect` accumulates across `EachPlayerDoes` seats within one resolution, so a later seat would draw for an earlier seat's discards); Mystery Key (no Equipment-sourced "equipped creature deals combat damage" trigger that can sacrifice the Equipment itself).
+
 ## FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes
 
 - **Seats** 4400-4409: Henry Wu, Sygg River Guide, Fblthp Impossibly Lost, Errant Street Artist, Hakim
