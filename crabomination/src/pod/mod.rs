@@ -27348,6 +27348,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MIARA_10_COMMANDERS,
             main: decks::MIARA_10_MAIN,
         },
+        // Seat 4483: Bruse Tarl, Boorish Herder and Ravos, Soultender's EDHREC average deck. `--pod-decks 4483`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Ravos, Soultender (WBR)",
+            commanders: decks::BRUSE_TARL_18_COMMANDERS,
+            main: decks::BRUSE_TARL_18_MAIN,
+        },
+        // Seat 4484: Alena, Kessig Trapper and Ravos, Soultender's EDHREC average deck. `--pod-decks 4484`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Ravos, Soultender (WBR)",
+            commanders: decks::ALENA_22_COMMANDERS,
+            main: decks::ALENA_22_MAIN,
+        },
+        // Seat 4485: Jeska, Thrice Reborn and Ravos, Soultender's EDHREC average deck. `--pod-decks 4485`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Ravos, Soultender (WBR)",
+            commanders: decks::JESKA_8_COMMANDERS,
+            main: decks::JESKA_8_MAIN,
+        },
+        // Seat 4486: Prava of the Steel Legion and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 4486`.
+        PodDeck {
+            name: "Prava of the Steel Legion and Reyhan, Last of the Abzan (WBG)",
+            commanders: decks::PRAVA_OF_THE_STEEL_LEGION_5_COMMANDERS,
+            main: decks::PRAVA_OF_THE_STEEL_LEGION_5_MAIN,
+        },
+        // Seat 4487: Francisco, Fowl Marauder and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4487`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Tormod, the Desecrator (B)",
+            commanders: decks::FRANCISCO_15_COMMANDERS,
+            main: decks::FRANCISCO_15_MAIN,
+        },
+        // Seat 4488: Lae'zel, Vlaakith's Champion and Criminal Past's EDHREC average deck. `--pod-decks 4488`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Criminal Past (WB)",
+            commanders: decks::LAEZEL_8_COMMANDERS,
+            main: decks::LAEZEL_8_MAIN,
+        },
+        // Seat 4489: The Fugitive Doctor and Romana II's EDHREC average deck. `--pod-decks 4489`.
+        PodDeck {
+            name: "The Fugitive Doctor and Romana II (WRG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_13_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_13_MAIN,
+        },
+        // Seat 4490: Brinelin, the Moon Kraken and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 4490`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Falthis, Shadowcat Familiar (UB)",
+            commanders: decks::BRINELIN_20_COMMANDERS,
+            main: decks::BRINELIN_20_MAIN,
+        },
+        // Seat 4491: Kodama of the East Tree and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4491`.
+        PodDeck {
+            name: "Kodama of the East Tree and Numa, Joraga Chieftain (G)",
+            commanders: decks::KODAMA_OF_THE_EAST_TREE_10_COMMANDERS,
+            main: decks::KODAMA_OF_THE_EAST_TREE_10_MAIN,
+        },
+        // Seat 4492: Amber Gristle O'Maul and Popular Entertainer's EDHREC average deck. `--pod-decks 4492`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Popular Entertainer (R)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_10_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_10_MAIN,
+        },
+        // Seat 4493: The Ninth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 4493`.
+        PodDeck {
+            name: "The Ninth Doctor and Donna Noble (UR)",
+            commanders: decks::THE_NINTH_DOCTOR_19_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_19_MAIN,
+        },
+        // Seat 4494: Akiri, Line-Slinger and Alena, Kessig Trapper's EDHREC average deck. `--pod-decks 4494`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Alena, Kessig Trapper (WR)",
+            commanders: decks::AKIRI_16_COMMANDERS,
+            main: decks::AKIRI_16_MAIN,
+        },
+        // Seat 4495: Halana, Kessig Ranger and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4495`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::HALANA_17_COMMANDERS,
+            main: decks::HALANA_17_MAIN,
+        },
+        // Seat 4496: Miara, Thorn of the Glade and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4496`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Sengir, the Dark Baron (B)",
+            commanders: decks::MIARA_11_COMMANDERS,
+            main: decks::MIARA_11_MAIN,
+        },
+        // Seat 4497: Radiant, Serra Archangel and Tymna the Weaver's EDHREC average deck. `--pod-decks 4497`.
+        PodDeck {
+            name: "Radiant, Serra Archangel and Tymna the Weaver (WB)",
+            commanders: decks::RADIANT_8_COMMANDERS,
+            main: decks::RADIANT_8_MAIN,
+        },
+        // Seat 4498: Francisco, Fowl Marauder and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 4498`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Livio, Oathsworn Sentinel (WB)",
+            commanders: decks::FRANCISCO_16_COMMANDERS,
+            main: decks::FRANCISCO_16_MAIN,
+        },
+        // Seat 4499: Alharu, Solemn Ritualist and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 4499`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Tana, the Bloodsower (WRG)",
+            commanders: decks::ALHARU_16_COMMANDERS,
+            main: decks::ALHARU_16_MAIN,
+        },
+        // Seat 4500: Miara, Thorn of the Glade and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 4500`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Silas Renn, Seeker Adept (UB)",
+            commanders: decks::MIARA_12_COMMANDERS,
+            main: decks::MIARA_12_MAIN,
+        },
+        // Seat 4501: Skanos Dragonheart and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 4501`.
+        PodDeck {
+            name: "Skanos Dragonheart and Agent of the Iron Throne (BG)",
+            commanders: decks::SKANOS_DRAGONHEART_16_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_16_MAIN,
+        },
     ]
 }
 
@@ -33731,6 +33845,25 @@ mod tests {
             ("Burakos, Party Leader and Dragon Cultist", &[0x1B96]),
             ("Alharu, Solemn Ritualist and Eligeth, Crossroads Augur", &[0x1B97]),
             ("Miara, Thorn of the Glade and Tymna the Weaver", &[0x1B98]),
+            ("Bruse Tarl, Boorish Herder and Ravos, Soultender", &[0x1B99]),
+            ("Alena, Kessig Trapper and Ravos, Soultender", &[0x1B9A]),
+            ("Jeska, Thrice Reborn and Ravos, Soultender", &[0x1B9B]),
+            ("Prava of the Steel Legion and Reyhan, Last of the Abzan", &[0x1B9C]),
+            ("Francisco, Fowl Marauder and Tormod, the Desecrator", &[0x1B9D]),
+            ("Lae'zel, Vlaakith's Champion and Criminal Past", &[0x1B9E]),
+            ("The Fugitive Doctor and Romana II", &[0x1B9F]),
+            ("Brinelin, the Moon Kraken and Falthis, Shadowcat Familiar", &[0x1BA0]),
+            ("Kodama of the East Tree and Numa, Joraga Chieftain", &[0x1BA1]),
+            ("Amber Gristle O'Maul and Popular Entertainer", &[0x1BA2]),
+            ("The Ninth Doctor and Donna Noble", &[0x1BA3]),
+            ("Akiri, Line-Slinger and Alena, Kessig Trapper", &[0x1BA4]),
+            ("Halana, Kessig Ranger and Sidar Kondo of Jamuraa", &[0x1BA5]),
+            ("Miara, Thorn of the Glade and Sengir, the Dark Baron", &[0x1BA6]),
+            ("Radiant, Serra Archangel and Tymna the Weaver", &[0x1BA7]),
+            ("Francisco, Fowl Marauder and Livio, Oathsworn Sentinel", &[0x1BA8]),
+            ("Alharu, Solemn Ritualist and Tana, the Bloodsower", &[0x1BA9]),
+            ("Miara, Thorn of the Glade and Silas Renn, Seeker Adept", &[0x1BAA]),
+            ("Skanos Dragonheart and Agent of the Iron Throne", &[0x1BAB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
