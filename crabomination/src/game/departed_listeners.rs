@@ -24,8 +24,10 @@ use crate::game::effects::{EffectContext, events};
 /// The listener kinds this pass serves: "whenever [a permanent] enters",
 /// "whenever a creature dies" (one bounced or exiled; one that died looks back
 /// in `simultaneous_deaths`), "whenever you gain / an opponent loses life",
-/// "whenever a player draws / discards a card" and "whenever a counter is put
-/// on". Printed listeners of
+/// "whenever a player draws / discards a card", "whenever a counter is put
+/// on" and "whenever a permanent is returned to your hand" — the last a
+/// leaves-the-battlefield trigger that also sees its own return (CR 603.10a;
+/// Stormfront Riders). Printed listeners of
 /// each fire only from the walk (`fire_life_gained_watchers` serves delayed
 /// ones).
 fn looks_back(kind: &EventKind) -> bool {
@@ -39,6 +41,7 @@ fn looks_back(kind: &EventKind) -> bool {
             | EventKind::CardDiscarded
             | EventKind::CounterAdded(_)
             | EventKind::AnyCounterAdded
+            | EventKind::PermanentReturnedToHand
     )
 }
 
@@ -54,6 +57,7 @@ fn looked_back_on(ev: &GameEvent) -> bool {
             | GameEvent::CardDiscarded { .. }
             | GameEvent::CounterAdded { .. }
             | GameEvent::KeywordCounterAdded { .. }
+            | GameEvent::PermanentReturnedToHand { .. }
     )
 }
 
@@ -137,7 +141,17 @@ impl GameState {
                     continue;
                 }
                 let single = ta.event.once_per_turn || ta.event.once_per_batch;
-                for ev in &events[start..dep] {
+                // CR 603.10a — a returned-to-hand listener sees its own return,
+                // which the batch records after the departure itself.
+                let end = if ta.event.kind == EventKind::PermanentReturnedToHand {
+                    events[dep..]
+                        .iter()
+                        .position(|e| matches!(e, GameEvent::PermanentReturnedToHand { card_id, .. } if *card_id == listener))
+                        .map_or(dep, |i| dep + i + 1)
+                } else {
+                    dep
+                };
+                for ev in &events[start..end] {
                     if !looked_back_on(ev)
                         || matches!(ev, GameEvent::PermanentEntered { card_id } if *card_id == listener)
                         || !events::event_matches_spec(self, ev, &ta.event, snap)

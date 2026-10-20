@@ -2671,6 +2671,18 @@ impl GameState {
         // Try battlefield first.
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
             let stripped = self.lost_all_abilities(cid);
+            // CR 603.10a — a "returned to your hand" listener sees its own
+            // return; the departed-listener pass reads this snapshot.
+            if matches!(resolved_dest, ZoneDest::Hand(_)) {
+                let c = &self.battlefield[pos];
+                if c.definition
+                    .triggered_abilities
+                    .iter()
+                    .any(|t| t.event.kind == crate::effect::EventKind::PermanentReturnedToHand)
+                {
+                    self.died_card_snapshots.insert(cid, self.lki_clone(c));
+                }
+            }
             let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(cid);
             self.collect_leaver_counters(&card);
