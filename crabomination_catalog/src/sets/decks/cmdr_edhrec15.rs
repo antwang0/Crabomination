@@ -255,7 +255,7 @@ pub fn tatterkite() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Flying],
-        static_abilities: vec![static_ab("This creature can't have counters put on it.", StaticEffect::CountersCantBePlaced)],
+        static_abilities: vec![static_ab("This creature can't have counters put on it.", StaticEffect::CantHaveCountersPutOn { applies_to: Selector::This })],
         ..creature("Tatterkite", cost(&[generic(3)]), vec![CreatureType::Scarecrow], 2, 1)
     }
 }

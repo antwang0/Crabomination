@@ -343,7 +343,7 @@ pub fn raft_security_officer() -> CardDefinition {
 }
 
 /// Frozen in Ice — {2}{U} Aura. Entering, tap the creature; it loses all
-/// abilities and doesn't untap during its controller's untap step.
+/// abilities and can't become untapped.
 pub fn frozen_in_ice() -> CardDefinition {
     let it = || Selector::AttachedTo(Box::new(Selector::This));
     CardDefinition {
@@ -358,7 +358,7 @@ pub fn frozen_in_ice() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Tap { what: it() })],
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature can't become untapped.",
-            effect: StaticEffect::PreventUntap { applies_to: it() },
+            effect: StaticEffect::CantBecomeUntapped { applies_to: it() },
         }],
         ..spell(
             "Frozen in Ice",

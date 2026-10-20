@@ -1144,7 +1144,7 @@ pub fn meliras_keepers() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This creature can't have counters put on it.",
-            effect: StaticEffect::CountersCantBePlaced,
+            effect: StaticEffect::CantHaveCountersPutOn { applies_to: Selector::This },
         }],
         ..creature(
             "Melira's Keepers",
