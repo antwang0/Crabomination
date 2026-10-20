@@ -31386,6 +31386,41 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileLibraryThenTopFromExile { max } => {
+                let me = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut pool: Vec<(CardId, String, u32)> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.owner == me && !c.face_down)
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                    .collect();
+                // The headless pick: the costliest cards.
+                pool.sort_by_key(|(id, _, mv)| (std::cmp::Reverse(*mv), *id));
+                let auto: Vec<CardId> = pool.iter().take(*max as usize).map(|(id, _, _)| *id).collect();
+                let Some(chosen) = self.choose_up_to_cards(
+                    me,
+                    format!("Choose up to {max} exiled cards to put on top of your library"),
+                    source,
+                    pool.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                    *max,
+                    PickValue::Gain,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                let library: Vec<CardId> = self.players[me].library.iter().map(|c| c.id).collect();
+                for id in library {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                let top = ZoneDest::Library { who: crate::effect::PlayerRef::You, pos: crate::effect::LibraryPosition::Top };
+                for id in chosen.into_iter().rev() {
+                    self.move_card_to(id, &top, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileLibraryExceptBottom { who, keep } => {
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 for p in self.resolve_players(who, ctx) {

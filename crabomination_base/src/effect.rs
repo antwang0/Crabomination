@@ -7555,6 +7555,11 @@ pub enum Effect {
     /// exiled plainly). Doomsday Excruciator's "each player exiles all but the
     /// bottom six cards of their library."
     ExileLibraryExceptBottom { who: PlayerRef, keep: Value },
+    /// "Choose up to `max` face-up exiled cards you own. Exile all the cards
+    /// from your library, then put the chosen cards on top of your library"
+    /// (Mirror of Fate). The choice comes first, so a card the library exile
+    /// moves can't be chosen.
+    ExileLibraryThenTopFromExile { max: u32 },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.

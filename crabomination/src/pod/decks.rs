@@ -123449,3 +123449,31 @@ pub const HENRY_WU_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const SYGG_2_COMMANDERS: &[CardFactory] = &[sygg_river_guide];
+
+/// **Sygg, River Guide**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 13 Islands + 8 Plains = 99.
+/// Sygg, River Guide (EDHREC, fetched 2026-10-20).
+pub const SYGG_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, door_of_destinies, heralds_horn,
+    paradise_mantle, sol_ring, springleaf_drum, talisman_of_progress, thought_vessel,
+    adarkar_wastes, azorius_chancery, command_tower, deserted_beach, eclipsed_realms,
+    glacial_fortress, hallowed_fountain, path_of_ancestry, port_town, prairie_stream,
+    reliquary_tower, sea_of_clouds, temple_of_enlightenment, wanderwine_hub, adept_watershaper,
+    deepchannel_duelist, deepway_navigator, eclipsed_merrow, emperor_mihail_ii, fallowsage,
+    harbinger_of_the_seas, harpoon_sniper, judge_of_currents, kopala_warden_of_waves,
+    lord_of_atlantis, lullmage_mentor, master_of_the_pearl_trident, meanders_guide,
+    merfolk_sovereign, merrow_harbinger, merrow_reejerey, seafloor_oracle, seahunter,
+    silvergill_adept, stonybrook_banneret, stonybrook_schoolmaster, surgespanner,
+    svyelun_of_sea_and_sky, sygg_wanderwine_wisdom, thada_adel_acquisitor, thieving_skydiver,
+    vodalian_hexcatcher, vodalian_wave_knight, wanderwine_prophets, deeproot_pilgrimage,
+    deeproot_waters, intruder_alarm, kindred_discovery, merrow_commerce, opposition,
+    reflections_of_littjara, spreading_seas, arcane_denial, counterspell, cyclonic_rift,
+    dovins_veto, generous_gift, harmonized_crescendo, muddle_the_mixture, negate, path_to_exile,
+    swords_to_plowshares, teferis_protection, aquitects_will, distant_melody, summon_the_school,
+    supreme_verdict, syggs_command,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, plains, plains, plains, plains, plains, plains, plains, plains,
+];

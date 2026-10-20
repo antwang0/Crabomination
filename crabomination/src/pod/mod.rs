@@ -26856,6 +26856,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HENRY_WU_COMMANDERS,
             main: decks::HENRY_WU_MAIN,
         },
+        // Seat 4401: Sygg, River Guide's EDHREC average deck. `--pod-decks 4401`.
+        PodDeck {
+            name: "Sygg, River Guide (WU)",
+            commanders: decks::SYGG_2_COMMANDERS,
+            main: decks::SYGG_2_MAIN,
+        },
     ]
 }
 
@@ -33157,6 +33163,7 @@ mod tests {
             ("Farideh, Devil's Chosen", &[0x1B44]),
             ("Monoxa, Midway Manager", &[0x1B45]),
             ("Henry Wu, InGen Geneticist", &[0x1B46]),
+            ("Sygg, River Guide", &[0x1B47]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

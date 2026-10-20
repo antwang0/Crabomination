@@ -9231,6 +9231,22 @@ impl GameState {
                     self.draw_n(active, (per * n) as usize, &mut events);
                     true
                 }
+                CumulativeUpkeepCost::ExileTop(per) => {
+                    let total = (per * n) as usize;
+                    if self.players[active].library.len() < total {
+                        false
+                    } else {
+                        let ctx = crate::game::effects::EffectContext::for_ability(id, active, None);
+                        let exile = crate::effect::Effect::ExileTopOfLibrary {
+                            who: crate::effect::Selector::You,
+                            amount: crate::effect::Value::Const(total as i32),
+                            link_to_source: false,
+                            face_down: false,
+                        };
+                        let _ = self.run_effect(&exile, &ctx, &mut events);
+                        true
+                    }
+                }
                 CumulativeUpkeepCost::AddMana(color) => {
                     self.players[active].mana_pool.add(*color, n);
                     for _ in 0..n {

@@ -2962,6 +2962,9 @@ pub enum CumulativeUpkeepCost {
     PutCounterOnSelf(CounterType),
     /// "Cumulative upkeep—Draw a card" (Psychic Vortex). Always payable.
     Draw(u32),
+    /// "Cumulative upkeep—Exile the top card of your library" (Thought Lash):
+    /// `n` cards per age counter. Unpayable with fewer in the library.
+    ExileTop(u32),
     /// "Cumulative upkeep—Put two cards from a single graveyard on the
     /// bottom of their owner's library" (Jötun Grunt): `n` cards from one
     /// graveyard per age counter.
@@ -2997,6 +3000,7 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
             CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
+            CumulativeUpkeepCost::ExileTop(n) => format!("Exile the top {n} card(s) of your library"),
             CumulativeUpkeepCost::OpponentCreatesSurvivor => "Have an opponent create a 1/1 red Survivor".into(),
             CumulativeUpkeepCost::OpponentGainsLife(n) => format!("An opponent gains {n} life"),
             CumulativeUpkeepCost::GainControlOfLand => "Gain control of a land you don't control".into(),
