@@ -7008,6 +7008,10 @@ pub struct EquipBonus {
     pub set_artifact_types: Option<Vec<ArtifactSubtype>>,
     #[serde(default)]
     pub set_colors: Option<Vec<crate::mana::Color>>,
+    /// Colours the host gains in addition to its own (layer 5) — "is a white
+    /// Angel in addition to its other colors and types" (Angelic Armaments).
+    #[serde(default)]
+    pub add_colors: Vec<crate::mana::Color>,
     /// When true the host loses all abilities (layer 6 — CR 613.1f).
     #[serde(default)]
     pub remove_abilities: bool,

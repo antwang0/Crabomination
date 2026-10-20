@@ -15099,6 +15099,9 @@ impl GameState {
                 push_mod(&mut all_effects, Layer::L5Color, None,
                     Modification::SetColors(colors.clone()));
             }
+            for c in &bonus.add_colors {
+                push_mod(&mut all_effects, Layer::L5Color, None, Modification::AddColor(*c));
+            }
             // Host-conditional riders ("as long as enchanted creature is
             // green, …" — Shield of the Oversoul). Evaluated against the
             // host's pre-layer state, like `EquipScale` above.
@@ -34033,7 +34036,7 @@ fn card_can_change_colors(card: &CardInstance) -> bool {
     // The equipped bonus' `set_colors` is attachment-gated, exactly as the
     // type twin's `type_bits::ATTACHED` half is.
     if card.attached_to.is_some()
-        && card.definition.equipped_bonus.as_ref().is_some_and(|b| b.set_colors.is_some())
+        && card.definition.equipped_bonus.as_ref().is_some_and(|b| b.set_colors.is_some() || !b.add_colors.is_empty())
     {
         return true;
     }
