@@ -18320,6 +18320,11 @@ static DECKS: &[Factory] = &[
     super::decks::keen_eared_sentry,
     super::decks::once_upon_a_time,
     super::decks::veinfire_borderpost,
+    super::decks::scouts_warning,
+    super::decks::wolf_of_devils_breach,
+    super::decks::realm_razer,
+    super::decks::out_of_bounds,
+    super::decks::consecrate_land,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

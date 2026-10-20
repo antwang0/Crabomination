@@ -720,3 +720,94 @@ pub fn veinfire_borderpost() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch four ──────────────────────────────────────────────────────────────
+
+/// Scout's Warning — {W} instant. The next creature card you play this turn
+/// can be played as though it had flash. Draw a card.
+pub fn scouts_warning() -> CardDefinition {
+    spell(
+        "Scout's Warning",
+        cost(&[w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::NextCreatureSpellHasFlashThisTurn,
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Wolf of Devil's Breach — {3}{R}{R} 5/5 Elemental Wolf. Whenever it
+/// attacks, you may pay {1}{R} and discard a card; if you do, it deals damage
+/// equal to the discarded card's mana value to target creature or
+/// planeswalker.
+pub fn wolf_of_devils_breach() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::If {
+            cond: Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::ONE),
+            then: Box::new(Effect::MayPay {
+                description: "Pay {1}{R} and discard a card to deal damage equal to its mana value?".into(),
+                mana_cost: cost(&[generic(1), r()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::DealDamage {
+                        to: target_filtered(R::Creature.or(R::Planeswalker)),
+                        amount: Value::ManaValueOf(Box::new(Selector::DiscardedThisResolution { filter: R::Any })),
+                    },
+                ])),
+                else_: None,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature(
+            "Wolf of Devil's Breach",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Elemental, CreatureType::Wolf],
+            5,
+            5,
+        )
+    }
+}
+
+/// Realm Razer — {3}{R}{G}{W} 4/2 Beast. ETB: exile all lands; when it leaves
+/// the battlefield, the exiled cards return to the battlefield tapped under
+/// their owners' control. (Modeled as one "until it leaves" exile, CR
+/// 610.3: a Razer gone before its ETB resolves exiles nothing, where the
+/// printed two-trigger wording would exile the lands for good.)
+pub fn realm_razer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: Selector::EachPermanent(R::Land),
+            return_to: crate::card::ExileReturnZone::BattlefieldTapped,
+        })],
+        ..creature("Realm Razer", cost(&[generic(3), r(), g(), w()]), vec![CreatureType::Beast], 4, 2)
+    }
+}
+
+/// Out of Bounds — {3}{U} instant. Assist. Counter target spell. (Assist —
+/// another player paying up to {3} of the cost — is not modeled.)
+pub fn out_of_bounds() -> CardDefinition {
+    spell(
+        "Out of Bounds",
+        cost(&[generic(3), crate::mana::u()]),
+        CardType::Instant,
+        Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+    )
+}
+
+/// Consecrate Land — {W} Aura, enchant land. Enchanted land has
+/// indestructible. (Its "can't be enchanted by other Auras" is not modeled.)
+pub fn consecrate_land() -> CardDefinition {
+    CardDefinition {
+        name: "Consecrate Land",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        equipped_bonus: Some(crate::card::EquipBonus { keywords: vec![Keyword::Indestructible], ..Default::default() }),
+        ..Default::default()
+    }
+}

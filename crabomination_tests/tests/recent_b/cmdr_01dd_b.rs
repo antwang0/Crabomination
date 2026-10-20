@@ -529,3 +529,103 @@ fn veinfire_borderpost_returns_a_basic_for_its_alternative_cost() {
     assert!(g.players[0].hand.iter().any(|c| c.id == swamp), "the Swamp went home");
     assert!(g.battlefield_find(post).unwrap().tapped, "enters tapped");
 }
+
+/// Scout's Warning: the next creature spell has flash; a noncreature spell
+/// in between does not spend it, and the creature after the first does not
+/// get it.
+#[test]
+fn scouts_warning_flashes_only_the_next_creature() {
+    let mut g = pod(2);
+    let warning = g.add_card_to_hand(0, catalog::scouts_warning());
+    cast(&mut g, warning, None);
+    g.step = TurnStep::End;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    let first = g.add_card_to_hand(0, catalog::timber_wolves());
+    cast(&mut g, first, None);
+    assert!(g.battlefield_find(first).is_some(), "the next creature had flash");
+    let second = g.add_card_to_hand(0, catalog::timber_wolves());
+    flood(&mut g, 0);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: second,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "spent by the first creature");
+}
+
+/// Wolf of Devil's Breach pitches a card for damage equal to its mana value.
+#[test]
+fn wolf_of_devils_breach_discards_for_damage() {
+    let mut g = pod(2);
+    let wolf = g.add_card_to_battlefield(0, catalog::wolf_of_devils_breach());
+    g.battlefield_find_mut(wolf).unwrap().summoning_sick = false;
+    let target = g.add_token_to_battlefield(1, &body("Beast", 5, CreatureType::Beast));
+    g.add_card_to_hand(0, catalog::apocalypse_demon()); // mana value 6
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: wolf, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "6 damage to the 5/5");
+    assert!(g.players[0].hand.is_empty(), "the card was discarded");
+}
+
+/// Realm Razer exiles every land and returns them tapped when it leaves.
+#[test]
+fn realm_razer_exiles_all_lands_until_it_leaves() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::forest());
+    let theirs = g.add_card_to_battlefield(1, catalog::island());
+    let razer = g.add_card_to_hand(0, catalog::realm_razer());
+    cast(&mut g, razer, None);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(razer)));
+    let back = g.battlefield_find(theirs).expect("returned");
+    assert!(back.tapped && back.controller == 1, "tapped, under its owner");
+}
+
+/// Out of Bounds counters a spell.
+#[test]
+fn out_of_bounds_counters_a_spell() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    let life = g.players[0].life;
+    let counter = g.add_card_to_hand(0, catalog::out_of_bounds());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "countered");
+}
+
+/// Consecrate Land makes its land indestructible.
+#[test]
+fn consecrate_land_makes_the_land_indestructible() {
+    let mut g = pod(2);
+    let land = g.add_card_to_battlefield(0, catalog::plains());
+    let aura = g.add_card_to_hand(0, catalog::consecrate_land());
+    cast(&mut g, aura, Some(Target::Permanent(land)));
+    assert!(g.computed_permanent(land).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+}
