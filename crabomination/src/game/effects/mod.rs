@@ -8,6 +8,7 @@
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod distinct_mv_return;
+mod mill_until;
 mod energy_sweep;
 mod among;
 mod may_cost;
@@ -11576,6 +11577,7 @@ impl GameState {
             }
 
             Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
+            Effect::MillUntilMatching { who, filter, max } => self.mill_until_matching(who, filter, max, ctx, events),
 
             Effect::MillThenToHand { amount, filter, otherwise } => {
                 use crate::decision::{Decision, DecisionAnswer};

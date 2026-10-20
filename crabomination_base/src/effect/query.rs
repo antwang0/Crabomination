@@ -1859,6 +1859,7 @@ impl Effect {
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
             | Effect::MillUntilLands { who, lands: amount }
+            | Effect::MillUntilMatching { who, max: amount, .. }
             | Effect::ExileTopOfLibrary { who, amount, .. }
             | Effect::ExileTopMintPerChosenColor { who, amount, .. } => {
                 sel_has_target(who) || value_has_target(amount)
@@ -3164,6 +3165,7 @@ impl Effect {
             | Effect::Draw { who, .. }
             | Effect::Mill { who, .. }
             | Effect::MillUntilLands { who, .. }
+            | Effect::MillUntilMatching { who, .. }
             | Effect::MillTwoRepeatSharing { who, .. }
             | Effect::ExileTopOfLibrary { who, .. }
             | Effect::ExileTopMintPerChosenColor { who, .. } => {
@@ -4467,6 +4469,7 @@ impl Effect {
                 _ => "mill".into(),
             },
             Effect::MillUntilLands { .. } => "mill until lands".into(),
+            Effect::MillUntilMatching { .. } => "mill until a match".into(),
             Effect::MillTwoRepeatSharing { .. } => "mill two, maybe repeat".into(),
             Effect::ExileTopOfLibrary { amount, .. } => match amount {
                 Value::Const(n) => format!("exile top {n} of library"),
@@ -4741,6 +4744,7 @@ impl Effect {
             | Effect::Draw { .. }
             | Effect::Mill { .. }
             | Effect::MillUntilLands { .. }
+            | Effect::MillUntilMatching { .. }
             | Effect::MillTwoRepeatSharing { .. }
             | Effect::ExileTopOfLibrary { .. }
             | Effect::ExileTopMintPerChosenColor { .. }
@@ -5561,7 +5565,9 @@ impl Effect {
                 | Effect::ExileTopOfLibrary { who, amount, .. } => {
                     sel_find(who, slot).or_else(|| val_find(amount, slot))
                 }
-                Effect::MillUntilLands { who, .. } | Effect::MillTwoRepeatSharing { who, .. } => {
+                Effect::MillUntilLands { who, .. }
+                | Effect::MillUntilMatching { who, .. }
+                | Effect::MillTwoRepeatSharing { who, .. } => {
                     sel_find(who, slot)
                 }
                 Effect::ExileTopMintPerChosenColor { who, .. } => {

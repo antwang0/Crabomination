@@ -6127,6 +6127,10 @@ pub enum Effect {
     /// `lands` land cards are revealed, then put all revealed cards into
     /// that player's graveyard (Mind Grind, Consuming Aberration's trigger).
     MillUntilLands { who: Selector, lands: Value },
+    /// CR 701.13 — each resolved player mills one card at a time until a card
+    /// matching `filter` or `max` cards have been milled, whichever comes
+    /// first; the milled cards are `Selector::LastMoved` (Helm of Obedience).
+    MillUntilMatching { who: Selector, filter: SelectionRequirement, max: Value },
     /// CR 701.13 with a repeat rider — the resolved player mills two cards; if
     /// the two milled cards share `axis`, repeat. Sphinx's Tutelage shares a
     /// colour (nonland cards only); The Tale of Tamiyo shares a card type and
