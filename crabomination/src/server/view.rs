@@ -2663,6 +2663,10 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some((req, n)) = ability.craft_exile_cost.as_ref() {
         parts.push(format!("Exile {n} {}(s)", requirement_noun(req)));
     }
+    if !ability.craft_exile_each.is_empty() {
+        let each: Vec<&str> = ability.craft_exile_each.iter().map(requirement_noun).collect();
+        parts.push(format!("Exile a {}", each.join(", a ")));
+    }
     if let Some((kind, n)) = ability.add_counter_cost.as_ref() {
         parts.push(format!("Put {n} {} counter(s) on this", counter_kind_label(kind)));
     }

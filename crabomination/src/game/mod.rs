@@ -207,6 +207,7 @@ mod quest_copy;
 mod discard_pick;
 mod growth_loop;
 mod venture_limit;
+mod craft_each;
 mod copy_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;

@@ -5184,6 +5184,13 @@ pub struct ActivatedAbility {
     /// board pieces stay put. Defaults to None.
     #[serde(default)]
     pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
+    /// CR 702.167a — "Craft with a Dinosaur, a Merfolk, a Pirate, and a
+    /// Vampire": one distinct object per requirement, each from among
+    /// permanents you control and/or cards in your graveyard (Throne of the
+    /// Grim Captain). Matched by `game/craft_each.rs`; paid and linked exactly
+    /// like `craft_exile_cost`'s picks. Empty for every other ability.
+    #[serde(default)]
+    pub craft_exile_each: Vec<SelectionRequirement>,
     /// CR 701.67 — Waterbend N as part of this ability's cost ("Waterbend {N}:
     /// …"). The N generic lives in `mana_cost`; this flag marks the ability so
     /// activation accepts waterbend helpers (tap an untapped artifact/creature

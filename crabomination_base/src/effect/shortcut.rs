@@ -3270,6 +3270,18 @@ pub fn craft(cost: crate::mana::ManaCost, filter: SelectionRequirement, count: u
     }
 }
 
+/// [`craft`] with one distinct object per requirement ("Craft with a
+/// Dinosaur, a Merfolk, a Pirate, and a Vampire" — CR 702.167a).
+pub fn craft_each(cost: crate::mana::ManaCost, each: Vec<SelectionRequirement>) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        craft_exile_each: each,
+        effect: Effect::ExileSelfReturnTransformed,
+        ..Default::default()
+    }
+}
+
 /// Transmute (CR 702.53): "[cost], Discard this card: Search your library for a
 /// card with the same mana value as this card, reveal it, put it into your
 /// hand, then shuffle. Activate only as a sorcery." `mv` is the card's own mana

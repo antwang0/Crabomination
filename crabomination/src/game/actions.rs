@@ -23134,6 +23134,9 @@ impl GameState {
                 picks.extend(bf.into_iter().map(|id| (id, false)));
             }
             picks
+        } else if !ability.craft_exile_each.is_empty() {
+            self.craft_each_picks(p, card_id, &ability.craft_exile_each)
+                .ok_or(GameError::SelectionRequirementViolated)?
         } else {
             Vec::new()
         };
