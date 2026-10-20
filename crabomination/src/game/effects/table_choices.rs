@@ -125,9 +125,24 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        let seats = self.apnap_sort(self.opponents_of(ctx.controller));
+        self.seats_choose_from_graveyard(seats, filter, to, effect, ctx, events)
+    }
+
+    /// The walk behind `EachOpponentChoosesFromGraveyard` and
+    /// `PlayerChoosesFromGraveyard`: each of `seats` (APNAP) gives up its
+    /// least valuable `filter` match, then the picks move to `to` together.
+    pub(super) fn seats_choose_from_graveyard(
+        &mut self,
+        seats: Vec<usize>,
+        filter: &SelectionRequirement,
+        to: &ZoneDest,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         let me = ctx.controller;
         let source = ctx.source.unwrap_or(CardId(0));
-        let seats = self.apnap_sort(self.opponents_of(me));
         let mut cursor = 0usize;
         let mut picks: Vec<CardId> = Vec::new();
         for q in seats {

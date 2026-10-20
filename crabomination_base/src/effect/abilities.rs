@@ -4360,6 +4360,16 @@ pub enum StaticEffect {
     ControllerMaySkipDrawStepDrawForAttackShield { attackers: SelectionRequirement },
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
+    /// CR 101.2 — "You can't play lands or cast spells from your hand"
+    /// (Experimental Frenzy). The `cast_lock::FROM_HAND` bit of
+    /// `cast_lock_scan`, read by `action_lock_rejection` for a land play or
+    /// any `Cast*` action whose card is in its controller's hand.
+    ControllerCantPlayFromHand,
+    /// CR 614 — "If a spell or ability an opponent controls causes you to
+    /// discard a card, you may reveal that card and put it on top of your
+    /// library instead of putting it anywhere else" (Nephalia Academy). Read
+    /// by `discard_card` beside Library of Leng; always taken.
+    OpponentDiscardToLibraryTop,
     /// Mistform Warchief — "Creature spells you cast that share a creature
     /// type with this creature cost `amount` less to cast."
     SharedCreatureTypeSpellCostReduction { amount: u32 },

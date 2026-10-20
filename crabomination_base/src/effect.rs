@@ -6230,6 +6230,10 @@ pub enum Effect {
     /// cards [to]" (Dredge the Mire) — each chooser gives up its least
     /// valuable match.
     EachOpponentChoosesFromGraveyard { filter: SelectionRequirement, to: ZoneDest },
+    /// "Target opponent puts a [filter] card of their choice from their
+    /// graveyard [to]" (Visions of Dread): `EachOpponentChoosesFromGraveyard`
+    /// with the choosing seats named by `who`.
+    PlayerChoosesFromGraveyard { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// "Each other player may draw a card. Whenever a card is drawn this way,
     /// [per_draw]" (Explosion of Riches) — `per_draw` runs under the
     /// resolving controller once per accepted draw.

@@ -9996,6 +9996,10 @@ impl GameState {
             Effect::EachOpponentChoosesFromGraveyard { filter, to } => {
                 self.each_opponent_chooses_from_graveyard(filter, to, effect, ctx, events)
             }
+            Effect::PlayerChoosesFromGraveyard { who, filter, to } => {
+                let seats = self.apnap_sort(self.resolve_players(who, ctx));
+                self.seats_choose_from_graveyard(seats, filter, to, effect, ctx, events)
+            }
             Effect::EachOtherPlayerMayDraw { per_draw } => {
                 self.each_other_player_may_draw(per_draw, effect, ctx, events)
             }

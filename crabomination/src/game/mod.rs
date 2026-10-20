@@ -493,6 +493,8 @@ pub(crate) mod cast_lock {
     pub const MORE_THAN_YOU: u32 = 1 << 13;
     /// Ashes of the Abhorrent (an activation of a graveyard card).
     pub const GRAVEYARD: u32 = 1 << 14;
+    /// Experimental Frenzy (`ControllerCantPlayFromHand`).
+    pub const FROM_HAND: u32 = 1 << 15;
     /// The locks whose gate reads the cast spell's characteristics.
     pub const ANY_CARD: u32 =
         ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING | MORE_THAN_YOU;
@@ -5914,6 +5916,7 @@ impl GameState {
                     | SE::OpponentsCantCastDuringCombat
                     | SE::DefendingPlayerCantCastWhileAttacking => cast_lock::COMBAT,
                     SE::GraveyardCastAndActivationLock => cast_lock::GRAVEYARD,
+                    SE::ControllerCantPlayFromHand => cast_lock::FROM_HAND,
                     _ => 0,
                 };
             }
@@ -6238,6 +6241,25 @@ impl GameState {
                 });
             if locked {
                 return Some(GameError::SilencedThisTurn);
+            }
+        }
+        // CR 101.2 — Experimental Frenzy: no land or spell from the hand.
+        if locks & cast_lock::FROM_HAND != 0 {
+            let card = match action {
+                GameAction::PlayLand(id) | GameAction::PlayLandBack(id) => Some(*id),
+                _ if is_cast => action.cast_card_id(),
+                _ => None,
+            };
+            if card.is_some_and(|id| self.players[caster].hand.iter().any(|c| c.id == id))
+                && self.battlefield.iter().any(|c| {
+                    c.controller == caster
+                        && c.definition
+                            .static_abilities
+                            .iter()
+                            .any(|sa| matches!(sa.effect, StaticEffect::ControllerCantPlayFromHand))
+                })
+            {
+                return Some(GameError::SpellNameLocked);
             }
         }
         None
@@ -21584,7 +21606,9 @@ impl GameState {
         // blocks, each taking its own whole-board `static_abilities` walk,
         // with six `find_card_anywhere` lookups of the cast spell between
         // them, for locks a normal board never has. See `cast_lock_scan`.
-        let locks = if action.is_cast() || matches!(action, GameAction::ActivateAbility { .. }) {
+        let locks = if action.is_cast()
+            || matches!(action, GameAction::ActivateAbility { .. } | GameAction::PlayLand(_) | GameAction::PlayLandBack(_))
+        {
             self.cast_lock_scan()
         } else {
             0
@@ -22269,11 +22293,16 @@ impl GameState {
         let is_land = !was_nonland;
         // CR 614 — Library of Leng: the discard still happens, but the card
         // goes on top of the library instead of into the graveyard.
-        if madness.is_none()
+        // Nephalia Academy — the same, only for an opponent's effect, and
+        // ahead of madness ("instead of putting it anywhere else").
+        let opponent_caused = self.resolution_causer.is_some_and(|c| self.opponents_of(p).contains(&c));
+        if (madness.is_none() || opponent_caused)
             && self.battlefield.iter().any(|c| {
                 c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::DiscardToLibraryTop)
+                    && c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                        crate::effect::StaticEffect::DiscardToLibraryTop => madness.is_none(),
+                        crate::effect::StaticEffect::OpponentDiscardToLibraryTop => opponent_caused,
+                        _ => false,
                     })
             })
         {
@@ -35437,6 +35466,7 @@ fn static_effect_to_effects(
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands
+            | StaticEffect::ControllerCantPlayFromHand
             | StaticEffect::NoPlayerCanPlayLands
             | StaticEffect::ControllerSkipsDrawStep
             | StaticEffect::ControllerMaySkipDrawStepForLife { .. }
@@ -35980,6 +36010,7 @@ fn static_effect_to_effects(
             | StaticEffect::AllPlayersNoMaximumHandSize
             // DiscardToLibraryTop (Library of Leng) — read by `discard_card`.
             | StaticEffect::DiscardToLibraryTop
+            | StaticEffect::OpponentDiscardToLibraryTop
             // TappedCreaturesCanBlock — consulted at block declaration via
             // `tapped_creatures_can_block`; no layer effect.
             | StaticEffect::TappedCreaturesCanBlock

@@ -2446,6 +2446,7 @@ impl Effect {
             | Effect::WheneverCreatureEntersThisTurn { .. }
             | Effect::WheneverCreatureEntersUntilYourNextTurn { .. }
             | Effect::EachOpponentChoosesFromGraveyard { .. }
+            | Effect::PlayerChoosesFromGraveyard { .. }
             | Effect::EachOtherPlayerMayDraw { .. }
             | Effect::GreatestDiscardersLoseLife
             | Effect::EachPlayerChoosesWarOrPeace

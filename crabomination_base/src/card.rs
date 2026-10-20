@@ -1120,6 +1120,8 @@ pub enum CounterType {
     /// The Dragon-Kami Reborn's hatching counters on its face-down exiles
     /// (Dragon-Kami's Egg casts creature spells from among them).
     Hatching,
+    /// Smoldering Egg's ember counters (seven transform it).
+    Ember,
 }
 
 /// Every zone a card can occupy.
