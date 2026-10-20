@@ -28392,6 +28392,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NADIER_10_COMMANDERS,
             main: decks::NADIER_10_MAIN,
         },
+        // Seat 4657: Livio, Oathsworn Sentinel and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4657`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Numa, Joraga Chieftain (WG)",
+            commanders: decks::LIVIO_8_COMMANDERS,
+            main: decks::LIVIO_8_MAIN,
+        },
+        // Seat 4658: Krark, the Thumbless and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4658`.
+        PodDeck {
+            name: "Krark, the Thumbless and Nadier, Agent of the Duskenel (BR)",
+            commanders: decks::KRARK_9_COMMANDERS,
+            main: decks::KRARK_9_MAIN,
+        },
     ]
 }
 
@@ -34949,6 +34961,8 @@ mod tests {
             ("Durnan of the Yawning Portal and Feywild Visitor", &[0x1C44]),
             ("Livaan, Cultist of Tiamat and Folk Hero", &[0x1C45]),
             ("Nadier, Agent of the Duskenel and Radiant, Serra Archangel", &[0x1C46]),
+            ("Livio, Oathsworn Sentinel and Numa, Joraga Chieftain", &[0x1C47]),
+            ("Krark, the Thumbless and Nadier, Agent of the Duskenel", &[0x1C48]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

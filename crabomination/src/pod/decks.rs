@@ -130582,3 +130582,58 @@ pub const NADIER_10_MAIN: &[CardFactory] = &[
     // Basics
     plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LIVIO_8_COMMANDERS: &[CardFactory] = &[livio_oathsworn_sentinel, numa_joraga_chieftain];
+
+/// **Livio, Oathsworn Sentinel and Numa, Joraga Chieftain**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Forests + 10 Plains = 98.
+/// Livio, Oathsworn Sentinel and Numa, Joraga Chieftain (EDHREC, fetched 2026-10-20).
+pub const LIVIO_8_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lifecrafters_bestiary, sol_ring, staff_of_domination,
+    talisman_of_unity, the_earth_crystal, arch_of_orazca, branchloft_pathway, canopy_vista,
+    command_tower, evendo_waking_haven, exotic_orchard, fortified_village, horizon_canopy,
+    overgrown_farmland, razorverge_thicket, sunpetal_grove, temple_garden, windswept_heath,
+    wirewood_lodge, arbor_elf, beast_whisperer, birds_of_paradise, canopy_tactician,
+    craterhoof_behemoth, drumbellower, dwynen_gilt_leaf_daen, elvish_archdruid,
+    elvish_harbinger, elvish_herder, elvish_mystic, essence_warden, fauna_shaman, fiend_hunter,
+    gaeas_herald, gala_greeters, heedless_one, heliod_sun_crowned, immaculate_magistrate,
+    imperious_perfect, jagged_scar_archers, joraga_warcaller, leaf_crowned_visionary,
+    llanowar_loamspeaker, nissas_chosen, nullmage_shepherd, priest_of_titania,
+    rhys_the_redeemed, souls_attendant, steel_leaf_champion, walking_ballista,
+    wildborn_preserver, wirewood_symbiote, wolverine_riders, ghostly_prison,
+    growing_rites_of_itlimoc, leaders_talent, leyline_of_abundance, monologue_tax,
+    reconnaissance, beast_within, druids_deliverance, fog, generous_gift, path_to_exile,
+    return_to_nature, swords_to_plowshares, nissa_revane, bounty_of_skemfar, cultivate,
+    harvest_season, natures_rhythm, preposterous_proportions, search_for_glory,
+    shamanic_revelation, uncage_the_menagerie, wrath_of_god,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const KRARK_9_COMMANDERS: &[CardFactory] = &[krark_the_thumbless, nadier_agent_of_the_duskenel];
+
+/// **Krark, the Thumbless and Nadier, Agent of the Duskenel**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 10 Swamps = 98.
+/// Krark, the Thumbless and Nadier, Agent of the Duskenel (EDHREC, fetched 2026-10-20).
+pub const KRARK_9_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, cursed_mirror, fellwar_stone, mind_stone, rakdos_signet,
+    skullclamp, sol_ring, talisman_of_indulgence, tarrians_soulcleaver, blazemire_verge,
+    blood_crypt, bojuka_bog, canyon_slough, command_tower, dragonskull_summit, graven_cairns,
+    luxury_suite, phyrexian_tower, rakdos_carnarium, raucous_theater, smoldering_marsh,
+    tainted_peak, boggart_trawler, callous_sell_sword, devilish_valet, juri_master_of_the_revue,
+    lagomos_hand_of_hatred, legion_warboss, loyal_apprentice, mahadi_emporium_master,
+    marionette_apprentice, mirkwood_bats, pinnacle_monk, pitiless_plunderer,
+    professional_face_breaker, rowan_scion_of_war, ruthless_technomancer, storm_kiln_artist,
+    tavern_scoundrel, warren_soultrader, all_will_be_one, rakdos_joins_up, vampiric_rites,
+    big_score, burnt_offering, chaos_warp, culling_the_weak, dark_ritual, deadly_dispute,
+    fake_your_own_death, fanatical_offering, fire_covenant, kazuuls_fury, malakir_rebirth,
+    nasty_end, rakdos_charm, unexpected_windfall, untimely_malfunction, withering_torment,
+    annihilating_glare, blasphemous_act, chandras_ignition, damnation, dragon_fodder,
+    dread_return, faithless_looting, feed_the_swarm, krenkos_command, last_chance,
+    last_one_standing, peer_into_the_abyss, reckless_blaze, rite_of_consumption,
+    storm_of_memories, strike_it_rich, vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
