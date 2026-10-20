@@ -131444,3 +131444,57 @@ pub const MIARA_14_MAIN: &[CardFactory] = &[
     mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BREECHES_27_COMMANDERS: &[CardFactory] = &[breeches_brazen_plunderer, falthis_shadowcat_familiar];
+
+/// **Breeches, Brazen Plunderer and Falthis, Shadowcat Familiar**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 16 Mountains + 16 Swamps = 98.
+/// Breeches, Brazen Plunderer and Falthis, Shadowcat Familiar (EDHREC, fetched 2026-10-20).
+pub const BREECHES_27_MAIN: &[CardFactory] = &[
+    arcane_signet, coat_of_arms, fire_diamond, heirloom_blade, rakdos_signet,
+    silver_shroud_costume, sol_ring, springleaf_drum, akoum_refuge, command_tower,
+    exotic_orchard, myriad_landscape, terramorphic_expanse, anger, archetype_of_finality,
+    arvinox_the_mind_flail, boarding_party, captain_lannery_storm, captain_ripley_vance,
+    coastline_marauders, coercive_recruiter, crimson_fleet_commodore, dargo_the_shipwrecker,
+    daring_buccaneer, deadeye_tormentor, deadeye_tracker, dire_fleet_daredevil,
+    dire_fleet_hoarder, dire_fleet_neckbreaker, dire_fleet_poisoner, dire_fleet_ravager,
+    dire_fleet_warmonger, exocrine, fanatical_firebrand, fathom_fleet_captain,
+    fathom_fleet_cutthroat, forerunner_of_the_coalition, glint_horn_buccaneer,
+    grasping_scoundrel, greedy_freebooter, impulsive_pilferer, kari_zev_skyship_raider,
+    kitesail_freebooter, leaden_myr, lightning_rig_crew, pitiless_plunderer, ruin_raider,
+    ruthless_knave, wily_goblin, berserkers_onslaught, daring_piracy, bedevil, deflecting_swat,
+    doom_blade, fiery_cannonade, go_for_the_throat, murderous_cut, supernatural_stamina,
+    terminate, angrath_minotaur_pirate, angraths_fury, blasphemous_act, demonic_tutor,
+    feed_the_swarm, portent_of_betrayal, seismic_stomp,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const WYLL_14_COMMANDERS: &[CardFactory] = &[wyll_blade_of_frontiers, street_urchin];
+
+/// **Wyll, Blade of Frontiers and Street Urchin**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Mountains = 98.
+/// Wyll, Blade of Frontiers and Street Urchin (EDHREC, fetched 2026-10-20).
+pub const WYLL_14_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, boompile, clown_car, dowsing_dagger, fire_diamond,
+    goblin_morningstar, helm_of_the_host, krarks_thumb, luck_bobblehead, mind_stone,
+    ruby_medallion, shadowspear, sol_ring, spiked_pit_trap, swiftfoot_boots, sword_of_hours,
+    sword_of_the_animist, the_deck_of_many_things, treasure_chest, vexing_puzzlebox,
+    wand_of_wonder, buried_ruin, treasure_vault, underdark_rift, valakut_the_molten_pinnacle,
+    war_room, ancient_copper_dragon, brazen_dwarf, chaos_channeler, chaos_dragon, clay_golem,
+    delina_wild_mage, draconian_gate_bot, fickle_efreet, gadrak_the_crown_scourge,
+    goblin_kaboomist, goblin_welder, iron_mastiff, kediss_emberclaw_familiar, krenko_mob_boss,
+    okaun_eye_of_chaos, rad_rascal, storm_kiln_artist, swarming_goblins, tavern_scoundrel,
+    torbran_thane_of_red_fell, barbarian_class, maddening_hex, priority_boarding,
+    tectonic_reformation, berserkers_frenzy, critical_hit, deflecting_swat, faridehs_fireball,
+    flick_a_coin, lightning_bolt, tibalts_trickery, wylls_reversal, tibalt_rakish_instigator,
+    blasphemous_act, fiery_gambit, light_up_the_stage, mana_clash, reckless_endeavor,
+    slight_malfunction, thunderwave, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];

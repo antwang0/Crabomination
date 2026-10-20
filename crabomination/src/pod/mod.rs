@@ -28578,6 +28578,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MIARA_14_COMMANDERS,
             main: decks::MIARA_14_MAIN,
         },
+        // Seat 4688: Breeches, Brazen Plunderer and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 4688`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Falthis, Shadowcat Familiar (BR)",
+            commanders: decks::BREECHES_27_COMMANDERS,
+            main: decks::BREECHES_27_MAIN,
+        },
+        // Seat 4689: Wyll, Blade of Frontiers and Street Urchin's EDHREC average deck. `--pod-decks 4689`.
+        PodDeck {
+            name: "Wyll, Blade of Frontiers and Street Urchin (R)",
+            commanders: decks::WYLL_14_COMMANDERS,
+            main: decks::WYLL_14_MAIN,
+        },
     ]
 }
 
@@ -35166,6 +35178,8 @@ mod tests {
             ("Akiri, Line-Slinger and Sengir, the Dark Baron", &[0x1C63]),
             ("Keleth, Sunmane Familiar and Ravos, Soultender", &[0x1C64]),
             ("Miara, Thorn of the Glade and Vial Smasher the Fierce", &[0x1C65]),
+            ("Breeches, Brazen Plunderer and Falthis, Shadowcat Familiar", &[0x1C66]),
+            ("Wyll, Blade of Frontiers and Street Urchin", &[0x1C67]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
