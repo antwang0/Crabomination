@@ -3103,3 +3103,212 @@ pub fn heart_piercer_bow() -> CardDefinition {
         },
     )
 }
+
+// ── Batch eight ─────────────────────────────────────────────────────────────
+
+/// Angelic Armaments — {3} Equipment. Equipped creature gets +2/+2, has
+/// flying, and is a white Angel in addition to its other colors and types.
+/// Equip {4}.
+pub fn angelic_armaments() -> CardDefinition {
+    equipment(
+        "Angelic Armaments",
+        cost(&[generic(3)]),
+        cost(&[generic(4)]),
+        EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Flying],
+            add_creature_types: vec![CreatureType::Angel],
+            add_colors: vec![Color::White],
+            ..Default::default()
+        },
+    )
+}
+
+/// Spell Blast — {X}{U} instant. Counter target spell with mana value X.
+pub fn spell_blast() -> CardDefinition {
+    spell(
+        "Spell Blast",
+        cost(&[x(), u()]),
+        CardType::Instant,
+        Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::ManaValueExactlyXFromCost)) },
+    )
+}
+
+/// Spell Burst — {X}{U} instant. Buyback {3}. Counter target spell with mana
+/// value X.
+pub fn spell_burst() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Buyback(cost(&[generic(3)]))],
+        ..spell(
+            "Spell Burst",
+            cost(&[x(), u()]),
+            CardType::Instant,
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::ManaValueExactlyXFromCost)) },
+        )
+    }
+}
+
+/// Briarberry Cohort — {1}{U} 1/1 Faerie Soldier. Flying. +1/+1 as long as
+/// you control another blue creature.
+pub fn briarberry_cohort() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control another blue creature, this gets +1/+1.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Creature.and(R::HasColor(Color::Blue)).and(R::ControlledByYou).and(R::OtherThanSource),
+                )),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+            },
+        }],
+        ..creature("Briarberry Cohort", cost(&[generic(1), u()]), vec![CreatureType::Faerie, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Awakener Druid — {2}{G} 1/1 Human Druid. When it enters, target Forest
+/// becomes a 4/5 green Treefolk creature for as long as this creature
+/// remains on the battlefield. It's still a land.
+pub fn awakener_druid() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::BecomeCreature {
+                what: target_filtered(R::HasLandType(LandType::Forest)),
+                power: Value::Const(4),
+                toughness: Value::Const(5),
+                creature_types: vec![CreatureType::Treefolk],
+                keywords: vec![],
+                duration: Duration::WhileSourceOnBattlefield,
+            },
+            Effect::BecomeColor {
+                what: Selector::Target(0),
+                colors: vec![Color::Green],
+                duration: Duration::WhileSourceOnBattlefield,
+                additive: false,
+            },
+        ]))],
+        ..creature("Awakener Druid", cost(&[generic(2), g()]), vec![CreatureType::Human, CreatureType::Druid], 1, 1)
+    }
+}
+
+/// Circle of the Moon Druid — {2}{G} 2/4 Human Elf Druid. Bear Form — during
+/// your turn, it is a Bear with base power and toughness 4/2 (it loses all
+/// other creature types).
+pub fn circle_of_the_moon_druid() -> CardDefinition {
+    let your_turn = || Predicate::IsTurnOf(PlayerRef::You);
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Bear Form — during your turn, this creature has base power and toughness 4/2.",
+                effect: StaticEffect::SetBasePtIf { condition: your_turn(), power: 4, toughness: 2 },
+            },
+            StaticAbility {
+                description: "Bear Form — during your turn, this creature loses all other creature types.",
+                effect: StaticEffect::WhileCondition {
+                    condition: your_turn(),
+                    inner: Box::new(StaticEffect::MatchingLoseAllCreatureTypes { applies_to: Selector::This }),
+                },
+            },
+            StaticAbility {
+                description: "Bear Form — during your turn, this creature is a Bear.",
+                effect: StaticEffect::WhileCondition {
+                    condition: your_turn(),
+                    inner: Box::new(StaticEffect::AddCreatureTypeToMatching {
+                        applies_to: Selector::This,
+                        creature_type: CreatureType::Bear,
+                    }),
+                },
+            },
+        ],
+        ..creature(
+            "Circle of the Moon Druid",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Human, CreatureType::Elf, CreatureType::Druid],
+            2,
+            4,
+        )
+    }
+}
+
+/// Alert Heedbonder — {1}{G/W}{G/W} 2/4 Human Scout. Vigilance. At the
+/// beginning of your end step, gain 1 life for each creature you control
+/// with vigilance.
+pub fn alert_heedbonder() -> CardDefinition {
+    let gw = || hybrid(Color::Green, Color::White);
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::HasKeyword(Keyword::Vigilance)),
+                )),
+            },
+        }],
+        ..creature("Alert Heedbonder", cost(&[generic(1), gw(), gw()]), vec![CreatureType::Human, CreatureType::Scout], 2, 4)
+    }
+}
+
+/// Dust Elemental — {2}{W}{W} 6/6 Elemental. Flash; flying; fear. When it
+/// enters, return three creatures you control to their owner's hand.
+pub fn dust_elemental() -> CardDefinition {
+    let one = || Effect::ReturnOneYouControl { filter: R::Creature, keep_best: false };
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Fear],
+        triggered_abilities: vec![etb(Effect::Seq(vec![one(), one(), one()]))],
+        ..creature("Dust Elemental", cost(&[generic(2), w(), w()]), vec![CreatureType::Elemental], 6, 6)
+    }
+}
+
+/// Vivien, Arkbow Ranger — {1}{G}{G}{G} planeswalker, loyalty 4. +1:
+/// distribute two +1/+1 counters among up to two target creatures; they gain
+/// trample until end of turn. −3: target creature you control deals damage
+/// equal to its power to target creature or planeswalker. −5: you may reveal
+/// a creature card you own from outside the game and put it into your hand.
+pub fn vivien_arkbow_ranger() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let trample = |slot| Effect::GrantKeyword { what: Selector::Target(slot), keyword: Keyword::Trample, duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Vivien, Arkbow Ranger",
+        cost: cost(&[generic(1), g(), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Vivien], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::DistributeCounters {
+                        total: Value::Const(2),
+                        counter: CounterType::PlusOnePlusOne,
+                        filter: R::Creature,
+                        max_targets: 2,
+                    },
+                    trample(0),
+                    trample(1),
+                ]),
+            ),
+            loyalty(
+                -3,
+                Effect::DealDamageEqualToPower {
+                    source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    target: Selector::TargetFiltered { slot: 1, filter: R::Creature.or(R::Planeswalker) },
+                },
+            ),
+            loyalty(
+                -5,
+                Effect::MayDo {
+                    description: "Reveal a creature card you own from outside the game?".into(),
+                    body: Box::new(Effect::WishToHand { filter: R::Creature }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

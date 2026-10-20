@@ -18519,6 +18519,15 @@ static DECKS: &[Factory] = &[
     super::decks::petrified_plating,
     super::decks::aeronauts_wings,
     super::decks::heart_piercer_bow,
+    super::decks::angelic_armaments,
+    super::decks::spell_blast,
+    super::decks::spell_burst,
+    super::decks::briarberry_cohort,
+    super::decks::awakener_druid,
+    super::decks::circle_of_the_moon_druid,
+    super::decks::alert_heedbonder,
+    super::decks::dust_elemental,
+    super::decks::vivien_arkbow_ranger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

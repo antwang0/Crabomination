@@ -1318,3 +1318,117 @@ fn protomatter_powder_returns_an_artifact() {
     activate_on(&mut g, powder, 0, Some(Target::Permanent(ring))).expect("activate");
     assert!(g.battlefield_find(ring).is_some());
 }
+
+/// Angelic Armaments makes its host a white Angel in addition to its other
+/// colours and types (layer 4 / layer 5 additions, not replacements).
+#[test]
+fn angelic_armaments_adds_white_and_angel() {
+    let mut g = pod(2);
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let arms = g.add_card_to_battlefield(0, catalog::angelic_armaments());
+    equip(&mut g, arms, elf);
+    let c = g.computed_permanent(elf).unwrap();
+    assert!(c.colors.contains(Color::White) && c.colors.contains(Color::Green));
+    assert!(c.subtypes().creature_types.contains(&CreatureType::Angel));
+    assert!(c.subtypes().creature_types.contains(&CreatureType::Elf));
+    assert!(c.keywords().contains(&Keyword::Flying));
+    assert_eq!(pt(&g, elf), (3, 3));
+}
+
+/// Spell Blast counters only a spell whose mana value is exactly X.
+#[test]
+fn spell_blast_matches_mana_value_x() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_hand(1, catalog::grizzly_bears());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.perform_action(GameAction::CastSpell { card_id: theirs, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("the Bears");
+    let blast = g.add_card_to_hand(0, catalog::spell_blast());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.clone()
+            .perform_action(GameAction::CastSpell {
+                card_id: blast,
+                target: Some(Target::Permanent(theirs)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: Some(3),
+            })
+            .is_err(),
+        "X = 3 can't target a two-drop"
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: blast,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("X = 2");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == theirs), "countered");
+}
+
+/// Circle of the Moon Druid is a 4/2 Bear only on its controller's turn.
+#[test]
+fn circle_of_the_moon_druid_takes_bear_form_on_your_turn() {
+    let mut g = pod(2);
+    let druid = g.add_card_to_battlefield(0, catalog::circle_of_the_moon_druid());
+    assert_eq!(pt(&g, druid), (4, 2));
+    let types = g.computed_permanent(druid).unwrap().subtypes().creature_types.clone();
+    assert_eq!(types, vec![CreatureType::Bear]);
+    g.active_player_idx = 1;
+    assert_eq!(pt(&g, druid), (2, 4));
+    assert!(g.computed_permanent(druid).unwrap().subtypes().creature_types.contains(&CreatureType::Elf));
+}
+
+/// Awakener Druid's Forest stays a 4/5 Treefolk only while the Druid does.
+#[test]
+fn awakener_druid_wakes_a_forest_while_it_stays() {
+    let mut g = pod(2);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let druid = g.add_card_to_hand(0, catalog::awakener_druid());
+    cast(&mut g, druid, Some(Target::Permanent(forest)));
+    assert_eq!(pt(&g, forest), (4, 5));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(druid)));
+    assert!(g.computed_permanent(forest).unwrap().card_types().contains(&CardType::Land));
+    assert!(!g.computed_permanent(forest).unwrap().card_types().contains(&CardType::Creature));
+}
+
+/// Dust Elemental returns three creatures you control.
+#[test]
+fn dust_elemental_returns_three_of_yours() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let elemental = g.add_card_to_hand(0, catalog::dust_elemental());
+    cast(&mut g, elemental, None);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    let on_board = g.battlefield_find(elemental).is_some();
+    assert_eq!(bears + usize::from(on_board), 1, "three of the four creatures went home");
+}
+
+/// Vivien's +1 puts both counters on a lone target and gives it trample.
+#[test]
+fn vivien_arkbow_ranger_plus_one_on_one_target() {
+    let mut g = pod(2);
+    let vivien = g.add_card_to_hand(0, catalog::vivien_arkbow_ranger());
+    cast(&mut g, vivien, None);
+    let beast = g.add_token_to_battlefield(0, &body("Beast", 3, CreatureType::Beast));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vivien,
+        ability_index: 0,
+        target: Some(Target::Permanent(beast)),
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(beast).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Trample));
+}
