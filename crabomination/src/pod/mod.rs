@@ -28164,6 +28164,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VICONIA_19_COMMANDERS,
             main: decks::VICONIA_19_MAIN,
         },
+        // Seat 4619: Glacian, Powerstone Engineer and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4619`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::GLACIAN_24_COMMANDERS,
+            main: decks::GLACIAN_24_MAIN,
+        },
+        // Seat 4620: Francisco, Fowl Marauder and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 4620`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Ikra Shidiqi, the Usurper (BG)",
+            commanders: decks::FRANCISCO_23_COMMANDERS,
+            main: decks::FRANCISCO_23_MAIN,
+        },
+        // Seat 4621: Kydele, Chosen of Kruphix and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4621`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Siani, Eye of the Storm (UG)",
+            commanders: decks::KYDELE_8_COMMANDERS,
+            main: decks::KYDELE_8_MAIN,
+        },
+        // Seat 4622: Alena, Kessig Trapper and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4622`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Sengir, the Dark Baron (BR)",
+            commanders: decks::ALENA_28_COMMANDERS,
+            main: decks::ALENA_28_MAIN,
+        },
+        // Seat 4623: The Third Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4623`.
+        PodDeck {
+            name: "The Third Doctor and Amy Pond (URG)",
+            commanders: decks::THE_THIRD_DOCTOR_14_COMMANDERS,
+            main: decks::THE_THIRD_DOCTOR_14_MAIN,
+        },
+        // Seat 4624: Breeches, Brazen Plunderer and Esior, Wardwing Familiar's EDHREC average deck. `--pod-decks 4624`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Esior, Wardwing Familiar (UR)",
+            commanders: decks::BREECHES_25_COMMANDERS,
+            main: decks::BREECHES_25_MAIN,
+        },
+        // Seat 4625: Dargo, the Shipwrecker and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4625`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Numa, Joraga Chieftain (RG)",
+            commanders: decks::DARGO_17_COMMANDERS,
+            main: decks::DARGO_17_MAIN,
+        },
     ]
 }
 
@@ -34683,6 +34725,13 @@ mod tests {
             ("Ludevic, Necro-Alchemist and Miara, Thorn of the Glade", &[0x1C1E]),
             ("Malcolm, Keen-Eyed Navigator and Miara, Thorn of the Glade", &[0x1C1F]),
             ("Viconia, Drow Apostate and Veteran Soldier", &[0x1C20]),
+            ("Glacian, Powerstone Engineer and Sidar Kondo of Jamuraa", &[0x1C21]),
+            ("Francisco, Fowl Marauder and Ikra Shidiqi, the Usurper", &[0x1C22]),
+            ("Kydele, Chosen of Kruphix and Siani, Eye of the Storm", &[0x1C23]),
+            ("Alena, Kessig Trapper and Sengir, the Dark Baron", &[0x1C24]),
+            ("The Third Doctor and Amy Pond", &[0x1C25]),
+            ("Breeches, Brazen Plunderer and Esior, Wardwing Familiar", &[0x1C26]),
+            ("Dargo, the Shipwrecker and Numa, Joraga Chieftain", &[0x1C27]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
