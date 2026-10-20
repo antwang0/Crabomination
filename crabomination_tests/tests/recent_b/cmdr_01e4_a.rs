@@ -2059,3 +2059,132 @@ fn cr_109_5_pikemaster_reads_its_own_controller() {
     g.active_player_idx = 0;
     assert!(!g.computed_permanent(pike).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
+
+/// CR 122.1a — Armor Thrull's +1/+2 counter adds one power and two toughness.
+#[test]
+fn cr_122_1a_armor_thrull_leaves_a_plus_one_plus_two_counter() {
+    let mut g = pod(2);
+    let thrull = g.add_card_to_battlefield(0, catalog::armor_thrull());
+    g.clear_sickness(thrull);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    activate_on(&mut g, thrull, 0, Some(Target::Permanent(bear))).expect("sacrifice");
+    assert!(g.battlefield_find(thrull).is_none());
+    assert_eq!(pt(&g, bear), (3, 4));
+}
+
+/// Mindstab Thrull trades itself for three discards when unblocked.
+#[test]
+fn mindstab_thrull_trades_itself_for_three_discards() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    let thrull = g.add_card_to_battlefield(0, catalog::mindstab_thrull());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack_with(&mut g, &[thrull]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thrull).is_none(), "sacrificed");
+    assert_eq!(g.players[1].hand.len(), 1);
+}
+
+/// Thrull Champion pumps every Thrull and steals one.
+#[test]
+fn thrull_champion_pumps_and_steals_thrulls() {
+    let mut g = pod(2);
+    let champion = g.add_card_to_battlefield(0, catalog::thrull_champion());
+    g.clear_sickness(champion);
+    let theirs = g.add_card_to_battlefield(1, catalog::armor_thrull());
+    assert_eq!(pt(&g, theirs), (2, 4));
+    activate_on(&mut g, champion, 0, Some(Target::Permanent(theirs))).expect("steal");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+}
+
+/// Contagion, pitched, puts two -2/-1 counters on one creature.
+#[test]
+fn contagion_pitches_for_two_minus_two_minus_one_counters() {
+    let mut g = pod(2);
+    let beast = g.add_token_to_battlefield(1, &body("Beast", 3, CreatureType::Beast));
+    let pitch = g.add_card_to_hand(0, catalog::murder());
+    let contagion = g.add_card_to_hand(0, catalog::contagion());
+    let life = g.players[0].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: contagion,
+        pitch_card: Some(pitch),
+        target: Some(Target::Permanent(beast)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("pitch");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1);
+    assert_eq!(pt(&g, beast), (-1, 1));
+}
+
+/// Solitary Camel has lifelink with a Desert in the graveyard.
+#[test]
+fn solitary_camel_drinks_from_a_desert() {
+    let mut g = pod(2);
+    let camel = g.add_card_to_battlefield(0, catalog::solitary_camel());
+    assert!(!g.computed_permanent(camel).unwrap().keywords().contains(&Keyword::Lifelink));
+    g.add_card_to_graveyard(0, catalog::desert());
+    assert!(g.computed_permanent(camel).unwrap().keywords().contains(&Keyword::Lifelink));
+}
+
+/// Call of the Full Moon: +3/+2 and trample.
+#[test]
+fn call_of_the_full_moon_pumps_its_host() {
+    let mut g = pod(2);
+    let bear = g.add_token_to_battlefield(0, &body("Bear", 2, CreatureType::Bear));
+    let aura = g.add_card_to_hand(0, catalog::call_of_the_full_moon());
+    cast(&mut g, aura, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (5, 4));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
+}
+
+/// Evolved Sleeper climbs Cleric, then Phyrexian, then draws.
+#[test]
+fn evolved_sleeper_climbs_its_ladder() {
+    let mut g = pod(2);
+    let sleeper = g.add_card_to_battlefield(0, catalog::evolved_sleeper());
+    activate(&mut g, sleeper, 1).expect("not a Cleric yet: no-op");
+    assert_eq!(pt(&g, sleeper), (1, 1));
+    activate(&mut g, sleeper, 0).expect("Cleric");
+    assert_eq!(pt(&g, sleeper), (2, 2));
+    activate(&mut g, sleeper, 1).expect("Phyrexian");
+    assert_eq!(pt(&g, sleeper), (3, 3));
+    assert!(g.computed_permanent(sleeper).unwrap().keywords().contains(&Keyword::Deathtouch));
+    let hand = g.players[0].hand.len();
+    activate(&mut g, sleeper, 2).expect("grow");
+    assert_eq!(pt(&g, sleeper), (4, 4));
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Stallion of Ashmouth pumps only with delirium.
+#[test]
+fn stallion_of_ashmouth_needs_delirium() {
+    let mut g = pod(2);
+    let stallion = g.add_card_to_battlefield(0, catalog::stallion_of_ashmouth());
+    assert!(activate(&mut g, stallion, 0).is_err(), "no delirium");
+    for card in [catalog::island(), catalog::murder(), catalog::sol_ring(), catalog::dune_beetle()] {
+        g.add_card_to_graveyard(0, card);
+    }
+    activate(&mut g, stallion, 0).expect("delirium");
+    assert_eq!(pt(&g, stallion), (4, 4));
+}
+
+/// Thriving Rats spends its two energy on an attack counter.
+#[test]
+fn thriving_rats_spends_energy_on_attack() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let rats = g.add_card_to_hand(0, catalog::thriving_rats());
+    cast(&mut g, rats, None);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack_with(&mut g, &[rats]);
+    assert_eq!(g.battlefield_find(rats).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

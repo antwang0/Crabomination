@@ -4745,3 +4745,302 @@ pub fn counterintelligence() -> CardDefinition {
         },
     )
 }
+
+// ── Batch thirteen (three-gap decks) ────────────────────────────────────────
+
+/// Armor Thrull — {2}{B} 1/3 Thrull. {T}, sacrifice it: put a +1/+2 counter
+/// on target creature.
+pub fn armor_thrull() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusTwo,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature("Armor Thrull", cost(&[generic(2), b()]), vec![CreatureType::Thrull], 1, 3)
+    }
+}
+
+/// Mindstab Thrull — {1}{B}{B} 2/2 Thrull. Whenever it attacks and isn't
+/// blocked, you may sacrifice it; if you do, defending player discards three
+/// cards.
+pub fn mindstab_thrull() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_unblocked(Effect::MayDo {
+            description: "Sacrifice Mindstab Thrull to make the defending player discard three?".into(),
+            body: Box::new(Effect::If {
+                cond: Predicate::SourceOnBattlefield,
+                // The discard goes first: `DefendingPlayer` is read off the
+                // attack, which ends once the Thrull is sacrificed.
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::DefendingPlayer),
+                        amount: Value::Const(3),
+                        random: false,
+                    },
+                    Effect::SacrificeSource,
+                ])),
+                else_: Box::new(Effect::Noop),
+            }),
+        })],
+        ..creature("Mindstab Thrull", cost(&[generic(1), b(), b()]), vec![CreatureType::Thrull], 2, 2)
+    }
+}
+
+/// Thrull Champion — {4}{B} 2/2 Thrull. Thrull creatures get +1/+1. {T}: gain
+/// control of target Thrull for as long as you control this creature.
+pub fn thrull_champion() -> CardDefinition {
+    let thrull = || R::Creature.and(R::HasCreatureType(CreatureType::Thrull));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Thrull creatures get +1/+1.",
+            effect: StaticEffect::PumpPT { applies_to: Selector::EachPermanent(thrull()), power: 1, toughness: 1 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GainControlWhileYouControlSource { what: target_filtered(thrull()) },
+            ..Default::default()
+        }],
+        ..creature("Thrull Champion", cost(&[generic(4), b()]), vec![CreatureType::Thrull], 2, 2)
+    }
+}
+
+/// Contagion — {3}{B}{B} instant. You may pay 1 life and exile a black card
+/// from your hand rather than pay its mana cost. Distribute two -2/-1
+/// counters among one or two target creatures.
+pub fn contagion() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: ManaCost::default(),
+            life_cost: 1,
+            exile_filter: Some(R::HasColor(Color::Black)),
+            ..Default::default()
+        }),
+        ..spell(
+            "Contagion",
+            cost(&[generic(3), b(), b()]),
+            CardType::Instant,
+            Effect::DistributeCounters {
+                total: Value::Const(2),
+                counter: CounterType::MinusTwoMinusOne,
+                filter: R::Creature,
+                max_targets: 2,
+            },
+        )
+    }
+}
+
+/// Changeling Sentinel — {3}{W} 3/2 Shapeshifter. Changeling, vigilance.
+pub fn changeling_sentinel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Changeling, Keyword::Vigilance],
+        ..creature("Changeling Sentinel", cost(&[generic(3), w()]), vec![CreatureType::Shapeshifter], 3, 2)
+    }
+}
+
+/// Solitary Camel — {2}{W} 3/2 Camel. Lifelink as long as you control a
+/// Desert or there is a Desert card in your graveyard.
+pub fn solitary_camel() -> CardDefinition {
+    let desert = || R::HasLandType(LandType::Desert);
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Lifelink while you control a Desert or one is in your graveyard.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Lifelink,
+                condition: Predicate::Any(vec![
+                    Predicate::SelectorExists(Selector::EachPermanent(desert().and(R::ControlledByYou))),
+                    Predicate::SelectorExists(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: desert(),
+                    }),
+                ]),
+            },
+        }],
+        ..creature("Solitary Camel", cost(&[generic(2), w()]), vec![CreatureType::Camel], 3, 2)
+    }
+}
+
+/// Black Hole — {3}{B} sorcery. Destroy target creature and up to X other
+/// target creatures, where X is the number of Attractions you've visited
+/// this turn. The engine has no Attractions, so X is always 0.
+pub fn black_hole() -> CardDefinition {
+    spell("Black Hole", cost(&[generic(3), b()]), CardType::Sorcery, Effect::Destroy { what: target_filtered(R::Creature) })
+}
+
+/// Harvesttide Infiltrator // Harvesttide Assailant — {2}{R} 3/2 trampling
+/// Human Werewolf, daybound; back a 4/4 trampling Werewolf, nightbound.
+pub fn harvesttide_infiltrator() -> CardDefinition {
+    let assailant = CardDefinition {
+        name: "Harvesttide Assailant",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Nightbound],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Daybound],
+        back_face: Some(Box::new(assailant)),
+        ..creature(
+            "Harvesttide Infiltrator",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Human, CreatureType::Werewolf],
+            3,
+            2,
+        )
+    }
+}
+
+/// Call of the Full Moon — {1}{R} Aura. Enchanted creature gets +3/+2 and has
+/// trample. At the beginning of each upkeep, if a player cast two or more
+/// spells last turn, sacrifice this Aura.
+pub fn call_of_the_full_moon() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::TwoOrMoreSpellsCastLastTurn),
+            effect: Effect::SacrificeSource,
+        }],
+        ..aura(
+            "Call of the Full Moon",
+            cost(&[generic(1), r()]),
+            Some(EquipBonus { power: 3, toughness: 2, keywords: vec![Keyword::Trample], ..Default::default() }),
+        )
+    }
+}
+
+/// Vampiric Fury — {1}{R} instant. Vampire creatures you control get +2/+0
+/// and gain first strike until end of turn.
+pub fn vampiric_fury() -> CardDefinition {
+    let vampires =
+        || Selector::EachPermanent(R::Creature.and(R::HasCreatureType(CreatureType::Vampire)).and(R::ControlledByYou));
+    spell(
+        "Vampiric Fury",
+        cost(&[generic(1), r()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: vampires(),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: vampires(), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+        ]),
+    )
+}
+
+/// Evolved Sleeper — {B} 1/1 Human. {B}: it becomes a Human Cleric with base
+/// power and toughness 2/2. {1}{B}: if it's a Cleric, put a deathtouch counter
+/// on it and it becomes a Phyrexian Human Cleric with base 3/3. {1}{B}{B}: if
+/// it's a Phyrexian, put a +1/+1 counter on it, then draw a card and lose 1
+/// life.
+pub fn evolved_sleeper() -> CardDefinition {
+    let become_ = |types: Vec<CreatureType>, pt: i32| {
+        vec![
+            Effect::BecomeCreatureType { what: Selector::This, creature_types: types, duration: Duration::Permanent },
+            Effect::SetBasePT {
+                what: Selector::This,
+                power: Value::Const(pt),
+                toughness: Value::Const(pt),
+                duration: Duration::Permanent,
+            },
+        ]
+    };
+    let if_it_is = |t: CreatureType, then: Vec<Effect>| Effect::If {
+        cond: Predicate::EntityMatches { what: Selector::This, filter: R::HasCreatureType(t) },
+        then: Box::new(Effect::Seq(then)),
+        else_: Box::new(Effect::Noop),
+    };
+    let mut phyrexian = vec![Effect::AddKeywordCounter {
+        what: Selector::This,
+        keyword: Keyword::Deathtouch,
+        amount: Value::ONE,
+    }];
+    phyrexian.extend(become_(vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Cleric], 3));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                effect: Effect::Seq(become_(vec![CreatureType::Human, CreatureType::Cleric], 2)),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                effect: if_it_is(CreatureType::Cleric, phyrexian),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b(), b()]),
+                effect: if_it_is(
+                    CreatureType::Phyrexian,
+                    vec![
+                        Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                    ],
+                ),
+                ..Default::default()
+            },
+        ],
+        ..creature("Evolved Sleeper", cost(&[b()]), vec![CreatureType::Human], 1, 1)
+    }
+}
+
+/// Stallion of Ashmouth — {3}{B} 3/3 Nightmare Horse. Delirium — {1}{B}: +1/+1
+/// until end of turn, only with four or more card types in your graveyard.
+pub fn stallion_of_ashmouth() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            condition: Some(Predicate::DeliriumActive { who: PlayerRef::You }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Stallion of Ashmouth",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Nightmare, CreatureType::Horse],
+            3,
+            3,
+        )
+    }
+}
+
+/// Thriving Rats — {1}{B} 1/2 Rat. When it enters, you get {E}{E}. Whenever it
+/// attacks, you may pay {E}{E}; if you do, put a +1/+1 counter on it.
+pub fn thriving_rats() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Pay {E}{E} for a +1/+1 counter?".into(),
+                    body: Box::new(Effect::PayEnergy {
+                        amount: 2,
+                        then: Box::new(Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        }),
+                    }),
+                },
+            },
+        ],
+        ..creature("Thriving Rats", cost(&[generic(1), b()]), vec![CreatureType::Rat], 1, 2)
+    }
+}
