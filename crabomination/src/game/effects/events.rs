@@ -684,6 +684,10 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             | EventKind::Connived
             | EventKind::PlayerDamaged
             | EventKind::CardExiled
+            // CR 603.2 — "whenever a permanent is returned to your hand"
+            // (Azorius Aethermage, Warped Devotion, Justice, Stormfront
+            // Riders) fires per permanent; a two-creature bounce read 1.
+            | EventKind::PermanentReturnedToHand
             // One event per investigation, exploit, enlist or die: "whenever
             // you roll a 4 or higher" off three dice fires per die (Mr. House).
             | EventKind::Performed(_)
