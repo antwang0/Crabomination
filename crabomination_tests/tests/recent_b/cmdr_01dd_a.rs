@@ -413,3 +413,50 @@ fn grave_strength_counts_creatures_after_milling() {
     cast(&mut g, gs, Some(Target::Permanent(bears))).expect("cast");
     assert_eq!(g.battlefield_find(bears).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 4);
 }
+
+/// CR 614 / 119.5 — Enduring Angel replaces a reduction to 0 or less: the
+/// life total becomes 3, never 0, and the Angel transforms into a */*
+/// Angelic Enforcer sized by that life.
+#[test]
+fn cr_614_enduring_angel_catches_a_lethal_loss() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_battlefield(0, catalog::enduring_angel());
+    g.players[0].life = 2;
+    assert_eq!(g.adjust_life_applied(0, -5), 1, "2 becomes 3: a gain of the difference");
+    assert_eq!(g.players[0].life, 3);
+    assert!(!g.players[0].eliminated);
+    assert_eq!(g.battlefield_find(angel).unwrap().definition.name, "Angelic Enforcer");
+    assert_eq!(g.computed_permanent(angel).unwrap().power, 3);
+    // Transformed, the replacement is gone.
+    g.adjust_life(0, -1);
+    assert_eq!(g.players[0].life, 2);
+}
+
+/// CR 104.3 / 614 — Exquisite Archangel exiles itself instead of its
+/// controller losing, and the life total resets to the starting total.
+#[test]
+fn cr_614_exquisite_archangel_resets_to_starting_life() {
+    let mut g = pod(2);
+    let arch = g.add_card_to_battlefield(0, catalog::exquisite_archangel());
+    g.players[0].life = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bolt, Some(Target::Player(0))).expect("bolt");
+    assert!(!g.players[0].eliminated);
+    assert!(g.battlefield_find(arch).is_none(), "exiled");
+    assert_eq!(g.players[0].life, g.players[0].starting_life);
+}
+
+/// Oketra's Last Mercy resets your life and locks your lands for one untap.
+#[test]
+fn oketras_last_mercy_resets_life_and_skips_a_land_untap() {
+    let mut g = pod(2);
+    g.players[0].life = 4;
+    let olm = g.add_card_to_hand(0, catalog::oketras_last_mercy());
+    flood(&mut g, 0);
+    cast(&mut g, olm, None).expect("cast");
+    assert_eq!(g.players[0].life, g.players[0].starting_life);
+    assert!(g.players[0].lands_dont_untap_next_untap > 0);
+}

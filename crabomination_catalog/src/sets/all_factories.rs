@@ -18180,6 +18180,9 @@ static DECKS: &[Factory] = &[
     super::decks::tyrannical_pitlord,
     super::decks::circle_of_affliction,
     super::decks::grave_strength,
+    super::decks::enduring_angel,
+    super::decks::exquisite_archangel,
+    super::decks::oketras_last_mercy,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
