@@ -1264,3 +1264,133 @@ pub fn precognition_field() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch nine ──────────────────────────────────────────────────────────────
+
+/// Lightning-Core Excavator — {1} 0/3 artifact creature — Golem. {5}, {T},
+/// sacrifice it: 3 damage to any target.
+pub fn lightning_core_excavator() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(5)]),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..creature("Lightning-Core Excavator", cost(&[generic(1)]), vec![CreatureType::Golem], 0, 3)
+    }
+}
+
+/// Tangleclaw Werewolf // Fibrous Entangler — {2}{G}{G} 2/4 Werewolf Horror
+/// that can block an additional creature; {6}{G}: transform. Back: 4/6
+/// Eldrazi Werewolf with vigilance, must be blocked if able, and can block an
+/// additional creature.
+pub fn tangleclaw_werewolf() -> CardDefinition {
+    let entangler = CardDefinition {
+        color_indicator: vec![Color::Green],
+        keywords: vec![Keyword::Vigilance, Keyword::MustBeBlocked, Keyword::CanBlockAdditional(1)],
+        ..creature(
+            "Fibrous Entangler",
+            ManaCost::default(),
+            vec![CreatureType::Eldrazi, CreatureType::Werewolf],
+            4,
+            6,
+        )
+    };
+    CardDefinition {
+        keywords: vec![Keyword::CanBlockAdditional(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), g()]),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(entangler)),
+        ..creature(
+            "Tangleclaw Werewolf",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Werewolf, CreatureType::Horror],
+            2,
+            4,
+        )
+    }
+}
+
+/// Allosaurus Rider — {5}{G}{G} Elf Warrior, 1+*/1+* (lands you control). You
+/// may exile two green cards from your hand rather than pay its mana cost.
+pub fn allosaurus_rider() -> CardDefinition {
+    let size = || {
+        Value::Sum(vec![
+            Value::ONE,
+            Value::PermanentCountControlledByMatching(PlayerRef::You, R::Land),
+        ])
+    };
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: ManaCost::default(),
+            exile_filter: Some(R::HasColor(Color::Green)),
+            exile_filter_extra: 1,
+            ..Default::default()
+        }),
+        static_abilities: vec![StaticAbility {
+            description: "Allosaurus Rider's power and toughness are each equal to 1 plus the number of lands you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: size(), toughness: size() },
+        }],
+        ..creature(
+            "Allosaurus Rider",
+            cost(&[generic(5), g(), g()]),
+            vec![CreatureType::Elf, CreatureType::Warrior],
+            1,
+            1,
+        )
+    }
+}
+
+/// Altar Golem — {7} */* trample artifact creature — Golem, P/T each the
+/// number of creatures on the battlefield. Doesn't untap during your untap
+/// step. Tap five untapped creatures you control: untap it.
+pub fn altar_golem() -> CardDefinition {
+    let creatures = || Value::CountOf(Box::new(Selector::EachPermanent(R::Creature)));
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Altar Golem's power and toughness are each equal to the number of creatures on the battlefield.",
+                effect: StaticEffect::SelfBasePtFromValue { power: creatures(), toughness: creatures() },
+            },
+            StaticAbility {
+                description: "This creature doesn't untap during your untap step.",
+                effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::Creature, 5)),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+            ..Default::default()
+        }],
+        ..creature("Altar Golem", cost(&[generic(7)]), vec![CreatureType::Golem], 0, 0)
+    }
+}
+
+/// Natural Selection — {G} instant. Look at the top three cards of target
+/// player's library and put them back in any order; you may have that player
+/// shuffle.
+pub fn natural_selection() -> CardDefinition {
+    spell(
+        "Natural Selection",
+        cost(&[g()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::RearrangeTop { who: PlayerRef::Target(0), amount: Value::Const(3) }),
+            },
+            Effect::MayDo {
+                description: "Have that player shuffle their library?".into(),
+                body: Box::new(Effect::ShuffleLibrary { who: PlayerRef::Target(0) }),
+            },
+        ]),
+    )
+}

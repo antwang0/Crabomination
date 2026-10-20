@@ -913,3 +913,71 @@ fn precognition_field_casts_from_the_top() {
     cast(&mut g, bolt, Some(Target::Player(1)));
     assert_eq!(g.players[1].life, life - 3);
 }
+
+/// Lightning-Core Excavator pings for 3 when sacrificed.
+#[test]
+fn lightning_core_excavator_sacrifices_for_three() {
+    let mut g = pod(2);
+    let golem = g.add_card_to_battlefield(0, catalog::lightning_core_excavator());
+    g.battlefield_find_mut(golem).unwrap().summoning_sick = false;
+    let life = g.players[1].life;
+    activate(&mut g, golem, 0, Some(Target::Player(1))).expect("ping");
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.battlefield_find(golem).is_none());
+}
+
+/// Tangleclaw Werewolf transforms into a 4/6 that must be blocked.
+#[test]
+fn tangleclaw_werewolf_transforms_into_fibrous_entangler() {
+    let mut g = pod(2);
+    let wolf = g.add_card_to_battlefield(0, catalog::tangleclaw_werewolf());
+    activate(&mut g, wolf, 0, None).expect("transform");
+    let c = g.computed_permanent(wolf).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 6));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::MustBeBlocked));
+}
+
+/// Allosaurus Rider: free for two green cards; 1 + lands big.
+#[test]
+fn allosaurus_rider_pitches_two_green_cards() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_hand(0, catalog::timber_wolves());
+    g.add_card_to_hand(0, catalog::elegant_entourage());
+    let rider = g.add_card_to_hand(0, catalog::allosaurus_rider());
+    let pitch = g.players[0].hand.iter().find(|c| c.definition.name == "Timber Wolves").map(|c| c.id);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: rider,
+        pitch_card: pitch,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("pitch two green cards");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, rider), (4, 4), "1 + three lands");
+    assert_eq!(g.exile.len(), 2);
+}
+
+/// Altar Golem counts every creature and stays tapped through untap.
+#[test]
+fn altar_golem_counts_all_creatures() {
+    let mut g = pod(2);
+    let golem = g.add_card_to_battlefield(0, catalog::altar_golem());
+    g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    assert_eq!(pt(&g, golem), (2, 2));
+}
+
+/// Natural Selection keeps the target's top three on top.
+#[test]
+fn natural_selection_rearranges_a_players_top_three() {
+    let mut g = pod(2);
+    let lib = g.players[1].library.len();
+    let spell = g.add_card_to_hand(0, catalog::natural_selection());
+    cast(&mut g, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].library.len(), lib);
+}

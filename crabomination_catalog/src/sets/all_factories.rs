@@ -18338,6 +18338,11 @@ static DECKS: &[Factory] = &[
     super::decks::grindclock,
     super::decks::shade_of_trokair,
     super::decks::precognition_field,
+    super::decks::lightning_core_excavator,
+    super::decks::tangleclaw_werewolf,
+    super::decks::allosaurus_rider,
+    super::decks::altar_golem,
+    super::decks::natural_selection,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
