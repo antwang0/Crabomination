@@ -28368,6 +28368,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIVIO_7_COMMANDERS,
             main: decks::LIVIO_7_MAIN,
         },
+        // Seat 4653: The Tenth Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 4653`.
+        PodDeck {
+            name: "The Tenth Doctor and Yasmin Khan (UR)",
+            commanders: decks::THE_TENTH_DOCTOR_14_COMMANDERS,
+            main: decks::THE_TENTH_DOCTOR_14_MAIN,
+        },
+        // Seat 4654: Durnan of the Yawning Portal and Feywild Visitor's EDHREC average deck. `--pod-decks 4654`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Feywild Visitor (UG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_14_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_14_MAIN,
+        },
+        // Seat 4655: Livaan, Cultist of Tiamat and Folk Hero's EDHREC average deck. `--pod-decks 4655`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Folk Hero (WR)",
+            commanders: decks::LIVAAN_7_COMMANDERS,
+            main: decks::LIVAAN_7_MAIN,
+        },
+        // Seat 4656: Nadier, Agent of the Duskenel and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4656`.
+        PodDeck {
+            name: "Nadier, Agent of the Duskenel and Radiant, Serra Archangel (WB)",
+            commanders: decks::NADIER_10_COMMANDERS,
+            main: decks::NADIER_10_MAIN,
+        },
     ]
 }
 
@@ -34921,6 +34945,10 @@ mod tests {
             ("Burakos, Party Leader and Inspiring Leader", &[0x1C40]),
             ("Bruse Tarl, Boorish Herder and Prava of the Steel Legion", &[0x1C41]),
             ("Livio, Oathsworn Sentinel and Malcolm, Keen-Eyed Navigator", &[0x1C42]),
+            ("The Tenth Doctor and Yasmin Khan", &[0x1C43]),
+            ("Durnan of the Yawning Portal and Feywild Visitor", &[0x1C44]),
+            ("Livaan, Cultist of Tiamat and Folk Hero", &[0x1C45]),
+            ("Nadier, Agent of the Duskenel and Radiant, Serra Archangel", &[0x1C46]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
