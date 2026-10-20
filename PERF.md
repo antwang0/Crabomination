@@ -3154,7 +3154,9 @@ pods (release)   seed 9268, 1,000 games at each of 2..8 seats: 7,000 decided, ev
                  turns/game 19.67 / 32.22 / 46.10 / 58.32 / 69.54 / 82.00 / 97.64
                  ⚠ above 2026-09-20's 64.39 / 77.80 / 92.58 at 6-8 seats — predates this run: the
                  run's base `86bbb59` and the tip read byte-identical at 9103 x 60 six-seat games
-                 (debug, 70.72 / 4,580.4 / 352.1). Bisect between `389b14975` and `86bbb59`.
+                 (debug, 70.72 / 4,580.4 / 352.1). Bisected: the main step is `1876f4a7b` (CR 712.2 —
+                 TDFC back faces stopped being castable for free), 64.23 -> 68.47; the curve above is
+                 the reference now.
 pods (debug)     seeds 9264-9269 over seats 4400-4412 at 4/6 seats: 222 games, all decided
 ```
 
