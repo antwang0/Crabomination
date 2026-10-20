@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 32 closer cards, 10 seats, two engine fixes](#fixedopen-2026-10-20-commander-run-01ddeutc--32-closer-cards-10-seats-two-engine-fixes) | 30 |
+| Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes](#fixedopen-2026-10-20-commander-run-01ddeutc--44-closer-cards-13-seats-two-engine-fixes) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes](#fixedopen-2026-10-19-commander-run-01gwrdkp--44-closer-cards-17-seats-six-engine-fixes) | 34 |
 | Cards & rules | [FIXED/OPEN 2026-10-19 (Commander run, `016Xh16H`) — 168 closer cards, 37 seats, step-trigger / Adventure-copy / snow-payment bugs](#fixedopen-2026-10-19-commander-run-016xh16h--168-closer-cards-37-seats-step-trigger--adventure-copy--snow-payment-bugs) | 47 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-18 (Commander run, `01HPYxiB`) — audit-build pod sweeps, eight fixes](#fixedopen-2026-10-18-commander-run-01hpyxib--audit-build-pod-sweeps-eight-fixes) | 30 |
@@ -182,12 +182,13 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
-## FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 32 closer cards, 10 seats, two engine fixes
+## FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes
 
 - **Seats** 4400-4409: Henry Wu, Sygg River Guide, Fblthp Impossibly Lost, Errant Street Artist, Hakim
   Loreweaver, Proft Sinister Mastermind, Selenia Dark Angel, Sol'Kanar the Tainted, Leori Sparktouched Hunter,
-  Bill Ferny Bree Swindler — every legal unseated two- and three-card gap, then four of the four-card gaps.
-  Cards in `decks::cmdr_01dd_a`..`_i`, tests `recent_b/cmdr_01dd_a.rs`. The 2026-10-20 rescan (6,801 EDHREC
+  Bill Ferny Bree Swindler — every legal unseated two- and three-card gap, then four of the four-card gaps —
+  and 4410-4412 Sygg Wanderwine Wisdom, Tam Mindful First-Year, Baru Wurmspeaker.
+  Cards in `decks::cmdr_01dd_a`..`_j`, tests `recent_b/cmdr_01dd_a.rs`. The 2026-10-20 rescan (6,801 EDHREC
   commanders) left **42 legal unseated decks**; after this run 32, the nearest Baru (Panglacial Wurm only) and
   Myra (Attractions), then five-gap The Celestial Toymaker / The Most Dangerous Gamer / Sygg Wanderwine Wisdom /
   Tam, Mindful First-Year.
@@ -199,18 +200,29 @@ the handoff.
   may name `Selector::ChosenPermanentOfSource` (Tyrannical Pitlord); `StaticEffect::LifeToZeroTransformsSelf`
   read in `adjust_life` behind the life-static lane (CR 614 / 119.5; Enduring Angel) and
   `ReplaceControllerLossWithExileSelfAtStartingLife` (Exquisite Archangel); `Effect::CastHandSpellsFreeThisTurn`
-  (Chandra, Flame's Catalyst); `Effect::SacrificeEachWhenOtherLeavesThisTurn` (CR 603.4; Phantasmal Mount).
+  (Chandra, Flame's Catalyst); `Effect::SacrificeEachWhenOtherLeavesThisTurn` (CR 603.4; Phantasmal Mount);
+  `StaticEffect::CastFromLibraryWhileSearching`, offered by the generic search arm right after the search mark
+  (`game/effects/search_cast.rs`; Panglacial Wurm); `DamageWontReduceControllerLifeBelowWhileAtLeast`
+  (Elderscale Wurm).
 - **Fixes:** CR 606.1 — a loyalty ability went on the stack without `TriggerPush::activated`, so "copy that
   ability" and "counter target activated ability" could not see it (Chandra's Regulator found it); CR 400.7 —
   `leave_battlefield_state` now clears `modes_chosen`, so a blinked "choose one that hasn't been chosen"
   permanent starts a fresh menu (Sol'Kanar's own donation). Doc: `Effect::MayPay` auto-taps (the pool-only note
   was stale).
-- **OPEN:** Panglacial Wurm ("while you're searching your library, you may cast this card from your library")
-  needs one hook in the library-search funnel — the ~9 `searched_library_this_turn = true` sites want a single
-  `note_library_searched` helper first (a bug class: each marks the search itself), then the offer, which must
-  survive the search arms' suspend/replay. ⚠ **Don't edit `crabomination_base` while an optimized build of the
+- **OPEN:** Panglacial Wurm is offered only by the generic search arm (`Effect::Search` / `SearchPickedBy` /
+  `SearchZones`) and never to a prompting seat; the other eight search resolvers each mark the search
+  themselves (`searched_library_this_turn = true` × 9) — one `note_library_searched` helper would make the
+  offer, Archive Trap's flag and the event agree everywhere (a bug class). ⚠ **Don't edit `crabomination_base` while an optimized build of the
   engine is compiling**: the base crate compiles first, the engine later reads the newer sources, and the build
   fails (E0599) half an hour in.
+
+### The Commander NEXT's session lines as `01DDeUtc` found them (moved verbatim)
+
+3. **State (2026-10-19 night): ~4,392 seats** (4384-4392 by `016Xh16H`: Zhou Yu, Beluna, Syrix, Meng Huo, Lynde, The Unluckiest Planeswalker, Narfi, Heidar). `01GwrDKP` added 44 closer cards (`decks::cmdr_01gw_a`..`_g`) and 17 seats (4367-4383), the 1-3- then 5-7-gap tier; primitives (up-to-N modal triggers with targeted modes, sticker / Treasure-mana events, Draugr's castable ice exile, vivid reveal, blight-then, reveal-from-hand, next-declare-attackers delayed trigger) and six engine fixes (suspended step triggers CR 702.62b; CR 802.2 entering-attacking defenders and its CR 508.8 moot check; exile extra-slot fill; a `ChooseN`'s later slots had no `slot_owner`, so modal hostile player slots aimed at their controller) in ENGINE_BACKLOG `01GwrDKP`. `01DJHkWk`: ~270 cards (`decks::cmdr_01dj_a`..`_w`), seats through 4366; audit sweeps 9258/9259 clean bar one 104.4a draw. `016Xh16H`: 168 cards, 37 seats, the Adventure-copy and `{S}` auto-tap fixes — its ENGINE_BACKLOG section. **Next seed 9263.**
+
+5. **Top open closers (2026-10-19 evening rescan; 60 legal unseated decks):** one gap — Echo (Wan Shi Tong, All-Knowing: a "put into a library" event; `CardPile::writes` + a per-library id diff gated on a listener is the cheap route; also Wan Shi Tong's own 5-gap deck). Two: Fblthp (Mirror of Fate + Thought Lash: an exile-top activation cost, a non-mana cumulative upkeep). Three: Henry Wu (exploit event without the exploited creature), Selenia (would-lose / life-to-0 replacements), Errant, Hakim (Illusory Gains' control that follows the Aura). Four: Baru, Leori, Bill Ferny, Sol'Kanar, Proft (a chosen-creature link). Five+: Toymaker (piles), Count Nefaria (Nettlevine Blight), Tam Mindful, Myra, Sygg (no text yet); ten-plus: Ayesha Tanaka / General Jarkeld (banding), The Space Family Goblinson cluster (d20 / attractions). ⚠ `01DJHkWk` and this run collided on 14 cards and 4 seats — **fetch before starting a cluster**, and say the tier in the commit subject.
+
+8. **Robustness (`01HPYxiB`, 2026-10-18):** audit-build sweeps — `scripts/pod_sweep.py <overflow+debug-assertions bot_ladder> SEED 4,6,8 1 --jobs 3 --classify` (+`--env CRAB_POD_CONCEDE=20`) — over 38,000 pod games at seeds 9201-9216 (2-8 seats) found fourteen bugs, all fixed (ENGINE_BACKLOG `01HPYxiB`): half-card cast locks, battle/planeswalker damage triggers (`EventSpec::or_battle`), five hand→library 903.9b misses, `LowestLifeTotal` reading departed seats, three self-targeting bot picks, the Karn restart (CR 727 / 903.6), Glimpse's tapped commander, the conspire gate, counter-total overflow, two-seat Commander caster-first targeting. **The seat test outgrew a two-hour window (~4,200 seats ≈ 2.5 h debug on four cores): run it as `CRAB_SEAT_SHARD=0/2` then `1/2`** (shard 0 passed in 79 min; shard 1 found a hideaway `CastWithoutPayingImmediate` returning `Err` under a cast lock, fixed `0ac513052`). Next: fresh sweep seeds 9219+; board caps are ~0.07 % (ENGINE_BACKLOG lists them by seed) — the top cause is Mondrak token doubling; ⚠ a `#[cfg]` sits on the line above `check_commanders` — removing a debug line above it broke every optimized build once. **`015cG1GZ` (2026-10-19):** seeds 9230-9231 (3/4/6/8 seats, 9,672 games) + targeted pods: fixed the Naru Meha copier loop (`game/copy_loop.rs`), Doppelgang's X² gate (`ApplyToTargets` in `effect_token_estimate`), CR 701.17c shuffle-instead mills (Zellix × Blightsteel), and a 42-minute Food-board game (loop probes off past 256 permanents; exact Soulbond precheck) → 11 min, the rest is PERF's O(n²) mint-gather candidate. Next seed 9232.
 
 ## FIXED/OPEN 2026-10-19 (Commander run, `01GwrDKP`) — 44 closer cards, 17 seats, six engine fixes
 

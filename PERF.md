@@ -3136,6 +3136,28 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-20 (Commander run, `01DDeUtc`) — guardrail; 44 cards, 13 seats, eleven primitives, two rule fixes
+
+Hot-path touches: `clamp_damage_to_life_floor` folds Elderscale Wurm's floor into the one board walk it
+already took (the `any` became a loop with the same trip count when nothing matches); `adjust_life` asks
+`life_to_zero_replacement` only on a loss behind the life-static lane; the generic search arm walks the
+searcher's library once for the castable-while-searching marker; `selector_to_affected` gains one arm;
+loyalty abilities push with `activated(true)`. `release` bot_ladder at `cc7773593`, 4-core Xeon @ 2.80 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed
+                 invariant; determinism ok; thread_determinism ok (3 vs 1); peak_rss_mib 44.4;
+                 190.19 games/s on 3 threads
+2-player pools   seed 9267: cube 2,398 + 2 CR 104.4a draws / sos 1,500 / sealed 3,600, 0 stalls;
+                 cube at the previous run's 9256: 2,400 / 0 undecided, as recorded
+pods (release)   seed 9268, 1,000 games at each of 2..8 seats: 7,000 decided, every undecided_by 0;
+                 turns/game 19.67 / 32.22 / 46.10 / 58.32 / 69.54 / 82.00 / 97.64
+                 ⚠ above 2026-09-20's 64.39 / 77.80 / 92.58 at 6-8 seats — predates this run: the
+                 run's base `86bbb59` and the tip read byte-identical at 9103 x 60 six-seat games
+                 (debug, 70.72 / 4,580.4 / 352.1). Bisect between `389b14975` and `86bbb59`.
+pods (debug)     seeds 9264-9269 over seats 4400-4412 at 4/6 seats: 222 games, all decided
+```
+
 ### 2026-10-19 evening (Commander run, `01GwrDKP`) — guardrail; 44 cards, 17 seats, nine primitives, six engine fixes
 
 Hot-path touches: `ChooseN` reads one more `Option` field (`None` everywhere but one card) before its
