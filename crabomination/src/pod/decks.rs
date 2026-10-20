@@ -123420,3 +123420,32 @@ pub const MONOXA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const HENRY_WU_COMMANDERS: &[CardFactory] = &[henry_wu_ingen_geneticist];
+
+/// **Henry Wu, InGen Geneticist**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 5 Forests + 4 Islands + 7 Swamps = 99.
+/// Henry Wu, InGen Geneticist (EDHREC, fetched 2026-10-20).
+pub const HENRY_WU_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, horn_of_gondor, skullclamp, sol_ring, vat_of_rebirth,
+    breeding_pool, command_tower, dreamroot_cascade, drowned_catacomb, exotic_orchard,
+    hinterland_harbor, llanowar_wastes, morphic_pool, opulent_palace, overgrown_tomb,
+    path_of_ancestry, rejuvenating_springs, reliquary_tower, sunken_hollow, undergrowth_stadium,
+    watery_grave, woodland_cemetery, yavimaya_coast, zagoth_triome, beifongs_bounty_hunters,
+    birds_of_paradise, blood_artist, bloodghast, chasm_skulker, chatterfang_squirrel_general,
+    compy_swarm, endrek_sahr_master_breeder, eternal_witness, fell_stinger, grim_haruspex,
+    homunculus_horde, honest_rutstein, inga_and_esika, jadar_ghoulcaller_of_nephalia,
+    jolrael_mwonvuli_recluse, koma_cosmos_serpent, marionette_apprentice,
+    meren_of_clan_nel_toth, mirkwood_bats, morbid_opportunist, mosswood_dreadknight,
+    muldrotha_the_gravetide, ophiomancer, overcharged_amalgam, pitiless_plunderer,
+    profaner_of_the_dead, reef_worm, sidisi_undead_vizier, silumgar_sorcerer, skull_skaab,
+    solemn_simulacrum, syr_konrad_the_grim, tendershoot_dryad, xathrid_necromancer,
+    zimone_and_dina, zulaport_cutthroat, bastion_of_remembrance, black_market_connections,
+    grave_pact, moldervine_reclamation, primeval_bounty, tribute_to_the_world_tree,
+    an_offer_you_cant_refuse, arcane_denial, assassins_trophy, beast_within, counterspell,
+    deadly_dispute, heroic_intervention, cultivate, farseek, natures_lore, rampant_growth,
+    reanimate, three_visits, toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];

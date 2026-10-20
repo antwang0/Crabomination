@@ -26850,6 +26850,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MONOXA_COMMANDERS,
             main: decks::MONOXA_MAIN,
         },
+        // Seat 4400: Henry Wu, InGen Geneticist's EDHREC average deck. `--pod-decks 4400`.
+        PodDeck {
+            name: "Henry Wu, InGen Geneticist (UBG)",
+            commanders: decks::HENRY_WU_COMMANDERS,
+            main: decks::HENRY_WU_MAIN,
+        },
     ]
 }
 
@@ -33150,6 +33156,7 @@ mod tests {
             ("Wan Shi Tong, All-Knowing", &[0x1B43]),
             ("Farideh, Devil's Chosen", &[0x1B44]),
             ("Monoxa, Midway Manager", &[0x1B45]),
+            ("Henry Wu, InGen Geneticist", &[0x1B46]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
