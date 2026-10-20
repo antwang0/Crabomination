@@ -130637,3 +130637,110 @@ pub const KRARK_9_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const FALTHIS_24_COMMANDERS: &[CardFactory] = &[falthis_shadowcat_familiar, miara_thorn_of_the_glade];
+
+/// **Falthis, Shadowcat Familiar and Miara, Thorn of the Glade**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 31 Swamps = 98.
+/// Falthis, Shadowcat Familiar and Miara, Thorn of the Glade (EDHREC, fetched 2026-10-20).
+pub const FALTHIS_24_MAIN: &[CardFactory] = &[
+    arcane_signet, glass_cast_heart, grim_bauble, hemlock_vial, hylderblade, icon_of_ancestry,
+    lothlorien_blade, sol_ring, thought_vessel, adventurers_inn, arch_of_orazca, arid_archway,
+    barren_moor, base_camp, blinkmoth_nexus, bojuka_bog, command_tower, compleated_huntmaster,
+    deadbridge_shaman, deathknell_berserker, duskwielder, elderfang_disciple,
+    elderfang_ritualist, elvish_doomsayer, elvish_dreadlord, exquisite_huntmaster,
+    eyeblight_assassin, haunt_of_the_dead_marshes, hired_hexblade, hullcarver, infestation_sage,
+    komas_faithful, lys_alana_scarblade, myrkuls_invoker, nadiers_nightblade,
+    nadier_agent_of_the_duskenel, nightshade_harvester, plague_witch, ruthless_winnower,
+    scarred_vinebreeder, skemfar_avenger, skemfar_shadowsage, thornbow_archer,
+    unscrupulous_agent, agent_of_the_shadow_thieves, black_market, call_the_bloodline,
+    cast_into_darkness, corroding_dragonstorm, prowess_of_the_fair, alchemists_gift,
+    aleshas_legacy, armor_of_shadows, dark_ritual, dash_hopes, defile, diabolic_edict,
+    final_flourish, infernal_reckoning, crippling_fear, deadly_tempest, eyeblight_massacre,
+    feed_the_swarm, insatiable_avarice, read_the_bones, return_upon_the_tide, sign_in_blood,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SAFANA_21_COMMANDERS: &[CardFactory] = &[safana_calimport_cutthroat, haunted_one];
+
+/// **Safana, Calimport Cutthroat and Haunted One**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 28 Swamps = 98.
+/// Safana, Calimport Cutthroat and Haunted One (EDHREC, fetched 2026-10-20).
+pub const SAFANA_21_MAIN: &[CardFactory] = &[
+    charcoal_diamond, dungeon_map, dungeoneers_pack, ghost_lantern, jet_medallion,
+    portal_to_phyrexia, sarevoks_tome, sol_ring, trailblazers_torch, vat_of_rebirth,
+    dungeon_descent, leechridden_swamp, phyrexian_tower, survivors_encampment,
+    vault_of_whispers, westvale_abbey, witchs_cottage, acererak_the_archlich,
+    agent_of_the_fates, archpriest_of_shadows, beamsaw_prospector, blackbloom_rogue,
+    body_launderer, butch_deloria_tunnel_snake, conceited_witch, dimir_house_guard,
+    disciple_of_bolas, ecstatic_awakener, elegy_acolyte, fain_the_broker, fell_beast_of_mordor,
+    final_sting_faerie, fleshwrither, graveblade_marauder, gray_merchant_of_asphodel,
+    king_macar_the_gold_cursed, midnight_scavengers, morbid_opportunist, night_clubber,
+    nighthawk_scavenger, passageway_seer, pitiless_plunderer, plaguecrafter,
+    ravenloft_adventurer, thieving_sprite, troll_of_khazad_dum, undercity_scrounger,
+    underdark_explorer, vengeful_bloodwitch, vicious_battlerager, yuan_ti_fang_blade,
+    ancestral_vengeance, consecrated_by_blood, polluted_bonds, precipitous_drop,
+    scion_of_halaster, cut_down, deadly_dispute, defile, imps_mischief, mausoleum_secrets,
+    not_dead_after_all, peppersmoke, tragic_slip, agonizing_syphon, fates_reversal,
+    feed_the_swarm, from_the_catacombs, tegwylls_scouring, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const SAFANA_22_COMMANDERS: &[CardFactory] = &[safana_calimport_cutthroat, hardy_outlander];
+
+/// **Safana, Calimport Cutthroat and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 13 Forests + 7 Swamps = 98.
+/// Safana, Calimport Cutthroat and Hardy Outlander (EDHREC, fetched 2026-10-20).
+pub const SAFANA_22_MAIN: &[CardFactory] = &[
+    brass_knuckles, crawlspace, dungeon_map, fifty_feet_of_rope, golgari_signet, mithril_coat,
+    quietus_spike, sarevoks_tome, talisman_of_resilience, trailblazers_torch, captivating_cave,
+    command_tower, darkbore_pathway, dungeon_descent, exotic_orchard, hidden_nursery,
+    jungle_hollow, llanowar_wastes, mosswort_bridge, treasure_vault, underground_mortuary,
+    undergrowth_stadium, ambush_viper, blight_pile, campus_guide, dune_beetle, elvish_mystic,
+    entourage_of_trest, forgotten_ancient, garrulous_sycophant, glissa_sunslayer,
+    hinterland_logger, intrepid_provisioner, krosan_avenger, llanowar_elves, nadiers_nightblade,
+    overgrown_battlement, passageway_seer, ravenloft_adventurer, shield_wall_sentinel,
+    silvanuss_invoker, tree_of_redemption, treetop_snarespinner, undercity_scrounger,
+    underdark_explorer, undermountain_adventurer, varis_silverymoon_ranger, vicious_battlerager,
+    wandering_troubadour, yuan_ti_fang_blade, aspect_of_gorgon, briar_patch, court_of_ambition,
+    court_of_garenbrig, elephant_grass, find_the_path, sandwurm_convergence, vow_of_torment,
+    vow_of_wildness, wild_growth, dark_dabbling, deadly_dispute, fog, grasp_of_darkness,
+    grim_contest, heroic_intervention, jaheiras_respite, leeching_bite, vivien_reid,
+    bone_shards, explore_the_underdark, farseek, kodamas_reach, natures_lore, three_visits,
+    unearth, vicious_rumors, you_find_a_cursed_idol,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ALHARU_26_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, glacian_powerstone_engineer];
+
+/// **Alharu, Solemn Ritualist and Glacian, Powerstone Engineer**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 16 Islands + 15 Plains = 98.
+/// Alharu, Solemn Ritualist and Glacian, Powerstone Engineer (EDHREC, fetched 2026-10-20).
+pub const ALHARU_26_MAIN: &[CardFactory] = &[
+    ballista_charger, bottle_of_suleiman, sol_ring, adarkar_wastes, azorius_chancery,
+    azorius_guildgate, calciform_pools, command_tower, glacial_fortress, idyllic_beachfront,
+    absolute_virtue, ancient_silver_dragon, boulderborn_dragon, burdened_stoneback,
+    coral_commando, cryptic_annelid, deceptive_frostkite, dragonback_lancer, dragonlord_ojutai,
+    dragonologist, glory_bound_initiate, guardian_scalelord, hammerhead_tyrant,
+    highspire_bell_ringer, hraesvelgr_of_the_first_brood, icefall_regent, iron_giant,
+    ironclad_krovod, labyrinth_minotaur, lagonna_band_trailblazer, lumengrid_warden,
+    ojutai_soul_of_winter, phantasmal_dragon, protector_of_the_wastes, pseudodragon_familiar,
+    scalelord_reckoner, scion_of_ugin, spectrum_sentinel, steel_hellkite, stern_judge,
+    sunscorch_regent, born_to_drive, control_magic, evershrikes_gift, exchange_of_words,
+    martial_impetus, pacifism, sentinels_mark, diminish, disenchant, dispelling_exhale,
+    holy_day, lethargy_trap, midnight_haunting, negate, osseous_exhale, pitfall_trap, redirect,
+    theoretical_duplication, thraben_charm, trapmakers_snare, unsummon, whiplash_trap,
+    breath_of_life, fell_the_mighty, preordain, will_of_the_temur,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

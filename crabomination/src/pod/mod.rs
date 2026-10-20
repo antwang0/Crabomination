@@ -28404,6 +28404,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KRARK_9_COMMANDERS,
             main: decks::KRARK_9_MAIN,
         },
+        // Seat 4659: Falthis, Shadowcat Familiar and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4659`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Miara, Thorn of the Glade (B)",
+            commanders: decks::FALTHIS_24_COMMANDERS,
+            main: decks::FALTHIS_24_MAIN,
+        },
+        // Seat 4660: Safana, Calimport Cutthroat and Haunted One's EDHREC average deck. `--pod-decks 4660`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Haunted One (B)",
+            commanders: decks::SAFANA_21_COMMANDERS,
+            main: decks::SAFANA_21_MAIN,
+        },
+        // Seat 4661: Safana, Calimport Cutthroat and Hardy Outlander's EDHREC average deck. `--pod-decks 4661`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Hardy Outlander (BG)",
+            commanders: decks::SAFANA_22_COMMANDERS,
+            main: decks::SAFANA_22_MAIN,
+        },
+        // Seat 4662: Alharu, Solemn Ritualist and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 4662`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Glacian, Powerstone Engineer (WU)",
+            commanders: decks::ALHARU_26_COMMANDERS,
+            main: decks::ALHARU_26_MAIN,
+        },
     ]
 }
 
@@ -34963,6 +34987,10 @@ mod tests {
             ("Nadier, Agent of the Duskenel and Radiant, Serra Archangel", &[0x1C46]),
             ("Livio, Oathsworn Sentinel and Numa, Joraga Chieftain", &[0x1C47]),
             ("Krark, the Thumbless and Nadier, Agent of the Duskenel", &[0x1C48]),
+            ("Falthis, Shadowcat Familiar and Miara, Thorn of the Glade", &[0x1C49]),
+            ("Safana, Calimport Cutthroat and Haunted One", &[0x1C4A]),
+            ("Safana, Calimport Cutthroat and Hardy Outlander", &[0x1C4B]),
+            ("Alharu, Solemn Ritualist and Glacian, Powerstone Engineer", &[0x1C4C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
