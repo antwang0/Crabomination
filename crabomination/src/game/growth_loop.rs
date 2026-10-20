@@ -54,6 +54,14 @@ impl GameState {
         // Depth growth holds the floor where it is: the loop's depth
         // oscillates (each resolution pops one, every few push several).
         let deep_only = !grew && depth_before >= STACK_LOOP_DEPTH;
+        // A deep resolution counts only against a deep floor: a chain that
+        // began near the bottom and was fanned out past the bound is a
+        // cascade draining back toward it, and holding its shallow floor
+        // counted every drained trigger (eight-seat sweep seed 930232: ~1,800
+        // Agate Instigator pings drawn as a loop at depth 1,622, floor 2).
+        if deep_only && floor != 0 && (floor as usize) < STACK_LOOP_DEPTH / 2 {
+            return (depth, tag);
+        }
         let grew = grew || deep_only;
         if floor == 0 || chain_tag != tag || depth < floor {
             return if grew { (depth, tag) } else { (0, 0) };
@@ -109,6 +117,20 @@ mod tests {
             d = if i % 3 == 2 { d + 4 } else { d - 1 };
         }
         assert_eq!(g.game_over, Some(None));
+    }
+
+    /// A chain that began shallow and was fanned out deep drains without
+    /// drawing: the deep-only resolutions don't count against its shallow
+    /// floor (sweep seed 930232).
+    #[test]
+    fn a_fan_out_from_a_shallow_chain_drains_without_drawing() {
+        let mut g = crate::game::multi_player_game(2);
+        let (mut w, mut events) = ((0, 0), Vec::new());
+        w = g.note_growth_loop(true, 2, true, w, &mut events);
+        for d in (STACK_LOOP_DEPTH..STACK_LOOP_DEPTH * 2).rev() {
+            w = g.note_growth_loop(true, d, false, w, &mut events);
+        }
+        assert!(g.game_over.is_none());
     }
 
     /// A deep stack that only drains is a finite cascade, not a loop.
