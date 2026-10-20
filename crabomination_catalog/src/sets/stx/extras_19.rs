@@ -1034,6 +1034,7 @@ pub fn ecological_appreciation() -> CardDefinition {
                 graveyard: true,
                 denied: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Shuffled },
                 rest: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                denied_smallest: false,
             },
             Effect::ExileResolvingSpell,
         ]),

@@ -12866,6 +12866,10 @@ pub enum Effect {
         graveyard: bool,
         denied: ZoneDest,
         rest: ZoneDest,
+        /// The opponent hands over the two SMALLEST (Turtles Forever: the two
+        /// it picks go to the caster's hand); `false` denies the two biggest.
+        #[serde(default)]
+        denied_smallest: bool,
     },
     /// Fact or Fiction / Atris — reveal the top `count` cards of your library;
     /// an opponent separates them into two piles; put one pile into your hand

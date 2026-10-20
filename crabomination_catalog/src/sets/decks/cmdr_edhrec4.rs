@@ -1538,6 +1538,7 @@ pub fn elemental_teachings() -> CardDefinition {
                 graveyard: false,
                 denied: ZoneDest::Graveyard,
                 rest: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                denied_smallest: false,
             },
             Effect::ShuffleLibrary { who: PlayerRef::You },
         ]),

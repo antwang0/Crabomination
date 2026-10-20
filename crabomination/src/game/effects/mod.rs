@@ -36108,7 +36108,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SearchSplitWithOpponent { count, filter, mv_at_most_x, graveyard, denied, rest } => {
+            Effect::SearchSplitWithOpponent { count, filter, mv_at_most_x, graveyard, denied, rest, denied_smallest } => {
                 let p = ctx.controller;
                 let cap = if *mv_at_most_x { ctx.x_value } else { u32::MAX };
                 self.players[p].searched_library_this_turn = true;
@@ -36134,7 +36134,11 @@ impl GameState {
                         picked.push(cid);
                     }
                 }
-                // The opponent denies the two biggest (picked is MV-sorted).
+                // The opponent denies the two biggest (picked is MV-sorted), or
+                // hands over the two smallest.
+                if *denied_smallest {
+                    picked.reverse();
+                }
                 for cid in picked.iter().skip(2) {
                     self.move_card_to(*cid, rest, ctx, events);
                 }
