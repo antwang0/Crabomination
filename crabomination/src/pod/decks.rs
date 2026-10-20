@@ -128720,3 +128720,60 @@ pub const THE_THIRTEENTH_DOCTOR_10_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, island, island,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const WYLL_13_COMMANDERS: &[CardFactory] = &[wyll_blade_of_frontiers, acolyte_of_bahamut];
+
+/// **Wyll, Blade of Frontiers and Acolyte of Bahamut**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Forests + 11 Mountains = 98.
+/// Wyll, Blade of Frontiers and Acolyte of Bahamut (EDHREC, fetched 2026-10-20).
+pub const WYLL_13_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_tricks, bucknards_everfull_purse, component_pouch, dragons_hoard,
+    sol_ring, swiftfoot_boots, sword_of_hours, the_deck_of_many_things, treasure_chest,
+    vexing_puzzlebox, wand_of_wonder, cinder_glade, command_tower, game_trail, gruul_turf,
+    haven_of_the_spirit_dragon, karplusan_forest, mossfire_valley, path_of_ancestry,
+    rockfall_vale, rootbound_crag, spinerock_knoll, stomping_ground, temple_of_abandon,
+    underdark_rift, ancient_bronze_dragon, ancient_copper_dragon, atarka_world_render,
+    brazen_dwarf, chaos_channeler, chaos_dragon, delina_wild_mage, draconic_muralists,
+    dragonborn_champion, dragonlords_servant, dragonspeaker_shaman, druid_of_the_emerald_grove,
+    earth_cult_elemental, earthquake_dragon, ganax_astral_hunter, goblin_anarchomancer,
+    goldspan_dragon, hellkite_tyrant, hoarding_ogre, iron_mastiff, lathliss_dragon_queen,
+    savage_ventmaw, scaled_nurturer, scourge_of_valkas, sylvan_shepherd, thrakkus_the_butcher,
+    utvara_hellkite, vrondiss_rage_of_ancients, barbarian_class, crucible_of_fire,
+    dragon_tempest, garruks_uprising, journey_to_the_lost_city, maddening_hex,
+    rhythm_of_the_wild, beast_within, berserkers_frenzy, critical_hit, faridehs_fireball,
+    heroic_intervention, pair_o_dice_lost, return_of_the_wildspeaker, song_of_inspiration,
+    wylls_reversal, domri_chaos_bringer, blasphemous_act, cultivate, overwhelming_encounter,
+    rampant_growth, reckless_endeavor, thunderwave, wild_endeavor,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const ALENA_24_COMMANDERS: &[CardFactory] = &[alena_kessig_trapper, kamahl_heart_of_krosa];
+
+/// **Alena, Kessig Trapper and Kamahl, Heart of Krosa**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 9 Mountains = 98.
+/// Alena, Kessig Trapper and Kamahl, Heart of Krosa (EDHREC, fetched 2026-10-20).
+pub const ALENA_24_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, sol_ring, swiftfoot_boots, the_great_henge, castle_garenbrig,
+    cinder_glade, command_tower, game_trail, gruul_turf, karplusan_forest, kessig_wolf_run,
+    mossfire_valley, mosswort_bridge, rogues_passage, rootbound_crag, stomping_ground,
+    temple_of_abandon, wooded_foothills, anzrag_the_quake_mole, beast_whisperer,
+    birds_of_paradise, drakuseth_maw_of_flames, elder_gargaroth, elvish_mystic,
+    etali_primal_storm, fanatic_of_rhonas, fyndhorn_elves, ghalta_primal_hunger,
+    goblin_anarchomancer, goreclaw_terror_of_qal_sisma, grand_warlord_radha,
+    gwenna_eyes_of_gaea, halana_and_alena, ilharg_the_raze_boar, ilysian_caryatid,
+    impervious_greatwurm, kodama_of_the_east_tree, kogla_the_titan_ape, llanowar_elves,
+    moraug_fury_of_akoum, ogre_battledriver, port_razer, quartzwood_crasher, reclamation_sage,
+    ruby_daring_tracker, sakura_tribe_elder, samut_hazorets_champion, savage_ventmaw,
+    selvala_heart_of_the_wilds, xenagos_god_of_revels, bitter_work, elemental_bond,
+    garruks_uprising, growing_rites_of_itlimoc, rhythm_of_the_wild, unnatural_growth,
+    up_the_beanstalk, warstorm_surge, beast_within, chaos_warp, entish_restoration, harrow,
+    heroic_intervention, return_of_the_wildspeaker, domri_chaos_bringer, blasphemous_act,
+    chandras_ignition, cultivate, farseek, kodamas_reach, natures_lore, rampant_growth,
+    rishkars_expertise, three_visits, vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

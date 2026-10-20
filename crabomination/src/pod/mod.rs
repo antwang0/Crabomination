@@ -27990,6 +27990,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_THIRTEENTH_DOCTOR_10_COMMANDERS,
             main: decks::THE_THIRTEENTH_DOCTOR_10_MAIN,
         },
+        // Seat 4590: Wyll, Blade of Frontiers and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4590`.
+        PodDeck {
+            name: "Wyll, Blade of Frontiers and Acolyte of Bahamut (RG)",
+            commanders: decks::WYLL_13_COMMANDERS,
+            main: decks::WYLL_13_MAIN,
+        },
+        // Seat 4591: Alena, Kessig Trapper and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 4591`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Kamahl, Heart of Krosa (RG)",
+            commanders: decks::ALENA_24_COMMANDERS,
+            main: decks::ALENA_24_MAIN,
+        },
     ]
 }
 
@@ -34480,6 +34492,8 @@ mod tests {
             ("Anara, Wolvid Familiar and Ghost of Ramirez DePietro", &[0x1C01]),
             ("Alharu, Solemn Ritualist and Halana, Kessig Ranger", &[0x1C02]),
             ("The Thirteenth Doctor and Amy Pond", &[0x1C03]),
+            ("Wyll, Blade of Frontiers and Acolyte of Bahamut", &[0x1C04]),
+            ("Alena, Kessig Trapper and Kamahl, Heart of Krosa", &[0x1C05]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
