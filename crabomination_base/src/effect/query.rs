@@ -1598,6 +1598,7 @@ impl Effect {
             // here left `resolve_selector` with an empty `ctx.targets`, so the
             // arm built no `PreventionShield` at all and six Circle-shaped
             // cards did nothing.
+            Effect::PreventAllButOneFromChosenSource { .. } => false,
             Effect::PreventNextDamageFromChosenSource { to, redirect_to, .. } => {
                 to.as_ref().is_some_and(sel_has_target)
                     || redirect_to.as_ref().is_some_and(sel_has_target)

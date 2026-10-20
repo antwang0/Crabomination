@@ -1235,6 +1235,12 @@ impl GameState {
                 break;
             }
             let soak = match shield.remaining {
+                // Forcefield — all but `all_but` of the event.
+                None if shield.all_but > 0 => {
+                    let soak = remaining.saturating_sub(shield.all_but);
+                    remaining -= soak;
+                    soak
+                }
                 // Prevent-all: soak everything; the shield stays for the
                 // turn unless it's a one-event shield.
                 None => std::mem::take(&mut remaining),

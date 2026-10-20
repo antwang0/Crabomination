@@ -2742,6 +2742,10 @@ pub struct PreventionShield {
     /// source's controller.
     #[serde(default)]
     pub reflect_by: Option<crate::card::CardId>,
+    /// "Prevent all but `all_but` of that damage" (Forcefield): an
+    /// unbudgeted shield that lets this much through. 0 = prevent it all.
+    #[serde(default)]
+    pub all_but: u32,
 }
 
 /// CR 615.7 — a turn-long shield around one chosen damage *source*

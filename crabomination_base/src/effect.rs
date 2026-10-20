@@ -13332,6 +13332,10 @@ pub enum Effect {
     /// damage to you this turn, prevent that damage." A one-event,
     /// source-restricted shield around the controller. Circle of Protection
     /// cycle.
+    /// CR 615.7 — "The next time a [filter] source of your choice would deal
+    /// damage to you this turn, prevent all but 1 of that damage"
+    /// (Forcefield): a one-event `all_but: 1` shield.
+    PreventAllButOneFromChosenSource { filter: crate::card::SelectionRequirement },
     PreventNextDamageFromChosenSource {
         filter: crate::card::SelectionRequirement,
         /// Deflecting Palm — damage prevented by this shield is dealt to

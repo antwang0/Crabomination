@@ -9,6 +9,7 @@
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod distinct_mv_return;
 mod mill_until;
+mod all_but_one;
 mod energy_sweep;
 mod among;
 mod may_cost;
@@ -40215,6 +40216,8 @@ impl GameState {
                 }
                 Ok(())
             }
+
+            Effect::PreventAllButOneFromChosenSource { filter } => self.prevent_all_but_one_from_chosen_source(filter, ctx),
 
             Effect::PreventNextFromChosenSourceToTeam { amount, to, one_event, gain_life_colors } => {
                 // CR 615.7 — one shared "next N" pool around the controller and
