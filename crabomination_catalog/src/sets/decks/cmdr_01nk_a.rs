@@ -2,11 +2,12 @@
 //! `tests/recent_b/cmdr_01nk_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility,
+    ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
+    CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
+    LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement as R, StaticAbility, StaticEffect,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{discard, draw, etb, target_filtered};
+use crate::effect::shortcut::{blocks, discard, draw, emerge, etb, on_attack, on_cast, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
@@ -309,6 +310,237 @@ pub fn tarnation_vista() -> CardDefinition {
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Acquisitions Expert — {1}{B} 1/2 Human Rogue. When it enters, target
+/// opponent reveals cards from their hand equal to your party's size; you
+/// choose one of them and they discard it.
+pub fn acquisitions_expert() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::DiscardChosenFromRevealed {
+            from: target_filtered(R::OpponentPlayer),
+            reveal: Value::PartyCount,
+            pick: Value::ONE,
+        })],
+        ..creature("Acquisitions Expert", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Rogue], 1, 2)
+    }
+}
+
+/// Distended Mindbender — {8} 5/5 Eldrazi Insect, emerge {5}{B}{B}. When you
+/// cast it, target opponent reveals their hand; you choose a nonland card
+/// with mana value 3 or less and a card with mana value 4 or greater from
+/// it, and they discard those cards.
+pub fn distended_mindbender() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(emerge(cost(&[generic(5), b(), b()]))),
+        triggered_abilities: vec![on_cast(Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: target_filtered(R::OpponentPlayer),
+                count: Value::ONE,
+                filter: R::Nonland.and(R::ManaValueAtMost(3)),
+            },
+            Effect::DiscardChosen { from: Selector::Target(0), count: Value::ONE, filter: R::ManaValueAtLeast(4) },
+        ]))],
+        ..creature("Distended Mindbender", cost(&[generic(8)]), vec![CreatureType::Eldrazi, CreatureType::Insect], 5, 5)
+    }
+}
+
+/// Soul Separator — {3} artifact. {5}, {T}, sacrifice it: exile target
+/// creature card from your graveyard; create a token copy of it that's a 1/1
+/// flying Spirit in addition to its other types, and a black Zombie with the
+/// card's power and toughness.
+pub fn soul_separator() -> CardDefinition {
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        dynamic_pt: Some((
+            Value::PowerOf(Box::new(Selector::Target(0))),
+            Value::ToughnessOf(Box::new(Selector::Target(0))),
+        )),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Soul Separator",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(5)]),
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(R::Creature.and(R::InYourGraveyard)) },
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::Target(0),
+                    extra_creature_types: vec![CreatureType::Spirit],
+                    extra_card_types: vec![],
+                    override_pt: Some((1, 1)),
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![Keyword::Flying],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(zombie) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ajani's Last Stand — {2}{W}{W} enchantment. Whenever a creature or
+/// planeswalker you control dies, you may sacrifice it; if you do, create a
+/// 4/4 white flying Avatar. When an opponent's spell or ability makes you
+/// discard it, if you control a Plains, create that Avatar.
+pub fn ajanis_last_stand() -> CardDefinition {
+    let avatar = || {
+        Arc::new(TokenDefinition {
+            name: "Avatar".into(),
+            power: 4,
+            toughness: 4,
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::White],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        })
+    };
+    let mint = move || Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: avatar() };
+    CardDefinition {
+        name: "Ajani's Last Stand",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.or(R::Planeswalker) },
+                ),
+                effect: Effect::MaySacrificeSource {
+                    description: "Sacrifice Ajani's Last Stand for a 4/4 Avatar?".into(),
+                    then: Box::new(mint()),
+                    else_: None,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::OpponentCausedYouToDiscard, EventScope::SelfSource).with_filter(
+                    Predicate::SelectorExists(Selector::EachPermanent(
+                        R::HasLandType(LandType::Plains).and(R::ControlledByYou),
+                    )),
+                ),
+                effect: mint(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Veteran's Armaments — {2} Kindred Artifact — Soldier Equipment. Equipped
+/// creature has "whenever this creature attacks or blocks, it gets +1/+1
+/// until end of turn for each attacking creature". Whenever a Soldier
+/// creature enters, you may attach it to it. Equip {2}.
+pub fn veterans_armaments() -> CardDefinition {
+    let attackers = || Value::CountOf(Box::new(Selector::EachPermanent(R::IsAttacking)));
+    let pump = move || Effect::PumpPT { what: Selector::This, power: attackers(), toughness: attackers(), duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Veteran's Armaments",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Kindred, CardType::Artifact],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Soldier)),
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Attach Veteran's Armaments to it?".into(),
+                body: Box::new(Effect::Attach { what: Selector::This, to: Selector::TriggerSource }),
+            },
+        }],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![on_attack(pump()), blocks(pump())],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Jace, Cunning Castaway — {1}{U}{U} legendary planeswalker, loyalty 3.
+/// +1: until end of turn, whenever one or more creatures you control deal
+/// combat damage to a player, draw a card, then discard a card. −2: create a
+/// 2/2 blue Illusion with "when this becomes the target of a spell, sacrifice
+/// it". −5: create two tokens that are copies of Jace, except not legendary.
+pub fn jace_cunning_castaway() -> CardDefinition {
+    let illusion = TokenDefinition {
+        name: "Illusion".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource).caused_by(R::IsSpellOnStack),
+            effect: Effect::SacrificeSource,
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Jace, Cunning Castaway",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::MatchingCreaturesDealingCombatDamageBatchThisTurn {
+                    filter: R::Creature,
+                    body: Box::new(Effect::Seq(vec![draw(1), discard(Selector::You, 1, false)])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(illusion) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: true,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 ..Default::default()
             },

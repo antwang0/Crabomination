@@ -258,3 +258,94 @@ fn tarnation_vista_counts_monocolored_permanents() {
     assert_eq!(pool.amount(Color::Green), 1, "the green Bears");
     assert_eq!(pool.amount(Color::Red), 0, "the R/G Trailblazer is multicolored");
 }
+
+/// Acquisitions Expert reveals as many cards as your party is large and
+/// discards the one you choose.
+#[test]
+fn acquisitions_expert_reveals_party_size() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let ae = g.add_card_to_hand(0, catalog::acquisitions_expert());
+    cast(&mut g, ae, None);
+    if !g.stack.is_empty() {
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].hand.len(), 2, "a party of one (the Rogue) reveals one; it's discarded");
+}
+
+/// Distended Mindbender's cast trigger takes a small nonland card and a big one.
+#[test]
+fn distended_mindbender_strips_a_small_and_a_big_card() {
+    let mut g = pod(2);
+    let small = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let big = g.add_card_to_hand(1, catalog::hill_giant());
+    let land = g.add_card_to_hand(1, catalog::plains());
+    let mb = g.add_card_to_hand(0, catalog::distended_mindbender());
+    cast(&mut g, mb, Some(Target::Player(1)));
+    let hand: Vec<_> = g.players[1].hand.iter().map(|c| c.id).collect();
+    assert_eq!(hand, vec![land], "{small:?} and {big:?} discarded");
+}
+
+/// Soul Separator makes a 1/1 flying Spirit copy and a Zombie with the card's
+/// power and toughness.
+#[test]
+fn soul_separator_splits_a_dead_creature() {
+    let mut g = pod(2);
+    let sep = g.add_card_to_battlefield(0, catalog::soul_separator());
+    let dead = g.add_card_to_graveyard(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility { card_id: sep, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None, mode: None })
+        .unwrap();
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Hill Giant").expect("the copy").id;
+    let cp = g.computed_permanent(copy).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+    let zombie = g.battlefield.iter().find(|c| c.definition.name == "Zombie").expect("the zombie").id;
+    let zp = g.computed_permanent(zombie).unwrap();
+    assert_eq!((zp.power, zp.toughness), (3, 3));
+    assert!(g.exile.iter().any(|c| c.id == dead));
+}
+
+/// Ajani's Last Stand trades itself for a 4/4 flying Avatar when a creature
+/// you control dies.
+#[test]
+fn ajanis_last_stand_answers_a_death() {
+    let mut g = pod(2);
+    let stand = g.add_card_to_battlefield(0, catalog::ajanis_last_stand());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let evs = g
+        .resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &EffectContext::for_spell(1, Some(Target::Permanent(bears)), 1, 0))
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stand).is_none(), "sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Avatar"));
+}
+
+/// Veteran's Armaments may jump onto an entering Soldier.
+#[test]
+fn veterans_armaments_attaches_to_entering_soldiers() {
+    let mut g = pod(2);
+    let arm = g.add_card_to_battlefield(0, catalog::veterans_armaments());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let vanguard = g.add_card_to_hand(0, catalog::elite_vanguard());
+    cast(&mut g, vanguard, None);
+    assert_eq!(g.battlefield_find(arm).unwrap().attached_to, Some(vanguard), "attached to the entering Soldier");
+}
+
+/// Jace, Cunning Castaway's −5 makes two non-legendary copies of itself.
+#[test]
+fn jace_cunning_castaway_copies_itself() {
+    let mut g = pod(2);
+    let jace = g.add_card_to_battlefield(0, catalog::jace_cunning_castaway());
+    g.battlefield_find_mut(jace).unwrap().add_counters(CounterType::Loyalty, 3);
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: jace, ability_index: 2, target: None, x_value: None })
+        .unwrap();
+    drain_stack(&mut g);
+    let jaces = g.battlefield.iter().filter(|c| c.definition.name == "Jace, Cunning Castaway").count();
+    assert_eq!(jaces, 3, "the original survives the legend rule beside two non-legendary copies");
+}

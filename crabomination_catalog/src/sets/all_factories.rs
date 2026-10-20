@@ -18362,6 +18362,12 @@ static DECKS: &[Factory] = &[
     super::decks::dichotomancy,
     super::decks::sphere_of_annihilation,
     super::decks::tarnation_vista,
+    super::decks::acquisitions_expert,
+    super::decks::distended_mindbender,
+    super::decks::soul_separator,
+    super::decks::ajanis_last_stand,
+    super::decks::veterans_armaments,
+    super::decks::jace_cunning_castaway,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,
