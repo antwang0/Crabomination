@@ -18408,8 +18408,6 @@ static DECKS: &[Factory] = &[
     super::decks::aurora_champion,
     super::decks::incremental_growth,
     super::decks::inspiring_roar,
-    super::decks::lightning_core_excavator,
-    super::decks::slumbering_walker,
     super::decks::exuberant_wolfbear,
     super::decks::razorclaw_bear,
     super::decks::awaken_the_bear,

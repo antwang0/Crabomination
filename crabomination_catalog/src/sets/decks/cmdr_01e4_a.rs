@@ -1185,54 +1185,6 @@ pub fn inspiring_roar() -> CardDefinition {
     )
 }
 
-/// Lightning-Core Excavator — {1} 0/3 artifact creature Golem. {5}, {T},
-/// sacrifice it: 3 damage to any target.
-pub fn lightning_core_excavator() -> CardDefinition {
-    CardDefinition {
-        card_types: vec![CardType::Artifact, CardType::Creature],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(5)]),
-            tap_cost: true,
-            sac_cost: true,
-            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
-            ..Default::default()
-        }],
-        ..creature("Lightning-Core Excavator", cost(&[generic(1)]), vec![CreatureType::Golem], 0, 3)
-    }
-}
-
-/// Slumbering Walker — {3}{W}{W} 4/7 Giant Warrior. Enters with two -1/-1
-/// counters. At the beginning of your end step, you may remove a counter from
-/// it; when you do, return target creature card with power 2 or less from
-/// your graveyard to the battlefield (CR 603.12 reflexive trigger).
-pub fn slumbering_walker() -> CardDefinition {
-    CardDefinition {
-        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(2))),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::This, filter: R::WithAnyCounter },
-            ),
-            effect: Effect::MayDo {
-                description: "Remove a counter from Slumbering Walker?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::RemoveCounter {
-                        what: Selector::This,
-                        kind: CounterType::MinusOneMinusOne,
-                        amount: Value::ONE,
-                    },
-                    Effect::ReflexiveTrigger {
-                        body: Box::new(Effect::Move {
-                            what: target_filtered(R::Creature.and(R::PowerAtMost(2)).from_your_graveyard()),
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                        }),
-                    },
-                ])),
-            },
-        }],
-        ..creature("Slumbering Walker", cost(&[generic(3), w(), w()]), vec![CreatureType::Giant, CreatureType::Warrior], 4, 7)
-    }
-}
-
 /// Exuberant Wolfbear — {3}{G} 4/4 Wolf Bear. Whenever it attacks, you may
 /// have the base power and toughness of target Human you control become equal
 /// to its power and toughness until end of turn.
