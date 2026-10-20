@@ -18207,6 +18207,11 @@ static DECKS: &[Factory] = &[
     super::decks::elfhame_wurm,
     super::decks::elderscale_wurm,
     super::decks::soul_swallower,
+    // cmdr_01fn_a (session 01FnAVVR)
+    super::decks::immortal_coil,
+    super::decks::priest_of_the_blood_rite,
+    super::decks::colfenors_plans,
+    super::decks::forbidden_crypt,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
