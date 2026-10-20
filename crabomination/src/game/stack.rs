@@ -3212,6 +3212,7 @@ impl GameState {
                             });
                         }
                     }
+                    self.note_entering_loyalty(card_id, &mut events);
                     // CR 702.32 / 702.63 — Fading / Vanishing enter-with-counters.
                     self.apply_fading_vanishing_etb(card_id, &mut events);
                     // CR 701.28 — a spell cast converted (More Than Meets the

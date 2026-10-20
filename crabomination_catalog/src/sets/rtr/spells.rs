@@ -28,13 +28,15 @@ pub fn annihilating_fire() -> CardDefinition {
         name: "Annihilating Fire",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Instant],
+        // The replacement goes in first: damage checks state-based actions
+        // mid-resolution, so a lethal hit died before a later step ran.
         effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::Target(0),
+            },
             Effect::DealDamage {
                 to: target_any(),
                 amount: Value::Const(3),
-            },
-            Effect::ExileIfWouldDieThisTurn {
-                what: Selector::Target(0),
             },
         ]),
         ..Default::default()

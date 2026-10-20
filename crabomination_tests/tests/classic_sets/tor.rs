@@ -465,6 +465,29 @@ fn overmaster_protects_one_spell() {
     );
 }
 
+/// Regression: the cast consumed Overmaster's grant before the spell was
+/// stamped uncounterable, so the stamp never saw it and a Counterspell still
+/// countered the protected spell.
+#[test]
+fn overmaster_spell_survives_a_counterspell() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::overmaster());
+    cast(&mut g, 0, spell, None);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Bolt");
+    let cs = g.add_card_to_hand(1, catalog::counterspell());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    let _ = g.perform_action(GameAction::CastSpell { card_id: cs, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None });
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "the Bolt resolved");
+}
+
 /// Llawan bounces blue creatures and stops opponents casting more.
 #[test]
 fn llawan_bounces_and_locks_blue() {

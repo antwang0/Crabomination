@@ -29406,6 +29406,18 @@ impl GameState {
                 count: (-loyalty_change) as u32,
             });
         }
+        // CR 606.4 — a plus ability's cost PUTS loyalty counters on it, by its
+        // activator: "whenever you put one or more loyalty counters on a
+        // planeswalker" (Inspired Tethermage) and "whenever loyalty counters
+        // are put on planeswalkers you control" (Bioessence Hydra) see it.
+        if loyalty_change > 0 {
+            events.push(GameEvent::CounterAdded {
+                card_id,
+                counter_type: crate::card::CounterType::Loyalty,
+                count: loyalty_change as u32,
+                placer: Some(p),
+            });
+        }
 
         // Push ability effects onto the stack. Auto-fill additional target
         // slots (Domri Rade's −2 "target creature you control fights another

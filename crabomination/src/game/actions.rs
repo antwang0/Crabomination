@@ -5949,6 +5949,24 @@ impl GameState {
         }
     }
 
+    /// CR 122.6 / 306.5b — a planeswalker that entered with loyalty counters
+    /// had them put on it, by its controller (CR 122.6a): "whenever loyalty
+    /// counters are put on planeswalkers you control" sees the entry
+    /// (Bioessence Hydra ruling, 2019-05-03; Inspired Tethermage). Called by
+    /// both entry paths once the entering counters have settled.
+    pub(crate) fn note_entering_loyalty(&self, card_id: CardId, events: &mut Vec<GameEvent>) {
+        let Some(c) = self.battlefield_find(card_id) else { return };
+        let n = c.counter_count(crate::card::CounterType::Loyalty);
+        if n > 0 && self.computed_has_card_type(c, crate::card::CardType::Planeswalker) {
+            events.push(GameEvent::CounterAdded {
+                card_id,
+                counter_type: crate::card::CounterType::Loyalty,
+                count: n,
+                placer: Some(c.controller),
+            });
+        }
+    }
+
     /// CR 704.5g (Zilortha) — true iff some active `LethalDamageByPower` static
     /// matches the creature `card_id`, so its lethal-damage threshold is power
     /// rather than toughness.
@@ -13363,7 +13381,9 @@ impl GameState {
         let face = if card.has_face_view() { card.face_view(true) } else { None };
         let fdef = face.as_ref().map_or_else(|| card.definition.arc(), |f| f.definition.arc());
         // "The next [filter] spell you cast this turn can't be countered" is a
-        // one-shot: the matching cast consumes its grant.
+        // one-shot: the matching cast consumes its grant — and is stamped
+        // uncounterable below, which can no longer read the grant it ate.
+        let mut next_spell_grant = false;
         if !self.players[p].next_spell_uncounterable.is_empty() {
             let hit = self.players[p]
                 .next_spell_uncounterable
@@ -13371,6 +13391,7 @@ impl GameState {
                 .position(|f| self.evaluate_requirement_on_card(f, face.as_ref().unwrap_or(&card), p));
             if let Some(i) = hit {
                 self.players[p].next_spell_uncounterable.remove(i);
+                next_spell_grant = true;
             }
         }
         self.spells_cast_this_turn += 1;
@@ -13501,7 +13522,8 @@ impl GameState {
             collect_self_cast_triggers(&card)
         };
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
-            || std::mem::take(&mut self.cast_paid_uncounterable);
+            || std::mem::take(&mut self.cast_paid_uncounterable)
+            || next_spell_grant;
         // Written only when set: `card` is a CoW handle and the write unshares.
         if self.players[p].cast_paid_with_treasure > 0 {
             let spent = std::mem::take(&mut self.players[p].cast_paid_with_treasure);

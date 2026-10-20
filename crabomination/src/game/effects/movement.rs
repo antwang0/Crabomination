@@ -3414,6 +3414,7 @@ impl GameState {
                         });
                     }
                 }
+                self.note_entering_loyalty(cid, events);
                 // CR 702.32 / 702.63 — Fading / Vanishing enter-with-counters.
                 self.apply_fading_vanishing_etb(cid, events);
                 // CR 714.2b — a Saga entering from anywhere (reanimated,

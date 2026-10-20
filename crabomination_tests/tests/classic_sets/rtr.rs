@@ -2457,3 +2457,20 @@ fn search_the_city_returns_then_grants_a_turn() {
     assert!(g.battlefield_find(city).is_none(), "sacrificed once the pile emptied");
     assert_eq!(g.players[0].extra_turns, 1, "and banked an extra turn");
 }
+
+/// Regression: Annihilating Fire's "if a creature dealt damage this way would
+/// die this turn, exile it instead" was installed after the damage, which
+/// checks state-based actions mid-resolution — the creature had already died.
+#[test]
+fn annihilating_fire_exiles_what_it_kills() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let af = g.add_card_to_hand(0, catalog::annihilating_fire());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell { card_id: af, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled, not dead");
+}
