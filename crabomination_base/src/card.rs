@@ -409,6 +409,8 @@ pub enum CreatureType {
     Camarid,
     // Unfinity (Wee Champion).
     Child,
+    // Marvel (Shi'ar Soldier).
+    Shiar,
 }
 
 /// Land subtypes (basic land types + others).
