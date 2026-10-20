@@ -4351,3 +4351,397 @@ pub fn mystery_key() -> CardDefinition {
         },
     )
 }
+
+// ── Batch twelve (two-gap decks) ────────────────────────────────────────────
+
+/// Ray of Frost — {1}{U} Aura. Flash. When it enters, if enchanted creature
+/// is red, tap it. As long as enchanted creature is red, it loses all
+/// abilities. Enchanted creature doesn't untap during its controller's untap
+/// step.
+pub fn ray_of_frost() -> CardDefinition {
+    let host = || Selector::attached_to(Selector::This);
+    let host_is_red = || Predicate::EntityMatches { what: host(), filter: R::HasColor(Color::Red) };
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: host_is_red(),
+            then: Box::new(Effect::Tap { what: host() }),
+            else_: Box::new(Effect::Noop),
+        })],
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as enchanted creature is red, it loses all abilities.",
+                effect: StaticEffect::WhileCondition {
+                    condition: host_is_red(),
+                    inner: Box::new(StaticEffect::MatchingLoseAllAbilities { applies_to: host() }),
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature doesn't untap during its controller's untap step.",
+                effect: StaticEffect::PreventUntap { applies_to: host() },
+            },
+        ],
+        ..aura("Ray of Frost", cost(&[generic(1), u()]), None)
+    }
+}
+
+/// Tamiyo's Compleation — {3}{U} Aura. Flash. Enchant artifact, creature, or
+/// planeswalker. When it enters, tap enchanted permanent; if it's an
+/// Equipment, unattach it. Enchanted permanent loses all abilities and doesn't
+/// untap during its controller's untap step.
+pub fn tamiyos_compleation() -> CardDefinition {
+    let host = || Selector::attached_to(Selector::This);
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Artifact.or(R::Creature).or(R::Planeswalker)),
+        },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: host() },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: host(),
+                    filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                },
+                then: Box::new(Effect::Unattach { what: host() }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted permanent loses all abilities.",
+                effect: StaticEffect::MatchingLoseAllAbilities { applies_to: host() },
+            },
+            StaticAbility {
+                description: "Enchanted permanent doesn't untap during its controller's untap step.",
+                effect: StaticEffect::PreventUntap { applies_to: host() },
+            },
+        ],
+        ..aura("Tamiyo's Compleation", cost(&[generic(3), u()]), None)
+    }
+}
+
+/// Ludevic's Test Subject // Ludevic's Abomination — {1}{U} 0/3 Lizard Egg.
+/// Defender. {1}{U}: put a hatchling counter on it; then at five or more,
+/// remove them and transform it. Back: a 13/13 trampling Lizard Horror.
+pub fn ludevics_test_subject() -> CardDefinition {
+    let hatchlings = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Hatchling };
+    let abomination = CardDefinition {
+        name: "Ludevic's Abomination",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard, CreatureType::Horror], ..Default::default() },
+        power: 13,
+        toughness: 13,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Hatchling, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(hatchlings(), Value::Const(5)),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter { what: Selector::This, kind: CounterType::Hatchling, amount: hatchlings() },
+                        Effect::Transform { what: Selector::This },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(abomination)),
+        ..creature("Ludevic's Test Subject", cost(&[generic(1), u()]), vec![CreatureType::Lizard, CreatureType::Egg], 0, 3)
+    }
+}
+
+/// Skaab Goliath — {5}{U} 6/9 Zombie Giant. As an additional cost, exile two
+/// creature cards from your graveyard. Trample.
+pub fn skaab_goliath() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::ExileFromGraveyard { filter: R::Creature, count: 2 }],
+        ..creature("Skaab Goliath", cost(&[generic(5), u()]), vec![CreatureType::Zombie, CreatureType::Giant], 6, 9)
+    }
+}
+
+/// Foreboding Statue // Forsaken Thresher — {3} 1/2 artifact Construct. {T}:
+/// add one mana of any color and put an omen counter on it. At the beginning
+/// of your end step, at three or more omen counters, untap it and transform
+/// it. Back: a 5/5 that adds one mana of any color at the beginning of your
+/// first main phase.
+pub fn foreboding_statue() -> CardDefinition {
+    let any_one = || Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::ONE) };
+    let thresher = CardDefinition {
+        name: "Forsaken Thresher",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+            effect: any_one(),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                any_one(),
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Omen, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Omen },
+                    Value::Const(3),
+                ),
+            ),
+            effect: Effect::Seq(vec![Effect::Untap { what: Selector::This, up_to: None }, Effect::Transform { what: Selector::This }]),
+        }],
+        back_face: Some(Box::new(thresher)),
+        ..creature("Foreboding Statue", cost(&[generic(3)]), vec![CreatureType::Construct], 1, 2)
+    }
+}
+
+/// Profound Journey — {5}{W}{W} sorcery. Return target permanent card from
+/// your graveyard to the battlefield. Rebound.
+pub fn profound_journey() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Rebound],
+        ..spell(
+            "Profound Journey",
+            cost(&[generic(5), w(), w()]),
+            CardType::Sorcery,
+            Effect::Move {
+                what: target_filtered(R::PermanentCard.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        )
+    }
+}
+
+/// Angrath, Minotaur Pirate — {4}{B}{R} planeswalker, loyalty 5. +2: 1 damage
+/// to target opponent or planeswalker and each creature that player or that
+/// planeswalker's controller controls. −3: return target Pirate card from your
+/// graveyard to the battlefield. −11: destroy all creatures target opponent
+/// controls; Angrath deals that player damage equal to their total power.
+pub fn angrath_minotaur_pirate() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, Supertype};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let theirs = || Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature };
+    CardDefinition {
+        name: "Angrath, Minotaur Pirate",
+        cost: cost(&[generic(4), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Angrath], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(
+                2,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)), amount: Value::ONE },
+                    Effect::DealDamage { to: theirs(), amount: Value::ONE },
+                ]),
+            ),
+            loyalty(
+                -3,
+                Effect::Move {
+                    what: target_filtered(R::HasCreatureType(CreatureType::Pirate).and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ),
+            // The total power is read before the creatures are destroyed.
+            loyalty(
+                -11,
+                Effect::WithX {
+                    x: Value::PowerOf(Box::new(theirs())),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Destroy { what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature } },
+                        Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::XFromCost },
+                    ])),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Angrath's Fury — {3}{B}{R} sorcery. Destroy target creature. 3 damage to
+/// target player or planeswalker. You may search your library and/or
+/// graveyard for Angrath, Minotaur Pirate and put it into your hand (the
+/// graveyard copy is taken first).
+pub fn angraths_fury() -> CardDefinition {
+    let angrath = || R::HasName("Angrath, Minotaur Pirate".into());
+    let in_graveyard = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: angrath() };
+    spell(
+        "Angrath's Fury",
+        cost(&[generic(3), b(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Player.or(R::Planeswalker) },
+                amount: Value::Const(3),
+            },
+            Effect::MayDo {
+                description: "Search for Angrath, Minotaur Pirate?".into(),
+                body: Box::new(Effect::If {
+                    cond: Predicate::SelectorExists(in_graveyard()),
+                    then: Box::new(Effect::Move { what: Selector::one_of(in_graveyard()), to: ZoneDest::Hand(PlayerRef::You) }),
+                    else_: Box::new(Effect::Search { who: PlayerRef::You, filter: angrath(), to: ZoneDest::Hand(PlayerRef::You) }),
+                }),
+            },
+        ]),
+    )
+}
+
+/// Sphinx-Bone Wand — {7} artifact. Whenever you cast an instant or sorcery
+/// spell, you may put a charge counter on it; if you do, it deals damage
+/// equal to its charge counters to any target.
+pub fn sphinx_bone_wand() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            }),
+            effect: Effect::MayDo {
+                description: "Put a charge counter on Sphinx-Bone Wand?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+                    Effect::DealDamage {
+                        to: crate::effect::shortcut::target_any(),
+                        amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                    },
+                ])),
+            },
+        }],
+        ..spell("Sphinx-Bone Wand", cost(&[generic(7)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Relic Runner — {1}{U} 2/1 Human Rogue. Can't be blocked if you've cast a
+/// historic spell this turn.
+pub fn relic_runner() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature can't be blocked if you've cast a historic spell this turn.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Unblockable,
+                condition: Predicate::ValueAtLeast(Value::HistoricSpellsCastThisTurn(PlayerRef::You), Value::ONE),
+            },
+        }],
+        ..creature("Relic Runner", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 1)
+    }
+}
+
+/// Mishra's Onslaught — {3}{R} instant. Choose one — two 1/1 colorless
+/// Soldier artifact creature tokens; or creatures you control get +2/+0 until
+/// end of turn.
+pub fn mishras_onslaught() -> CardDefinition {
+    let soldier = TokenDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..token("Soldier", 1, 1, vec![], vec![CreatureType::Soldier])
+    };
+    spell(
+        "Mishra's Onslaught",
+        cost(&[generic(3), r()]),
+        CardType::Instant,
+        Effect::ChooseMode(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: Arc::new(soldier) },
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Rending Volley — {R} instant. Can't be countered. 4 damage to target white
+/// or blue creature.
+pub fn rending_volley() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeCountered],
+        ..spell(
+            "Rending Volley",
+            cost(&[r()]),
+            CardType::Instant,
+            Effect::DealDamage {
+                to: target_filtered(R::Creature.and(R::HasColor(Color::White).or(R::HasColor(Color::Blue)))),
+                amount: Value::Const(4),
+            },
+        )
+    }
+}
+
+/// Highspire Mantis — {2}{R}{W} 3/3 Insect. Flying, trample.
+pub fn highspire_mantis() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        ..creature("Highspire Mantis", cost(&[generic(2), r(), w()]), vec![CreatureType::Insect], 3, 3)
+    }
+}
+
+/// Zodiac Horse — {3}{G} 3/3 Horse. Islandwalk.
+pub fn zodiac_horse() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(LandType::Island)],
+        ..creature("Zodiac Horse", cost(&[generic(3), g()]), vec![CreatureType::Horse], 3, 3)
+    }
+}
+
+/// Watchwing Scarecrow — {4} 2/4 artifact Scarecrow. Vigilance while you
+/// control a white creature; flying while you control a blue creature.
+pub fn watchwing_scarecrow() -> CardDefinition {
+    let while_you_control = |color: Color| {
+        Predicate::SelectorExists(Selector::EachPermanent(R::Creature.and(R::HasColor(color)).and(R::ControlledByYou)))
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![
+            StaticAbility {
+                description: "This creature has vigilance as long as you control a white creature.",
+                effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                    keyword: Keyword::Vigilance,
+                    condition: while_you_control(Color::White),
+                },
+            },
+            StaticAbility {
+                description: "This creature has flying as long as you control a blue creature.",
+                effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                    keyword: Keyword::Flying,
+                    condition: while_you_control(Color::Blue),
+                },
+            },
+        ],
+        ..creature("Watchwing Scarecrow", cost(&[generic(4)]), vec![CreatureType::Scarecrow], 2, 4)
+    }
+}
+
+/// Counterintelligence — {2}{U}{U} sorcery. Return one or two target
+/// creatures to their owners' hands.
+pub fn counterintelligence() -> CardDefinition {
+    spell(
+        "Counterintelligence",
+        cost(&[generic(2), u(), u()]),
+        CardType::Sorcery,
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 1,
+            filter: R::Creature,
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
+        },
+    )
+}

@@ -1843,6 +1843,211 @@ fn mystery_key_draws_three_on_a_hit() {
     assert_eq!(g.players[0].hand.len(), hand + 3);
 }
 
+/// Ray of Frost taps a red creature and strips its abilities.
+#[test]
+fn ray_of_frost_silences_red() {
+    let mut g = pod(2);
+    let red = g.add_token_to_battlefield(
+        1,
+        &TokenDefinition {
+            colors: vec![Color::Red],
+            keywords: vec![Keyword::Haste],
+            ..body("Goblin", 2, CreatureType::Goblin)
+        },
+    );
+    let ray = g.add_card_to_hand(0, catalog::ray_of_frost());
+    cast(&mut g, ray, Some(Target::Permanent(red)));
+    assert!(g.battlefield_find(red).unwrap().tapped);
+    assert!(!g.computed_permanent(red).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// Tamiyo's Compleation taps its host and strips its abilities.
+#[test]
+fn tamiyos_compleation_strips_abilities() {
+    let mut g = pod(2);
+    let hasty = g.add_token_to_battlefield(
+        1,
+        &TokenDefinition { keywords: vec![Keyword::Haste], ..body("Goblin", 2, CreatureType::Goblin) },
+    );
+    let aura = g.add_card_to_hand(0, catalog::tamiyos_compleation());
+    cast(&mut g, aura, Some(Target::Permanent(hasty)));
+    assert!(g.battlefield_find(hasty).unwrap().tapped);
+    assert!(!g.computed_permanent(hasty).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// Ludevic's Test Subject hatches at its fifth counter.
+#[test]
+fn ludevics_test_subject_hatches_at_five() {
+    let mut g = pod(2);
+    let egg = g.add_card_to_battlefield(0, catalog::ludevics_test_subject());
+    for _ in 0..4 {
+        activate(&mut g, egg, 0).expect("feed");
+    }
+    assert_eq!(pt(&g, egg), (0, 3));
+    activate(&mut g, egg, 0).expect("hatch");
+    assert_eq!(pt(&g, egg), (13, 13));
+    assert_eq!(g.battlefield_find(egg).unwrap().counter_count(CounterType::Hatchling), 0);
+}
+
+/// Skaab Goliath needs two creature cards to exile.
+#[test]
+fn skaab_goliath_exiles_two_creature_cards() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::dune_beetle());
+    let goliath = g.add_card_to_hand(0, catalog::skaab_goliath());
+    flood(&mut g, 0);
+    let cast_it = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: goliath,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast_it(&mut g).is_err(), "one creature card");
+    g.add_card_to_graveyard(0, catalog::dune_beetle());
+    cast_it(&mut g).expect("two creature cards");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(goliath).is_some());
+    assert!(g.players[0].graveyard.is_empty());
+}
+
+/// Foreboding Statue transforms at its end step after three omen counters.
+#[test]
+fn foreboding_statue_transforms_at_three_omens() {
+    let mut g = pod(2);
+    let statue = g.add_card_to_battlefield(0, catalog::foreboding_statue());
+    g.battlefield_find_mut(statue).unwrap().add_counters(CounterType::Omen, 2);
+    g.clear_sickness(statue);
+    activate(&mut g, statue, 0).expect("tap for mana");
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+    }
+    drain_stack(&mut g);
+    let c = g.battlefield_find(statue).unwrap();
+    assert!(!c.tapped, "untapped");
+    assert_eq!(pt(&g, statue), (5, 5));
+}
+
+/// Profound Journey returns a permanent card.
+#[test]
+fn profound_journey_returns_a_permanent_card() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let journey = g.add_card_to_hand(0, catalog::profound_journey());
+    cast(&mut g, journey, Some(Target::Permanent(ring)));
+    assert!(g.battlefield_find(ring).is_some());
+}
+
+/// Angrath's +2 pings the opponent and each of their creatures.
+#[test]
+fn angrath_minotaur_pirate_pings_a_side() {
+    let mut g = pod(3);
+    let angrath = g.add_card_to_hand(0, catalog::angrath_minotaur_pirate());
+    cast(&mut g, angrath, None);
+    let theirs = g.add_token_to_battlefield(1, &body("Elf", 1, CreatureType::Elf));
+    let bystander = g.add_token_to_battlefield(2, &body("Elf", 1, CreatureType::Elf));
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: angrath,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    })
+    .expect("+2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert!(g.battlefield_find(bystander).is_some());
+}
+
+/// Angrath's Fury tutors Angrath out of the graveyard.
+#[test]
+fn angraths_fury_finds_angrath() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let angrath = g.add_card_to_graveyard(0, catalog::angrath_minotaur_pirate());
+    let bear = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let fury = g.add_card_to_hand(0, catalog::angraths_fury());
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fury,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(g.players[0].hand.iter().any(|c| c.id == angrath));
+}
+
+/// Sphinx-Bone Wand grows a counter per spell and burns for the total.
+#[test]
+fn sphinx_bone_wand_burns_for_its_counters() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let wand = g.add_card_to_battlefield(0, catalog::sphinx_bone_wand());
+    g.battlefield_find_mut(wand).unwrap().add_counters(CounterType::Charge, 2);
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let syphon = g.add_card_to_hand(0, catalog::agonizing_syphon());
+    let beast = g.add_token_to_battlefield(0, &body("Beast", 5, CreatureType::Beast));
+    cast(&mut g, syphon, Some(Target::Permanent(beast)));
+    assert_eq!(g.battlefield_find(wand).unwrap().counter_count(CounterType::Charge), 3);
+    assert!(g.players[1].life <= life, "the wand found a target");
+}
+
+/// Relic Runner can't be blocked after a historic spell.
+#[test]
+fn relic_runner_slips_by_after_a_historic_spell() {
+    let mut g = pod(2);
+    let runner = g.add_card_to_battlefield(0, catalog::relic_runner());
+    assert!(!g.computed_permanent(runner).unwrap().keywords().contains(&Keyword::Unblockable));
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring, None);
+    assert!(g.computed_permanent(runner).unwrap().keywords().contains(&Keyword::Unblockable));
+}
+
+/// Watchwing Scarecrow reads your creatures' colours.
+#[test]
+fn watchwing_scarecrow_reads_colors() {
+    let mut g = pod(2);
+    let crow = g.add_card_to_battlefield(0, catalog::watchwing_scarecrow());
+    assert!(!g.computed_permanent(crow).unwrap().keywords().contains(&Keyword::Flying));
+    g.add_card_to_battlefield(0, catalog::relic_runner());
+    let c = g.computed_permanent(crow).unwrap();
+    let kws = c.keywords();
+    assert!(kws.contains(&Keyword::Flying) && !kws.contains(&Keyword::Vigilance));
+}
+
+/// Counterintelligence returns two creatures.
+#[test]
+fn counterintelligence_returns_two() {
+    let mut g = pod(2);
+    let a = g.add_token_to_battlefield(1, &body("Bear", 2, CreatureType::Bear));
+    let b = g.add_card_to_battlefield(1, catalog::dune_beetle());
+    let spell = g.add_card_to_hand(0, catalog::counterintelligence());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert!(g.players[1].hand.iter().any(|c| c.id == b));
+}
+
 /// CR 109.5 — a keyword-while static reads "you" as its controller, not seat
 /// 0: Faithful Pikemaster strikes first on its own controller's turn.
 #[test]
