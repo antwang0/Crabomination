@@ -5886,6 +5886,7 @@ impl GameState {
                     | SE::OneNoncreatureSpellPerTurn
                     | SE::OneNonartifactSpellPerTurn
                     | SE::OneNonPhyrexianSpellPerTurn
+                    | SE::ControllerOneSpellPerTurn
                     | SE::ControllerCastsOnlyOnTurnUpTo { .. } => cast_lock::ONE_SPELL,
                     SE::CantCastSharingColorWithLastCastSpell => cast_lock::MANA_MAZE,
                     SE::NoSpellOrNonbasicLandSharingAPermanentName => cast_lock::NAME,
@@ -5969,6 +5970,9 @@ impl GameState {
                 && self.battlefield.iter().any(|c| {
                     c.definition.static_abilities.iter().any(|sa| match sa.effect {
                         StaticEffect::OneSpellPerTurn => pl.spells_cast_this_game_turn >= 1,
+                        StaticEffect::ControllerOneSpellPerTurn => {
+                            c.controller == caster && pl.spells_cast_this_game_turn >= 1
+                        }
                         StaticEffect::ControllerCastsOnlyOnTurnUpTo { max } => {
                             c.controller == caster && (active != caster || pl.spells_cast_this_game_turn >= max)
                         }
@@ -23056,6 +23060,18 @@ impl GameState {
         })
     }
 
+    /// CR 121.2a — `p` controls a Forbidden Crypt draw replacement.
+    fn graveyard_return_instead_of_drawing(&self, p: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::ReplaceDrawWithGraveyardReturn)
+                )
+            })
+        })
+    }
+
     /// CR 121.2a — `p` controls an Enduring Renewal draw replacement.
     fn creature_draws_to_graveyard(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
@@ -23331,6 +23347,9 @@ impl GameState {
             }
             if self.creature_draws_to_graveyard(p) {
                 applicable.push(DrawDig::CreatureToGraveyard);
+            }
+            if self.graveyard_return_instead_of_drawing(p) {
+                applicable.push(DrawDig::GraveyardReturn);
             }
             if self.others_may_bin_draw().is_some() {
                 applicable.push(DrawDig::OthersMayBin);
@@ -23736,6 +23755,33 @@ impl GameState {
                 let card = self.players[p].library.remove(0);
                 if !self.route_to_graveyard(card, events) {
                     events.push(GameEvent::CardRevealedIntoGraveyard { player: p, card_id: id });
+                }
+                true
+            }
+            // Forbidden Crypt — "return a card from your graveyard to your
+            // hand instead. If you can't, you lose the game." A choice, not a
+            // target; mandatory, and the loss is CR 104.3d-gated.
+            DrawDig::GraveyardReturn => {
+                use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+                let body = if self.players[p].graveyard.is_empty() {
+                    Effect::LoseGame { who: PlayerRef::Seat(p) }
+                } else {
+                    Effect::ChooseOneAmong {
+                        what: Selector::CardsInZone {
+                            who: PlayerRef::Seat(p),
+                            zone: crate::card::Zone::Graveyard,
+                            filter: crate::card::SelectionRequirement::Any,
+                        },
+                        chooser: PlayerRef::Seat(p),
+                        chosen: Box::new(Effect::Move {
+                            what: Selector::SeparatedPile { chosen: true },
+                            to: ZoneDest::Hand(PlayerRef::Seat(p)),
+                        }),
+                        other: Box::new(Effect::Noop),
+                    }
+                };
+                if let Ok(mut evs) = self.resolve_effect_driven(&body, &ctx) {
+                    events.append(&mut evs);
                 }
                 true
             }
@@ -36049,6 +36095,7 @@ fn static_effect_to_effects(
             | StaticEffect::ReplaceDrawWithImpulse { .. }
             | StaticEffect::ReplaceDrawWithExileFaceDownWithSource
             | StaticEffect::ReplaceDrawCreaturesToGraveyard
+            | StaticEffect::ReplaceDrawWithGraveyardReturn
             | StaticEffect::DrawsRevealedOthersMayPayLifeToBin { .. }
             | StaticEffect::DrawsRevealedTaxed { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
@@ -36067,6 +36114,7 @@ fn static_effect_to_effects(
             | StaticEffect::ReplaceDamageToYouWithCountersOnSource { .. }
             | StaticEffect::ReplaceDamageToYouWithGraveyardExile
             | StaticEffect::PreventDamageToYouMillTwice
+            | StaticEffect::PreventDamageToYouExileFromGraveyard
             | StaticEffect::LifeGainBecomesDraw
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage
@@ -36207,6 +36255,7 @@ fn static_effect_to_effects(
             | StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::ControllerCastsOnlyOnTurnUpTo { .. }
+            | StaticEffect::ControllerOneSpellPerTurn
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
             | StaticEffect::DoubleDamageToYou
@@ -37328,6 +37377,8 @@ pub(crate) enum DrawDig {
     /// Enduring Renewal — reveal the top card; a creature card goes to the
     /// graveyard, anything else is drawn.
     CreatureToGraveyard,
+    /// Forbidden Crypt — return a graveyard card to hand; none, and you lose.
+    GraveyardReturn,
     /// Zur's Weirding — reveal it; another player may pay life to bin it,
     /// otherwise it is drawn.
     OthersMayBin,
@@ -37346,6 +37397,7 @@ impl DrawDig {
             DrawDig::MillOneOfTwo => "Look at the top two, bin one, then draw",
             DrawDig::CreatureToGraveyard => "Reveal the top card; bin it if it's a creature",
             DrawDig::OthersMayBin => "Reveal it; another player may pay life to bin it",
+            DrawDig::GraveyardReturn => "Return a card from your graveyard to your hand",
         }
     }
 }

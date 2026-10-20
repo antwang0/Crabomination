@@ -1039,6 +1039,9 @@ pub enum StaticEffect {
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_game_turn`.
     OneSpellPerTurn,
+    /// "You can't cast more than one spell each turn" — `OneSpellPerTurn`
+    /// binding only the source's controller (Colfenor's Plans).
+    ControllerOneSpellPerTurn,
     /// "You can cast spells only during your turn and you can cast no more
     /// than `max` spells each turn" (Fires of Invention). Binds the source's
     /// controller only; enforced beside `OneSpellPerTurn`.
@@ -3417,6 +3420,10 @@ pub enum StaticEffect {
         #[serde(default)]
         rest_to_graveyard: bool,
     },
+    /// CR 121.2a — "If you would draw a card, return a card from your
+    /// graveyard to your hand instead. If you can't, you lose the game"
+    /// (Forbidden Crypt). Mandatory.
+    ReplaceDrawWithGraveyardReturn,
     /// CR 121.2a — "If you would draw a card, reveal the top card of your
     /// library instead. If it's a creature card, put it into your graveyard.
     /// Otherwise, draw a card" (Enduring Renewal). Mandatory.
@@ -3609,6 +3616,11 @@ pub enum StaticEffect {
     /// mill twice that many cards" (Angel of Suffering). A prevention, so
     /// "damage can't be prevented" switches it off.
     PreventDamageToYouMillTwice,
+    /// CR 615 — "If damage would be dealt to you, prevent that damage. Exile
+    /// a card from your graveyard for each 1 damage prevented this way"
+    /// (Immortal Coil). Exiles what there is; the loss is the card's state
+    /// trigger, not this.
+    PreventDamageToYouExileFromGraveyard,
     /// CR 614 — "If you would gain life, draw that many cards instead"
     /// (Nefarious Lich).
     LifeGainBecomesDraw,

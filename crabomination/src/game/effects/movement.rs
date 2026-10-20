@@ -226,6 +226,27 @@ impl GameState {
             }
             return true;
         }
+        // CR 615 — Immortal Coil: the damage is prevented and its controller
+        // exiles a graveyard card per point, as many as there are. Running
+        // out is the card's own state trigger, not this.
+        if amount > 0
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::PreventDamageToYouExileFromGraveyard)
+                    })
+            })
+            && prevent_static_scan(self) & prevent_static::CANT_PREVENT == 0
+        {
+            for _ in 0..amount {
+                let Some(card) = self.players[p].graveyard.pop() else { break };
+                let cid = card.id;
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                self.note_exiled_from_graveyard(p, cid, events);
+            }
+            return true;
+        }
         // CR 614 — Nefarious Lich: damage to its controller exiles
         // that many graveyard cards instead; failing that, they lose.
         if damage_statics

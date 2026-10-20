@@ -873,6 +873,7 @@ fn card_has_damage_replacement_static(c: &CardInstance) -> bool {
                 | S::ReplaceDamageToYouWithCountersOnSource { .. }
                 | S::ReplaceDamageToYouWithGraveyardExile
                 | S::PreventDamageToYouMillTwice
+                | S::PreventDamageToYouExileFromGraveyard
                 | S::RedirectControllerDamageToEquippedCreature
                 | S::RedirectDamageToSelf
         )
@@ -1135,6 +1136,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
                 | S::ReplaceDrawWithImpulse { .. }
                 | S::ReplaceDrawWithExileFaceDownWithSource
                 | S::ReplaceDrawCreaturesToGraveyard
+                | S::ReplaceDrawWithGraveyardReturn
                 | S::ChainsOfMephistopheles
                 | S::EmptyHandDrawBonus { .. }
                 | S::DrawsRevealedTaxed { .. }
