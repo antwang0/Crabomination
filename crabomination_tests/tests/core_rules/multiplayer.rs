@@ -1698,7 +1698,33 @@ fn cr_702_79a_a_stolen_persist_creature_returns_to_its_owner() {
     let mut events = Vec::new();
     g.destroy_permanent(finks, false, &mut events);
     g.check_state_based_actions();
+    // CR 702.79a — persist is a trigger: the return resolves off the stack.
+    drain_stack(&mut g);
     assert_eq!(g.battlefield_find(finks).map(|c| c.controller), Some(0), "back under its owner");
+}
+
+/// CR 702.93a — undying is a trigger, not an inline return: Butcher Ghoul
+/// at 0 toughness under Solemnity (no +1/+1 counter) dies, waits in the
+/// graveyard with its trigger on the stack, and comes back only when that
+/// resolves — so the loop passes priority instead of spinning inside one
+/// state-based sweep (pod seed 931016 capped at 8,192 Bastion triggers).
+#[test]
+fn cr_702_93a_undying_returns_off_the_stack() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::solemnity());
+    let ghoul = g.add_card_to_battlefield(0, catalog::butcher_ghoul());
+    g.add_card_to_battlefield(1, catalog::m_o_d_o_k());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(ghoul).is_none(), "0/0 under the opponent's -1/-1");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ghoul));
+    assert_eq!(g.stack.len(), 1, "the undying trigger waits on the stack");
+    let events = g.resolve_top_of_stack().expect("resolve");
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::PermanentEntered { card_id } if *card_id == ghoul)),
+        "the trigger returned it"
+    );
+    g.check_state_based_actions();
+    assert_eq!(g.stack.len(), 1, "no counter, still 0/0: it dies again and the next return waits too");
 }
 
 /// CR 704.3 — the state-based check repeats until none applies. A departure

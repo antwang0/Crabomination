@@ -8217,11 +8217,6 @@ impl GameState {
             );
         }
 
-        // Set when Persist/Undying puts a permanent back: the only way the
-        // death loop can *add* to the board, and so the only reason the
-        // presence scan has to be retaken below.
-        let mut board_grew = false;
-
         // Hushbringer (CR 614): suppress creature-death triggers while a
         // `SuppressCreatureEtbTriggers { also_dies }` static is in play. Read
         // only inside the death loop, so the whole-battlefield scan is gated
@@ -8523,21 +8518,15 @@ impl GameState {
                         .build(),
                 );
             }
-            // Persist / Undying return (CR 702.79 / 702.92), shared with the
-            // destroy / sacrifice funnels via `return_persist_undying`.
-            self.return_persist_undying(
-                id, owner, (has_persist, has_undying, minus_count, plus_count), events,
-            );
-            if (has_persist || has_undying) && self.battlefield.find_by_id(id).is_some() {
-                board_grew = true;
-            }
+            // Persist / Undying (CR 702.79 / 702.93), shared with the destroy /
+            // sacrifice funnels via `return_persist_undying`: a trigger.
+            self.return_persist_undying(id, owner, (has_persist, has_undying, minus_count, plus_count));
             let _ = controller_idx; // used via closure above
         }
 
         // Every flag is an over-approximation and the sweep so far can only
-        // have *removed* permanents, so the scan taken above still covers the
-        // post-death board. Only a Persist/Undying return grows it.
-        let scan = if board_grew { self.sba_board_scan() } else { scan };
+        // have *removed* permanents (a persist / undying return is a trigger),
+        // so the scan taken above still covers the post-death board.
 
         // Planeswalkers with 0 loyalty die (CR 704.5i) — unless their
         // controller has Sanctum Lurker's exemption.
@@ -10095,10 +10084,8 @@ impl GameState {
         // CR 702.79 / 702.92 — Persist / Undying apply on *any* death, not
         // just lethal-damage SBA. The destroy / sacrifice funnels route
         // through here, so return the creature now if it qualifies.
-        self.return_persist_undying(
-            id, persist_owner, (persist_has, undying_has, persist_minus, persist_plus), &mut out,
-        );
-        out // dies-trigger events are on the stack; Persist returns are in `out`.
+        self.return_persist_undying(id, persist_owner, (persist_has, undying_has, persist_minus, persist_plus));
+        out // dies triggers, persist / undying among them, are on the stack.
     }
 
     /// CR 702.79 / 702.92 — Persist / Undying return. Shared by every death
@@ -10122,7 +10109,6 @@ impl GameState {
         id: CardId,
         owner: usize,
         info: (bool, bool, u32, u32),
-        events: &mut Vec<GameEvent>,
     ) {
         use crate::card::CounterType;
         let (has_persist, has_undying, minus_count, plus_count) = info;
@@ -10131,6 +10117,26 @@ impl GameState {
         } else if has_undying && plus_count == 0 {
             CounterType::PlusOnePlusOne
         } else {
+            return;
+        };
+        // CR 702.79a / 702.93a — persist and undying are "when this creature
+        // dies" triggers: the return waits on the stack, so a death loop gives
+        // players priority (Butcher Ghoul under Solemnity and an opponent's
+        // -1/-1 anthem, seed 931016) and a "dying doesn't trigger" static stops
+        // it (Hushbringer). The death is in the owner's graveyard by now.
+        if crate::game::actions::creature_dies_triggers_suppressed(self)
+            || !self.players[owner].graveyard.iter().any(|c| c.id == id)
+        {
+            return;
+        }
+        self.push_stack(TriggerPush::new(id, owner, Effect::PersistUndyingReturn { kind }).build());
+    }
+
+    /// The resolution of a persist / undying trigger: `id` returns from its
+    /// owner's graveyard under that player's control with one `kind` counter
+    /// (CR 400.7 — if it left the graveyard it's a new object and stays put).
+    pub(crate) fn persist_undying_return_now(&mut self, id: CardId, kind: crate::card::CounterType, events: &mut Vec<GameEvent>) {
+        let Some(owner) = (0..self.players.len()).find(|&p| self.players[p].graveyard.iter().any(|c| c.id == id)) else {
             return;
         };
         if let Some(mut returned) = Self::take_card(&mut self.players[owner].graveyard, id) {

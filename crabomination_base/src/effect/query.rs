@@ -1910,6 +1910,7 @@ impl Effect {
                 player_has_target(who) || value_has_target(keep)
             }
             Effect::ExileLibraryThenTopFromExile { .. } => false,
+            Effect::PersistUndyingReturn { .. } => false,
             Effect::Explore { who } | Effect::ExploreAfterScry { who } => sel_has_target(who),
             Effect::Goad { what }
             | Effect::LureTargetToSourceNextTurn { what }

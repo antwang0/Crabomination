@@ -13074,6 +13074,11 @@ pub enum Effect {
     /// (Runesword's sacrifice rider). Expires at cleanup.
     WhenTargetLeavesBattlefieldThisTurn { what: Selector, body: Box<Effect> },
 
+    /// CR 702.79a / 702.93a — a persist / undying trigger resolving: the
+    /// source card returns from its owner's graveyard under its owner's control
+    /// with a `kind` counter. Pushed by the death funnels, never printed.
+    PersistUndyingReturn { kind: crate::card::CounterType },
+
     /// CR 603.4 — "When `a` leaves the battlefield this turn, sacrifice `b`.
     /// When `b` leaves the battlefield this turn, sacrifice `a`" (Phantasmal
     /// Mount): two delayed triggers, each bound to the other permanent.

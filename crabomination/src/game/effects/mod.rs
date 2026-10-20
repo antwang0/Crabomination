@@ -39036,6 +39036,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PersistUndyingReturn { kind } => {
+                if let Some(id) = ctx.source {
+                    self.persist_undying_return_now(id, *kind, events);
+                }
+                Ok(())
+            }
+
             Effect::SacrificeEachWhenOtherLeavesThisTurn { a, b } => {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let first = |sel: &Selector, g: &Self| g.resolve_selector(sel, ctx).into_iter().find_map(|e| e.as_permanent_id());
