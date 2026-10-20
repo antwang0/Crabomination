@@ -1547,6 +1547,7 @@ impl Effect {
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::SpellsCostLessThisTurnByValue { .. } => false,
+            Effect::NameSpellsCostLessThisTurn { .. } => false,
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
             Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
             Effect::GrantSpellsFlashThisTurn { .. } => false,

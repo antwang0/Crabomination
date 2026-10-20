@@ -19690,6 +19690,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameSpellsCostLessThisTurn { amount } => {
+                let me = ctx.controller;
+                let mut hand: Vec<(CardId, &'static str, u32)> = self.players[me]
+                    .hand
+                    .iter()
+                    .filter(|c| !c.definition.is_land())
+                    .map(|c| (c.id, c.definition.name, c.definition.cost.cmc()))
+                    .collect();
+                if hand.is_empty() {
+                    return Ok(());
+                }
+                hand.sort_by_key(|&(id, _, mv)| (std::cmp::Reverse(mv), id));
+                let named = hand.iter().map(|&(id, n, _)| (id, n.to_string())).collect();
+                let Some(pick) = self.ask_seat_cards(
+                    me,
+                    "Choose a card name: spells with it cost less this turn".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    named,
+                    1,
+                    1,
+                    PickValue::Gain,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let Some(&(_, name, _)) = pick.first().and_then(|id| hand.iter().find(|h| h.0 == *id)) else {
+                    return Ok(());
+                };
+                for p in self.living_seats().collect::<Vec<_>>() {
+                    self.players[p]
+                        .turn_spell_discounts
+                        .push((crate::card::SelectionRequirement::HasName(name.to_string()), *amount));
+                }
+                Ok(())
+            }
+
             Effect::SpellsCostLessThisTurnByValue { filter, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 {

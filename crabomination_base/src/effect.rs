@@ -8280,6 +8280,11 @@ pub enum Effect {
     /// (Rowan, Scion of War: "X is the amount of life you lost this turn",
     /// 2023-09-01 ruling).
     SpellsCostLessThisTurnByValue { filter: SelectionRequirement, amount: Value },
+    /// "Choose a card name. Spells with the chosen name cost {amount} less to
+    /// cast this turn" (Cheering Fanatic) — every player's spells. The name
+    /// is picked from the nonland cards in the controller's hand (the only
+    /// names the discount can pay off for them), priciest first.
+    NameSpellsCostLessThisTurn { amount: u32 },
     /// "Until your next turn, [filter] spells `who` casts cost {amount} less
     /// to cast" (Will Kenrith's −2) — the discount mirror of
     /// `SpellTaxUntilYourNextTurn`, expiring at the controller's untap.
