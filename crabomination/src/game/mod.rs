@@ -36406,6 +36406,8 @@ pub(crate) fn selector_to_affected(
             }
         }
         Selector::EachPermanent(req) => affected_from_requirement(req, controller),
+        // "The chosen creature gets …" (Tyrannical Pitlord): the as-enters pick.
+        Selector::ChosenPermanentOfSource => card.chosen_permanent.map(AffectedPermanents::just),
         _ => None,
     }
 }
