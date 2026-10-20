@@ -123829,3 +123829,34 @@ pub const DROMAR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, plains, plains, plains, plains,
     plains, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_CELESTIAL_TOYMAKER_COMMANDERS: &[CardFactory] = &[the_celestial_toymaker];
+
+/// **The Celestial Toymaker**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 7 Islands + 4 Plains + 4 Swamps = 99.
+/// The Celestial Toymaker (EDHREC, fetched 2026-10-20).
+pub const THE_CELESTIAL_TOYMAKER_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, dimir_signet, liars_pendulum, lightning_greaves,
+    phyrexian_portal, sol_ring, swiftfoot_boots, talisman_of_dominance, talisman_of_hierarchy,
+    talisman_of_progress, thought_vessel, arcane_sanctum, command_tower, deserted_beach,
+    drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress, godless_shrine,
+    hallowed_fountain, isolated_chapel, morphic_pool, polluted_delta, prairie_stream,
+    raffines_tower, reliquary_tower, rogues_passage, sea_of_clouds, shipwreck_marsh,
+    vault_of_champions, watery_grave, adric_mathematical_genius, atris_oracle_of_half_truths,
+    auton_soldier, chameleon_master_of_disguise, curator_of_destinies,
+    delney_streetwise_lookout, gollum_scheming_guide, maccready_lamplight_mayor,
+    master_of_predicaments, roaming_throne, sakashima_of_a_thousand_faces,
+    sakashima_the_impostor, spark_double, sphinx_ambassador, sphinx_of_clear_skies,
+    sphinx_of_uthuun, the_seventh_doctor, triumph_of_saint_katherine,
+    unesh_criosphinx_sovereign, fight_or_flight, ghostly_prison, parallel_thoughts, propaganda,
+    reconnaissance, the_toymakers_trap, wound_reflection, anguished_unmaking, become_anonymous,
+    counterspell, dovins_veto, epiphany_at_the_drownyard, fact_or_fiction, fortunes_favor,
+    hostile_negotiations, intrude_on_the_mind, path_to_exile, riddles_in_the_dark,
+    saurons_ransom, swords_to_plowshares, truth_or_tale, void_rend, jace_architect_of_thought,
+    abstract_performance, boneyard_parley, brilliant_ultimatum, death_or_glory, do_or_die,
+    ghastly_conscription, irenicuss_vile_duplication, make_an_example, quantum_misalignment,
+    sadistic_shell_game,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp,
+];

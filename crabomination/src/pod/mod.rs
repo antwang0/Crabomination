@@ -26940,6 +26940,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DROMAR_COMMANDERS,
             main: decks::DROMAR_MAIN,
         },
+        // Seat 4415: The Celestial Toymaker's EDHREC average deck. `--pod-decks 4415`.
+        PodDeck {
+            name: "The Celestial Toymaker (WUB)",
+            commanders: decks::THE_CELESTIAL_TOYMAKER_COMMANDERS,
+            main: decks::THE_CELESTIAL_TOYMAKER_MAIN,
+        },
     ]
 }
 
@@ -33255,6 +33261,7 @@ mod tests {
             ("Baru, Wurmspeaker", &[0x1B52]),
             ("Blim, Comedic Genius", &[0x1B53]),
             ("Dromar, the Banisher", &[0x1B54]),
+            ("The Celestial Toymaker", &[0x1B55]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
