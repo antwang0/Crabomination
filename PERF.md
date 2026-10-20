@@ -3136,6 +3136,24 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-20 late (Commander run, `01E4rMUL`) — guardrail; 240 cards, 115 seats, four rule fixes
+
+The CR 109.5 fix (`SelfHasKeywordWhilePredicate` read "you" as seat 0) touches a static-gather arm the
+2-player pools reach; the golden traces and `--bench` did not move. `release` bot_ladder at `b285bc937`,
+4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 thread_determinism ok (3 vs 1); peak_rss_mib 44.7
+2-player pools   seed 9315: cube 2,399 + 1 CR 104.4a draw / sos 1,500 / sealed 3,600, 0 stalls
+pods (release)   seed 9316, 200 games at each of 2..8 seats: 1,400 decided, every undecided_by 0;
+                 turns/game 20.62 / 32.35 / 46.74 / 58.63 / 68.14 / 82.22 / 99.36 (the reference curve)
+pods (release)   seed 9317, new seats 4659-4680 in five groups of four x 100: 500 decided
+sweeps (audit)   seed 9305, every deck at 4/6/8 seats: 2,516 games, 0 bad; 9306/9307 over 4659-4671: 114, 0 bad
+suite            28,523 / 1 / 6 (strict answer log, seat test excluded) — the one failure the concurrent
+                 d5c8304d4's ratchet, fixed in b285bc937 (cap 69 -> 70)
+```
+
 ### 2026-10-20 (Commander run, `01DDeUtc`) — guardrail; 44 cards, 13 seats, eleven primitives, two rule fixes
 
 Hot-path touches: `clamp_damage_to_life_floor` folds Elderscale Wurm's floor into the one board walk it
