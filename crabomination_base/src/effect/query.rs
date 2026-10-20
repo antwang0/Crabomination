@@ -1011,6 +1011,7 @@ impl Effect {
             | Effect::NextCreatureSpellHasFlashThisTurn
             | Effect::AnyPlayerMayPayLifeToCounterThis { .. }
             | Effect::AnyPlayerMaySacrificeToTopdeckSource { .. }
+            | Effect::EachPlayerDiscardsAnyThenDrawsThatMany
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

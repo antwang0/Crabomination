@@ -14327,6 +14327,10 @@ pub enum Effect {
     /// Wumpus) — asked in turn order from the controller; the first
     /// sacrifice ends it.
     AnyPlayerMaySacrificeToTopdeckSource { filter: SelectionRequirement },
+    /// "Each player discards any number of cards, then draws that many
+    /// cards" (Flux): APNAP choices, discards together, then each seat draws
+    /// its OWN count.
+    EachPlayerDiscardsAnyThenDrawsThatMany,
 
     AnyPlayerMayAccept {
         who: PlayerRef,
