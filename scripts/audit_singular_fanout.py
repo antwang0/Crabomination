@@ -72,16 +72,47 @@ SELECTOR_CONSUMED_SINGLY = (
 ALLOWLIST: dict[tuple[str, str], str] = {}
 
 
+def helper_bodies():
+    """{fn name: body} over the effects module, so an arm that hands its fields
+    to a helper (`run_separate_into_piles(.., splitter, chooser, ..)`) is
+    read through it."""
+    out = {}
+    for path in sorted(EFFECTS.parent.glob("*.rs")):
+        src = path.read_text()
+        heads = [(m.start(), m.group(1)) for m in re.finditer(r"^\s*(?:pub(?:\(crate\))? )?fn (\w+)", src, re.M)]
+        for i, (start, name) in enumerate(heads):
+            stop = heads[i + 1][0] if i + 1 < len(heads) else len(src)
+            out[name] = src[start:stop]
+    return out
+
+
 def singular_arms():
-    """{effect name} for arms that resolve a `who` field singularly."""
+    """{effect name: {field}} for arms that resolve a `PlayerRef` field
+    singularly — `who`, and any other field (a pile's `splitter` /
+    `chooser`), directly or through a helper the arm calls."""
     src = EFFECTS.read_text()
+    helpers = helper_bodies()
     heads = [(m.start(), m.group(2)) for m in ARM_HEAD.finditer(src)]
-    out = set()
+    out = {}
     for i, (start, name) in enumerate(heads):
         stop = heads[i + 1][0] if i + 1 < len(heads) else len(src)
         body = src[start:stop]
-        if "self.resolve_player(who" in body:
-            out.add(name)
+        pat = body[: body.find("=>")] if "=>" in body else ""
+        fields = set(re.findall(r"\b([a-z_][a-z0-9_]*)\b", pat[pat.find("{") + 1 :])) if "{" in pat else set()
+        hit = set()
+        for f in fields:
+            single = rf"self\.resolve_player\(&?{f}\b"
+            if re.search(rf"self\.resolve_players\(&?{f}\b", body):
+                continue
+            if re.search(single, body):
+                hit.add(f)
+                continue
+            # A helper the arm hands `f` to BY NAME, resolving it singularly.
+            for m in re.finditer(r"self\.(\w+)\(([^;]*?)\)", body, re.S):
+                if re.search(rf"\b{f}\b", m.group(2)) and re.search(single, helpers.get(m.group(1), "")):
+                    hit.add(f)
+        if hit:
+            out.setdefault(name, set()).update(hit)
     return out
 
 
@@ -98,27 +129,55 @@ def singular_selector_arms():
     return out
 
 
-def fan_out_sites(names, selector_names=frozenset()):
-    """[(effect, ref, file, line)] for catalog sites filling `who` with one."""
-    alt = "|".join(sorted(names))
+def effect_bodies(src, names):
+    """(name, start, body) for each `Effect::Name { … }` literal in `src`
+    whose name is in `names`, the body cut at its matching brace."""
+    for m in re.finditer(r"Effect::(\w+)\s*\{", src):
+        if m.group(1) not in names:
+            continue
+        depth, i = 0, m.end() - 1
+        while i < len(src):
+            depth += {"{": 1, "}": -1}.get(src[i], 0)
+            if depth == 0:
+                break
+            i += 1
+        yield m.group(1), m.start(), src[m.end() : i]
+
+
+def top_level_fields(body):
+    """`(field, value-start)` for each `field:` at nesting depth 0."""
+    depth = 0
+    for m in re.finditer(r"[{}()\[\]]|\b([a-z_][a-z0-9_]*):(?!:)", body):
+        t = m.group(0)
+        if t in "{([":
+            depth += 1
+        elif t in "})]":
+            depth -= 1
+        elif depth == 0 and m.group(1):
+            yield m.group(1), m.end()
+
+
+def fan_out_sites(arms, selector_names=frozenset()):
+    """[(effect, ref, file, line)] for catalog sites filling a singularly
+    resolved field (`who`, a pile's `chooser`, …) with a fan-out ref. Only the
+    effect's OWN fields count: `from: Selector::CardsInZone { who: EachPlayer }`
+    fans out by itself (Cemetery Illuminator's `MoveChosen`)."""
     refs = "|".join(FAN_OUT)
-    # `Effect::Name { … who: PlayerRef::Each… }` — the field may sit on its own
-    # line, so allow anything but a closing brace in between. The selector half
-    # is the same clause wrapped: `who: Selector::Player(PlayerRef::Each…)`.
-    alts = "|".join(sorted(selector_names)) or "(?!)"
-    pat = re.compile(
-        rf"Effect::({alt})\s*\{{[^}}]*?who:\s*PlayerRef::({refs})\b"
-        rf"|Effect::({alts})\s*\{{[^}}]*?who:\s*Selector::Player\(PlayerRef::({refs})\b",
-        re.S,
-    )
+    player = re.compile(rf"\s*PlayerRef::({refs})\b")
+    selector = re.compile(rf"\s*Selector::Player\(PlayerRef::({refs})\b")
     hits = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
-        for m in pat.finditer(src):
-            line = src[: m.start()].count("\n") + 1
-            effect = m.group(1) or m.group(3)
-            ref = m.group(2) or m.group(4)
-            hits.append((effect, ref, path.relative_to(ROOT), line))
+        for name, start, body in effect_bodies(src, set(arms) | set(selector_names)):
+            for field, at in top_level_fields(body):
+                m = None
+                if field in arms.get(name, ()):
+                    m = player.match(body, at)
+                if m is None and field == "who" and name in selector_names:
+                    m = selector.match(body, at)
+                if m:
+                    line = src[: start].count("\n") + 1
+                    hits.append((name, m.group(1), path.relative_to(ROOT), line))
     return hits
 
 
@@ -148,7 +207,7 @@ def main():
     sel_names = singular_selector_arms()
     hits = fan_out_sites(names, sel_names)
     print(
-        f"{len(names)} effect arms resolve their `who` singularly, "
+        f"{len(names)} effect arms resolve a PlayerRef field singularly, "
         f"{len(sel_names)} more consume a `who: Selector` first-only."
     )
     unexpected, seen = [], set()
