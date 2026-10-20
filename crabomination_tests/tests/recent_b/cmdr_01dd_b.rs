@@ -808,3 +808,34 @@ fn cr_119_4_dash_hopes_is_countered_by_a_life_payment() {
         }
     }
 }
+
+/// The End exiles a creature and every same-named card of its owner's, and
+/// its owner draws one per card exiled from their hand.
+#[test]
+fn the_end_sweeps_the_name_and_refunds_hand_cards() {
+    let mut g = pod(2);
+    let target = g.add_card_to_battlefield(1, catalog::dinosaur_hunter());
+    g.add_card_to_hand(1, catalog::dinosaur_hunter());
+    g.add_card_to_hand(1, catalog::dinosaur_hunter());
+    g.add_card_to_graveyard(1, catalog::dinosaur_hunter());
+    g.add_card_to_library(1, catalog::dinosaur_hunter());
+    let hand = g.players[1].hand.len();
+    let end = g.add_card_to_hand(0, catalog::the_end());
+    cast(&mut g, end, Some(Target::Permanent(target)));
+    let named = |g: &GameState| g.exile.iter().filter(|c| c.definition.name == "Dinosaur Hunter").count();
+    assert_eq!(named(&g), 5, "the permanent and four more copies");
+    assert_eq!(g.players[1].hand.len(), hand - 2 + 2, "two exiled from hand, two drawn");
+}
+
+/// Sengir Nosferatu turns into a Bat and back.
+#[test]
+fn sengir_nosferatu_becomes_a_bat_and_returns() {
+    let mut g = pod(2);
+    let vampire = g.add_card_to_battlefield(0, catalog::sengir_nosferatu());
+    activate(&mut g, vampire, 0, None).expect("exile");
+    assert!(g.exile.iter().any(|c| c.id == vampire));
+    let bat = g.battlefield.iter().find(|c| c.definition.name == "Bat").map(|c| c.id).expect("a Bat");
+    activate(&mut g, bat, 0, None).expect("return");
+    assert!(g.battlefield_find(vampire).is_some(), "the Nosferatu is back");
+    assert!(g.battlefield_find(bat).is_none(), "the Bat was sacrificed");
+}

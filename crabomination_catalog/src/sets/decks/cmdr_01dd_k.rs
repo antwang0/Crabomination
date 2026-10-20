@@ -1052,3 +1052,86 @@ pub fn dash_hopes() -> CardDefinition {
         )
     }
 }
+
+// ── Batch seven ─────────────────────────────────────────────────────────────
+
+/// The End — {2}{B}{B} instant, {2} less while your life total is 5 or less.
+/// Exile target creature or planeswalker, then every card with its name from
+/// its owner's graveyard, hand and library; that player shuffles and draws a
+/// card per card exiled from their hand. (The sweep reads the owner's zones:
+/// for a stolen permanent the printed "its controller's" differs.)
+pub fn the_end() -> CardDefinition {
+    let owner = || PlayerRef::OwnerOf(Box::new(Selector::Target(0)));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if your life total is 5 or less.",
+            effect: StaticEffect::SelfCostReducedIfPredicate {
+                amount: 2,
+                condition: Predicate::PlayerLifeAtMost { who: PlayerRef::You, life: 5 },
+            },
+        }],
+        ..spell(
+            "The End",
+            cost(&[generic(2), b(), b()]),
+            CardType::Instant,
+            Effect::WithX {
+                x: Value::CardsInHandMatching { who: owner(), filter: R::SameNameAsTarget },
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ExileSameNameAsTarget { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+                    Effect::Draw { who: Selector::Player(owner()), amount: Value::XFromCost },
+                ])),
+            },
+        )
+    }
+}
+
+/// Sengir Nosferatu — {3}{B}{B} 4/4 flying Vampire. {1}{B}, exile it: create
+/// a 1/2 black flying Bat with "{1}{B}, Sacrifice this token: Return an
+/// exiled card named Sengir Nosferatu to the battlefield under its owner's
+/// control."
+pub fn sengir_nosferatu() -> CardDefinition {
+    let bat = crate::card::TokenDefinition {
+        name: "Bat".into(),
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_cost: true,
+            effect: Effect::ChooseOneAmong {
+                what: Selector::EachMatching {
+                    zone: crate::effect::ZoneRef::Exile,
+                    filter: R::HasName("Sengir Nosferatu".into()),
+                },
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::Move {
+                    what: Selector::SeparatedPile { chosen: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOf(Box::new(Selector::SeparatedPile { chosen: true })),
+                        tapped: false,
+                    },
+                }),
+                other: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            exile_self_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(bat),
+            },
+            ..Default::default()
+        }],
+        ..creature("Sengir Nosferatu", cost(&[generic(3), b(), b()]), vec![CreatureType::Vampire], 4, 4)
+    }
+}

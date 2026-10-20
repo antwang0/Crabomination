@@ -18331,6 +18331,8 @@ static DECKS: &[Factory] = &[
     super::decks::minion_reflector,
     super::decks::phyrexian_devourer,
     super::decks::dash_hopes,
+    super::decks::the_end,
+    super::decks::sengir_nosferatu,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
