@@ -27870,6 +27870,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANARA_21_COMMANDERS,
             main: decks::ANARA_21_MAIN,
         },
+        // Seat 4570: Lulu, Loyal Hollyphant and Master Chef's EDHREC average deck. `--pod-decks 4570`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Master Chef (WG)",
+            commanders: decks::LULU_16_COMMANDERS,
+            main: decks::LULU_16_MAIN,
+        },
+        // Seat 4571: Lulu, Loyal Hollyphant and Raised by Giants's EDHREC average deck. `--pod-decks 4571`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Raised by Giants (WG)",
+            commanders: decks::LULU_17_COMMANDERS,
+            main: decks::LULU_17_MAIN,
+        },
+        // Seat 4572: Vhal, Candlekeep Researcher and Candlekeep Sage's EDHREC average deck. `--pod-decks 4572`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Candlekeep Sage (U)",
+            commanders: decks::VHAL_17_COMMANDERS,
+            main: decks::VHAL_17_MAIN,
+        },
+        // Seat 4573: Keleth, Sunmane Familiar and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4573`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::KELETH_14_COMMANDERS,
+            main: decks::KELETH_14_MAIN,
+        },
+        // Seat 4574: Halsin, Emerald Archdruid and Noble Heritage's EDHREC average deck. `--pod-decks 4574`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Noble Heritage (WG)",
+            commanders: decks::HALSIN_14_COMMANDERS,
+            main: decks::HALSIN_14_MAIN,
+        },
+        // Seat 4575: Keleth, Sunmane Familiar and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4575`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Miara, Thorn of the Glade (WB)",
+            commanders: decks::KELETH_15_COMMANDERS,
+            main: decks::KELETH_15_MAIN,
+        },
+        // Seat 4576: The Fourteenth Doctor and Bill Potts's EDHREC average deck. `--pod-decks 4576`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Bill Potts (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_8_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_8_MAIN,
+        },
+        // Seat 4577: Ikra Shidiqi, the Usurper and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 4577`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Keskit, the Flesh Sculptor (BG)",
+            commanders: decks::IKRA_SHIDIQI_7_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_7_MAIN,
+        },
+        // Seat 4578: Gale, Waterdeep Prodigy and Flaming Fist's EDHREC average deck. `--pod-decks 4578`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Flaming Fist (WU)",
+            commanders: decks::GALE_18_COMMANDERS,
+            main: decks::GALE_18_MAIN,
+        },
+        // Seat 4579: Keleth, Sunmane Familiar and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4579`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Numa, Joraga Chieftain (WG)",
+            commanders: decks::KELETH_16_COMMANDERS,
+            main: decks::KELETH_16_MAIN,
+        },
+        // Seat 4580: Numa, Joraga Chieftain and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 4580`.
+        PodDeck {
+            name: "Numa, Joraga Chieftain and Toggo, Goblin Weaponsmith (RG)",
+            commanders: decks::NUMA_8_COMMANDERS,
+            main: decks::NUMA_8_MAIN,
+        },
+        // Seat 4581: Ellyn Harbreeze, Busybody and Cultist of the Absolute's EDHREC average deck. `--pod-decks 4581`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Cultist of the Absolute (WB)",
+            commanders: decks::ELLYN_HARBREEZE_13_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_13_MAIN,
+        },
+        // Seat 4582: Anara, Wolvid Familiar and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 4582`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Keskit, the Flesh Sculptor (BG)",
+            commanders: decks::ANARA_22_COMMANDERS,
+            main: decks::ANARA_22_MAIN,
+        },
+        // Seat 4583: Sidar Kondo of Jamuraa and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4583`.
+        PodDeck {
+            name: "Sidar Kondo of Jamuraa and Slurrk, All-Ingesting (WG)",
+            commanders: decks::SIDAR_KONDO_OF_JAMURAA_COMMANDERS,
+            main: decks::SIDAR_KONDO_OF_JAMURAA_MAIN,
+        },
+        // Seat 4584: Eligeth, Crossroads Augur and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 4584`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Ich-Tekik, Salvage Splicer (UG)",
+            commanders: decks::ELIGETH_29_COMMANDERS,
+            main: decks::ELIGETH_29_MAIN,
+        },
+        // Seat 4585: Francisco, Fowl Marauder and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4585`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Numa, Joraga Chieftain (BG)",
+            commanders: decks::FRANCISCO_22_COMMANDERS,
+            main: decks::FRANCISCO_22_MAIN,
+        },
     ]
 }
 
@@ -34340,6 +34436,22 @@ mod tests {
             ("Zellix, Sanity Flayer and Hardy Outlander", &[0x1BED]),
             ("Alena, Kessig Trapper and Rebbec, Architect of Ascension", &[0x1BEE]),
             ("Anara, Wolvid Familiar and Francisco, Fowl Marauder", &[0x1BEF]),
+            ("Lulu, Loyal Hollyphant and Master Chef", &[0x1BF0]),
+            ("Lulu, Loyal Hollyphant and Raised by Giants", &[0x1BF1]),
+            ("Vhal, Candlekeep Researcher and Candlekeep Sage", &[0x1BF2]),
+            ("Keleth, Sunmane Familiar and Sidar Kondo of Jamuraa", &[0x1BF3]),
+            ("Halsin, Emerald Archdruid and Noble Heritage", &[0x1BF4]),
+            ("Keleth, Sunmane Familiar and Miara, Thorn of the Glade", &[0x1BF5]),
+            ("The Fourteenth Doctor and Bill Potts", &[0x1BF6]),
+            ("Ikra Shidiqi, the Usurper and Keskit, the Flesh Sculptor", &[0x1BF7]),
+            ("Gale, Waterdeep Prodigy and Flaming Fist", &[0x1BF8]),
+            ("Keleth, Sunmane Familiar and Numa, Joraga Chieftain", &[0x1BF9]),
+            ("Numa, Joraga Chieftain and Toggo, Goblin Weaponsmith", &[0x1BFA]),
+            ("Ellyn Harbreeze, Busybody and Cultist of the Absolute", &[0x1BFB]),
+            ("Anara, Wolvid Familiar and Keskit, the Flesh Sculptor", &[0x1BFC]),
+            ("Sidar Kondo of Jamuraa and Slurrk, All-Ingesting", &[0x1BFD]),
+            ("Eligeth, Crossroads Augur and Ich-Tekik, Salvage Splicer", &[0x1BFE]),
+            ("Francisco, Fowl Marauder and Numa, Joraga Chieftain", &[0x1BFF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
