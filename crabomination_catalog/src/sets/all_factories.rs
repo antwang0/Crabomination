@@ -18212,6 +18212,13 @@ static DECKS: &[Factory] = &[
     super::decks::priest_of_the_blood_rite,
     super::decks::colfenors_plans,
     super::decks::forbidden_crypt,
+    // cmdr_01fn_b (session 01FnAVVR)
+    super::decks::northern_paladin,
+    super::decks::order_of_the_sacred_torch,
+    super::decks::stromgald_cabal,
+    super::decks::deathgrip,
+    super::decks::flooded_woodlands,
+    super::decks::natures_ruin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

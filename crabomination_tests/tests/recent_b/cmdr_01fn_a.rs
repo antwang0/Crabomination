@@ -142,3 +142,36 @@ fn colfenors_plans_plays_its_exile_one_spell_a_turn() {
     cast_as(&mut g, 1, other, Some(Target::Player(0))).expect("opponent's first");
     cast_as(&mut g, 1, second, Some(Target::Player(0))).expect("opponent's second");
 }
+
+fn declare(g: &mut GameState, attackers: &[CardId]) -> Result<(), GameError> {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers
+            .iter()
+            .map(|&attacker| crabomination::game::types::Attack {
+                attacker,
+                target: crabomination::game::types::AttackTarget::Player(1),
+            })
+            .collect(),
+    ))
+    .map(|_| ())
+}
+
+/// CR 508.1g — Flooded Woodlands: one land sacrificed per attacking green
+/// creature, paid as attackers are declared; nongreen attackers pay nothing,
+/// and a short pool rejects the declaration.
+#[test]
+fn cr_508_1g_flooded_woodlands_charges_a_land_per_green_attacker() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(1, catalog::flooded_woodlands());
+    let bears: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let knight = g.add_card_to_battlefield(0, catalog::northern_paladin());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    for id in bears.iter().chain([&knight]) {
+        g.clear_sickness(*id);
+    }
+    assert!(declare(&mut g.clone(), &bears).is_err(), "two green attackers, one land");
+    declare(&mut g, &[bears[0], knight]).expect("one green attacker, one land");
+    assert!(g.battlefield_find(land).is_none(), "the Forest paid for the Bears");
+}
