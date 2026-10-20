@@ -27552,6 +27552,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREECHES_23_COMMANDERS,
             main: decks::BREECHES_23_MAIN,
         },
+        // Seat 4517: Lae'zel, Vlaakith's Champion and Candlekeep Sage's EDHREC average deck. `--pod-decks 4517`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Candlekeep Sage (WU)",
+            commanders: decks::LAEZEL_10_COMMANDERS,
+            main: decks::LAEZEL_10_MAIN,
+        },
+        // Seat 4518: Lae'zel, Vlaakith's Champion and Feywild Visitor's EDHREC average deck. `--pod-decks 4518`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Feywild Visitor (WU)",
+            commanders: decks::LAEZEL_11_COMMANDERS,
+            main: decks::LAEZEL_11_MAIN,
+        },
+        // Seat 4519: Keskit, the Flesh Sculptor and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 4519`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Sakashima of a Thousand Faces (UB)",
+            commanders: decks::KESKIT_10_COMMANDERS,
+            main: decks::KESKIT_10_MAIN,
+        },
+        // Seat 4520: Ellyn Harbreeze, Busybody and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4520`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Acolyte of Bahamut (WG)",
+            commanders: decks::ELLYN_HARBREEZE_12_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_12_MAIN,
+        },
+        // Seat 4521: Vhal, Candlekeep Researcher and Feywild Visitor's EDHREC average deck. `--pod-decks 4521`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Feywild Visitor (U)",
+            commanders: decks::VHAL_15_COMMANDERS,
+            main: decks::VHAL_15_MAIN,
+        },
+        // Seat 4522: Francisco, Fowl Marauder and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 4522`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Ich-Tekik, Salvage Splicer (BG)",
+            commanders: decks::FRANCISCO_17_COMMANDERS,
+            main: decks::FRANCISCO_17_MAIN,
+        },
+        // Seat 4523: Francisco, Fowl Marauder and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4523`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Rebbec, Architect of Ascension (WB)",
+            commanders: decks::FRANCISCO_18_COMMANDERS,
+            main: decks::FRANCISCO_18_MAIN,
+        },
+        // Seat 4524: Francisco, Fowl Marauder and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4524`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Nadier, Agent of the Duskenel (B)",
+            commanders: decks::FRANCISCO_19_COMMANDERS,
+            main: decks::FRANCISCO_19_MAIN,
+        },
     ]
 }
 
@@ -33969,6 +34017,14 @@ mod tests {
             ("Rebbec, Architect of Ascension and The Prismatic Piper", &[0x1BB8]),
             ("Safana, Calimport Cutthroat and Inspiring Leader", &[0x1BB9]),
             ("Breeches, Brazen Plunderer and Gilanra, Caller of Wirewood", &[0x1BBA]),
+            ("Lae'zel, Vlaakith's Champion and Candlekeep Sage", &[0x1BBB]),
+            ("Lae'zel, Vlaakith's Champion and Feywild Visitor", &[0x1BBC]),
+            ("Keskit, the Flesh Sculptor and Sakashima of a Thousand Faces", &[0x1BBD]),
+            ("Ellyn Harbreeze, Busybody and Acolyte of Bahamut", &[0x1BBE]),
+            ("Vhal, Candlekeep Researcher and Feywild Visitor", &[0x1BBF]),
+            ("Francisco, Fowl Marauder and Ich-Tekik, Salvage Splicer", &[0x1BC0]),
+            ("Francisco, Fowl Marauder and Rebbec, Architect of Ascension", &[0x1BC1]),
+            ("Francisco, Fowl Marauder and Nadier, Agent of the Duskenel", &[0x1BC2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
