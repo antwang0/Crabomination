@@ -18169,6 +18169,10 @@ static DECKS: &[Factory] = &[
     super::decks::harpoon_sniper,
     super::decks::judge_of_currents,
     super::decks::sygg_wanderwine_wisdom,
+    super::decks::thought_lash,
+    super::decks::mirror_of_fate,
+    super::decks::sea_gate_stormcaller,
+    super::decks::insidious_will,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

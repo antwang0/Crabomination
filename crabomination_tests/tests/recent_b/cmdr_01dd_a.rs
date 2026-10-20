@@ -204,3 +204,96 @@ fn sygg_pays_w_to_transform_and_shield() {
     assert_eq!(g.battlefield_find(sygg).unwrap().definition.name, "Sygg, Wanderbrine Shield");
     assert!(g.computed_permanent(sygg).unwrap().keywords().contains(&crabomination::card::Keyword::Protection(Color::Red)));
 }
+
+fn cast_no_drain(g: &mut GameState, id: CardId, target: Option<Target>, mode: Option<usize>) {
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode, x_value: None })
+        .expect("cast");
+}
+
+/// Walk seat 0 into its upkeep from seat 1's end step and resolve what fired.
+fn into_upkeep(g: &mut GameState) {
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::End;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(g);
+}
+
+/// CR 702.24a — Thought Lash's upkeep is paid by exiling the top card per
+/// age counter; with too few cards it goes unpaid, it's sacrificed, and its
+/// trigger exiles the rest of the library.
+#[test]
+fn cr_702_24a_thought_lash_exiles_the_top_or_the_whole_library() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let lash = g.add_card_to_battlefield(0, catalog::thought_lash());
+    into_upkeep(&mut g);
+    assert!(g.battlefield_find(lash).is_some(), "paid");
+    assert_eq!(g.players[0].library.len(), 9, "one card for one age counter");
+
+    let mut g = pod(2);
+    let lash = g.add_card_to_battlefield(0, catalog::thought_lash());
+    g.battlefield_find_mut(lash).unwrap().counters.insert(CounterType::Age, 11);
+    into_upkeep(&mut g);
+    assert!(g.battlefield_find(lash).is_none(), "twelve cards owed, ten in the library");
+    assert!(g.players[0].library.is_empty(), "the unpaid trigger exiled the library");
+}
+
+/// Mirror of Fate chooses before it exiles: the chosen exiled card ends up
+/// as the whole library, and the old library is in exile.
+#[test]
+fn mirror_of_fate_rebuilds_the_library_from_exile() {
+    let mut g = pod(2);
+    let mirror = ready(&mut g, 0, catalog::mirror_of_fate());
+    let bolt = g.add_card_to_exile(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mirror,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let lib: Vec<CardId> = g.players[0].library.iter().map(|c| c.id).collect();
+    assert_eq!(lib, vec![bolt]);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 10);
+}
+
+/// Sea Gate Stormcaller copies the next cheap instant or sorcery once, or
+/// twice kicked.
+#[test]
+fn sea_gate_stormcaller_copies_the_next_cheap_spell() {
+    for (kicked, life) in [(false, 14), (true, 11)] {
+        let mut g = pod(2);
+        let sgs = g.add_card_to_hand(0, catalog::sea_gate_stormcaller());
+        flood(&mut g, 0);
+        if kicked {
+            g.perform_action(GameAction::CastSpellKicked { card_id: sgs, target: None, additional_targets: vec![], mode: None, x_value: None })
+                .expect("kick");
+            drain_stack(&mut g);
+        } else {
+            cast(&mut g, sgs, None).expect("cast");
+        }
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
+        assert_eq!(g.players[1].life, life, "kicked {kicked}");
+    }
+}
+
+/// Insidious Will's third mode copies a spell.
+#[test]
+fn insidious_will_copies_an_instant() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let will = g.add_card_to_hand(0, catalog::insidious_will());
+    flood(&mut g, 0);
+    cast_no_drain(&mut g, bolt, Some(Target::Player(1)), None);
+    cast_no_drain(&mut g, will, Some(Target::Permanent(bolt)), Some(2));
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14);
+}
