@@ -341,3 +341,20 @@ fn loathsome_troll_climbs_out_of_the_graveyard() {
     drain_stack(&mut g);
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == troll), "it left the graveyard");
 }
+
+/// Divine Smite: a black permanent is exiled; any other phases out
+/// (CR 702.26) and is still there, just treated as though it doesn't exist.
+#[test]
+fn divine_smite_exiles_black_and_phases_out_the_rest() {
+    let mut g = main_phase(2);
+    let black = g.add_card_to_battlefield(1, catalog::eyeblight_assassin());
+    let red = g.add_card_to_battlefield(1, catalog::velukan_dragon());
+    for target in [black, red] {
+        let smite = g.add_card_to_hand(0, catalog::divine_smite());
+        flood(&mut g, 0);
+        cast_as(&mut g, 0, smite, Some(Target::Permanent(target))).expect("cast");
+    }
+    assert!(g.exile.iter().any(|c| c.id == black), "black: exiled");
+    assert!(!g.exile.iter().any(|c| c.id == red), "red: phased out, not exiled");
+    assert!(g.battlefield_find(red).is_none(), "a phased-out permanent is treated as though it doesn't exist");
+}

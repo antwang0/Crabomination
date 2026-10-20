@@ -18265,6 +18265,19 @@ static DECKS: &[Factory] = &[
     super::decks::medicine_runner,
     super::decks::clockwork_hydra,
     super::decks::guardians_of_koilos,
+    // cmdr_01fn_f (session 01FnAVVR)
+    super::decks::snooping_newsie,
+    super::decks::putrefax,
+    super::decks::gravelgill_duo,
+    super::decks::prophet_of_the_peak,
+    super::decks::plunder,
+    super::decks::madblind_mountain,
+    super::decks::baleful_stare,
+    super::decks::snow_fortress,
+    super::decks::divine_smite,
+    super::decks::spiral_into_solitude,
+    super::decks::skullmulcher,
+    super::decks::screaming_swarm,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
