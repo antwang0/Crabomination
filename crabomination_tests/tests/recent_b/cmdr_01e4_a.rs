@@ -1793,7 +1793,7 @@ fn surge_engine_climbs_its_ladder() {
     assert!(activate(&mut g, engine, 2).is_err(), "not blue yet");
     activate(&mut g, engine, 1).expect("become blue");
     let c = g.computed_permanent(engine).unwrap();
-    assert!(c.colors.contains(&Color::Blue));
+    assert!(c.colors.contains(Color::Blue));
     assert_eq!((c.power, c.toughness), (5, 4));
     let hand = g.players[0].hand.len();
     activate(&mut g, engine, 2).expect("draw");
