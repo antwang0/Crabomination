@@ -582,6 +582,8 @@ pub enum PlaneswalkerSubtype {
     Feroz,
     // Arzakon (its own EDHREC deck; Tam, the Possibility counts it).
     Arzakon,
+    // Grand Master of Flowers (Rashida Scalebane's deck).
+    Bahamut,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -2855,6 +2857,9 @@ pub enum Keyword {
     /// the bearer still isn't a shadow creature, so nonshadow attackers can
     /// still be blocked by it (Heartwood Dryad, Wall of Diffusion).
     CanBlockShadow,
+    /// "This creature can block [type]s as though it had reach" (Dragon
+    /// Hunter): a flying attacker of that creature type is blockable by it.
+    CanBlockCreatureTypeAsThoughReach(CreatureType),
     /// "You can't lose the game and your opponents can't win the game" as an
     /// ability a permanent *has* — granted, so it reads through layers (The
     /// Book of Exalted Deeds' Angel). The printed form is

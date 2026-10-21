@@ -20788,7 +20788,7 @@ impl GameState {
         }
         attackers.iter().any(|(atk, atk_cp)| {
             !self.blocker_matching_restriction_bars(blocker, blocker_cp.keywords(), atk.id)
-                && can_block_attacker_computed(
+                && can_block_attacker_typed(
                     blocker,
                     blocker_cp,
                     || self.permanent_is_enchanted(blocker.id),
@@ -20796,6 +20796,7 @@ impl GameState {
                     atk_cp.keywords(),
                     atk_cp.colors,
                     atk_cp.power,
+                    |t| atk_cp.subtypes().creature_types.contains(t),
                 )
         })
     }
@@ -21152,7 +21153,7 @@ impl GameState {
                 _ => {}
             }
         }
-        if !can_block_attacker_computed(
+        if !can_block_attacker_typed(
             blocker,
             blocker_cp,
             || self.permanent_is_enchanted(blocker.id),
@@ -21160,6 +21161,7 @@ impl GameState {
             atk_kws,
             atk_colors,
             atk_power,
+            |t| atk_cp.is_some_and(|a| a.subtypes().creature_types.contains(t)),
         ) {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
@@ -37216,6 +37218,32 @@ pub fn can_block_attacker_computed(
     attacker_colors: crate::mana::ColorSet,
     attacker_power: i32,
 ) -> bool {
+    can_block_attacker_typed(
+        blocker,
+        blocker_computed,
+        blocker_enchanted,
+        monarch,
+        attacker_kws,
+        attacker_colors,
+        attacker_power,
+        |_| false,
+    )
+}
+
+/// [`can_block_attacker_computed`] that also knows the attacker's creature
+/// types (`attacker_has_type`) — Dragon Hunter's "can block Dragons as though
+/// it had reach". Both engine call sites use this one.
+#[allow(clippy::too_many_arguments)]
+pub fn can_block_attacker_typed(
+    blocker: &CardInstance,
+    blocker_computed: &ComputedPermanent,
+    blocker_enchanted: impl Fn() -> bool + Copy,
+    monarch: Option<usize>,
+    attacker_kws: &[Keyword],
+    attacker_colors: crate::mana::ColorSet,
+    attacker_power: i32,
+    attacker_has_type: impl Fn(&crate::card::CreatureType) -> bool + Copy,
+) -> bool {
     let blocker_kws = &blocker_computed.keywords();
     let blocker_power = blocker_computed.power;
 
@@ -37233,10 +37261,12 @@ pub fn can_block_attacker_computed(
     // the two that need an *attacker* flag are settled after both passes.
     let (mut b_flying, mut b_reach, mut b_only_flying) = (false, false, false);
     let (mut b_horsemanship, mut b_shadow, mut b_can_block_shadow) = (false, false, false);
+    let mut b_reach_vs: Option<&crate::card::CreatureType> = None;
     for k in blocker_kws.iter() {
         match k {
             Keyword::Flying => b_flying = true,
             Keyword::Reach => b_reach = true,
+            Keyword::CanBlockCreatureTypeAsThoughReach(t) => b_reach_vs = Some(t),
             // Wanderlight Spirit: this blocker can block only fliers.
             Keyword::CanBlockOnlyFlying => b_only_flying = true,
             Keyword::Horsemanship => b_horsemanship = true,
@@ -37264,7 +37294,7 @@ pub fn can_block_attacker_computed(
             | Keyword::ProtectionFromEverything => return false,
             // Flying: only fliers and reach may block.
             Keyword::Flying => {
-                if !b_flying && !b_reach {
+                if !b_flying && !b_reach && !b_reach_vs.is_some_and(attacker_has_type) {
                     return false;
                 }
                 a_flying = true;

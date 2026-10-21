@@ -111,6 +111,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Intimidate => "Intimidate",
         Keyword::Skulk => "Skulk",
         Keyword::CanBlockShadow => "Can block shadow",
+        Keyword::CanBlockCreatureTypeAsThoughReach(_) => "Can block a creature type as though it had reach",
         Keyword::SpaceSculptor => "Space sculptor",
         Keyword::Fear => "Fear",
         Keyword::Rebound => "Rebound",
