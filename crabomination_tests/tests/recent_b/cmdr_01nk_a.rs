@@ -799,3 +799,18 @@ fn cr_601_2c_spinning_wheel_kick_hits_x_targets() {
     assert!(g.battlefield_find(c).is_some(), "not a target");
     assert_eq!(g.battlefield_find(giant).unwrap().damage, 0, "the kicker deals, takes nothing");
 }
+
+/// End-Blaze Epiphany kills a 3-power creature, exiles three off the top and
+/// grants a may-play on one of them.
+#[test]
+fn end_blaze_epiphany_impulses_by_the_dead_creatures_power() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let eb = g.add_card_to_hand(0, catalog::end_blaze_epiphany());
+    let lib = g.players[0].library.len();
+    cast_with(&mut g, eb, Some(Target::Permanent(giant)), vec![], Some(3), None);
+    assert!(g.battlefield_find(giant).is_none(), "dead");
+    assert_eq!(g.players[0].library.len(), lib - 3, "three exiled");
+    let granted = g.exile.iter().filter(|c| c.may_play_until.is_some_and(|m| m.player == 0)).count();
+    assert_eq!(granted, 1, "one chosen to play");
+}

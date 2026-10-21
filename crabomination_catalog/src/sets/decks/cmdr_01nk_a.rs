@@ -1294,3 +1294,46 @@ pub fn spinning_wheel_kick() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// End-Blaze Epiphany — {X}{R} instant. X damage to target creature. When it
+/// dies this turn, exile cards from the top of your library equal to its
+/// power, then choose one of them; until the end of your next turn you may
+/// play it.
+pub fn end_blaze_epiphany() -> CardDefinition {
+    CardDefinition {
+        name: "End-Blaze Epiphany",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // The watcher goes first: the damage's mid-resolution SBA check
+            // would otherwise remove the creature before it is watched.
+            Effect::WhenTargetDiesThisTurn {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary {
+                        who: Selector::You,
+                        amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                        link_to_source: false,
+                        face_down: false,
+                    },
+                    Effect::ChooseOneAmong {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::GrantMayPlay {
+                            what: Selector::SeparatedPile { chosen: true },
+                            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                            to_owner: false,
+                            exile_after: false,
+                            pay_own_cost: true,
+                            any_color: false,
+                        }),
+                        other: Box::new(Effect::Noop),
+                    },
+                ])),
+                slot: 0,
+                filter: Some(R::Creature),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
