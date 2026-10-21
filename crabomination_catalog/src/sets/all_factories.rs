@@ -19036,6 +19036,11 @@ static DECKS: &[Factory] = &[
     super::decks::hysterical_blindness,
     super::decks::uncomfortable_chill,
     super::decks::zevlor_elturel_exile,
+    super::decks::tivadar_of_thorn,
+    super::decks::lightwielder_paladin,
+    super::decks::justice,
+    super::decks::luminesce,
+    super::decks::surge_of_salvation,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

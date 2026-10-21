@@ -622,3 +622,73 @@ fn uncomfortable_chill_shrinks_the_other_side() {
     assert_eq!(g.computed_permanent(mine).unwrap().power, 2);
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// Justice (2004-10-04 ruling): a red spell dealing damage to two creatures at
+/// once triggers it once for the total, aimed at the spell's controller; a
+/// red creature's combat damage triggers it too.
+#[test]
+fn justice_punishes_red_damage_once_per_source_event() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::justice());
+    g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let clasm = g.add_card_to_hand(1, catalog::pyroclasm());
+    let life = g.players[1].life;
+    g.active_player_idx = 1;
+    cast_x(&mut g, 1, clasm, None, None);
+    assert_eq!(g.players[1].life, life - 4, "2 + 2 in one trigger");
+    let goblin = ready(&mut g, 1, catalog::raging_goblin());
+    let life = g.players[1].life;
+    attack(&mut g, 1, &[(goblin, 2)]);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, life - 1, "the Goblin's 1 combat damage");
+}
+
+/// Luminesce prevents a black or red source's damage everywhere; Surge of
+/// Salvation only to its caster's creatures (CR 615.1).
+#[test]
+fn luminesce_and_surge_of_salvation_stop_black_and_red_damage() {
+    let mut g = pod(2);
+    let lum = g.add_card_to_hand(0, catalog::luminesce());
+    cast_x(&mut g, 0, lum, None, None);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let life = g.players[0].life;
+    cast_x(&mut g, 1, bolt, Some(Target::Player(0)), None);
+    assert_eq!(g.players[0].life, life, "Luminesce: no red damage this turn");
+
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let surge = g.add_card_to_hand(0, catalog::surge_of_salvation());
+    cast_x(&mut g, 0, surge, None, None);
+    assert!(g.permanent_has_keyword(mine, &Keyword::Hexproof));
+    let clasm = g.add_card_to_hand(1, catalog::pyroclasm());
+    g.active_player_idx = 1;
+    cast_x(&mut g, 1, clasm, None, None);
+    assert!(g.battlefield_find(mine).is_some(), "Surge covers the caster's creatures");
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// Tivadar's ETB kills a Goblin; Lightwielder Paladin exiles a red permanent
+/// of the player it hit.
+#[test]
+fn tivadar_and_lightwielder_paladin_hunt_red() {
+    let mut g = pod(2);
+    let goblin = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    let tiv = g.add_card_to_hand(0, catalog::tivadar_of_thorn());
+    cast_x(&mut g, 0, tiv, None, None);
+    assert!(g.battlefield_find(goblin).is_none());
+    let mut g = pod(2);
+    let paladin = ready(&mut g, 0, catalog::lightwielder_paladin());
+    let piker = g.add_card_to_battlefield(1, catalog::goblin_piker());
+    g.battlefield_find_mut(piker).unwrap().tapped = true;
+    attack(&mut g, 0, &[(paladin, 1)]);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert!(g.exile.iter().any(|c| c.id == piker), "the red permanent of the damaged player");
+}

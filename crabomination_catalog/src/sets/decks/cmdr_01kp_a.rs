@@ -973,3 +973,116 @@ pub fn zevlor_elturel_exile() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Tivadar of Thorn's five ─────────────────────────────────────────────────
+
+/// Tivadar of Thorn — {1}{W}{W} 2/2 legendary Human Knight, first strike,
+/// protection from red. When he enters, destroy target Goblin.
+pub fn tivadar_of_thorn() -> CardDefinition {
+    CardDefinition {
+        name: "Tivadar of Thorn",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Protection(Color::Red)],
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(R::HasCreatureType(CreatureType::Goblin)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Lightwielder Paladin — {3}{W}{W} 4/4 Human Knight, first strike. Whenever
+/// it deals combat damage to a player, you may exile target black or red
+/// permanent that player controls.
+pub fn lightwielder_paladin() -> CardDefinition {
+    CardDefinition {
+        name: "Lightwielder Paladin",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        R::Permanent
+                            .and(R::HasColor(Color::Black).or(R::HasColor(Color::Red)))
+                            .and(R::ControlledByTriggerPlayer),
+                    ),
+                    to: ZoneDest::Exile,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Justice — {2}{W}{W} enchantment. At the beginning of your upkeep, sacrifice
+/// it unless you pay {W}{W}. Whenever a red creature or spell deals damage,
+/// Justice deals that much damage to that creature's or spell's controller
+/// (one trigger per source event, its total — 2004-10-04 ruling).
+pub fn justice() -> CardDefinition {
+    let red_dealer = R::HasColor(Color::Red)
+        .and(R::Creature.or(R::HasCardType(CardType::Instant)).or(R::HasCardType(CardType::Sorcery)));
+    CardDefinition {
+        name: "Justice",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::SacrificeSourceUnlessPay { cost: cost(&[w(), w()]) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsDamage, EventScope::AnyPlayer).dealt_by(red_dealer),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Luminesce — {W} instant. Prevent all damage that black sources and red
+/// sources would deal this turn.
+pub fn luminesce() -> CardDefinition {
+    CardDefinition {
+        name: "Luminesce",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventDamageFromColorsThisTurn { colors: vec![Color::Black, Color::Red], to_your_creatures: false },
+        ..Default::default()
+    }
+}
+
+/// Surge of Salvation — {W} instant. You and permanents you control gain
+/// hexproof until end of turn (the permanents fixed as it resolves). Prevent
+/// all damage black and/or red sources would deal to creatures you control
+/// this turn — any creature you control then (2023-04-14 ruling).
+pub fn surge_of_salvation() -> CardDefinition {
+    CardDefinition {
+        name: "Surge of Salvation",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PlayerHexproofThisTurn { who: Selector::You },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Permanent.and(R::ControlledByYou)),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PreventDamageFromColorsThisTurn { colors: vec![Color::Black, Color::Red], to_your_creatures: true },
+        ]),
+        ..Default::default()
+    }
+}
