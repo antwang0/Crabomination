@@ -135019,3 +135019,30 @@ pub const BREECHES_31_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const GLACIAN_31_COMMANDERS: &[CardFactory] = &[glacian_powerstone_engineer, ludevic_necro_alchemist];
+
+/// **Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 15 Islands + 4 Mountains = 98.
+/// Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist (EDHREC, fetched 2026-10-21).
+pub const GLACIAN_31_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, basalt_monolith, blinkmoth_urn, clock_of_omens,
+    elixir_of_immortality, forsaken_monument, hedron_archive, howling_mine, ichor_wellspring,
+    ingenuity_engine, krark_clan_ironworks, mana_vault, midnight_clock, mind_stone,
+    mycosynth_wellspring, senseis_divining_top, sol_ring, static_orb, tangle_wire,
+    thaumatic_compass, trinisphere, unwinding_clock, voltaic_key, winter_orb, witching_well,
+    buried_ruin, castle_vantress, darksteel_citadel, evolving_wilds, great_furnace,
+    inventors_fair, mystic_sanctuary, reliquary_tower, scalding_tarn, seat_of_the_synod,
+    shivan_reef, steam_vents, sulfur_falls, terramorphic_expanse, training_center, broodstar,
+    emry_lurker_of_the_loch, etherium_sculptor, jhoira_weatherlight_captain, merchants_dockhand,
+    metalwork_colossus, meteor_golem, padeem_consul_of_innovation, quicksmith_rebel,
+    quicksmith_spy, sai_master_thopterist, scrap_trawler, thassas_oracle,
+    efficient_construction, frozen_aether, ghirapur_aether_grid, mirrodin_besieged, mirrormade,
+    overburden, storm_the_vault, thopter_spy_network, counterspell, deflecting_swat,
+    dig_through_time, expansion_explosion, fierce_guardianship, hurkyls_recall, machinate,
+    whir_of_invention, narset_parter_of_veils, saheeli_sublime_artificer, tezzeret_the_seeker,
+    tezzeret_artifice_master, fabricate, grapeshot, reshape, saheelis_directive, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, mountain, mountain, mountain, mountain,
+];

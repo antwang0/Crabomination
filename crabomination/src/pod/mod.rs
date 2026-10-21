@@ -29346,6 +29346,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREECHES_31_COMMANDERS,
             main: decks::BREECHES_31_MAIN,
         },
+        // Seat 4816: Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4816`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::GLACIAN_31_COMMANDERS,
+            main: decks::GLACIAN_31_MAIN,
+        },
     ]
 }
 
@@ -36062,6 +36068,7 @@ mod tests {
             ("The Eighth Doctor and Amy Pond", &[0x1CE3]),
             ("Amber Gristle O'Maul and Dungeon Delver", &[0x1CE4]),
             ("Breeches, Brazen Plunderer and Radiant, Serra Archangel", &[0x1CE5]),
+            ("Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist", &[0x1CE6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
