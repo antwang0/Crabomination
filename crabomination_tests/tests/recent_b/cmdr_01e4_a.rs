@@ -3810,3 +3810,62 @@ fn wooden_cane_and_coal_stoker_pay_out_on_entry() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "cast from hand: three red");
 }
+
+/// Thirsting Axe eats a creature that didn't hit a creature in combat this
+/// turn, and spares one that did.
+#[test]
+fn thirsting_axe_spares_only_a_creature_that_hit_a_creature() {
+    let to_end_step = |g: &mut GameState| {
+        g.step = TurnStep::PostCombatMain;
+        while g.step != TurnStep::End {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(g);
+    };
+    // Unbloodied: sacrificed.
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let axe = g.add_card_to_battlefield(0, catalog::thirsting_axe());
+    equip(&mut g, axe, giant);
+    assert_eq!(pt(&g, giant), (7, 3));
+    to_end_step(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "no combat damage to a creature: sacrificed");
+    // Blocked by a 2/2 it kills: it dealt combat damage to a creature, kept.
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let axe = g.add_card_to_battlefield(0, catalog::thirsting_axe());
+    equip(&mut g, axe, giant);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    attack_with(&mut g, &[giant]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bears, giant)])).expect("block");
+    while g.step != TurnStep::EndCombat && g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "the Bears died");
+    to_end_step(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "it hit a creature: kept");
+}
+
+#[test]
+fn bronze_cudgels_grows_with_each_activation_and_relic_amulet_spends_its_charge() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cudgels = g.add_card_to_battlefield(0, catalog::bronze_cudgels());
+    equip(&mut g, cudgels, bears);
+    activate(&mut g, cudgels, 0).expect("first");
+    assert_eq!(pt(&g, bears), (3, 2), "+1 the first time");
+    activate(&mut g, cudgels, 0).expect("second");
+    assert_eq!(pt(&g, bears), (5, 2), "+2 more the second time");
+    let amulet = g.add_card_to_battlefield(0, catalog::relic_amulet());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, Some(Target::Player(1)));
+    }
+    assert_eq!(g.battlefield_find(amulet).unwrap().counter_count(CounterType::Charge), 2);
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    activate_on(&mut g, amulet, 0, Some(Target::Permanent(wurm))).expect("{2}, {T}, remove all");
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 2);
+    assert_eq!(g.battlefield_find(amulet).unwrap().counter_count(CounterType::Charge), 0);
+}

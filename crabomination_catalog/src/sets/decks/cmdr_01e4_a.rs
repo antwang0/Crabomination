@@ -9648,3 +9648,306 @@ pub fn rockslide_ambush() -> CardDefinition {
         },
     )
 }
+
+/// Relic Amulet — {2} Artifact. Whenever you cast an instant, sorcery, or
+/// Wizard spell, put a charge counter on it. {2}, {T}, remove all charge
+/// counters: it deals that much damage to target creature.
+pub fn relic_amulet() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .or(R::HasCreatureType(CreatureType::Wizard)),
+            }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            remove_all_counters_cost: Some(CounterType::Charge),
+            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::CountersRemovedAsCost },
+            ..Default::default()
+        }],
+        ..spell("Relic Amulet", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// "{N}, {T}, Sacrifice this artifact: it deals `dmg` damage to target
+/// creature" (Scalding Cauldron, Vial of Dragonfire).
+fn sac_pinger(name: &'static str, mana: ManaCost, activate: u32, dmg: i32) -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(activate)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(dmg) },
+            ..Default::default()
+        }],
+        ..spell(name, mana, CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Scalding Cauldron — {1} Artifact. {3}, {T}, sacrifice it: 3 damage to
+/// target creature.
+pub fn scalding_cauldron() -> CardDefinition {
+    sac_pinger("Scalding Cauldron", cost(&[generic(1)]), 3, 3)
+}
+
+/// Vial of Dragonfire — {2} Artifact. {2}, {T}, sacrifice it: 2 damage to
+/// target creature.
+pub fn vial_of_dragonfire() -> CardDefinition {
+    sac_pinger("Vial of Dragonfire", cost(&[generic(2)]), 2, 2)
+}
+
+/// Tumble Magnet — {3} Artifact; enters with three charge counters. {T},
+/// remove a charge counter: tap target artifact or creature.
+pub fn tumble_magnet() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Charge, 1)),
+            effect: Effect::Tap { what: target_filtered(R::Artifact.or(R::Creature)) },
+            ..Default::default()
+        }],
+        ..spell("Tumble Magnet", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Weapon Rack — {4} Artifact; enters with three +1/+1 counters. {T}: move a
+/// +1/+1 counter from it onto target creature (sorcery speed).
+pub fn weapon_rack() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::MoveCounters {
+                from: Selector::This,
+                to: target_filtered(R::Creature),
+                counter: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..spell("Weapon Rack", cost(&[generic(4)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Grazing Kelpie — {3}{G/U} 2/3 Beast with persist. {G/U}, sacrifice it:
+/// put target card from a graveyard on the bottom of its owner's library.
+pub fn grazing_kelpie() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Persist],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[hybrid(Color::Green, Color::Blue)]),
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::InGraveyard),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
+            },
+            ..Default::default()
+        }],
+        ..creature("Grazing Kelpie", cost(&[generic(3), hybrid(Color::Green, Color::Blue)]), vec![CreatureType::Beast], 2, 3)
+    }
+}
+
+/// Nephalia Seakite — {3}{U} 2/3 Bird with flash and flying.
+pub fn nephalia_seakite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        ..creature("Nephalia Seakite", cost(&[generic(3), u()]), vec![CreatureType::Bird], 2, 3)
+    }
+}
+
+/// Primal Plasma — {3}{U} */* Elemental Shapeshifter. As it enters, it
+/// becomes a 3/3, a 2/2 with flying, or a 1/6 with defender.
+pub fn primal_plasma() -> CardDefinition {
+    use crate::card::EntersChoiceMode;
+    let mode = |power, toughness, keywords| EntersChoiceMode { power, toughness, keywords };
+    CardDefinition {
+        enters_as_choice: Some(vec![
+            mode(3, 3, vec![]),
+            mode(2, 2, vec![Keyword::Flying]),
+            mode(1, 6, vec![Keyword::Defender]),
+        ]),
+        ..creature("Primal Plasma", cost(&[generic(3), u()]), vec![CreatureType::Elemental, CreatureType::Shapeshifter], 0, 0)
+    }
+}
+
+/// Ethereal Ambush — {3}{G}{U} Instant. Manifest the top two cards of your
+/// library.
+pub fn ethereal_ambush() -> CardDefinition {
+    spell(
+        "Ethereal Ambush",
+        cost(&[generic(3), g(), u()]),
+        CardType::Instant,
+        Effect::Manifest { who: PlayerRef::You, amount: Value::Const(2) },
+    )
+}
+
+/// Bronze Cudgels — {1} Equipment. {2}: until end of turn, equipped creature
+/// gets +X/+0, X the number of times this ability has resolved this turn
+/// (read as activations: this one included, so the first gives +1). Equip {1}.
+pub fn bronze_cudgels() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            max_activations_per_turn: Some(u32::MAX),
+            effect: Effect::PumpPT {
+                what: Selector::attached_to(Selector::This),
+                power: Value::SourceActivationsThisTurn,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..equipment("Bronze Cudgels", cost(&[generic(1)]), cost(&[generic(1)]), EquipBonus::default())
+    }
+}
+
+/// Honed Khopesh — {1} Equipment. Equipped creature gets +1/+1. Equip {1}.
+pub fn honed_khopesh() -> CardDefinition {
+    equipment(
+        "Honed Khopesh",
+        cost(&[generic(1)]),
+        cost(&[generic(1)]),
+        EquipBonus { power: 1, toughness: 1, ..Default::default() },
+    )
+}
+
+/// An Equipment that attaches itself to target creature you control as it
+/// enters (Scavenged Blade, Utility Knife).
+fn self_attaching(def: CardDefinition) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        ..def
+    }
+}
+
+/// Scavenged Blade — {1}{R} Equipment. When it enters, attach it to target
+/// creature you control. +2/+0. Equip {2}{R}.
+pub fn scavenged_blade() -> CardDefinition {
+    self_attaching(equipment(
+        "Scavenged Blade",
+        cost(&[generic(1), r()]),
+        cost(&[generic(2), r()]),
+        EquipBonus { power: 2, ..Default::default() },
+    ))
+}
+
+/// Utility Knife — {1} Equipment. When it enters, attach it to target
+/// creature you control. +1/+1. Equip {3}.
+pub fn utility_knife() -> CardDefinition {
+    self_attaching(equipment(
+        "Utility Knife",
+        cost(&[generic(1)]),
+        cost(&[generic(3)]),
+        EquipBonus { power: 1, toughness: 1, ..Default::default() },
+    ))
+}
+
+/// Thirsting Axe — {3} Equipment. +4/+0. At the beginning of your end step,
+/// if equipped creature didn't deal combat damage to a creature this turn,
+/// sacrifice it. Equip {2}. The Axe remembers the damage, not the creature:
+/// one that hit a creature unequipped and was equipped after still loses it.
+pub fn thirsting_axe() -> CardDefinition {
+    let host = || Selector::attached_to(Selector::This);
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(Predicate::All(
+                vec![
+                    Predicate::SelectorExists(host()),
+                    Predicate::Not(Box::new(Predicate::SourceMarkedThisTurn)),
+                ],
+            )),
+            effect: Effect::SacrificePermanent { what: host() },
+        }],
+        ..equipment(
+            "Thirsting Axe",
+            cost(&[generic(3)]),
+            cost(&[generic(2)]),
+            EquipBonus {
+                power: 4,
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+                    effect: Effect::MarkSourceThisTurn,
+                }],
+                triggers_on_equipment: true,
+                ..Default::default()
+            },
+        )
+    }
+}
+
+/// Dwarven Hold — land; enters tapped; may stay tapped (CR 502.3). Upkeep, if
+/// tapped: a storage counter. {T}, remove any number of storage counters: {R}
+/// for each.
+pub fn dwarven_hold() -> CardDefinition {
+    CardDefinition {
+        name: "Dwarven Hold",
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::Tapped }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Storage, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_x: Some(CounterType::Storage),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::Red], Value::XFromCost) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Armory Veteran — {1}{R} 2/2 Orc Warrior; menace while equipped.
+pub fn armory_veteran() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is equipped, it has menace.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches { what: Selector::This, filter: R::IsEquipped },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Menace],
+            },
+        }],
+        ..creature("Armory Veteran", cost(&[generic(1), r()]), vec![CreatureType::Orc, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Fire Shrine Keeper — {R} 1/1 Elemental with menace. {7}{R}, {T}, sacrifice
+/// it: 3 damage to each of up to two target creatures.
+pub fn fire_shrine_keeper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7), r()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Fire Shrine Keeper", cost(&[r()]), vec![CreatureType::Elemental], 1, 1)
+    }
+}
+
+/// Flowstone Infusion — {R} Instant. Target creature gets +2/-2 until end of
+/// turn.
+pub fn flowstone_infusion() -> CardDefinition {
+    spell("Flowstone Infusion", cost(&[r()]), CardType::Instant, pump(target_filtered(R::Creature), 2, -2))
+}
