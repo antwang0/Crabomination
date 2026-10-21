@@ -5240,3 +5240,112 @@ pub fn brand_of_ill_omen() -> CardDefinition {
         ..aura("Brand of Ill Omen", cost(&[generic(3), r()]), None)
     }
 }
+
+// ── Batch seventeen (two-gap decks) ─────────────────────────────────────────
+
+/// Mystic Skull // Mystic Monstrosity — {2} artifact. {1}, {T}: add one mana
+/// of any color. {5}, {T}: transform it. Back: a 5/6 Construct whose lands
+/// tap for any color.
+pub fn mystic_skull() -> CardDefinition {
+    let any = || ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+        ..Default::default()
+    };
+    let monstrosity = CardDefinition {
+        name: "Mystic Monstrosity",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control have \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                ability: any(),
+                condition: None,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility { mana_cost: cost(&[generic(1)]), ..any() },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(monstrosity)),
+        ..spell("Mystic Skull", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Harvest Pyre — {1}{R} instant. As an additional cost, exile X cards from
+/// your graveyard. It deals X damage to target creature.
+pub fn harvest_pyre() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::ExileFromGraveyardXFromCost {
+            filter: R::InYourGraveyard,
+        }],
+        ..spell(
+            "Harvest Pyre",
+            cost(&[generic(1), r()]),
+            CardType::Instant,
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::XFromCost },
+        )
+    }
+}
+
+/// Ore-Rich Stalactite // Cosmium Catalyst — {1}{R} artifact. {T}: add {R},
+/// spent only on instants and sorceries. Craft with four or more red instant
+/// and/or sorcery cards {3}{R}{R}. Back: {1}{R}, {T}: choose a card used to
+/// craft it at random; you may cast it without paying its mana cost.
+pub fn ore_rich_stalactite() -> CardDefinition {
+    let catalyst = CardDefinition {
+        name: "Cosmium Catalyst",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            tap_cost: true,
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::RandomOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Exile,
+                    filter: R::ExiledWithSource,
+                })),
+                source_zone: Zone::Exile,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Red])),
+                        crate::mana::SpendRestriction::InstantSorceryOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            crate::effect::shortcut::craft(
+                cost(&[generic(3), r(), r()]),
+                R::HasColor(Color::Red).and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                4,
+            ),
+        ],
+        back_face: Some(Box::new(catalyst)),
+        ..spell("Ore-Rich Stalactite", cost(&[generic(1), r()]), CardType::Artifact, Effect::Noop)
+    }
+}

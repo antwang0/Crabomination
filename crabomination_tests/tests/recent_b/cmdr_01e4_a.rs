@@ -2329,3 +2329,45 @@ fn cr_301_5c_a_creature_equipment_cant_equip() {
     flood(&mut g, 0);
     assert!(g.perform_action(GameAction::Equip { equipment: sword, target: other }).is_err());
 }
+
+/// Harvest Pyre's X is the number of graveyard cards exiled for it.
+#[test]
+fn harvest_pyre_burns_by_the_graveyard() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pyre = g.add_card_to_hand(0, catalog::harvest_pyre());
+    cast_x(&mut g, pyre, Some(Target::Permanent(bear)), Some(2));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].graveyard.len(), 2, "two Islands exiled, the Pyre itself added");
+}
+
+/// Ore-Rich Stalactite crafts with four red instants into Cosmium Catalyst,
+/// which casts one of them for free.
+#[test]
+fn ore_rich_stalactite_crafts_and_recasts() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let rock = g.add_card_to_battlefield(0, catalog::ore_rich_stalactite());
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    activate(&mut g, rock, 1).expect("craft");
+    let rock = g.battlefield.iter().find(|c| c.definition.name == "Cosmium Catalyst").expect("crafted").id;
+    g.clear_sickness(rock);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    activate(&mut g, rock, 0).expect("catalyst");
+    assert_eq!(g.players[1].life, life - 3, "a crafted Bolt cast free at the opponent");
+}
+
+/// Mystic Skull transforms for {5} into a 5/6 Construct.
+#[test]
+fn mystic_skull_wakes_up() {
+    let mut g = pod(2);
+    let skull = g.add_card_to_battlefield(0, catalog::mystic_skull());
+    activate(&mut g, skull, 1).expect("transform");
+    assert_eq!(pt(&g, skull), (5, 6));
+}
