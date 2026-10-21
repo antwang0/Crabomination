@@ -6,7 +6,9 @@
 //! beginning of combat (CR 507), the last window before attackers are
 //! declared. A pod bot now taps the active player's biggest untapped
 //! creature there (or all of them, for a player-targeted tap) when its power
-//! is at least `MIN_POWER`. Commander games only, so two-player play is
+//! is at least `MIN_POWER`; a lock-down tap (Ice Floe, Sand Squid —
+//! `TapAndUntapLock`) also takes the biggest creature attacking it once
+//! attackers are declared. Commander games only, so two-player play is
 //! unchanged.
 
 use crate::card::CardId;
@@ -17,27 +19,33 @@ use crate::game::types::{GameAction, Target, TurnStep};
 /// Power below which a tap isn't worth the mana.
 const MIN_POWER: i32 = 2;
 
-/// Whom a tap ability in `e` reaches: a creature in its target slot, or every
-/// creature of its target player.
+/// Whom a tap ability in `e` reaches: a creature in its target slot (`lock`
+/// when it also stays tapped), or every creature of its target player.
 enum Reach {
-    Creature,
+    Creature { lock: bool },
     Player,
 }
 
+/// A tap that leads its ability: Braided Net's `Seq` adds its lock after.
 fn reach(e: &Effect) -> Option<Reach> {
+    let target = |w: &Selector| matches!(w, Selector::Target(_) | Selector::TargetFiltered { .. });
     match e {
-        Effect::Tap { what: Selector::Target(_) | Selector::TargetFiltered { .. } } => Some(Reach::Creature),
+        Effect::Tap { what } if target(what) => Some(Reach::Creature { lock: false }),
+        Effect::TapAndUntapLock { what } if target(what) => Some(Reach::Creature { lock: true }),
         Effect::Tap { what: Selector::ControlledBy { who: PlayerRef::Target(0), .. } } => Some(Reach::Player),
+        Effect::Seq(v) => v.first().and_then(reach),
         _ => None,
     }
 }
 
 /// The first accepted tap on the active player's biggest untapped creature,
-/// at their beginning of combat.
+/// at their beginning of combat; in their declare attackers step, a lock-down
+/// on the biggest creature attacking.
 pub(super) fn pick_pre_combat_tap(state: &GameState, seat: usize) -> Option<GameAction> {
     let active = state.active_player_idx;
+    let attacking = state.step == TurnStep::DeclareAttackers;
     if state.players[seat].commanders.is_empty()
-        || state.step != TurnStep::BeginCombat
+        || !(state.step == TurnStep::BeginCombat || attacking)
         || state.same_team(active, seat)
         || !state.stack.is_empty()
     {
@@ -46,7 +54,8 @@ pub(super) fn pick_pre_combat_tap(state: &GameState, seat: usize) -> Option<Game
     let mut foes: Vec<(i32, CardId)> = state
         .battlefield
         .iter()
-        .filter(|c| c.controller == active && c.definition.is_creature() && !c.tapped)
+        .filter(|c| c.controller == active && c.definition.is_creature())
+        .filter(|c| if attacking { state.creature_is_attacking_seat(c.id, seat) } else { !c.tapped })
         .filter_map(|c| state.computed_permanent(c.id).map(|cp| (cp.power, c.id)))
         .filter(|(p, _)| *p >= MIN_POWER)
         .collect();
@@ -61,14 +70,16 @@ pub(super) fn pick_pre_combat_tap(state: &GameState, seat: usize) -> Option<Game
                 && ab.discard_cost.is_none()
                 && ab.life_cost == 0
                 && ab.energy_cost == 0
-                && ab.remove_counter_cost.is_none()
                 && ab.remove_all_counters_cost.is_none()
                 && ab.exile_other_filter.is_none()
                 && !ab.mana_cost.has_x();
             let Some(r) = reach(&ab.effect).filter(|_| costs_ok) else { continue };
             let targets: Vec<Target> = match r {
-                Reach::Creature => foes.iter().map(|&(_, id)| Target::Permanent(id)).collect(),
-                Reach::Player => vec![Target::Player(active)],
+                Reach::Creature { lock } if lock || !attacking => {
+                    foes.iter().map(|&(_, id)| Target::Permanent(id)).collect()
+                }
+                Reach::Player if !attacking => vec![Target::Player(active)],
+                _ => continue,
             };
             for t in targets {
                 let action = GameAction::ActivateAbility {
@@ -116,5 +127,44 @@ mod tests {
         assert!(!g.battlefield_find(elf).unwrap().tapped);
         g.active_player_idx = 0;
         assert!(pick_pre_combat_tap(&g, 0).is_none(), "own turn");
+    }
+
+    /// Braided Net leads with its tap (a `Seq`, paid with a net counter): at
+    /// an opponent's beginning of combat it taps their Hill Giant.
+    #[test]
+    fn braided_net_taps_a_would_be_attacker() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let net = g.add_card_to_battlefield(0, crate::catalog::braided_net());
+        g.battlefield_find_mut(net).unwrap().add_counters(crate::card::CounterType::Net, 3);
+        let giant = g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+        g.step = TurnStep::BeginCombat;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let a = pick_pre_combat_tap(&g, 0).expect("tap");
+        assert!(matches!(a, GameAction::ActivateAbility { target: Some(Target::Permanent(t)), .. } if t == giant));
+    }
+
+    /// Ice Floe can only reach a creature attacking its controller: it waits
+    /// for the declare attackers step, then locks the attacker down.
+    #[test]
+    fn ice_floe_locks_down_an_attacker() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.add_card_to_battlefield(0, crate::catalog::ice_floe());
+        let giant = g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+        g.clear_sickness(giant);
+        g.active_player_idx = 1;
+        g.step = TurnStep::BeginCombat;
+        g.priority.player_with_priority = 0;
+        assert!(pick_pre_combat_tap(&g, 0).is_none(), "nothing is attacking yet");
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(0) }]))
+            .expect("attack");
+        g.priority.player_with_priority = 0;
+        let a = pick_pre_combat_tap(&g, 0).expect("lock");
+        assert!(matches!(a, GameAction::ActivateAbility { target: Some(Target::Permanent(t)), .. } if t == giant));
     }
 }
