@@ -28854,6 +28854,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VHAL_19_COMMANDERS,
             main: decks::VHAL_19_MAIN,
         },
+        // Seat 4734: Thanos, the Mad Titan's EDHREC average deck. `--pod-decks 4734`.
+        PodDeck {
+            name: "Thanos, the Mad Titan (WUBRG)",
+            commanders: decks::THANOS_2_COMMANDERS,
+            main: decks::THANOS_2_MAIN,
+        },
+        // Seat 4735: Jace, Vryn's Prodigy's EDHREC average deck. `--pod-decks 4735`.
+        PodDeck {
+            name: "Jace, Vryn's Prodigy (U)",
+            commanders: decks::JACE_2_COMMANDERS,
+            main: decks::JACE_2_MAIN,
+        },
+        // Seat 4736: Hallar, the Firefletcher's EDHREC average deck. `--pod-decks 4736`.
+        PodDeck {
+            name: "Hallar, the Firefletcher (RG)",
+            commanders: decks::HALLAR_COMMANDERS,
+            main: decks::HALLAR_MAIN,
+        },
+        // Seat 4737: Kiora of Salt and Sand's EDHREC average deck. `--pod-decks 4737`.
+        PodDeck {
+            name: "Kiora of Salt and Sand (UG)",
+            commanders: decks::KIORA_OF_SALT_AND_SAND_COMMANDERS,
+            main: decks::KIORA_OF_SALT_AND_SAND_MAIN,
+        },
+        // Seat 4738: Gideon the Oathless's EDHREC average deck. `--pod-decks 4738`.
+        PodDeck {
+            name: "Gideon the Oathless (B)",
+            commanders: decks::GIDEON_THE_OATHLESS_COMMANDERS,
+            main: decks::GIDEON_THE_OATHLESS_MAIN,
+        },
+        // Seat 4739: Kediss, Emberclaw Familiar and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4739`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Nadier, Agent of the Duskenel (BR)",
+            commanders: decks::KEDISS_14_COMMANDERS,
+            main: decks::KEDISS_14_MAIN,
+        },
     ]
 }
 
@@ -35488,6 +35524,12 @@ mod tests {
             ("Radiant, Serra Archangel and Sakashima of a Thousand Faces", &[0x1C91]),
             ("Sivriss, Nightmare Speaker and Shameless Charlatan", &[0x1C92]),
             ("Vhal, Candlekeep Researcher and Guild Artisan", &[0x1C93]),
+            ("Thanos, the Mad Titan", &[0x1C94]),
+            ("Jace, Vryn's Prodigy", &[0x1C95]),
+            ("Hallar, the Firefletcher", &[0x1C96]),
+            ("Kiora of Salt and Sand", &[0x1C97]),
+            ("Gideon the Oathless", &[0x1C98]),
+            ("Kediss, Emberclaw Familiar and Nadier, Agent of the Duskenel", &[0x1C99]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

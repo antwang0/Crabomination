@@ -132720,3 +132720,176 @@ pub const VHAL_19_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const THANOS_2_COMMANDERS: &[CardFactory] = &[thanos_the_mad_titan];
+
+/// **Thanos, the Mad Titan**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 3 Plains + 4 Swamps = 99.
+/// Thanos, the Mad Titan (EDHREC, fetched 2026-10-21).
+pub const THANOS_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, conjurers_closet, cosmic_cube, fellwar_stone,
+    lightning_greaves, sol_ring, swiftfoot_boots, the_mind_stone, the_soul_stone,
+    timeless_lotus, blood_crypt, bloodstained_mire, breeding_pool, city_of_brass, command_tower,
+    dark_fortress, exotic_orchard, godless_shrine, hallowed_fountain, mana_confluence,
+    marsh_flats, misty_rainforest, overgrown_tomb, path_of_ancestry, polluted_delta,
+    reflecting_pool, reliquary_tower, sacred_foundry, steam_vents, stomping_ground,
+    temple_garden, verdant_catacombs, villainous_hideout, watery_grave, ares_god_of_war,
+    baron_strucker_hydra_overlord, birds_of_paradise, bloom_tender,
+    chameleon_master_of_disguise, crossbones_malicious_mercenary, doctor_doom,
+    doctor_doom_king_of_latveria, doctor_octopus_master_planner, faeburrow_elder,
+    kang_the_conqueror, kang_temporal_tyrant, leader_super_genius, loki_the_deceiver, m_o_d_o_k,
+    madame_hydra, norman_osborn, prowler_clawed_thief, super_skrull, taskmaster_mercenary_mimic,
+    thanos_deaths_consort, the_masters_of_evil, the_squadron_sinister,
+    tombstone_career_criminal, ultron_unlimited, avengers_under_siege, black_market_connections,
+    construct_a_cosmic_cube, doom_reigns_supreme, teleportation_circle, the_coming_of_galactus,
+    thunderbolts_conspiracy, chaos_warp, cloudshift, counterspell, dark_ritual, ephemerate,
+    heroic_intervention, path_to_exile, swords_to_plowshares, teferis_protection,
+    visions_of_villainy, jace_multiverse_architect, blasphemous_act, cultivate,
+    extinction_event, farseek, kodamas_reach, natures_lore, reanimate, three_visits,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const JACE_2_COMMANDERS: &[CardFactory] = &[jace_vryns_prodigy];
+
+/// **Jace, Vryn's Prodigy**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Jace, Vryn's Prodigy (EDHREC, fetched 2026-10-21).
+pub const JACE_2_MAIN: &[CardFactory] = &[
+    arcane_signet, hedron_archive, ichormoon_gauntlet, sapphire_medallion, sol_ring,
+    the_chain_veil, the_water_crystal, thought_vessel, castle_vantress, karns_bastion,
+    mystic_sanctuary, otawara_soaring_city, reliquary_tower, theorists_sanctum, deepglow_skate,
+    flux_channeler, geist_of_saint_thalia, guildpact_informant, jaces_archivist,
+    jaces_mindseeker, jaces_phantasm, jaces_projection, jaces_sentinel, laboratory_maniac,
+    spark_double, theorists_proxy, thrummingbird, jaces_erasure, jaces_sanctum, oath_of_jace,
+    omniscience, psychic_corrosion, way_of_the_cryomancer, way_of_the_mind_sculptor, aetherize,
+    an_offer_you_cant_refuse, brainstorm, countersculpt, counterspell, cyclonic_rift, dispel,
+    dramatic_reversal, fact_or_fiction, frantic_search, high_tide, jaces_ingenuity,
+    jaces_machinations, jaces_scrutiny, mana_drain, mystical_tutor, negate, pongify,
+    jace_beleren, jace_reawakened, jace_architect_of_thought, jace_memory_adept,
+    jace_reality_sculptor, jace_unraveler_of_secrets, jace_wielder_of_mysteries,
+    jace_the_mind_sculptor, jace_the_perfected_mind, the_theorist_jace_beleren,
+    contentious_plan, flood_of_recollection, jaces_ruse, jaces_triumph, maddening_cacophony,
+    ponder, proteges_awakening, talent_of_the_telepath, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const HALLAR_COMMANDERS: &[CardFactory] = &[hallar_the_firefletcher];
+
+/// **Hallar, the Firefletcher**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Mountains = 99.
+/// Hallar, the Firefletcher (EDHREC, fetched 2026-10-21).
+pub const HALLAR_MAIN: &[CardFactory] = &[
+    arcane_signet, everflowing_chalice, ozolith_the_shattered_spire, skyclave_relic, sol_ring,
+    swiftfoot_boots, the_ozolith, cinder_glade, command_tower, game_trail, gruul_turf,
+    karplusan_forest, opal_palace, oran_rief_the_vastwood, rockfall_vale, rogues_passage,
+    rootbound_crag, stomping_ground, temple_of_abandon, throne_of_makindi, citanul_woodreaders,
+    elfhame_druid, elvish_mystic, flametongue_yearling, forgotten_ancient, ghitu_chronicler,
+    gnarlid_colony, goblin_anarchomancer, goblin_bushwhacker, goblin_ruinblaster,
+    halana_and_alena, joraga_warcaller, kami_of_whispered_hopes, llanowar_elves, mold_shambler,
+    murasa_sproutling, skitter_of_lizards, sprouting_goblin, untamed_kavu, verduran_emissary,
+    vine_gecko, wolfbriar_elemental, yavimaya_iconoclast, branching_evolution,
+    evolutionary_escalation, hardened_scales, hydras_growth, keen_sense, predatory_hunger,
+    rhythm_of_the_wild, snake_umbra, cinderclasm, colossal_growth, comet_storm, gaeas_gift,
+    gift_of_growth, inscription_of_abundance, inspiring_call, invigorating_surge, overload,
+    return_of_the_wildspeaker, snakeskin_veil, solidarity_of_heroes, strength_of_the_tajuru,
+    vines_of_vastwood, breath_of_darigaaz, canopy_surge, chocobo_kick, cultivate,
+    grow_from_the_ashes, molten_disaster, primal_growth, rampant_growth, reclaim_the_wastes,
+    rishkars_expertise, savage_offensive, vastwood_surge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const KIORA_OF_SALT_AND_SAND_COMMANDERS: &[CardFactory] = &[kiora_of_salt_and_sand];
+
+/// **Kiora of Salt and Sand**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Forests + 12 Islands = 99.
+/// Kiora of Salt and Sand (EDHREC, fetched 2026-10-21).
+pub const KIORA_OF_SALT_AND_SAND_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, arcane_signet, ichormoon_gauntlet, sol_ring, the_aetherspark,
+    the_chain_veil, breeding_pool, command_tower, dreamroot_cascade, flooded_grove,
+    hinterland_harbor, karns_bastion, rejuvenating_springs, reliquary_tower,
+    simic_growth_chamber, sodden_verdure, theorists_sanctum, transformative_commons,
+    yavimaya_coast, arcane_amphisbaena, avatar_of_burgeoning_echoes, bioessence_hydra,
+    birds_of_paradise, cankerbloom, deepglow_skate, dreamtide_whale, evolution_sage,
+    ezuri_stalker_of_spheres, flux_channeler, geist_of_saint_thalia, inspired_tethermage,
+    llanowar_elves, mindseeker_oculus, spark_double, tamiyo_inquisitive_student,
+    tekuthal_inquiry_dominus, theorists_proxy, thrummingbird, doubling_season, inexorable_tide,
+    teferis_talent, way_of_the_cryomancer, way_of_the_mind_sculptor, way_of_the_paradox,
+    way_of_the_wildspeaker, beast_within, compel_brutality, countersculpt, counterspell,
+    experimental_augury, growth_spiral, jaces_machinations, mutational_advantage,
+    ripples_of_potential, chandra_chill_of_compliance, garruk_curse_breaker,
+    jace_reality_sculptor, kasmina_enigma_sage, kiora_behemoth_beckoner,
+    kiora_master_of_the_depths, kiora_the_crashing_wave, nissa_ascended_animist,
+    nissa_steward_of_elements, oko_thief_of_crowns, teferi_master_of_time,
+    teferi_temporal_archmage, teferi_temporal_pilgrim, the_theorist_jace_beleren, cultivate,
+    entrust_the_spark, expansion_algorithm, farseek, natures_lore, tams_resistance,
+    tezzerets_gambit, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
+
+pub const GIDEON_THE_OATHLESS_COMMANDERS: &[CardFactory] = &[gideon_the_oathless];
+
+/// **Gideon the Oathless**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Swamps = 99.
+/// Gideon the Oathless (EDHREC, fetched 2026-10-21).
+pub const GIDEON_THE_OATHLESS_MAIN: &[CardFactory] = &[
+    acorn_catapult, arcane_signet, basilisk_collar, bontus_monument, dowsing_dagger,
+    genesis_chamber, jet_medallion, panharmonicon, sol_ring, swiftfoot_boots,
+    the_darkness_crystal, thought_vessel, bojuka_bog, cabal_coffers, cabal_stronghold,
+    castle_locthwain, forbidden_orchard, nykthos_shrine_to_nyx, urborg_tomb_of_yawgmoth,
+    war_room, akroan_horse, ayara_first_of_locthwain, blood_artist, blood_seeker,
+    bloodletter_of_aclazotz, bloodthirsty_conqueror, clackbridge_troll, creeping_bloodsucker,
+    crypt_ghast, gray_merchant_of_asphodel, hunted_bonebrute, hunted_horror,
+    maha_its_feathers_night, mai_scornful_striker, massacre_wurm, morbid_opportunist,
+    nettling_nuisance, ophiomancer, sheoldred_the_apocalypse, slaughter_specialist,
+    syr_konrad_the_grim, the_master_of_lake_town, black_market_connections,
+    curse_of_disturbance, illness_in_the_ranks, infernal_genesis, phyrexian_arena,
+    revenge_of_ravens, the_meathook_massacre, tombstone_stairwell, trespassers_curse,
+    tribute_to_horobi, wound_reflection, dark_ritual, deadly_rollick, defile, fell_the_profane,
+    imps_mischief, malakir_rebirth, not_dead_after_all, saw_in_half, undying_malice,
+    withering_torment, garruk_veiled_butcher, awaken_the_erstwhile, dark_salvation,
+    demonic_tutor, exsanguinate, feed_the_swarm, nights_whisper, reanimate, sign_in_blood,
+    toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KEDISS_14_COMMANDERS: &[CardFactory] = &[kediss_emberclaw_familiar, nadier_agent_of_the_duskenel];
+
+/// **Kediss, Emberclaw Familiar and Nadier, Agent of the Duskenel**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Mountains + 10 Swamps = 98.
+/// Kediss, Emberclaw Familiar and Nadier, Agent of the Duskenel (EDHREC, fetched
+/// 2026-10-21).
+pub const KEDISS_14_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, blade_of_selves, cranial_plating, embercleave,
+    lightning_greaves, mask_of_griselbrand, shadowspear, sol_ring, swiftfoot_boots,
+    tarrians_soulcleaver, the_ozolith, the_reaver_cleaver, whip_of_erebos, blood_crypt,
+    command_tower, dragonskull_summit, drossforge_bridge, exotic_orchard, graven_cairns,
+    mines_of_moria, rakdos_carnarium, rogues_passage, shadowblood_ridge, smoldering_marsh,
+    snow_covered_swamp, treasure_vault, vault_of_whispers, witchs_clinic, academy_manufactor,
+    ancient_copper_dragon, bonehoard_dracosaur, cavern_hoard_dragon, crime_novelist,
+    decadent_dragon, disciple_of_the_vault, dockside_chef, fain_the_broker, goldspan_dragon,
+    grim_hireling, ingenious_artillerist, kalain_reclusive_painter, krenko_baron_of_tin_street,
+    krenko_mob_boss, marionette_apprentice, marionette_master, mirkwood_bats,
+    nadiers_nightblade, pitiless_plunderer, professional_face_breaker, reckless_fireweaver,
+    ruthless_technomancer, swarming_goblins, swashbuckler_extraordinaire, xorn,
+    agent_of_the_iron_throne, descent_into_avernus, fable_of_the_mirror_breaker, guild_artisan,
+    impact_tremors, revel_in_riches, there_and_back_again, tombstone_stairwell, costly_plunder,
+    deadly_dispute, fake_your_own_death, fanatical_offering, malakir_rebirth, mishras_onslaught,
+    saw_in_half, tainted_strike, unexpected_windfall, unleash_fury, blasphemous_act,
+    blood_money, jeskas_will, living_death, toxic_deluge, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
