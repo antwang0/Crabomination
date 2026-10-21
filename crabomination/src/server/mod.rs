@@ -105,6 +105,7 @@ mod manland;
 mod selection_sink;
 mod regenerate;
 mod counter_sink;
+mod modal_wipe;
 mod end_step_ping;
 mod graveyard_hate;
 mod pre_combat_tap;
