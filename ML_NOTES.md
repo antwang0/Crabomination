@@ -5993,3 +5993,50 @@ census ran beside the search stage, so its wall clock is not a reading).
 The search stage's wall clock is contaminated the same way (the census,
 two suites and three builds ran beside it), so no per-arm cost is
 recorded.
+
+## Round 81 — the value net retrained on today's actors: +1.36 as a scored pilot and +1.05 as the search leaf over the champion, both over their bars; a champion swap is PROPOSED, not made (2026-10-20)
+
+Pre-registration: `.ladder/run_r81_retrain.sh` (the `gate` header was written
+before its first cell). Round 69's recipe verbatim (`--attn --lambda 0.7
+--games 250000 --steps 200000 --window 500000 --lr 1e-4 --lr-cosine 60000
+--relabel-mode new --stop-after-stale 12 --actors 3`), four training seeds,
+CUDA learner on the 4090, ~23 min a seed. Holdout AUC 0.8237 / 0.8239 /
+0.8116 / 0.7965 (s43 / s97 / s151 / s199; not comparable across regimes).
+The reference is the committed `nets/champion.safetensors` — round 69's
+round-57 control nets are not on this box, so this is "fresh vs champion",
+not "fresh vs old data".
+
+**Scored** — `net67` vs `dflt`, sealed, 1 000 games x 12 decks, ladder
+seeds 43 / 97:
+
+| net | seed 43 | seed 97 | − champion |
+|---|---|---|---|
+| champion | 49.9 | 49.6 | — |
+| r81 s43 | 52.1 | 52.0 | +2.30 |
+| r81 s97 | 50.8 | 50.9 | +1.10 |
+| r81 s151 | 51.0 | 50.6 | +1.05 |
+| r81 s199 | 50.8 | 50.7 | +1.00 |
+
+Pooled **+1.36 [+0.37, +2.36]** (t, four training seeds) — over the +0.5
+bar on the point estimate, every seed positive. The champion still reads
+~50 on this pilot (round 62 / 69's "the leaf adds nothing scored"); the
+fresh nets don't.
+
+**Search** — the best fresh net (s43) and the champion as the leaf of
+`mcts-net67-256` vs `mcts-dflt-256`, 500 games x 12 decks:
+
+| leaf | seed 43 | seed 97 | mean |
+|---|---|---|---|
+| r81 s43 | 53.6 [52.6, 54.5] | 56.2 [55.3, 57.1] | 54.90 |
+| champion | 52.9 [51.9, 53.8] | 54.8 [53.8, 55.7] | 53.85 |
+
+Fresh − champion **+1.05** (+0.7 / +1.4 by ladder seed), over the +0.5
+bar — one training seed, so it is the best-of-four's reading, not the
+pool's. 5h54m wall clock for the gate on 22 threads.
+
+**Reading.** Unlike round 69 (fresh − old −0.49), retraining paid on both
+pilots: the actors have moved through rounds 70-80's adoptions and the
+engine fixes since, and the champion was trained on neither. Per the
+pre-registration the lobby is NOT flipped — swapping `nets/champion.safetensors`
+for `nets_r81_s43/best.safetensors` is the user's call, and the honest
+caveat is that the search reading is one training seed's.
