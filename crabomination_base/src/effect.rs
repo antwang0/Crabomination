@@ -9721,6 +9721,10 @@ pub enum Effect {
     /// `chosen_card_type` is granted to its controller until a matching cast
     /// spends it or the turn ends.
     NextSpellOfSourceChosenTypeFreeThisTurn,
+    /// CR 123.2 — "You get {TK}{TK}": `amount` ticket counters on `who`
+    /// (Command Performance). `Player.tickets`; nothing spends them yet (name
+    /// stickers are free).
+    GainTickets { who: PlayerRef, amount: u32 },
     /// Lonis's steal: target opponent reveals the top `count` cards of their
     /// library; you may put a nonland permanent card with mana value at most
     /// `max_mv` from among them onto the battlefield under your control; the

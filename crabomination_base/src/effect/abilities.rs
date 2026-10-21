@@ -4114,6 +4114,9 @@ pub enum StaticEffect {
     /// them and you may exchange one result with this creature's base power or
     /// base toughness" (Vedalken Squirrel-Whacker); read in `roll_one_die`.
     MayExchangeD6WithSelfBasePt,
+    /// CR 706.6 — "Once each turn, you may pay {N} to reroll one or more dice
+    /// you rolled" (Monitor Monitor); read in `roll_one_die`.
+    MayPayToRerollDieOncePerTurn { generic: u32 },
     /// CR 614.1a — while the source's `PlayerMayStampSourceTurn` stamp holds
     /// ("until your next upkeep"), each 1 damage that would be dealt to its
     /// controller removes a `kind` counter from it instead (Soul Echo).

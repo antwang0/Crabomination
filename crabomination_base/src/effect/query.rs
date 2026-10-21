@@ -1025,6 +1025,7 @@ impl Effect {
             | Effect::BinExiledWithSourceNamedLike { .. }
             | Effect::ChooseCardTypeSharedByExiledWithSource
             | Effect::NextSpellOfSourceChosenTypeFreeThisTurn
+            | Effect::GainTickets { .. }
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

@@ -1504,7 +1504,8 @@ impl GameState {
             crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
             _ => (sides as u32).div_ceil(2) as u8,
         };
-        if sides == 6 { self.exchange_d6_with_base_pt(player, face) } else { face }
+        let face = if sides == 6 { self.exchange_d6_with_base_pt(player, face) } else { face };
+        self.paid_die_reroll(player, sides, face)
     }
 
     /// Ask `seat` to choose a number in `0..=max`, routed to a seat that may
@@ -24814,6 +24815,14 @@ impl GameState {
                 self.each_player_keeps_from_hand_shuffles_rest(*keep, effect, ctx, events)
             }
             Effect::RollDiceSetBasePt { sides } => self.roll_dice_set_base_pt(*sides, ctx, events),
+            Effect::GainTickets { who, amount } => {
+                for p in self.resolve_players(who, ctx) {
+                    if let Some(pl) = self.players.get_mut(p) {
+                        pl.tickets = pl.tickets.saturating_add(*amount);
+                    }
+                }
+                Ok(())
+            }
             Effect::NextSpellOfSourceChosenTypeFreeThisTurn => {
                 let chosen = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.chosen_card_type.clone());
                 if let (Some(t), Some(pl)) = (chosen, self.players.get_mut(ctx.controller)) {

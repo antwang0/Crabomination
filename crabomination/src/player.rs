@@ -1402,6 +1402,9 @@ pub struct PlayerData {
     /// as a turn-based action in `do_rad_counters`). Default 0.
     #[serde(default)]
     pub rad_counters: u32,
+    /// CR 123.2 — ticket counters ({TK}), from Command Performance.
+    #[serde(default)]
+    pub tickets: u32,
     /// CR 700.6 / 702.131 — true once this player has the city's blessing.
     /// Granted by an Ascend ability/permanent while they control ten or more
     /// permanents; once obtained it lasts for the rest of the game. Default
@@ -2071,6 +2074,7 @@ impl Player {
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            tickets: 0,
             poison_capped_this_turn: false,
             ring_temptations: 0,
             ring_bearer: None,

@@ -83,4 +83,33 @@ impl GameState {
         }
         face
     }
+
+    /// CR 706.6 — Monitor Monitor's paid reroll of a low die `player` rolled,
+    /// once each turn per Monitor (headless: a face in the bottom third).
+    pub(crate) fn paid_die_reroll(&mut self, player: usize, sides: u8, face: u8) -> u8 {
+        if u32::from(face) * 3 > u32::from(sides) {
+            return face;
+        }
+        let slot = crate::game::DONE_THIS_TURN_SLOT;
+        let monitor = self.battlefield.iter().find_map(|c| {
+            (c.controller == player && !self.triggered_once_per_turn_used.contains(&(c.id, slot)))
+                .then(|| {
+                    c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                        StaticEffect::MayPayToRerollDieOncePerTurn { generic } => Some((c.id, generic)),
+                        _ => None,
+                    })
+                })
+                .flatten()
+        });
+        let Some((id, generic)) = monitor else { return face };
+        if !self.pay_generic(player, generic) {
+            return face;
+        }
+        self.triggered_once_per_turn_used.insert((id, slot));
+        let rolled = rand::RngExt::random_range(&mut self.rng.draw(), 1..=sides);
+        match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides, rolled }) {
+            crate::decision::DecisionAnswer::DieRoll(f) => f.clamp(1, sides),
+            _ => rolled,
+        }
+    }
 }
