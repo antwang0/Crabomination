@@ -21,7 +21,7 @@ the handoff.
 | --- | --- | --- |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01kpxz3h--12-single-commander-seats-38-cards-the-single-commander-list) | 40 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
-| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 40 cards, 20 seats, eleven primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--40-cards-20-seats-eleven-primitives) | 31 |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 42 cards, 21 seats, thirteen primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--42-cards-21-seats-thirteen-primitives) | 34 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes](#fixedopen-2026-10-20-commander-run-01nkae5b--46-one-gap-closers-45-seats-two-bug-classes) | 37 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 183 seats, 477 cards, seven bug classes](#fixedopen-2026-10-20-commander-run-01e4rmul--183-seats-477-cards-seven-bug-classes) | 8 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
@@ -282,7 +282,7 @@ the handoff.
 - **Aegar approximation:** "a spell you controlled" is read as an instant or sorcery you OWN — a resolved spell sits in
   its owner's graveyard by dispatch, past `last_known_controller`; a stolen cast is the gap.
 
-## FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 40 cards, 20 seats, eleven primitives
+## FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 42 cards, 21 seats, thirteen primitives
 
 - **Seats** 4776-4783, 4790-4796 (seat numbers raced with `01E4rMUL` three times: re-seat after every rebase), closed by
   `decks::cmdr_01r3_a` (tests `recent_b/cmdr_01r3_a.rs`, 20): one-gap Arcane Proxy, Worldpurge, Braided Net, Vedalken
@@ -300,6 +300,10 @@ the handoff.
   share a card type", `game/craft_each.rs`), `Effect::ChooseCardTypeSharedByExiledWithSource` (the back face's as-enters
   pick over the cards the craft linked to it), `Effect::NextSpellOfSourceChosenTypeFreeThisTurn` (`Player.free_next_spell_types`,
   a {0} cost taken like Rooftop Storm's and spent by the matching cast). Census seed 9433: both abilities activated.
+- **The Seventh Doctor + Graham O'Brien** (seat 4825): Monitor Monitor (`StaticEffect::MayPayToRerollDieOncePerTurn`, in
+  `roll_one_die` beside the d6 exchange) and Command Performance (`Effect::GainTickets` / `Player.tickets`, CR 123.2 —
+  nothing spends tickets yet). Attractions already ship (CR 717); an EDHREC deck has no Attraction deck, so opening one
+  does nothing (rules-correct). Gates: engine clippy 0, `--bench` byte-identical, release pods seeds 9425-9436 decided.
 - **Primitives:** `Effect::EachPlayerKeepsUpToFromHandShufflesRest` (Worldpurge); `Duration::WhileTapped` — CR 611.2c
   read of the *affected* permanent (Braided Net); `StaticEffect::PermanentsCantPhaseIn` (holds the untap step, Time and
   Tide's swap, and releases an "until it leaves" holder into the untap step) + `Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut`
@@ -350,7 +354,7 @@ the handoff.
 - ⚠ Before adding a variant, grep the WHOLE enum: `SpendRestriction::KickedOnly` duplicated `KickedSpellsOnly`
   (reverted) and only core_rules' exhaustive walk caught it.
 - **CLAIMED (`01E4rMUL`, 2026-10-21) — don't duplicate:** nothing open (landed — Niambi's six (Teferi, Timeless Voyager's −8 via `Effect::PhaseOutUntilYourNextTurnEnds`), seat 4832; Count Nefaria's four (Count Nefaria, Nettlevine Blight, Stench of Decay, Mephitic Vapors), seat 4831; Akroma + Numa's five (Angel's Tomb, Scroll of Avacyn, Puncturing Light, Paragon of Modernity via `Value::DistinctColorsSpent`, Guardian Angel 🟡), seat 4820; Abdel + Criminal Past's five (Candletrap, Choking Restraints, Citizen's Arrest, Soaring Hope, Weight of Conscience via `tap_n_share_creature_type`), seat 4819; Nimbus Champion, Frostfist Strider, Destructive Tampering, seats 4809-4810; Tezzeret, Master of Metal in batch twenty-seven, before `01R3xh4r`'s second-batch claim named it; batch twenty-seven's twenty-seven, seats 4805-4808; batch twenty-six's twenty-eight, seats 4797-4800; batch twenty-five's thirty-two, seats 4784-4789 (Amber Gristle jointly with `01R3xh4r`'s Geistflame Reservoir); batch twenty-four's thirty-four, seats 4770-4775; assist + batch twenty-three's seven, seats 4767-4769; batch twenty-two's twenty-two, seats 4761-4766; batch twenty-one's sixteen, seats 4756-4760; batch twenty's nine two-gap halves, seats 4750-4754; Invasion of New Phyrexia, Long Rest, Halls of Mist, Three Bowls of Porridge, Barroom Brawl landed: seats 4740-4744, 4748).
-- **CLAIMED (`01R3xh4r`, 2026-10-21, third batch) — don't duplicate:** The Seventh Doctor + Graham O'Brien (Monitor Monitor, Command Performance: a paid once-a-turn die reroll, {TK} tickets).
+- **CLAIMED (`01R3xh4r`, 2026-10-21, third batch) — landed:** seat 4825.
 - **CLAIMED (`01R3xh4r`, 2026-10-21, second batch) — landed:** seats 4811-4814 (Tezzeret, Master of Metal was `01E4rMUL`'s).
 - **CLAIMED (`01R3xh4r`, 2026-10-21) — landed:** every card it named (seats 4776-4783, 4790-4796) bar Eye of Ojer Taq and Monitor Monitor + Command Performance, which are released (see `01R3xh4r` above).
 - **CLAIMED (`01Jywzky`, 2026-10-21) — don't duplicate:** the SINGLE-commander list (`edhrec_scan_top.py`): Rashida Scalebane's four (Alabaster Dragon, Dragon Hunter, Shieldhide Dragon, Grand Master of Flowers), Mairsil's four (Endling, Hateflayer, Minion of Leshrac, Torchling), Zevlor, Hogaak (Fires of Mount Doom, Aegar + its deck and Sharkey LANDED, seats 4801-4804).
