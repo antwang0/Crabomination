@@ -24522,9 +24522,17 @@ impl GameState {
         // (fortify, CR 702.71c) — the activating player controls. Use the
         // computed view so animated permanents are honored.
         // CR 301.5c — an Equipment can't equip itself (a reconfigure
-        // creature offered as its own host).
+        // creature offered as its own host), and one that is also a creature
+        // can't equip at all unless it has reconfigure (an animated Dancing
+        // Sword, March of the Machines).
         if target == equipment {
             return Err(GameError::InvalidTarget);
+        }
+        if fortify.is_none()
+            && self.battlefield[equip_pos].definition.has_reconfigure().is_none()
+            && self.permanent_is_creature(equipment)
+        {
+            return Err(GameError::NotEquipment(equipment));
         }
         let wanted = if fortify.is_some() {
             crate::card::CardType::Land
@@ -36341,6 +36349,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::ControllerCantCastNoncreatureSpells
             | StaticEffect::ControllerCantCastCreatureSpells
+            | StaticEffect::EnchantedControllerCantCastCreatureSpells
             | StaticEffect::ControllerCantCastInstantsOrSorceries
             | StaticEffect::ControllerIsStartingPlayer
             | StaticEffect::MatchingEntersWithExtraCounters { .. }

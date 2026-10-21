@@ -1328,6 +1328,9 @@ pub enum StaticEffect {
     /// "You can't cast creature spells" (Grid Monitor). The creature-side
     /// sibling of `ControllerCantCastNoncreatureSpells`.
     ControllerCantCastCreatureSpells,
+    /// "Enchanted creature's controller can't cast creature spells" (Brand of
+    /// Ill Omen): the Aura's lock binds whoever controls the creature it is on.
+    EnchantedControllerCantCastCreatureSpells,
     /// "You can't cast instant or sorcery spells" (Hymn of the Wilds).
     ControllerCantCastInstantsOrSorceries,
     /// CR 315.5a — "You are the starting player" (Power Play). Read by

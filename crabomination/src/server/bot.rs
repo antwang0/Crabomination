@@ -12278,6 +12278,11 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         if eq.attached_to == Some(target) || eq.id == target {
             continue;
         }
+        // CR 301.5c — an Equipment that is also a creature (an animated
+        // Dancing Sword) can't equip unless it has reconfigure.
+        if eq.definition.has_reconfigure().is_none() && state.computed_is_creature(eq) {
+            continue;
+        }
         // CR 702.151 — a reconfigure card attaches by reconfiguring.
         let action = if eq.definition.has_reconfigure().is_some() && printed {
             GameAction::Reconfigure { equipment: eq.id, target: Some(target) }

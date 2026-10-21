@@ -16987,14 +16987,19 @@ impl GameState {
     }
 
     /// True while `player` controls a `ControllerCantCastCreatureSpells`
-    /// static (Grid Monitor).
+    /// static (Grid Monitor), or controls a creature enchanted by an
+    /// `EnchantedControllerCantCastCreatureSpells` Aura (Brand of Ill Omen).
     pub(crate) fn player_cant_cast_creature_spells(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::ControllerCantCastCreatureSpells)
-                })
+            c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::ControllerCantCastCreatureSpells => c.controller == player,
+                StaticEffect::EnchantedControllerCantCastCreatureSpells => c
+                    .attached_to
+                    .and_then(|host| self.battlefield_find(host))
+                    .is_some_and(|host| host.controller == player),
+                _ => false,
+            })
         })
     }
 
