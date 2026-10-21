@@ -28788,6 +28788,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIVIO_10_COMMANDERS,
             main: decks::LIVIO_10_MAIN,
         },
+        // Seat 4723: Breeches, Brazen Plunderer and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 4723`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Jeska, Thrice Reborn (R)",
+            commanders: decks::BREECHES_28_COMMANDERS,
+            main: decks::BREECHES_28_MAIN,
+        },
     ]
 }
 
@@ -35411,6 +35417,7 @@ mod tests {
             ("Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer", &[0x1C86]),
             ("Imoen, Mystic Trickster and Inspiring Leader", &[0x1C87]),
             ("Livio, Oathsworn Sentinel and Slurrk, All-Ingesting", &[0x1C88]),
+            ("Breeches, Brazen Plunderer and Jeska, Thrice Reborn", &[0x1C89]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

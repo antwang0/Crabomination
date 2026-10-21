@@ -132419,3 +132419,30 @@ pub const LIVIO_10_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const BREECHES_28_COMMANDERS: &[CardFactory] = &[breeches_brazen_plunderer, jeska_thrice_reborn];
+
+/// **Breeches, Brazen Plunderer and Jeska, Thrice Reborn**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 17 Mountains = 98.
+/// Breeches, Brazen Plunderer and Jeska, Thrice Reborn (EDHREC, fetched 2026-10-21).
+pub const BREECHES_28_MAIN: &[CardFactory] = &[
+    arcane_signet, cloudstone_curio, cursed_mirror, cursed_totem, fellwar_stone, grim_monolith,
+    liquimetal_torque, lotus_petal, mana_vault, senseis_divining_top, sol_ring, the_irencrag,
+    the_one_ring, the_reaver_cleaver, ancient_tomb, arid_mesa, buried_ruin, cavern_of_souls,
+    gemstone_caverns, scavenger_grounds, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, talon_gates_of_madara, urzas_saga, wooded_foothills,
+    alexios_deimos_of_kosmos, birgi_god_of_storytelling, dire_fleet_daredevil, dualcaster_mage,
+    emberwilde_captain, enterprising_scallywag, glint_horn_buccaneer, imperial_recruiter,
+    impulsive_pilferer, laelia_the_blade_reforged, lightning_rig_crew, magus_of_the_moon,
+    prophetic_flamespeaker, reckless_lackey, robber_of_the_rich, sardian_avenger,
+    simian_spirit_guide, storm_kiln_artist, young_pyromancer, blank_goblin, brand_of_ill_omen,
+    flame_blitz, seal_of_fire, the_akroan_war, underworld_breach, abrade, burnout, chaos_warp,
+    deflecting_swat, delayed_blast_fireball, final_fortune, fork, fury_storm, galvanic_blast,
+    lightning_bolt, magmaquake, pyroblast, red_elemental_blast, reverberate, siege_smash,
+    tibalts_trickery, wild_ricochet, you_find_some_prisoners, chandra_flamecaller,
+    chandra_torch_of_defiance, blasphemous_act, by_force, faithless_looting, gamble,
+    jeskas_will, mizzium_mortars, past_in_flames, ruination, shatterskull_smashing, twinflame,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
