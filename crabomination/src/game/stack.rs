@@ -3098,6 +3098,7 @@ impl GameState {
                         for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
+                        self.spend_ench_creature_etb_bonus(card_id, caster);
                     }
                     if is_creature_resolve {
                         self.apply_etb_type_riders(card_id, caster);
@@ -6047,6 +6048,7 @@ impl GameState {
         clear_cold!(self.emerged_this_turn);
         clear_cold!(self.cant_attack_pw_type_this_turn);
         clear_cold!(self.cant_attack_walkers_this_turn);
+        clear_cold!(self.ench_creature_etb_bonus);
         self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the

@@ -3449,6 +3449,11 @@ impl GameState {
             if self.scratch.discarded_for_cost_card.is_some() {
                 self.scratch.discarded_for_cost_card = None;
             }
+            // Storyweave's bonus, once taken, lasts only for the batch that
+            // took it (the rest of that resolution).
+            if self.ench_creature_etb_bonus.iter().any(|e| e.2) {
+                self.ench_creature_etb_bonus.retain(|e| !e.2);
+            }
             // Reset last-created-token scratch — `Selector::LastCreatedToken`
             // (singular) and `Selector::LastCreatedTokens` (plural) only refer
             // to tokens created by *this* resolution.
@@ -17024,6 +17029,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NextEnchantmentCreaturesEnterWithCountersThisTurn { amount } => {
+                self.ench_creature_etb_bonus.push((ctx.controller, *amount, false));
+                Ok(())
+            }
             Effect::CreaturesEnterWithExtraCounterThisTurn { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].extra_etb_p1p1_counters_this_turn =

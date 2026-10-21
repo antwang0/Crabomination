@@ -2219,6 +2219,13 @@ pub struct ColdState {
     /// `permanent_cant_be_attacked`; cleared at cleanup.
     #[serde(default)]
     pub(crate) cant_attack_walkers_this_turn: Vec<(usize, usize)>,
+    /// Storyweave — "the next time one or more enchantment creatures you
+    /// control enter this turn, each enters with `.1` additional +1/+1
+    /// counters": `(seat, amount, spent)`. An entry that takes the bonus
+    /// marks it spent, so the rest of that resolution's simultaneous entrants
+    /// share it (CR 614.1c); the next resolution drops it, as does cleanup.
+    #[serde(default)]
+    pub(crate) ench_creature_etb_bonus: Vec<(usize, u32, bool)>,
     /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
     /// actually take a turn (Mindslaver). A later entry for the same seat
     /// overwrites the earlier one (CR 723.1a).
@@ -8741,7 +8748,8 @@ impl GameState {
             let mut specs = vec![];
             if self.computed_is_creature(ec) {
                 let extra = self.players[controller].extra_etb_p1p1_counters_this_turn
-                + self.players[controller].extra_etb_p1p1_until_your_turn;
+                + self.players[controller].extra_etb_p1p1_until_your_turn
+                + self.ench_creature_etb_bonus_for(ec, controller);
                 if extra > 0 {
                     specs.push((crate::card::CounterType::PlusOnePlusOne, extra));
                 }
@@ -8910,11 +8918,37 @@ impl GameState {
         // Combine Guildmage — a turn-scoped "each creature you control enters
         // with an additional +1/+1 counter" grant on the controller.
         let extra = self.players[controller].extra_etb_p1p1_counters_this_turn
-                + self.players[controller].extra_etb_p1p1_until_your_turn;
+                + self.players[controller].extra_etb_p1p1_until_your_turn
+                + self.ench_creature_etb_bonus_for(ec, controller);
         if extra > 0 {
             specs.push((crate::card::CounterType::PlusOnePlusOne, extra));
         }
         specs
+    }
+
+    /// Storyweave's pending bonus for an entering enchantment creature
+    /// `controller` controls (0 for anything else).
+    fn ench_creature_etb_bonus_for(&self, ec: &crate::card::CardInstance, controller: usize) -> u32 {
+        if self.ench_creature_etb_bonus.is_empty()
+            || !self.computed_has_card_type(ec, crate::card::CardType::Enchantment)
+        {
+            return 0;
+        }
+        self.ench_creature_etb_bonus.iter().filter(|(seat, _, _)| *seat == controller).map(|(_, n, _)| *n).sum()
+    }
+
+    /// An entrant took Storyweave's bonus: mark `controller`'s spent, so the
+    /// next resolution drops it.
+    pub(crate) fn spend_ench_creature_etb_bonus(&mut self, cid: CardId, controller: usize) {
+        if self.ench_creature_etb_bonus.iter().any(|(seat, _, spent)| *seat == controller && !*spent)
+            && self.battlefield_find(cid).is_some_and(|c| {
+                self.computed_is_creature(c) && self.computed_has_card_type(c, crate::card::CardType::Enchantment)
+            })
+        {
+            for e in self.ench_creature_etb_bonus.iter_mut().filter(|e| e.0 == controller) {
+                e.2 = true;
+            }
+        }
     }
 
     /// CR 702.32 / 702.63 — a permanent with Fading N / Vanishing N enters
@@ -11777,6 +11811,7 @@ impl GameState {
                 (n > 0).then_some((kind, n))
             });
             let mut specs = self.chosen_type_etb_counter_specs(id, ctrl);
+            self.spend_ench_creature_etb_bonus(id, ctrl);
             // An as-enters rider stamped on the instance (CR 702.98a unleash).
             // Read first: a `CardCold` field, empty on almost every mint.
             if self.battlefield.find_by_id(id).is_some_and(|c| c.cold_any(|k| !k.pending_etb_counters.is_empty()))

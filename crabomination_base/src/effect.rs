@@ -8821,6 +8821,10 @@ pub enum Effect {
     /// (stacking across activations); cleared at cleanup. Distinct from
     /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
     CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
+    /// "The next time one or more enchantment creatures you control enter
+    /// this turn, each enters with `amount` additional +1/+1 counters"
+    /// (Storyweave) — one batch, then gone (`ColdState.ench_creature_etb_bonus`).
+    NextEnchantmentCreaturesEnterWithCountersThisTurn { amount: u32 },
     /// As `CreaturesEnterWithExtraCounterThisTurn`, "until your next turn"
     /// (Arlinn, the Pack's Hope).
     CreaturesEnterWithExtraCounterUntilYourNextTurn { who: PlayerRef },

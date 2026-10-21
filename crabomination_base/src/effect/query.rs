@@ -1206,7 +1206,8 @@ impl Effect {
             Effect::TaxAttackersUntilYourNextTurn { .. }
             | Effect::TaxAttackersInLifeUntilYourNextTurn { .. } => false,
             // Player-scoped ETB-counter grant; no cast-time target.
-            Effect::CreaturesEnterWithExtraCounterThisTurn { .. } => false,
+            Effect::CreaturesEnterWithExtraCounterThisTurn { .. }
+            | Effect::NextEnchantmentCreaturesEnterWithCountersThisTurn { .. } => false,
             Effect::CreaturesEnterWithExtraCounterUntilYourNextTurn { .. } => false,
             // Random graveyard pick at resolution — no cast-time target.
             Effect::ExileRandomGraveyardCopyTapped { .. } => false,

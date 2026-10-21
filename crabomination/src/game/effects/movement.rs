@@ -3451,6 +3451,7 @@ impl GameState {
                 for (kind, n) in self.chosen_type_etb_counter_specs(cid, p) {
                     counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                 }
+                self.spend_ench_creature_etb_bonus(cid, p);
                 // "Return it to the battlefield with N counters on it" (Grave
                 // Endeavor) — stamped on the card just before the move. Read
                 // through `&self` first: a `CardCold` field, empty on nearly
