@@ -9205,6 +9205,29 @@ pub(super) fn cast_candidates<'a>(
                 false,
             ));
         }
+        // CR 903.8 + 702.33 — kicked from the command zone (on the hand
+        // pipeline's hop), offered beside the plain cast for the valuation
+        // when the whole of it — cost, kicker and tax — could be paid. An {X}
+        // kicker at X = 0 buys nothing, so it isn't.
+        let kicked_ok = regular_ok
+            && c.definition.has_kicker().is_some_and(|k| {
+                !k.has_x()
+                    && have_mana.get().total
+                        >= c.definition.cost.cmc() + k.cmc() + state.commander_tax_for(c).0
+                    && colors_coverable(k, have_mana.get())
+            });
+        if kicked_ok {
+            castable.push((
+                GameAction::CastSpellKicked {
+                    card_id: id,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
+                    mode: None,
+                    x_value: None,
+                },
+                false,
+            ));
+        }
         if regular_ok {
             castable.push((
                 GameAction::CastFromCommandZone {
