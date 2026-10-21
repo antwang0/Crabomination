@@ -1418,6 +1418,7 @@ impl Effect {
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::DeployExiledCreature { what, .. } => sel_has_target(what),
             Effect::CopyCardAndCastFree { what }
+            | Effect::ExileOntoAttractionWithMidway { what }
             | Effect::CopyCardsAndCastFreeUpTo { what, .. }
             | Effect::CopyCardsAndCastFreeTotalMv { what, .. } => sel_has_target(what),
             Effect::ExileHand { who }
@@ -3004,6 +3005,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileLinked { what }
+            | Effect::ExileOntoAttractionWithMidway { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
@@ -5937,6 +5939,7 @@ impl Effect {
                 | Effect::ExileSameNameAsTarget { what }
                 | Effect::ExileTaggedWithSource { what }
                 | Effect::ExileLinked { what }
+                | Effect::ExileOntoAttractionWithMidway { what }
                 | Effect::ExileUntilSourceLeaves { what, .. }
                 | Effect::ExileReturnAtYourNextUpkeep { what }
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }

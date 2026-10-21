@@ -7346,6 +7346,12 @@ pub enum Effect {
     /// (Reenact the Crime) — mints a token copy of the card `what` resolves to
     /// and offers a free cast of it.
     CopyCardAndCastFree { what: Selector },
+    /// Myra the Magnificent — exile the card `what` names and choose an
+    /// Attraction you control without a midway counter: put one on it, link
+    /// the card to it (`exiled_with`), and give it "whenever you visit this,
+    /// copy the exiled card; you may cast the copy free" for as long as it
+    /// stays on the battlefield (CR 717). No such Attraction: the exile alone.
+    ExileOntoAttractionWithMidway { what: Selector },
     /// "Copy those cards. You may cast up to `max` of the copies without
     /// paying their mana costs" (Baron Helmut Zemo's boast, over
     /// `Selector::CostExiledCards`): each card `what` resolves to is offered

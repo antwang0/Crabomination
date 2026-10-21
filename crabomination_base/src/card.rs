@@ -1136,6 +1136,8 @@ pub enum CounterType {
     Net,
     /// Soul Echo's echo counters.
     Echo,
+    /// CR 717 — a midway counter on an Attraction (Myra the Magnificent).
+    Midway,
 }
 
 /// Every zone a card can occupy.

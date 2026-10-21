@@ -31365,6 +31365,66 @@ impl GameState {
 
             // CR 701.51b — move the top card of your Attraction deck onto the
             // battlefield under your control, face up.
+            Effect::ExileOntoAttractionWithMidway { what } => {
+                use crate::card::{ArtifactSubtype, CounterType};
+                let me = ctx.controller;
+                let Some(cid) = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                if !self.exile.iter().any(|c| c.id == cid) {
+                    return Ok(());
+                }
+                let attractions: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == me
+                            && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Attraction)
+                            && c.counter_count(CounterType::Midway) == 0
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let Some(&(auto, _)) = attractions.first() else { return Ok(()) };
+                let mut cursor = 0;
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    me,
+                    "Choose an Attraction for the midway counter".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    attractions,
+                    1,
+                    1,
+                    PickValue::Gain,
+                    effect,
+                    vec![auto],
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let attraction = picked.first().copied().unwrap_or(auto);
+                if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                    c.exiled_with = Some(attraction);
+                }
+                let sub = EffectContext::for_ability(attraction, me, None);
+                self.run_effect(
+                    &Effect::AddCounter { what: Selector::This, kind: CounterType::Midway, amount: crate::effect::Value::ONE },
+                    &sub,
+                    events,
+                )?;
+                let visit = crate::card::TriggeredAbility {
+                    event: crate::effect::EventSpec::new(crate::effect::EventKind::VisitedAttraction, crate::effect::EventScope::SelfSource),
+                    effect: Effect::CopyCardAndCastFree { what: Selector::CardExiledWithSource },
+                };
+                if let Some(c) = self.battlefield_find_mut(attraction) {
+                    c.bake_grant().triggered_abilities.push(visit);
+                }
+                Ok(())
+            }
+
             Effect::OpenAnAttraction => {
                 let p = ctx.controller;
                 if self.players[p].attraction_deck.is_empty() {
