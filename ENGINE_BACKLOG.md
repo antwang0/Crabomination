@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 14 |
-| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01kpxz3h--12-single-commander-seats-38-cards-the-single-commander-list) | 40 |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 21 seats, 61 cards, pod Attraction decks, snow by colour](#fixedopen-2026-10-21-commander-run-01kpxz3h--21-seats-61-cards-pod-attraction-decks-snow-by-colour) | 79 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 42 cards, 21 seats, thirteen primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--42-cards-21-seats-thirteen-primitives) | 34 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes](#fixedopen-2026-10-20-commander-run-01nkae5b--46-one-gap-closers-45-seats-two-bug-classes) | 37 |
@@ -207,13 +207,14 @@ the handoff.
   Gamer's open / prize triggers, Motion Sickness and Discourtesy Clerk all fire (`--card-census`, seed 9451); smoke
   seeds 9450-9452 (600 games, 4/6 seats with Myra) all decided.
 
-## FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list
+## FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 21 seats, 61 cards, pod Attraction decks, snow by colour
 
-- **Seats** 4821-4824, 4826-4830, 4833-4834 (seat numbers raced with `01E4rMUL`/`01R3xh4r` twice: re-seat after a
-  conflicted rebase): Squall, Gunblade Duelist; Captain Rex Nebula; Tetzin, Gnome Champion; Satsuki, the Living Lore;
-  Loot, the Anomaly; Suki, Kyoshi Captain; Sokka, Wolf Cove's Protector; Brawn, Amadeus Cho; The Wasp, Winsome
-  Avenger; Wasp, Shrinking Savior; Zevlor, Elturel Exile — all single-commander EDHREC averages, closed by
-  `decks::cmdr_01kp_a` (38 cards, tests `recent_b/cmdr_01kp_a.rs`, 25).
+- **Seats** 4821-4824, 4826-4830, 4833-4843, 4847 (seat numbers raced with `01E4rMUL`/`01R3xh4r`/`01KabMxS`: re-seat
+  after a conflicted rebase): Squall; Captain Rex Nebula; Tetzin; Satsuki; Loot; Suki; Sokka; Brawn; The Wasp; Wasp,
+  Shrinking Savior; Zevlor; Keleth + Thrasios (closed by Oko); Tivadar of Thorn; Myra the Magnificent; The Howling
+  Commandos; The Falcon, Sam Wilson; Black Widow, Daring Operative (EDHREC's digital-only Hela dropped for a Swamp, the
+  deck's comment says so); Lae'zel + Haunted One; Amber Gristle O'Maul + Flaming Fist; The Fifteenth Doctor + Yasmin
+  Khan; Jorn, God of Winter — closed by `decks::cmdr_01kp_a` (61 cards, tests `recent_b/cmdr_01kp_a.rs`, 54).
 - **Primitives:** `Predicate::AttackerOfTriggererPtEqualsSourceChosenNumber` + `ChooseNumberForSource.own_creature_pt`
   (Squall); `Effect::BecomeArtifactSubtypesFor` ("becomes a Vehicle artifact", CR 205.1a) and
   `ReturnOtherLinkedExiles` (`return_linked_exiles_except`, Mysterious Limousine); craft "with one or more" =
@@ -224,21 +225,35 @@ the handoff.
   `attacked_walkers_of_this_turn`) — Tetzin's four; `Effect::NextEnchantmentCreaturesEnterWithCountersThisTurn`
   (Storyweave, one batch = the entering resolution); `R::SharesCreatureTypeWithLastMoved`; an emblem's
   `IsSourceChosenCreatureType` concretized as it's made (CR 114.4, Oko's −6); `R::SpellTargetsOnlyOneOpponentOrTheirs`
-  (read by the cast-time card walk) + `Effect::CopySpellForEachOtherOpponent` (CR 707.10c, Zevlor).
+  (read by the cast-time card walk) + `Effect::CopySpellForEachOtherOpponent` (CR 707.10c, Zevlor);
+  `PreventionTarget::CreaturesOf` + `Effect::PreventDamageFromColorsThisTurn` (CR 615.1, Luminesce / Surge of
+  Salvation) and a resolving spell reaching anyone's `AnyPlayer` `DealsDamage` listener, one summed trigger per spell
+  (Justice; read off `resolving_spell_snapshot`); `CounterType::Midway` + `Effect::ExileOntoAttractionWithMidway`
+  (Myra, CR 717); **snow mana by colour** — `ManaPool::snow_by` (per bucket, clamped like `artifact`, marked from the
+  activation path's pool delta, settled at payment snow-first, CR 601.2h) into `CardData::cast_snow_colors`, read by
+  `Predicate::SnowOfItsColorSpentToCast` (Boreal Outrider); `StaticEffect::AttachedIsLegendary` generalized to
+  `AttachedHasSupertype(Supertype)` (Glittering Frost's "enchanted land is snow"); `Effect::EntersTappedAfterGrantedPlay`
+  + `MayPlayPermission::enters_tapped` (Kaldring, CR 614.1c; spells ride Edgar's `graveyard_cast_enters_tapped`).
+- **Pods (CR 717.2):** a seat whose deck opens Attractions brings an Attraction deck (`pod::POD_ATTRACTIONS`, one per
+  name, shuffled per game off the deal's stream — only such seats draw from it); the card-conservation audit counts the
+  Attraction deck and the junkyard (CR 717.6). Myra, Monoxa, Goblinson, the Seventh Doctor and Draconian Gate-Bot (whose
+  enters modes were missing and now open or destroy an Attraction) did nothing in pods before.
 - **Bot (Commander only):** `combat_only.rs` casts a "target blocked creature you control" spell once ours is blocked
   (Duelist's Flame); the CREW sink gate sees an EOT-granted crew (a debug pod's sink-audit panic, seed 9442 — Rex);
   `transform_sink.rs` crafts "with N [filter]" into a creature back, reading the craft CDA off the would-be picks
   (`GameState::craft_cost_picks`, shared with the activation); `evasion.rs` buys a ready attacker's own "this gains
   [evasion]" (the Lemures, landwalk only against that land type); `next_spell_copy.rs` arms Zevlor's watcher ahead of
-  a hostile targeted instant/sorcery it can still afford.
-- **OPEN (single-commander list, after this run):** Myra the Magnificent (725 — "open an Attraction" exists; her {X},
-  {T} midway-counter copy on a visited Attraction does not); Hogaak (929 — `01Jywzky`'s note: a graveyard cast paid by
-  convoke + delve only, and a bot that assembles it); Dee Kay / The Most Dangerous Gamer / Spinnerette (Soul Swindler,
-  Squirrel Squatters, Motion Sickness, Done for the Day — Attraction riders); Tivadar (5); Niambi (claimed by
-  `01E4rMUL`); The Howling Commandos / The Falcon (6 each). ⚠ The scan's own legality filter is still missing — filter
-  the commander AND each missing card by Scryfall's `legalities.commander` (Hela, Mistress of Darkness is not legal).
-- **OPEN (bot):** Sunbird Standard's craft is a last-resort sink (never reached in 80 pods with five spare mana);
-  Ray of Enfeeblement / Wring Flesh (-X/-1 instants) were never cast in 160 Loot pods.
+  a hostile targeted instant/sorcery it can still afford; `attraction_midway.rs` spends idle mana on Myra's {X},{T}
+  (the costliest graveyard instant/sorcery X can pay, once a midway-less Attraction is out).
+- **Debug-pod throughput:** a Tivadar lineup ran 0.03 games/s in a debug `bot_ladder` against 0.6 for a control — 28 %
+  of samples sat in `memo_audit::board_audit` (debug-only). Release-fast runs the same lineups at 8-12 games/s: not a
+  bug, but debug smokes over large boards are slow.
+- **OPEN (lists, after this run):** both are drained of cheap closers. Singles: Hogaak (929, claimed by `01KabMxS` with
+  command-zone convoke/delve). Pairs: only Faceless One / Prismatic Piper decks (illegal) and the 1,339 zero-gap pairs
+  the convention doesn't seat. ⚠ `edhrec_scan_top.py` has no legality filter (Whtz, Hela, the Un-cards): filter the
+  commander AND each missing card by Scryfall's `legalities.commander`.
+- **OPEN (bot):** Sunbird Standard's craft is a last-resort sink; Ray of Enfeeblement / Wring Flesh (-X/-1 instants) were
+  never cast in 160 Loot pods; Gustha's Scepter is never activated (a hand-stash has no main-phase score).
 
 - **CLAIMED (`01KPxZ3H`, 2026-10-21) — don't duplicate:** Tetzin's four (Tetzin, Gnome Champion; Chalice of Life; Sunbird
   Standard; Unstable Glyphbridge), Squall's two (Squall, Gunblade Duelist; Duelist's Flame), Captain Rex Nebula's two
