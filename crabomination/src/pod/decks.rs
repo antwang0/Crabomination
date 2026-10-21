@@ -131809,3 +131809,140 @@ pub const ALHARU_27_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const GHOST_OF_RAMIREZ_DEPIETRO_25_COMMANDERS: &[CardFactory] = &[ghost_of_ramirez_depietro, krark_the_thumbless];
+
+/// **Ghost of Ramirez DePietro and Krark, the Thumbless**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 11 Islands + 12 Mountains = 98.
+/// Ghost of Ramirez DePietro and Krark, the Thumbless (EDHREC, fetched 2026-10-21).
+pub const GHOST_OF_RAMIREZ_DEPIETRO_25_MAIN: &[CardFactory] = &[
+    arcane_signet, izzet_signet, krarks_thumb, runechanters_pike, sol_ring, ash_barrens,
+    cascade_bluffs, command_tower, exotic_orchard, forgotten_cave, izzet_boilerworks,
+    lonely_sandbar, mystic_sanctuary, shivan_reef, sulfur_falls, temple_of_epiphany,
+    academy_wall, archmage_emeritus, ashling_flame_dancer, captain_howler_sea_scourge,
+    curious_homunculus, edgar_king_of_figaro, goblin_electromancer, guttersnipe,
+    harmonic_prodigy, haughty_djinn, magmakin_artillerist, malcolm_keen_eyed_navigator,
+    mocking_sprite, storm_kiln_artist, stormcatch_mentor, tavern_scoundrel, windrider_wizard,
+    young_pyromancer, chance_encounter, double_vision, dual_casting, sorcerer_class,
+    thousand_year_storm, big_score, chaos_warp, confounding_riddle, demand_answers,
+    desperate_ravings, electric_revelation, fact_or_fiction, frantic_search, invert_polarity,
+    izzet_charm, laughing_mad, lightning_axe, lightning_bolt, mogg_salvage, otherworldly_gaze,
+    rush_of_inspiration, sazacaps_brew, sonic_burst, thrill_of_possibility, unexpected_windfall,
+    ral_crackling_wit, careful_study, cathartic_reunion, faithless_looting, fell_beasts_shriek,
+    grab_the_prize, jeskas_will, mana_clash, pirates_pillage, seize_the_spoils,
+    shreds_of_sanity, sorceresss_schemes, spreading_insurrection, stitch_in_time,
+    tormenting_voice, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const DARGO_18_COMMANDERS: &[CardFactory] = &[dargo_the_shipwrecker, eligeth_crossroads_augur];
+
+/// **Dargo, the Shipwrecker and Eligeth, Crossroads Augur**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 19 Islands + 9 Mountains = 98.
+/// Dargo, the Shipwrecker and Eligeth, Crossroads Augur (EDHREC, fetched 2026-10-21).
+pub const DARGO_18_MAIN: &[CardFactory] = &[
+    arcane_signet, cryogen_relic, crystal_ball, izzet_signet, lightning_greaves, lotus_petal,
+    mana_vault, manifold_key, pyrite_spellbomb, sol_ring, the_one_ring, thought_vessel,
+    command_tower, mystic_sanctuary, shivan_reef, steam_vents, stormcarved_coast, study_hall,
+    temple_of_epiphany, training_center, volcanic_island, ardent_elementalist,
+    avatar_of_slaughter, bilbo_retired_burglar, breeches_eager_pillager, burning_prophet,
+    chrome_companion, consecrated_sphinx, cryptic_annelid, drake_hatcher, ferrovore,
+    flamekin_herald, grey_havens_navigator, imperial_recruiter, impulsive_pilferer,
+    inferno_titan, malcolm_keen_eyed_navigator, thassas_oracle, unstoppable_ogre,
+    watchwing_scarecrow, xorn, imprisoned_in_the_moon, jaces_sanctum, makeshift_munitions,
+    mana_cache, mana_flare, mystic_remora, rhystic_study, an_offer_you_cant_refuse, brainstorm,
+    counterspell, cyclonic_rift, deliberate, final_flare, forceful_denial, heartfire,
+    muddle_the_mixture, mystical_tutor, opt, seething_song, temur_battle_rage,
+    unexpected_windfall, circuits_act, fabricate, gitaxian_probe, hit_the_mother_lode,
+    jeskas_will, preordain, serum_visions, splitting_the_powerstone,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const GLACIAN_26_COMMANDERS: &[CardFactory] = &[glacian_powerstone_engineer, ikra_shidiqi_the_usurper];
+
+/// **Glacian, Powerstone Engineer and Ikra Shidiqi, the Usurper**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 7 Forests + 11 Islands + 10 Swamps = 98.
+/// Glacian, Powerstone Engineer and Ikra Shidiqi, the Usurper (EDHREC, fetched 2026-10-21).
+pub const GLACIAN_26_MAIN: &[CardFactory] = &[
+    aces_baseball_bat, arcane_signet, blackblade_reforged, crown_of_gondor, eater_of_virtue,
+    encroaching_mycosynth, eye_of_vecna, hand_of_vecna, helm_of_kaldra, kaldra_compleat,
+    lotus_petal, mask_of_griselbrand, shield_of_kaldra, sword_of_kaldra, talisman_of_dominance,
+    the_aetherspark, the_book_of_vile_darkness, the_celestus, the_enigma_jewel,
+    the_everflowing_well, the_irencrag, the_key_to_the_vault, the_mana_rig, wayfarers_bauble,
+    breeding_pool, command_tower, dreamroot_cascade, exotic_orchard, golgari_rot_farm,
+    hinterland_harbor, rain_slicked_copse, sodden_verdure, vernal_fen,
+    adrix_and_nev_twincasters, blight_pile, crashing_drawbridge, ed_e_lonesome_eyebot,
+    ethereal_investigator, floriferous_vinewall, gatecreeper_vine, gomazoa, hornet_nest,
+    karn_legacy_reforged, kolvori_god_of_kinship, lonis_cryptozoologist, sai_master_thopterist,
+    sapling_of_colfenor, susan_foreman, syr_konrad_the_grim, thassas_oracle,
+    the_cyber_controller, the_third_doctor, tree_of_perdition, tree_of_redemption,
+    wall_of_limbs, wall_of_runes, wall_of_souls, weathered_sentinels, yedora_grave_gardener,
+    mechanized_production, the_meathook_massacre, drown_in_the_loch, fell_the_profane,
+    hagra_mauling, veil_of_summer, karn_living_legacy, hard_evidence, ponder,
+    terisiares_devastation, will_of_the_abzan,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KELETH_21_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, kydele_chosen_of_kruphix];
+
+/// **Keleth, Sunmane Familiar and Kydele, Chosen of Kruphix**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 1 Forest + 5 Islands + 4 Plains = 98.
+/// Keleth, Sunmane Familiar and Kydele, Chosen of Kruphix (EDHREC, fetched 2026-10-21).
+pub const KELETH_21_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, astral_cornucopia, credit_voucher, marina_vendrells_grimoire,
+    midnight_clock, selesnya_signet, teferis_puzzle_box, well_of_lost_dreams, adarkar_wastes,
+    bant_panorama, breeding_pool, brushland, canopy_vista, command_tower, deserted_beach,
+    dreamroot_cascade, exotic_orchard, flooded_grove, horizon_canopy, krosan_verge,
+    misty_rainforest, mystic_gate, overgrown_farmland, prairie_stream, reflecting_pool,
+    skycloud_expanse, sparas_headquarters, sungrass_prairie, waterlogged_grove, windswept_heath,
+    wooded_bastion, yavimaya_coast, benevolent_unicorn, breaching_hippocamp, capashen_unicorn,
+    celestial_unicorn, disciple_of_freyalise, forgotten_creation, formidable_speaker,
+    good_fortune_unicorn, haliya_ascendant_cadet, inspiring_unicorn, jaces_archivist,
+    lathiel_the_bounteous_dawn, ledger_shredder, loch_mare, loyal_unicorn, mesa_unicorn,
+    opaline_unicorn, prize_pig, regal_bunnicorn, ronom_unicorn, serra_ascendant,
+    shanna_purifying_blade, sphinx_of_the_revelation, tarpan, thundering_mightmare,
+    will_scion_of_peace, wishmonger, workhorse, zodiac_horse, freed_from_the_real, greater_good,
+    hardened_scales, pemmins_aura, sylvan_library, vault_87_forced_evolution, wizard_class,
+    brainstorm, counterspell, eladamris_call, emergency_powers, inspiring_call, mystical_tutor,
+    path_to_exile, swords_to_plowshares, tolarian_winds, ajani_caller_of_the_pride,
+    kiora_behemoth_beckoner, expel_the_interlopers, flux, personal_tutor, reshape,
+    solve_the_equation, spirit_water_revival, storm_herd, tempt_with_bunnies, windfall,
+    // Basics
+    forest, island, island, island, island, island, plains, plains, plains, plains,
+];
+
+pub const GLACIAN_27_COMMANDERS: &[CardFactory] = &[glacian_powerstone_engineer, kraum_ludevics_opus];
+
+/// **Glacian, Powerstone Engineer and Kraum, Ludevic's Opus**'s EDHREC average deck, card for card:
+/// 61 nonbasic cards + 26 Islands + 11 Mountains = 98.
+/// Glacian, Powerstone Engineer and Kraum, Ludevic's Opus (EDHREC, fetched 2026-10-21).
+pub const GLACIAN_27_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, bag_of_holding, bilbos_ring, detectives_satchel, dragonspark_reactor,
+    esoteric_duplicator, eye_of_vecna, golem_foundry, jackdaw, magnifying_glass, midnight_clock,
+    nettlecyst, rms_titanic, slagstone_refinery, sol_ring, tamiyos_journal, the_aetherspark,
+    the_eternity_elevator, the_mana_rig, thopter_fabricator, thought_vessel, transmutation_font,
+    uthros_research_craft, vulshok_factory, warmaker_gunship, hall_of_tagsin, library,
+    reliquary_tower, academy_manufactor, archaeomender, combustible_gearhulk,
+    forensic_gadgeteer, geology_enthusiast, ingenious_artillerist, jhoira_weatherlight_captain,
+    kuldotha_forgemaster, mirran_spy, padeem_consul_of_innovation, pinnacle_emissary,
+    quicksmith_genius, reckless_fireweaver, riddlesmith, sai_master_thopterist,
+    solemn_simulacrum, stone_retrieval_unit, the_mechanist_aerial_artisan, thran_spider,
+    unctus_grand_metatect, urza_powerstone_prodigy, vedalken_archmage, vedalken_humiliator,
+    efficient_construction, mirrodin_besieged, visions_of_phyrexia, confirm_suspicions,
+    scour_for_scrap, secrets_of_the_key, stoic_rebuttal, karn_living_legacy, fabricate,
+    splitting_the_powerstone,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];

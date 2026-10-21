@@ -28656,6 +28656,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALHARU_27_COMMANDERS,
             main: decks::ALHARU_27_MAIN,
         },
+        // Seat 4701: Ghost of Ramirez DePietro and Krark, the Thumbless's EDHREC average deck. `--pod-decks 4701`.
+        PodDeck {
+            name: "Ghost of Ramirez DePietro and Krark, the Thumbless (UR)",
+            commanders: decks::GHOST_OF_RAMIREZ_DEPIETRO_25_COMMANDERS,
+            main: decks::GHOST_OF_RAMIREZ_DEPIETRO_25_MAIN,
+        },
+        // Seat 4702: Dargo, the Shipwrecker and Eligeth, Crossroads Augur's EDHREC average deck. `--pod-decks 4702`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Eligeth, Crossroads Augur (UR)",
+            commanders: decks::DARGO_18_COMMANDERS,
+            main: decks::DARGO_18_MAIN,
+        },
+        // Seat 4703: Glacian, Powerstone Engineer and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 4703`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Ikra Shidiqi, the Usurper (UBG)",
+            commanders: decks::GLACIAN_26_COMMANDERS,
+            main: decks::GLACIAN_26_MAIN,
+        },
+        // Seat 4704: Keleth, Sunmane Familiar and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4704`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Kydele, Chosen of Kruphix (WUG)",
+            commanders: decks::KELETH_21_COMMANDERS,
+            main: decks::KELETH_21_MAIN,
+        },
+        // Seat 4705: Glacian, Powerstone Engineer and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 4705`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Kraum, Ludevic's Opus (UR)",
+            commanders: decks::GLACIAN_27_COMMANDERS,
+            main: decks::GLACIAN_27_MAIN,
+        },
     ]
 }
 
@@ -35257,6 +35287,11 @@ mod tests {
             ("Livaan, Cultist of Tiamat and Haunted One", &[0x1C70]),
             ("The Fugitive Doctor and Jamie McCrimmon", &[0x1C71]),
             ("Alharu, Solemn Ritualist and Radiant, Serra Archangel", &[0x1C72]),
+            ("Ghost of Ramirez DePietro and Krark, the Thumbless", &[0x1C73]),
+            ("Dargo, the Shipwrecker and Eligeth, Crossroads Augur", &[0x1C74]),
+            ("Glacian, Powerstone Engineer and Ikra Shidiqi, the Usurper", &[0x1C75]),
+            ("Keleth, Sunmane Familiar and Kydele, Chosen of Kruphix", &[0x1C76]),
+            ("Glacian, Powerstone Engineer and Kraum, Ludevic's Opus", &[0x1C77]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
