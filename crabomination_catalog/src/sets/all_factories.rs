@@ -19031,6 +19031,11 @@ static DECKS: &[Factory] = &[
     super::decks::oko_lorwyn_liege,
     super::decks::wasp_shrinking_savior,
     super::decks::quantum_reduction,
+    super::decks::amulet_of_safekeeping,
+    super::decks::mystic_subdual,
+    super::decks::hysterical_blindness,
+    super::decks::uncomfortable_chill,
+    super::decks::zevlor_elturel_exile,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -572,3 +572,53 @@ fn quantum_reduction_flashes_in_by_teamwork() {
     assert_eq!(c.power, -1);
     assert!(!c.keywords().contains(&Keyword::Flying));
 }
+
+/// CR 707.10c — Zevlor's next qualifying spell is copied once per other
+/// opponent: a Bolt at seat 1 also hits seats 2 and 3. A spell aimed at our
+/// own creature doesn't qualify and leaves the watcher armed.
+#[test]
+fn cr_707_10c_zevlor_copies_a_single_target_spell_at_each_other_opponent() {
+    let mut g = pod(4);
+    let zev = ready(&mut g, 0, catalog::zevlor_elturel_exile());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, zev, 0, None);
+    let giant = g.add_card_to_hand(0, catalog::giant_growth());
+    cast_x(&mut g, 0, giant, Some(Target::Permanent(bear)), None);
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_x(&mut g, 0, bolt, Some(Target::Player(1)), None);
+    for seat in 1..4 {
+        assert_eq!(g.players[seat].life, life[seat] - 3, "seat {seat}");
+    }
+    assert_eq!(g.players[0].life, life[0]);
+}
+
+/// Amulet of Safekeeping wards its controller for {1} (CR 702.21a): a Bolt
+/// from a tapped-out opponent is countered. Creature tokens get -1/-0.
+#[test]
+fn amulet_of_safekeeping_taxes_spells_aimed_at_you() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::amulet_of_safekeeping());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "countered: no {{1}} to pay");
+}
+
+/// Uncomfortable Chill shrinks only the opponents' creatures, and draws.
+#[test]
+fn uncomfortable_chill_shrinks_the_other_side() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let chill = g.add_card_to_hand(0, catalog::uncomfortable_chill());
+    let hand = g.players[0].hand.len() - 1;
+    cast_x(&mut g, 0, chill, None, None);
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 2);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

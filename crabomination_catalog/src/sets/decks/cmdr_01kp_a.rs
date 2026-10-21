@@ -863,3 +863,113 @@ pub fn quantum_reduction() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Wasp, Shrinking Savior's four ───────────────────────────────────────────
+
+/// Amulet of Safekeeping — {2} artifact. Whenever you become the target of a
+/// spell or ability an opponent controls, counter it unless its controller
+/// pays {1} (a ward on the player, CR 702.21a). Creature tokens get -1/-0.
+pub fn amulet_of_safekeeping() -> CardDefinition {
+    CardDefinition {
+        name: "Amulet of Safekeeping",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Whenever you become the target of a spell or ability an opponent controls, counter \
+                              that spell or ability unless its controller pays {1}.",
+                effect: StaticEffect::ControllerHasWard(crate::card::WardCost::generic(1)),
+            },
+            StaticAbility {
+                description: "Creature tokens get -1/-0.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::IsToken)),
+                    power: -1,
+                    toughness: 0,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mystic Subdual — {1}{U} Aura with flash. Enchanted creature gets -2/-0 and
+/// loses all abilities.
+pub fn mystic_subdual() -> CardDefinition {
+    CardDefinition {
+        name: "Mystic Subdual",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { power: -2, ..Default::default() }),
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature loses all abilities.",
+            effect: StaticEffect::MatchingLoseAllAbilities { applies_to: Selector::attached_to(Selector::This) },
+        }],
+        ..Default::default()
+    }
+}
+
+fn shrink_opponents(power: i32) -> Effect {
+    Effect::PumpPT {
+        what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+        power: Value::Const(power),
+        toughness: Value::ZERO,
+        duration: Duration::EndOfTurn,
+    }
+}
+
+/// Hysterical Blindness — {2}{U} instant. Creatures your opponents control get
+/// -4/-0 until end of turn.
+pub fn hysterical_blindness() -> CardDefinition {
+    CardDefinition {
+        name: "Hysterical Blindness",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: shrink_opponents(-4),
+        ..Default::default()
+    }
+}
+
+/// Uncomfortable Chill — {2}{U} instant. Creatures your opponents control get
+/// -2/-0 until end of turn. Draw a card.
+pub fn uncomfortable_chill() -> CardDefinition {
+    CardDefinition {
+        name: "Uncomfortable Chill",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![shrink_opponents(-2), Effect::Draw { who: Selector::You, amount: Value::ONE }]),
+        ..Default::default()
+    }
+}
+
+/// Zevlor, Elturel Exile — {1}{U}{B}{R} 4/2 legendary Tiefling Warrior with
+/// haste. {2}, {T}: when you next cast an instant or sorcery spell this turn
+/// that targets only a single opponent or a single permanent an opponent
+/// controls, for each other opponent choose that player or a permanent they
+/// control, copy the spell, and the copy targets the choice (CR 707.10c).
+pub fn zevlor_elturel_exile() -> CardDefinition {
+    let spell = R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Zevlor, Elturel Exile",
+        cost: cost(&[generic(1), u(), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Tiefling, CreatureType::Warrior], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::OnYourNextSpellMatchingThisTurn {
+                filter: spell.and(R::SpellTargetsOnlyOneOpponentOrTheirs),
+                body: Box::new(Effect::CopySpellForEachOtherOpponent { what: Selector::TriggerSource }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
