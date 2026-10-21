@@ -5574,3 +5574,27 @@ pub fn three_bowls_of_porridge() -> CardDefinition {
         ..spell("Three Bowls of Porridge", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
     }
 }
+
+/// Barroom Brawl — {1}{G} sorcery. Target creature you control fights target
+/// creature the opponent to your left controls. Then that player may copy this
+/// spell and may choose new targets for the copy.
+pub fn barroom_brawl() -> CardDefinition {
+    spell(
+        "Barroom Brawl",
+        cost(&[generic(1), g()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Fight {
+                attacker: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponentToYourLeft),
+                },
+            },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(1))),
+                cost: crate::effect::ChainCopyCost::Free,
+            },
+        ]),
+    )
+}

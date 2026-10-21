@@ -2534,3 +2534,31 @@ fn three_bowls_of_porridge_tries_each_bowl_once() {
     assert!(g.battlefield_find(bowls).is_none());
     assert_eq!(g.players[0].life, life + 3);
 }
+
+/// Barroom Brawl only reaches the opponent to your left (seat 1 of three, and
+/// past a seat that has left the game).
+#[test]
+fn barroom_brawl_picks_on_the_left() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let left = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let right = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let brawl = g.add_card_to_hand(0, catalog::barroom_brawl());
+    flood(&mut g, 0);
+    let cast_at = |g: &mut GameState, them| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: brawl,
+            target: Some(Target::Permanent(mine)),
+            additional_targets: vec![Target::Permanent(them)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast_at(&mut g, right).is_err(), "seat 2 is to the right");
+    cast_at(&mut g, left).expect("seat 1 is to the left");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(left).is_none(), "the Giant wins the fight");
+    assert_eq!(g.opponent_to_left_of(0), Some(1));
+    g.players[1].eliminated = true;
+    assert_eq!(g.opponent_to_left_of(0), Some(2), "the next living opponent");
+}
