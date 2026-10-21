@@ -135940,3 +135940,60 @@ pub const HOGAAK_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const QUICKSILVER_3_COMMANDERS: &[CardFactory] = &[quicksilver_pietro_maximoff];
+
+/// **Quicksilver, Pietro Maximoff**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Mountains = 99.
+/// Quicksilver, Pietro Maximoff (EDHREC, fetched 2026-10-21).
+pub const QUICKSILVER_3_MAIN: &[CardFactory] = &[
+    arcane_signet, jar_of_eyeballs, javelin_of_lightning, masterwork_of_ingenuity,
+    matzalantli_the_great_door, racers_scoreboard, sol_ring, ash_barrens, cavernous_maw,
+    flamekin_village, forgotten_cave, geier_reach_sanitarium, guildmages_forum, maze_of_shadows,
+    miren_the_moaning_well, muraganda_raceway, scavenger_grounds, shire_terrace,
+    tendo_ice_bridge, arcbound_wanderer, ardent_dustspeaker, avatar_of_slaughter,
+    ball_lightning, brighthearth_banneret, burnout_bashtronaut, catalyst_elemental, coal_stoker,
+    dark_dweller_oracle, death_kiss, desert_cerodon, dinotomaton, electryte,
+    endrider_spikespitter, everflame_eidolon, gargoyle_sentinel, goblin_surveyor,
+    havengul_vampire, illustrious_historian, immobilizer_eldrazi, iron_golem, kilnmouth_dragon,
+    plague_myr, roc_of_kher_ridges, soulbright_flamekin, spark_elemental, spawnbed_protector,
+    stonework_packbeast, tephraderm, toxic_iguanar, voldaren_stinger, zodiac_goat,
+    goblin_shrine, kumano_faces_kakkazan, outpace_oblivion, tectonic_instability,
+    visions_of_phyrexia, warstorm_surge, boil, brute_strength, chaos_warp, demand_answers,
+    dynacharge, great_train_heist, spark_spray, temur_battle_rage, thrill_of_possibility,
+    unleash_fury, fanning_the_flames, geosurge, mizzium_mortars, obliterating_bolt,
+    rockslide_ambush, ruination, wheel_of_misfortune, wild_ride,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const LEONARDO_6_COMMANDERS: &[CardFactory] = &[leonardo_worldly_warrior];
+
+/// **Leonardo, Worldly Warrior**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Leonardo, Worldly Warrior (EDHREC, fetched 2026-10-21).
+pub const LEONARDO_6_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_plate, mind_stone, oketras_monument, quintessential_katana,
+    shadowspear, skullclamp, sol_ring, swiftfoot_boots, sword_of_fire_and_ice,
+    sword_of_hearth_and_home, sword_of_sinew_and_steel, umezawas_jitte, wooden_cane,
+    castle_ardenvale, command_beacon, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    fountainport, nykthos_shrine_to_nyx, rogues_passage, turtle_lair, war_room,
+    action_news_crew, adeline_resplendent_cathar, codsworth_handy_helper, east_wind_avatar,
+    enduring_innocence, esper_sentinel, featherbrained_filcher, high_flying_ace,
+    jennika_bad_apple_big_sister, knight_of_the_white_orchid, leonardo_big_brother,
+    leonardo_leader_in_blue, leonardo_sewer_samurai, lita_little_orphan_amphibian,
+    mentor_of_the_meek, mighty_mutanimals, mondrak_glory_dominus, moonshaker_cavalry,
+    ornithopter_of_paradise, puresteel_paladin, rumor_gatherer, selfless_spirit,
+    splinter_leo_father_son, splinter_aging_champion, triceraton_regenta, wall_of_omens,
+    weathered_wayfarer, welcoming_vampire, witch_enchanter, anointed_procession,
+    dimensional_exile, endless_foot_assault, sigardas_aid, tocasias_welcome, uneasy_alliance,
+    akromas_will, continue_card, grand_crescendo, grounded_for_life, hamato_guardian_stance,
+    leos_guidance, path_to_exile, swords_to_plowshares, the_last_ronins_technique,
+    hour_of_reckoning, leonardos_technique, martial_coup, vanquish_the_horde, visions_of_glory,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

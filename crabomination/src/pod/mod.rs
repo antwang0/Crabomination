@@ -29544,6 +29544,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HOGAAK_COMMANDERS,
             main: decks::HOGAAK_MAIN,
         },
+        // Seat 4849: Quicksilver, Pietro Maximoff's EDHREC average deck. `--pod-decks 4849`.
+        PodDeck {
+            name: "Quicksilver, Pietro Maximoff (R)",
+            commanders: decks::QUICKSILVER_3_COMMANDERS,
+            main: decks::QUICKSILVER_3_MAIN,
+        },
+        // Seat 4850: Leonardo, Worldly Warrior's EDHREC average deck. `--pod-decks 4850`.
+        PodDeck {
+            name: "Leonardo, Worldly Warrior (W)",
+            commanders: decks::LEONARDO_6_COMMANDERS,
+            main: decks::LEONARDO_6_MAIN,
+        },
     ]
 }
 
@@ -36353,6 +36365,8 @@ mod tests {
             ("Spinnerette, Arachnobat", &[0x1D04]),
             ("Jorn, God of Winter", &[0x1D05]),
             ("Hogaak, Arisen Necropolis", &[0x1D06]),
+            ("Quicksilver, Pietro Maximoff", &[0x1D07]),
+            ("Leonardo, Worldly Warrior", &[0x1D08]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

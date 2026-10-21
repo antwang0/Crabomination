@@ -857025,5 +857025,145 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892301&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/152135?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Quicksilver, Pietro Maximoff": {
+    "object": "card",
+    "id": "95ced506-c1a4-4742-9f13-3a261f5a08da",
+    "oracle_id": "c5c1fb0f-b9cf-48a0-a4ea-e995e222e4b4",
+    "multiverse_ids": [],
+    "resource_id": "ED3819989ECAA11D56AF5BCF9ADD18CFE173A01CAE032C5D926F9393BAF331C7",
+    "mtgo_id": 151127,
+    "arena_id": 105568,
+    "tcgplayer_id": 697298,
+    "cardmarket_id": 892268,
+    "name": "Quicksilver, Pietro Maximoff",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/95ced506-c1a4-4742-9f13-3a261f5a08da",
+    "scryfall_uri": "https://scryfall.com/card/msc/551/quicksilver-pietro-maximoff?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:38:18Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.jpg?1783903098",
+      "normal": "https://cards.scryfall.io/normal/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.jpg?1783903098",
+      "large": "https://cards.scryfall.io/large/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.jpg?1783903098",
+      "png": "https://cards.scryfall.io/png/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.png?1783903098",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.jpg?1783903098",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.jpg?1783903098",
+      "thumb": "https://cards.scryfall.io/thumb/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.webp?1783903098",
+      "grid": "https://cards.scryfall.io/grid/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.webp?1783903098",
+      "display": "https://cards.scryfall.io/display/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.webp?1783903098",
+      "art": "https://cards.scryfall.io/art/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.webp?1783903098",
+      "crop": "https://cards.scryfall.io/crop/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.webp?1783903098",
+      "jpeg": "https://cards.scryfall.io/normal/front/9/5/95ced506-c1a4-4742-9f13-3a261f5a08da.jpg?1783903098"
+    },
+    "mana_cost": "{2}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Mutant Hero",
+    "oracle_text": "Haste (This creature can attack and {T} as soon as he comes under your control.)",
+    "power": "3",
+    "toughness": "2",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "keywords": [
+      "Haste"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/95ced506-c1a4-4742-9f13-3a261f5a08da/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ac5c1fb0f-b9cf-48a0-a4ea-e995e222e4b4&unique=prints",
+    "collector_number": "551",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"I must be going now. This has all been extraordinarily tedious.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "David Talaski",
+    "artist_ids": [
+      "e02ed52e-c8ae-479c-b405-c2ee24feb6d5"
+    ],
+    "illustration_id": "ba06673a-27f1-4d69-b25f-289a2dd9ead2",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 28881,
+    "prices": {
+      "usd": "0.79",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "0.15",
+      "eur_foil": null,
+      "tix": "0.29"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DQuicksilver%252C%2BPietro%2BMaximoff",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DQuicksilver%252C%2BPietro%2BMaximoff",
+      "edhrec": "https://edhrec.com/route/?cc=Quicksilver%2C+Pietro+Maximoff"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697298%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892268&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151127?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }
