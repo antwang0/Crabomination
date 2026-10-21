@@ -728,3 +728,208 @@ fn myra_puts_a_midway_spell_on_an_attraction() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.len() >= hand + 2, "the copied Divination resolved");
 }
+
+/// Abzan Skycaptain's death bolsters 2 (CR 701.39): the least-toughness
+/// creature its controller has left gets two +1/+1 counters.
+#[test]
+fn cr_701_39_abzan_skycaptain_bolsters_on_death() {
+    let mut g = pod(2);
+    let sky = g.add_card_to_battlefield(0, catalog::abzan_skycaptain());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast_x(&mut g, 1, bolt, Some(Target::Permanent(sky)), None);
+    assert!(g.battlefield_find(sky).is_none());
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(giant).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Ampryn Tactician's ETB anthem lasts the turn and covers only its side.
+#[test]
+fn ampryn_tactician_pumps_the_team_on_entry() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tac = g.add_card_to_hand(0, catalog::ampryn_tactician());
+    cast_x(&mut g, 0, tac, None, None);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(tac).unwrap().power, 4);
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 2);
+}
+
+/// Drogskol Infantry disturbs from the graveyard into Drogskol Armaments
+/// (CR 702.146): enchanted creature gets +2/+2.
+#[test]
+fn cr_702_146_drogskol_infantry_disturbs_into_armaments() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let inf = g.add_card_to_graveyard(0, catalog::drogskol_infantry());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: inf,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+    })
+    .expect("disturb");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+}
+
+/// Scrapwork Cohort makes an artifact Soldier on entry, and unearths
+/// (CR 702.84) for {2}{W} with haste.
+#[test]
+fn cr_702_84_scrapwork_cohort_unearths_and_makes_a_soldier() {
+    let mut g = pod(2);
+    let co = g.add_card_to_graveyard(0, catalog::scrapwork_cohort());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: co,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("unearth");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(co).is_some());
+    assert!(g.permanent_has_keyword(co, &Keyword::Haste));
+    let soldiers = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Soldier" && c.definition.card_types.contains(&CardType::Artifact))
+        .count();
+    assert_eq!(soldiers, 1);
+}
+
+/// Sergeant-at-Arms (CR 702.33 kicker, 603.4 intervening if): two Soldiers
+/// only when kicked.
+#[test]
+fn cr_702_33_sergeant_at_arms_makes_soldiers_only_when_kicked() {
+    for (kick, want) in [(false, 0), (true, 2)] {
+        let mut g = pod(2);
+        let sgt = g.add_card_to_hand(0, catalog::sergeant_at_arms());
+        flood(&mut g, 0);
+        let action = if kick {
+            GameAction::CastSpellKicked { card_id: sgt, target: None, additional_targets: vec![], mode: None, x_value: None }
+        } else {
+            GameAction::CastSpell { card_id: sgt, target: None, additional_targets: vec![], mode: None, x_value: None }
+        };
+        g.perform_action(action).expect("cast");
+        drain_stack(&mut g);
+        let n = g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count();
+        assert_eq!(n, want, "kicked: {kick}");
+    }
+}
+
+/// Repel the Darkness taps two creatures and draws.
+#[test]
+fn repel_the_darkness_taps_two_and_draws() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let rep = g.add_card_to_hand(0, catalog::repel_the_darkness());
+    let hand = g.players[0].hand.len() - 1;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rep,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Herald of the Sun counters another flier — and Lightwalker, given a
+/// +1/+1 counter some other way, starts flying.
+#[test]
+fn herald_of_the_sun_feeds_fliers_and_lightwalker_takes_off() {
+    let mut g = pod(2);
+    let herald = g.add_card_to_battlefield(0, catalog::herald_of_the_sun());
+    let sky = g.add_card_to_battlefield(0, catalog::abzan_skycaptain());
+    let walker = g.add_card_to_battlefield(0, catalog::lightwalker());
+    flood(&mut g, 0);
+    let act = |t| GameAction::ActivateAbility {
+        card_id: herald,
+        ability_index: 0,
+        target: Some(Target::Permanent(t)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    assert!(g.perform_action(act(walker)).is_err(), "Lightwalker isn't flying yet");
+    assert!(g.perform_action(act(herald)).is_err(), "another creature");
+    g.perform_action(act(sky)).expect("a flier");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sky).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(!g.permanent_has_keyword(walker, &Keyword::Flying));
+    g.battlefield_find_mut(walker).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.permanent_has_keyword(walker, &Keyword::Flying));
+}
+
+/// Steadfast Sentry's death leaves a +1/+1 counter behind.
+#[test]
+fn steadfast_sentry_leaves_a_counter() {
+    let mut g = pod(2);
+    let sentry = g.add_card_to_battlefield(0, catalog::steadfast_sentry());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.permanent_has_keyword(sentry, &Keyword::Vigilance));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast_x(&mut g, 1, bolt, Some(Target::Permanent(sentry)), None);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Recumbent Bliss pacifies (CR 508.1c / 509.1b) and offers 1 life each
+/// upkeep.
+#[test]
+fn recumbent_bliss_pacifies() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let bliss = g.add_card_to_hand(0, catalog::recumbent_bliss());
+    cast_x(&mut g, 0, bliss, Some(Target::Permanent(giant)), None);
+    assert!(g.permanent_has_keyword(giant, &Keyword::CantAttack));
+    assert!(g.permanent_has_keyword(giant, &Keyword::CantBlock));
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let swing = GameAction::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(0) }]);
+    assert!(g.perform_action(swing).is_err());
+}
+
+/// Fall to Earth exiles a creature and everyone gains 3.
+#[test]
+fn fall_to_earth_exiles_and_heals_the_table() {
+    let mut g = pod(3);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let fall = g.add_card_to_hand(0, catalog::fall_to_earth());
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    cast_x(&mut g, 0, fall, Some(Target::Permanent(giant)), None);
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    for (i, p) in g.players.iter().enumerate() {
+        assert_eq!(p.life, life[i] + 3);
+    }
+}
+
+/// Protective Response needs an attacking or blocking target (CR 506.4).
+#[test]
+fn protective_response_kills_an_attacker() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let resp = g.add_card_to_hand(0, catalog::protective_response());
+    flood(&mut g, 0);
+    let cast = GameAction::CastSpell {
+        card_id: resp,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast.clone()).is_err(), "not attacking yet");
+    attack(&mut g, 1, &[(giant, 0)]);
+    cast_x(&mut g, 0, resp, Some(Target::Permanent(giant)), None);
+    assert!(g.battlefield_find(giant).is_none());
+}

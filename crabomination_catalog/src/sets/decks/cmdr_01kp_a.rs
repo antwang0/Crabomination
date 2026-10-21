@@ -1121,3 +1121,225 @@ pub fn myra_the_magnificent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The Howling Commandos' six ──────────────────────────────────────────────
+
+fn white_creature(name: &'static str, mana: crate::mana::ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+fn dies(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource), effect }
+}
+
+fn soldier_token(artifact: bool) -> Arc<TokenDefinition> {
+    Arc::new(TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: if artifact { vec![CardType::Artifact, CardType::Creature] } else { vec![CardType::Creature] },
+        colors: if artifact { vec![] } else { vec![Color::White] },
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    })
+}
+
+/// Abzan Skycaptain — {3}{W} 2/2 flying Bird Soldier. When it dies, bolster 2
+/// (CR 701.39).
+pub fn abzan_skycaptain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![dies(crate::effect::shortcut::bolster(2))],
+        ..white_creature("Abzan Skycaptain", cost(&[generic(3), w()]), vec![CreatureType::Bird, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Ampryn Tactician — {2}{W}{W} 3/3 Human Soldier. When it enters, creatures
+/// you control get +1/+1 until end of turn.
+pub fn ampryn_tactician() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        })],
+        ..white_creature("Ampryn Tactician", cost(&[generic(2), w(), w()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 3)
+    }
+}
+
+/// Drogskol Infantry // Drogskol Armaments — {1}{W} 2/2 Spirit Soldier.
+/// Disturb {3}{W} (CR 702.146): the back is an Aura, enchanted creature gets
+/// +2/+2 (exiled instead of going to a graveyard).
+pub fn drogskol_infantry() -> CardDefinition {
+    let armaments = CardDefinition {
+        name: "Drogskol Armaments",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        color_indicator: vec![Color::White],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 2, ..Default::default() }),
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Disturb(cost(&[generic(3), w()]))],
+        back_face: Some(Box::new(armaments)),
+        ..white_creature("Drogskol Infantry", cost(&[generic(1), w()]), vec![CreatureType::Spirit, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Scrapwork Cohort — {4} 3/1 artifact creature Soldier. When it enters,
+/// create a 1/1 colorless Soldier artifact creature token. Unearth {2}{W}.
+pub fn scrapwork_cohort() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: soldier_token(true),
+        })],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(2), w()]))],
+        ..white_creature("Scrapwork Cohort", cost(&[generic(4)]), vec![CreatureType::Soldier], 3, 1)
+    }
+}
+
+/// Sergeant-at-Arms — {2}{W} 2/3 Human Soldier. Kicker {2}{W}. When it enters,
+/// if it was kicked, create two 1/1 white Soldier tokens (an intervening if).
+pub fn sergeant_at_arms() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), w()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: soldier_token(false) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..white_creature("Sergeant-at-Arms", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 3)
+    }
+}
+
+/// Repel the Darkness — {2}{W} instant. Tap up to two target creatures. Draw a
+/// card.
+pub fn repel_the_darkness() -> CardDefinition {
+    CardDefinition {
+        name: "Repel the Darkness",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── The Falcon, Sam Wilson's six ────────────────────────────────────────────
+
+/// Herald of the Sun — {4}{W}{W} 4/4 flying Angel. {3}{W}: put a +1/+1 counter
+/// on another target creature with flying.
+pub fn herald_of_the_sun() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying)).and(R::OtherThanSource)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..white_creature("Herald of the Sun", cost(&[generic(4), w(), w()]), vec![CreatureType::Angel], 4, 4)
+    }
+}
+
+/// Lightwalker — {1}{W} 2/1 Human Warrior with flying as long as it has a
+/// +1/+1 counter on it.
+pub fn lightwalker() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has flying as long as it has a +1/+1 counter on it.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Flying,
+                condition: R::WithCounter(CounterType::PlusOnePlusOne),
+            },
+        }],
+        ..white_creature("Lightwalker", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Warrior], 2, 1)
+    }
+}
+
+/// Steadfast Sentry — {2}{W} 3/2 vigilant Human Soldier. When it dies, put a
+/// +1/+1 counter on target creature you control.
+pub fn steadfast_sentry() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![dies(Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..white_creature("Steadfast Sentry", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 2)
+    }
+}
+
+/// Recumbent Bliss — {2}{W} Aura. Enchanted creature can't attack or block.
+/// At the beginning of your upkeep, you may gain 1 life.
+pub fn recumbent_bliss() -> CardDefinition {
+    CardDefinition {
+        name: "Recumbent Bliss",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::CantAttack, Keyword::CantBlock], ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fall to Earth — {4}{W} instant. Exile target creature. Each player gains 3
+/// life. Basic landcycling {2}.
+pub fn fall_to_earth() -> CardDefinition {
+    CardDefinition {
+        name: "Fall to Earth",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Typecycling(Box::new((cost(&[generic(2)]), R::IsBasicLand)))],
+        effect: Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Exile },
+            Effect::GainLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Protective Response — {2}{W} instant with convoke. Destroy target attacking
+/// or blocking creature.
+pub fn protective_response() -> CardDefinition {
+    CardDefinition {
+        name: "Protective Response",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))) },
+        ..Default::default()
+    }
+}

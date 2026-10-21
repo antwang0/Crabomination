@@ -19042,6 +19042,18 @@ static DECKS: &[Factory] = &[
     super::decks::luminesce,
     super::decks::surge_of_salvation,
     super::decks::myra_the_magnificent,
+    super::decks::abzan_skycaptain,
+    super::decks::ampryn_tactician,
+    super::decks::drogskol_infantry,
+    super::decks::scrapwork_cohort,
+    super::decks::sergeant_at_arms,
+    super::decks::repel_the_darkness,
+    super::decks::herald_of_the_sun,
+    super::decks::lightwalker,
+    super::decks::steadfast_sentry,
+    super::decks::recumbent_bliss,
+    super::decks::fall_to_earth,
+    super::decks::protective_response,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
