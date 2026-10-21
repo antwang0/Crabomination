@@ -194,11 +194,14 @@ the handoff.
 - **LANDED (`01KabMxS`, claimed 18:25) — `01E4rMUL`'s 19:17 claim of the same six is moot:** seats 4844-4846 (The
   Most Dangerous Gamer, Dee Kay, Spinnerette), closed by `decks::cmdr_01ka_a` (Soul Swindler, Squirrel Squatters,
   Spinnerette, Motion Sickness, Dee Kay, Done for the Day) + `unf::pick_a_beeble`; tests `recent_b/cmdr_01ka_a.rs`.
-- **CLAIMED (`01KabMxS`, 2026-10-21, second batch) — don't duplicate:** convoke / improvise / delve on a cast from the
-  **command zone** (CR 903.8 + 702.51 / 702.126 / 702.66 — `cast_from_command_zone_as` ignored them, so Kasla, Tasigur,
-  Bennie Bracks, Winter, The Wandering Rescuer and Ironheart could never use their own keyword as a commander) and from
-  a graveyard cast permission; "you can't spend mana to cast this spell"; **Hogaak, Arisen Necropolis** + its seat and
-  bot.
+- **LANDED (`01KabMxS`, second batch):** convoke / improvise / delve on a **command-zone** cast (CR 903.8 + 702.51a /
+  702.126 / 702.66a; `cast_from_command_zone_as` ignored them, so Kasla, Tasigur, Bennie Bracks, Winter, The Wandering
+  Rescuer and Ironheart never used their keyword as a commander) and under a graveyard cast permission —
+  `game/helper_cast.rs::cast_with_helpers` routes `CastSpellConvoke` / `CastSpellDelve` / the new
+  `CastSpellConvokeDelve` by zone; "you can't spend mana to cast this spell" (`CardDefinition::no_mana_spend`,
+  `pay_without_mana`); `StaticEffect::CastSelfFromGraveyard`. **Hogaak, Arisen Necropolis**, seat 4848 — the last
+  Commander-legal single-commander EDHREC average with a gap. Bot: `server/helper_cast.rs` (Commander games only).
+  Smoke seed 9453, 400 games over the seven helper-keyword commanders' seats: all decided, Hogaak cast.
 - **Primitives:** `Value::AttractionsVisitedThisTurn` (PlayerCold `attractions_visited`, turn-stamped); `KeywordAct::
   OpenedAttraction` / `ClaimedPrize` (CR 701.51c / 702.159b) + `Effect::ClaimThePrize`; the turn-based roll to visit
   is a die roll (CR 701.52a — `DieResult` listeners like Dee Kay see it). **FIXED:** The Most Dangerous Gamer grew on

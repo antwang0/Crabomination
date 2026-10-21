@@ -2351,3 +2351,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Guardian Angel | the "until end of turn, you may pay {1} any time you could cast an instant: prevent the next 1 damage to that permanent or player" rider is missing — only the prevent-X shield resolves | a player-hosted activated ability (an emblem with `activated`, offered by the action enumerator and the bot) |
 | 🟡 Monitor Monitor | the {1} reroll is never asked: every seat takes the headless rule (a die in the bottom third, one die per turn) inside `roll_one_die` | a seat-routed ask outside an effect |
 | 🟡 Command Performance | {TK}{TK} is state only (no ticket costs exist); the sticker mode puts a name sticker (ability / P-T stickers aren't modelled) | ticket-cost stickers |
+| 🟡 Done for the Day | {TK} is state only, and the all-three sticker is a name sticker (as Command Performance) | ticket-cost stickers |
+| 🟡 The Most Dangerous Gamer | its type line drops Gamer ("Human Gamer Guest" — no `CreatureType::Gamer`) | the creature type |
