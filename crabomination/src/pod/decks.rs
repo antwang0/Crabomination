@@ -132002,3 +132002,143 @@ pub const LIVAAN_11_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const AMBER_GRISTLE_OMAUL_12_COMMANDERS: &[CardFactory] = &[amber_gristle_omaul, street_urchin];
+
+/// **Amber Gristle O'Maul and Street Urchin**'s EDHREC average deck, card for card:
+/// 61 nonbasic cards + 37 Mountains = 98.
+/// Amber Gristle O'Maul and Street Urchin (EDHREC, fetched 2026-10-21).
+pub const AMBER_GRISTLE_OMAUL_12_MAIN: &[CardFactory] = &[
+    campfire, grafted_skullcap, hazorets_monument, honor_worn_shaku, inscribed_tablet,
+    key_to_the_city, ring_of_valkas, springleaf_drum, tome_of_legends, castle_embereth,
+    spinerock_knoll, anjes_ravager, bloodhaze_wolverine, bomat_courier, brash_taunter,
+    child_of_the_volcano, cyclops_electromancer, defiler_of_instinct, desert_cerodon,
+    diamond_lion, dragon_whisperer, goblin_rabblemaster, gut_true_soul_zealot,
+    igneous_elemental, illustrious_historian, kari_zev_skyship_raider, kavaron_harrier,
+    loyal_apprentice, mad_ratter, ox_of_agonas, pia_nalaar, preyseizer_dragon,
+    reckless_bushwhacker, reinforced_ronin, rosnakht_heir_of_rohgahh, shock_brigade,
+    signal_pest, squee_dubious_monarch, subira_tulzidi_caravanner, break_through_the_line,
+    count_on_luck, daring_piracy, ferocity_of_the_wilds, goblin_assault, goblin_oriflamme,
+    goblinslide, chaos_warp, dragonrage, enthusiastic_study, last_ditch_effort,
+    magmatic_sinkhole, zoyowas_justice, zariel_archduke_of_avernus, blasphemous_act,
+    burning_curiosity, chandras_ignition, direct_current, indulge_excess, magmatic_chasm,
+    waltz_of_rage, zenith_festival,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const HALANA_19_COMMANDERS: &[CardFactory] = &[halana_kessig_ranger, keleth_sunmane_familiar];
+
+/// **Halana, Kessig Ranger and Keleth, Sunmane Familiar**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 11 Forests + 16 Plains = 98.
+/// Halana, Kessig Ranger and Keleth, Sunmane Familiar (EDHREC, fetched 2026-10-21).
+pub const HALANA_19_MAIN: &[CardFactory] = &[
+    anduril_narsil_reforged, arcane_signet, chronicle_of_victory, commanders_sphere,
+    horn_of_the_mark, investigators_journal, sol_ring, the_ozolith, wayfarers_bauble,
+    command_tower, fortified_village, nykthos_shrine_to_nyx, overgrown_farmland, sunpetal_grove,
+    temple_garden, unclaimed_territory, wooded_bastion, adeline_resplendent_cathar,
+    ambitious_farmhand, arborea_pegasus, ardenvale_paladin, armored_warhorse, bastion_protector,
+    brightfield_mustang, brightmare, capashen_unicorn, cavalry_pegasus, celestial_unicorn,
+    crested_sunmare, daybreak_charger, diamond_mare, frontier_seeker, good_fortune_unicorn,
+    guardian_sunmare, inspiring_unicorn, knight_of_grace, lathiel_the_bounteous_dawn,
+    loyal_unicorn, mangara_the_diplomat, mesa_unicorn, miriam_herd_whisperer, nyxborn_unicorn,
+    opaline_unicorn, outcaster_trailblazer, patient_naturalist, pegasus_courser, seraphic_steed,
+    temur_charger, thalia_heretic_cathar, thundering_mightmare, trusted_pegasus, vine_mare,
+    azusas_many_journeys, blessed_sanctuary, buried_in_the_garden, cathars_crusade,
+    reach_for_the_sky, resourceful_defense, betrayal_at_the_vault, charge, crushing_canopy,
+    naturalize, path_to_exile, stroke_of_midnight, swords_to_plowshares, another_round,
+    cultivate, explore, full_steam_ahead, requisition_raid, throw_from_the_saddle,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const HALANA_20_COMMANDERS: &[CardFactory] = &[halana_kessig_ranger, siani_eye_of_the_storm];
+
+/// **Halana, Kessig Ranger and Siani, Eye of the Storm**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 9 Islands = 98.
+/// Halana, Kessig Ranger and Siani, Eye of the Storm (EDHREC, fetched 2026-10-21).
+pub const HALANA_20_MAIN: &[CardFactory] = &[
+    decanter_of_endless_water, dissection_tools, dream_thiefs_bandana, hidden_blade,
+    hunters_bow, pit_trap, sol_ring, the_great_henge, viridian_longbow, alchemists_refuge,
+    argoth_sanctum_of_nature, barkchannel_pathway, botanical_sanctum, command_tower, desert,
+    exotic_orchard, halimar_depths, labyrinth_of_skophos, maze_of_ith,
+    minamo_school_at_waters_edge, mistrise_village, oakhollow_village, reflecting_pool,
+    rimewood_falls, shifting_woodland, temple_of_mystery, urzas_cave, abhorrent_oculus,
+    acidic_slime, aerial_guide, aerie_ouphes, ambush_viper, ancient_bronze_dragon,
+    ancient_silver_dragon, archetype_of_imagination, argent_sphinx, aven_fleetwing,
+    azure_fleet_admiral, clement_the_worrywort, cloud_of_faeries, deadly_recluse,
+    djinn_of_wishes, dragon_sniper, edric_spymaster_of_trest, fang_of_shigeki,
+    freestrider_lookout, goliath_sphinx, high_fae_trickster, hoarding_recluse, hornet_queen,
+    hydroelectric_specimen, moss_viper, needlethorn_drake, nightshade_dryad, oakhame_adversary,
+    regal_behemoth, saryth_the_vipers_fang, skyserpent_seeker, tangled_florahedron,
+    tomb_of_horrors_adventurer, tower_winder, umara_wizard, undermountain_adventurer, aluren,
+    leyline_of_anticipation, absorb_identity, aetherize, beyeen_veil, gift_of_the_viper,
+    silundi_vision, consuming_tide, covenant_of_minds, crashing_footfalls, creeping_corrosion,
+    farseek, wear_down,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, island, island, island, island, island, island, island, island, island,
+];
+
+pub const THE_FIFTH_DOCTOR_11_COMMANDERS: &[CardFactory] = &[the_fifth_doctor, amy_pond];
+
+/// **The Fifth Doctor and Amy Pond**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 4 Islands + 3 Mountains + 5 Plains = 98.
+/// The Fifth Doctor and Amy Pond (EDHREC, fetched 2026-10-21).
+pub const THE_FIFTH_DOCTOR_11_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, lotus_bloom, mox_tantalite, sol_ring,
+    the_millennium_calendar, the_regalia, the_seriema, wedding_ring, adagia_windswept_bastion,
+    arid_mesa, cascade_bluffs, command_tower, elegant_parlor, flooded_strand, floodfarm_verge,
+    hallowed_fountain, inspiring_vantage, kor_haven, maze_of_ith, meticulous_archive,
+    multiversal_passage, raugrin_triome, reliquary_tower, sacred_foundry, scalding_tarn,
+    seachrome_coast, spirebluff_canal, steam_vents, thundering_falls, breathkeeper_seraph,
+    chakram_retriever, chakram_slinger, crystal_barricade, deep_sea_kraken, drannith_magistrate,
+    epochrasite, gandalf_of_the_secret_fire, grand_arbiter_augustin_iv, impetuous_protege,
+    imposing_sovereign, ith_high_arcanist, jhoiras_timebug, kami_of_false_hope,
+    mangara_the_diplomat, okaun_eye_of_chaos, proud_mentor, rhoda_geist_avenger, rift_elemental,
+    rory_williams, silverblade_paladin, sinister_concierge, sokrates_athenian_teacher,
+    star_whale, taigam_master_opportunist, the_eleventh_doctor, the_face_of_boe,
+    the_tenth_doctor, time_beetle, timin_youthful_geist, wingcrafter, zndrsplt_eye_of_wisdom,
+    authority_of_the_consuls, blind_obedience, mark_of_asylum, prosperous_partnership,
+    rhystic_study, smothering_tithe, wedding_announcement, clockspinning, dawn_charm,
+    fierce_guardianship, holy_day, new_way_forward, suspend, swift_response, will_kenrith,
+    ancestral_vision, dont_move, expropriate, inevitable_betrayal, inspiring_refrain,
+    reality_strobe, split_up, sway_of_the_stars, the_wedding_of_river_song,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, plains, plains, plains,
+    plains, plains,
+];
+
+pub const AKROMA_21_COMMANDERS: &[CardFactory] = &[akroma_vision_of_ixidor, dargo_the_shipwrecker];
+
+/// **Akroma, Vision of Ixidor and Dargo, the Shipwrecker**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Mountains + 11 Plains = 98.
+/// Akroma, Vision of Ixidor and Dargo, the Shipwrecker (EDHREC, fetched 2026-10-21).
+pub const AKROMA_21_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, batterbone, boros_signet, celestial_armor,
+    commanders_sphere, conquerors_galleon, fiendlash, gorgons_head, hard_won_jitte,
+    improvised_arsenal, mithril_coat, nettlecyst, prism_ring, raiders_karve, replicating_ring,
+    ring_of_evos_isle, ring_of_valkas, robe_of_stars, sol_ring, sword_of_fire_and_ice,
+    talisman_of_conviction, the_one_ring, thran_power_suit, wayfarers_bauble, wedding_ring,
+    bloodstained_mire, clifftop_retreat, command_tower, evolving_wilds, flooded_strand,
+    furycalm_snarl, kavaron_memorial_world, lupinflower_village, prismatic_vista,
+    radiant_summit, sacred_foundry, spectator_seating, sundown_pass, terramorphic_expanse,
+    vibrant_cityscape, alexios_deimos_of_kosmos, archetype_of_courage, captain_lannery_storm,
+    charging_monstrosaur, charging_tuskodon, elturel_survivors, highspire_mantis,
+    krenkos_buzzcrusher, puresteel_paladin, purphoros_god_of_the_forge, quaketusk_boar,
+    raph_and_leo_sibling_rivals, scampering_surveyor, solemn_simulacrum, stampede_rider,
+    energy_storm, flowering_field, flowering_of_the_white_tree, storm_world,
+    the_cave_of_two_lovers, boros_charm, courageous_resolve, disenchant, lightning_bolt,
+    orims_thunder, sandbenders_storm, thrill_of_possibility, true_loves_kiss, blasphemous_act,
+    cathartic_reunion, fumigate, shatterstorm, storm_of_memories, storm_of_souls,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

@@ -28698,6 +28698,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIVAAN_11_COMMANDERS,
             main: decks::LIVAAN_11_MAIN,
         },
+        // Seat 4708: Amber Gristle O'Maul and Street Urchin's EDHREC average deck. `--pod-decks 4708`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Street Urchin (R)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_12_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_12_MAIN,
+        },
+        // Seat 4709: Halana, Kessig Ranger and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 4709`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Keleth, Sunmane Familiar (WG)",
+            commanders: decks::HALANA_19_COMMANDERS,
+            main: decks::HALANA_19_MAIN,
+        },
+        // Seat 4710: Halana, Kessig Ranger and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4710`.
+        PodDeck {
+            name: "Halana, Kessig Ranger and Siani, Eye of the Storm (UG)",
+            commanders: decks::HALANA_20_COMMANDERS,
+            main: decks::HALANA_20_MAIN,
+        },
+        // Seat 4711: The Fifth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4711`.
+        PodDeck {
+            name: "The Fifth Doctor and Amy Pond (WUR)",
+            commanders: decks::THE_FIFTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_11_MAIN,
+        },
+        // Seat 4712: Akroma, Vision of Ixidor and Dargo, the Shipwrecker's EDHREC average deck. `--pod-decks 4712`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Dargo, the Shipwrecker (WR)",
+            commanders: decks::AKROMA_21_COMMANDERS,
+            main: decks::AKROMA_21_MAIN,
+        },
     ]
 }
 
@@ -35306,6 +35336,11 @@ mod tests {
             ("Glacian, Powerstone Engineer and Kraum, Ludevic's Opus", &[0x1C77]),
             ("Erinis, Gloom Stalker and Hardy Outlander", &[0x1C78]),
             ("Livaan, Cultist of Tiamat and Popular Entertainer", &[0x1C79]),
+            ("Amber Gristle O'Maul and Street Urchin", &[0x1C7A]),
+            ("Halana, Kessig Ranger and Keleth, Sunmane Familiar", &[0x1C7B]),
+            ("Halana, Kessig Ranger and Siani, Eye of the Storm", &[0x1C7C]),
+            ("The Fifth Doctor and Amy Pond", &[0x1C7D]),
+            ("Akroma, Vision of Ixidor and Dargo, the Shipwrecker", &[0x1C7E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
