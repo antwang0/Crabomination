@@ -814,3 +814,50 @@ fn end_blaze_epiphany_impulses_by_the_dead_creatures_power() {
     let granted = g.exile.iter().filter(|c| c.may_play_until.is_some_and(|m| m.player == 0)).count();
     assert_eq!(granted, 1, "one chosen to play");
 }
+
+/// Fallaji Excavation makes three tapped Powerstones and gains 3 life.
+#[test]
+fn fallaji_excavation_makes_tapped_powerstones() {
+    let mut g = pod(2);
+    let fe = g.add_card_to_hand(0, catalog::fallaji_excavation());
+    let life = g.players[0].life;
+    cast(&mut g, fe, None);
+    let stones: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Powerstone").collect();
+    assert_eq!(stones.len(), 3);
+    assert!(stones.iter().all(|c| c.tapped));
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Festering Newt's death shrinks an opposing creature by -1/-1.
+#[test]
+fn festering_newt_shrinks_an_opposing_creature() {
+    let mut g = pod(2);
+    let newt = g.add_card_to_battlefield(0, catalog::festering_newt());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let evs = g
+        .resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &EffectContext::for_spell(1, Some(Target::Permanent(newt)), 1, 0))
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 1);
+}
+
+/// Silver Scrutiny is an instant-speed draw at X ≤ 3 and a sorcery above.
+#[test]
+fn silver_scrutiny_has_flash_only_at_small_x() {
+    let mut g = pod(2);
+    g.active_player_idx = 1;
+    let big = g.add_card_to_hand(0, catalog::silver_scrutiny());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: big, target: None, additional_targets: vec![], mode: None, x_value: Some(4) }).is_err(),
+        "X = 4 on an opponent's turn is a sorcery"
+    );
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: big, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("X = 2 at instant speed");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
+}
+

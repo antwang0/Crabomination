@@ -1337,3 +1337,64 @@ pub fn end_blaze_epiphany() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fallaji Excavation — {3}{G}{G} sorcery. Create three tapped Powerstone
+/// tokens. You gain 3 life.
+pub fn fallaji_excavation() -> CardDefinition {
+    let powerstone = TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() };
+    CardDefinition {
+        name: "Fallaji Excavation",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: Arc::new(powerstone) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Festering Newt — {B} 1/1 Salamander. When it dies, target creature an
+/// opponent controls gets -1/-1 until end of turn, or -4/-4 if you control a
+/// creature named Bogbrew Witch.
+pub fn festering_newt() -> CardDefinition {
+    let shrink = |n: i32| Effect::PumpPT {
+        what: Selector::Target(0),
+        power: Value::Const(-n),
+        toughness: Value::Const(-n),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 1,
+                filter: R::Creature.and(R::ControlledByOpponent),
+                effect: Box::new(Effect::If {
+                    cond: Predicate::SelectorExists(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::HasName("Bogbrew Witch".into())),
+                    )),
+                    then: Box::new(shrink(4)),
+                    else_: Box::new(shrink(1)),
+                }),
+            },
+        ]))],
+        ..creature("Festering Newt", cost(&[b()]), vec![CreatureType::Salamander], 1, 1)
+    }
+}
+
+/// Silver Scrutiny — {X}{U}{U} sorcery; it may be cast as though it had
+/// flash if X is 3 or less. Draw X cards.
+pub fn silver_scrutiny() -> CardDefinition {
+    CardDefinition {
+        name: "Silver Scrutiny",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast this spell as though it had flash if X is 3 or less.",
+            effect: StaticEffect::SelfFlashIf { condition: Predicate::ValueAtMost(Value::XFromCost, Value::Const(3)) },
+        }],
+        effect: Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ..Default::default()
+    }
+}
