@@ -5220,6 +5220,9 @@ impl GameState {
             if !me.attacked_players_this_turn.is_empty() {
                 me.attacked_players_this_turn.clear();
             }
+            if !me.attacked_walkers_of_this_turn.is_empty() {
+                me.attacked_walkers_of_this_turn.clear();
+            }
             // "Until your next turn" player grants expire at their owner's untap
             // (Blossoming Calm's hexproof).
             me.hexproof_until_next_turn = false;
@@ -6043,6 +6046,7 @@ impl GameState {
         }
         clear_cold!(self.emerged_this_turn);
         clear_cold!(self.cant_attack_pw_type_this_turn);
+        clear_cold!(self.cant_attack_walkers_this_turn);
         self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
@@ -6122,6 +6126,9 @@ impl GameState {
                     }
                     if !self.players[s].attacked_players_this_turn.is_empty() {
                         self.players[s].attacked_players_this_turn.clear();
+                    }
+                    if !self.players[s].attacked_walkers_of_this_turn.is_empty() {
+                        self.players[s].attacked_walkers_of_this_turn.clear();
                     }
                 }
                 self.turn_number += 1;

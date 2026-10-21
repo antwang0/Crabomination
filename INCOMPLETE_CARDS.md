@@ -2133,7 +2133,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
 | 🟡 Press the Enemy | the spell / permanent choice is offered as two modes | one slot cannot hold either a spell or a permanent |
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
-| 🟡 Altar of the Wretched // Wretched Bonemass | crafts with exactly one creature (not "one or more"); the Bonemass doesn't gain the exiled cards' flying/first strike/… keywords | the craft cost exiles a single card; no "has each keyword among exiled cards" static |
+| 🟡 Altar of the Wretched // Wretched Bonemass | the Bonemass doesn't gain the exiled cards' flying/first strike/… keywords | no "has each keyword among exiled cards" static |
 | 🟡 Hand of Vecna | the pump goes only to the equipped creature; the "or a creature you control named Vecna" choice is missing | the trigger targets `AttachedTo` only |
 | 🟡 Game of Chaos | whoever wins a flip decides to flip again by the auto policy (`AnyPlayerMayAccept`); the stakes cap at 2^16 | `Effect::GameOfChaosRound` |
 | 🟡 Azra Oddsmaker | "choose a creature" is a target among your own creatures, picked as the trigger goes on the stack (before the discard) | `TargetPlayerThen { filter: mine() }` around `MayDiscard` |

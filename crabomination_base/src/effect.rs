@@ -3625,6 +3625,10 @@ pub enum ManaPayload {
     /// "For each color among monocolored permanents you control, add one mana
     /// of that color" (Tarnation Vista): Vivid's set over monocolored ones.
     OneOfEachColorAmongYourMonocoloredPermanents,
+    /// "For each color among the exiled cards used to craft this creature,
+    /// add one mana of that color" (Sunbird Effigy): Vivid's shape over the
+    /// cards exiled with the source.
+    OneOfEachColorAmongExiledWithSource,
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,
@@ -6078,6 +6082,10 @@ pub enum Effect {
     /// them" (Thoughtpicker Witch). The rest stay on top in their original
     /// order; the auto picker exiles the highest-mana-value card.
     LookTopExileOneOfN { who: PlayerRef, count: Value },
+    /// "For each player, choose a [`keep`] that player controls. Then destroy
+    /// all [`of`] except those chosen" (Unstable Glyphbridge) — the
+    /// controller makes every pick.
+    ChooseOnePerPlayerDestroyRest { keep: SelectionRequirement, of: SelectionRequirement },
     /// "Each player chooses any number of creatures they control with total
     /// power `max_power` or less, then sacrifices all other creatures they
     /// control" (Destined Confrontation).
@@ -14598,6 +14606,10 @@ pub enum Effect {
     /// "Creatures `who` controls can't attack `defender` this turn"
     /// (Web of Inertia's punishment half). Cleared at cleanup.
     CantAttackPlayerThisTurn { who: PlayerRef, defender: PlayerRef },
+    /// "`who` can't attack `defender` or planeswalkers `defender` controls
+    /// this turn" (Sandswirl Wanderglyph) — a player-level ban (CR 508.1)
+    /// covering every creature `who` controls; cleared at cleanup.
+    CantAttackPlayerOrWalkersThisTurn { who: PlayerRef, defender: PlayerRef },
     /// "`who` can't attack you or permanents you control during their next
     /// turn" (The Second Doctor) — a player-level ban (CR 508.1), so a
     /// creature they get later is barred too.

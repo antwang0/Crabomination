@@ -3363,6 +3363,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         // about the count, not about the choice.
         | ManaPayload::OneOfEachColorAmongYourPermanents
         | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents
+        | ManaPayload::OneOfEachColorAmongExiledWithSource
         | ManaPayload::DraftNotedColorOfSource => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
@@ -5116,6 +5117,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         | ManaPayload::AnyColorAmongYourPermanents
         | ManaPayload::OneOfEachColorAmongYourPermanents
         | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents
+        | ManaPayload::OneOfEachColorAmongExiledWithSource
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces => ColorSet::empty(),
         // Devotion-scaled: it can make `color`, but only the controller
@@ -23276,6 +23278,27 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();
+            // "Craft with one or more [filter]" is count 0: every matching
+            // card in the graveyard (the most a P/T or colour CDA can read —
+            // Wretched Bonemass, Sunbird Effigy), else one permanent, a
+            // nonland one when there is any.
+            let count = if count == 0 {
+                if gy.is_empty() && bf.is_empty() {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                if gy.is_empty() {
+                    let nonland: Vec<CardId> =
+                        bf.iter().copied().filter(|id| self.battlefield_find(*id).is_some_and(|c| !c.definition.is_land())).collect();
+                    if !nonland.is_empty() {
+                        bf = nonland;
+                    }
+                    1
+                } else {
+                    gy.len()
+                }
+            } else {
+                count
+            };
             if gy.len() + bf.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }

@@ -1,7 +1,8 @@
 //! "Each player chooses a [filter] permanent they control, then sacrifices
 //! (or: destroy) the rest" — Single Combat, Divine Reckoning, Deadly Vanity —
 //! and its one-per-card-type sibling (Cataclysmic Gearhulk, Cataclysm, Tragic
-//! Arrogance).
+//! Arrogance) — and Unstable Glyphbridge's "for each player, [you] choose a
+//! creature with power 2 or less that player controls; destroy the rest".
 
 use crate::card::{CardId, SelectionRequirement};
 use crate::decision::PickValue;
@@ -349,6 +350,68 @@ impl GameState {
         self.clear_answer_log();
         for (p, id) in doomed {
             self.sacrifice_one(id, p, events);
+        }
+        Ok(())
+    }
+
+    /// `Effect::ChooseOnePerPlayerDestroyRest` — the controller picks, for
+    /// each living player in APNAP order (CR 101.4), one `keep` permanent that
+    /// player controls; then every `of` permanent not picked is destroyed at
+    /// once (CR 608.2c). Headless: its own priciest, an opponent's cheapest.
+    pub(super) fn choose_one_per_player_destroy_rest(
+        &mut self,
+        keep: &SelectionRequirement,
+        of: &SelectionRequirement,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let seats = self.apnap_sort(self.living_seats().collect());
+        let mut cursor = 0;
+        let mut kept: Vec<CardId> = Vec::new();
+        for p in seats {
+            let mine: Vec<(u32, CardId, String)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .filter(|c| self.evaluate_requirement_static(keep, &crate::game::Target::Permanent(c.id), me, ctx.source))
+                .map(|c| (c.definition.cost.cmc(), c.id, c.definition.name.to_string()))
+                .collect();
+            let auto = if p == me {
+                mine.iter().max_by_key(|(mv, id, _)| (*mv, std::cmp::Reverse(*id)))
+            } else {
+                mine.iter().min_by_key(|(mv, id, _)| (*mv, *id))
+            }
+            .map(|(_, id, _)| *id);
+            let Some(auto) = auto else { continue };
+            let Some(picked) = self.ask_seat_cards_logged(
+                &mut cursor,
+                me,
+                format!("Choose the creature seat {p} keeps"),
+                source,
+                mine.iter().map(|(_, id, name)| (*id, name.clone())).collect(),
+                1,
+                1,
+                PickValue::Gain,
+                effect,
+                vec![auto],
+            ) else {
+                return Ok(());
+            };
+            kept.push(picked.first().copied().unwrap_or(auto));
+        }
+        self.clear_answer_log();
+        let doomed: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| !kept.contains(&c.id))
+            .filter(|c| self.evaluate_requirement_static(of, &crate::game::Target::Permanent(c.id), me, ctx.source))
+            .map(|c| c.id)
+            .collect();
+        for id in doomed {
+            self.destroy_permanent(id, false, events);
         }
         Ok(())
     }

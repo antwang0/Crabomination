@@ -12680,6 +12680,10 @@ impl GameState {
                 self.gain_chosen_basic_land_type(what, *duration, ctx)
             }
 
+            Effect::ChooseOnePerPlayerDestroyRest { keep, of } => {
+                self.choose_one_per_player_destroy_rest(keep, of, ctx, events, effect)
+            }
+
             Effect::EachPlayerKeepsCreaturesTotalPower { max_power } => {
                 self.each_player_keeps_creatures_total_power(*max_power, ctx, events, effect)
             }
@@ -14880,6 +14884,15 @@ impl GameState {
                                 color: col,
                                 source: ctx.source,
                             });
+                        }
+                    }
+                    // Sunbird Effigy — one of each colour among the cards
+                    // used to craft it; no choice to make.
+                    ManaPayload::OneOfEachColorAmongExiledWithSource => {
+                        let src = ctx.source.unwrap_or(CardId(0));
+                        for col in self.colors_exiled_with(src).iter() {
+                            self.players[p].mana_pool.add(col, mult);
+                            events.push(GameEvent::ManaAdded { player: p, color: col, source: ctx.source });
                         }
                     }
                     ManaPayload::AnyColorAmongYourPermanents => {
@@ -33167,6 +33180,21 @@ impl GameState {
                 };
                 if !self.cant_attack_player_this_turn.contains(&(a, d)) {
                     self.cant_attack_player_this_turn.push((a, d));
+                }
+                Ok(())
+            }
+
+            Effect::CantAttackPlayerOrWalkersThisTurn { who, defender } => {
+                let (Some(a), Some(d)) =
+                    (self.resolve_player(who, ctx), self.resolve_player(defender, ctx))
+                else {
+                    return Ok(());
+                };
+                if !self.cant_attack_player_this_turn.contains(&(a, d)) {
+                    self.cant_attack_player_this_turn.push((a, d));
+                }
+                if !self.cant_attack_walkers_this_turn.contains(&(a, d)) {
+                    self.cant_attack_walkers_this_turn.push((a, d));
                 }
                 Ok(())
             }

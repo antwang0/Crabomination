@@ -238,8 +238,8 @@ pub fn explore_the_underdark() -> CardDefinition {
 
 /// Altar of the Wretched // Wretched Bonemass — {2}{B} artifact. When it
 /// enters, you may sacrifice a nontoken creature to draw and then mill X (its
-/// power). Craft with a creature {2}{B}{B} (the printed "one or more" crafts
-/// with exactly one; the Bonemass doesn't copy keywords — INCOMPLETE_CARDS).
+/// power). Craft with one or more creatures {2}{B}{B} (the Bonemass doesn't
+/// copy keywords — INCOMPLETE_CARDS).
 /// {2}{B}: return it from your graveyard to your hand. Bonemass: P/T each the
 /// total power of the cards used to craft it.
 pub fn altar_of_the_wretched() -> CardDefinition {
@@ -269,7 +269,7 @@ pub fn altar_of_the_wretched() -> CardDefinition {
             ])),
         })],
         activated_abilities: vec![
-            crate::effect::shortcut::craft(cost(&[generic(2), b(), b()]), R::Creature, 1),
+            crate::effect::shortcut::craft(cost(&[generic(2), b(), b()]), R::Creature, 0),
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), b()]),
                 from_graveyard: true,

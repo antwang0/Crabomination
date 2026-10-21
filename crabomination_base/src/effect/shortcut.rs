@@ -3265,8 +3265,9 @@ pub fn scavenge(cost: crate::mana::ManaCost) -> ActivatedAbility {
 /// [filter] from among permanents you control and/or [filter] cards from your
 /// graveyard: Return this card transformed. Activate only as a sorcery." The
 /// source's exile-and-return-transformed rides `ExileSelfReturnTransformed`;
-/// the additional "exile N other objects" cost rides `craft_exile_cost`. The
-/// front face must carry a `back_face`. LCI cycle.
+/// the additional "exile N other objects" cost rides `craft_exile_cost`; a
+/// `count` of 0 is "craft with one or more". The front face must carry a
+/// `back_face`. LCI cycle.
 pub fn craft(cost: crate::mana::ManaCost, filter: SelectionRequirement, count: u32) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: cost,

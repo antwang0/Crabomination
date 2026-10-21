@@ -979,9 +979,9 @@ fn project_player(
         cannot_gain_life,
         cant_cast_noncreature: player.cant_cast_noncreature_this_turn,
         arbiter_cant_cast: player.attacked_this_turn
-            && state.opponent_has_static(player_seat, |e| {
+            && (state.opponent_has_static(player_seat, |e| {
                 matches!(e, crate::effect::StaticEffect::OpponentsWhoAttackedCantCast)
-            }),
+            }) || state.attacked_you_lock(player_seat)),
         arbiter_cant_attack: player.spells_cast_this_game_turn > 0
             && state.opponent_has_static(player_seat, |e| {
                 matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
@@ -2661,7 +2661,11 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
         parts.push(format!("Tap {n} {}s", requirement_noun(req)));
     }
     if let Some((req, n)) = ability.craft_exile_cost.as_ref() {
-        parts.push(format!("Exile {n} {}(s)", requirement_noun(req)));
+        if *n == 0 {
+            parts.push(format!("Exile one or more {}(s)", requirement_noun(req)));
+        } else {
+            parts.push(format!("Exile {n} {}(s)", requirement_noun(req)));
+        }
     }
     if let Some(n) = ability.craft_exile_sharing_type {
         parts.push(format!("Exile {n} that share a card type"));

@@ -2213,6 +2213,12 @@ pub struct ColdState {
     /// `permanent_cant_be_attacked` for the active player; cleared at cleanup.
     #[serde(default)]
     pub(crate) cant_attack_pw_type_this_turn: Vec<(usize, usize, crate::card::PlaneswalkerSubtype)>,
+    /// "Creatures `.0` controls can't attack planeswalkers `.1` controls this
+    /// turn" — the walker half of `Effect::CantAttackPlayerOrWalkersThisTurn`
+    /// (its player half rides `cant_attack_player_this_turn`). Read by
+    /// `permanent_cant_be_attacked`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) cant_attack_walkers_this_turn: Vec<(usize, usize)>,
     /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
     /// actually take a turn (Mindslaver). A later entry for the same seat
     /// overwrites the earlier one (CR 723.1a).
@@ -5145,6 +5151,18 @@ impl GameState {
         }
     }
 
+    /// The union of printed colors among the cards exiled with `source`
+    /// (`exiled_with` — a craft's "exiled cards used to craft it").
+    pub(crate) fn colors_exiled_with(&self, source: CardId) -> crate::mana::ColorSet {
+        let mut set = crate::mana::ColorSet::empty();
+        for c in self.exile.iter().filter(|c| c.exiled_with == Some(source)) {
+            for col in c.definition.printed_color_set().iter() {
+                set.insert(col);
+            }
+        }
+        set
+    }
+
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         if self.transform_prohibited(id) {
             return;
@@ -5909,7 +5927,7 @@ impl GameState {
                     SE::OpponentsCantCastNoncreatureAboveLandCount => cast_lock::ABOVE_LANDS,
                     SE::MostPermanentsCantPlay => cast_lock::DAMPING,
                     SE::OpponentsWithMoreCantPlayThatType => cast_lock::MORE_THAN_YOU,
-                    SE::OpponentsWhoAttackedCantCast => cast_lock::ATTACKED,
+                    SE::OpponentsWhoAttackedCantCast | SE::OpponentsWhoAttackedYouCantCast => cast_lock::ATTACKED,
                     SE::PlayersActOnlyOnTheirOwnTurn => cast_lock::OWN_TURN_ACT,
                     SE::PlayersCastOnlyOnOwnTurn => cast_lock::OWN_TURN_CAST,
                     SE::OpponentsCantCastDuringYourTurn
@@ -6169,9 +6187,9 @@ impl GameState {
         if is_cast
             && locks & cast_lock::ATTACKED != 0
             && self.players[caster].attacked_this_turn
-            && self.opponent_has_static(caster, |e| {
+            && (self.opponent_has_static(caster, |e| {
                 matches!(e, StaticEffect::OpponentsWhoAttackedCantCast)
-            })
+            }) || self.attacked_you_lock(caster))
         {
             return Some(GameError::SilencedThisTurn);
         }
@@ -17749,6 +17767,10 @@ impl GameState {
                         .fold(0i32, |acc, c| acc.saturating_add(c.definition.power));
                     (pw, pw)
                 }
+                crate::card::DynamicPt::ExiledWithSourceColorCount => {
+                    let n = self.colors_exiled_with(card.id).len() as i32;
+                    (n, n)
+                }
                 crate::card::DynamicPt::ExiledWithSourceTotals => {
                     // Sutured Ghoul — the pile exiled as it entered.
                     let (mut pw, mut tf) = (0, 0);
@@ -21252,6 +21274,24 @@ impl GameState {
     /// True when some opponent of `seat` controls a battlefield permanent with
     /// a static matching `pred`. The shared shape behind the "an opponent
     /// controls X, so you can't Y" locks.
+    /// Sandswirl Wanderglyph — `caster` attacked this static's controller or
+    /// a planeswalker they control this turn (only the active player has
+    /// attacked this turn), so it can't cast spells.
+    pub(crate) fn attacked_you_lock(&self, caster: usize) -> bool {
+        let pl = &self.players[caster];
+        caster == self.active_player_idx
+            && self.battlefield.iter().any(|c| {
+                !c.definition.static_abilities.is_empty()
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::OpponentsWhoAttackedYouCantCast))
+                    && !self.same_team(c.controller, caster)
+                    && (pl.attacked_players_this_turn.contains(&c.controller)
+                        || pl.attacked_walkers_of_this_turn.contains(&c.controller))
+            })
+    }
+
     pub fn opponent_has_static(
         &self,
         seat: usize,
@@ -35765,6 +35805,7 @@ fn static_effect_to_effects(
             | StaticEffect::YourTriggersCantRemoveYourCreatureTokens
             | StaticEffect::LibraryTopCastGainsHaste { .. }
             | StaticEffect::OpponentsWhoAttackedCantCast
+            | StaticEffect::OpponentsWhoAttackedYouCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered
             | StaticEffect::SpellsCantBeCounteredMatching { .. }

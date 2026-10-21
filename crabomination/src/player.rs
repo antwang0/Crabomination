@@ -457,6 +457,12 @@ pub struct PlayerCold {
     /// turn boundary clears the grant.
     #[serde(default)]
     pub rad_per_cast_their_turn: bool,
+    /// The players whose planeswalkers this player attacked during their most
+    /// recent turn — `attacked_players_this_turn`'s walker half, cleared with
+    /// it (Sandswirl Wanderglyph's "attacked you or a planeswalker you
+    /// control this turn").
+    #[serde(default)]
+    pub attacked_walkers_of_this_turn: Vec<usize>,
 }
 
 /// A seat's mutable state. Reached only through [`Player`], which owns it

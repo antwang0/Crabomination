@@ -4347,8 +4347,9 @@ pub enum SelectionRequirement {
     /// gate. Works on stack spells and battlefield permanents alike (both
     /// carry a `controller`).
     ManaValueAtMostControllerGraveyard,
-    /// True when the candidate has a back-face `CardDefinition` —
-    /// i.e. it's a double-faced card (MDFC).
+    /// A double-faced card (CR 712.1): one carrying a back-face
+    /// `CardDefinition`, or a permanent showing its back face (transformed —
+    /// Tetzin's "double-faced artifact", The Golden-Gear Colossus's target).
     HasBackFace,
     /// True when the candidate is a preparation card — a creature
     /// carrying an inset prepare spell (`prepare_spell.is_some()`).
@@ -7531,6 +7532,9 @@ pub enum DynamicPt {
     /// Power = toughness = the mana value of the card exiled with this
     /// permanent; 0 with none (Living Lore).
     ExiledWithSourceManaValue,
+    /// Power = toughness = the number of colors among the cards exiled with
+    /// this permanent (Sunbird Effigy — "the exiled cards used to craft it").
+    ExiledWithSourceColorCount,
     /// Power = the greatest mana value among the controller's noncreature
     /// permanents and the noncreature cards in their graveyard (Dragon Man,
     /// Reformed Robot); toughness fixed.

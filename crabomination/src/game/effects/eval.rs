@@ -7289,7 +7289,7 @@ impl GameState {
                         let count = self.players[card.controller].graveyard_card_count() as u32;
                         card.definition.cost.cmc() <= count
                     }
-                    R::HasBackFace => card.definition.back_face.is_some(),
+                    R::HasBackFace => card.definition.back_face.is_some() || card.front_face.is_some(),
                     R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
                     R::NameDiffersFromLastMoved => !self.scratch.last_moved_cards.iter().any(|id| {
                         self.find_card_anywhere(*id)

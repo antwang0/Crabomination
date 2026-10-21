@@ -2268,6 +2268,12 @@ impl GameState {
             {
                 self.players[d].attacked_by_assassins_of |= 1u64 << p;
             }
+            if let AttackTarget::Planeswalker(pw) = atk.target
+                && let Some(d) = self.battlefield_find(pw).map(|c| c.controller)
+                && !self.players[p].attacked_walkers_of_this_turn.contains(&d)
+            {
+                self.players[p].attacked_walkers_of_this_turn.push(d);
+            }
             let card = self
                 .battlefield
                 .iter_mut()
@@ -5583,6 +5589,12 @@ impl GameState {
         if self.players.get(self.active_player_idx).is_some_and(|p| !p.next_turn_attack_bans.is_empty())
             && let Some(c) = self.battlefield_find(id)
             && self.next_turn_attack_banned(self.active_player_idx, c.controller)
+        {
+            return true;
+        }
+        if !self.cant_attack_walkers_this_turn.is_empty()
+            && let Some(pw) = self.battlefield_find(id)
+            && self.cant_attack_walkers_this_turn.contains(&(self.active_player_idx, pw.controller))
         {
             return true;
         }

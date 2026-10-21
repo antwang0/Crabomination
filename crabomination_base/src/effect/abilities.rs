@@ -388,6 +388,11 @@ pub enum StaticEffect {
     /// can't cast spells." Gated at the cast dispatch off the caster's
     /// `Player.attacked_this_turn`.
     OpponentsWhoAttackedCantCast,
+    /// Sandswirl Wanderglyph — "Each opponent who attacked you or a
+    /// planeswalker you control this turn can't cast spells." The same cast
+    /// gate, keyed on whom they attacked (`attacked_players_this_turn` /
+    /// `attacked_walkers_of_this_turn`).
+    OpponentsWhoAttackedYouCantCast,
     /// Lavinia, Azorius Renegade — "Each opponent can't cast noncreature spells
     /// with mana value greater than the number of lands that player controls."
     /// Gated at the cast dispatch against the caster's live land count.
@@ -5260,7 +5265,8 @@ pub struct ActivatedAbility {
     /// returns it transformed). Activate only as a sorcery
     /// (`sorcery_speed: true`). The auto-picker exiles graveyard cards
     /// first, then the lowest-power battlefield permanents, so higher-value
-    /// board pieces stay put. Defaults to None.
+    /// board pieces stay put. A count of 0 is "craft with one or more": every
+    /// matching graveyard card, else one permanent. Defaults to None.
     #[serde(default)]
     pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
     /// CR 702.167a — "Craft with a Dinosaur, a Merfolk, a Pirate, and a

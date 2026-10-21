@@ -1039,6 +1039,7 @@ impl Effect {
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
             | Effect::EachPlayerKeepsNSacrificesRest { .. }
             | Effect::EachPlayerKeepsCreaturesTotalPower { .. }
+            | Effect::ChooseOnePerPlayerDestroyRest { .. }
             | Effect::EachPlayerReturnsAMatchingPermanent { .. }
             | Effect::RemoveAllCountersFromAnyNumber { .. }
             | Effect::DealDamageToEachPlayerPerPermanent { .. }
@@ -1154,6 +1155,7 @@ impl Effect {
             | Effect::LoseAllButLifeRemembered { who, .. }
             | Effect::UntapChosenPerCardInGraveyard { who } => player_has_target(who),
             Effect::CantAttackPlayerThisTurn { who, defender }
+            | Effect::CantAttackPlayerOrWalkersThisTurn { who, defender }
             | Effect::CantAttackPlaneswalkerTypeThisTurn { who, defender, .. } => {
                 player_has_target(who) || player_has_target(defender)
             }
@@ -2029,7 +2031,8 @@ impl Effect {
                     | ManaPayload::AnyColorAmongExiledWithSource
                     | ManaPayload::AnyColorAmongYourPermanents
                     | ManaPayload::OneOfEachColorAmongYourPermanents
-                    | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents => false,
+                    | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents
+                    | ManaPayload::OneOfEachColorAmongExiledWithSource => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)
