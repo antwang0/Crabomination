@@ -18347,6 +18347,9 @@ static DECKS: &[Factory] = &[
     super::decks::enshrouding_mist,
     super::decks::cyclical_evolution,
     super::decks::domri_chaos_bringer,
+    // cmdr_01jy_a (session 01Jywzky)
+    super::decks::burnout,
+    super::decks::mana_short,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,
