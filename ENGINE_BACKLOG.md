@@ -245,6 +245,8 @@ the handoff.
     `AnyPlayer` `DealsDamage` listeners gated on `dealer_filter` (the permanent path's Phase 1.6 binds the dealer
     as `TriggerSource`, so `ControllerOf(TriggerSource)` + `TriggerEventAmount` is the whole body). (`Not(Human)`
     passes on the unfindable spell by accident, which is why Repel the Abominable never showed it.)
+- **CLAIMED (`01KPxZ3H`, 2026-10-21, sixth batch) — don't duplicate:** Lae'zel + Haunted One's two (Blood-Chin
+  Fanatic, Chief of the Scale); Amber Gristle O'Maul + Flaming Fist's two (Fearless Skald, Chandra's Outrage).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
