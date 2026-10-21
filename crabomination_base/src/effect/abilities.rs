@@ -5265,6 +5265,12 @@ pub struct ActivatedAbility {
     /// like `craft_exile_cost`'s picks. Empty for every other ability.
     #[serde(default)]
     pub craft_exile_each: Vec<SelectionRequirement>,
+    /// CR 702.167a — "Craft with two that share a card type" (Eye of Ojer
+    /// Taq): this many objects sharing a card type, from among other
+    /// permanents you control and/or cards in your graveyard
+    /// (`game/craft_each.rs`), paid and linked like `craft_exile_cost`'s.
+    #[serde(default)]
+    pub craft_exile_sharing_type: Option<u32>,
     /// CR 701.67 — Waterbend N as part of this ability's cost ("Waterbend {N}:
     /// …"). The N generic lives in `mana_cost`; this flag marks the ability so
     /// activation accepts waterbend helpers (tap an untapped artifact/creature

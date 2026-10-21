@@ -1023,6 +1023,8 @@ impl Effect {
             | Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { .. }
             | Effect::RollDiceSetBasePt { .. }
             | Effect::BinExiledWithSourceNamedLike { .. }
+            | Effect::ChooseCardTypeSharedByExiledWithSource
+            | Effect::NextSpellOfSourceChosenTypeFreeThisTurn
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

@@ -5538,6 +5538,7 @@ impl GameState {
                 pl.pending_is_discounts.clear();
                 pl.pending_spell_discounts.clear();
                 pl.next_matching_spell_discounts.clear();
+                pl.free_next_spell_types.clear();
                 pl.pending_affinity_next_spell.clear();
                 pl.pending_affinity_next_noncreature.clear();
             }

@@ -11706,6 +11706,10 @@ impl GameState {
             // or library cast (Gisa and Geralf) hops through this path. {0}
             // is never worse, so it is taken (CR 118.9).
             crate::mana::ManaCost::default()
+        } else if self.free_next_spell_type(p, &card).is_some() {
+            // Apex Observatory's grant — taken for the same reason, and spent
+            // by the cast below.
+            crate::mana::ManaCost::default()
         } else {
             match (bestow, card.definition.has_bestow()) {
                 (true, Some(bc)) => bc.clone(),
@@ -13432,6 +13436,9 @@ impl GameState {
             }
         }
         self.consume_next_matching_spell_discounts(p, face.as_ref().unwrap_or(&card));
+        if let Some(i) = self.free_next_spell_type(p, face.as_ref().unwrap_or(&card)) {
+            self.players[p].free_next_spell_types.remove(i);
+        }
         self.spells_cast_this_turn += 1;
         if card.cast_from_graveyard && !self.players[p].used_graveyard_this_turn {
             self.players[p].used_graveyard_this_turn = true;
@@ -23283,6 +23290,8 @@ impl GameState {
         } else if !ability.craft_exile_each.is_empty() {
             self.craft_each_picks(p, card_id, &ability.craft_exile_each)
                 .ok_or(GameError::SelectionRequirementViolated)?
+        } else if let Some(n) = ability.craft_exile_sharing_type {
+            self.craft_sharing_type_picks(p, card_id, n).ok_or(GameError::SelectionRequirementViolated)?
         } else {
             Vec::new()
         };

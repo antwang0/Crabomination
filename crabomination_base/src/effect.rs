@@ -9682,6 +9682,15 @@ pub enum Effect {
     /// `ChooseCardTypeForSource` over a printed list, in printed order (Cloud
     /// Key's "artifact, creature, enchantment, instant, or sorcery").
     ChooseCardTypeFromForSource { options: Vec<crate::card::CardType> },
+    /// `ChooseCardTypeForSource` over the card types shared by two or more
+    /// cards exiled with the source — "a card type shared among two exiled
+    /// cards used to craft it" (Apex Observatory, CR 702.167c).
+    ChooseCardTypeSharedByExiledWithSource,
+    /// "The next spell you cast this turn of the chosen type can be cast
+    /// without paying its mana cost" (Apex Observatory): the source's
+    /// `chosen_card_type` is granted to its controller until a matching cast
+    /// spends it or the turn ends.
+    NextSpellOfSourceChosenTypeFreeThisTurn,
     /// Lonis's steal: target opponent reveals the top `count` cards of their
     /// library; you may put a nonland permanent card with mana value at most
     /// `max_mv` from among them onto the battlefield under your control; the

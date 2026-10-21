@@ -2663,6 +2663,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some((req, n)) = ability.craft_exile_cost.as_ref() {
         parts.push(format!("Exile {n} {}(s)", requirement_noun(req)));
     }
+    if let Some(n) = ability.craft_exile_sharing_type {
+        parts.push(format!("Exile {n} that share a card type"));
+    }
     if !ability.craft_exile_each.is_empty() {
         let each: Vec<&str> = ability.craft_exile_each.iter().map(requirement_noun).collect();
         parts.push(format!("Exile a {}", each.join(", a ")));

@@ -37,3 +37,14 @@ impl GameState {
         self.players[seat].next_matching_spell_discounts.retain(|_| keep.next().unwrap_or(true));
     }
 }
+
+impl GameState {
+    /// The index of `seat`'s Apex Observatory grant that `card` spends, if any.
+    pub(crate) fn free_next_spell_type(&self, seat: usize, card: &CardInstance) -> Option<usize> {
+        let grants = &self.players.get(seat)?.free_next_spell_types;
+        if grants.is_empty() {
+            return None;
+        }
+        grants.iter().position(|t| card.definition.card_types.contains(t))
+    }
+}

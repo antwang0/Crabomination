@@ -7065,7 +7065,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseCardTypeForSource | Effect::ChooseCardTypeFromForSource { .. } => {
+            Effect::ChooseCardTypeForSource
+            | Effect::ChooseCardTypeFromForSource { .. }
+            | Effect::ChooseCardTypeSharedByExiledWithSource => {
                 use crate::card::CardType;
                 let Some(source) = ctx.source else { return Ok(()) };
                 const ALL: [CardType; 7] = [
@@ -7077,8 +7079,34 @@ impl GameState {
                     CardType::Planeswalker,
                     CardType::Land,
                 ];
+                // CR 702.167c — Apex Observatory's types shared by two of the
+                // cards used to craft it.
+                let shared: Vec<CardType> = if matches!(effect, Effect::ChooseCardTypeSharedByExiledWithSource) {
+                    let crafted: Vec<&[CardType]> = self
+                        .exile
+                        .iter()
+                        .filter(|c| c.exiled_with == Some(source))
+                        .map(|c| c.definition.card_types.as_slice())
+                        .collect();
+                    let mut ts: Vec<CardType> = ALL
+                        .iter()
+                        .chain(std::iter::once(&CardType::Battle))
+                        .filter(|t| crafted.iter().filter(|ts| ts.contains(t)).count() >= 2)
+                        .cloned()
+                        .collect();
+                    if ts.is_empty() {
+                        return Ok(());
+                    }
+                    // Headless: the type most of the controller's hand shares.
+                    let hand = &self.players[ctx.controller].hand;
+                    ts.sort_by_key(|t| std::cmp::Reverse(hand.iter().filter(|c| c.definition.card_types.contains(t)).count()));
+                    ts
+                } else {
+                    Vec::new()
+                };
                 let options: &[CardType] = match effect {
                     Effect::ChooseCardTypeFromForSource { options } if !options.is_empty() => options,
+                    Effect::ChooseCardTypeSharedByExiledWithSource => &shared,
                     _ => &ALL,
                 };
                 let texts = options.iter().map(|t| format!("{t:?}")).collect();
@@ -24753,6 +24781,13 @@ impl GameState {
                 self.each_player_keeps_from_hand_shuffles_rest(*keep, effect, ctx, events)
             }
             Effect::RollDiceSetBasePt { sides } => self.roll_dice_set_base_pt(*sides, ctx, events),
+            Effect::NextSpellOfSourceChosenTypeFreeThisTurn => {
+                let chosen = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.chosen_card_type.clone());
+                if let (Some(t), Some(pl)) = (chosen, self.players.get_mut(ctx.controller)) {
+                    pl.free_next_spell_types.push(t);
+                }
+                Ok(())
+            }
             Effect::BinExiledWithSourceNamedLike { what } => {
                 self.bin_exiled_with_source_named_like(what, ctx, events);
                 Ok(())
