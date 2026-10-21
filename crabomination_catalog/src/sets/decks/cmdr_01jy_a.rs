@@ -6,7 +6,9 @@ use crate::card::{
     Keyword, LandType, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{draw, etb, on_attack, partner_with_search, pump_target, target_filtered};
-use crate::effect::{DelayedTriggerKind, Duration, Effect, LookPick, PlayerRef, Predicate, Selector, Value, ZoneDest};
+use crate::effect::{
+    DelayedTriggerKind, Duration, Effect, LibraryPosition, LookPick, PlayerRef, Predicate, Selector, Value, ZoneDest,
+};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
 use std::sync::Arc;
 
@@ -803,5 +805,192 @@ pub fn clay_champion() -> CardDefinition {
             }),
         })],
         ..creature("Clay Champion", cost(&[crate::mana::x(), generic(4)]), vec![CreatureType::Construct], 2, 2)
+    }
+}
+
+fn loyalty(loyalty_cost: i32, effect: Effect) -> LoyaltyAbility {
+    LoyaltyAbility { loyalty_cost, effect, ..Default::default() }
+}
+
+/// Vigorbloom Vanguard // Seed Suture — {1}{G/W} 2/2 Troll Druid that enters
+/// prepared; each creature you control with a +1/+1 counter has vigilance.
+/// Seed Suture ({G/W} sorcery): a +1/+1 counter on target creature, gain 1.
+pub fn vigorbloom_vanguard() -> CardDefinition {
+    let gw = || hybrid(Color::Green, Color::White);
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        prepare_spell: Some(Arc::new(CardDefinition {
+            name: "Seed Suture",
+            cost: cost(&[gw()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        })),
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with a +1/+1 counter on it has vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        ..creature("Vigorbloom Vanguard", cost(&[generic(1), gw()]), vec![CreatureType::Troll, CreatureType::Druid], 2, 2)
+    }
+}
+
+/// Ajani, Valiant Protector — {4}{G}{W} planeswalker, loyalty 4. +2: two +1/+1
+/// counters on up to one target creature. +1: reveal until a creature card, put
+/// it into your hand, the rest on the bottom at random. −11: X +1/+1 counters on
+/// target creature (X your life total); it gains trample until end of turn.
+pub fn ajani_valiant_protector() -> CardDefinition {
+    CardDefinition {
+        name: "Ajani, Valiant Protector",
+        cost: cost(&[generic(4), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            loyalty(
+                2,
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    }),
+                },
+            ),
+            loyalty(
+                1,
+                Effect::RevealUntilNFound {
+                    who: PlayerRef::You,
+                    find: R::Creature,
+                    count: Value::ONE,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ),
+            loyalty(
+                -11,
+                Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(R::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::LifeOf(PlayerRef::You),
+                    },
+                    grant_each(Selector::Target(0), Keyword::Trample),
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dovin Baan — {2}{W}{U} planeswalker, loyalty 3. +1: until your next turn,
+/// up to one target creature gets −3/−0 and its activated abilities can't be
+/// activated. −1: gain 2 life, draw a card. −7: an emblem — your opponents
+/// can't untap more than two permanents during their untap steps.
+pub fn dovin_baan() -> CardDefinition {
+    let lock = Effect::Seq(vec![
+        Effect::PumpPT {
+            what: Selector::Target(0),
+            power: Value::Const(-3),
+            toughness: Value::Const(0),
+            duration: Duration::UntilNextTurn,
+        },
+        Effect::GrantKeyword {
+            what: Selector::Target(0),
+            keyword: Keyword::CantActivateAbilities,
+            duration: Duration::UntilNextTurn,
+        },
+    ]);
+    CardDefinition {
+        name: "Dovin Baan",
+        cost: cost(&[generic(2), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Dovin], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            loyalty(1, Effect::ApplyToTargets { max_targets: 1, min_targets: 0, filter: R::Creature, effect: Box::new(lock) }),
+            loyalty(-1, Effect::Seq(vec![Effect::GainLife { who: Selector::You, amount: Value::Const(2) }, draw(1)])),
+            loyalty(
+                -7,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Dovin Baan".into(),
+                    triggered: vec![],
+                    statics: vec![StaticAbility {
+                        description: "Your opponents can't untap more than two permanents during their untap steps.",
+                        effect: StaticEffect::OpponentsMaxUntapsPerStep(2),
+                    }],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Predator Dragon — {3}{R}{R}{R} 4/4 flying, haste Dragon; devour 2.
+pub fn predator_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Devour(2)],
+        ..creature("Predator Dragon", cost(&[generic(3), r(), r(), r()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Druidic Ritual — {2}{G} sorcery. You may mill three cards. Then return up
+/// to one creature card and up to one land card from your graveyard to your
+/// hand.
+pub fn druidic_ritual() -> CardDefinition {
+    spell(
+        "Druidic Ritual",
+        cost(&[generic(2), g()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::MayDo {
+                description: "Mill three cards?".into(),
+                body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            },
+            Effect::ReturnGraveyardCardsToHand { filter: R::Creature, max: Value::ONE },
+            Effect::ReturnGraveyardCardsToHand { filter: R::Land, max: Value::ONE },
+        ]),
+    )
+}
+
+/// Nevermaker — {3}{U} 2/3 flying Elemental, evoke {3}{U}. When it leaves the
+/// battlefield, put target nonland permanent on top of its owner's library.
+pub fn nevermaker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(3), u()]))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent.and(R::Nonland)),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: LibraryPosition::Top,
+                },
+            },
+        }],
+        ..creature("Nevermaker", cost(&[generic(3), u()]), vec![CreatureType::Elemental], 2, 3)
+    }
+}
+
+/// Brazen Buccaneers — {3}{R} 2/2 Human Pirate with haste. It explores as it
+/// enters.
+pub fn brazen_buccaneers() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(crate::effect::shortcut::explore())],
+        ..creature("Brazen Buccaneers", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 2)
     }
 }

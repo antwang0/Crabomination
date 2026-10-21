@@ -474,3 +474,67 @@ fn tezzeret_the_schemer_minus_two_scales_with_artifacts() {
     drain_stack(&mut g);
     assert_eq!(pt(&g, giant), (5, 1));
 }
+
+/// Dovin Baan's emblem caps each opponent at two untaps in their untap step
+/// (CR 502.3); its owner untaps everything.
+#[test]
+fn dovin_baan_emblem_caps_opponents_untaps() {
+    let mut g = pod(3);
+    let dovin = g.add_card_to_battlefield(0, catalog::dovin_baan());
+    g.battlefield_find_mut(dovin).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 4);
+    let theirs: Vec<CardId> = (0..4).map(|_| g.add_card_to_battlefield(1, catalog::forest())).collect();
+    let mine: Vec<CardId> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::forest())).collect();
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: dovin, ability_index: 2, target: None, x_value: None })
+        .expect("−7");
+    drain_stack(&mut g);
+    for &id in theirs.iter().chain(&mine) {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    to_next_upkeep(&mut g);
+    assert_eq!(g.active_player_idx, 1);
+    let untapped = theirs.iter().filter(|&&id| !g.battlefield_find(id).unwrap().tapped).count();
+    assert_eq!(untapped, 2, "the opponent untaps two of four");
+    g.active_player_idx = 2;
+    to_next_upkeep(&mut g);
+    assert_eq!(g.active_player_idx, 0);
+    assert!(mine.iter().all(|&id| !g.battlefield_find(id).unwrap().tapped), "the owner isn't capped");
+}
+
+/// Druidic Ritual returns at most one creature and one land card.
+#[test]
+fn druidic_ritual_returns_a_creature_and_a_land() {
+    let mut g = pod(2);
+    for card in [catalog::grizzly_bears(), catalog::hill_giant(), catalog::forest(), catalog::forest()] {
+        g.add_card_to_graveyard(0, card);
+    }
+    let ritual = g.add_card_to_hand(0, catalog::druidic_ritual());
+    let hand = g.players[0].hand.len();
+    cast_as(&mut g, 0, ritual, None);
+    drain_stack(&mut g);
+    let hand_now = &g.players[0].hand;
+    assert_eq!(hand_now.len(), hand + 1, "two cards back, the ritual gone");
+    assert_eq!(hand_now.iter().filter(|c| c.definition.is_land()).count(), 1);
+}
+
+/// Nevermaker cast for evoke is sacrificed and its leaves-the-battlefield
+/// trigger tops a nonland permanent.
+#[test]
+fn nevermaker_evoked_tops_a_permanent() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let never = g.add_card_to_hand(0, catalog::nevermaker());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: never,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("evoke");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(never).is_none(), "evoked: sacrificed");
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.players[1].library.iter().next().map(|c| c.id), Some(giant), "on top of its owner's library");
+}

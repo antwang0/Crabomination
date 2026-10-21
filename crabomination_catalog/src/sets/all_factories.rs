@@ -18381,6 +18381,13 @@ static DECKS: &[Factory] = &[
     super::decks::tezzeret_the_schemer,
     super::decks::prepare_fight,
     super::decks::clay_champion,
+    super::decks::vigorbloom_vanguard,
+    super::decks::ajani_valiant_protector,
+    super::decks::dovin_baan,
+    super::decks::predator_dragon,
+    super::decks::druidic_ritual,
+    super::decks::nevermaker,
+    super::decks::brazen_buccaneers,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,
