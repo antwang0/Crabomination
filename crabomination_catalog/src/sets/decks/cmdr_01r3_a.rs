@@ -2,8 +2,8 @@
 //! `tests/recent_b/cmdr_01r3_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    ActivatedAbility, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Zone,
 };
 use crate::effect::shortcut::{craft, magecraft, target_filtered};
@@ -428,6 +428,51 @@ pub fn soul_echo() -> CardDefinition {
                 then: Box::new(Effect::SacrificeSource),
                 else_: Box::new(Effect::PlayerMayStampSourceTurn { who: target_filtered(R::OpponentPlayer) }),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mindlink Mech — {2}{U} 4/3 Vehicle, flying, crew 1. Whenever it becomes
+/// crewed for the first time each turn, until end of turn it becomes a copy of
+/// target nonlegendary creature that crewed it this turn, except it's 4/3, a
+/// Vehicle artifact in addition to its other types, and has flying (CR 707.9b).
+pub fn mindlink_mech() -> CardDefinition {
+    let mut crewed = EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::YourControl)
+        .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsSource });
+    crewed.once_per_turn = true;
+    let crew = R::Creature.and(R::CrewedSourceThisTurn).and(R::HasSupertype(Supertype::Legendary).negate());
+    CardDefinition {
+        name: "Mindlink Mech",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Crew(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: crewed,
+            effect: Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(crew),
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                },
+                Effect::AmendCopy {
+                    what: Selector::This,
+                    keep_activated: vec![],
+                    keep_triggered: vec![],
+                    pt: Some((4, 3)),
+                    keep_name: false,
+                    legendary: false,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Artifact],
+                    creature_types: vec![],
+                },
+                // Layer 4; indefinite is harmless, the Mech is a Vehicle anyway.
+                Effect::SetArtifactSubtypes { what: Selector::This, subtypes: vec![ArtifactSubtype::Vehicle] },
+            ]),
         }],
         ..Default::default()
     }

@@ -307,3 +307,21 @@ fn cr_614_1a_soul_echo_turns_damage_into_counters_until_your_next_upkeep() {
     g.check_state_based_actions();
     assert!(g.players[0].is_alive(), "0 life doesn't lose");
 }
+
+/// CR 707.9b — crewed by a Shivan Dragon, Mindlink Mech becomes a 4/3 flying
+/// Shivan Dragon that is a Vehicle artifact too, with the Dragon's firebreathing;
+/// the copy ends at end of turn. A second crewing that turn doesn't trigger.
+#[test]
+fn cr_707_9b_mindlink_mech_copies_its_crew_as_a_four_three() {
+    let mut g = pod(2);
+    let mech = g.add_card_to_battlefield(0, catalog::mindlink_mech());
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    g.battlefield_find_mut(dragon).unwrap().summoning_sick = false;
+    g.perform_action(GameAction::Crew { vehicle: mech, crew_creatures: vec![dragon] }).expect("crew");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mech).unwrap();
+    assert_eq!(cp.def.name, "Shivan Dragon");
+    assert_eq!((cp.power, cp.toughness), (4, 3));
+    assert!(cp.def.is_artifact() && cp.keywords().contains(&Keyword::Flying));
+    assert!(!cp.def.activated_abilities.is_empty(), "it has the Dragon's pump");
+}
