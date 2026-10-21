@@ -1735,6 +1735,11 @@ pub struct ColdState {
     /// only a countered activation writes it; cleared at cleanup.
     #[serde(default)]
     pub(crate) countered_activations_this_turn: Vec<crate::game::types::StackItem>,
+    /// Sources an `Effect::MarkSourceThisTurn` marked: "if [it] didn't [do X]
+    /// this turn" read back by `Predicate::SourceMarkedThisTurn` (Thirsting
+    /// Axe). Cold: only that effect writes it; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) sources_marked_this_turn: Vec<CardId>,
     /// Aeon Engine — the game's turn order is reversed: every walk "in turn
     /// order" (the next turn, priority, APNAP) goes the other way round the
     /// table. Reversing again restores the original order. Cold: written once

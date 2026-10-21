@@ -2149,6 +2149,9 @@ pub enum Predicate {
     /// at least `n` — or, off a whole-roll `RolledDice`, its greatest result —
     /// via `EffectContext.event_amount` (Ground Pounder, Mr. House).
     DieResultAtLeast(u8),
+    /// The evaluating source was marked by `Effect::MarkSourceThisTurn` this
+    /// turn.
+    SourceMarkedThisTurn,
     /// CR 702.85a — the spell this `SpellCast` trigger fired on has cascade:
     /// printed, or given by a "when you cast" cascade trigger whose condition
     /// holds for it (Wild-Magic Sorcerer, Maelstrom Nexus, a delirious
@@ -13944,6 +13947,11 @@ pub enum Effect {
     /// not by its state then. The controller-relative atoms
     /// (`ControlledByOpponent`) are evaluated from the seat that resolved it.
     PreventAllDamageByMatchingThisTurn { filter: crate::card::SelectionRequirement },
+    /// Note that the resolving source did something this turn, for
+    /// `Predicate::SourceMarkedThisTurn` to read back until cleanup (Thirsting
+    /// Axe's "if equipped creature didn't deal combat damage to a creature
+    /// this turn": a combat-damage trigger marks, the end step reads).
+    MarkSourceThisTurn,
     /// CR 615.1 — "prevent all combat damage that would be dealt this turn to
     /// [filter]" (Pack Leader's Dogs you control). A filter judged when the
     /// damage would be dealt, from the resolving seat, so a Dog that arrives

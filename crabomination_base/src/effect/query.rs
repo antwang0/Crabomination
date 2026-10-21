@@ -785,6 +785,7 @@ impl Effect {
     pub fn requires_target(&self) -> bool {
         match self {
             Effect::ConniveFinish { .. }
+            | Effect::MarkSourceThisTurn
             | Effect::Voyage { .. }
             | Effect::ShuffleIntoTopPile { .. }
             | Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }

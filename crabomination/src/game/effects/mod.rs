@@ -40334,6 +40334,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MarkSourceThisTurn => {
+                if let Some(src) = ctx.source
+                    && !self.sources_marked_this_turn.contains(&src)
+                {
+                    self.sources_marked_this_turn.push(src);
+                }
+                Ok(())
+            }
+
             Effect::PreventCombatDamageToMatchingThisTurn { filter } => {
                 if !self
                     .combat_damage_prevented_to_matching_this_turn

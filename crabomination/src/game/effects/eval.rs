@@ -3096,6 +3096,7 @@ impl GameState {
             Predicate::IsDay => self.day_night == Some(crate::game::types::DayNight::Day),
             Predicate::IsNight => self.day_night == Some(crate::game::types::DayNight::Night),
             Predicate::DieResultAtLeast(n) => ctx.event_amount >= *n as u32,
+            Predicate::SourceMarkedThisTurn => ctx.source.is_some_and(|s| self.sources_marked_this_turn.contains(&s)),
             Predicate::IsMonarch { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
