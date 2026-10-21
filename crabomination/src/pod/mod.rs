@@ -28824,6 +28824,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TWELFTH_DOCTOR_21_COMMANDERS,
             main: decks::THE_TWELFTH_DOCTOR_21_MAIN,
         },
+        // Seat 4729: Ganax, Astral Hunter and Criminal Past's EDHREC average deck. `--pod-decks 4729`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Criminal Past (BR)",
+            commanders: decks::GANAX_10_COMMANDERS,
+            main: decks::GANAX_10_MAIN,
+        },
+        // Seat 4730: Lae'zel, Vlaakith's Champion and Raised by Giants's EDHREC average deck. `--pod-decks 4730`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Raised by Giants (WG)",
+            commanders: decks::LAEZEL_12_COMMANDERS,
+            main: decks::LAEZEL_12_MAIN,
+        },
+        // Seat 4731: Radiant, Serra Archangel and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 4731`.
+        PodDeck {
+            name: "Radiant, Serra Archangel and Sakashima of a Thousand Faces (WU)",
+            commanders: decks::RADIANT_9_COMMANDERS,
+            main: decks::RADIANT_9_MAIN,
+        },
     ]
 }
 
@@ -35453,6 +35471,9 @@ mod tests {
             ("Numa, Joraga Chieftain and Rograkh, Son of Rohgahh", &[0x1C8C]),
             ("Safana, Calimport Cutthroat and Candlekeep Sage", &[0x1C8D]),
             ("The Twelfth Doctor and Donna Noble", &[0x1C8E]),
+            ("Ganax, Astral Hunter and Criminal Past", &[0x1C8F]),
+            ("Lae'zel, Vlaakith's Champion and Raised by Giants", &[0x1C90]),
+            ("Radiant, Serra Archangel and Sakashima of a Thousand Faces", &[0x1C91]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

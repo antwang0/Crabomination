@@ -132585,3 +132585,83 @@ pub const THE_TWELFTH_DOCTOR_21_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const GANAX_10_COMMANDERS: &[CardFactory] = &[ganax_astral_hunter, criminal_past];
+
+/// **Ganax, Astral Hunter and Criminal Past**'s EDHREC average deck, card for card:
+/// 58 nonbasic cards + 26 Mountains + 14 Swamps = 98.
+/// Ganax, Astral Hunter and Criminal Past (EDHREC, fetched 2026-10-21).
+pub const GANAX_10_MAIN: &[CardFactory] = &[
+    carnelian_orb_of_dragonkind, dragons_hoard, mimic_vat, sol_ring, academy_manufactor,
+    atsushi_the_blazing_sky, bladewing_the_risen, bladewing_deathless_tyrant, bone_dragon,
+    dragon_mage, dragonkin_berserker, dragonlords_servant, dragonspeaker_shaman,
+    festering_goblin, goblin_lackey, goblin_recruiter, goblin_warchief, hellkite_courser,
+    kiki_jiki_mirror_breaker, krark_clan_shaman, krenko_mob_boss, legion_warboss, malfegor,
+    patron_of_the_arts, predator_dragon, pyrewild_shaman, rivaz_of_the_claw,
+    siege_gang_commander, skirk_prospector, skithiryx_the_blight_dragon, sling_gang_lieutenant,
+    splatter_goblin, steel_hellkite, vampiric_dragon, voracious_dragon, weirding_shaman,
+    wily_goblin, xorn, dragon_cultist, dragon_tempest, fable_of_the_mirror_breaker,
+    malevolent_awakening, altars_reap, brightstone_ritual, cabal_ritual, dark_ritual,
+    desperate_ritual, pyretic_ritual, seething_song, terminate, blood_money, bone_splinters,
+    browbeat, dragon_fodder, dragonstorm, goblin_grenade, mizzium_mortars, tendrils_of_agony,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LAEZEL_12_COMMANDERS: &[CardFactory] = &[laezel_vlaakiths_champion, raised_by_giants];
+
+/// **Lae'zel, Vlaakith's Champion and Raised by Giants**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Forests + 9 Plains = 98.
+/// Lae'zel, Vlaakith's Champion and Raised by Giants (EDHREC, fetched 2026-10-21).
+pub const LAEZEL_12_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, selesnya_signet, sol_ring, swiftfoot_boots,
+    talisman_of_unity, the_great_henge, the_ozolith, bountiful_promenade, brushland,
+    canopy_vista, command_tower, gavony_township, hexhaven_dueling_arena, hushwood_verge,
+    karns_bastion, lush_portico, overgrown_farmland, reliquary_tower, selesnya_sanctuary,
+    sungrass_prairie, sunpetal_grove, temple_garden, abzan_falconer, big_bertha,
+    birds_of_paradise, conclave_mentor, eidolon_of_blossoms, elvish_mystic,
+    emergency_phytomedic, eternal_witness, falcon_and_redwing, forgotten_ancient,
+    hercules_olympian_hero, leatherhead_iron_gator, llanowar_elves, patrolling_peacemaker,
+    sanctum_weaver, satyr_enchanter, setessan_champion, shalai_voice_of_plenty,
+    sythis_harvests_hand, vigorbloom_vanguard, yoshimaru_beloved_companion, doubling_season,
+    enchantresss_presence, felidar_retreat, fertile_ground, garruks_uprising, ghostly_prison,
+    hardened_scales, loading_zone, miraris_wake, snake_umbra, sphere_of_safety, sterling_grove,
+    wild_growth, beast_within, enlightened_tutor, gaeas_gift, heroic_intervention,
+    path_to_exile, snakeskin_veil, swords_to_plowshares, teferis_protection, vigorbloom_charm,
+    ajani_steadfast, ajani_valiant_protector, basri_ket, elspeth_resplendent, austere_command,
+    cultivate, epic_fight, farewell, go_nuts, idyllic_tutor, natures_lore, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RADIANT_9_COMMANDERS: &[CardFactory] = &[radiant_serra_archangel, sakashima_of_a_thousand_faces];
+
+/// **Radiant, Serra Archangel and Sakashima of a Thousand Faces**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Islands + 7 Plains = 98.
+/// Radiant, Serra Archangel and Sakashima of a Thousand Faces (EDHREC, fetched 2026-10-21).
+pub const RADIANT_9_MAIN: &[CardFactory] = &[
+    arcane_signet, darksteel_ingot, gilded_lotus, mazemind_tome, replicating_ring, sol_ring,
+    thought_vessel, vedalken_orrery, wedding_ring, evolving_wilds, flood_plain,
+    glacial_floodplain, glacial_fortress, hallowed_fountain, hengegate_pathway,
+    irrigated_farmland, lonely_arroyo, maze_of_ith, mystifying_maze, nimbus_maze, port_town,
+    prairie_stream, reliquary_tower, scalding_tarn, sea_of_clouds, seachrome_coast,
+    thespians_stage, academy_loremaster, adarkar_valkyrie, agent_of_treachery,
+    angel_of_the_ruins, angelic_aberration, archmage_of_runes, avacyn_angel_of_hope,
+    burnished_hart, clone_card, dark_maze, emeria_shepherd, esper_sentinel, glorious_protector,
+    heliod_sun_crowned, keiga_the_tide_star, luminous_broodmoth, mother_of_runes,
+    orvar_the_all_form, roil_elemental, unsettled_mariner, vesuvan_drifter, walking_ballista,
+    ajanis_mantra, archmage_ascension, authority_of_the_consuls, lost_in_the_maze,
+    mystic_remora, rhystic_study, smothering_tithe, wedding_announcement, absorb,
+    an_offer_you_cant_refuse, angelic_favor, anticognition, archmages_charm, banes_contingency,
+    blue_elemental_blast, bone_to_ash, brainstorm, bring_the_ending, counterspell,
+    debt_of_loyalty, dovins_veto, negate, settle_the_wreckage, teferis_protection, basri_ket,
+    dovin_baan, teyo_geometric_tactician, blatant_thievery, fabricate, govern_the_guildless,
+    secret_rendezvous,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains,
+];
