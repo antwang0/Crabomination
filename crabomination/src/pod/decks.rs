@@ -134875,3 +134875,120 @@ pub const ELIGETH_31_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const THE_NINTH_DOCTOR_20_COMMANDERS: &[CardFactory] = &[the_ninth_doctor, ace_fearless_rebel];
+
+/// **The Ninth Doctor and Ace, Fearless Rebel**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 3 Forests + 3 Islands + 4 Mountains = 98.
+/// The Ninth Doctor and Ace, Fearless Rebel (EDHREC, fetched 2026-10-21).
+pub const THE_NINTH_DOCTOR_20_MAIN: &[CardFactory] = &[
+    aladdins_ring, arcane_signet, basalt_monolith, beamtown_beatstick, buried_treasure,
+    everflowing_chalice, grim_monolith, jesters_scepter, lotus_petal, mana_vault, power_armor,
+    simic_signet, sol_ring, talisman_of_creativity, talisman_of_curiosity, the_magic_mirror,
+    umbral_mantle, voodoo_doll, arid_mesa, breeding_pool, command_tower, exotic_orchard,
+    mana_confluence, misty_rainforest, mutavault, polluted_delta, prismatic_vista,
+    scrying_sheets, skyline_cascade, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, steam_vents,
+    stomping_ground, taiga, verdant_catacombs, volcanic_island, windswept_heath,
+    wooded_foothills, academy_manufactor, ancient_copper_dragon, baeloth_barrityl_entertainer,
+    coretapper, disruptor_wanderglyph, drowner_of_hope, drumhunter, elvish_mystic,
+    frost_fair_lure_fish, geist_of_the_archives, glittermonger, greenweaver_druid, halo_scarab,
+    jhoiras_timebug, plargg_and_nassari, progenitor_mimic, soulblade_renewer,
+    threefold_thunderhulk, city_of_death, court_of_garenbrig, curious_inquiry,
+    fable_of_the_mirror_breaker, power_artifact, recycle, sorcerer_class, welcome_to,
+    an_offer_you_cant_refuse, archdruids_charm, big_score, confront_the_unknown, counterspell,
+    fury_storm, pull_from_tomorrow, seething_song, wildsize, brasss_bounty, hit_the_mother_lode,
+    hull_breach, nissas_revelation, rousing_refrain, skyscribing, skyshroud_claim,
+    visions_of_duplicity,
+    // Basics
+    forest, forest, forest, island, island, island, mountain, mountain, mountain, mountain,
+];
+
+pub const SAFANA_25_COMMANDERS: &[CardFactory] = &[safana_calimport_cutthroat, shameless_charlatan];
+
+/// **Safana, Calimport Cutthroat and Shameless Charlatan**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Islands + 10 Swamps = 98.
+/// Safana, Calimport Cutthroat and Shameless Charlatan (EDHREC, fetched 2026-10-21).
+pub const SAFANA_25_MAIN: &[CardFactory] = &[
+    blitzball_stadium, conformer_shuriken, hedron_archive, honor_worn_shaku,
+    machine_gods_effigy, mask_of_the_schemer, planar_atlas, ring_of_the_lucii,
+    silver_inlaid_dagger, sol_ring, stonespeaker_crystal, the_enigma_jewel, thran_dynamo,
+    blighted_cataract, blighted_fen, choked_estuary, gloomlake_verge, nesting_grounds,
+    realm_of_koh, spymasters_vault, sunken_hollow, temple_of_deceit, the_mycosynth_gardens,
+    underground_river, watery_grave, aven_courier, bold_plagiarist, callidus_assassin,
+    cephalid_facetaker, crystalline_giant, daring_fiendbonder, dimir_infiltrator,
+    duskfang_mentor, elusive_tormentor, goldberry_river_daughter, halo_forager,
+    kitesail_larcenist, ledger_shredder, likeness_looter, loch_mare, mocking_doppelganger,
+    nightshade_harvester, nightveil_predator, psychic_frog, qarsi_revenant, saiba_cryptomancer,
+    scavenged_brawler, silent_hallcreeper, slaughter_specialist, slippery_scoundrel,
+    talion_the_kindly_lord, westgate_regent, wingspan_mentor, captivating_glance,
+    obsessive_pursuit, astarions_thirst, blood_curdle, change_of_plans, disdainful_stroke,
+    fate_transfer, fell_the_profane, fleeting_reflection, memory_plunder, power_word_kill,
+    storm_of_forms, true_polymorph, unexpected_fangs, victim_of_night, tezzeret_master_of_metal,
+    call_of_the_death_dweller, echo_storm, exsanguinate, invoke_the_winds, lunar_insight,
+    make_an_example, mass_manipulation, unbreakable_bond,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_EIGHTH_DOCTOR_14_COMMANDERS: &[CardFactory] = &[the_eighth_doctor, amy_pond];
+
+/// **The Eighth Doctor and Amy Pond**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 4 Islands + 4 Mountains + 3 Plains = 98.
+/// The Eighth Doctor and Amy Pond (EDHREC, fetched 2026-10-21).
+pub const THE_EIGHTH_DOCTOR_14_MAIN: &[CardFactory] = &[
+    conformer_shuriken, crystal_skull_isu_spyglass, fire_diamond, hazorets_monument,
+    kaldra_compleat, kefnets_monument, lotus_bloom, marble_diamond, mox_tantalite,
+    oketras_monument, pearl_medallion, raugrin_crystal, ruby_medallion, sapphire_medallion,
+    sky_diamond, sol_talisman, sword_of_kaldra, the_fire_crystal, the_water_crystal,
+    the_wind_crystal, treasure_map, ancient_den, clifftop_retreat, command_tower,
+    darksteel_citadel, forgotten_cave, glacial_fortress, great_hall_of_the_citadel,
+    lonely_sandbar, mystic_monastery, perilous_landscape, power_depot, public_thoroughfare,
+    raugrin_triome, razortide_bridge, reflecting_pool, rustvale_bridge, seat_of_the_synod,
+    secluded_steppe, secret_tunnel, silverbluff_bridge, sulfur_falls, temple_of_enlightenment,
+    temple_of_epiphany, temple_of_triumph, invasion_of_new_phyrexia, invasion_of_vryn,
+    alisaie_leveilleur, alphinaud_leveilleur, beloved_chaplain, brallin_skyshark_rider,
+    chakram_retriever, chakram_slinger, epochrasite, impetuous_protege, khorvath_brightflame,
+    okaun_eye_of_chaos, phantasmal_image, protean_raider, proud_mentor, rhoda_geist_avenger,
+    rory_williams, sakashima_the_impostor, sakashimas_student, shabraz_the_skyshark,
+    stunt_double, sylvia_brightspear, timin_youthful_geist, zndrsplt_eye_of_wisdom,
+    honden_of_cleansing_fire, honden_of_infinite_rage, honden_of_seeing_winds,
+    love_song_of_night_and_day, the_cave_of_two_lovers, absorb, annul, ceremonious_rejection,
+    deny_entry, opera_love_song, sokkas_haiku, true_loves_kiss, rowan_kenrith, will_kenrith,
+    jayas_immolating_inferno, kiss_of_the_amesha, secret_rendezvous, urzas_ruinous_blast,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains,
+];
+
+pub const AMBER_GRISTLE_OMAUL_14_COMMANDERS: &[CardFactory] = &[amber_gristle_omaul, dungeon_delver];
+
+/// **Amber Gristle O'Maul and Dungeon Delver**'s EDHREC average deck, card for card:
+/// 98 nonbasic cards = 98.
+/// Amber Gristle O'Maul and Dungeon Delver (EDHREC, fetched 2026-10-21).
+pub const AMBER_GRISTLE_OMAUL_14_MAIN: &[CardFactory] = &[
+    cyclopean_snare, entrancing_lyre, sarevoks_tome, siren_song_lyre, sol_ring,
+    staff_of_the_mind_magus, blighted_cataract, coral_atoll, madblind_mountain, moonring_island,
+    mountain_valley, seafloor_debris, skyline_cascade, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, volcanic_island,
+    invasion_of_vryn, aarakocra_sneak, aboshan_cephalid_emperor, academy_drake, academy_elite,
+    academy_loremaster, academy_researchers, academy_wall, advanced_hoverguard, aerial_caravan,
+    agent_of_treachery, agitator_ant, akki_battle_squad, akki_drillmaster, akki_ember_keeper,
+    alandra_sky_dreamer, alchemists_apprentice, alena_kessig_trapper, alirios_enraptured,
+    alloy_myr, alora_merry_thief, alpine_guide, amphin_mutineer, anarchist,
+    ancient_copper_dragon, anger, aphetto_grifter, apprentice_wizard, arcanis_the_omnipotent,
+    arcbound_ravager, arcbound_reclaimer, archaeomancer, archaeomender,
+    archetype_of_imagination, archivist, azure_mage, fugitive_wizard, hisokas_guard,
+    keeper_of_the_mind, contempt, dispersing_orb, gaseous_form, shattered_ego,
+    aether_tradewinds, command_of_unsummoning, put_away, rebound, churning_eddy,
+    counsel_of_the_soratami, into_the_void, symbol_of_unsummoning,
+];

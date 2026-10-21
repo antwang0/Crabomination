@@ -29316,6 +29316,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELIGETH_31_COMMANDERS,
             main: decks::ELIGETH_31_MAIN,
         },
+        // Seat 4811: The Ninth Doctor and Ace, Fearless Rebel's EDHREC average deck. `--pod-decks 4811`.
+        PodDeck {
+            name: "The Ninth Doctor and Ace, Fearless Rebel (URG)",
+            commanders: decks::THE_NINTH_DOCTOR_20_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_20_MAIN,
+        },
+        // Seat 4812: Safana, Calimport Cutthroat and Shameless Charlatan's EDHREC average deck. `--pod-decks 4812`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Shameless Charlatan (UB)",
+            commanders: decks::SAFANA_25_COMMANDERS,
+            main: decks::SAFANA_25_MAIN,
+        },
+        // Seat 4813: The Eighth Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4813`.
+        PodDeck {
+            name: "The Eighth Doctor and Amy Pond (WUR)",
+            commanders: decks::THE_EIGHTH_DOCTOR_14_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_14_MAIN,
+        },
+        // Seat 4814: Amber Gristle O'Maul and Dungeon Delver's EDHREC average deck. `--pod-decks 4814`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Dungeon Delver (UR)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_14_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_14_MAIN,
+        },
     ]
 }
 
@@ -36027,6 +36051,10 @@ mod tests {
             ("Armix, Filigree Thrasher and Siani, Eye of the Storm", &[0x1CDE]),
             ("Dargo, the Shipwrecker and Ludevic, Necro-Alchemist", &[0x1CDF]),
             ("Eligeth, Crossroads Augur and Kediss, Emberclaw Familiar", &[0x1CE0]),
+            ("The Ninth Doctor and Ace, Fearless Rebel", &[0x1CE1]),
+            ("Safana, Calimport Cutthroat and Shameless Charlatan", &[0x1CE2]),
+            ("The Eighth Doctor and Amy Pond", &[0x1CE3]),
+            ("Amber Gristle O'Maul and Dungeon Delver", &[0x1CE4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
