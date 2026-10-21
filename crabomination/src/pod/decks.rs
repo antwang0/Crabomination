@@ -134992,3 +134992,30 @@ pub const AMBER_GRISTLE_OMAUL_14_MAIN: &[CardFactory] = &[
     aether_tradewinds, command_of_unsummoning, put_away, rebound, churning_eddy,
     counsel_of_the_soratami, into_the_void, symbol_of_unsummoning,
 ];
+
+pub const BREECHES_31_COMMANDERS: &[CardFactory] = &[breeches_brazen_plunderer, radiant_serra_archangel];
+
+/// **Breeches, Brazen Plunderer and Radiant, Serra Archangel**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 6 Mountains + 18 Plains = 98.
+/// Breeches, Brazen Plunderer and Radiant, Serra Archangel (EDHREC, fetched 2026-10-21).
+pub const BREECHES_31_MAIN: &[CardFactory] = &[
+    arcane_signet, implement_of_combustion, staff_of_the_flame_magus, swiftfoot_boots,
+    boros_guildgate, drifting_meadow, evolving_wilds, forgotten_cave, path_of_ancestry,
+    sandstone_bridge, secluded_steppe, smoldering_crater, wind_scarred_crag, aegis_angel,
+    aerial_responder, angel_of_the_dawn, angelic_curator, aven_skirmisher, borderland_marauder,
+    dawnglare_invoker, dawning_angel, dragon_egg, emeria_angel, fearless_pup, furnace_whelp,
+    goblin_roughrider, gustcloak_harrier, gustcloak_runner, gustcloak_savior,
+    gustcloak_skirmisher, harvesttide_infiltrator, healers_flock, healers_hawk,
+    oreskos_explorer, paragon_of_fierce_defiance, phantom_flock, serra_angel, shivan_dragon,
+    skyknight_legionnaire, sparktongue_dragon, staunch_throneguard, sungrace_pegasus,
+    sunscorch_regent, tavern_ruffian, thraben_watcher, twinmaw_stormbrood, chosen_by_heliod,
+    crown_of_fury, divine_favor, dragon_mantle, duelists_heritage, fortifying_provisions,
+    grasp_of_the_hieromancer, oblivion_ring, pacifism, valor_in_akros, demystify,
+    divine_verdict, draconic_roar, fever_charm, kill_shot, lightning_strike, order_chaos,
+    path_to_exile, piety_charm, riot_control, sacred_boon, shock, solar_blast,
+    elspeth_suns_champion, austere_command, cut_a_deal, lay_waste, split_up,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
