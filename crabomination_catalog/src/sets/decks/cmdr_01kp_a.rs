@@ -1477,3 +1477,292 @@ pub fn gusthas_scepter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Jorn, God of Winter's ten ───────────────────────────────────────────────
+
+fn snow(n: usize) -> crate::mana::ManaCost {
+    crate::mana::ManaCost { symbols: vec![crate::mana::ManaSymbol::Snow; n] }
+}
+
+fn your_snow() -> Selector {
+    Selector::EachPermanent(R::IsSnow.and(R::ControlledByYou))
+}
+
+fn snow_creature(name: &'static str, mana: crate::mana::ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+/// Jorn, God of Winter // Kaldring, the Rimestaff — {2}{G} 3/3 legendary snow
+/// God: whenever Jorn attacks, untap each snow permanent you control. Back
+/// (modal, {1}{U}{B}): a legendary snow artifact — {T}: you may play target
+/// snow permanent card from your graveyard this turn; if you do, it enters
+/// tapped.
+pub fn jorn_god_of_winter() -> CardDefinition {
+    let kaldring = CardDefinition {
+        name: "Kaldring, the Rimestaff",
+        cost: cost(&[generic(1), u(), b()]),
+        supertypes: vec![Supertype::Legendary, Supertype::Snow],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: target_filtered(R::IsSnow.and(R::PermanentCard).and(R::InYourGraveyard)),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                Effect::EntersTappedAfterGrantedPlay { what: Selector::Target(0) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary, Supertype::Snow],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Untap { what: your_snow(), up_to: None },
+        }],
+        back_face: Some(Box::new(kaldring)),
+        ..snow_creature("Jorn, God of Winter", cost(&[generic(2), g()]), vec![CreatureType::God], 3, 3)
+    }
+}
+
+/// Abominable Treefolk — {2}{G}{U} */* snow Treefolk with trample, P/T equal
+/// to the number of snow permanents you control. When it enters, tap target
+/// creature an opponent controls; it doesn't untap during its controller's
+/// next untap step.
+pub fn abominable_treefolk() -> CardDefinition {
+    let count = || Value::count(your_snow());
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Abominable Treefolk's power and toughness are each equal to the number of snow permanents you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: count(), toughness: count() },
+        }],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
+        ]))],
+        ..snow_creature("Abominable Treefolk", cost(&[generic(2), g(), u()]), vec![CreatureType::Treefolk], 0, 0)
+    }
+}
+
+/// Boreal Outrider — {2}{G} 3/2 snow Elf Warrior. Whenever you cast a creature
+/// spell, if snow mana of any of that spell's colours was spent to cast it, it
+/// enters with an additional +1/+1 counter (CR 106.3, 603.4).
+pub fn boreal_outrider() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::SnowOfItsColorSpentToCast { what: Selector::TriggerSource },
+            ])),
+            effect: Effect::SpellEntersWithCounters {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..snow_creature("Boreal Outrider", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 3, 2)
+    }
+}
+
+/// Conifer Wurm — {4}{G} 4/4 snow Wurm with trample. {3}{G}: +X/+X until end
+/// of turn, X the number of snow permanents you control.
+pub fn conifer_wurm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::count(your_snow()),
+                toughness: Value::count(your_snow()),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..snow_creature("Conifer Wurm", cost(&[generic(4), g()]), vec![CreatureType::Wurm], 4, 4)
+    }
+}
+
+/// Hailstorm Valkyrie — {3}{B} 2/2 flying, trampling snow Angel Wizard.
+/// {S}{S}: +2/+2 until end of turn (CR 107.4h).
+pub fn hailstorm_valkyrie() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: snow(2),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..snow_creature("Hailstorm Valkyrie", cost(&[generic(3), b()]), vec![CreatureType::Angel, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Spirit of the Aldergard — {3}{G} 0/4 snow Bear Spirit. When it enters,
+/// search your library for a snow land card, reveal it, put it into your
+/// hand. It gets +1/+0 for each other snow permanent you control.
+pub fn spirit_of_the_aldergard() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::Land.and(R::IsSnow),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+0 for each other snow permanent you control.",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: Selector::This,
+                power: Value::count(Selector::EachPermanent(R::IsSnow.and(R::ControlledByYou).and(R::OtherThanSource))),
+                toughness: Value::ZERO,
+            },
+        }],
+        ..snow_creature("Spirit of the Aldergard", cost(&[generic(3), g()]), vec![CreatureType::Bear, CreatureType::Spirit], 0, 4)
+    }
+}
+
+/// Glittering Frost — {2}{G} snow Aura, enchant land. Enchanted land is snow
+/// (CR 205.4); whenever it's tapped for mana, its controller adds an
+/// additional one mana of any color.
+pub fn glittering_frost() -> CardDefinition {
+    CardDefinition {
+        name: "Glittering Frost",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted land is snow.",
+                effect: StaticEffect::AttachedHasSupertype(Supertype::Snow),
+            },
+            StaticAbility {
+                description: "Whenever enchanted land is tapped for mana, its controller adds an additional one mana of any color.",
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: true,
+                    filter: R::Land,
+                    extra: crate::effect::ExtraManaKind::AnyColor,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rime Transfusion — {1}{B} snow Aura. Enchanted creature gets +2/+1 and has
+/// "{S}: this creature can't be blocked this turn except by snow creatures."
+pub fn rime_transfusion() -> CardDefinition {
+    CardDefinition {
+        name: "Rime Transfusion",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 1, ..Default::default() }),
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has \"{S}: This creature can't be blocked this turn except by snow creatures.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::attached_to(Selector::This),
+                ability: ActivatedAbility {
+                    mana_cost: snow(1),
+                    effect: Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::Creature.and(R::IsSnow))),
+                        duration: Duration::EndOfTurn,
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Three Seasons — {G}{U} Saga. I: mill three. II: return up to two
+/// target snow permanent cards from your graveyard to your hand. III: choose
+/// three cards in each graveyard; their owners shuffle them into their
+/// libraries (the most valuable three of each).
+pub fn the_three_seasons() -> CardDefinition {
+    CardDefinition {
+        name: "The Three Seasons",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            (
+                2,
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: R::IsSnow.and(R::PermanentCard).and(R::InYourGraveyard),
+                    effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+                },
+            ),
+            (
+                3,
+                Effect::ForEach {
+                    selector: Selector::Player(PlayerRef::EachPlayer),
+                    body: Box::new(Effect::Move {
+                        what: Selector::take_priciest(
+                            Selector::EachMatching {
+                                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::Triggerer),
+                                filter: R::Any,
+                            },
+                            Value::Const(3),
+                        ),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::OwnerOfMoved,
+                            pos: crate::effect::LibraryPosition::Shuffled,
+                        },
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Glacial Revelation — {2}{G} sorcery. Reveal the top six cards; put any
+/// number of snow permanent cards among them into your hand, the rest into
+/// your graveyard.
+pub fn glacial_revelation() -> CardDefinition {
+    CardDefinition {
+        name: "Glacial Revelation",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(6),
+            rest_to_graveyard: true,
+            pick_filter: Some(R::IsSnow.and(R::PermanentCard)),
+            take: Some(Value::Const(6)),
+            optional: true,
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}

@@ -1077,3 +1077,185 @@ fn cr_614_1c_an_enters_tapped_grant_taps_the_land_and_the_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bears).unwrap().tapped);
 }
+
+fn snow_forests(g: &mut GameState, seat: usize, n: usize) -> Vec<CardId> {
+    (0..n).map(|_| g.add_card_to_battlefield(seat, catalog::snow_covered_forest())).collect()
+}
+
+/// Boreal Outrider (CR 106.3): a creature spell paid with green snow mana
+/// enters with a +1/+1 counter; one paid from plain Forests doesn't.
+#[test]
+fn cr_106_3_boreal_outrider_counts_snow_of_the_spells_colour() {
+    for (snowy, want) in [(true, 1), (false, 0)] {
+        let mut g = pod(2);
+        g.add_card_to_battlefield(0, catalog::boreal_outrider());
+        if snowy {
+            snow_forests(&mut g, 0, 2);
+        } else {
+            for _ in 0..2 {
+                g.add_card_to_battlefield(0, catalog::forest());
+            }
+        }
+        let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast off the lands");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), want, "snow: {snowy}");
+    }
+}
+
+/// Jorn's attack untaps his controller's snow permanents; Kaldring (his
+/// back) lets a snow land be played from the graveyard, tapped.
+#[test]
+fn jorn_untaps_snow_and_kaldring_replays_it_tapped() {
+    let mut g = pod(2);
+    let jorn = ready(&mut g, 0, catalog::jorn_god_of_winter());
+    let lands = snow_forests(&mut g, 0, 2);
+    let plain = g.add_card_to_battlefield(0, catalog::forest());
+    for id in lands.iter().chain([&plain]) {
+        g.battlefield_find_mut(*id).unwrap().tapped = true;
+    }
+    attack(&mut g, 0, &[(jorn, 1)]);
+    assert!(lands.iter().all(|id| !g.battlefield_find(*id).unwrap().tapped));
+    assert!(g.battlefield_find(plain).unwrap().tapped, "not snow");
+
+    let mut g = pod(2);
+    let kaldring = *catalog::jorn_god_of_winter().back_face.unwrap();
+    let staff = ready(&mut g, 0, kaldring);
+    let land = g.add_card_to_graveyard(0, catalog::snow_covered_forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: staff,
+        ability_index: 0,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Kaldring");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::PlayLandFromGraveyard(land)).expect("play it");
+    assert!(g.battlefield_find(land).unwrap().tapped);
+}
+
+/// Abominable Treefolk is as big as its controller's snow count and freezes
+/// an opposing creature (CR 502.3: it skips its next untap).
+#[test]
+fn abominable_treefolk_counts_snow_and_freezes() {
+    let mut g = pod(2);
+    snow_forests(&mut g, 0, 3);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tf = g.add_card_to_hand(0, catalog::abominable_treefolk());
+    cast_x(&mut g, 0, tf, None, None);
+    assert_eq!(g.computed_permanent(tf).unwrap().power, 4, "three Forests and itself");
+    assert!(g.battlefield_find(bears).unwrap().tapped);
+}
+
+/// Conifer Wurm and Hailstorm Valkyrie pump off snow: the Wurm by the snow
+/// count, the Valkyrie for {S}{S} (CR 107.4h — mana from snow sources only).
+#[test]
+fn cr_107_4h_conifer_wurm_and_hailstorm_valkyrie_pump_on_snow() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 0, catalog::conifer_wurm());
+    let valk = ready(&mut g, 0, catalog::hailstorm_valkyrie());
+    snow_forests(&mut g, 0, 2);
+    let act = |id| GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    g.players[0].mana_pool.add(Color::Black, 2);
+    assert!(g.perform_action(act(valk)).is_ok(), "the two snow Forests pay {{S}}{{S}}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(valk).unwrap().power, 4);
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.perform_action(act(wurm)).expect("Wurm");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 8, "4 + four snow permanents: the Wurm, the Valkyrie and two Forests");
+}
+
+/// Spirit of the Aldergard fetches a snow land and grows with other snow.
+#[test]
+fn spirit_of_the_aldergard_fetches_snow_and_grows() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let land = g.add_card_to_library(0, catalog::snow_covered_forest());
+    g.add_card_to_library(0, catalog::forest());
+    snow_forests(&mut g, 0, 2);
+    let sp = g.add_card_to_hand(0, catalog::spirit_of_the_aldergard());
+    cast_x(&mut g, 0, sp, None, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land));
+    assert_eq!(g.computed_permanent(sp).unwrap().power, 2);
+}
+
+/// Glittering Frost makes its land snow (CR 205.4) and adds a mana of any
+/// colour when it's tapped; Rime Transfusion's bearer buys snow-only blocks.
+#[test]
+fn glittering_frost_and_rime_transfusion() {
+    let mut g = pod(2);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let frost = g.add_card_to_hand(0, catalog::glittering_frost());
+    cast_x(&mut g, 0, frost, Some(Target::Permanent(forest)), None);
+    assert!(
+        g.computed_permanent(forest).unwrap().supertypes().contains(&crabomination::card::Supertype::Snow),
+        "enchanted land is snow"
+    );
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let rime = g.add_card_to_hand(0, catalog::rime_transfusion());
+    cast_x(&mut g, 0, rime, Some(Target::Permanent(bears)), None);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bears,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{S} off the frosted Forest");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(bears, &Keyword::CantBeBlockedExceptBy(Box::new(
+        crabomination::card::SelectionRequirement::Creature.and(crabomination::card::SelectionRequirement::IsSnow)
+    ))));
+    assert_eq!(g.players[0].mana_pool.total(), 1, "the Frost's extra mana floats");
+}
+
+/// The Three Seasons' chapter II returns snow permanents; chapter III
+/// shuffles three cards of each graveyard back.
+#[test]
+fn the_three_seasons_recurs_snow_then_reshuffles_graveyards() {
+    let mut g = pod(2);
+    let saga = catalog::the_three_seasons();
+    let a = g.add_card_to_graveyard(0, catalog::snow_covered_forest());
+    let b = g.add_card_to_graveyard(0, catalog::boreal_outrider());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(a)), 0, 0);
+    let mut ctx = ctx;
+    ctx.targets.push(Target::Permanent(b));
+    g.resolve_effect(&saga.saga_chapters[1].1, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b));
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::island());
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&saga.saga_chapters[2].1, &ctx).unwrap();
+    assert_eq!((g.players[0].graveyard.len(), g.players[1].graveyard.len()), (1, 1));
+}
+
+/// Glacial Revelation keeps every snow permanent in the top six.
+#[test]
+fn glacial_revelation_keeps_the_snow() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let keep: Vec<_> = (0..2).map(|_| g.add_card_to_library(0, catalog::snow_covered_forest())).collect();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let rev = g.add_card_to_hand(0, catalog::glacial_revelation());
+    cast_x(&mut g, 0, rev, None, None);
+    assert!(keep.iter().all(|id| g.players[0].hand.iter().any(|c| c.id == *id)));
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count(), 4);
+}
