@@ -444,3 +444,65 @@ fn cr_714_2b_braidss_frightful_return_chapter_three_punishes() {
     drain_stack(&mut g);
     assert_eq!((g.players[1].life, g.players[0].hand.len()), (life - 2, hand + 1));
 }
+
+/// Jester's Scepter exiles five face down, then counters a spell that shares a
+/// name with one of them, binning that card.
+#[test]
+fn jesters_scepter_counters_a_spell_named_like_its_exile() {
+    let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::lightning_bolt());
+    }
+    g.players[1].library.rotate_left(10);
+    let scepter = g.add_card_to_hand(0, catalog::jesters_scepter());
+    cast(&mut g, scepter, Some(Target::Player(1)));
+    let exiled: Vec<_> = g.exile.iter().filter(|c| c.exiled_with == Some(scepter)).collect();
+    assert_eq!(exiled.len(), 5);
+    assert!(exiled.iter().all(|c| c.face_down && c.definition.name == "Lightning Bolt"));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let life = g.players[0].life;
+    activate(&mut g, 0, scepter, Some(Target::Permanent(bolt))).expect("scepter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "the Bolt was countered");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(scepter)).count(), 4, "one exiled Bolt binned");
+}
+
+/// Visions of Duplicity swaps two creatures neither of which its caster
+/// controls (CR 701.12) — a three-seat swap between two opponents.
+#[test]
+fn cr_701_12_visions_of_duplicity_swaps_two_opponents_creatures() {
+    let mut g = pod(3);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let vis = g.add_card_to_hand(0, catalog::visions_of_duplicity());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: vis,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().controller, 2);
+    assert_eq!(g.battlefield_find(b).unwrap().controller, 1);
+}
+
+/// CR 712 — Elusive Tormentor transforms for {1} and a discard into the
+/// unblockable, indestructible Insidious Mist.
+#[test]
+fn cr_712_elusive_tormentor_becomes_insidious_mist() {
+    let mut g = pod(2);
+    let vamp = g.add_card_to_battlefield(0, catalog::elusive_tormentor());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, 0, vamp, None).expect("transform");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(vamp).unwrap();
+    assert_eq!(cp.def.name, "Insidious Mist");
+    assert!(cp.keywords().contains(&Keyword::Indestructible) && cp.keywords().contains(&Keyword::Unblockable));
+}

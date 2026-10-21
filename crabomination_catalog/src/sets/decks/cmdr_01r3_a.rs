@@ -1,19 +1,20 @@
-//! Commander: the 2026-10-21 (`01R3xh4r`) one-gap pair closers. Tests in
+//! Commander: the 2026-10-21 (`01R3xh4r`) one- to four-gap pair closers. Tests in
 //! `tests/recent_b/cmdr_01r3_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, AlternativeCost, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
-    Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
+    ActivatedAbility, AlternativeCost, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, ConditionalEquipBonus,
+    CounterType, CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
+    MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Zone,
 };
-use std::sync::Arc;
-use crate::effect::shortcut::{craft, freerunning, magecraft, target_filtered};
+use crate::effect::shortcut::{craft, freerunning, magecraft, partner_with_search, support, target_filtered};
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value, ZoneDest,
+    DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value,
+    ZoneDest,
 };
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
+use std::sync::Arc;
 
 /// Arcane Proxy — {7} 4/3 artifact creature Wizard; prototype {1}{U}{U} 2/1
 /// (CR 702.160). When it enters, if you cast it, exile target instant or
@@ -721,6 +722,298 @@ pub fn kor_dirge() -> CardDefinition {
             whole_turn: true,
             exile_top_per_prevented: false,
         },
+        ..Default::default()
+    }
+}
+
+/// Put Away — {2}{U}{U} instant. Counter target spell. You may shuffle up to
+/// one target card from your graveyard into your library.
+pub fn put_away() -> CardDefinition {
+    CardDefinition {
+        name: "Put Away",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+                Effect::Move {
+                    what: Selector::TargetFiltered { slot: 1, filter: R::InYourGraveyard },
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Shuffled },
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ceremonious Rejection — {U} instant: counter target colorless spell.
+pub fn ceremonious_rejection() -> CardDefinition {
+    CardDefinition {
+        name: "Ceremonious Rejection",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::Colorless)) },
+        ..Default::default()
+    }
+}
+
+/// Deny Entry — {2}{U} instant: counter target creature spell, then draw a
+/// card and discard a card.
+pub fn deny_entry() -> CardDefinition {
+    CardDefinition {
+        name: "Deny Entry",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::Creature)) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kiss of the Amesha — {4}{W}{U} sorcery: target player gains 7 life and
+/// draws two cards.
+pub fn kiss_of_the_amesha() -> CardDefinition {
+    CardDefinition {
+        name: "Kiss of the Amesha",
+        cost: cost(&[generic(4), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife { who: target_filtered(R::Player), amount: Value::Const(7) },
+            Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Symbol of Unsummoning — {2}{U} sorcery: return target creature to its
+/// owner's hand; draw a card.
+pub fn symbol_of_unsummoning() -> CardDefinition {
+    CardDefinition {
+        name: "Symbol of Unsummoning",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Command of Unsummoning — {2}{U} instant; cast only during the declare
+/// attackers step if you've been attacked this step. Return one or two target
+/// attacking creatures to their owner's hand.
+pub fn command_of_unsummoning() -> CardDefinition {
+    let attacker = |slot| Selector::TargetFiltered { slot, filter: R::Creature.and(R::IsAttacking) };
+    CardDefinition {
+        name: "Command of Unsummoning",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        cast_condition: Some(Predicate::All(vec![
+            Predicate::CurrentStepIs(TurnStep::DeclareAttackers),
+            Predicate::ValueAtLeast(Value::CreaturesAttackingPlayer(PlayerRef::You), Value::ONE),
+        ])),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move { what: attacker(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                Effect::Move { what: attacker(1), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Invasion of Vryn // Overloaded Mage-Ring — {3}{U} Siege, defense 4. When it
+/// enters, draw three cards, then discard a card. Back: {1}, {T}, sacrifice
+/// this artifact: copy target spell you control; you may choose new targets.
+pub fn invasion_of_vryn() -> CardDefinition {
+    let ring = CardDefinition {
+        name: "Overloaded Mage-Ring",
+        card_types: vec![CardType::Artifact],
+        color_indicator: vec![Color::Blue],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::CopySpellMayChooseTargets {
+                what: target_filtered(R::IsSpellOnStack.and(R::ControlledByYou)),
+                count: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Vryn",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() },
+        defense: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        }],
+        back_face: Some(Box::new(ring)),
+        ..Default::default()
+    }
+}
+
+/// Fate Transfer — {1}{U/B} instant: move all counters from target creature
+/// onto another target creature.
+pub fn fate_transfer() -> CardDefinition {
+    CardDefinition {
+        name: "Fate Transfer",
+        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::MoveAllCounters {
+            from: target_filtered(R::Creature),
+            to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0)) },
+        },
+        ..Default::default()
+    }
+}
+
+/// Silver-Inlaid Dagger — {1} Equipment: +2/+0, a Human an additional +1/+0.
+/// Equip {2}.
+pub fn silver_inlaid_dagger() -> CardDefinition {
+    CardDefinition {
+        name: "Silver-Inlaid Dagger",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::HasCreatureType(CreatureType::Human),
+                power: 1,
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Elusive Tormentor // Insidious Mist — {2}{B}{B} 4/4 Vampire Wizard; {1},
+/// discard a card: transform it. Back: a 0/1 Elemental with hexproof and
+/// indestructible that can't block or be blocked; whenever it attacks and
+/// isn't blocked, you may pay {2}{B} to transform it.
+pub fn elusive_tormentor() -> CardDefinition {
+    let mist = CardDefinition {
+        name: "Insidious Mist",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Hexproof, Keyword::Indestructible, Keyword::CantBlock, Keyword::Unblockable],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {2}{B} to transform it?".into(),
+                mana_cost: cost(&[generic(2), b()]),
+                body: Box::new(Effect::Transform { what: Selector::This }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(mist)),
+        ..creature(
+            "Elusive Tormentor",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Vampire, CreatureType::Wizard],
+            4,
+            4,
+        )
+    }
+}
+
+/// Visions of Duplicity — {2}{U} sorcery: exchange control of two target
+/// creatures you don't control. Flashback {8}{U}{U}, {X} less where X is the
+/// greatest mana value of a commander you own on the battlefield or in the
+/// command zone.
+pub fn visions_of_duplicity() -> CardDefinition {
+    let theirs = R::Creature.and(R::ControlledByYou.negate());
+    CardDefinition {
+        name: "Visions of Duplicity",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(8), u(), u()]))],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast this way, where X is the greatest mana value of a commander you own on the battlefield or in the command zone.",
+            effect: StaticEffect::SelfFlashbackCostsLess {
+                amount: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
+            },
+        }],
+        effect: Effect::ExchangeControl {
+            a: target_filtered(theirs.clone()),
+            b: Selector::TargetFiltered { slot: 1, filter: theirs.and(R::OtherThanTargetSlot(0)) },
+        },
+        ..Default::default()
+    }
+}
+
+/// Soulblade Renewer — {4}{G} 2/2 Elf Warrior. Partner with Soulblade
+/// Corrupter. When it enters, support 2.
+pub fn soulblade_renewer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Soulblade Corrupter".into())],
+        triggered_abilities: vec![
+            partner_with_search("Soulblade Corrupter"),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: support(2),
+            },
+        ],
+        ..creature("Soulblade Renewer", cost(&[generic(4), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Jester's Scepter — {3} artifact. When it enters, exile the top five cards
+/// of target player's library face down. {2}, {T}, put a card exiled with it
+/// into its owner's graveyard: counter target spell with the same name as that
+/// card. The card binned is one that names the spell (a non-matching card
+/// never pays for a counter).
+pub fn jesters_scepter() -> CardDefinition {
+    CardDefinition {
+        name: "Jester's Scepter",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileTopOfLibrary {
+                who: target_filtered(R::Player),
+                amount: Value::Const(5),
+                link_to_source: true,
+                face_down: true,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::SameNameAsExiledWithSource)) },
+                Effect::BinExiledWithSourceNamedLike { what: Selector::Target(0) },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
