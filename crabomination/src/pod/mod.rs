@@ -28686,6 +28686,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GLACIAN_27_COMMANDERS,
             main: decks::GLACIAN_27_MAIN,
         },
+        // Seat 4706: Erinis, Gloom Stalker and Hardy Outlander's EDHREC average deck. `--pod-decks 4706`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Hardy Outlander (G)",
+            commanders: decks::ERINIS_15_COMMANDERS,
+            main: decks::ERINIS_15_MAIN,
+        },
+        // Seat 4707: Livaan, Cultist of Tiamat and Popular Entertainer's EDHREC average deck. `--pod-decks 4707`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Popular Entertainer (R)",
+            commanders: decks::LIVAAN_11_COMMANDERS,
+            main: decks::LIVAAN_11_MAIN,
+        },
     ]
 }
 
@@ -35292,6 +35304,8 @@ mod tests {
             ("Glacian, Powerstone Engineer and Ikra Shidiqi, the Usurper", &[0x1C75]),
             ("Keleth, Sunmane Familiar and Kydele, Chosen of Kruphix", &[0x1C76]),
             ("Glacian, Powerstone Engineer and Kraum, Ludevic's Opus", &[0x1C77]),
+            ("Erinis, Gloom Stalker and Hardy Outlander", &[0x1C78]),
+            ("Livaan, Cultist of Tiamat and Popular Entertainer", &[0x1C79]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

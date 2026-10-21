@@ -131946,3 +131946,59 @@ pub const GLACIAN_27_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ERINIS_15_COMMANDERS: &[CardFactory] = &[erinis_gloom_stalker, hardy_outlander];
+
+/// **Erinis, Gloom Stalker and Hardy Outlander**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 23 Forests = 98.
+/// Erinis, Gloom Stalker and Hardy Outlander (EDHREC, fetched 2026-10-21).
+pub const ERINIS_15_MAIN: &[CardFactory] = &[
+    adventuring_gear, emerald_medallion, explorers_scope, hunters_bow, shadowspear,
+    skyclave_pick_axe, zuran_orb, blasted_landscape, blighted_woodland, boseiju_who_endures,
+    brokers_hideout, cabaretti_courtyard, desert_of_the_indomitable, evolving_wilds,
+    lotus_field, myriad_landscape, riveteers_overlook, slippery_karst, terramorphic_expanse,
+    the_hunter_maze, tranquil_thicket, yavimaya_cradle_of_growth, ancient_greenwarden,
+    argothian_enchantress, ascendant_packleader, attercop, dragonsguard_elite,
+    duskshell_crawler, fang_of_shigeki, fertilid, freestrider_lookout, grazing_gladehart,
+    kazandu_nectarpot, multani_yavimayas_avatar, nessian_wanderer, rampaging_baloths,
+    setessan_champion, shigeki_jukai_visionary, shinen_of_lifes_roar, snapping_gnarlid,
+    somberwald_alpha, springbloom_druid, territorial_baloth, territorial_scythecat,
+    tricksters_elk, verduran_enchantress, audacity, enchantresss_presence,
+    kenriths_transformation, khalni_heart_expedition, ordeal_of_nylea, rancor,
+    retreat_to_kazandu, setessan_training, sixth_sense, snake_umbra, utopia_sprawl, wild_growth,
+    archdruids_charm, entish_restoration, harrow, hunters_insight, khalni_ambush, ram_through,
+    return_of_the_wildspeaker, roiling_regrowth, snakeskin_veil, animists_might,
+    bala_ged_recovery, bridgeworks_battle, cultivate, planar_engineering, rampant_growth,
+    scale_the_heights, spinning_wheel_kick,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest,
+];
+
+pub const LIVAAN_11_COMMANDERS: &[CardFactory] = &[livaan_cultist_of_tiamat, popular_entertainer];
+
+/// **Livaan, Cultist of Tiamat and Popular Entertainer**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 32 Mountains = 98.
+/// Livaan, Cultist of Tiamat and Popular Entertainer (EDHREC, fetched 2026-10-21).
+pub const LIVAAN_11_MAIN: &[CardFactory] = &[
+    arcane_signet, bloodthirsty_blade, endless_atlas, fellwar_stone, lightning_greaves,
+    mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, the_reaver_cleaver, rogues_passage,
+    urzas_cave, valakut_the_molten_pinnacle, agitator_ant, avatar_roku_firebender,
+    baeloth_barrityl_entertainer, bothersome_quasit, geode_rager, goliath_daydreamer,
+    grenzo_havoc_raiser, karlach_fury_of_avernus, lady_loki_agent_of_chaos,
+    magda_the_hoardmaster, manaform_hellkite, pinnacle_monk, renegade_bull, storm_kiln_artist,
+    vengeful_ancestor, count_on_luck, dictate_of_the_twin_gods, furious_rise, pain_for_all,
+    shiny_impetus, abrade, big_score, blazing_crescendo, chaos_warp, end_blaze_epiphany,
+    giantfall, haste_magic, lightning_bolt, monstrous_rage, reckless_ransacking, rush_of_blood,
+    seize_opportunity, souls_fire, temur_battle_rage, thrill_of_possibility, uncaged_fury,
+    unexpected_windfall, untimely_malfunction, chandra_torch_of_defiance, blasphemous_act,
+    chandras_ignition, coronation_of_chaos, disrupt_decorum, fast_forward, fateful_tempest,
+    furygale_flocking, improvisation_capstone, insurrection, mana_geyser, mizzixs_mastery,
+    past_in_flames, twisted_fealty, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
