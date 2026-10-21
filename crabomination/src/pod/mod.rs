@@ -29608,6 +29608,7 @@ const POD_ATTRACTIONS: &[CardFactory] = &[
     crate::catalog::spinny_ride,
     crate::catalog::trash_bin,
     crate::catalog::swinging_ship,
+    crate::catalog::pick_a_beeble,
 ];
 
 /// Whether any of `d`'s abilities (either face) opens an Attraction.

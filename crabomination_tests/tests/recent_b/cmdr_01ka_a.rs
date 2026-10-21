@@ -171,3 +171,22 @@ fn cr_603_4_done_for_the_day_pays_only_with_an_employee() {
     end_step(&mut g);
     assert_eq!(paid(&g), 1);
 }
+
+/// CR 717.2 / 717.2a — a pod seat whose deck opens Attractions brings an
+/// Attraction deck of ten or more distinct names (in the command zone, not the
+/// 100); a seat whose deck never opens one brings none.
+#[test]
+fn cr_717_2a_a_pod_seat_that_opens_attractions_brings_an_attraction_deck() {
+    use crabomination::pod::{build_pod_template, target_decks};
+    let field = target_decks();
+    let gamer = *field.iter().find(|d| d.name.starts_with("The Most Dangerous Gamer")).expect("seat");
+    let t = build_pod_template(&[gamer, field[0]]);
+    let deck = &t.players[0].attraction_deck;
+    assert!(deck.len() >= 10);
+    let mut names: Vec<&str> = deck.iter().map(|c| c.definition.name).collect();
+    names.sort_unstable();
+    names.dedup();
+    assert_eq!(names.len(), deck.len(), "one of each name");
+    assert_eq!(t.players[0].library.len(), 99, "outside the 100");
+    assert!(t.players[1].attraction_deck.is_empty());
+}
