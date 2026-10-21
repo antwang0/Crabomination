@@ -1050,3 +1050,57 @@ pub fn eye_of_ojer_taq() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Monitor Monitor — {2}{U}{U} 2/5 Human Employee. When it enters, open an
+/// Attraction. Once each turn, you may pay {1} to reroll one or more dice you
+/// rolled (CR 706.6; headless: a die in the bottom third, one at a time).
+pub fn monitor_monitor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::OpenAnAttraction,
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Once each turn, you may pay {1} to reroll one or more dice you rolled.",
+            effect: StaticEffect::MayPayToRerollDieOncePerTurn { generic: 1 },
+        }],
+        ..creature(
+            "Monitor Monitor",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Employee],
+            2,
+            5,
+        )
+    }
+}
+
+/// Command Performance — {1}{U} sorcery, choose two: open an Attraction; roll
+/// to visit your Attractions; you get {TK}{TK}; you may put a sticker on a
+/// nonland permanent you own (name stickers only, CR 123).
+pub fn command_performance() -> CardDefinition {
+    CardDefinition {
+        name: "Command Performance",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::OpenAnAttraction,
+                Effect::RollToVisitAttractions,
+                Effect::GainTickets { who: PlayerRef::You, amount: 2 },
+                Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(R::Land.negate().and(R::OwnedByYou)),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::PutNameSticker {
+                        what: Selector::SeparatedPile { chosen: true },
+                        optional: true,
+                    }),
+                    other: Box::new(Effect::Noop),
+                },
+            ],
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}

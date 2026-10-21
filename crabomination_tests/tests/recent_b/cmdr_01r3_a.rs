@@ -539,3 +539,41 @@ fn cr_702_167_eye_of_ojer_taq_crafts_on_a_shared_type() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "cast for free and resolved");
     assert!(g.players[0].free_next_spell_types.is_empty(), "the grant is spent");
 }
+
+/// CR 706.6 — Monitor Monitor pays {1} to reroll a low die once a turn: the 1
+/// becomes a 6; a second low roll that turn stands.
+#[test]
+fn cr_706_6_monitor_monitor_rerolls_once_a_turn() {
+    let mut g = pod(2);
+    let monitor = g.add_card_to_battlefield(0, catalog::monitor_monitor());
+    g.players[0].mana_pool.add_colorless(2);
+    let roll = Effect::RollDie {
+        sides: 6,
+        count: Value::ONE,
+        modifier: Value::Const(0),
+        reroll_at_most: 0,
+        ignore_lowest: 0,
+        results: vec![(6, 6, Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        on_doubles: None,
+    };
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1), DecisionAnswer::DieRoll(6), DecisionAnswer::DieRoll(1)]));
+    g.resolve_effect(&roll, &EffectContext::for_ability(monitor, 0, None)).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "rerolled into a 6");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "{{1}} paid");
+    g.resolve_effect(&roll, &EffectContext::for_ability(monitor, 0, None)).unwrap();
+    assert_eq!(g.players[0].mana_pool.total(), 1, "once each turn");
+}
+
+/// Command Performance's ticket mode: {TK}{TK} (CR 123.2); the Attraction
+/// mode opens nothing from an empty Attraction deck.
+#[test]
+fn cr_123_2_command_performance_grants_two_tickets() {
+    let mut g = pod(2);
+    let cp = g.add_card_to_hand(0, catalog::command_performance());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree { card_id: cp, spree_modes: vec![0, 2], target: None, additional_targets: vec![], x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].tickets, 2);
+}

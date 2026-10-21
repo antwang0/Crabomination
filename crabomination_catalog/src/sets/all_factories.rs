@@ -18995,6 +18995,8 @@ static DECKS: &[Factory] = &[
     super::decks::soulblade_renewer,
     super::decks::jesters_scepter,
     super::decks::eye_of_ojer_taq,
+    super::decks::monitor_monitor,
+    super::decks::command_performance,
     // cmdr_01kp_a (session 01KPxZ3H)
     super::decks::squall_gunblade_duelist,
     super::decks::duelists_flame,
