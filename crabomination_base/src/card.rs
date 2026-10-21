@@ -1134,6 +1134,8 @@ pub enum CounterType {
     Rope,
     /// Braided Net's net counters.
     Net,
+    /// Soul Echo's echo counters.
+    Echo,
 }
 
 /// Every zone a card can occupy.

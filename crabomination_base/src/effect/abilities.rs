@@ -4096,6 +4096,14 @@ pub enum StaticEffect {
     /// every phase-in path holds while it is on the battlefield; read by
     /// `GameState::phase_in_locked`.
     PermanentsCantPhaseIn,
+    /// CR 706.6 — "If you would roll one or more six-sided dice, instead roll
+    /// them and you may exchange one result with this creature's base power or
+    /// base toughness" (Vedalken Squirrel-Whacker); read in `roll_one_die`.
+    MayExchangeD6WithSelfBasePt,
+    /// CR 614.1a — while the source's `PlayerMayStampSourceTurn` stamp holds
+    /// ("until your next upkeep"), each 1 damage that would be dealt to its
+    /// controller removes a `kind` counter from it instead (Soul Echo).
+    ReplaceDamageToYouRemovingStampedCounters { kind: crate::card::CounterType },
     /// CR 614.6 — graveyard-hate replacement: "If a card would be put into
     /// a graveyard from anywhere, exile it instead." When `opponents_only`
     /// the redirect applies only to cards bound for a graveyard belonging to

@@ -204,6 +204,15 @@ impl GameState {
             }
             return true;
         }
+        // CR 614.1a — Soul Echo, while its stamp holds: each 1 damage removes
+        // an echo counter instead, counters or not (2004-10-04 ruling).
+        if damage_statics && let Some((cid, kind)) = self.stamped_damage_replacement(p) {
+            let removed = self.battlefield_find_mut(cid).map_or(0, |c| c.remove_counters(kind, amount));
+            if removed > 0 {
+                events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: removed });
+            }
+            return true;
+        }
         // CR 615 — Angel of Suffering: the damage is prevented and its
         // controller mills twice that many (no prevention under a "damage
         // can't be prevented" static).

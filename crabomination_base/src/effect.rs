@@ -14386,6 +14386,14 @@ pub enum Effect {
     /// control. All permanents other than this one that weren't chosen phase
     /// out" (Disciple of Caelus Nin) — asked in turn order (CR 101.4).
     EachPlayerKeepsUpToPermanentsRestPhaseOut { keep: u32 },
+    /// "Roll a d`sides` twice. Its base power becomes the first result and its
+    /// base toughness becomes the second" — an as-enters effect on the source
+    /// (Vedalken Squirrel-Whacker): one indefinite layer-7b set it owns.
+    RollDiceSetBasePt { sides: u8 },
+    /// "[Who] may choose that …" (Soul Echo's upkeep): the seat `who` names
+    /// is asked; yes stamps the source with this turn (`chosen_number`), no
+    /// clears it. Read by `StaticEffect::ReplaceDamageToYouRemovingStampedCounters`.
+    PlayerMayStampSourceTurn { who: Selector },
     /// "[Player] loses all unspent mana" (Mana Short, Worldpurge) — an
     /// effect, so Upwelling's step-end exception doesn't stop it (CR 500.4);
     /// Yurlok's mana burn sees the loss.

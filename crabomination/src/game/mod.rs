@@ -35786,6 +35786,8 @@ fn static_effect_to_effects(
             | StaticEffect::CantBecomeUntapped { .. }
             | StaticEffect::CantHaveCountersPutOn { .. }
             | StaticEffect::PermanentsCantPhaseIn
+            | StaticEffect::MayExchangeD6WithSelfBasePt
+            | StaticEffect::ReplaceDamageToYouRemovingStampedCounters { .. }
             // SpellCostFloor (Trinisphere) — read at cast time by
             // `apply_spell_cost_floor`; no layer effect.
             | StaticEffect::SpellCostFloor { .. }

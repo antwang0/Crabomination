@@ -874,6 +874,7 @@ fn card_has_damage_replacement_static(c: &CardInstance) -> bool {
                 | S::ReplaceDamageToYouWithGraveyardExile
                 | S::PreventDamageToYouMillTwice
                 | S::PreventDamageToYouExileFromGraveyard
+                | S::ReplaceDamageToYouRemovingStampedCounters { .. }
                 | S::RedirectControllerDamageToEquippedCreature
                 | S::RedirectDamageToSelf
         )

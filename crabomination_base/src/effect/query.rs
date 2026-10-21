@@ -1018,6 +1018,7 @@ impl Effect {
             | Effect::EachPlayerShufflesHandAndPermanentsThenDraws
             | Effect::EachPlayerKeepsUpToFromHandShufflesRest { .. }
             | Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { .. }
+            | Effect::RollDiceSetBasePt { .. }
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
@@ -1882,6 +1883,7 @@ impl Effect {
                 value_has_target(amount) || value_has_target(take)
             }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
+            Effect::PlayerMayStampSourceTurn { who } => sel_has_target(who),
             Effect::DiscardMatchingAtRandom { who, .. } => player_has_target(who),
             Effect::ExileFromHand { who, amount } | Effect::ExileFromHandLinked { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
@@ -3169,6 +3171,7 @@ impl Effect {
             // manual Target. The filter is typically `Player` (Mind Rot,
             // Sign in Blood) but can be narrower (Howling Mine-style "you").
             Effect::Discard { who, .. }
+            | Effect::PlayerMayStampSourceTurn { who }
             | Effect::LureCreaturesToSourceNextTurn { who }
             | Effect::AttackIfAbleDuringTheirNextTurn { who }
             | Effect::DiscardAnyNumber { who, .. }
@@ -3697,6 +3700,7 @@ impl Effect {
         fn hostile(e: &Effect) -> bool {
             match e {
                 Effect::Discard { .. }
+                | Effect::PlayerMayStampSourceTurn { .. }
                 | Effect::DiscardChosen { .. }
                 | Effect::DiscardHalf { .. }
                 | Effect::DealDamage { .. }
@@ -4749,6 +4753,7 @@ impl Effect {
             | Effect::Drain { .. }
             | Effect::DrainLifeLost { .. }
             | Effect::Discard { .. }
+            | Effect::PlayerMayStampSourceTurn { .. }
             | Effect::LureCreaturesToSourceNextTurn { .. }
             | Effect::AttackIfAbleDuringTheirNextTurn { .. }
             | Effect::DiscardAnyNumber { .. }
@@ -5589,6 +5594,7 @@ impl Effect {
                 }
                 Effect::DestroyTargets { filter } => Some(filter),
                 Effect::Discard { who, .. } => sel_find(who, slot),
+                Effect::PlayerMayStampSourceTurn { who } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who, .. } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. }
                 | Effect::DiscardChosenFromRevealed { from, .. }

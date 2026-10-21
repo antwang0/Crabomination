@@ -14,6 +14,8 @@ mod any_player_sacrifice;
 mod flux;
 mod keep_from_hand;
 mod keep_permanents;
+mod die_exchange;
+mod soul_echo;
 mod great_aurora;
 mod lose_unspent;
 mod artifact_subtypes;
@@ -1495,10 +1497,11 @@ impl GameState {
             pl.dice_rolled_this_turn += 1;
         }
         let rolled = rand::RngExt::random_range(&mut self.rng.draw(), 1..=sides);
-        match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides, rolled }) {
+        let face = match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides, rolled }) {
             crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
             _ => (sides as u32).div_ceil(2) as u8,
-        }
+        };
+        if sides == 6 { self.exchange_d6_with_base_pt(player, face) } else { face }
     }
 
     /// Ask `seat` to choose a number in `0..=max`, routed to a seat that may
@@ -24746,6 +24749,8 @@ impl GameState {
             Effect::EachPlayerKeepsUpToFromHandShufflesRest { keep } => {
                 self.each_player_keeps_from_hand_shuffles_rest(*keep, effect, ctx, events)
             }
+            Effect::RollDiceSetBasePt { sides } => self.roll_dice_set_base_pt(*sides, ctx, events),
+            Effect::PlayerMayStampSourceTurn { who } => self.player_may_stamp_source_turn(who, effect, ctx, events),
             Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { keep } => {
                 self.each_player_keeps_permanents_rest_phase_out(*keep, effect, ctx, events)
             }
