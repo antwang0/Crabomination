@@ -55815,14 +55815,6 @@ pub fn cryptic_serpent() -> CardDefinition {
 /// opponent, gain 6 life; if you control fewer creatures than an opponent,
 /// create three 1/1 white Soldiers.
 pub fn timely_reinforcements() -> CardDefinition {
-    let your_creatures = || {
-        Value::CountOf(Box::new(Selector::EachPermanent(
-            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-        )))
-    };
-    let opp_creatures = Value::CountOf(Box::new(Selector::EachPermanent(
-        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-    )));
     CardDefinition {
         name: "Timely Reinforcements",
         cost: cost(&[generic(2), w()]),
@@ -55839,11 +55831,9 @@ pub fn timely_reinforcements() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
+            // "Than an opponent" — any one of them (CR 800.4), not their sum.
             Effect::If {
-                cond: Predicate::Not(Box::new(Predicate::ValueAtLeast(
-                    your_creatures(),
-                    opp_creatures,
-                ))),
+                cond: Predicate::AnOpponentControlsMoreCreatures,
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),

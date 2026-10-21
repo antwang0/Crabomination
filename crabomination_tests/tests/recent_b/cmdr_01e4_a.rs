@@ -3395,3 +3395,21 @@ fn air_nomad_student_studies_at_home() {
     drain_stack(&mut g);
     assert_eq!(pt(&g, student), (3, 3));
 }
+
+/// CR 800.4 — Timely Reinforcements' "fewer creatures than an opponent" is
+/// one opponent's board, not the sum: two one-creature opponents don't
+/// outnumber a one-creature caster.
+#[test]
+fn cr_800_4_timely_reinforcements_reads_one_opponent() {
+    for (seat1, tokens) in [(1, 0), (2, 3)] {
+        let mut g = pod(3);
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..seat1 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        let timely = g.add_card_to_hand(0, catalog::timely_reinforcements());
+        cast(&mut g, timely, None);
+        assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), tokens, "seat 1 has {seat1}");
+    }
+}
