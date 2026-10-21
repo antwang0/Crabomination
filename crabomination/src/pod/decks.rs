@@ -135243,3 +135243,33 @@ pub const TETZIN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
     plains, plains, plains, plains,
 ];
+
+pub const SATSUKI_COMMANDERS: &[CardFactory] = &[satsuki_the_living_lore];
+
+/// **Satsuki, the Living Lore**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Forests + 11 Plains = 99.
+/// Satsuki, the Living Lore (EDHREC, fetched 2026-10-21).
+pub const SATSUKI_MAIN: &[CardFactory] = &[
+    arcane_signet, power_conduit, selesnya_signet, sol_ring, bountiful_promenade, canopy_vista,
+    command_tower, fortified_village, hall_of_heliods_generosity, karns_bastion,
+    nesting_grounds, overgrown_farmland, reliquary_tower, selesnya_sanctuary, sungrass_prairie,
+    sunpetal_grove, temple_garden, temple_of_plenty, archon_of_suns_grace, destiny_spinner,
+    eidolon_of_blossoms, garnet_princess_of_alexandria, herald_of_the_pantheon,
+    jukai_naturalist, kami_of_transience, mesa_enchantress, sanctum_weaver, satyr_enchanter,
+    scholar_of_new_horizons, setessan_champion, starfield_mystic, summon_bahamut, summon_fenrir,
+    summon_knights_of_round, summon_yojimbo, sun_titan, sythis_harvests_hand, weaver_of_harmony,
+    yenna_redtooth_regent, azusas_many_journeys, battle_at_the_helvault, battle_for_bretagard,
+    boseiju_reaches_skyward, elspeth_conquers_death, enchantresss_presence,
+    era_of_enlightenment, fall_of_the_impostor, historians_boon, jugan_defends_the_temple,
+    love_song_of_night_and_day, michikos_reign_of_truth, sigil_of_the_empty_throne,
+    song_of_freyalise, sterling_grove, tales_of_master_seshiro, teachings_of_the_kirin,
+    the_binding_of_the_titans, the_birth_of_meletis, the_fall_of_lord_konda,
+    the_first_iroan_games, the_mending_of_dominaria, the_restoration_of_eiganjo,
+    the_weatherseed_treaty, three_blind_mice, triumph_of_gerrard, beast_within, path_to_exile,
+    season_of_renewal, storyweave, swords_to_plowshares, calix_destinys_hand,
+    brilliant_restoration, clash_of_the_eikons, cultivate, idyllic_tutor, rampant_growth,
+    resurgent_belief,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

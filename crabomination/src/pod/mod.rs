@@ -29394,6 +29394,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TETZIN_COMMANDERS,
             main: decks::TETZIN_MAIN,
         },
+        // Seat 4824: Satsuki, the Living Lore's EDHREC average deck. `--pod-decks 4824`.
+        PodDeck {
+            name: "Satsuki, the Living Lore (WG)",
+            commanders: decks::SATSUKI_COMMANDERS,
+            main: decks::SATSUKI_MAIN,
+        },
     ]
 }
 
@@ -36118,6 +36124,7 @@ mod tests {
             ("Squall, Gunblade Duelist", &[0x1CEB]),
             ("Captain Rex Nebula", &[0x1CEC]),
             ("Tetzin, Gnome Champion", &[0x1CED]),
+            ("Satsuki, the Living Lore", &[0x1CEE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
