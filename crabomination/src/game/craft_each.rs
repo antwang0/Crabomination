@@ -5,6 +5,8 @@
 //! fills one slot, so the picks are a matching, found by backtracking over
 //! the (at most a handful of) requirements. Graveyard cards are tried first,
 //! then the lowest-power permanents, so board pieces stay where they can.
+//! `craft_cost_picks` is the plain "craft with N [filter]" sibling, shared by
+//! the activation's pre-flight and the bot's craft sink.
 
 use crate::card::{CardId, SelectionRequirement};
 use crate::game::GameState;
@@ -110,5 +112,59 @@ impl GameState {
             })
             .max_by_key(|(from_gy, _)| *from_gy)
             .map(|(_, picks)| picks)
+    }
+
+    /// "Craft with `count` [filter]" (`ActivatedAbility::craft_exile_cost`):
+    /// `count` *other* objects from among `p`'s permanents and graveyard,
+    /// graveyard cards first, then the lowest-power permanents; `None` when
+    /// too few match. `count` 0 is "one or more": every matching graveyard
+    /// card (the most a P/T or colour CDA can read — Wretched Bonemass,
+    /// Sunbird Effigy), else one permanent, a nonland one when there is any.
+    pub(crate) fn craft_cost_picks(
+        &self,
+        p: usize,
+        source: CardId,
+        filter: &SelectionRequirement,
+        count: u32,
+    ) -> Option<Vec<(CardId, bool)>> {
+        let gy: Vec<CardId> = self.players[p]
+            .graveyard
+            .iter()
+            .filter(|c| c.id != source)
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+            .map(|c| c.id)
+            .collect();
+        let mut bf: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.id != source && c.controller == p)
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+            .map(|c| c.id)
+            .collect();
+        let count = match count {
+            0 if gy.is_empty() && bf.is_empty() => return None,
+            0 if gy.is_empty() => {
+                let nonland: Vec<CardId> = bf
+                    .iter()
+                    .copied()
+                    .filter(|id| self.battlefield_find(*id).is_some_and(|c| !c.definition.is_land()))
+                    .collect();
+                if !nonland.is_empty() {
+                    bf = nonland;
+                }
+                1
+            }
+            0 => gy.len(),
+            n => n as usize,
+        };
+        if gy.len() + bf.len() < count {
+            return None;
+        }
+        let mut picks: Vec<(CardId, bool)> = gy.into_iter().take(count).map(|id| (id, true)).collect();
+        if picks.len() < count {
+            let need = count - picks.len();
+            picks.extend(self.auto_pick_lowest_power(&bf, need).into_iter().map(|id| (id, false)));
+        }
+        Some(picks)
     }
 }

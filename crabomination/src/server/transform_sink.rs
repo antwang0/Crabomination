@@ -85,8 +85,9 @@ pub(super) fn pick_creature_upgrade_transform(state: &GameState, seat: usize) ->
     None
 }
 
-/// Pods: a noncreature's "craft with one of each" (CR 702.167a — Throne of
-/// the Grim Captain) into a creature back face, when the board pieces the
+/// Pods: a noncreature's craft — "with one of each" (CR 702.167a — Throne of
+/// the Grim Captain) or "with N [filter]" — into a creature back face, when
+/// the board pieces the
 /// craft would exile are worth less than that creature (graveyard cards are
 /// free). A 40-game census of the three Throne seats never saw it crafted:
 /// no sink asked for a noncreature's exile-and-return. Commander games
@@ -101,17 +102,28 @@ pub(super) fn pick_craft_into_creature(state: &GameState, seat: usize) -> Option
             continue;
         }
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if ab.craft_exile_each.is_empty() || !matches!(ab.effect, Effect::ExileSelfReturnTransformed) {
+            if !matches!(ab.effect, Effect::ExileSelfReturnTransformed) {
                 continue;
             }
-            let Some(picks) = state.craft_each_picks(seat, card.id, &ab.craft_exile_each) else { continue };
+            // "Craft with one of each" or "craft with N [filter]" (Sunbird
+            // Standard, Altar of the Wretched — never crafted in 60 Tetzin
+            // pods, seed 9443, before the plain shape was read here).
+            let picks = if !ab.craft_exile_each.is_empty() {
+                state.craft_each_picks(seat, card.id, &ab.craft_exile_each)
+            } else if let Some((filter, n)) = ab.craft_exile_cost.as_ref() {
+                state.craft_cost_picks(seat, card.id, filter, *n)
+            } else {
+                None
+            };
+            let Some(picks) = picks else { continue };
             let spent: i64 = picks
                 .iter()
                 .filter(|(_, in_gy)| !in_gy)
                 .filter_map(|(id, _)| state.computed_permanent(*id))
                 .map(|cp| i64::from(cp.power.max(0)) + i64::from(cp.toughness.max(0)))
                 .sum::<i64>();
-            if spent >= i64::from(back.power) + i64::from(back.toughness) {
+            let (bp, bt) = crafted_pt(state, back, &picks);
+            if bt <= 0 || spent >= i64::from(bp) + i64::from(bt) {
                 continue;
             }
             let action = GameAction::ActivateAbility {
@@ -128,6 +140,33 @@ pub(super) fn pick_craft_into_creature(state: &GameState, seat: usize) -> Option
         }
     }
     None
+}
+
+/// The back face's P/T once crafted from `picks`: its printed numbers, or
+/// what a craft CDA would read off the exiled cards (CR 702.167c).
+fn crafted_pt(state: &GameState, back: &crate::card::CardDefinition, picks: &[(crate::card::CardId, bool)]) -> (i32, i32) {
+    use crate::card::DynamicPt;
+    let defs = || {
+        picks.iter().filter_map(|(id, _)| {
+            state.find_card_anywhere(*id).map(|c| c.definition.clone())
+        })
+    };
+    match back.dynamic_pt {
+        Some(DynamicPt::ExiledWithSourceColorCount) => {
+            let mut set = crate::mana::ColorSet::empty();
+            for d in defs() {
+                for c in d.printed_color_set().iter() {
+                    set.insert(c);
+                }
+            }
+            (set.len() as i32, set.len() as i32)
+        }
+        Some(DynamicPt::ExiledWithSourceTotalPower) => {
+            let p = defs().map(|d| d.power).sum::<i32>();
+            (p, p)
+        }
+        _ => (back.power, back.toughness),
+    }
 }
 
 /// The ability transforms its own source.
@@ -263,5 +302,23 @@ mod tests {
         g.add_card_to_graveyard(0, crate::catalog::silvergill_peddler());
         let a = pick_craft_into_creature(&g, 0).expect("craft");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, ability_index: 1, .. } if card_id == throne));
+    }
+
+    /// Sunbird Standard crafts with one or more in a pod once its graveyard
+    /// holds coloured cards (an Effigy of 0/0 would die, so not before).
+    #[test]
+    fn sunbird_standard_crafts_once_its_graveyard_has_colour() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let sunbird = g.add_card_to_battlefield(0, crate::catalog::sunbird_standard());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(5);
+        g.add_card_to_graveyard(0, crate::catalog::ornithopter());
+        assert!(pick_craft_into_creature(&g, 0).is_none(), "a colourless pile makes a 0/0");
+        g.add_card_to_graveyard(0, crate::catalog::lightning_bolt());
+        let a = pick_craft_into_creature(&g, 0).expect("craft");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, ability_index: 1, .. } if card_id == sunbird));
     }
 }

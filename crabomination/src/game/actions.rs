@@ -23263,53 +23263,7 @@ impl GameState {
         let craft_exile_picks: Vec<(CardId, bool)> = if let Some((filter, count)) =
             ability.craft_exile_cost.as_ref()
         {
-            let count = *count as usize;
-            let gy: Vec<CardId> = self.players[p]
-                .graveyard
-                .iter()
-                .filter(|c| c.id != card_id)
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .map(|c| c.id)
-                .collect();
-            let mut bf: Vec<CardId> = self
-                .battlefield
-                .iter()
-                .filter(|c| c.id != card_id && c.controller == p)
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .map(|c| c.id)
-                .collect();
-            // "Craft with one or more [filter]" is count 0: every matching
-            // card in the graveyard (the most a P/T or colour CDA can read —
-            // Wretched Bonemass, Sunbird Effigy), else one permanent, a
-            // nonland one when there is any.
-            let count = if count == 0 {
-                if gy.is_empty() && bf.is_empty() {
-                    return Err(GameError::SelectionRequirementViolated);
-                }
-                if gy.is_empty() {
-                    let nonland: Vec<CardId> =
-                        bf.iter().copied().filter(|id| self.battlefield_find(*id).is_some_and(|c| !c.definition.is_land())).collect();
-                    if !nonland.is_empty() {
-                        bf = nonland;
-                    }
-                    1
-                } else {
-                    gy.len()
-                }
-            } else {
-                count
-            };
-            if gy.len() + bf.len() < count {
-                return Err(GameError::SelectionRequirementViolated);
-            }
-            let mut picks: Vec<(CardId, bool)> =
-                gy.into_iter().take(count).map(|id| (id, true)).collect();
-            if picks.len() < count {
-                let need = count - picks.len();
-                bf = self.auto_pick_lowest_power(&bf, need);
-                picks.extend(bf.into_iter().map(|id| (id, false)));
-            }
-            picks
+            self.craft_cost_picks(p, card_id, filter, *count).ok_or(GameError::SelectionRequirementViolated)?
         } else if !ability.craft_exile_each.is_empty() {
             self.craft_each_picks(p, card_id, &ability.craft_exile_each)
                 .ok_or(GameError::SelectionRequirementViolated)?
