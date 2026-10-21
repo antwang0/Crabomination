@@ -18844,6 +18844,11 @@ static DECKS: &[Factory] = &[
     super::decks::arcane_proxy,
     super::decks::worldpurge,
     super::decks::braided_net,
+    super::decks::duskrider_peregrine,
+    super::decks::deem_worthy,
+    super::decks::dire_wolves,
+    super::decks::natures_blessing,
+    super::decks::disciple_of_caelus_nin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

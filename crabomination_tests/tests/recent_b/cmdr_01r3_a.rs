@@ -1,8 +1,9 @@
 //! Commander: the 2026-10-21 (`01R3xh4r`) one-gap pair closers
 //! (`decks::cmdr_01r3_a`).
 
-use crabomination::card::{CardId, CounterType};
+use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -111,4 +112,58 @@ fn cr_611_2c_braided_net_locks_only_while_the_target_stays_tapped() {
     g.battlefield_find_mut(dragon).unwrap().tapped = false;
     g.check_state_based_actions();
     activate(&mut g, 2, dragon, None).expect("untapped, the lock has ended");
+}
+
+/// CR 702.26 — Disciple of Caelus Nin: each seat keeps five permanents
+/// (turn order from the caster, CR 101.4), the rest phase out and stay out
+/// while it is on the battlefield; once it leaves they phase in on their
+/// controller's untap step.
+#[test]
+fn cr_702_26_disciple_of_caelus_nin_holds_the_board_phased_out() {
+    let mut g = pod(3);
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..7 {
+        g.add_card_to_battlefield(2, catalog::island());
+    }
+    let disciple = g.add_card_to_hand(0, catalog::disciple_of_caelus_nin());
+    cast(&mut g, disciple, None);
+    let count = |g: &GameState, seat| g.battlefield.iter().filter(|c| c.controller == seat).count();
+    assert_eq!((count(&g, 0), count(&g, 1), count(&g, 2)), (6, 1, 5), "five kept and the Disciple");
+    assert_eq!(g.phased_out.len(), 3);
+    g.active_player_idx = 2;
+    g.do_phasing();
+    assert_eq!(g.phased_out.len(), 3, "permanents can't phase in");
+    let pos = g.battlefield.iter().position(|c| c.id == disciple).unwrap();
+    g.battlefield.remove(pos);
+    g.do_phasing();
+    assert_eq!(count(&g, 2), 7, "the lock is gone");
+}
+
+/// CR 702.29c — Deem Worthy cycled: the "may" trigger deals 2 to a creature.
+#[test]
+fn cr_702_29c_deem_worthy_cycling_deals_two() {
+    let mut g = pod(2);
+    let ogre = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let deem = g.add_card_to_hand(0, catalog::deem_worthy());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::Cycle { card_id: deem, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ogre).unwrap().damage, 2);
+}
+
+/// Dire Wolves bands only while its controller has a Plains (CR 702.22).
+#[test]
+fn cr_702_22_dire_wolves_band_with_a_plains() {
+    let mut g = pod(2);
+    let wolves = g.add_card_to_battlefield(0, catalog::dire_wolves());
+    let bands = |g: &GameState| g.computed_permanent(wolves).unwrap().keywords().contains(&Keyword::Banding);
+    assert!(!bands(&g));
+    g.add_card_to_battlefield(1, catalog::plains());
+    assert!(!bands(&g), "an opponent's Plains doesn't count");
+    g.add_card_to_battlefield(0, catalog::plains());
+    assert!(bands(&g));
 }
