@@ -4312,6 +4312,10 @@ pub enum StaticEffect {
     /// `effective_alternative_cost` on the hand zone only; a printed
     /// alternative cost wins (a card carries one alt cost).
     GrantEvokeToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// CR 702.119 — "Each [filter] spell you cast has emerge. The emerge cost
+    /// is equal to its mana cost" (Herigast, Erupting Nullkite): from any zone
+    /// it's cast from; a printed alternative cost wins.
+    GrantEmergeToSpells { filter: SelectionRequirement },
     /// "Permanents you control have: whenever one or more +1/+1 counters are put
     /// on this permanent, put an additional +1/+1 counter on it. This ability
     /// triggers only once each turn." Cursed Wombat. Consulted in the

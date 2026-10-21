@@ -354,7 +354,7 @@ pub fn amphibian_downpour() -> CardDefinition {
 
 /// Herigast, Erupting Nullkite — {9} 6/6 Eldrazi Dragon with flying and Emerge
 /// {6}{R}{R}. When cast, you may exile your hand; if you do, draw three cards.
-/// (The "each creature spell you cast has emerge" static is omitted.)
+/// Each creature spell you cast has emerge equal to its mana cost (CR 702.119).
 pub fn herigast_erupting_nullkite() -> CardDefinition {
     CardDefinition {
         name: "Herigast, Erupting Nullkite",
@@ -369,6 +369,10 @@ pub fn herigast_erupting_nullkite() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         alternative_cost: Some(emerge(cost(&[generic(6), r(), r()]))),
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Each creature spell you cast has emerge. The emerge cost is equal to its mana cost.",
+            effect: crate::effect::StaticEffect::GrantEmergeToSpells { filter: R::Creature },
+        }],
         triggered_abilities: vec![on_cast(Effect::MayDo {
             description: "Exile your hand to draw three cards?".into(),
             body: Box::new(Effect::Seq(vec![

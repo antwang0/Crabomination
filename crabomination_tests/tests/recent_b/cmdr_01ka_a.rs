@@ -370,3 +370,31 @@ fn cr_903_8_an_adventure_commander_adventures_from_the_command_zone() {
     assert!(g.battlefield_find(beorn).is_some());
     assert_eq!(g.commander_cast_count.get(&beorn), Some(&2), "not a command-zone cast");
 }
+
+/// CR 702.119 — Herigast grants every creature spell its controller casts
+/// emerge equal to its mana cost: Serra Angel ({3}{W}{W}) emerges off a Hill
+/// Giant (mana value 4) for {W}{W}. Without Herigast it has no emerge.
+#[test]
+fn cr_702_119_herigast_grants_emerge_at_the_spells_own_cost() {
+    let mut g = pod(3);
+    let emerge = |g: &mut GameState, card_id| {
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id,
+            pitch_card: None,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::White, 2);
+    assert!(emerge(&mut g, angel).is_err(), "no emerge without Herigast");
+    ready(&mut g, 0, catalog::herigast_erupting_nullkite());
+    emerge(&mut g, angel).expect("emerged");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_some());
+    assert!(g.battlefield_find(giant).is_none(), "the Giant was sacrificed");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

@@ -36364,6 +36364,7 @@ fn static_effect_to_effects(
             // Hunting Velociraptor — consulted by `effective_alternative_cost`.
             | StaticEffect::GrantProwlToSpells { .. }
             | StaticEffect::GrantEvokeToSpells { .. }
+            | StaticEffect::GrantEmergeToSpells { .. }
             // Memory Crystal — read by the cast path's buyback fold.
             | StaticEffect::BuybackCostsLess { .. }
             // Invasion Plans — read by `block_chooser` at declare-blockers.

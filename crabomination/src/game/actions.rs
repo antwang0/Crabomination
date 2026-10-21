@@ -500,6 +500,26 @@ impl GameState {
         Some(crate::effect::shortcut::evoke(cost))
     }
 
+    /// The emerge a `GrantEmergeToSpells` static `p` controls gives the spell
+    /// `card_id` (Herigast), its cost the spell's mana cost.
+    fn granted_emerge(
+        &self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
+        let card = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id)?;
+        let granted = self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                crate::effect::StaticEffect::GrantEmergeToSpells { filter } => {
+                    self.evaluate_requirement_on_card(filter, card, p)
+                }
+                _ => false,
+            })
+        });
+        granted.then(|| crate::effect::shortcut::emerge(card.definition.cost.clone()))
+    }
+
     /// The blitz a `GrantBlitzToSpells` static `p` controls gives the spell
     /// `card_id` (Henzie), its cost the spell's mana cost.
     fn granted_blitz(
@@ -663,6 +683,9 @@ impl GameState {
         }
         // CR 702.74 — Ashling: "Elemental permanent spells you cast from
         // your hand gain evoke {4}".
+        if let Some(granted) = self.granted_emerge(p, zone, card_id) {
+            return Some(granted);
+        }
         if let Some(granted) = self.granted_evoke(p, zone, card_id) {
             return Some(granted);
         }
@@ -15963,12 +15986,12 @@ impl GameState {
             Vec::new()
         };
 
-        // CR 702.119 — Emerge: pick the creature to sacrifice (auto: highest
-        // MV for max cost reduction) and record its MV. Rejected up front if
-        // the caster controls no matching creature. Sacrificed after payment.
+        // CR 702.119 — Emerge: pick the creature to sacrifice (auto, below)
+        // and record its MV. Rejected up front if the caster controls no
+        // matching creature. Sacrificed after payment.
         let (emerge_sac, emerge_reduction): (Option<CardId>, u32) =
             if let Some(filter) = &alt.emerge {
-                let best = self
+                let fits: Vec<(u32, CardId)> = self
                     .battlefield
                     .iter()
                     .filter(|c| {
@@ -15981,10 +16004,24 @@ impl GameState {
                                 None,
                             )
                     })
-                    .max_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| (c.id, c.definition.cost.cmc()));
+                    .map(|c| (c.definition.cost.cmc(), c.id))
+                    .collect();
+                // Only the generic part shrinks, so the cheapest creature that
+                // covers it all loses nothing more (Herigast need not feed
+                // itself to a five-drop); else the biggest.
+                let need: u32 = alt
+                    .mana_cost
+                    .symbols
+                    .iter()
+                    .map(|s| if let crate::mana::ManaSymbol::Generic(n) = s { *n } else { 0 })
+                    .sum();
+                let best = fits
+                    .iter()
+                    .filter(|(mv, _)| *mv >= need)
+                    .min_by_key(|(mv, _)| *mv)
+                    .or_else(|| fits.iter().max_by_key(|(mv, _)| *mv));
                 match best {
-                    Some((cid, mv)) => (Some(cid), mv),
+                    Some(&(mv, cid)) => (Some(cid), mv),
                     None => return Err(GameError::SelectionRequirementViolated),
                 }
             } else {

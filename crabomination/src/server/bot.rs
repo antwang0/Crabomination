@@ -7568,7 +7568,8 @@ impl BoardFacts {
                     | SE::ZeroCostOncePerTurnMvAtMostSourceCounters(_)
                     // Henzie's granted blitz, Ashling's granted evoke.
                     | SE::GrantBlitzToSpells { .. }
-                    | SE::GrantEvokeToSpells { .. } => f.grants_alt_cost = true,
+                    | SE::GrantEvokeToSpells { .. }
+                    | SE::GrantEmergeToSpells { .. } => f.grants_alt_cost = true,
                     _ => {}
                 }
             }
