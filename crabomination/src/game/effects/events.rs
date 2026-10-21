@@ -210,6 +210,9 @@ fn event_payload_matches(
             EventKind::CreatureOrArtifactDied,
             GameEvent::PermanentDied { is_creature, is_artifact, .. },
         ) => *is_creature || *is_artifact,
+        // Both excess events share the kind's bit; the noncombat-only form
+        // (Fall of Cair Andros) skips combat excess.
+        (EventKind::DealtExcessDamage { noncombat_only }, GameEvent::ExcessCombatDamage { .. }) => !noncombat_only,
         // Enrage (CR 702.130): keyed on the damaged permanent, so we only
         // match `DamageDealt` events that hit a card (not a player).
         (EventKind::DealtDamage, GameEvent::DamageDealt { to_card, .. }) => to_card.is_some(),

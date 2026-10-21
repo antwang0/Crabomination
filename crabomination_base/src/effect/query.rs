@@ -532,6 +532,7 @@ impl Effect {
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
             | Effect::WheneverCardEntersOpponentGraveyardThisTurn { body, .. }
             | Effect::OnEachSpellCastThisTurn { body, .. }
+            | Effect::WhenPlayedThisWayThisTurn { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body, .. }
             | Effect::OnYourNextExhaustActivationThisTurn { body, .. }
             | Effect::OnYourNextAttackThisTurn { body, .. }
