@@ -191,7 +191,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::ProtectionFromOwnColors
         | Keyword::ProtectionFromColorsOutsideCommanderIdentity
         | Keyword::ProtectionFromEverything
-        | Keyword::ProtectionFromChosenPlayer => "Protection",
+        | Keyword::ProtectionFromChosenPlayer
+        | Keyword::ProtectionFromEachOpponent => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }

@@ -19653,6 +19653,7 @@ impl GameState {
                 .battlefield_find(tgt.id)
                 .and_then(|c| c.chosen_player)
                 .is_some_and(|q| src_printed.is_some_and(|s| s.controller == q)),
+            ProtectionKind::EachOpponent => src_printed.is_some_and(|s| !self.same_team(s.controller, tgt.controller)),
         })
     }
 
@@ -20997,6 +20998,7 @@ impl GameState {
                 Keyword::ProtectionFromChosenPlayer => {
                     attacker.chosen_player == Some(blocker.controller)
                 }
+                Keyword::ProtectionFromEachOpponent => !self.same_team(blocker.controller, attacker.controller),
                 // CR 509.1b — Hooded Horror: the defender has at least as many
                 // creatures as every other player.
                 Keyword::CantBeBlockedIfDefenderHasMostCreatures => {
@@ -34669,6 +34671,7 @@ enum ProtectionKind<'a> {
     CardType(&'a crate::card::CardType),
     Everything,
     ChosenPlayer,
+    EachOpponent,
 }
 
 impl<'a> ProtectionKind<'a> {
@@ -34692,6 +34695,7 @@ impl<'a> ProtectionKind<'a> {
             Keyword::ProtectionFromCardType(t) => Self::CardType(t),
             Keyword::ProtectionFromEverything => Self::Everything,
             Keyword::ProtectionFromChosenPlayer => Self::ChosenPlayer,
+            Keyword::ProtectionFromEachOpponent => Self::EachOpponent,
             _ => return None,
         })
     }
@@ -37023,6 +37027,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
         Keyword::CantBeBlockedIfDefenderControls(_)
             | Keyword::CantBeBlockedIfDefenderHasMostCreatures
             | Keyword::ProtectionFromChosenPlayer
+            | Keyword::ProtectionFromEachOpponent
             | Keyword::ProtectionFromMatching(_)
             | Keyword::Landwalk(_)
             | Keyword::LandwalkFiltered(_)

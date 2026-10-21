@@ -10550,6 +10550,7 @@ impl GameState {
             // still in transient ownership, so match it card-side.
             if (matches!(kw, Keyword::ProtectionFromChosenPlayer)
                 && target_card.chosen_player == Some(p))
+                || (matches!(kw, Keyword::ProtectionFromEachOpponent) && !self.same_team(p, target_card.controller))
                 || matches!(kw, Keyword::ProtectionFromMatching(f)
                     if self.evaluate_requirement_on_card(f, card, target_card.controller))
             {
@@ -17094,6 +17095,7 @@ impl GameState {
                     | Keyword::ProtectionFromCreatureType(_)
                     | Keyword::ProtectionFromMatching(_)
                     | Keyword::ProtectionFromChosenPlayer
+                    | Keyword::ProtectionFromEachOpponent
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
@@ -17180,6 +17182,7 @@ impl GameState {
                     | Keyword::ProtectionFromCreatureType(_)
                     | Keyword::ProtectionFromMatching(_)
                     | Keyword::ProtectionFromChosenPlayer
+                    | Keyword::ProtectionFromEachOpponent
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
@@ -17244,6 +17247,9 @@ impl GameState {
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes().creature_types.contains(ty),
             Keyword::ProtectionFromMatching(f) => {
                 self.evaluate_requirement_static(f, &Target::Permanent(source), tgt_controller, None)
+            }
+            Keyword::ProtectionFromEachOpponent => {
+                self.find_card_anywhere(source).is_some_and(|s| !self.same_team(s.controller, tgt_controller))
             }
             // True-Name Nemesis — the chosen player's sources.
             Keyword::ProtectionFromChosenPlayer => self

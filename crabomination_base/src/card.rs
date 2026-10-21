@@ -1940,6 +1940,10 @@ pub enum Keyword {
     /// (`CardInstance.chosen_player`): True-Name Nemesis. Checked at the
     /// targeting, blocking and damage sites against the source's controller.
     ProtectionFromChosenPlayer,
+    /// CR 702.16j — "protection from each of your opponents" (Figure of
+    /// Fable's Avatar): every opponent's sources, at the targeting, blocking,
+    /// damage and attach sites the chosen-player protection uses.
+    ProtectionFromEachOpponent,
     /// CR 509.1b — "can't be blocked as long as defending player controls
     /// the most creatures or is tied for the most" (Hooded Horror).
     CantBeBlockedIfDefenderHasMostCreatures,
