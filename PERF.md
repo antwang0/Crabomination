@@ -3151,8 +3151,17 @@ pods (release)   seed 9316, 200 games at each of 2..8 seats: 1,400 decided, ever
 pods (release)   seed 9317, new seats 4659-4680 in five groups of four x 100: 500 decided
 sweeps (audit)   seed 9305, every deck at 4/6/8 seats: 2,516 games, 0 bad; 9306/9307 over 4659-4671: 114, 0 bad
 suite            28,523 / 1 / 6 (strict answer log, seat test excluded) — the one failure the concurrent
-                 d5c8304d4's ratchet, fixed in b285bc937 (cap 69 -> 70)
+                 d5c8304d4's ratchet, fixed in b285bc937 (cap 69 -> 70; back to 69 once 6daa24e1a moved it)
+closing tip      dc5a5efaf (batches thirteen-fourteen, CounterType::PlusOnePlusTwo / MinusTwoMinusOne):
+                 --bench 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical, both determinism checks ok;
+                 suite 28,546 / 0 / 6; workspace clippy 0 (one needless borrow in a new test, fixed);
+                 seeds 9318/9319: seats 4683-4689 x 300 and default 4/6 seats x 200, all decided
+                 (46.71 / 68.04 turns/game)
 ```
+
+⚠ Disk: a debug suite or clippy run without `CARGO_INCREMENTAL=0` grew `target/debug/incremental` to
+17 GB and filled the session allowance three times; `rm -rf target/debug/incremental` (not the whole
+`target/debug`) frees it.
 
 ### 2026-10-20 (Commander run, `01DDeUtc`) — guardrail; 44 cards, 13 seats, eleven primitives, two rule fixes
 
