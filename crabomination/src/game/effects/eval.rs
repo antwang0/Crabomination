@@ -3124,6 +3124,18 @@ impl GameState {
                 .into_iter()
                 .filter_map(|e| e.as_card_id())
                 .any(|id| self.find_card_anywhere(id).is_some_and(|c| c.cast_with_marked_mana)),
+            Predicate::SnowOfItsColorSpentToCast { what } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_card_id())
+                .any(|id| {
+                    self.find_card_anywhere(id).is_some_and(|c| {
+                        let own = c.definition.printed_colors().iter().fold(0u8, |m, col| {
+                            m | crate::mana::Color::ALL.iter().position(|a| a == col).map_or(0, |i| 1 << i)
+                        });
+                        c.cast_snow_colors & own != 0
+                    })
+                }),
             Predicate::CastWithTreasureMana { what } => self
                 .resolve_selector(what, ctx)
                 .into_iter()

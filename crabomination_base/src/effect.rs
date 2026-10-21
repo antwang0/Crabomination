@@ -2181,6 +2181,11 @@ pub enum Predicate {
     /// (Alchemist's Talent, Rain of Riches — on a `SpellCast` trigger,
     /// `Selector::TriggerSource`).
     CastWithTreasureMana { what: Selector },
+    /// Snow mana of one of the spell's own colours was spent to cast the
+    /// spell `what` resolves to (Boreal Outrider — "if {S} of any of that
+    /// spell's colors was spent to cast it", on a `SpellCast` trigger with
+    /// `Selector::TriggerSource`). Reads `CardData::cast_snow_colors`.
+    SnowOfItsColorSpentToCast { what: Selector },
     /// `SpendRestriction::MarksCast` mana was spent to cast `what` (Barracks
     /// of the Thousand's "using mana produced by" this).
     CastWithMarkedMana { what: Selector },

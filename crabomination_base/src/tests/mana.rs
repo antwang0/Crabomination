@@ -543,3 +543,21 @@ fn spells_you_dont_own_restriction() {
     assert!(!r.allows(&SpellKind::default()));
     assert!(!r.allows(&SpellKind { not_owned: true, activating_ability: true, ..Default::default() }));
 }
+
+/// CR 106.3 / 601.2h — the pool remembers which colours of its mana are snow;
+/// a payment that spends a bucket spends its snow mana first, so paying {G}
+/// from a snow Forest's green reports green snow, and paying {R} from a
+/// non-snow Mountain beside it reports none.
+#[test]
+fn snow_colours_spent_follow_the_bucket_that_paid() {
+    let mut pool = ManaPool::default();
+    pool.add_snow(Color::Green, 1);
+    pool.add(Color::Red, 1);
+    let before = pool.clone();
+    pool.pay(&cost(&[r()])).unwrap();
+    assert_eq!(pool.settle_snow_colors_spent(&before), 0, "the red wasn't snow");
+    let before = pool.clone();
+    pool.pay(&cost(&[g()])).unwrap();
+    assert_eq!(pool.settle_snow_colors_spent(&before), 1 << 4, "green snow");
+    assert!(pool.is_empty());
+}

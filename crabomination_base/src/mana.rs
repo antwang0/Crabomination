@@ -1465,6 +1465,13 @@ pub struct ManaPool {
     /// cast it" (Coin of Mastery); skipped on the wire when all zero.
     #[serde(default, skip_serializing_if = "is_zero_prov")]
     artifact: [u32; 6],
+    /// Provenance counter, WUBRG then colorless like `artifact`: how much of
+    /// each bucket came from a snow source. Read only to tell which colours
+    /// of snow mana a payment spent (Boreal Outrider's "{S} of any of that
+    /// spell's colors"); `snow` stays the pool-wide count `{S}` pips draw
+    /// on. Skipped on the wire when all zero.
+    #[serde(default, skip_serializing_if = "is_zero_prov")]
+    snow_by: [u32; 6],
     /// Provenance counter: how much of the pool came from a Desert's mana
     /// ability. Read only to count "mana from a Desert spent to cast this
     /// spell" (Cataclysmic Prospecting); clamped and skipped on the wire
@@ -1599,6 +1606,9 @@ impl ManaPool {
         for n in self.artifact.iter_mut() {
             *n *= 2;
         }
+        for n in self.snow_by.iter_mut() {
+            *n *= 2;
+        }
         self.desert *= 2;
     }
 
@@ -1643,6 +1653,19 @@ impl ManaPool {
         if self.desert > 0 {
             self.desert = self.desert.min(self.total());
         }
+        self.clamp_snow_by();
+    }
+
+    /// Clamp the per-bucket snow provenance to its buckets (see `snow_by`).
+    fn clamp_snow_by(&mut self) {
+        if is_zero_prov(&self.snow_by) {
+            return;
+        }
+        for c in Color::ALL {
+            let idx = color_index(c);
+            self.snow_by[idx] = self.snow_by[idx].min(*self.slot(c));
+        }
+        self.snow_by[5] = self.snow_by[5].min(self.colorless);
     }
 
     /// Tag `amount` mana just added as Treasure-produced (the mana-ability
@@ -1663,6 +1686,37 @@ impl ManaPool {
     /// source), clamped to the pool like every provenance counter.
     pub fn mark_from_snow(&mut self, amount: u32) {
         self.snow = (self.snow + amount).min(self.total());
+    }
+
+    /// Tag `amount` mana just added to `color`'s bucket (`None` = colorless)
+    /// as snow in the per-bucket provenance — the activation path's pool
+    /// delta, beside [`mark_from_snow`](Self::mark_from_snow)'s total.
+    pub fn mark_snow_bucket(&mut self, color: Option<Color>, amount: u32) {
+        self.snow_by[prov_index(color)] += amount;
+        self.clamp_snow_by();
+    }
+
+    /// The colours of snow mana `self` spent since `before` (a WUBRG
+    /// bitmask, bit `i` for `Color::ALL[i]`), the payer spending snow mana
+    /// ahead of other mana in each bucket (CR 601.2h: the payer picks which
+    /// mana) — and the provenance left behind is debited to match.
+    pub fn settle_snow_colors_spent(&mut self, before: &ManaPool) -> u8 {
+        if is_zero_prov(&before.snow_by) {
+            return 0;
+        }
+        let mut mask = 0;
+        for i in 0..6 {
+            let (was, now) = match i {
+                5 => (before.colorless, self.colorless),
+                _ => (*before.slot(Color::ALL[i]), *self.slot(Color::ALL[i])),
+            };
+            let n = before.snow_by[i].min(was.saturating_sub(now));
+            self.snow_by[i] = self.snow_by[i].min(before.snow_by[i] - n);
+            if n > 0 && i < 5 {
+                mask |= 1 << i;
+            }
+        }
+        mask
     }
 
     /// Desert-produced mana floating (see the field).
@@ -1724,6 +1778,7 @@ impl ManaPool {
     pub fn add_snow(&mut self, color: Color, amount: u32) {
         *self.slot_mut(color) += amount;
         self.snow += amount;
+        self.snow_by[color_index(color)] += amount;
     }
 
     /// Add `amount` mana of `color` carrying a spend `restriction`. The
@@ -2217,6 +2272,7 @@ impl ManaPool {
         self.colorless -= spent;
         self.creature[5] -= spent;
         self.snow = self.snow.min(self.total());
+        self.clamp_snow_by();
         Ok(side_effects)
     }
 
@@ -2401,6 +2457,7 @@ impl ManaPool {
             && self.creature.iter().all(|&n| n == 0)
             && self.treasure == 0
             && is_zero_prov(&self.artifact)
+            && is_zero_prov(&self.snow_by)
             && self.desert == 0
     }
 
@@ -2488,6 +2545,9 @@ impl ManaPool {
         self.treasure += other.treasure;
         for (i, n) in other.artifact.iter().enumerate() {
             self.artifact[i] += *n;
+        }
+        for (i, n) in other.snow_by.iter().enumerate() {
+            self.snow_by[i] += *n;
         }
         self.desert += other.desert;
         for (n, r) in &other.restricted_colorless {

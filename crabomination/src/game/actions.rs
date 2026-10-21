@@ -4128,6 +4128,11 @@ impl crate::game::GameState {
         if spent > 0 {
             self.players[p].cast_paid_snow_mana = spent;
         }
+        // Boreal Outrider — the colours of the snow mana this payment spent.
+        let colors = self.players[p].mana_pool.settle_snow_colors_spent(&receipt.pool_before);
+        if colors != 0 {
+            self.players[p].cast_paid_snow_colors = colors;
+        }
         // Generator Servant — mana spent on a creature spell grants it haste.
         let dragon = kind.changeling || kind.creature_types.contains(&crate::card::CreatureType::Dragon);
         if kind.creature
@@ -13596,6 +13601,9 @@ impl GameState {
         if self.players[p].cast_paid_snow_mana > 0 {
             card.cast_snow_mana = std::mem::take(&mut self.players[p].cast_paid_snow_mana).min(255) as u8;
         }
+        if self.players[p].cast_paid_snow_colors != 0 {
+            card.cast_snow_colors = std::mem::take(&mut self.players[p].cast_paid_snow_colors);
+        }
         if self.players[p].cast_paid_creature_mana > 0 {
             card.cast_creature_mana = std::mem::take(&mut self.players[p].cast_paid_creature_mana).min(255) as u8;
         }
@@ -21797,7 +21805,15 @@ impl GameState {
                 self.computed_permanent(c.id)
                     .map_or(c.definition.is_snow(), |cp| cp.supertypes().contains(&crate::card::Supertype::Snow))
             })
-            .map(|_| self.players[p].mana_pool.total());
+            .map(|_| {
+                let pool = &self.players[p].mana_pool;
+                let mut b = [0u32; 6];
+                for (i, c) in ManaColor::ALL.into_iter().enumerate() {
+                    b[i] = pool.amount(c);
+                }
+                b[5] = pool.colorless_amount();
+                (pool.total(), b)
+            });
         // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
         let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
             && source.is_some_and(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact));
@@ -21865,11 +21881,22 @@ impl GameState {
                 pool.mark_from_desert(d);
             }
         }
-        if let Some(total) = snow_before {
+        if let Some((total, b)) = snow_before {
             let pool = &mut self.players[p].mana_pool;
             let d = pool.total().saturating_sub(total);
             if d > 0 {
                 pool.mark_from_snow(d);
+            }
+            // Boreal Outrider — which colours that snow mana was.
+            for (i, c) in ManaColor::ALL.into_iter().enumerate() {
+                let d = pool.amount(c).saturating_sub(b[i]);
+                if d > 0 {
+                    pool.mark_snow_bucket(Some(c), d);
+                }
+            }
+            let d = pool.colorless_amount().saturating_sub(b[5]);
+            if d > 0 {
+                pool.mark_snow_bucket(None, d);
             }
         }
         out

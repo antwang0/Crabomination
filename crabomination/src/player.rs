@@ -234,6 +234,10 @@ pub struct PlayerCold {
     /// `CardData::cast_snow_mana`.
     #[serde(skip)]
     pub cast_paid_snow_mana: u32,
+    /// Transient: the colours of that snow mana (a WUBRG bitmask), consumed
+    /// into `CardData::cast_snow_colors`.
+    #[serde(skip)]
+    pub cast_paid_snow_colors: u8,
     /// CR 903.4a — this seat's combined commander colour identity, computed
     /// once as the commanders are seated because identity is established
     /// before the game and never changes. Cached because the walk behind it
