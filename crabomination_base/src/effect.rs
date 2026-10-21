@@ -14351,6 +14351,10 @@ pub enum Effect {
     /// "Each player shuffles all cards from their hand and all permanents they
     /// own into their library, then draws that many cards" (The Great Aurora).
     EachPlayerShufflesHandAndPermanentsThenDraws,
+    /// "[Player] loses all unspent mana" (Mana Short, Worldpurge) — an
+    /// effect, so Upwelling's step-end exception doesn't stop it (CR 500.4);
+    /// Yurlok's mana burn sees the loss.
+    LoseUnspentMana { who: PlayerRef },
 
     AnyPlayerMayAccept {
         who: PlayerRef,

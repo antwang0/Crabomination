@@ -933,6 +933,7 @@ impl Effect {
             | Effect::ChooseOpponentLedBy { then, .. } => then.requires_target(),
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
+            Effect::LoseUnspentMana { who } => player_has_target(who),
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
