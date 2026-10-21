@@ -135273,3 +135273,32 @@ pub const SATSUKI_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const THE_SEVENTH_DOCTOR_9_COMMANDERS: &[CardFactory] = &[the_seventh_doctor, graham_obrien];
+
+/// **The Seventh Doctor and Graham O'Brien**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 6 Forests + 6 Islands + 6 Plains = 98.
+/// The Seventh Doctor and Graham O'Brien (EDHREC, fetched 2026-10-21).
+pub const THE_SEVENTH_DOCTOR_9_MAIN: &[CardFactory] = &[
+    arcane_signet, five_hundred_year_diary, inspiring_statuary, mithril_coat,
+    nuka_cola_vending_machine, palantir_of_orthanc, sol_ring, tardis, tamiyos_journal,
+    tempting_contract, vexing_puzzlebox, whispersilk_cloak, bountiful_promenade, breeding_pool,
+    canopy_vista, command_tower, deserted_beach, dreamroot_cascade, exotic_orchard,
+    glacial_fortress, hallowed_fountain, rejuvenating_springs, reliquary_tower, rogues_passage,
+    sea_of_clouds, seaside_citadel, sparas_headquarters, temple_garden, academy_manufactor,
+    blightsteel_colossus, callous_oppressor, complaints_clerk, curator_of_destinies,
+    displaced_dinosaurs, erdwal_illuminator, ethereal_investigator, gluntch_the_bestower,
+    jaheira_friend_of_the_forest, k_9_mark_i, martha_jones, master_of_ceremonies,
+    master_of_predicaments, monitor_monitor, morska_undersea_sleuth, peregrin_took,
+    petting_zookeeper, sphinx_of_uthuun, the_eleventh_doctor, the_fourth_doctor,
+    the_third_doctor, the_thirteenth_doctor, tireless_provisioner, city_of_death,
+    fight_or_flight, fortune_tellers_talent, ghostly_prison, revelation, smothering_tithe,
+    trial_of_a_time_lord, arcane_denial, everybody_lives, fact_or_fiction, fierce_guardianship,
+    heroic_intervention, path_to_exile, riot_control, swords_to_plowshares, teferis_protection,
+    space_beleren, animal_magnetism, coming_attraction, command_performance, councils_judgment,
+    death_or_glory, expropriate, farewell, farseek, inevitable_betrayal, reality_strobe,
+    show_and_tell,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains,
+];

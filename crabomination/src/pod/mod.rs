@@ -29400,6 +29400,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SATSUKI_COMMANDERS,
             main: decks::SATSUKI_MAIN,
         },
+        // Seat 4825: The Seventh Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 4825`.
+        PodDeck {
+            name: "The Seventh Doctor and Graham O'Brien (WUG)",
+            commanders: decks::THE_SEVENTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_SEVENTH_DOCTOR_9_MAIN,
+        },
     ]
 }
 
@@ -36125,6 +36131,7 @@ mod tests {
             ("Captain Rex Nebula", &[0x1CEC]),
             ("Tetzin, Gnome Champion", &[0x1CED]),
             ("Satsuki, the Living Lore", &[0x1CEE]),
+            ("The Seventh Doctor and Graham O'Brien", &[0x1CEF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
