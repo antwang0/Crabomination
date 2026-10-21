@@ -28914,6 +28914,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARDENN_21_COMMANDERS,
             main: decks::ARDENN_21_MAIN,
         },
+        // Seat 4744: Breeches, Brazen Plunderer and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 4744`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Glacian, Powerstone Engineer (UR)",
+            commanders: decks::BREECHES_29_COMMANDERS,
+            main: decks::BREECHES_29_MAIN,
+        },
     ]
 }
 
@@ -35558,6 +35564,7 @@ mod tests {
             ("Halsin, Emerald Archdruid and Hardy Outlander", &[0x1C9B]),
             ("Livio, Oathsworn Sentinel and Siani, Eye of the Storm", &[0x1C9C]),
             ("Ardenn, Intrepid Archaeologist and Brinelin, the Moon Kraken", &[0x1C9D]),
+            ("Breeches, Brazen Plunderer and Glacian, Powerstone Engineer", &[0x1C9E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

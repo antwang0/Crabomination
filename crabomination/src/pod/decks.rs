@@ -133011,3 +133011,33 @@ pub const ARDENN_21_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, island, plains, plains, plains,
 ];
+
+pub const BREECHES_29_COMMANDERS: &[CardFactory] = &[breeches_brazen_plunderer, glacian_powerstone_engineer];
+
+/// **Breeches, Brazen Plunderer and Glacian, Powerstone Engineer**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 6 Islands + 10 Mountains = 98.
+/// Breeches, Brazen Plunderer and Glacian, Powerstone Engineer (EDHREC, fetched
+/// 2026-10-21).
+pub const BREECHES_29_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, decanter_of_endless_water, everflowing_chalice, fellwar_stone,
+    izzet_signet, midnight_clock, talisman_of_creativity, thought_vessel,
+    three_bowls_of_porridge, wayfarers_bauble, blighted_cataract, cascade_bluffs,
+    castle_embereth, castle_vantress, command_tower, demolition_field, desolate_lighthouse,
+    eroded_canyon, ferrous_lake, forgotten_cave, frostboil_snarl, ghost_quarter,
+    izzet_boilerworks, lonely_sandbar, molten_tributary, path_of_ancestry, pit_of_offerings,
+    prismari_campus, restless_spire, scavenger_grounds, shivan_reef, sulfur_falls,
+    temple_of_epiphany, volatile_fjord, academy_manufactor, angraths_marauders,
+    azure_fleet_admiral, bloodline_pretender, boarding_party, brazen_buccaneers,
+    brazen_freebooter, breeches_eager_pillager, captain_lannery_storm,
+    captain_storm_cosmium_raider, captivating_crew, coercive_recruiter, combat_celebrant,
+    corsair_captain, cutthroat_negotiator, daring_saboteur, departed_deckhand,
+    escaped_experiment, fiendish_duo, goblin_trailblazer, headstrong_brute, heartless_hidetsugu,
+    impulsive_pilferer, malcolm_the_eyes, merchant_raiders, mirage_phalanx, mirrorhall_mimic,
+    port_razer, reckless_lackey, river_song, sailor_of_means, shipwreck_sentry,
+    slippery_scoundrel, storm_fleet_sprinter, timestream_navigator, zara_renegade_recruiter,
+    bitter_feud, coastal_piracy, curse_of_bloodletting, goblin_war_drums, war_cadence,
+    big_score, blustersquall, chaos_warp, fire_ice, pongify, reality_shift,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
