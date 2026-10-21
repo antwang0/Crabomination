@@ -851,7 +851,7 @@ pub fn persecute() -> CardDefinition {
 pub fn phyrexian_processor() -> CardDefinition {
     CardDefinition {
         as_enters_effect: Some(Effect::Seq(vec![
-            Effect::ChooseNumberForSource { max: 20, pays_life: true, min: 0 },
+            Effect::ChooseNumberForSource { max: 20, pays_life: true, min: 0, own_creature_pt: false },
             Effect::LoseLife { who: Selector::You, amount: Value::ChosenNumberOfSource },
         ])),
         activated_abilities: vec![ActivatedAbility {

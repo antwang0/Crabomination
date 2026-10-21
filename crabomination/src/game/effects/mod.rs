@@ -39019,7 +39019,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseNumberForSource { max, pays_life, min } => {
+            Effect::ChooseNumberForSource { max, pays_life, min, own_creature_pt } => {
                 // Sanctum Prelate — "as this enters, choose a number."
                 // Suspends for wants_ui seats; the old bare ask locked the
                 // number at AutoDecider's 0 (hitting only MV-0 spells).
@@ -39048,6 +39048,21 @@ impl GameState {
                     // AutoDecider's 0 reads as "no opinion" → heuristic.
                     None => match self.decider.decide(&decision) {
                         DecisionAnswer::Amount(n) if n > 0 => n.min(*max),
+                        // Squall: the commonest power or toughness among the
+                        // creature cards you own, ties to the smaller number.
+                        _ if *own_creature_pt => {
+                            let mut counts = [0u32; 17];
+                            let pl = &self.players[ctx.controller];
+                            let owned = self.battlefield.iter().filter(|c| c.owner == ctx.controller && c.id != source);
+                            for c in pl.library.iter().chain(pl.hand.iter()).chain(owned) {
+                                if c.definition.is_creature() {
+                                    for v in [c.definition.power, c.definition.toughness] {
+                                        counts[v.clamp(0, 16) as usize] += 1;
+                                    }
+                                }
+                            }
+                            (0..17u32).max_by_key(|&i| (counts[i as usize], std::cmp::Reverse(i))).unwrap_or(2).min(*max)
+                        }
                         _ => {
                             let mut counts: crate::fxhash::HashMap<u32, u32> =
                                 crate::fxhash::HashMap::default();

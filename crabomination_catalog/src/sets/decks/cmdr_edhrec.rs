@@ -1577,7 +1577,7 @@ pub fn talion_the_kindly_lord() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        as_enters_effect: Some(Effect::ChooseNumberForSource { max: 10, pays_life: false, min: 1 }),
+        as_enters_effect: Some(Effect::ChooseNumberForSource { max: 10, pays_life: false, min: 1, own_creature_pt: false }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::Any(vec![
                 spell_stat_is_chosen(Value::ManaValueOf(spell())),

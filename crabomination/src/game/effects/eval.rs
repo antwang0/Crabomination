@@ -4357,6 +4357,21 @@ impl GameState {
                         .filter_map(|e| e.as_permanent_id())
                         .any(|cid| self.battlefield_find(cid).is_some() && self.scaled_counter_count_on(cid, *kind, 1) > 0)
             }
+            Predicate::AttackerOfTriggererPtEqualsSourceChosenNumber => {
+                let seat = match ctx.trigger_source {
+                    Some(EntityRef::Player(p)) => Some(p),
+                    _ => self.trigger_event_player_scratch,
+                };
+                let n = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.chosen_number);
+                let (Some(seat), Some(n)) = (seat, n) else { return false };
+                let n = n as i32;
+                self.attacking.iter().any(|a| {
+                    a.target == crate::game::AttackTarget::Player(seat)
+                        && self
+                            .battlefield_find(a.attacker)
+                            .is_some_and(|c| self.effective_power(c) == n || self.effective_toughness(c) == n)
+                })
+            }
             Predicate::SourceDoneThisTurn => ctx
                 .source
                 .is_some_and(|s| self.triggered_once_per_turn_used.contains(&(s, crate::game::DONE_THIS_TURN_SLOT))),

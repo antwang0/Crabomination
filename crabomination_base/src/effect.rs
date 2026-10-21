@@ -1969,6 +1969,11 @@ pub enum Predicate {
     /// Solemnity lock and no restriction (Blightbeetle) zeroes it. CR
     /// 702.100b — a creature evolves only if the counter was put.
     CounterWouldLand { what: Selector, kind: crate::card::CounterType },
+    /// "If any of those creatures have power or toughness equal to the chosen
+    /// number" (Squall, Gunblade Duelist): a creature attacking the trigger's
+    /// player (`PlayerRef::Triggerer`) whose power or toughness is the
+    /// source's `chosen_number`.
+    AttackerOfTriggererPtEqualsSourceChosenNumber,
     /// At least one entity matches the selector.
     SelectorExists(Selector),
     /// Selector resolves to at least `n` entities.
@@ -13167,6 +13172,10 @@ pub enum Effect {
         /// The lowest number allowed ("between 1 and 10" — Talion).
         #[serde(default)]
         min: u32,
+        /// The number is matched against your own creatures' power and
+        /// toughness (Squall), so the headless pick is the commonest of those.
+        #[serde(default)]
+        own_creature_pt: bool,
     },
 
     /// CR 729 — "Players play a Magic subgame, using their libraries as their
