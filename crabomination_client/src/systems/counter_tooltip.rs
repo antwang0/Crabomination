@@ -1510,6 +1510,8 @@ pub(crate) fn counter_label(kind: CounterType) -> &'static str {
         CounterType::PlusTwoPlusZero => "+2/+0",
         CounterType::PlusZeroPlusTwo => "+0/+2",
         CounterType::PlusTwoPlusTwo => "+2/+2",
+        CounterType::PlusOnePlusTwo => "+1/+2",
+        CounterType::MinusTwoMinusOne => "-2/-1",
         CounterType::Currency => "Currency",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
