@@ -28920,6 +28920,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREECHES_29_COMMANDERS,
             main: decks::BREECHES_29_MAIN,
         },
+        // Seat 4745: Rashida Scalebane's EDHREC average deck. `--pod-decks 4745`.
+        PodDeck {
+            name: "Rashida Scalebane (W)",
+            commanders: decks::RASHIDA_SCALEBANE_COMMANDERS,
+            main: decks::RASHIDA_SCALEBANE_MAIN,
+        },
+        // Seat 4746: Lae'zel, Vlaakith's Champion and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4746`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Acolyte of Bahamut (WG)",
+            commanders: decks::LAEZEL_13_COMMANDERS,
+            main: decks::LAEZEL_13_MAIN,
+        },
+        // Seat 4747: Rasaad yn Bashir and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4747`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Acolyte of Bahamut (WG)",
+            commanders: decks::RASAAD_YN_BASHIR_25_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_25_MAIN,
+        },
     ]
 }
 
@@ -35565,6 +35583,9 @@ mod tests {
             ("Livio, Oathsworn Sentinel and Siani, Eye of the Storm", &[0x1C9C]),
             ("Ardenn, Intrepid Archaeologist and Brinelin, the Moon Kraken", &[0x1C9D]),
             ("Breeches, Brazen Plunderer and Glacian, Powerstone Engineer", &[0x1C9E]),
+            ("Rashida Scalebane", &[0x1C9F]),
+            ("Lae'zel, Vlaakith's Champion and Acolyte of Bahamut", &[0x1CA0]),
+            ("Rasaad yn Bashir and Acolyte of Bahamut", &[0x1CA1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

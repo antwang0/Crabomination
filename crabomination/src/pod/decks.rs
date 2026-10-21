@@ -133041,3 +133041,88 @@ pub const BREECHES_29_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const RASHIDA_SCALEBANE_COMMANDERS: &[CardFactory] = &[rashida_scalebane];
+
+/// **Rashida Scalebane**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Rashida Scalebane (EDHREC, fetched 2026-10-21).
+pub const RASHIDA_SCALEBANE_MAIN: &[CardFactory] = &[
+    arcane_signet, cosmos_elixir, dragons_hoard, dragonstorm_globe, marble_diamond, mind_stone,
+    oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots, the_wind_crystal,
+    thousand_year_elixir, wayfarers_bauble, well_of_lost_dreams, castle_ardenvale,
+    cave_of_the_frost_dragon, emeria_the_sky_ruin, haven_of_the_spirit_dragon,
+    maelstrom_of_the_spirit_dragon, myriad_landscape, nykthos_shrine_to_nyx, war_room,
+    alabaster_dragon, ancestor_dragon, ancient_gold_dragon, ao_the_dawn_sky, baneslayer_angel,
+    celestine_the_living_saint, crystal_dragon, dragon_hunter, eternal_dragon,
+    guardian_scalelord, icingdeath_frost_tyrant, knight_of_the_white_orchid, mirror_entity,
+    nadaar_selfless_paladin, nykthos_paragon, protector_of_the_wastes, scalelord_reckoner,
+    shieldhide_dragon, soul_warden, steel_hellkite, sunscorch_regent, sylvia_brightspear,
+    timeless_dragon, wardscale_dragon, white_dragon, yosei_the_morning_star, cleric_class,
+    cradle_of_vitality, gift_of_immortality, kindred_boon, land_tax, light_of_promise, sunbond,
+    test_of_endurance, akromas_will, brought_back, generous_gift, path_to_exile,
+    shields_of_velis_vel, stroke_of_midnight, swords_to_plowshares, to_arms,
+    unbreakable_formation, valorous_stance, grand_master_of_flowers, austere_command, farewell,
+    fumigate, late_to_dinner, vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const LAEZEL_13_COMMANDERS: &[CardFactory] = &[laezel_vlaakiths_champion, acolyte_of_bahamut];
+
+/// **Lae'zel, Vlaakith's Champion and Acolyte of Bahamut**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 9 Plains = 98.
+/// Lae'zel, Vlaakith's Champion and Acolyte of Bahamut (EDHREC, fetched 2026-10-21).
+pub const LAEZEL_13_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_hoard, dragonstorm_globe, heralds_horn, jade_orb_of_dragonkind,
+    selesnya_signet, sol_ring, the_great_henge, brushland, canopy_vista,
+    cave_of_the_frost_dragon, command_tower, fortified_village, gavony_township,
+    haven_of_the_spirit_dragon, karns_bastion, maelstrom_of_the_spirit_dragon,
+    overgrown_farmland, scattered_groves, selesnya_sanctuary, sunpetal_grove, temple_garden,
+    ambitious_dragonborn, ancient_bronze_dragon, ancient_gold_dragon, ao_the_dawn_sky,
+    bloomvine_regent, broodcaller_scourge, canopy_gargantuan, crystal_dragon, destructor_dragon,
+    draconic_muralists, dragons_disciple, dragonlord_dromoka, dread_linnorm,
+    dromoka_the_eternal, earthquake_dragon, enduring_scalelord, foe_razer_regent,
+    guardian_scalelord, gyre_sage, jugan_the_rising_star, kami_of_whispered_hopes,
+    kura_the_boundless_sky, old_gnawbone, protector_of_the_wastes, scaled_nurturer,
+    scalelord_reckoner, skanos_dragonheart, steel_hellkite, sunscorch_regent,
+    sylvia_brightspear, citadel_siege, elemental_bond, encroaching_dragonstorm, frontier_siege,
+    garruks_uprising, hardened_scales, jugan_defends_the_temple, dromokas_command,
+    generous_gift, heroic_intervention, inspiring_call, path_to_exile,
+    return_of_the_wildspeaker, swords_to_plowshares, unbreakable_formation,
+    ajani_the_greathearted, grand_master_of_flowers, cultivate, damning_verdict, farseek,
+    kodamas_reach, natures_lore, rampant_growth, requisition_raid, rishkars_expertise,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const RASAAD_YN_BASHIR_25_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, acolyte_of_bahamut];
+
+/// **Rasaad yn Bashir and Acolyte of Bahamut**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 9 Plains = 98.
+/// Rasaad yn Bashir and Acolyte of Bahamut (EDHREC, fetched 2026-10-21).
+pub const RASAAD_YN_BASHIR_25_MAIN: &[CardFactory] = &[
+    arcane_signet, cathars_shield, delvers_torch, dungeon_map, dungeoneers_pack,
+    fifty_feet_of_rope, jade_orb_of_dragonkind, rhonass_monument, sarevoks_tome,
+    selesnya_signet, swiftfoot_boots, trailblazers_torch, baldurs_gate, basilisk_gate,
+    blossoming_sands, citadel_gate, command_tower, desert_of_the_true, exotic_orchard,
+    fortified_village, gateway_plaza, gond_gate, heap_gate, manor_gate, selesnya_guildgate,
+    temple_of_the_dragon_queen, ambitious_dragonborn, ancestor_dragon, ancient_bronze_dragon,
+    arbor_adherent, avenging_hunter, basris_lieutenant, beast_whisperer, consuming_blob,
+    crystal_dragon, draconic_muralists, dragons_disciple, dragonlord_dromoka,
+    dromoka_the_eternal, earthquake_dragon, emerald_dragon, fecund_greenshell,
+    ghalta_and_mavren, gluntch_the_bestower, goliath_paladin, guardian_scalelord,
+    hundred_handed_one, karametra_god_of_harvests, loxodon_gatekeeper, lurking_green_dragon,
+    nadaar_selfless_paladin, saryth_the_vipers_fang, scaled_nurturer, seasoned_dungeoneer,
+    skanos_dragonheart, sunscorch_regent, tapestry_warden, undermountain_adventurer,
+    wandering_troubadour, white_plume_adventurer, brave_the_sands, find_the_path, high_ground,
+    inspiring_leader, paladin_class, stoneskin, the_dragon_kami_reborn, undercellar_sweep,
+    divine_arrow, krosan_grip, momentous_fall, revivify, grand_master_of_flowers,
+    explore_the_underdark, harmonize, natures_lore, you_find_a_cursed_idol,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
