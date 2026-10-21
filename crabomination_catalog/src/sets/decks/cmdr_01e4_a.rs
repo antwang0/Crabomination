@@ -5817,3 +5817,330 @@ pub fn shape_anew() -> CardDefinition {
         ]),
     )
 }
+
+// ── Batch twenty-one (pair-deck closers) ────────────────────────────────────
+
+/// Sharpened Pitchfork — {2} Equipment. Equipped creature has first strike,
+/// and gets +1/+1 while it's a Human. Equip {1}.
+pub fn sharpened_pitchfork() -> CardDefinition {
+    equipment(
+        "Sharpened Pitchfork",
+        cost(&[generic(2)]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            keywords: vec![Keyword::FirstStrike],
+            conditional_pt: Some((
+                1,
+                1,
+                Predicate::EntityMatches {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    filter: R::HasCreatureType(CreatureType::Human),
+                },
+            )),
+            ..Default::default()
+        },
+    )
+}
+
+/// Eyes of the Beholder — {4}{B}{B} instant. Target creature gets -11/-11
+/// until end of turn.
+pub fn eyes_of_the_beholder() -> CardDefinition {
+    spell(
+        "Eyes of the Beholder",
+        cost(&[generic(4), b(), b()]),
+        CardType::Instant,
+        Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(-11),
+            toughness: Value::Const(-11),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Eldritch Pact — {6}{B} sorcery. Target player draws X cards and loses X
+/// life, X = the cards in their graveyard.
+pub fn eldritch_pact() -> CardDefinition {
+    let x = || Value::GraveyardSizeOf(PlayerRef::Target(0));
+    spell(
+        "Eldritch Pact",
+        cost(&[generic(6), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Draw { who: target_filtered(R::Player), amount: x() },
+            Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: x() },
+        ]),
+    )
+}
+
+/// Sorcerer's Strongbox — {4} artifact. {2}, {T}: flip a coin; on a win,
+/// sacrifice it and draw three cards.
+pub fn sorcerers_strongbox() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::FlipCoin {
+                count: Value::ONE,
+                on_heads: Box::new(Effect::Seq(vec![
+                    Effect::SacrificeSource,
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ])),
+                on_tails: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..spell("Sorcerer's Strongbox", cost(&[generic(4)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Vessel of Ephemera — {1}{W} enchantment. {2}{W}, sacrifice it: create two
+/// 1/1 white Spirit tokens with flying.
+pub fn vessel_of_ephemera() -> CardDefinition {
+    let spirit = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Spirit", 1, 1, vec![Color::White], vec![CreatureType::Spirit])
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            sac_cost: true,
+            effect: make(2, spirit),
+            ..Default::default()
+        }],
+        ..spell("Vessel of Ephemera", cost(&[generic(1), w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Ritual of Rejuvenation — {2}{W} instant. You gain 4 life. Draw a card.
+pub fn ritual_of_rejuvenation() -> CardDefinition {
+    spell(
+        "Ritual of Rejuvenation",
+        cost(&[generic(2), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Feaster of Fools — {4}{B}{B} 3/3 Demon. Convoke, flying, devour 2.
+pub fn feaster_of_fools() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke, Keyword::Flying, Keyword::Devour(2)],
+        ..creature("Feaster of Fools", cost(&[generic(4), b(), b()]), vec![CreatureType::Demon], 3, 3)
+    }
+}
+
+/// Fetid Imp — {1}{B} 1/2 flying Imp. {B}: it gains deathtouch until end of
+/// turn.
+pub fn fetid_imp() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Fetid Imp", cost(&[generic(1), b()]), vec![CreatureType::Imp], 1, 2)
+    }
+}
+
+/// Spirit Away — {5}{U}{U} Aura. You control enchanted creature; it gets
+/// +2/+2 and has flying.
+pub fn spirit_away() -> CardDefinition {
+    let enchanted = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains { what: enchanted() })],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature gets +2/+2.",
+                effect: StaticEffect::PumpPT { applies_to: enchanted(), power: 2, toughness: 2 },
+            },
+            StaticAbility {
+                description: "Enchanted creature has flying.",
+                effect: StaticEffect::GrantKeyword { applies_to: enchanted(), keyword: Keyword::Flying },
+            },
+        ],
+        ..aura("Spirit Away", cost(&[generic(5), u(), u()]), None)
+    }
+}
+
+/// Quicksmith Rebel — {3}{R} 3/2 Human Artificer. When it enters, target
+/// artifact you control gains "{T}: This artifact deals 2 damage to any
+/// target" while you control this creature (chosen as it enters, like
+/// Quicksmith Spy — INCOMPLETE_CARDS).
+pub fn quicksmith_rebel() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChoosePermanentForSource { filter: R::Artifact.and(R::ControlledByYou) })],
+        static_abilities: vec![StaticAbility {
+            description: "The chosen artifact has \"{T}: This artifact deals 2 damage to any target.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::ChosenPermanentOfSource,
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..creature("Quicksmith Rebel", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 2)
+    }
+}
+
+/// Seasinger — {1}{U}{U} 0/1 Merfolk. When you control no Islands, sacrifice
+/// it. You may choose not to untap it. {T}: gain control of target creature
+/// whose controller controls an Island for as long as you control this and it
+/// remains tapped.
+pub fn seasinger() -> CardDefinition {
+    let islands = |who: R| Selector::EachPermanent(R::HasLandType(LandType::Island).and(who));
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        state_trigger: Some(crate::card::StateTriggeredAbility {
+            condition: Predicate::Not(Box::new(Predicate::SelectorExists(islands(R::ControlledByYou)))),
+            effect: Effect::SacrificeSource,
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GainControlWhileSourceTapped {
+                what: target_filtered(R::Creature.and(R::ControllerControlsLandType(LandType::Island))),
+            },
+            ..Default::default()
+        }],
+        ..creature("Seasinger", cost(&[generic(1), u(), u()]), vec![CreatureType::Merfolk], 0, 1)
+    }
+}
+
+/// Chandra, Pyrogenius — {4}{R}{R} planeswalker, loyalty 5. +2: 2 damage to
+/// each opponent. −3: 4 damage to target creature. −10: 6 damage to target
+/// player or planeswalker and each creature that player or that
+/// planeswalker's controller controls.
+pub fn chandra_pyrogenius() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let victim = || PlayerRef::ControllerOf(Box::new(Selector::Target(0)));
+    CardDefinition {
+        name: "Chandra, Pyrogenius",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Chandra], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(2, Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) }),
+            loyalty(-3, Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) }),
+            loyalty(
+                -10,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: target_filtered(R::Player.or(R::Planeswalker)), amount: Value::Const(6) },
+                    Effect::DealDamage {
+                        to: Selector::ControlledBy { who: victim(), filter: R::Creature },
+                        amount: Value::Const(6),
+                    },
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Liberating Combustion — {4}{R} sorcery. 6 damage to target creature; you
+/// may search your library (the graveyard half is not offered) for Chandra,
+/// Pyrogenius and put it into your hand.
+pub fn liberating_combustion() -> CardDefinition {
+    spell(
+        "Liberating Combustion",
+        cost(&[generic(4), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(6) },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasName("Chandra, Pyrogenius".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+    )
+}
+
+/// Hunter's Mark — {3}{G} instant; {3} less if it targets a blue permanent you
+/// don't control; can't be countered. Target creature you control gets +1/+1,
+/// then deals damage equal to its power to target creature or planeswalker
+/// you don't control.
+pub fn hunters_mark() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeCountered],
+        self_cost_reduction_cost_if_target: Some((R::HasColor(Color::Blue).and(R::ControlledByYou.negate()), cost(&[generic(3)]))),
+        ..spell(
+            "Hunter's Mark",
+            cost(&[generic(3), g()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::DealDamageFrom {
+                    source: Selector::Target(0),
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.or(R::Planeswalker).and(R::ControlledByYou.negate()),
+                    },
+                    amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                },
+            ]),
+        )
+    }
+}
+
+/// Aggressive Instinct — {1}{G} sorcery. Target creature you control deals
+/// damage equal to its power to target creature you don't control.
+pub fn aggressive_instinct() -> CardDefinition {
+    spell(
+        "Aggressive Instinct",
+        cost(&[generic(1), g()]),
+        CardType::Sorcery,
+        Effect::DealDamageFrom {
+            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou.negate()) },
+            amount: Value::PowerOf(Box::new(Selector::Target(0))),
+        },
+    )
+}
+
+/// Graceful Takedown — {1}{G} sorcery. Any number of target enchanted
+/// creatures you control and up to one other target creature you control each
+/// deal damage equal to their power to target creature you don't control.
+/// (Every enchanted creature you control deals its damage untargeted —
+/// INCOMPLETE_CARDS.)
+pub fn graceful_takedown() -> CardDefinition {
+    let enchanted = R::Creature.and(R::ControlledByYou).and(R::IsEnchanted);
+    CardDefinition {
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(enchanted),
+                    body: Box::new(Effect::DealDamageFrom {
+                        source: Selector::TriggerSource,
+                        to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou.negate()) },
+                        amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    }),
+                },
+                Effect::DealDamageFrom {
+                    source: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByYou).and(R::IsEnchanted.negate()),
+                    },
+                    to: Selector::Target(0),
+                    amount: Value::PowerOf(Box::new(Selector::Target(1))),
+                },
+            ])),
+        },
+        ..spell("Graceful Takedown", cost(&[generic(1), g()]), CardType::Sorcery, Effect::Noop)
+    }
+}

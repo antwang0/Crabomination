@@ -2673,3 +2673,155 @@ fn shape_anew_rerolls_an_artifact() {
     assert!(g.battlefield_find(ring).is_none());
     assert_eq!(g.battlefield_find(stone).map(|c| c.controller), Some(1));
 }
+
+/// Sharpened Pitchfork's +1/+1 is for Humans only.
+#[test]
+fn sharpened_pitchfork_favors_humans() {
+    for (bearer, want) in [(catalog::elite_vanguard(), (3, 2)), (catalog::grizzly_bears(), (2, 2))] {
+        let mut g = pod(2);
+        let fork = g.add_card_to_battlefield(0, catalog::sharpened_pitchfork());
+        let c = g.add_card_to_battlefield(0, bearer);
+        flood(&mut g, 0);
+        g.perform_action(GameAction::Equip { equipment: fork, target: c }).expect("equip");
+        drain_stack(&mut g);
+        assert_eq!(pt(&g, c), want);
+        assert!(g.computed_permanent(c).unwrap().keywords().contains(&Keyword::FirstStrike));
+    }
+}
+
+/// Eldritch Pact scales with the target player's graveyard.
+#[test]
+fn eldritch_pact_reads_their_graveyard() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    let (hand, life) = (g.players[1].hand.len(), g.players[1].life);
+    let pact = g.add_card_to_hand(0, catalog::eldritch_pact());
+    cast(&mut g, pact, Some(Target::Player(1)));
+    assert_eq!((g.players[1].hand.len(), g.players[1].life), (hand + 3, life - 3));
+}
+
+/// Spirit Away steals a creature and makes it a 4/4 flyer.
+#[test]
+fn spirit_away_steals_and_lifts() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::spirit_away());
+    cast(&mut g, aura, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert_eq!(pt(&g, bear), (4, 4));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+}
+
+/// CR 603.8 — Seasinger is sacrificed the moment you control no Islands, and
+/// steals only from a player who controls one.
+#[test]
+fn seasinger_needs_islands_on_both_sides() {
+    let mut g = pod(3);
+    let isle = g.add_card_to_battlefield(0, catalog::island());
+    let singer = g.add_card_to_battlefield(0, catalog::seasinger());
+    g.add_card_to_battlefield(1, catalog::island());
+    let wet = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dry = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.clear_sickness(singer);
+    g.priority.player_with_priority = 0;
+    let steal = |g: &mut GameState, t| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: singer,
+            ability_index: 0,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(steal(&mut g, dry).is_err(), "seat 2 has no Island");
+    steal(&mut g, wet).expect("seat 1 does");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wet).unwrap().controller, 0);
+    let murder = g.add_card_to_hand(0, catalog::stone_rain());
+    cast(&mut g, murder, Some(Target::Permanent(isle)));
+    assert!(g.battlefield_find(singer).is_none(), "no Islands: sacrificed");
+}
+
+/// Chandra, Pyrogenius's +2 burns each opponent.
+#[test]
+fn chandra_pyrogenius_burns_the_table() {
+    let mut g = pod(3);
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_pyrogenius());
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: chandra, ability_index: 0, target: None, x_value: None })
+        .expect("+2");
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (life - 2, life - 2));
+}
+
+/// Hunter's Mark costs {G} when it bites a blue permanent you don't control.
+#[test]
+fn hunters_mark_is_cheap_against_blue() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let drake = g.add_card_to_battlefield(1, catalog::wind_drake());
+    let mark = g.add_card_to_hand(0, catalog::hunters_mark());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mark,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(drake)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{G} is enough");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drake).is_none());
+}
+
+/// Graceful Takedown adds every enchanted creature's power to the other
+/// creature's.
+#[test]
+fn graceful_takedown_gangs_up() {
+    let mut g = pod(2);
+    let enchanted = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let holy = g.add_card_to_hand(0, catalog::holy_strength());
+    cast(&mut g, holy, Some(Target::Permanent(enchanted)));
+    let giant = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let takedown = g.add_card_to_hand(0, catalog::graceful_takedown());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: takedown,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![Target::Permanent(other)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "3 from the enchanted Bears + 2 from the other kill a 6/4");
+}
+
+/// Quicksmith Rebel arms an artifact with a 2-damage ping.
+#[test]
+fn quicksmith_rebel_arms_an_artifact() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let rebel = g.add_card_to_hand(0, catalog::quicksmith_rebel());
+    cast(&mut g, rebel, None);
+    let life = g.players[1].life;
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+}

@@ -2313,3 +2313,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Long Rest | the X cards are picked at resolution (one per mana value, greatest first headless), not targeted on cast: graveyard removal in response can't fizzle it | a multi-target "different mana values" target constraint |
 | 🟡 Three Bowls of Porridge | the unchosen mode and its target are picked at resolution (CR 602.2b wants both on activation) | `ChooseUnchosenMode` picking at activation |
 | 🟡 Quicksmith Spy | the artifact is chosen as it enters, not targeted, and keeps "{T}: Draw a card" while the Spy is on the battlefield under any controller | an ETB target slot for `RememberPermanentOnSource`; a control-scoped grant |
+| 🟡 Graceful Takedown | every enchanted creature you control deals its damage untargeted (the printed "any number of target enchanted creatures" is all of them); the other creature is targeted | an any-number target slot |
+| 🟡 Quicksmith Rebel | as Quicksmith Spy: the artifact is chosen as it enters, not targeted | the same ETB target slot |
+| 🟡 Liberating Combustion | searches only the library for Chandra, Pyrogenius (the graveyard half is not offered) | a library-and/or-graveyard search |
