@@ -538,3 +538,61 @@ fn nevermaker_evoked_tops_a_permanent() {
     assert!(g.battlefield_find(giant).is_none());
     assert_eq!(g.players[1].library.iter().next().map(|c| c.id), Some(giant), "on top of its owner's library");
 }
+
+/// Voracious Dragon deals twice the Goblins it devoured — a devoured
+/// non-Goblin counts for its counters, not its damage (CR 702.82).
+#[test]
+fn voracious_dragon_counts_devoured_goblins() {
+    use crabomination::card::{CardType, CounterType, CreatureType, Subtypes, TokenDefinition};
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = pod(2);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    for kind in [CreatureType::Goblin, CreatureType::Goblin, CreatureType::Soldier] {
+        let token = TokenDefinition {
+            name: "Token".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes { creature_types: vec![kind], ..Default::default() },
+            ..Default::default()
+        };
+        let make = Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(token) };
+        g.resolve_effect(&make, &ctx).unwrap();
+    }
+    let dragon = g.add_card_to_hand(0, catalog::voracious_dragon());
+    let life = g.players[1].life;
+    cast_as(&mut g, 0, dragon, None);
+    drain_stack(&mut g);
+    let me = g.battlefield_find(dragon).expect("on the battlefield");
+    assert_eq!(me.counter_count(CounterType::PlusOnePlusOne), 3, "devour 1: all three tokens");
+    assert_eq!(g.players[1].life, life - 4, "two Goblins: 4 damage at the opponent");
+}
+
+/// Academy Loremaster: the active player may draw an extra card, and if they
+/// do their spells cost {2} more this turn only.
+#[test]
+fn academy_loremaster_taxes_the_extra_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::academy_loremaster());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    let hand = g.players[0].hand.len();
+    while !(g.step == TurnStep::PreCombatMain && g.active_player_idx == 0) {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the draw and the extra card");
+    assert_eq!(g.players[0].spell_tax_this_turn, 2);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    let cast = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(cast.is_err(), "{{R}} no longer pays for a taxed Bolt");
+}

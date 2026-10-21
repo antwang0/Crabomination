@@ -18388,6 +18388,8 @@ static DECKS: &[Factory] = &[
     super::decks::druidic_ritual,
     super::decks::nevermaker,
     super::decks::brazen_buccaneers,
+    super::decks::academy_loremaster,
+    super::decks::voracious_dragon,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

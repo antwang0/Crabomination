@@ -994,3 +994,40 @@ pub fn brazen_buccaneers() -> CardDefinition {
         ..creature("Brazen Buccaneers", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 2)
     }
 }
+
+/// Academy Loremaster — {U}{U} 2/3 Human Wizard. At the beginning of each
+/// player's draw step, that player may draw an additional card; if they do,
+/// spells they cast this turn cost {2} more.
+pub fn academy_loremaster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Draw), EventScope::AnyPlayer),
+            effect: Effect::AnyPlayerMayAccept {
+                who: PlayerRef::ActivePlayer,
+                prompt: "Draw an additional card? Spells you cast this turn cost {2} more.".into(),
+                accepted: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::Player(PlayerRef::AcceptingPlayer), amount: Value::ONE },
+                    Effect::SpellsCostMoreThisTurn { who: PlayerRef::AcceptingPlayer, amount: 2 },
+                ])),
+                otherwise: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Academy Loremaster", cost(&[u(), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Voracious Dragon — {3}{R}{R} 4/4 flying Dragon, devour 1. Entering, it
+/// deals damage to any target equal to twice the number of Goblins it devoured.
+pub fn voracious_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Devour(1)],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: crate::effect::shortcut::target_any(),
+            amount: Value::Times(
+                Box::new(Value::DevouredMatching(R::HasCreatureType(CreatureType::Goblin))),
+                Box::new(Value::Const(2)),
+            ),
+        })],
+        ..creature("Voracious Dragon", cost(&[generic(3), r(), r()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
