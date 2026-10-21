@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 6 |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 14 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01kpxz3h--12-single-commander-seats-38-cards-the-single-commander-list) | 40 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 42 cards, 21 seats, thirteen primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--42-cards-21-seats-thirteen-primitives) | 34 |
@@ -191,14 +191,16 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders
 
-- **CLAIMED (`01KabMxS`, 2026-10-21) — don't duplicate:** the Attraction-rider closers for The Most Dangerous Gamer,
-  Dee Kay and Spinnerette's EDHREC averages — Soul Swindler, Squirrel Squatters, Spinnerette, Arachnobat, Motion
-  Sickness, Dee Kay, Finder of the Lost, Done for the Day; Pick-a-Beeble (a prize Attraction); and The Most Dangerous
-  Gamer's own "whenever you open an Attraction" / "claim the prize" triggers (CR 701.51c, 702.159b).
-  - *Note from `01KPxZ3H`* (`224bc528d`): **pod seats whose deck opens an Attraction now bring an Attraction deck**
-    (`pod::POD_ATTRACTIONS`, the catalog's fourteen `unf.rs` Attractions; `opens_attractions` walks every ability for
-    `Effect::OpenAnAttraction`), shuffled per game; the card-conservation audit counts `attraction_deck` and
-    `attraction_junkyard`. A new Attraction (Pick-a-Beeble) goes in that list; a new "open" effect in that walk.
+- **LANDED (`01KabMxS`, claimed 18:25) — `01E4rMUL`'s 19:17 claim of the same six is moot:** seats 4844-4846 (The
+  Most Dangerous Gamer, Dee Kay, Spinnerette), closed by `decks::cmdr_01ka_a` (Soul Swindler, Squirrel Squatters,
+  Spinnerette, Motion Sickness, Dee Kay, Done for the Day) + `unf::pick_a_beeble`; tests `recent_b/cmdr_01ka_a.rs`.
+- **Primitives:** `Value::AttractionsVisitedThisTurn` (PlayerCold `attractions_visited`, turn-stamped); `KeywordAct::
+  OpenedAttraction` / `ClaimedPrize` (CR 701.51c / 702.159b) + `Effect::ClaimThePrize`; the turn-based roll to visit
+  is a die roll (CR 701.52a — `DieResult` listeners like Dee Kay see it). **FIXED:** The Most Dangerous Gamer grew on
+  its own opens even with no Attraction deck, and dropped its claim-the-prize trigger.
+- **Pods:** `01KPxZ3H`'s `POD_ATTRACTIONS` (224bc528d) now carries Pick-a-Beeble too. With Attraction decks the
+  Gamer's open / prize triggers, Motion Sickness and Discourtesy Clerk all fire (`--card-census`, seed 9451); smoke
+  seeds 9450-9452 (600 games, 4/6 seats with Myra) all decided.
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list
 
