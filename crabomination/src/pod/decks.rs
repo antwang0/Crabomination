@@ -133153,3 +133153,31 @@ pub const DURNAN_OF_THE_YAWNING_PORTAL_15_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest,
 ];
+
+pub const MAIRSIL_COMMANDERS: &[CardFactory] = &[mairsil_the_pretender];
+
+/// **Mairsil, the Pretender**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 5 Islands + 4 Mountains + 4 Swamps = 99.
+/// Mairsil, the Pretender (EDHREC, fetched 2026-10-21).
+pub const MAIRSIL_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, dimir_signet, fellwar_stone, gilded_lotus, izzet_signet,
+    nevinyrrals_disk, pendant_of_prosperity, rakdos_signet, sol_ring, staff_of_domination,
+    talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence, thousand_year_elixir,
+    blood_crypt, bloodstained_mire, command_tower, crumbling_necropolis, dragonskull_summit,
+    drowned_catacomb, exotic_orchard, luxury_suite, minamo_school_at_waters_edge, morphic_pool,
+    polluted_delta, riptide_laboratory, scalding_tarn, shivan_reef, smoldering_marsh,
+    steam_vents, sulfur_falls, sunken_hollow, training_center, watery_grave, xanders_lounge,
+    aetherling, anger, arcanis_the_omnipotent, asmodeus_the_archfiend, cavern_harpy,
+    cephalid_inkshrouder, eater_of_the_dead, endling, hateflayer, horseshoe_crab,
+    jaces_archivist, marvin_murderous_mimic, mercurial_chemister, minion_of_leshrac, morphling,
+    oriq_loremage, ovinomancer, pack_rat, pili_pala, quicksilver_elemental, shauku_endbringer,
+    spark_double, torchling, tree_of_perdition, ulamogs_dreadsire, vivi_ornitier,
+    candlekeep_sage, rhystic_study, training_grounds, an_offer_you_cant_refuse, arcane_denial,
+    chaos_warp, counterspell, entomb, essence_flux, fact_or_fiction, frantic_search,
+    ghostly_flicker, planar_incision, teferis_time_twist, thrill_of_possibility,
+    the_theorist_jace_beleren, blasphemous_act, buried_alive, cathartic_reunion, demonic_tutor,
+    faithless_looting, toxic_deluge, unmarked_grave, windfall,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp,
+];
