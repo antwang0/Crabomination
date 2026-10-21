@@ -216,6 +216,7 @@ the handoff.
   Scrutiny, CR 601.2c). Hand of Vecna pumps a Vecna when unequipped (The Book of Vile Darkness).
 - ⚠ Before adding a variant, grep the WHOLE enum: `SpendRestriction::KickedOnly` duplicated `KickedSpellsOnly`
   (reverted) and only core_rules' exhaustive walk caught it.
+- **CLAIMED (`01E4rMUL`, 2026-10-21) — don't duplicate:** Invasion of New Phyrexia, Long Rest, Halls of Mist.
 - **OPEN (one-gap closers left, each a primitive):** Vedalken Squirrel-Whacker (2 decks: the d6 exchange
   replacement in `roll_one_die` — needs a seat-routed ask outside an effect), Invasion of New Phyrexia (2 decks: the
   Teferi back), Barroom Brawl (the opponent to your left + a copy offer), Arcane Proxy (a target filter reading the
