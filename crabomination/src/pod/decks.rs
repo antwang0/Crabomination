@@ -135882,3 +135882,32 @@ pub const SPINNERETTE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const JORN_COMMANDERS: &[CardFactory] = &[jorn_god_of_winter];
+
+/// **Jorn, God of Winter**'s EDHREC average deck, card for card:
+/// 99 nonbasic cards = 99.
+/// Jorn, God of Winter (EDHREC, fetched 2026-10-21).
+pub const JORN_MAIN: &[CardFactory] = &[
+    arcane_signet, arcums_astrolabe, coldsteel_heart, horizon_stone, icebind_pillar,
+    lightning_greaves, replicating_ring, sol_ring, swiftfoot_boots, command_tower, dark_depths,
+    evolving_wilds, faceless_haven, frost_marsh, frostwalk_bastion, ice_tunnel, mouth_of_ronom,
+    rimewood_falls, scrying_sheets, shimmerdrift_vale, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_swamp,
+    snow_covered_swamp, snow_covered_swamp, snow_covered_swamp, snow_covered_swamp,
+    thespians_stage, woodland_chasm, abominable_treefolk, ascendant_spirit, avalanche_caller,
+    blizzard_specter, boreal_druid, boreal_outrider, conifer_wurm, draugr_necromancer,
+    frost_augur, hailstorm_valkyrie, heidar_rimewind_master, ice_fang_coatl, iceberg_cancrix,
+    icebreaker_kraken, kruphix_god_of_horizons, moritte_of_the_frost, narfi_betrayer_king,
+    ohran_frostfang, ohran_viper, pilfering_hawk, priest_of_the_haunted_edge, rime_tender,
+    rimefeather_owl, rimewind_cryomancer, sculptor_of_winter, spirit_of_the_aldergard,
+    glittering_frost, marit_lages_slumber, rime_transfusion, stasis, the_three_seasons,
+    wild_growth, wilderness_reclamation, winters_rest, an_offer_you_cant_refuse,
+    assassins_trophy, beast_within, counterspell, graven_lore, growth_spiral,
+    heroic_intervention, negate, pull_from_tomorrow, winters_chill, blessing_of_frost,
+    blizzard_brawl, blood_on_the_snow, cultivate, dead_of_winter, farseek, glacial_revelation,
+    into_the_north, kodamas_reach, rampant_growth, villainous_wealth,
+];
