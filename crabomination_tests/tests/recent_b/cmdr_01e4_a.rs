@@ -3294,3 +3294,104 @@ fn cloudseeder_makes_a_cloud_sprite() {
     let sprite = g.battlefield.iter().find(|c| c.definition.name == "Cloud Sprite").expect("token");
     assert!(sprite.definition.keywords.contains(&Keyword::CanBlockOnlyFlying));
 }
+
+/// Even the Odds needs fewer creatures than EACH opponent, not their total.
+#[test]
+fn even_the_odds_checks_each_opponent() {
+    for (seat2_creatures, castable) in [(2, true), (0, false)] {
+        let mut g = pod(3);
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        for _ in 0..seat2_creatures {
+            g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        }
+        let odds = g.add_card_to_hand(0, catalog::even_the_odds());
+        flood(&mut g, 0);
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: odds,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(cast.is_ok(), castable, "seat 2 has {seat2_creatures}");
+    }
+}
+
+/// For the Family doubles up with four creatures.
+#[test]
+fn for_the_family_scales_with_the_family() {
+    for (extra, want) in [(0, (4, 4)), (3, (6, 6))] {
+        let mut g = pod(2);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..extra {
+            g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        }
+        let spell = g.add_card_to_hand(0, catalog::for_the_family());
+        cast(&mut g, spell, Some(Target::Permanent(bear)));
+        assert_eq!(pt(&g, bear), want);
+    }
+}
+
+/// Start makes two Warriors; Finish, from the graveyard, trades one for a kill.
+#[test]
+fn start_then_finish() {
+    let mut g = pod(2);
+    let card = g.add_card_to_hand(0, catalog::start_finish());
+    cast(&mut g, card, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Warrior").count(), 2);
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastAftermath { card_id: card, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("Finish");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Warrior").count(), 1);
+    assert!(g.exile.iter().any(|c| c.id == card));
+}
+
+/// Harsh Sustenance and Spell Snuff's fateful hour.
+#[test]
+fn harsh_sustenance_counts_creatures() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    let harsh = g.add_card_to_hand(0, catalog::harsh_sustenance());
+    cast(&mut g, harsh, Some(Target::Player(1)));
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 3, theirs - 3));
+}
+
+/// Invasion of Tolvada brings back a permanent card; Liminal Hold holds one
+/// until it leaves.
+#[test]
+fn invasion_of_tolvada_and_liminal_hold() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let invasion = g.add_card_to_hand(0, catalog::invasion_of_tolvada());
+    cast(&mut g, invasion, None);
+    assert!(g.battlefield_find(ring).is_some());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let hold = g.add_card_to_hand(0, catalog::liminal_hold());
+    cast(&mut g, hold, None);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Air Nomad Student grows only on turns it stayed home.
+#[test]
+fn air_nomad_student_studies_at_home() {
+    let mut g = pod(2);
+    let student = g.add_card_to_battlefield(0, catalog::air_nomad_student());
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, student), (3, 3));
+}

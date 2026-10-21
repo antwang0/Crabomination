@@ -2338,3 +2338,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Braided Net | "its activated abilities can't be activated" leaves mana abilities usable (`Keyword::CantActivateAbilities`, CR 602.5c) | a lock that covers mana abilities |
 | 🟡 Mindlink Mech | "becomes crewed for the first time each turn" is `once_per_turn` on the crew trigger; the copy's Vehicle subtype is an indefinite `SetArtifactSubtypes` (harmless — the Mech is a Vehicle) | a first-time-this-turn crew event |
 | 🟡 Kor Dirge | Kor Dirge's "source of your choice" is the headless first hostile source (`choose_damage_prevention_source`) | a ranked source pick |
+| 🟡 Start // Finish | Finish sacrifices its creature on resolution, not as an additional cost (`SplitHalf` carries no additional cost) | an additional-cost field on `SplitHalf` |
+| 🟡 Graven Abomination | exiles a card from any opponent's graveyard, not specifically the defending player's | a defending-player graveyard target filter |
