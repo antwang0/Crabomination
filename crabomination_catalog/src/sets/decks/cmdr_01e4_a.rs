@@ -9101,3 +9101,98 @@ pub fn weight_of_conscience() -> CardDefinition {
         ..aura("Weight of Conscience", cost(&[generic(1), w()]), None)
     }
 }
+
+/// Angel's Tomb — {3} Artifact. Whenever a creature you control enters, you
+/// may have it become a 3/3 white Angel artifact creature with flying until
+/// end of turn.
+pub fn angels_tomb() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::ControlledByYou) },
+            ),
+            effect: Effect::MayDo {
+                description: "Make Angel's Tomb a 3/3 white Angel with flying?".into(),
+                body: Box::new(crate::effect::shortcut::colored_animation(
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Angel],
+                        keywords: vec![Keyword::Flying],
+                        duration: Duration::EndOfTurn,
+                    },
+                    &[Color::White],
+                )),
+            },
+        }],
+        ..spell("Angel's Tomb", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Scroll of Avacyn — {1} Artifact. {1}, sacrifice it: draw a card. If you
+/// control an Angel, you gain 5 life.
+pub fn scroll_of_avacyn() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::SelectorExists(mine(R::HasCreatureType(CreatureType::Angel))),
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..spell("Scroll of Avacyn", cost(&[generic(1)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Puncturing Light — {1}{W} Instant. Destroy target attacking or blocking
+/// creature with power 3 or less.
+pub fn puncturing_light() -> CardDefinition {
+    spell(
+        "Puncturing Light",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::PowerAtMost(3)).and(R::IsAttacking.or(R::IsBlocking))),
+        },
+    )
+}
+
+/// Paragon of Modernity — {4} 2/2 flying Angel Warrior artifact creature.
+/// {3}: +1/+1 until end of turn; if exactly three colors of mana were spent
+/// to activate it, a +1/+1 counter instead.
+pub fn paragon_of_modernity() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::If {
+                cond: Predicate::ValueEquals(Value::DistinctColorsSpent, Value::Const(3)),
+                then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+                else_: Box::new(pump(Selector::This, 1, 1)),
+            },
+            ..Default::default()
+        }],
+        ..creature("Paragon of Modernity", cost(&[generic(4)]), vec![CreatureType::Angel, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Guardian Angel — {X}{W} Instant. Prevent the next X damage that would be
+/// dealt to any target this turn. (The "until end of turn, you may pay {1}
+/// any time … to prevent the next 1 damage to it" rider is 🟡 in
+/// INCOMPLETE_CARDS.md: no player-hosted activated ability.)
+pub fn guardian_angel() -> CardDefinition {
+    spell(
+        "Guardian Angel",
+        cost(&[x(), w()]),
+        CardType::Instant,
+        Effect::PreventNextDamage { target: target_filtered(R::any_target()), amount: Value::XFromCost },
+    )
+}

@@ -18949,6 +18949,11 @@ static DECKS: &[Factory] = &[
     super::decks::citizens_arrest,
     super::decks::soaring_hope,
     super::decks::weight_of_conscience,
+    super::decks::angels_tomb,
+    super::decks::scroll_of_avacyn,
+    super::decks::puncturing_light,
+    super::decks::paragon_of_modernity,
+    super::decks::guardian_angel,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
     // cmdr_01r3_a (session 01R3xh4r)

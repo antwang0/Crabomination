@@ -3622,3 +3622,53 @@ fn candletrap_exile_needs_coven() {
     activate(&mut g, trap, 0).expect("powers 1, 2, 3");
     assert!(g.exile.iter().any(|c| c.id == target));
 }
+
+#[test]
+fn cr_602_2b_paragon_of_modernity_counts_the_colors_spent_to_activate() {
+    let mut g = pod(2);
+    let paragon = g.add_card_to_battlefield(0, catalog::paragon_of_modernity());
+    let activate_paying = |g: &mut GameState, colors: &[Color]| {
+        g.players[0].mana_pool = Default::default();
+        for &c in colors {
+            g.players[0].mana_pool.add(c, 1);
+        }
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: paragon,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("{3} paid");
+        drain_stack(g);
+    };
+    activate_paying(&mut g, &[Color::White, Color::White, Color::Blue]);
+    assert_eq!(pt(&g, paragon), (3, 3), "two colors: the pump");
+    assert_eq!(g.battlefield_find(paragon).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    activate_paying(&mut g, &[Color::White, Color::Blue, Color::Black]);
+    assert_eq!(pt(&g, paragon), (4, 4), "three colors: a counter instead of the pump");
+    assert_eq!(g.battlefield_find(paragon).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn angels_tomb_and_scroll_of_avacyn_make_and_count_an_angel() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let tomb = g.add_card_to_battlefield(0, catalog::angels_tomb());
+    let scroll = g.add_card_to_battlefield(0, catalog::scroll_of_avacyn());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    cast(&mut g, bears, None);
+    let angel = g.computed_permanent(tomb).expect("on the battlefield");
+    assert_eq!((angel.power, angel.toughness), (3, 3));
+    assert!(angel.card_types().contains(&CardType::Artifact) && angel.card_types().contains(&CardType::Creature));
+    assert!(angel.keywords().contains(&Keyword::Flying));
+    assert!(angel.colors.contains(Color::White));
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    activate(&mut g, scroll, 0).expect("{1}, sacrifice");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].life, life + 5, "the Tomb is an Angel this turn");
+}
