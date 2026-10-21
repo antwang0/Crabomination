@@ -3217,7 +3217,7 @@ pub fn super_soldier_serum() -> CardDefinition {
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature is legendary.",
-            effect: StaticEffect::AttachedIsLegendary,
+            effect: StaticEffect::AttachedHasSupertype(Supertype::Legendary),
         }],
         equipped_bonus: Some(EquipBonus {
             power: 2,

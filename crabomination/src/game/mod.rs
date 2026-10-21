@@ -18405,18 +18405,19 @@ impl GameState {
                 });
             }
         }
-        // CR 613.1d — "enchanted creature is legendary" (On Serra's Wings).
-        let legend_hosts: Vec<(CardId, CardId)> = sa_cards
+        // CR 613.1d — "enchanted creature is legendary" (On Serra's Wings),
+        // "enchanted land is snow" (Glittering Frost).
+        let supertype_hosts: Vec<(CardId, CardId, crate::card::Supertype)> = sa_cards
             .iter()
-            .filter(|(c, _)| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::AttachedIsLegendary))
+            .filter_map(|(c, _)| {
+                let host = c.attached_to?;
+                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::AttachedHasSupertype(t) => Some((c.id, host, t)),
+                    _ => None,
+                })
             })
-            .filter_map(|(c, _)| c.attached_to.map(|host| (c.id, host)))
             .collect();
-        for (source, host) in legend_hosts {
+        for (source, host, supertype) in supertype_hosts {
             all_effects.push(ContinuousEffect {
                 timestamp: 0,
                 source,
@@ -18424,7 +18425,7 @@ impl GameState {
                 layer: Layer::L4Type,
                 sublayer: None,
                 duration: EffectDuration::WhileSourceOnBattlefield,
-                modification: Modification::AddSupertype(crate::card::Supertype::Legendary),
+                modification: Modification::AddSupertype(supertype),
             });
         }
         // CR 701.54c — the Ring's level-1 emblem makes its controller's
@@ -36070,7 +36071,7 @@ fn static_effect_to_effects(
             // the live battlefield; resolved in `gather_continuous_effects`.
             | StaticEffect::AllNonlandPermanentsAreLegendary
             | StaticEffect::PermanentsWithCounterHaveSupertype { .. }
-            | StaticEffect::AttachedIsLegendary
+            | StaticEffect::AttachedHasSupertype(_)
             // DevotionBonus — read directly by `devotion_to`, no continuous effect.
             | StaticEffect::DevotionBonus
             // PreventCombatDamageToSelfAndGrow — consulted at the combat damage

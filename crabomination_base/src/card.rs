@@ -8040,7 +8040,7 @@ impl CardDefinition {
         }
         for sa in &self.static_abilities {
             match sa.effect {
-                StaticEffect::AllNonlandPermanentsAreLegendary | StaticEffect::AttachedIsLegendary => {
+                StaticEffect::AllNonlandPermanentsAreLegendary | StaticEffect::AttachedHasSupertype(_) => {
                     m |= b::SUPERTYPE_GRANT
                 }
                 // Either scope sets the bit; the SBA reads which one it is.

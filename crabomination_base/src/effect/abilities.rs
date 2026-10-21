@@ -612,10 +612,10 @@ pub enum StaticEffect {
     /// Legendary scans.
     PermanentsWithCounterHaveSupertype { counter: crate::card::CounterType, supertype: crate::card::Supertype },
     /// CR 205.4 / 613.1d — "Enchanted creature is legendary" (On Serra's
-    /// Wings): the permanent this Aura or Equipment is attached to gains the
-    /// Legendary supertype in layer 4. Materialized in
-    /// `gather_continuous_effects_inner`, beside the Leyline.
-    AttachedIsLegendary,
+    /// Wings), "Enchanted land is snow" (Glittering Frost): the permanent
+    /// this Aura or Equipment is attached to gains the supertype in layer 4.
+    /// Materialized in `gather_continuous_effects_inner`, beside the Leyline.
+    AttachedHasSupertype(crate::card::Supertype),
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

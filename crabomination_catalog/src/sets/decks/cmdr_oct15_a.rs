@@ -169,7 +169,7 @@ pub fn in_bolass_clutches() -> CardDefinition {
         })],
         static_abilities: vec![StaticAbility {
             description: "Enchanted permanent is legendary.",
-            effect: StaticEffect::AttachedIsLegendary,
+            effect: StaticEffect::AttachedHasSupertype(Supertype::Legendary),
         }],
         ..Default::default()
     }

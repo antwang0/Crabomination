@@ -281,7 +281,7 @@ pub fn on_serras_wings() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature is legendary.",
-            effect: StaticEffect::AttachedIsLegendary,
+            effect: StaticEffect::AttachedHasSupertype(Supertype::Legendary),
         }],
         ..aura(
             "On Serra's Wings",
