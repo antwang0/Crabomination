@@ -935,7 +935,7 @@ impl Effect {
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
             Effect::LoseUnspentMana { who } => player_has_target(who),
-            Effect::SetArtifactSubtypes { what, .. } => sel_has_target(what),
+            Effect::SetArtifactSubtypes { what, .. } | Effect::BecomeArtifactSubtypesFor { what, .. } => sel_has_target(what),
             Effect::SpellsCostMoreThisTurn { who, .. } => player_has_target(who),
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
@@ -2758,6 +2758,7 @@ impl Effect {
             | Effect::IgnoreStaticFromSourceThisTurn
             | Effect::PreventNextEventFromChosenSourceAnywhere { .. }
             | Effect::ReturnRandomExiledWithSource
+            | Effect::ReturnOtherLinkedExiles
             | Effect::GoblinGame
             | Effect::EachPlayerKeepsOneOfEachColorDiscardsRest
             | Effect::EachPlayerReturnsALandOfEachBasicType => false,

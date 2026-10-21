@@ -3748,6 +3748,17 @@ impl GameState {
         source: CardId,
         events: &mut Vec<GameEvent>,
     ) {
+        self.return_linked_exiles_except(source, &[], events);
+    }
+
+    /// [`Self::return_linked_exiles`] leaving `except` in exile — Mysterious
+    /// Limousine's "return each *other* card exiled with this Vehicle".
+    pub(crate) fn return_linked_exiles_except(
+        &mut self,
+        source: CardId,
+        except: &[CardId],
+        events: &mut Vec<GameEvent>,
+    ) {
         use crate::card::ExileReturnZone;
         let linked: Vec<CardId> = self
             .exile
@@ -3757,6 +3768,7 @@ impl GameState {
             .filter(|c| {
                 c.exiled_by.map(|l| l.source) == Some(source)
                     && c.exiled_by.and_then(|l| l.monarch_guard).is_none()
+                    && !except.contains(&c.id)
             })
             .map(|c| c.id)
             .collect();

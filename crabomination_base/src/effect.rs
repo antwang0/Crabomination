@@ -8663,6 +8663,12 @@ pub enum Effect {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
     },
+    /// "If a creature is put into exile this way, return each other card
+    /// exiled with this Vehicle to the battlefield under its owner's control"
+    /// (Mysterious Limousine): after an `ExileUntilSourceLeaves`, every card
+    /// still linked to the source bar this resolution's `LastMoved` returns
+    /// as its link says (CR 610.3); nothing happens when nothing was exiled.
+    ReturnOtherLinkedExiles,
     /// CR 603.6e — "Exile any number of other permanents you control matching
     /// `filter` until this leaves the battlefield" (Lumbering Battlement). The
     /// controller picks the subset (`Decision::ChooseCards`, min 0); each pick
@@ -14453,6 +14459,12 @@ pub enum Effect {
     /// subtypes from now on — "it isn't an Equipment" (Dancing Sword), an
     /// indefinite layer-4 rewrite.
     SetArtifactSubtypes { what: Selector, subtypes: Vec<crate::card::ArtifactSubtype> },
+    /// "It becomes a Vehicle artifact" (Captain Rex Nebula): for `duration`,
+    /// each permanent `what` names has exactly `subtypes` as its artifact
+    /// subtypes and no creature or land types (CR 205.1a with the card-type
+    /// rewrite a `SetCardTypesFor` beside it makes) — crewing it later adds
+    /// Creature but no creature types back.
+    BecomeArtifactSubtypesFor { what: Selector, subtypes: Vec<crate::card::ArtifactSubtype>, duration: Duration },
     /// "Spells [who] casts this turn cost {`amount`} more to cast" (Academy
     /// Loremaster) — `Player.spell_tax_this_turn`, cleared at the turn
     /// boundary.

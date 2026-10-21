@@ -16765,6 +16765,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnOtherLinkedExiles => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                // A token exiled this way ceases to exist (CR 111.7) but was
+                // still "put into exile this way".
+                let moved: Vec<CardId> = self.scratch.last_moved_cards.clone();
+                if !moved.is_empty() {
+                    self.return_linked_exiles_except(source, &moved, events);
+                }
+                Ok(())
+            }
+
             Effect::EachPlayerExilesChosenUntilSourceLeaves { count, filter } => {
                 // CR 610.3a — nothing is exiled once the source is gone.
                 let Some(source) = ctx.source.filter(|s| self.battlefield_find(*s).is_some())
@@ -24814,6 +24825,10 @@ impl GameState {
             }
             Effect::SetArtifactSubtypes { what, subtypes } => {
                 self.set_artifact_subtypes(what, subtypes, ctx);
+                Ok(())
+            }
+            Effect::BecomeArtifactSubtypesFor { what, subtypes, duration } => {
+                self.become_artifact_subtypes_for(what, subtypes, *duration, ctx);
                 Ok(())
             }
             Effect::AnyPlayerMaySacrificeToTopdeckSource { filter } => {
