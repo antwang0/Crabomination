@@ -978,6 +978,10 @@ pub enum Value {
     /// (Fraying Sanity, Cruel Calculations, Welcome the Dead — the last two
     /// narrow the source zone, which the tally doesn't record).
     CardsPutIntoGraveyardThisTurn(PlayerRef),
+    /// Cards put into `who`'s graveyard this turn from anywhere other than the
+    /// battlefield (Dimir Strandcatcher): the turn's graveyard arrivals minus
+    /// the ones `deaths.graveyard_from_battlefield_this_turn` recorded.
+    CardsPutIntoGraveyardNotFromBattlefieldThisTurn(PlayerRef),
     /// Creature cards put into `who`'s graveyard from anywhere this turn
     /// (`Player.creature_cards_to_graveyard_this_turn`) — Raphael, Fiendish
     /// Savior's end-step gate.

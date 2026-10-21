@@ -2014,6 +2014,15 @@ impl GameState {
                 .map(|p| self.players[p].cards_to_graveyard_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::CardsPutIntoGraveyardNotFromBattlefieldThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| {
+                    let from_field = &self.deaths.graveyard_from_battlefield_this_turn;
+                    self.players[p].graveyard_ids_this_turn.iter().filter(|id| !from_field.contains(id)).count() as i32
+                })
+                .max()
+                .unwrap_or(0),
             Value::SquadCount => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))
