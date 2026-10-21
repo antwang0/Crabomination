@@ -28794,6 +28794,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREECHES_28_COMMANDERS,
             main: decks::BREECHES_28_MAIN,
         },
+        // Seat 4724: Akroma, Vision of Ixidor and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4724`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Slurrk, All-Ingesting (WG)",
+            commanders: decks::AKROMA_22_COMMANDERS,
+            main: decks::AKROMA_22_MAIN,
+        },
+        // Seat 4725: Glacian, Powerstone Engineer and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4725`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Sengir, the Dark Baron (UB)",
+            commanders: decks::GLACIAN_28_COMMANDERS,
+            main: decks::GLACIAN_28_MAIN,
+        },
+        // Seat 4726: Numa, Joraga Chieftain and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 4726`.
+        PodDeck {
+            name: "Numa, Joraga Chieftain and Rograkh, Son of Rohgahh (RG)",
+            commanders: decks::NUMA_10_COMMANDERS,
+            main: decks::NUMA_10_MAIN,
+        },
+        // Seat 4727: Safana, Calimport Cutthroat and Candlekeep Sage's EDHREC average deck. `--pod-decks 4727`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Candlekeep Sage (UB)",
+            commanders: decks::SAFANA_23_COMMANDERS,
+            main: decks::SAFANA_23_MAIN,
+        },
     ]
 }
 
@@ -35418,6 +35442,10 @@ mod tests {
             ("Imoen, Mystic Trickster and Inspiring Leader", &[0x1C87]),
             ("Livio, Oathsworn Sentinel and Slurrk, All-Ingesting", &[0x1C88]),
             ("Breeches, Brazen Plunderer and Jeska, Thrice Reborn", &[0x1C89]),
+            ("Akroma, Vision of Ixidor and Slurrk, All-Ingesting", &[0x1C8A]),
+            ("Glacian, Powerstone Engineer and Sengir, the Dark Baron", &[0x1C8B]),
+            ("Numa, Joraga Chieftain and Rograkh, Son of Rohgahh", &[0x1C8C]),
+            ("Safana, Calimport Cutthroat and Candlekeep Sage", &[0x1C8D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

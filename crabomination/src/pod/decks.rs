@@ -132446,3 +132446,114 @@ pub const BREECHES_28_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const AKROMA_22_COMMANDERS: &[CardFactory] = &[akroma_vision_of_ixidor, slurrk_all_ingesting];
+
+/// **Akroma, Vision of Ixidor and Slurrk, All-Ingesting**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 7 Forests + 11 Plains = 98.
+/// Akroma, Vision of Ixidor and Slurrk, All-Ingesting (EDHREC, fetched 2026-10-21).
+pub const AKROMA_22_MAIN: &[CardFactory] = &[
+    akromas_memorial, arcane_signet, bone_sabres, lightning_greaves,
+    ozolith_the_shattered_spire, pristine_talisman, sol_ring, the_earth_crystal,
+    the_great_henge, the_wind_crystal, canopy_vista, citadel_gate, command_beacon,
+    command_tower, emeria_the_sky_ruin, evolving_wilds, fortified_village, gavony_township,
+    manor_gate, myriad_landscape, selesnya_sanctuary, sunpetal_grove, temple_garden,
+    terramorphic_expanse, abzan_battle_priest, adarkar_valkyrie, aerith_gainsborough,
+    ageless_entity, aggressive_mammoth, ancestor_dragon, bristly_bill_spine_sower,
+    clay_champion, conclave_mentor, dragonlord_dromoka, envoy_of_the_ancestors,
+    evolution_witness, exemplar_of_light, forgotten_ancient, hamza_guardian_of_arashin,
+    kodama_of_the_west_tree, kutzil_malamet_exemplar, lyra_dawnbringer, nykthos_paragon,
+    odric_lunarch_marshal, scavenging_ooze, segovian_angel, shalai_voice_of_plenty,
+    stonecoil_serpent, sunscorch_regent, swooping_lookout, the_gaffer, zetalpa_primal_dawn,
+    asceticism, branching_evolution, cryptolith_rite, doubling_season, garruks_uprising,
+    guardian_project, true_conviction, clever_concealment, generous_gift, heroic_intervention,
+    inspiring_call, invoke_the_divine, light_of_hope, natures_chant, pledge_of_unity,
+    prepare_fight, riot_control, solidarity_of_heroes, swords_to_plowshares,
+    ajani_the_greathearted, camaraderie, cultivate, farseek, kodamas_reach, ondu_inversion,
+    rampant_growth, smell_fear, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GLACIAN_28_COMMANDERS: &[CardFactory] = &[glacian_powerstone_engineer, sengir_the_dark_baron];
+
+/// **Glacian, Powerstone Engineer and Sengir, the Dark Baron**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 5 Islands + 19 Swamps = 98.
+/// Glacian, Powerstone Engineer and Sengir, the Dark Baron (EDHREC, fetched 2026-10-21).
+pub const GLACIAN_28_MAIN: &[CardFactory] = &[
+    ashnods_altar, brotherhood_regalia, chrome_mox, dowsing_dagger, ichor_wellspring,
+    leyline_axe, mox_amber, mox_diamond, mycosynth_lattice, palantir_of_orthanc, sol_ring,
+    swiftfoot_boots, sword_of_once_and_future, sword_of_wealth_and_power, whispersilk_cloak,
+    clearwater_pathway, command_tower, mistvault_bridge, otawara_soaring_city,
+    seat_of_the_synod, sunken_ruins, takenuma_abandoned_mire, treasure_vault, underground_river,
+    underground_sea, urborg_tomb_of_yawgmoth, urzas_saga, vault_of_whispers, carrion_feeder,
+    deranged_assistant, eloise_nephalia_sleuth, emrakuls_messenger, emry_lurker_of_the_loch,
+    glaring_fleshraker, krydle_of_baldurs_gate, lier_disciple_of_the_drowned, myr_battlesphere,
+    pawn_of_ulamog, phenax_god_of_deception, renowned_weaponsmith, sai_master_thopterist,
+    shambling_ghast, sheoldred_whispering_one, sifter_of_skulls, sliversmith,
+    stitchers_supplier, toxrill_the_corrosive, urza_lord_high_artificer, viscera_seer,
+    animate_dead, grave_pact, greed, out_of_the_tombs, oversold_cemetery, phyrexian_reclamation,
+    tortured_existence, virtue_of_persistence, corrupted_conviction, deadly_dispute,
+    infernal_grasp, mana_drain, perilous_research, read_the_runes, village_rites,
+    tezzeret_the_schemer, argivian_restoration, damnation, demonic_tutor, diabolic_intent,
+    reanimate, restart_sequence, retraced_image, stitch_together, victimize,
+    // Basics
+    island, island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const NUMA_10_COMMANDERS: &[CardFactory] = &[numa_joraga_chieftain, rograkh_son_of_rohgahh];
+
+/// **Numa, Joraga Chieftain and Rograkh, Son of Rohgahh**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 14 Forests + 3 Mountains = 98.
+/// Numa, Joraga Chieftain and Rograkh, Son of Rohgahh (EDHREC, fetched 2026-10-21).
+pub const NUMA_10_MAIN: &[CardFactory] = &[
+    arcane_signet, armory_of_iroas, chromatic_lantern, commanders_sphere, evolving_door,
+    fellwar_stone, glittering_stockpile, mana_vault, sol_ring, spectral_searchlight,
+    viviens_arkbow, arid_mesa, bloodstained_mire, boseiju_who_endures, cinder_glade,
+    command_tower, exotic_orchard, gaeas_cradle, misty_rainforest, path_of_ancestry,
+    racers_ring, scalding_tarn, sokenzan_crucible_of_defiance, spire_garden, stomping_ground,
+    terramorphic_expanse, verdant_catacombs, windswept_heath, wooded_foothills, akki_ronin,
+    burnished_hart, dryad_of_the_ilysian_grove, elmar_ulvenwald_informant, farhaven_elf,
+    gala_greeters, gilanra_caller_of_wirewood, god_eternal_rhonas, hans_eriksson,
+    heiko_yamazaki_the_general, immaculate_magistrate, jugan_the_rising_star,
+    kediss_emberclaw_familiar, krenko_tin_street_kingpin, kura_the_boundless_sky, lizard_blades,
+    priest_of_titania, professional_face_breaker, rabbit_battery, reclamation_sage,
+    riveteers_decoy, toggo_goblin_weaponsmith, topiary_stomper, tuya_bearclaw,
+    wildheart_invoker, careful_cultivation, court_of_ire, fable_of_the_mirror_breaker,
+    guardian_project, most_wanted, ordeal_of_nylea, roaring_earth, antagonize, chaos_warp,
+    explosive_growth, giant_growth, mutagenic_growth, tamiyos_safekeeping, titanic_growth,
+    jeska_thrice_reborn, vivien_reid, blasphemous_act, cultivate, explosive_singularity,
+    exponential_growth, monstrous_growth, natures_lore, nyleas_intervention, renegade_tactics,
+    three_visits, triumph_of_the_hordes, wheel_of_misfortune,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, mountain, mountain, mountain,
+];
+
+pub const SAFANA_23_COMMANDERS: &[CardFactory] = &[safana_calimport_cutthroat, candlekeep_sage];
+
+/// **Safana, Calimport Cutthroat and Candlekeep Sage**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 18 Islands + 13 Swamps = 98.
+/// Safana, Calimport Cutthroat and Candlekeep Sage (EDHREC, fetched 2026-10-21).
+pub const SAFANA_23_MAIN: &[CardFactory] = &[
+    ichor_wellspring, lapis_orb_of_dragonkind, sol_ring, talisman_of_dominance, thieves_tools,
+    voyager_staff, command_tower, fetid_pools, mystic_sanctuary, undercity_sewers, urzas_cave,
+    aarakocra_sneak, arcane_investigator, archaeomancer, baleful_strix, bronze_walrus,
+    dungeon_crawler, emeritus_of_ideation, ertai_resurrected, fog_bank, grim_servant,
+    hoarding_broodlord, imoen_mystic_trickster, mulldrifter, ornithopter_of_paradise,
+    passageway_seer, peregrine_drake, phyrexian_rager, ravenloft_adventurer,
+    salvager_of_secrets, shortcut_seeker, starscream_power_hungry, tomb_of_horrors_adventurer,
+    tymoras_invoker, undercover_operative, vedalken_aethermage, venser_shaper_savant,
+    vicious_battlerager, wanted_scoundrels, winter_eladrin, ringing_strike_mastery,
+    stunning_strike, underwater_tunnel_slimy_aquarium, blur, brainsurge, contact_other_plane,
+    displace, doom_blade, downsize, hazels_nocturne, lim_duls_vault, negate, pharikas_libation,
+    precognitive_perception, reasonable_doubt, release_to_the_wind, split_decision,
+    undercitys_embrace, blood_money, bubbling_muck, check_for_traps, diabolic_tutor,
+    feed_the_swarm, mind_spiral, pirates_prize, power_of_persuasion, talrands_invocation,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
