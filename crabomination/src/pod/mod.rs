@@ -29561,9 +29561,45 @@ pub fn build_pod_template_from(decks: &[SeatDeck<'_>]) -> GameState {
             g.add_card_to_library(seat, crate::cube::card_arc(f));
         }
         g.seat_commanders(seat, deck.commanders.iter().map(|f| f()).collect());
+        if deck.commanders.iter().chain(deck.main).any(|f| opens_attractions(&f())) {
+            g.seat_attraction_deck(seat, POD_ATTRACTIONS.iter().map(|f| f()).collect());
+        }
         g.players[seat].wants_ui = true;
     }
     g
+}
+
+/// CR 717.2 — the Attraction deck a pod seat brings when its deck opens
+/// Attractions: every Attraction in the catalog, one of each name (CR
+/// 717.2a: at least ten). EDHREC's averages list no Attraction deck, so
+/// without this Myra the Magnificent, Draconian Gate-Bot and the other
+/// "open an Attraction" cards did nothing in pods. Shuffled per game beside
+/// the library.
+const POD_ATTRACTIONS: &[CardFactory] = &[
+    crate::catalog::balloon_stand,
+    crate::catalog::bounce_chamber,
+    crate::catalog::bumper_cars,
+    crate::catalog::clown_extruder,
+    crate::catalog::concession_stand,
+    crate::catalog::foam_weapons_kiosk,
+    crate::catalog::fortune_teller,
+    crate::catalog::information_booth,
+    crate::catalog::kiddie_coaster,
+    crate::catalog::roller_coaster,
+    crate::catalog::merry_go_round,
+    crate::catalog::spinny_ride,
+    crate::catalog::trash_bin,
+    crate::catalog::swinging_ship,
+];
+
+/// Whether any of `d`'s abilities (either face) opens an Attraction.
+fn opens_attractions(d: &crate::card::CardDefinition) -> bool {
+    let hit = |e: &crate::effect::Effect| e.any_nested(&|e| matches!(e, crate::effect::Effect::OpenAnAttraction));
+    hit(&d.effect)
+        || d.triggered_abilities.iter().any(|t| hit(&t.effect))
+        || d.activated_abilities.iter().any(|a| hit(&a.effect))
+        || d.loyalty_abilities.iter().any(|a| hit(&a.effect))
+        || d.back_face.as_deref().is_some_and(opens_attractions)
 }
 
 /// Play one seeded pod game from a prebuilt template.
@@ -29819,7 +29855,7 @@ fn owned_card_counts(g: &GameState) -> Vec<Vec<crate::card::CardId>> {
         }
     }
     for p in g.players.iter() {
-        for z in [&*p.graveyard, &*p.hand, &*p.library, &*p.command, &*p.ante, &*p.sideboard] {
+        for z in [&*p.graveyard, &*p.hand, &*p.library, &*p.command, &*p.ante, &*p.sideboard, &*p.attraction_deck, &*p.attraction_junkyard] {
             z.iter().for_each(&mut add);
         }
     }
@@ -29860,6 +29896,10 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
         "a hand"
     } else if g.players.iter().any(|p| has(&p.library)) {
         "a library"
+    } else if g.players.iter().any(|p| has(&p.attraction_deck)) {
+        "an Attraction deck"
+    } else if g.players.iter().any(|p| has(&p.attraction_junkyard)) {
+        "a junkyard"
     } else if g.players.iter().any(|p| has(&p.command)) {
         "a command zone"
     } else if let Some(zone) = {
@@ -29988,6 +30028,11 @@ fn play_pod_game(
             Pilot::Uniform => false,
         };
         player.library.shuffle(&mut shuffle);
+        // Only a seat that brought one draws from the stream, so every other
+        // pod deals exactly as before.
+        if !player.attraction_deck.is_empty() {
+            player.attraction_deck.shuffle(&mut shuffle);
+        }
     }
     // A seeded deal implies a seeded game — mulligan reshuffles and every
     // other in-game roll come off the state's own stream (see
@@ -31191,6 +31236,20 @@ mod tests {
     }
 
     use super::*;
+
+    /// CR 717.2 — a seat whose deck opens Attractions brings an Attraction
+    /// deck of distinct names (at least ten), shuffled per game; a seat
+    /// whose deck doesn't brings none.
+    #[test]
+    fn cr_717_2_a_seat_that_opens_attractions_brings_an_attraction_deck() {
+        let myra = SeatDeck { commanders: decks::MYRA_THE_MAGNIFICENT_COMMANDERS, main: decks::MYRA_THE_MAGNIFICENT_MAIN };
+        let other = SeatDeck::from(&target_decks()[0]);
+        let g = build_pod_template_from(&[myra, other]);
+        let names: std::collections::HashSet<_> =
+            g.players[0].attraction_deck.iter().map(|c| c.definition.name).collect();
+        assert!(names.len() >= 10 && names.len() == g.players[0].attraction_deck.len());
+        assert!(g.players[1].attraction_deck.is_empty());
+    }
 
     fn rofellos_pod(seats: usize) -> Vec<PodDeck> {
         pod_field(seats)
