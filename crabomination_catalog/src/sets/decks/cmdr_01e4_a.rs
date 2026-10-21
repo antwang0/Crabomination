@@ -5383,20 +5383,3 @@ pub fn dimir_strandcatcher() -> CardDefinition {
         )
     }
 }
-
-/// Nevermaker — {3}{U} 2/3 flying Elemental. When it leaves the battlefield,
-/// put target nonland permanent on top of its owner's library. Evoke {3}{U}.
-pub fn nevermaker() -> CardDefinition {
-    CardDefinition {
-        keywords: vec![Keyword::Flying],
-        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(3), u()]))),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: target_filtered(R::Permanent.and(R::Land.negate())),
-                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
-            },
-        }],
-        ..creature("Nevermaker", cost(&[generic(3), u()]), vec![CreatureType::Elemental], 2, 3)
-    }
-}

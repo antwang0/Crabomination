@@ -132665,3 +132665,30 @@ pub const RADIANT_9_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const SIVRISS_16_COMMANDERS: &[CardFactory] = &[sivriss_nightmare_speaker, shameless_charlatan];
+
+/// **Sivriss, Nightmare Speaker and Shameless Charlatan**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Islands + 10 Swamps = 98.
+/// Sivriss, Nightmare Speaker and Shameless Charlatan (EDHREC, fetched 2026-10-21).
+pub const SIVRISS_16_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, mimic_vat, phyrexian_altar, sol_ring,
+    spine_of_ish_sah, talisman_of_dominance, vanquishers_banner, vat_of_rebirth, bojuka_bog,
+    choked_estuary, command_tower, darkwater_catacombs, drowned_catacomb, exotic_orchard,
+    fetid_pools, morphic_pool, polluted_delta, shipwreck_marsh, tainted_isle, underground_river,
+    watery_grave, archghoul_of_thraben, bladegriff_prototype, blight_titan, blood_artist,
+    cemetery_reaper, cleaver_skaab, cryptbreaker, dalek_drone, death_baron, dimir_strandcatcher,
+    diregraf_captain, grave_titan, gravecrawler, gray_merchant_of_asphodel, havengul_lich,
+    hordewing_skaab, hydroelectric_specimen, lilianas_reaver, lord_of_the_undead,
+    masters_councillors, midnight_reaper, nevermaker, reassembling_skeleton, relentless_dead,
+    shepherd_of_rot, shriekmaw, syr_konrad_the_grim, the_ancient_one, the_master_of_lake_town,
+    the_scarab_god, tomb_tyrant, undead_augur, undead_warchief, unshakable_tail,
+    vengeful_pharaoh, vizier_of_tumbling_sands, zombie_master, chamber_of_manipulation,
+    immobilizing_ink, oversold_cemetery, pedantic_learning, retreat_to_coralhelm, rooftop_storm,
+    deadly_dispute, fact_or_fiction, mana_drain, sheoldreds_edict, soul_shatter,
+    waterlogged_teachings, liliana_deaths_majesty, empty_the_laboratory, pull_from_the_grave,
+    reanimate, singularity_rupture, victimize, will_of_the_abzan,
+    // Basics
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

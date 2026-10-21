@@ -28842,6 +28842,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RADIANT_9_COMMANDERS,
             main: decks::RADIANT_9_MAIN,
         },
+        // Seat 4732: Sivriss, Nightmare Speaker and Shameless Charlatan's EDHREC average deck. `--pod-decks 4732`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Shameless Charlatan (UB)",
+            commanders: decks::SIVRISS_16_COMMANDERS,
+            main: decks::SIVRISS_16_MAIN,
+        },
     ]
 }
 
@@ -35474,6 +35480,7 @@ mod tests {
             ("Ganax, Astral Hunter and Criminal Past", &[0x1C8F]),
             ("Lae'zel, Vlaakith's Champion and Raised by Giants", &[0x1C90]),
             ("Radiant, Serra Archangel and Sakashima of a Thousand Faces", &[0x1C91]),
+            ("Sivriss, Nightmare Speaker and Shameless Charlatan", &[0x1C92]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
