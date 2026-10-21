@@ -4196,6 +4196,10 @@ pub enum StaticEffect {
     /// Orb, which wraps it in a `WhileCondition` gate on its own untapped
     /// state).
     MaxUntapsPerStep { filter: SelectionRequirement, max: u32 },
+    /// "Your opponents can't untap more than `n` permanents during their
+    /// untap steps" — Dovin Baan's emblem (CR 114), read from the owner's
+    /// emblems by the untap step, one cap per opposing seat.
+    OpponentsMaxUntapsPerStep(u32),
     /// CR 508.1d — "If a [`filter`] creature attacks, all [`filter`] creatures
     /// attack if able" (Magnetic Web). Checked against the *declared* batch in
     /// `declare_attackers`, so it costs nothing when none of them attacks.

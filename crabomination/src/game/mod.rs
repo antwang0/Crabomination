@@ -36191,6 +36191,7 @@ fn static_effect_to_effects(
             // `do_untap`; no layer effect.
             | StaticEffect::MaxOneUntapPerStep { .. }
             | StaticEffect::MaxUntapsPerStep { .. }
+            | StaticEffect::OpponentsMaxUntapsPerStep(_)
             // Magnetic Web — consulted by `declare_attackers`.
             | StaticEffect::AttackTogether { .. }
             // Hand to Hand — consulted by the cast / activate gates.

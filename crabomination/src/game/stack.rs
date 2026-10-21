@@ -4739,7 +4739,7 @@ impl GameState {
         // static-free board has none and the walk is dead.
         let cap_scan: &[crate::card::CardInstance] =
             if any_static { &self.battlefield } else { &[] };
-        let untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = cap_scan
+        let mut untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = cap_scan
             .iter()
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
             .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
@@ -4764,6 +4764,20 @@ impl GameState {
                 (set, max)
             })
             .collect();
+        // Dovin Baan's emblem — "your opponents can't untap more than two
+        // permanents during their untap steps": one cap per opponent seat.
+        for (owner, pl) in self.players.iter().enumerate() {
+            for em in &pl.emblems {
+                for sa in &em.statics {
+                    if let StaticEffect::OpponentsMaxUntapsPerStep(max) = sa.effect {
+                        for opp in (0..self.players.len()).filter(|&q| !self.same_team(q, owner)) {
+                            let set = self.battlefield.iter().filter(|c| c.controller == opp).map(|c| c.id).collect();
+                            untap_caps.push((set, max));
+                        }
+                    }
+                }
+            }
+        }
         let mut capped_untaps: crate::fxhash::HashMap<(usize, usize), u32> =
             crate::fxhash::HashMap::default();
         // CR 502.1 — ask each `MayChooseNotToUntap` permanent's controller
