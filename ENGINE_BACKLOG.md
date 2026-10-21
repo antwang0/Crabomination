@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes](#fixedopen-2026-10-20-commander-run-01nkae5b--46-one-gap-closers-45-seats-two-bug-classes) | 37 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 122 seats, 255 cards, four bug classes](#fixedopen-2026-10-20-commander-run-01e4rmul--122-seats-255-cards-four-bug-classes) | 8 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`) — 44 closer cards, 13 seats, two engine fixes](#fixedopen-2026-10-20-commander-run-01ddeutc--44-closer-cards-13-seats-two-engine-fixes) | 30 |
@@ -183,6 +184,44 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes
+
+- **Seats** 4630-4635, 4642-4658, 4672-4675, 4681-4682, 4690-4700, 4706-4707, 4718-4720: partner-pair EDHREC
+  averages whose ONE missing card this run wrote (`decks::cmdr_01nk_a`, 46 cards; tests `recent_b/cmdr_01nk_a.rs`).
+  Dropped: Jeska // The Prismatic Piper (chosen-colour mix), The Fugitive Doctor // Peri Brown (the EDHREC average
+  is 99 cards). Energy Storm and Flower // Flourish landed first in the concurrent `cmdr_01jy_a` and were dropped
+  from mine (with my `PreventInstantAndSorceryDamage`, which its `PreventAllSpellDamage` covers). Every group smoked
+  20+ debug games, all decided.
+- **FIXED (CR 614.17, bug class):** "this creature can't have counters put on it" (Melira's Keepers, Tatterkite) was
+  Solemnity's table-wide `CountersCantBePlaced`; Frozen in Ice's "can't become untapped" was `PreventUntap`, which an
+  untap effect ignored. New `StaticEffect::CantHaveCountersPutOn` / `CantBecomeUntapped` (`game/object_locks.rs`):
+  the counter lock answers 0 in `scaled_counter_count_on` (every placement through the CR 614.16 chain), the untap
+  lock covers the untap step, `untap_permanent`, Provoke, the control-swap untap and {Q}/untap costs (CR 614.17b).
+- **FIXED (CR 603.2, bug class):** `EventKind::PermanentReturnedToHand` was not in the fan-out list — a two-creature
+  bounce fired Azorius Aethermage / Warped Devotion / Justice once.
+- **Primitives:** `PreventNoncombatDamageToYouGainLife` (Purity); `ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents`
+  (Tarnation Vista); `ControllerCantPlayFromHand` (CR 101.2, Experimental Frenzy — `cast_lock::FROM_HAND`, one gate
+  in `action_lock_rejection` for every hand-cast action and land play); `OpponentDiscardToLibraryTop` (Nephalia
+  Academy); `Effect::PlayerChoosesFromGraveyard` (Visions of Dread); `CounterType::Ember` / `Rope`;
+  `YourInstantsAndSorceriesHaveRebound` (Cast Through Time); `Effect::MillUntilMatching` (Helm of Obedience);
+  `EquipBonus::animate_noncreature_mv` (Animate Artifact); `Effect::NameSpellsCostLessThisTurn` (Cheering Fanatic);
+  `R::ColorCountEqualsSacrificedPlus` (Evolving Door); `departed_listeners.rs` — a returned-to-hand listener sees its
+  own return (CR 603.10a, Kaslem's Stonetree / Fraying Line); `Effect::PreventAllButOneFromChosenSource`
+  (Forcefield, `PreventionShield.all_but`); `Effect::AnyPlayerMaySacrificeToTopdeckSource` (Shivan Wumpus);
+  `Effect::EachPlayerDiscardsAnyThenDrawsThatMany` (Flux); `SearchSplitWithOpponent::denied_smallest` (Turtles
+  Forever); `Effect::CastImmediatePayingExtra` (Ogre Battlecaster); `Effect::EachPlayerShufflesHandAndPermanentsThenDraws`
+  (The Great Aurora); `Selector::TargetsFrom(u8)` (Spinning Wheel Kick's X targets); copy duration
+  `WhileSourceAttached` (Secret Invasion). The SelfFlashIf timing gate now reads the cast's announced X (Silver
+  Scrutiny, CR 601.2c). Hand of Vecna pumps a Vecna when unequipped (The Book of Vile Darkness).
+- ⚠ Before adding a variant, grep the WHOLE enum: `SpendRestriction::KickedOnly` duplicated `KickedSpellsOnly`
+  (reverted) and only core_rules' exhaustive walk caught it.
+- **OPEN (one-gap closers left, each a primitive):** Vedalken Squirrel-Whacker (2 decks: the d6 exchange
+  replacement in `roll_one_die` — needs a seat-routed ask outside an effect), Invasion of New Phyrexia (2 decks: the
+  Teferi back), Barroom Brawl (the opponent to your left + a copy offer), Arcane Proxy (a target filter reading the
+  source's power: the walkers resolve only X/converge), Worldpurge, Tombstone Stairwell, Soul Echo, Mindlink Mech,
+  Eye of Ojer Taq, Braided Net, Draconian Gate-Bot. Gustha's Scepter and Pick-Axe close only Piper / Faceless One
+  decks, which fail legality. ⚠ The bot never activates Forcefield.
 
 ## FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 122 seats, 255 cards, four bug classes
 

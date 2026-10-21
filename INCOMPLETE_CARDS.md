@@ -475,6 +475,9 @@ Open 🟡 rows (each card plays; the clause named is approximated):
 | 🟡 Nephalia Academy | The "may reveal" is always taken, and no reveal event is emitted. |
 | 🟡 Evolving Door | Counts the sacrificed creature's **printed** colours (`sacrificed_colors`), not its last-known computed ones. |
 | 🟡 Sphere of Annihilation | Exiles the creatures, planeswalkers and graveyard cards one at a time, then itself — not simultaneously. |
+| 🟡 Turtles Forever | No prompt: the searcher takes the up-to-four highest-MV distinct-name legends and the opponent hands over the two smallest — a fixed heuristic on both sides, not a choice. |
+| 🟡 Forcefield | The shield catches the chosen creature's next damage to you this turn of any kind, not only unblocked combat damage. |
+| 🟡 The Book of Vile Darkness | Eye of Vecna and Hand of Vecna are exiled as the ability resolves (gated on both being there), not paid as part of the cost. |
 
 ## Commander additions of session `015BCEt5` (2026-09-26) — the approximations named
 
