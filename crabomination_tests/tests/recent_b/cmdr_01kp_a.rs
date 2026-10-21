@@ -1,7 +1,7 @@
 //! Commander: the 2026-10-21 (`01KPxZ3H`) single-commander closers
 //! (`decks::cmdr_01kp_a`).
 
-use crabomination::card::{ArtifactSubtype, CardDefinition, CardId, CardType, Keyword};
+use crabomination::card::{ArtifactSubtype, CardDefinition, CardId, CardType, CounterType, Keyword};
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::catalog;
 use crabomination::game::types::{GameAction, Target, TurnStep};
@@ -334,4 +334,59 @@ fn cr_508_1_sandswirl_wanderglyph_splits_casting_from_attacking() {
     g.priority.player_with_priority = 2;
     let cast = GameAction::CastSpell { card_id: opt, target: None, additional_targets: vec![], mode: None, x_value: None };
     assert!(g.perform_action(cast).is_err(), "attacked seat 0 this turn: no spells");
+}
+
+fn lore(g: &mut GameState, saga: CardId) {
+    let add = crabomination::effect::Effect::AddCounter {
+        what: crabomination::effect::Selector::ExactObjects(vec![saga]),
+        kind: CounterType::Lore,
+        amount: crabomination::card::Value::ONE,
+    };
+    let evs = g.resolve_effect(&add, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// CR 714.2c — Storyweave's two lore counters take Teachings of the Kirin
+/// from I to III, so chapters II and III both trigger; the Orochi the third
+/// chapter returns is the next enchantment creature to enter this turn, and
+/// enters with Storyweave's two extra +1/+1 counters (CR 614.1c).
+#[test]
+fn cr_714_2c_storyweave_skips_teachings_to_its_orochi_with_counters() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let saga = g.add_card_to_battlefield(0, catalog::teachings_of_the_kirin());
+    lore(&mut g, saga);
+    assert_eq!(g.players[0].graveyard.len(), 3, "chapter I milled three");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "and made a Spirit");
+    let weave = g.add_card_to_hand(0, catalog::storyweave());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: weave,
+        target: Some(Target::Permanent(saga)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let orochi = g.battlefield_find(saga).expect("returned transformed");
+    assert_eq!(orochi.definition.name, "Kirin-Touched Orochi");
+    assert!(orochi.counter_count(CounterType::PlusOnePlusOne) >= 2, "Storyweave's bonus");
+}
+
+/// Kirin-Touched Orochi's attack: exiling a creature card from a graveyard
+/// is the reflexive trigger's gate (CR 603.12) — a Spirit follows it.
+#[test]
+fn kirin_touched_orochi_exiles_then_makes_a_spirit() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::teachings_of_the_kirin());
+    g.transform_permanent(saga, &mut vec![]);
+    let bears = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    attack(&mut g, 0, &[(saga, 1)]);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit"));
 }

@@ -2,14 +2,14 @@
 //! `tests/recent_b/cmdr_01kp_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt, EventKind, EventScope,
-    EventSpec, ExileReturnZone, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{craft, target_any, target_filtered};
-use crate::effect::{Duration, Effect, LookExileGrant, ManaPayload, PlayerRef, Predicate, Selector, Value};
+use crate::effect::{Duration, Effect, LookExileGrant, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, b, cost, generic, r, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 use std::sync::Arc;
 
 /// Squall, Gunblade Duelist — {R}{W}{B} 3/2 legendary Human Mercenary, first
@@ -358,6 +358,110 @@ pub fn unstable_glyphbridge() -> CardDefinition {
         }],
         activated_abilities: vec![craft(cost(&[generic(3), w(), w()]), R::Artifact, 1)],
         back_face: Some(Box::new(wanderglyph)),
+        ..Default::default()
+    }
+}
+
+fn spirit() -> Arc<TokenDefinition> {
+    Arc::new(TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        ..Default::default()
+    })
+}
+
+/// Teachings of the Kirin // Kirin-Touched Orochi — {1}{G} Saga. I: mill
+/// three, create a 1/1 colorless Spirit. II: a +1/+1 counter on target
+/// creature you control. III: exile it, then return it transformed. The
+/// Orochi: 1/1 green enchantment creature Snake Monk; whenever it attacks,
+/// choose one — exile target creature card from a graveyard, and when you do
+/// (CR 603.12) create a 1/1 Spirit; or exile target noncreature card from a
+/// graveyard, and when you do put a +1/+1 counter on target creature you
+/// control.
+pub fn teachings_of_the_kirin() -> CardDefinition {
+    let exiled_then = |filter: R, then: Effect| {
+        Effect::Seq(vec![
+            Effect::Move { what: target_filtered(filter.from_any_graveyard()), to: ZoneDest::Exile },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::LastMoved),
+                then: Box::new(Effect::ReflexiveTrigger { body: Box::new(then) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ])
+    };
+    let counter = || Effect::AddCounter {
+        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    let orochi = CardDefinition {
+        name: "Kirin-Touched Orochi",
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake, CreatureType::Monk], ..Default::default() },
+        color_indicator: vec![Color::Green],
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                exiled_then(
+                    R::Creature,
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: spirit() },
+                ),
+                exiled_then(R::Creature.negate(), counter()),
+            ]),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Teachings of the Kirin",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: spirit() },
+                ]),
+            ),
+            (2, counter()),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(orochi)),
+        ..Default::default()
+    }
+}
+
+/// Storyweave — {2}{G} instant. Choose one — two +1/+1 counters on target
+/// creature you control; or two lore counters on target Saga you control
+/// (each chapter it reaches triggers, CR 714.2c), and the next time one or
+/// more enchantment creatures you control enter this turn, each enters with
+/// two additional +1/+1 counters.
+pub fn storyweave() -> CardDefinition {
+    CardDefinition {
+        name: "Storyweave",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga).and(R::ControlledByYou)),
+                    kind: CounterType::Lore,
+                    amount: Value::Const(2),
+                },
+                Effect::NextEnchantmentCreaturesEnterWithCountersThisTurn { amount: 2 },
+            ]),
+        ]),
         ..Default::default()
     }
 }

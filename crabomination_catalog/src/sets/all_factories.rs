@@ -19004,6 +19004,8 @@ static DECKS: &[Factory] = &[
     super::decks::chalice_of_life,
     super::decks::sunbird_standard,
     super::decks::unstable_glyphbridge,
+    super::decks::teachings_of_the_kirin,
+    super::decks::storyweave,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
