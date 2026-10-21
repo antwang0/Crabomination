@@ -29388,6 +29388,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_REX_NEBULA_COMMANDERS,
             main: decks::CAPTAIN_REX_NEBULA_MAIN,
         },
+        // Seat 4823: Tetzin, Gnome Champion's EDHREC average deck. `--pod-decks 4823`.
+        PodDeck {
+            name: "Tetzin, Gnome Champion (WUR)",
+            commanders: decks::TETZIN_COMMANDERS,
+            main: decks::TETZIN_MAIN,
+        },
     ]
 }
 
@@ -36111,6 +36117,7 @@ mod tests {
             ("Akroma, Vision of Ixidor and Numa, Joraga Chieftain", &[0x1CEA]),
             ("Squall, Gunblade Duelist", &[0x1CEB]),
             ("Captain Rex Nebula", &[0x1CEC]),
+            ("Tetzin, Gnome Champion", &[0x1CED]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

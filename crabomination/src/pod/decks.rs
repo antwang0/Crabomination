@@ -135213,3 +135213,33 @@ pub const CAPTAIN_REX_NEBULA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const TETZIN_COMMANDERS: &[CardFactory] = &[tetzin_gnome_champion];
+
+/// **Tetzin, Gnome Champion**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 5 Islands + 4 Mountains + 5 Plains = 99.
+/// Tetzin, Gnome Champion (EDHREC, fetched 2026-10-21).
+pub const TETZIN_MAIN: &[CardFactory] = &[
+    arcane_signet, azors_gateway, braided_net, brasss_tunnel_grinder, chalice_of_life,
+    clay_fired_bricks, conquerors_galleon, cryptolith_fragment, dire_flail, dowsing_dagger,
+    dowsing_device, eye_of_ojer_taq, fabrication_foundry, inverted_iceberg, lodestone_needle,
+    masters_guide_mural, matzalantli_the_great_door, oteclan_landmark, sol_ring,
+    spring_loaded_sawblades, sunbird_standard, thaumatic_compass, the_enigma_jewel,
+    the_everflowing_well, thousand_moons_smithy, treasure_map, unstable_glyphbridge,
+    waterlogged_hulk, ancient_den, archway_of_innovation, buried_ruin, clifftop_retreat,
+    command_tower, darksteel_citadel, exotic_orchard, glacial_fortress, great_furnace,
+    hallowed_fountain, mystic_monastery, power_depot, raugrin_triome, razortide_bridge,
+    rustvale_bridge, sacred_foundry, seat_of_the_synod, silverbluff_bridge, spire_of_industry,
+    steam_vents, sulfur_falls, alibou_ancient_witness, anim_pakal_thousandth_moon,
+    chrome_host_seedshark, emry_lurker_of_the_loch, enthusiastic_mechanaut, etherium_sculptor,
+    foreboding_statue, forensic_gadgeteer, foundry_inspector, golden_guardian,
+    illustrious_wanderglyph, jhoira_weatherlight_captain, kappa_cannoneer,
+    losheel_clockwork_scholar, market_gnome, optimus_prime_hero, padeem_consul_of_innovation,
+    sai_master_thopterist, thought_monitor, threefold_thunderhulk, urza_prince_of_kroog,
+    mirrodin_besieged, storm_the_vault, thopter_spy_network, counterspell, desynchronization,
+    dispatch, generous_gift, path_to_exile, swords_to_plowshares, daretti_scrap_savant,
+    dance_of_the_manse, organic_extinction, sevinnes_reclamation, thoughtcast, wake_the_past,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains,
+];
