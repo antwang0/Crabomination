@@ -2180,6 +2180,26 @@ impl GameAction {
         )
     }
 
+    /// The card a cast variant names when that variant runs the hand pipeline
+    /// (`cast_spell_with_convoke`) and so can cast a commander from the
+    /// command zone on a hop (CR 903.8): kicker, bestow, waterbend, convoke,
+    /// delve. The command zone's own action (`CastFromCommandZone`: plain,
+    /// alternative) and mutate have their own paths.
+    pub(crate) fn command_zone_hop_card(&self) -> Option<CardId> {
+        use GameAction as A;
+        match self {
+            A::CastSpellKicked { card_id, .. }
+            | A::CastSpellKickers { card_id, .. }
+            | A::CastSpellMultikicked { card_id, .. }
+            | A::CastBestow { card_id, .. }
+            | A::CastSpellWaterbend { card_id, .. }
+            | A::CastSpellConvoke { card_id, .. }
+            | A::CastSpellDelve { card_id, .. }
+            | A::CastSpellConvokeDelve { card_id, .. } => Some(*card_id),
+            _ => None,
+        }
+    }
+
     /// The `card_id` of the spell a `Cast*` action casts, if it carries one in
     /// a `card_id` field (every variant except `CastPrepareSpell`, which names a
     /// battlefield creature rather than the spell). Used by per-turn lock pieces

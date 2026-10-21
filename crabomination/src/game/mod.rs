@@ -2899,6 +2899,9 @@ pub struct ResolutionScratch {
 pub(crate) enum HopFrom {
     LibraryTop,
     Graveyard,
+    /// CR 903.8 — a commander cast through a hand-pipeline variant (kicker,
+    /// bestow, convoke, …); the pipeline adds its tax.
+    CommandZone,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -21761,6 +21764,14 @@ impl GameState {
                 | GameAction::DeclareAttackersExerting { .. }
         )
         .then(|| self.stack.len());
+        // CR 903.8 — a hand-pipeline cast variant of a commander still in the
+        // command zone runs that pipeline on a hop (`game/helper_cast.rs`).
+        if let Some(id) = action.command_zone_hop_card() {
+            let p = self.priority.player_with_priority;
+            if !self.players[p].has_in_hand(id) && self.players[p].command.iter().any(|c| c.id == id) {
+                return self.cast_hopped_from_command_zone(p, id, |g| g.perform_action_dispatch(action));
+            }
+        }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
             GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),

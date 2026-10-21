@@ -292,3 +292,33 @@ fn cr_903_8_hogaak_casts_from_the_graveyard_and_the_command_zone() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(cmd).is_some());
 }
+
+/// CR 903.8 + 702.33 — a kicker commander is kicked from the command zone:
+/// printed {2}{R}{R} + kicker {3} + {2} tax, the kicked ETB fires, and the cast
+/// counts toward the next tax. A failed kicked cast leaves it in the command
+/// zone.
+#[test]
+fn cr_903_8_a_commander_is_kicked_from_the_command_zone() {
+    let (mut g, verix) = commander_pod(catalog::verix_bladewing());
+    g.commander_cast_count.insert(verix, 1);
+    let kick = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpellKicked {
+            card_id: verix,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Red, 8);
+    assert!(kick(&mut g).is_err(), "eight mana is one short of nine");
+    assert!(g.players[0].command.iter().any(|c| c.id == verix), "back in the command zone");
+    assert_eq!(g.players[0].mana_pool.total(), 8, "and nothing spent");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    kick(&mut g).expect("kicked from the command zone");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    assert!(g.battlefield_find(verix).is_some());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Karox Bladewing"), "kicked");
+    assert_eq!(g.commander_cast_count.get(&verix), Some(&2));
+}

@@ -2,18 +2,20 @@
 //! (CR 702.51), improvise (CR 702.126) and delve (CR 702.66) — from any zone
 //! the card may be cast from: the hand (`cast_spell_with_convoke`), the
 //! command zone (CR 903.8: the tax is an additional cost, so convoke and delve
-//! apply to it too) and the graveyard under a cast permission. Also "you can't
-//! spend mana to cast this spell" (Hogaak), where the helpers pay it all.
+//! apply to it too — on a hop, with every other hand-pipeline variant) and the
+//! graveyard under a cast permission. Also "you can't spend mana to cast this
+//! spell" (Hogaak), where the helpers pay it all.
 
-use crate::card::{CardId, CardInstance, Keyword, KeywordSlice};
+use crate::card::CardId;
 use crate::game::GameState;
 use crate::game::actions::PaymentReceipt;
 use crate::game::types::{GameError, GameEvent, Target};
 use crate::mana::{ManaCost, ManaPool, SpellKind};
 
 impl GameState {
-    /// `CastSpellConvoke` / `CastSpellDelve` / `CastSpellConvokeDelve`, routed
-    /// by the zone `card_id` is in.
+    /// `CastSpellConvoke` / `CastSpellDelve` / `CastSpellConvokeDelve` from the
+    /// hand or a graveyard cast permission (the dispatcher hops a commander in
+    /// from the command zone first).
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_with_helpers(
         &mut self,
@@ -26,9 +28,6 @@ impl GameState {
         delve: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        if !self.players[p].has_in_hand(card_id) && self.players[p].command.iter().any(|c| c.id == card_id) {
-            return self.cast_from_command_zone_as(p, card_id, target, additional_targets, mode, x_value, false, convoke, delve);
-        }
         if !self.players[p].has_in_hand(card_id)
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
@@ -55,51 +54,6 @@ impl GameState {
             delve,
             crate::game::actions::CastFlags::default(),
         )
-    }
-
-    /// Validate a cast's helpers before anything moves: each convoke /
-    /// improvise helper is an untapped creature / artifact `p` controls, the
-    /// spell has the keyword, each delved card sits in `p`'s graveyard.
-    /// Returns whether the spell convokes (a convoking creature may pay a
-    /// colored pip; every other helper pays {1}).
-    pub(crate) fn check_cast_helpers(
-        &self,
-        p: usize,
-        card: &CardInstance,
-        convoke: &[CardId],
-        delve: &[CardId],
-    ) -> Result<bool, GameError> {
-        let has_convoke = card.definition.keywords.has_kw(&Keyword::Convoke)
-            || self.players[p].next_spell_convoke_this_turn
-            || self.spell_granted_convoke(p, card);
-        let has_improvise = card.definition.keywords.has_kw(&Keyword::Improvise)
-            || self.players[p].next_spell_improvise_this_turn
-            || self.spell_granted_improvise(p, card);
-        if !convoke.is_empty() && !has_convoke && !has_improvise {
-            return Err(GameError::SorcerySpeedOnly); // reuse: spell can't tap helpers
-        }
-        for cid in convoke {
-            let ok = self.battlefield.iter().any(|c| {
-                c.id == *cid
-                    && c.controller == p
-                    && !c.tapped
-                    && ((has_convoke && self.computed_is_creature(c))
-                        || (has_improvise && self.computed_has_card_type(c, crate::card::CardType::Artifact)))
-            });
-            if !ok {
-                return Err(GameError::CardNotOnBattlefield(*cid));
-            }
-        }
-        if !delve.is_empty()
-            && !card.definition.keywords.has_kw(&Keyword::Delve)
-            && !self.controller_grants_spells_delve(p)
-        {
-            return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have delve
-        }
-        if let Some(cid) = delve.iter().find(|cid| !self.players[p].graveyard.iter().any(|c| c.id == **cid)) {
-            return Err(GameError::CardNotInGraveyard(*cid));
-        }
-        Ok(has_convoke)
     }
 
     /// CR 702.51 — tap each convoke / improvise helper and credit its mana: a
@@ -185,36 +139,28 @@ impl GameState {
         r
     }
 
-    /// After a helper-paid cast's payment went through (outside the hand
-    /// path, which does this inline): exile the delved cards — linked to the
-    /// spell when `stamp` — and report the convoke taps (CR 702.51: "becomes
-    /// tapped" triggers fire).
-    pub(crate) fn finish_helper_payment(
+    /// CR 903.8 — cast a commander from the command zone through a
+    /// hand-pipeline variant: hop it into the hand (the pipeline adds the tax
+    /// and counts the cast, `HopFrom::CommandZone`), and put it back where it
+    /// was if the cast fails or leaves it in hand (a pending float-spend
+    /// question re-runs the action from the command zone).
+    pub(crate) fn cast_hopped_from_command_zone(
         &mut self,
         p: usize,
-        spell: CardId,
-        convoke: &[CardId],
-        delve: &[CardId],
-        has_convoke: bool,
-        stamp: Option<CardId>,
-    ) -> Vec<GameEvent> {
-        let mut events = Vec::new();
-        for cid in delve {
-            if let Some(mut exiled) = Self::take_card(&mut self.players[p].graveyard, *cid) {
-                if stamp.is_some() {
-                    exiled.exiled_with = stamp;
-                }
-                self.exile.push(exiled);
-                self.players[p].cards_exiled_this_turn += 1;
-                self.note_exiled_from_graveyard(p, *cid, &mut events);
-            }
+        card_id: CardId,
+        cast: impl FnOnce(&mut Self) -> Result<Vec<GameEvent>, GameError>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let at = self.players[p].command.iter().position(|c| c.id == card_id).ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].command.remove(at);
+        self.players[p].hand.push(card);
+        self.casting_hop = Some((card_id, crate::game::HopFrom::CommandZone));
+        let r = cast(self);
+        self.casting_hop = None;
+        if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
+            let at = at.min(self.players[p].command.len());
+            self.players[p].command.insert(at, card);
+            self.offboard_keyword_grants = true;
         }
-        for &cid in convoke {
-            events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
-        }
-        if has_convoke && !convoke.is_empty() {
-            self.convoked_by.push((spell, convoke.to_vec()));
-        }
-        events
+        r
     }
 }

@@ -11776,6 +11776,18 @@ impl GameState {
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        // CR 903.8 — a commander hopped in from the command zone owes its tax,
+        // an additional cost the reductions below see.
+        let commander_hop = self.casting_hop == Some((card.id, crate::game::HopFrom::CommandZone));
+        let commander_tax_life = if commander_hop {
+            let (generic, life) = self.commander_tax_for(&card);
+            if generic > 0 {
+                cost.symbols.push(crate::mana::ManaSymbol::Generic(generic));
+            }
+            life
+        } else {
+            0
+        };
         // The mask was taken before the CR 601.2b cost choices above, which can
         // only *remove* permanents (sacrifice / exile) and so can only clear a
         // bit; the audit below is the standing proof that it does not go stale.
@@ -11859,7 +11871,8 @@ impl GameState {
         // not). The life itself is paid after the mana receipt succeeds.
         // Terror of the Peaks' targeting tax is paid with it.
         let pay_x_life: u32 = if card.definition.additional_cost_pay_x_life { x_value.unwrap_or(0) } else { 0 };
-        let pay_x_life = pay_x_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
+        let pay_x_life =
+            pay_x_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets) + commander_tax_life;
         if !self.cost_life_payable(p, self.effective_life(p), pay_x_life) {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
@@ -11946,6 +11959,11 @@ impl GameState {
                 return Err(e);
             }
         };
+        // Bumped before the mana riders: Opal Palace counts the cast in
+        // progress (ruling 2020-11-10).
+        if commander_hop {
+            *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
+        }
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         // "Pay X life" additional cost — paid on cast alongside the mana
@@ -15524,7 +15542,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        self.cast_from_command_zone_as(p, card_id, target, additional_targets, mode, x_value, false, &[], &[])
+        self.cast_from_command_zone_as(p, card_id, target, additional_targets, mode, x_value, false)
     }
 
     /// [`cast_from_command_zone`](Self::cast_from_command_zone) for seat `p`.
@@ -15533,9 +15551,9 @@ impl GameState {
     /// and no timing check — it's cast while an ability resolves (CR 608.2g) —
     /// but the commander tax is still owed (CR 903.8 makes it an *additional*
     /// cost, and "you still pay any additional costs"), as is every other
-    /// additional cost the cast would carry. `convoke` / `delve` help pay the
-    /// total cost, tax included (CR 702.51a / 702.66a apply after it's
-    /// totalled; `GameState::cast_with_helpers`).
+    /// additional cost the cast would carry. A hand-pipeline variant (kicker,
+    /// convoke, delve, …) casts a commander on a hop instead
+    /// (`GameState::cast_hopped_from_command_zone`).
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_from_command_zone_as(
         &mut self,
@@ -15546,8 +15564,6 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
         without_paying: bool,
-        convoke: &[CardId],
-        delve: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
         let x_value = if without_paying { None } else { x_value };
 
@@ -15649,18 +15665,6 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         apply_colored_cost_statics(self, p, &card, &mut cost);
-        let has_convoke = match self.check_cast_helpers(p, &card, convoke, delve) {
-            Ok(c) => c,
-            Err(e) => {
-                self.players[p].command.push(card);
-                self.offboard_keyword_grants = true;
-                return Err(e);
-            }
-        };
-        if !delve.is_empty() {
-            let per = card.definition.graveyard_exile_cost.as_ref().map_or(1, |x| x.discount);
-            cost.reduce_generic(delve.len() as u32 * per);
-        }
         apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
@@ -15672,16 +15676,13 @@ impl GameState {
         // ride on spending it (uncounterable, haste) still stamp the cast.
         let forced_only = self.players[p].manual_mana;
         let spell_kind = self.spell_kind_for(p, &card);
-        let paid = if convoke.is_empty() && delve.is_empty() && !card.definition.no_mana_spend {
-            self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &spell_kind)
-        } else {
+        // "You can't spend mana to cast this spell": with no helpers, nothing pays.
+        let paid = if card.definition.no_mana_spend {
             let snapshot = self.snapshot_payment_state(p);
-            let float = card.definition.no_mana_spend.then(|| std::mem::take(&mut self.players[p].mana_pool));
-            self.credit_convoke_helpers(p, &cost, convoke, has_convoke);
-            match float {
-                Some(float) => self.pay_without_mana(p, &cost, &spell_kind, float, snapshot),
-                None => self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, None),
-            }
+            let float = std::mem::take(&mut self.players[p].mana_pool);
+            self.pay_without_mana(p, &cost, &spell_kind, float, snapshot)
+        } else {
+            self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &spell_kind)
         };
         let receipt = match paid {
             Ok(r) => r,
@@ -15691,9 +15692,7 @@ impl GameState {
                 return Err(e);
             }
         };
-        let stamp = (card.definition.graveyard_exile_cost.is_some() || card.definition.links_delved_cards).then_some(card_id);
-        let mut helper_events = self.finish_helper_payment(p, card_id, convoke, delve, has_convoke, stamp);
-        self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
+                self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
         let mana_spent = receipt
@@ -15712,7 +15711,6 @@ impl GameState {
         );
 
         let mut auto_events = receipt.auto_events;
-        auto_events.append(&mut helper_events);
         auto_events.push(GameEvent::SpellCast {
             player: p,
             card_id,
