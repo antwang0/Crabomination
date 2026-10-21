@@ -36,6 +36,16 @@ impl GameState {
         })
     }
 
+    /// CR 702.26 — "permanents can't phase in" is in force.
+    pub fn phase_in_locked(&self) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(self.active_static(&sa.effect, c), Some(StaticEffect::PermanentsCantPhaseIn)))
+        })
+    }
+
     /// CR 701.26b / 614.17 — permanent `cid` can't become untapped, by the
     /// untap step or by an effect.
     pub fn cant_become_untapped(&self, cid: CardId) -> bool {

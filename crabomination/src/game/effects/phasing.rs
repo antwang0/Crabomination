@@ -26,8 +26,55 @@ impl GameState {
         self.battlefield.push(c);
     }
 
+    /// CR 702.26 — phase out `ids` and anything attached to them (702.26g),
+    /// held by `holder` when it is an "until [source] leaves" phase-out.
+    /// Returns how many permanents phased out.
+    pub(crate) fn phase_out_permanents(
+        &mut self,
+        mut ids: crate::fxhash::HashSet<CardId>,
+        holder: Option<CardId>,
+        events: &mut Vec<GameEvent>,
+    ) -> u32 {
+        let mut phased = 0u32;
+        if ids.is_empty() {
+            return 0;
+        }
+        let attached: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.attached_to.is_some_and(|h| ids.contains(&h)))
+            .map(|c| c.id)
+            .collect();
+        ids.extend(attached);
+        let mut idx = 0;
+        while idx < self.battlefield.len() {
+            if ids.contains(&self.battlefield[idx].id) {
+                let mut c = self.battlefield.remove(idx);
+                // CR 702.26e — a phased-out permanent is treated as though it
+                // doesn't exist, so it leaves combat (a cast / ETB phase-out
+                // can fire mid-combat — Talon Gates, Reality Ripple).
+                self.remove_from_combat(c.id);
+                c.phased_out_by = holder;
+                events.push(GameEvent::PermanentPhasedOut { card_id: c.id });
+                self.phased_out.push(c);
+                phased += 1;
+            } else {
+                idx += 1;
+            }
+        }
+        phased
+    }
+
     /// Phase in every permanent phased out "until" `source` does something.
+    /// Under a phase-in lock they stay out, held by nothing, and return with
+    /// their controller's untap step once the lock ends.
     pub(crate) fn phase_in_held_by(&mut self, source: CardId, events: &mut Vec<GameEvent>) {
+        if self.phase_in_locked() {
+            for c in self.phased_out.iter_mut().filter(|c| c.phased_out_by == Some(source)) {
+                c.phased_out_by = None;
+            }
+            return;
+        }
         let mut i = 0;
         let mut phased_in: Vec<CardId> = Vec::new();
         while i < self.phased_out.len() {

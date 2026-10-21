@@ -4092,6 +4092,10 @@ pub enum StaticEffect {
     /// an effect untaps it (Blossombind, Frozen in Ice). `applies_to` is
     /// `This` or `AttachedTo(This)`; read by `GameState::cant_become_untapped`.
     CantBecomeUntapped { applies_to: Selector },
+    /// CR 702.26 — "Permanents can't phase in" (Disciple of Caelus Nin):
+    /// every phase-in path holds while it is on the battlefield; read by
+    /// `GameState::phase_in_locked`.
+    PermanentsCantPhaseIn,
     /// CR 614.6 — graveyard-hate replacement: "If a card would be put into
     /// a graveyard from anywhere, exile it instead." When `opponents_only`
     /// the redirect applies only to cards bound for a graveyard belonging to

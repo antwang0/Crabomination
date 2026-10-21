@@ -35785,6 +35785,7 @@ fn static_effect_to_effects(
             // Per-object "can't" locks (`game/object_locks.rs`).
             | StaticEffect::CantBecomeUntapped { .. }
             | StaticEffect::CantHaveCountersPutOn { .. }
+            | StaticEffect::PermanentsCantPhaseIn
             // SpellCostFloor (Trinisphere) — read at cast time by
             // `apply_spell_cost_floor`; no layer effect.
             | StaticEffect::SpellCostFloor { .. }

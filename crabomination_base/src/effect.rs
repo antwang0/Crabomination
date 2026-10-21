@@ -14382,6 +14382,10 @@ pub enum Effect {
     /// the rest into their library" (Worldpurge): APNAP choices, then each
     /// seat shuffles its own rest in.
     EachPlayerKeepsUpToFromHandShufflesRest { keep: u32 },
+    /// "Starting with you, each player chooses up to `keep` permanents they
+    /// control. All permanents other than this one that weren't chosen phase
+    /// out" (Disciple of Caelus Nin) — asked in turn order (CR 101.4).
+    EachPlayerKeepsUpToPermanentsRestPhaseOut { keep: u32 },
     /// "[Player] loses all unspent mana" (Mana Short, Worldpurge) — an
     /// effect, so Upwelling's step-end exception doesn't stop it (CR 500.4);
     /// Yurlok's mana burn sees the loss.

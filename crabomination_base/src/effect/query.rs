@@ -1017,6 +1017,7 @@ impl Effect {
             | Effect::EachPlayerDiscardsAnyThenDrawsThatMany
             | Effect::EachPlayerShufflesHandAndPermanentsThenDraws
             | Effect::EachPlayerKeepsUpToFromHandShufflesRest { .. }
+            | Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { .. }
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

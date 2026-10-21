@@ -13,6 +13,7 @@ mod all_but_one;
 mod any_player_sacrifice;
 mod flux;
 mod keep_from_hand;
+mod keep_permanents;
 mod great_aurora;
 mod lose_unspent;
 mod artifact_subtypes;
@@ -4357,11 +4358,13 @@ impl GameState {
             // CR 702.26 — Time and Tide. Snapshot both sides before either
             // moves, so a phaser that just returned isn't sent straight back.
             Effect::SwapPhasedState { filter } => {
+                let locked = self.phase_in_locked();
                 let returning: Vec<CardId> = self
                     .phased_out
                     .iter()
                     .filter(|c| {
-                        c.phased_out_by.is_none()
+                        !locked
+                            && c.phased_out_by.is_none()
                             && self.evaluate_requirement_on_card(filter, c, c.controller)
                     })
                     .map(|c| c.id)
@@ -18588,36 +18591,7 @@ impl GameState {
                         // The linking source stays behind to anchor the return.
                         ids.remove(&src);
                     }
-                let mut phased = 0u32;
-                if !ids.is_empty() {
-                    let attached: Vec<crate::card::CardId> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| c.attached_to.is_some_and(|h| ids.contains(&h)))
-                        .map(|c| c.id)
-                        .collect();
-                    ids.extend(attached);
-                    let mut idx = 0;
-                    while idx < self.battlefield.len() {
-                        if ids.contains(&self.battlefield[idx].id) {
-                            let mut c = self.battlefield.remove(idx);
-                            // CR 702.26e — a phased-out permanent is treated as
-                            // though it doesn't exist, so remove it from combat
-                            // if `Effect::PhaseOut` fires mid-combat (the
-                            // untap-step `do_phasing` path can't, but a cast /
-                            // ETB phase-out can — Talon Gates, Reality Ripple).
-                            self.remove_from_combat(c.id);
-                            if *until_source_leaves {
-                                c.phased_out_by = source;
-                            }
-                            events.push(GameEvent::PermanentPhasedOut { card_id: c.id });
-                            self.phased_out.push(c);
-                            phased += 1;
-                        } else {
-                            idx += 1;
-                        }
-                    }
-                }
+                let phased = self.phase_out_permanents(ids, if *until_source_leaves { source } else { None }, events);
                 // Out of Time — one time counter on the source per permanent
                 // phased out this way ("vanishing X, where X is …", printed
                 // as Vanishing 0). Only a vanishing source: Oubliette and The
@@ -24771,6 +24745,9 @@ impl GameState {
             }
             Effect::EachPlayerKeepsUpToFromHandShufflesRest { keep } => {
                 self.each_player_keeps_from_hand_shuffles_rest(*keep, effect, ctx, events)
+            }
+            Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { keep } => {
+                self.each_player_keeps_permanents_rest_phase_out(*keep, effect, ctx, events)
             }
             Effect::LoseUnspentMana { who } => self.lose_unspent_mana(who, ctx, events),
             Effect::SpellsCostMoreThisTurn { who, amount } => {

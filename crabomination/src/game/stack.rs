@@ -4101,8 +4101,11 @@ impl GameState {
                 && c.phased_out_by.is_none()
                 && !c.attached_to.is_some_and(|h| g.phased_out.iter().any(|o| o.id == h))
         };
-        let hosts: Vec<crate::card::CardId> =
-            self.phased_out.iter().filter(|c| returns_directly(self, c)).map(|c| c.id).collect();
+        let hosts: Vec<crate::card::CardId> = if self.phase_in_locked() {
+            Vec::new()
+        } else {
+            self.phased_out.iter().filter(|c| returns_directly(self, c)).map(|c| c.id).collect()
+        };
         let mut i = 0;
         while i < self.phased_out.len() {
             let c = &self.phased_out[i];
