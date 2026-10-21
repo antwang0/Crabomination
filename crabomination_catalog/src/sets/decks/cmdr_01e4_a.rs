@@ -5545,3 +5545,32 @@ pub fn halls_of_mist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Three Bowls of Porridge — {2} artifact Food. {2}, {T}: choose one that
+/// hasn't been chosen — 2 damage to target creature; tap target creature; or
+/// sacrifice it and gain 3 life. (Mode and target are picked at resolution —
+/// INCOMPLETE_CARDS.)
+pub fn three_bowls_of_porridge() -> CardDefinition {
+    let creature = || target_filtered(R::Creature);
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::ChooseUnchosenMode {
+                modes: vec![
+                    Effect::Reflexive {
+                        body: Box::new(Effect::DealDamage { to: creature(), amount: Value::Const(2) }),
+                    },
+                    Effect::Reflexive { body: Box::new(Effect::Tap { what: creature() }) },
+                    Effect::Seq(vec![
+                        Effect::SacrificeSource,
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    ]),
+                ],
+            },
+            ..Default::default()
+        }],
+        ..spell("Three Bowls of Porridge", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}

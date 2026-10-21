@@ -18728,6 +18728,7 @@ static DECKS: &[Factory] = &[
     super::decks::invasion_of_new_phyrexia,
     super::decks::long_rest,
     super::decks::halls_of_mist,
+    super::decks::three_bowls_of_porridge,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
 ];

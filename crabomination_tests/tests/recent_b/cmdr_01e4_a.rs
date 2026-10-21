@@ -2512,3 +2512,25 @@ fn halls_of_mist_rests_last_turns_attackers() {
         assert_eq!(attack.is_err(), attacked_last_turn);
     }
 }
+
+/// Three Bowls of Porridge never repeats a bowl: three activations, three
+/// different modes.
+#[test]
+fn three_bowls_of_porridge_tries_each_bowl_once() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let bowls = g.add_card_to_battlefield(0, catalog::three_bowls_of_porridge());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    activate(&mut g, bowls, 0).expect("bowl one");
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 2);
+    g.battlefield_find_mut(bowls).unwrap().tapped = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    activate(&mut g, bowls, 0).expect("bowl two");
+    assert!(g.battlefield_find(giant).unwrap().tapped, "mode 0 is spent: the tap bowl");
+    g.battlefield_find_mut(bowls).unwrap().tapped = false;
+    let life = g.players[0].life;
+    activate(&mut g, bowls, 0).expect("bowl three");
+    assert!(g.battlefield_find(bowls).is_none());
+    assert_eq!(g.players[0].life, life + 3);
+}

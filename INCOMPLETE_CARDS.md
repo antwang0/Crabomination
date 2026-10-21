@@ -2311,3 +2311,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Venser's Diffusion | "or suspended card" is not offered as a target — nonland permanents only | a suspended-card target leaf |
 | 🟡 Moonlit Lamenter / Burdened Stoneback | "remove a counter from this creature" pays only with -1/-1 counters (the kind each enters with); a +1/+1 or other counter can't pay | an any-kind `remove_counter_cost` |
 | 🟡 Long Rest | the X cards are picked at resolution (one per mana value, greatest first headless), not targeted on cast: graveyard removal in response can't fizzle it | a multi-target "different mana values" target constraint |
+| 🟡 Three Bowls of Porridge | the unchosen mode and its target are picked at resolution (CR 602.2b wants both on activation) | `ChooseUnchosenMode` picking at activation |
