@@ -4516,7 +4516,7 @@ impl crate::game::GameState {
     /// floating pool is applied. Drives the CR 702.51 convoke choice: a
     /// tapped creature contributes a colored pip only where the cost wants
     /// one, otherwise {1}.
-    fn cost_still_needs_color(
+    pub(crate) fn cost_still_needs_color(
         &self,
         p: usize,
         cost: &crate::mana::ManaCost,
@@ -6959,29 +6959,9 @@ impl GameState {
             })
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
-            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
-                .ok_or(GameError::CardNotInHand(card_id))?;
-            self.players[p].hand.push(card);
-            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
-            let mut r = self.cast_spell_with_convoke(
-                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
-            );
-            self.casting_hop = None;
-            match &mut r {
-                Err(_) => {
-                    if let Some(card) = Self::take_card(&mut self.players[p].hand, card_id) {
-                        self.players[p].send_to_graveyard(card);
-                    }
-                }
-                Ok(evs) => {
-                    self.note_left_graveyard(p, card_id, evs);
-                    if let Some(t) = used_type {
-                        self.players[p].graveyard_cast_types_this_turn.push(t);
-                    }
-                    self.entered_from_graveyard_this_turn.insert(card_id);
-                }
-            }
-            return r;
+            return self.cast_hopped_from_graveyard(p, card_id, used_type, |g| {
+                g.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default())
+            });
         }
         // Chainer — one creature spell from your graveyard this turn, any
         // creature card there as it's cast. Same hop; the cast spends it.
@@ -7300,6 +7280,10 @@ impl GameState {
         use crate::card::CardType;
         use crate::effect::StaticEffect;
         let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        // "You may cast this card from your graveyard" — the card's own (Hogaak).
+        if card.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::CastSelfFromGraveyard)) {
+            return Some(None);
+        }
         // Abandoned Sarcophagus — any turn, no budget, for matching cards;
         // Wrenn and Realmbreaker's emblem the same.
         let matching = |sa: &crate::card::StaticAbility| match &sa.effect {
@@ -10204,23 +10188,6 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { bestow: true, ..Default::default() })
     }
 
-    /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
-    /// `delve_cards` from the caster's graveyard to pay {1} of the spell's
-    /// generic cost. Each listed card must be in the caster's graveyard and
-    /// the spell must have `Keyword::Delve`. The graveyard cards are not
-    /// physically exiled until the (reduced) mana cost is successfully paid,
-    /// so a failed payment leaves the graveyard untouched.
-    pub(crate) fn cast_spell_with_delve(
-        &mut self,
-        card_id: CardId,
-        target: Option<Target>,
-        additional_targets: Vec<Target>,
-        mode: Option<usize>,
-        x_value: Option<u32>,
-        delve_cards: &[CardId],
-    ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, CastFlags::default())
-    }
 
     /// CR 701.67 — cast a spell paying its "waterbend {N}" additional cost.
     /// `helpers` are untapped artifacts/creatures the caster controls (count
@@ -11903,32 +11870,14 @@ impl GameState {
         // failed payment can revert both convoke taps and any lands that
         // auto-tap tapped.
         let snapshot = self.snapshot_payment_state(p);
+        // "You can't spend mana to cast this spell": the float is set aside so
+        // only the convoke credit can pay (`pay_without_mana`).
+        let no_mana_float = card.definition.no_mana_spend.then(|| std::mem::take(&mut self.players[p].mana_pool));
 
         // Convoke (CR 702.51): tap each chosen creature; each pays {1} OR one
-        // mana of a color that creature is. A tapped creature is credited with
-        // a colored pip its color set covers and the cost still needs — so a
-        // white creature pays a {W} the cost wants — falling back to {1}.
-        // Improvise / waterbend helpers (colorless artifacts) always pay {1}.
-        for cid in convoke_creatures {
-            // Only a convoking creature may pay a colored pip; every other
-            // helper pays {1}.
-            let colors: Vec<crate::mana::Color> = if has_convoke {
-                self.computed_permanent(*cid).map(|cp| cp.colors.to_vec()).unwrap_or_default()
-            } else {
-                Vec::new()
-            };
-            if let Some(c) = self.battlefield.find_by_id_mut(*cid) {
-                c.tapped = true;
-            }
-            match colors
-                .iter()
-                .copied()
-                .find(|c| self.cost_still_needs_color(p, &cost, *c))
-            {
-                Some(color) => self.players[p].mana_pool.add(color, 1),
-                None => self.players[p].mana_pool.add_colorless(1),
-            }
-        }
+        // mana of a color that creature is. Improvise / waterbend helpers
+        // (colorless artifacts) always pay {1}.
+        self.credit_convoke_helpers(p, &cost, convoke_creatures, has_convoke);
 
         let forced_only = self.players[p].manual_mana;
         // Spell kind gates spend-restricted mana ("spend only to cast …")
@@ -11949,6 +11898,7 @@ impl GameState {
             && spend_float_choice.is_none()
             && convoke_creatures.is_empty()
             && delve_cards.is_empty()
+            && no_mana_float.is_none()
             && self.float_spend_is_optional(p, &cost, &spell_kind)
         {
             let float_summary = self.protectable_float(p, &cost).summary();
@@ -11984,7 +11934,11 @@ impl GameState {
             return Ok(vec![]);
         }
 
-        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, spend_float_choice) {
+        let paid = match no_mana_float {
+            Some(float) => self.pay_without_mana(p, &cost, &spell_kind, float, snapshot),
+            None => self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, spend_float_choice),
+        };
+        let receipt = match paid {
             Ok(r) => r,
             Err(e) => {
                 cast_census::rollback(line!());
@@ -15570,7 +15524,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        self.cast_from_command_zone_as(p, card_id, target, additional_targets, mode, x_value, false)
+        self.cast_from_command_zone_as(p, card_id, target, additional_targets, mode, x_value, false, &[], &[])
     }
 
     /// [`cast_from_command_zone`](Self::cast_from_command_zone) for seat `p`.
@@ -15579,7 +15533,9 @@ impl GameState {
     /// and no timing check — it's cast while an ability resolves (CR 608.2g) —
     /// but the commander tax is still owed (CR 903.8 makes it an *additional*
     /// cost, and "you still pay any additional costs"), as is every other
-    /// additional cost the cast would carry.
+    /// additional cost the cast would carry. `convoke` / `delve` help pay the
+    /// total cost, tax included (CR 702.51a / 702.66a apply after it's
+    /// totalled; `GameState::cast_with_helpers`).
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_from_command_zone_as(
         &mut self,
@@ -15590,6 +15546,8 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
         without_paying: bool,
+        convoke: &[CardId],
+        delve: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
         let x_value = if without_paying { None } else { x_value };
 
@@ -15691,6 +15649,18 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         apply_colored_cost_statics(self, p, &card, &mut cost);
+        let has_convoke = match self.check_cast_helpers(p, &card, convoke, delve) {
+            Ok(c) => c,
+            Err(e) => {
+                self.players[p].command.push(card);
+                self.offboard_keyword_grants = true;
+                return Err(e);
+            }
+        };
+        if !delve.is_empty() {
+            let per = card.definition.graveyard_exile_cost.as_ref().map_or(1, |x| x.discount);
+            cost.reduce_generic(delve.len() as u32 * per);
+        }
         apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
@@ -15702,7 +15672,18 @@ impl GameState {
         // ride on spending it (uncounterable, haste) still stamp the cast.
         let forced_only = self.players[p].manual_mana;
         let spell_kind = self.spell_kind_for(p, &card);
-        let receipt = match self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &spell_kind) {
+        let paid = if convoke.is_empty() && delve.is_empty() && !card.definition.no_mana_spend {
+            self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &spell_kind)
+        } else {
+            let snapshot = self.snapshot_payment_state(p);
+            let float = card.definition.no_mana_spend.then(|| std::mem::take(&mut self.players[p].mana_pool));
+            self.credit_convoke_helpers(p, &cost, convoke, has_convoke);
+            match float {
+                Some(float) => self.pay_without_mana(p, &cost, &spell_kind, float, snapshot),
+                None => self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, None),
+            }
+        };
+        let receipt = match paid {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].command.push(card);
@@ -15710,6 +15691,8 @@ impl GameState {
                 return Err(e);
             }
         };
+        let stamp = (card.definition.graveyard_exile_cost.is_some() || card.definition.links_delved_cards).then_some(card_id);
+        let mut helper_events = self.finish_helper_payment(p, card_id, convoke, delve, has_convoke, stamp);
         self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
@@ -15729,6 +15712,7 @@ impl GameState {
         );
 
         let mut auto_events = receipt.auto_events;
+        auto_events.append(&mut helper_events);
         auto_events.push(GameEvent::SpellCast {
             player: p,
             card_id,

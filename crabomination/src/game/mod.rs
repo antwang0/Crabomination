@@ -202,6 +202,7 @@ mod attack_apnap;
 mod trigger_batch;
 mod vow;
 mod graveyard_cast;
+mod helper_cast;
 pub(crate) mod search_batch;
 mod move_spell;
 mod quest_copy;
@@ -21968,7 +21969,7 @@ impl GameState {
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], crate::game::actions::CastFlags::default()),
+            } => self.cast_with_helpers(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[]),
             GameAction::CastSpellWaterbend {
                 card_id,
                 target,
@@ -21984,7 +21985,16 @@ impl GameState {
                 mode,
                 x_value,
                 delve_cards,
-            } => self.cast_spell_with_delve(card_id, target, additional_targets, mode, x_value, &delve_cards),
+            } => self.cast_with_helpers(card_id, target, additional_targets, mode, x_value, &[], &delve_cards),
+            GameAction::CastSpellConvokeDelve {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+                convoke_creatures,
+                delve_cards,
+            } => self.cast_with_helpers(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &delve_cards),
             GameAction::CastSpellGrantedAlternative { card_id, target, additional_targets, mode, x_value } => {
                 self.cast_granted_alt = true;
                 let out = self.cast_spell_alternative_from(
@@ -35595,6 +35605,7 @@ fn static_effect_to_effects(
             | StaticEffect::FirstCyclingEachTurnFree
             | StaticEffect::CyclingFreeWhileHandAtLeast(_)
             | StaticEffect::CastFromGraveyardMatching { .. }
+            | StaticEffect::CastSelfFromGraveyard
             | StaticEffect::ExileOwnCyclingCardsUnlessCycled
             | StaticEffect::LandsProduceColorInstead(_)
             | StaticEffect::YourBasicLandsProduceChosenColorInstead

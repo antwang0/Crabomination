@@ -966,6 +966,21 @@ pub enum GameAction {
         x_value: Option<u32>,
         delve_cards: Vec<CardId>,
     },
+    /// Convoke and delve in one cast (CR 702.51 + 702.66 — neither is an
+    /// alternative cost, so they combine): Hogaak, Arisen Necropolis, whose
+    /// mana can't pay. `CastSpellConvoke`, `CastSpellDelve` and this route by
+    /// the card's zone — hand, command zone (CR 903.8) or a graveyard cast
+    /// permission.
+    CastSpellConvokeDelve {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        convoke_creatures: Vec<CardId>,
+        delve_cards: Vec<CardId>,
+    },
     /// Cast a spell paying its `alternative_cost` instead of its regular
     /// mana cost. `pitch_card` is the hand card (e.g., a blue card for Force
     /// of Will/Negation) being exiled to satisfy the alt cost — `None` when
@@ -2150,6 +2165,7 @@ impl GameAction {
                 | A::CastSpellConvoke { .. }
                 | A::CastSpellWaterbend { .. }
                 | A::CastSpellDelve { .. }
+                | A::CastSpellConvokeDelve { .. }
                 | A::CastSpellAlternative { .. }
                 | A::CastSpellGrantedAlternative { .. }
                 | A::CastFlashback { .. }
@@ -2202,6 +2218,7 @@ impl GameAction {
             | A::CastSpellConvoke { card_id, .. }
             | A::CastSpellWaterbend { card_id, .. }
             | A::CastSpellDelve { card_id, .. }
+            | A::CastSpellConvokeDelve { card_id, .. }
             | A::CastSpellAlternative { card_id, .. }
             | A::CastSpellGrantedAlternative { card_id, .. }
             | A::CastFlashback { card_id, .. }

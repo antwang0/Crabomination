@@ -4494,6 +4494,10 @@ pub enum StaticEffect {
     /// (Abandoned Sarcophagus; Haakon's Knights): a graveyard-cast grant for
     /// `filter`, on any turn, with no budget. Read by `graveyard_cast_type_available`.
     CastFromGraveyardMatching { filter: SelectionRequirement },
+    /// "You may cast this card from your graveyard" (Hogaak, Arisen
+    /// Necropolis): the card's own permission, read off the graveyard card by
+    /// `graveyard_cast_type_available` — any turn, no budget, no rider.
+    CastSelfFromGraveyard,
     /// "If a card that has a cycling ability would be put into your graveyard
     /// from anywhere and it wasn't cycled, exile it instead" (Abandoned
     /// Sarcophagus). A death-redirect-lane static; the cycle path marks

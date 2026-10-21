@@ -31,7 +31,7 @@ impl GameState {
         }) else {
             return;
         };
-        if let Ok(mut evs) = self.cast_from_command_zone_as(seat, id, None, vec![], None, None, true) {
+        if let Ok(mut evs) = self.cast_from_command_zone_as(seat, id, None, vec![], None, None, true, &[], &[]) {
             events.append(&mut evs);
         }
     }

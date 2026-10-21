@@ -5667,6 +5667,10 @@ pub struct CardDefinition {
     /// (`exiled_with`), for Soulflayer's keyword check.
     #[serde(default)]
     pub links_delved_cards: bool,
+    /// "You can't spend mana to cast this spell" (Hogaak, Arisen Necropolis):
+    /// convoke and delve must pay the whole cost (`GameState::pay_without_mana`).
+    #[serde(default)]
+    pub no_mana_spend: bool,
     /// "Put [this] on the bottom of its owner's library" as the spell
     /// finishes resolving (Spell Crumple): the resolved card goes there
     /// instead of the graveyard.
