@@ -135466,3 +135466,31 @@ pub const COUNT_NEFARIA_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const NIAMBI_2_COMMANDERS: &[CardFactory] = &[niambi_faithful_healer];
+
+/// **Niambi, Faithful Healer**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Islands + 9 Plains = 99.
+/// Niambi, Faithful Healer (EDHREC, fetched 2026-10-21).
+pub const NIAMBI_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, gatewatch_beacon, gideons_memorial, ichormoon_gauntlet,
+    sol_ring, talisman_of_progress, teferis_puzzle_box, the_chain_veil, thought_vessel,
+    azorius_chancery, command_tower, deserted_beach, fatehold_annex, glacial_fortress,
+    hallowed_fountain, interplanar_beacon, irrigated_farmland, karns_bastion, prairie_stream,
+    reliquary_tower, sea_of_clouds, teferis_isle, temple_of_enlightenment,
+    invasion_of_new_phyrexia, deepglow_skate, disruptive_student, djeru_with_eyes_open,
+    flux_channeler, grateful_apparition, historian_of_zhalfir, niambi_esteemed_speaker,
+    spark_double, teferis_honor_guard, teferis_protege, teferis_sentinel, teferis_wavecaster,
+    teferi_mage_of_zhalfir, teyo_lightshield_expert, thrummingbird, tomik_orzhov_lawmage,
+    deification, inexorable_tide, oath_of_teferi, teferis_ageless_insight, teferis_care,
+    teferis_curse, teferis_moat, teferis_realm, teferis_talent, teferis_tutelage, counterspell,
+    dovins_veto, exclude, fatehold_charm, impulse, negate, opt, path_to_exile,
+    swords_to_plowshares, teferis_protection, teferis_reproach, teferis_response,
+    teferis_time_twist, teferi_hero_of_dominaria, teferi_master_of_time,
+    teferi_temporal_archmage, teferi_temporal_pilgrim, teferi_time_raveler, teferi_timebender,
+    teferi_timeless_voyager, teferi_who_slows_the_sunset, approach_of_the_second_sun,
+    call_the_gatewatch, contentious_plan, supreme_verdict, tezzerets_gambit, time_wipe,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

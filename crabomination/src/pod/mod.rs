@@ -29442,6 +29442,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::COUNT_NEFARIA_COMMANDERS,
             main: decks::COUNT_NEFARIA_MAIN,
         },
+        // Seat 4832: Niambi, Faithful Healer's EDHREC average deck. `--pod-decks 4832`.
+        PodDeck {
+            name: "Niambi, Faithful Healer (WU)",
+            commanders: decks::NIAMBI_2_COMMANDERS,
+            main: decks::NIAMBI_2_MAIN,
+        },
     ]
 }
 
@@ -36174,6 +36180,7 @@ mod tests {
             ("Brawn, Amadeus Cho", &[0x1CF3]),
             ("The Wasp, Winsome Avenger", &[0x1CF4]),
             ("Count Nefaria", &[0x1CF5]),
+            ("Niambi, Faithful Healer", &[0x1CF6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
