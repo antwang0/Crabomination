@@ -18398,6 +18398,10 @@ static DECKS: &[Factory] = &[
     super::decks::murasa_sproutling,
     super::decks::vine_gecko,
     super::decks::reclaim_the_wastes,
+    super::decks::alabaster_dragon,
+    super::decks::dragon_hunter,
+    super::decks::shieldhide_dragon,
+    super::decks::grand_master_of_flowers,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

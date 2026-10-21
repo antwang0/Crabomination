@@ -1230,3 +1230,128 @@ pub fn reclaim_the_wastes() -> CardDefinition {
         )
     }
 }
+
+/// Alabaster Dragon — {4}{W}{W} 4/4 flying Dragon. When it dies, shuffle it
+/// into its owner's library.
+pub fn alabaster_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::ShuffleSelfIntoLibrary,
+        }],
+        ..creature("Alabaster Dragon", cost(&[generic(4), w(), w()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Dragon Hunter — {W} 2/1 Human Warrior. Protection from Dragons; it can
+/// block Dragons as though it had reach.
+pub fn dragon_hunter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::ProtectionFromCreatureType(CreatureType::Dragon),
+            Keyword::CanBlockCreatureTypeAsThoughReach(CreatureType::Dragon),
+        ],
+        ..creature("Dragon Hunter", cost(&[w()]), vec![CreatureType::Human, CreatureType::Warrior], 2, 1)
+    }
+}
+
+/// Shieldhide Dragon — {5}{W} 3/3 flying, lifelink Dragon; megamorph
+/// {5}{W}{W}. Turned face up, a +1/+1 counter on each other Dragon you control.
+pub fn shieldhide_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink, Keyword::Megamorph(cost(&[generic(5), w(), w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Dragon))
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature("Shieldhide Dragon", cost(&[generic(5), w()]), vec![CreatureType::Dragon], 3, 3)
+    }
+}
+
+/// Grand Master of Flowers — {2}{W}{W} Bahamut planeswalker, loyalty 3. With
+/// seven or more loyalty he's a 7/7 Dragon God creature with flying and
+/// indestructible. +1: target creature without first strike, double strike or
+/// vigilance can't attack or block until your next turn. +1: put a Monk of the
+/// Open Hand from your library and/or graveyard into your hand.
+pub fn grand_master_of_flowers() -> CardDefinition {
+    let big = || {
+        Predicate::ValueAtLeast(
+            Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Loyalty },
+            Value::Const(7),
+        )
+    };
+    let monk = || R::HasName("Monk of the Open Hand".into());
+    let in_graveyard = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: monk() };
+    let lock = |k: Keyword| Effect::GrantKeyword { what: Selector::Target(0), keyword: k, duration: Duration::UntilNextTurn };
+    CardDefinition {
+        name: "Grand Master of Flowers",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Bahamut], ..Default::default() },
+        base_loyalty: 3,
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as Grand Master of Flowers has seven or more loyalty counters on him, he's a 7/7 Dragon God creature with flying and indestructible.",
+                effect: StaticEffect::SelfIsCreatureIf {
+                    condition: big(),
+                    creature_types: vec![CreatureType::Dragon, CreatureType::God],
+                },
+            },
+            StaticAbility {
+                description: "…7/7…",
+                effect: StaticEffect::SetBasePtIf { condition: big(), power: 7, toughness: 7 },
+            },
+            StaticAbility {
+                description: "…with flying…",
+                effect: StaticEffect::SelfHasKeywordIf { keyword: Keyword::Flying, condition: big() },
+            },
+            StaticAbility {
+                description: "…and indestructible.",
+                effect: StaticEffect::SelfHasKeywordIf { keyword: Keyword::Indestructible, condition: big() },
+            },
+        ],
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: target_filtered(
+                            R::Creature
+                                .and(R::HasKeyword(Keyword::FirstStrike).negate())
+                                .and(R::HasKeyword(Keyword::DoubleStrike).negate())
+                                .and(R::HasKeyword(Keyword::Vigilance).negate()),
+                        ),
+                        keyword: Keyword::CantAttack,
+                        duration: Duration::UntilNextTurn,
+                    },
+                    lock(Keyword::CantBlock),
+                ]),
+            ),
+            loyalty(
+                1,
+                Effect::If {
+                    cond: Predicate::SelectorExists(in_graveyard()),
+                    then: Box::new(Effect::Move { what: Selector::one_of(in_graveyard()), to: ZoneDest::Hand(PlayerRef::You) }),
+                    else_: Box::new(Effect::SearchUpToN {
+                        who: PlayerRef::You,
+                        filter: monk(),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                        count: Value::ONE,
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

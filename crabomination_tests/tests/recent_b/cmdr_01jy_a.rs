@@ -707,3 +707,43 @@ fn murasa_sproutling_returns_a_kicker_card() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == chronicler));
 }
+
+/// Dragon Hunter blocks an attacking Dragon with flying as though it had
+/// reach — and only a Dragon (CR 702.17b).
+#[test]
+fn dragon_hunter_reaches_only_for_dragons() {
+    let mut g = pod(2);
+    let hunter = g.add_card_to_battlefield(1, catalog::dragon_hunter());
+    let dragon = g.add_card_to_battlefield(0, catalog::alabaster_dragon());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    attack_with(&mut g, &[dragon, angel]);
+    assert!(g.blocker_can_block_attacker(hunter, dragon));
+    assert!(!g.blocker_can_block_attacker(hunter, angel));
+}
+
+/// Grand Master of Flowers is a 7/7 flying, indestructible Dragon God only
+/// at seven or more loyalty.
+#[test]
+fn grand_master_of_flowers_rises_at_seven_loyalty() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let gm = g.add_card_to_battlefield(0, catalog::grand_master_of_flowers());
+    let creature = |g: &GameState| g.computed_permanent(gm).unwrap().card_types().contains(&crabomination::card::CardType::Creature);
+    assert!(!creature(&g));
+    g.battlefield_find_mut(gm).unwrap().add_counters(CounterType::Loyalty, 7);
+    assert!(creature(&g));
+    let cp = g.computed_permanent(gm).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
+}
+
+/// Alabaster Dragon dying goes into its owner's library, not the graveyard.
+#[test]
+fn alabaster_dragon_shuffles_home() {
+    let mut g = pod(2);
+    let dragon = g.add_card_to_battlefield(0, catalog::alabaster_dragon());
+    g.remove_to_graveyard_with_triggers(dragon);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != dragon));
+    assert!(g.players[0].library.iter().any(|c| c.id == dragon));
+}
