@@ -18797,6 +18797,13 @@ static DECKS: &[Factory] = &[
     super::decks::turtle_blimp,
     super::decks::magma_pummeler,
     super::decks::turtle_tracks,
+    super::decks::pause_for_reflection,
+    super::decks::the_crowd_goes_wild,
+    super::decks::spellweaver_duo,
+    super::decks::dredging_claw,
+    super::decks::jade_seedstones,
+    super::decks::memorial_to_unity,
+    super::decks::sacellum_godspeaker,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
 ];

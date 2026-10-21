@@ -6559,3 +6559,168 @@ pub fn turtle_tracks() -> CardDefinition {
         },
     )
 }
+
+// ── Batch twenty-three (assist and its decks) ───────────────────────────────
+
+/// Pause for Reflection — {2}{G} instant. Convoke. Prevent all combat damage
+/// that would be dealt this turn.
+pub fn pause_for_reflection() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke],
+        ..spell("Pause for Reflection", cost(&[generic(2), g()]), CardType::Instant, Effect::PreventAllCombatDamageThisTurn)
+    }
+}
+
+/// The Crowd Goes Wild — {X}{G} sorcery. Assist. Support X (a +1/+1 counter on
+/// each of up to X target creatures). Each creature with a +1/+1 counter on
+/// it gains trample until end of turn.
+pub fn the_crowd_goes_wild() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Assist],
+        ..spell(
+            "The Crowd Goes Wild",
+            cost(&[x(), g()]),
+            CardType::Sorcery,
+            Effect::CapTargetsAtX {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SupportCounters { max_targets: 8, filter: R::Creature },
+                    Effect::GrantKeyword {
+                        what: Selector::EachPermanent(R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne))),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        )
+    }
+}
+
+/// Spellweaver Duo — {6}{U} 4/4 Human Wizard. Assist. When it enters, you may
+/// return target tapped creature to its owner's hand.
+pub fn spellweaver_duo() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Assist],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::Tapped)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        ..creature("Spellweaver Duo", cost(&[generic(6), u()]), vec![CreatureType::Human, CreatureType::Wizard], 4, 4)
+    }
+}
+
+/// Dredging Claw — {2} Equipment. Equipped creature gets +1/+0 and has menace.
+/// Whenever a creature enters from your graveyard, you may attach it to that
+/// creature. Equip {1}{B}.
+pub fn dredging_claw() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::TriggerSourceEnteredFromGraveyard,
+            ])),
+            effect: Effect::MayDo {
+                description: "Attach Dredging Claw to it?".into(),
+                body: Box::new(Effect::Attach { what: Selector::This, to: Selector::TriggerSource }),
+            },
+        }],
+        ..equipment(
+            "Dredging Claw",
+            cost(&[generic(2)]),
+            cost(&[generic(1), b()]),
+            EquipBonus { power: 1, keywords: vec![Keyword::Menace], ..Default::default() },
+        )
+    }
+}
+
+/// Jade Seedstones // Jadeheart Attendant — {3}{G} artifact. When it enters,
+/// distribute three +1/+1 counters among one, two, or three target creatures
+/// you control. Craft with creature {5}{G}{G}. Back: a 7/7 Golem artifact
+/// creature; when it enters, you gain life equal to the crafted card's mana
+/// value.
+pub fn jade_seedstones() -> CardDefinition {
+    let attendant = CardDefinition {
+        name: "Jadeheart Attendant",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        color_indicator: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::TotalManaValueOf(Box::new(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Exile,
+                filter: R::ExiledWithSource,
+            })),
+        })],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::DistributeCounters {
+            total: Value::Const(3),
+            counter: CounterType::PlusOnePlusOne,
+            filter: R::Creature.and(R::ControlledByYou),
+            max_targets: 3,
+        })],
+        activated_abilities: vec![crate::effect::shortcut::craft(cost(&[generic(5), g(), g()]), R::Creature, 1)],
+        back_face: Some(Box::new(attendant)),
+        ..spell("Jade Seedstones", cost(&[generic(3), g()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Memorial to Unity — land. Enters tapped. {T}: add {G}. {2}{G}, {T},
+/// sacrifice it: look at the top five; you may put a creature card from among
+/// them into your hand; the rest go to the bottom in a random order.
+pub fn memorial_to_unity() -> CardDefinition {
+    CardDefinition {
+        name: "Memorial to Unity",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Green),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g()]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    rest_bottom_random: true,
+                    who: PlayerRef::You,
+                    count: Value::Const(5),
+                    take: Some(Value::ONE),
+                    pick_filter: Some(R::Creature),
+                    optional: true,
+                    ..Default::default()
+                })),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sacellum Godspeaker — {2}{G} 2/2 Elf Druid. {T}: reveal any number of
+/// creature cards with power 5 or greater from your hand; add {G} for each
+/// (it always reveals them all).
+pub fn sacellum_godspeaker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::CountOf(Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: R::Creature.and(R::PowerAtLeast(5)),
+                    })),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature("Sacellum Godspeaker", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Druid], 2, 2)
+    }
+}

@@ -2984,3 +2984,84 @@ fn invasion_of_muraganda_grows_and_fights() {
     assert_eq!(pt(&g, mine), (3, 3));
     assert!(g.battlefield_find(theirs).is_none(), "a 3/3 beats a 2/2");
 }
+
+/// The Crowd Goes Wild supports up to X creatures, then tramples everything
+/// with a +1/+1 counter.
+#[test]
+fn the_crowd_goes_wild_supports_x() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let crowd = g.add_card_to_hand(0, catalog::the_crowd_goes_wild());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crowd,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!((pt(&g, a), pt(&g, b), pt(&g, c)), ((3, 3), (3, 3), (2, 2)));
+    let tramples = |id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Trample);
+    assert!(tramples(a) && tramples(b) && !tramples(c));
+}
+
+/// Spellweaver Duo bounces a tapped creature as it enters.
+#[test]
+fn spellweaver_duo_bounces_a_tapped_creature() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let duo = g.add_card_to_hand(0, catalog::spellweaver_duo());
+    cast(&mut g, duo, None);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+}
+
+/// Jade Seedstones spreads three counters over your creatures.
+#[test]
+fn jade_seedstones_spreads_three_counters() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stones = g.add_card_to_hand(0, catalog::jade_seedstones());
+    cast(&mut g, stones, None);
+    assert_eq!(pt(&g, a), (5, 5), "one creature takes all three");
+}
+
+/// Sacellum Godspeaker taps for {G} per fatty in hand.
+#[test]
+fn sacellum_godspeaker_counts_the_fatties() {
+    let mut g = pod(2);
+    let speaker = g.add_card_to_battlefield(0, catalog::sacellum_godspeaker());
+    g.clear_sickness(speaker);
+    g.add_card_to_hand(0, catalog::craw_wurm());
+    g.add_card_to_hand(0, catalog::craw_wurm());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: speaker,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+}
+
+/// Dredging Claw jumps onto a creature returning from your graveyard.
+#[test]
+fn dredging_claw_follows_the_dead() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let claw = g.add_card_to_battlefield(0, catalog::dredging_claw());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let zombify = g.add_card_to_hand(0, catalog::zombify());
+    cast(&mut g, zombify, Some(Target::Permanent(giant)));
+    assert!(g.battlefield_find(giant).is_some());
+    assert_eq!(g.battlefield_find(claw).unwrap().attached_to, Some(giant));
+}

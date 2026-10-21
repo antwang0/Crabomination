@@ -2319,3 +2319,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Magma Pummeler | its "counters removed this way" trigger fires on any +1/+1 counter removal, not only the damage-prevention one | a prevention-sourced removal event |
 | 🟡 Turtle Tracks | only the caster searches ("any number of target players" — the caster would target themselves) | an any-number player target slot |
 | 🟡 Farrel's Mantle | "assigns no combat damage" also prevents combat damage dealt to the creature (`PreventAllCombatDamageInvolving`, as Ophidian) | an assign-no-combat-damage flag |
+| 🟡 Assist (The Crowd Goes Wild, Spellweaver Duo) | no other player is offered the assist payment; the caster pays it all (CR 702.132a — every opponent declining is legal) | a seat-routed payment offer at cast time |
+| 🟡 Sacellum Godspeaker | always reveals every power-5+ creature card in hand | a reveal-count choice |
