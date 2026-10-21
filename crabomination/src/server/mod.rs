@@ -101,6 +101,7 @@ mod trigger_copy;
 mod voyage;
 mod accept_offer;
 mod evasion;
+mod attraction_midway;
 mod next_spell_copy;
 mod manland;
 mod selection_sink;
