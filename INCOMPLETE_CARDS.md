@@ -2316,3 +2316,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Graceful Takedown | every enchanted creature you control deals its damage untargeted (the printed "any number of target enchanted creatures" is all of them); the other creature is targeted | an any-number target slot |
 | 🟡 Quicksmith Rebel | as Quicksmith Spy: the artifact is chosen as it enters, not targeted | the same ETB target slot |
 | 🟡 Liberating Combustion | searches only the library for Chandra, Pyrogenius (the graveyard half is not offered) | a library-and/or-graveyard search |
+| 🟡 Magma Pummeler | its "counters removed this way" trigger fires on any +1/+1 counter removal, not only the damage-prevention one | a prevention-sourced removal event |
+| 🟡 Turtle Tracks | only the caster searches ("any number of target players" — the caster would target themselves) | an any-number player target slot |
+| 🟡 Farrel's Mantle | "assigns no combat damage" also prevents combat damage dealt to the creature (`PreventAllCombatDamageInvolving`, as Ophidian) | an assign-no-combat-damage flag |

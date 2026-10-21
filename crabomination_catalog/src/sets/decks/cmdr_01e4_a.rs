@@ -6144,3 +6144,418 @@ pub fn graceful_takedown() -> CardDefinition {
         ..spell("Graceful Takedown", cost(&[generic(1), g()]), CardType::Sorcery, Effect::Noop)
     }
 }
+
+// ── Batch twenty-two (three- and four-gap pair closers) ─────────────────────
+
+/// Explosive Apparatus — {1} artifact. {3}, {T}, sacrifice it: 2 damage to
+/// any target.
+pub fn explosive_apparatus() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..spell("Explosive Apparatus", cost(&[generic(1)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Stern Constable — {W} 1/1 Human Soldier. {T}, discard a card: tap target
+/// creature.
+pub fn stern_constable() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature("Stern Constable", cost(&[w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Expose Evil — {1}{W} instant. Tap up to two target creatures. Investigate.
+pub fn expose_evil() -> CardDefinition {
+    spell(
+        "Expose Evil",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+                    Effect::Tap { what: Selector::TargetFiltered { slot: 1, filter: R::Creature } },
+                ])),
+            },
+            crate::effect::shortcut::investigate(1),
+        ]),
+    )
+}
+
+/// Make a Wish — {3}{G} sorcery. Return two cards at random from your
+/// graveyard to your hand.
+pub fn make_a_wish() -> CardDefinition {
+    spell(
+        "Make a Wish",
+        cost(&[generic(3), g()]),
+        CardType::Sorcery,
+        Effect::ReturnRandomFromGraveyard { who: PlayerRef::You, filter: R::Any, count: Value::Const(2) },
+    )
+}
+
+/// Wailing Ghoul — {1}{B} 1/3 Zombie. When it enters, mill two cards.
+pub fn wailing_ghoul() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(2) })],
+        ..creature("Wailing Ghoul", cost(&[generic(1), b()]), vec![CreatureType::Zombie], 1, 3)
+    }
+}
+
+/// Farrel's Mantle — {2}{W} Aura. Whenever enchanted creature attacks and
+/// isn't blocked, its controller may have it deal damage equal to its power
+/// plus 2 to another target creature; if so, it assigns no combat damage this
+/// turn.
+pub fn farrels_mantle() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::EnchantedBySource),
+            effect: Effect::MayDo {
+                description: "Have it deal its power plus 2 to another creature (no combat damage)?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::DealDamageFrom {
+                        source: host(),
+                        to: target_filtered(R::Creature.and(R::IsAttacking.negate())),
+                        amount: Value::Sum(vec![Value::PowerOf(Box::new(host())), Value::Const(2)]),
+                    },
+                    Effect::PreventAllCombatDamageInvolving { target: host() },
+                ])),
+            },
+        }],
+        ..aura("Farrel's Mantle", cost(&[generic(2), w()]), None)
+    }
+}
+
+/// Cauldron's Gift — {4}{B} sorcery. Adamant — with three black mana spent,
+/// mill four cards. You may return a creature card from your graveyard to the
+/// battlefield with an additional +1/+1 counter.
+pub fn cauldrons_gift() -> CardDefinition {
+    spell(
+        "Cauldron's Gift",
+        cost(&[generic(4), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Black, at_least: 3 },
+                then: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(4) }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::ClearLastMoved,
+            Effect::MoveChosen {
+                from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+                filter: None,
+                count: Value::ONE,
+                up_to: true,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Rakshasa's Secret — {2}{B} sorcery. Target opponent discards two cards. You
+/// mill two cards.
+pub fn rakshasas_secret() -> CardDefinition {
+    spell(
+        "Rakshasa's Secret",
+        cost(&[generic(2), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Discard { who: target_filtered(R::OpponentPlayer), amount: Value::Const(2), random: false },
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+        ]),
+    )
+}
+
+/// Belligerent Brontodon — {5}{G}{W} 4/6 Dinosaur. Each creature you control
+/// assigns combat damage equal to its toughness rather than its power.
+pub fn belligerent_brontodon() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control assigns combat damage equal to its toughness.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::AssignsCombatDamageByToughness,
+            },
+        }],
+        ..creature("Belligerent Brontodon", cost(&[generic(5), g(), w()]), vec![CreatureType::Dinosaur], 4, 6)
+    }
+}
+
+/// Midnight Duelist — {W} 1/2 Human Soldier. Protection from Vampires.
+pub fn midnight_duelist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::ProtectionFromCreatureType(CreatureType::Vampire)],
+        ..creature("Midnight Duelist", cost(&[w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 2)
+    }
+}
+
+/// Warden of the Woods — {4}{G}{G} 5/7 Treefolk. Vigilance. Whenever it
+/// becomes the target of a spell or ability an opponent controls, you may draw
+/// two cards.
+pub fn warden_of_the_woods() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Draw two cards?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            },
+        }],
+        ..creature("Warden of the Woods", cost(&[generic(4), g(), g()]), vec![CreatureType::Treefolk], 5, 7)
+    }
+}
+
+/// Savage Hunger — {2}{G} Aura. Enchanted creature gets +1/+0 and has
+/// trample. Cycling {2}.
+pub fn savage_hunger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        ..aura(
+            "Savage Hunger",
+            cost(&[generic(2), g()]),
+            Some(EquipBonus { power: 1, keywords: vec![Keyword::Trample], ..Default::default() }),
+        )
+    }
+}
+
+/// Wolfhunter's Quiver — {1} Equipment. Equipped creature has "{T}: 1 damage
+/// to any target" and "{T}: 3 damage to target Werewolf creature." Equip {5}.
+pub fn wolfhunters_quiver() -> CardDefinition {
+    let ping = |amount: i32, to: Selector| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::DealDamage { to, amount: Value::Const(amount) },
+        ..Default::default()
+    };
+    equipment(
+        "Wolfhunter's Quiver",
+        cost(&[generic(1)]),
+        cost(&[generic(5)]),
+        EquipBonus {
+            activated_abilities: vec![
+                ping(1, crate::effect::shortcut::target_any()),
+                ping(3, target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Werewolf)))),
+            ],
+            ..Default::default()
+        },
+    )
+}
+
+/// Shimmering Grotto — land. {T}: add {C}. {1}, {T}: add one mana of any
+/// color.
+pub fn shimmering_grotto() -> CardDefinition {
+    CardDefinition {
+        name: "Shimmering Grotto",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility { mana_cost: cost(&[generic(1)]), ..crate::sets::tap_add_any_color() },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nature's Embrace — {2}{G} Aura (creature or land). As a creature it gets
+/// +2/+2; as a land it has "{T}: Add two mana of any one color."
+pub fn natures_embrace() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    let host_is = |r: R| Predicate::EntityMatches { what: host(), filter: r };
+    CardDefinition {
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.or(R::Land)) },
+        static_abilities: vec![StaticAbility {
+            description: "As long as enchanted permanent is a land, it has \"{T}: Add two mana of any one color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: host(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(2)) },
+                    ..Default::default()
+                },
+                condition: Some(host_is(R::Land)),
+            },
+        }],
+        ..aura(
+            "Nature's Embrace",
+            cost(&[generic(2), g()]),
+            Some(EquipBonus { conditional_pt: Some((2, 2, host_is(R::Creature))), ..Default::default() }),
+        )
+    }
+}
+
+/// Feast of Succession — {4}{B}{B} sorcery. All creatures get -4/-4 until end
+/// of turn. You become the monarch.
+pub fn feast_of_succession() -> CardDefinition {
+    spell(
+        "Feast of Succession",
+        cost(&[generic(4), b(), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature),
+                power: Value::Const(-4),
+                toughness: Value::Const(-4),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeMonarch { who: PlayerRef::You },
+        ]),
+    )
+}
+
+/// Rusted Relic — {4} artifact. Metalcraft — it's a 5/5 Golem artifact
+/// creature while you control three or more artifacts.
+pub fn rusted_relic() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Metalcraft — 5/5 Golem artifact creature with three or more artifacts.",
+                effect: StaticEffect::SelfIsCreatureIf {
+                    condition: Predicate::MetalcraftActive { who: PlayerRef::You },
+                    creature_types: vec![CreatureType::Golem],
+                },
+            },
+            // A noncreature definition carries no base P/T (`base_power`).
+            StaticAbility {
+                description: "It's 5/5.",
+                effect: StaticEffect::SelfBasePtFromValue { power: Value::Const(5), toughness: Value::Const(5) },
+            },
+        ],
+        ..spell("Rusted Relic", cost(&[generic(4)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Invasion of Muraganda // Primordial Plasm — {4}{G} Siege, defense 6. When
+/// it enters, put a +1/+1 counter on target creature you control, then it
+/// fights up to one target creature you don't control. Back: a 4/4 Ooze; at
+/// the beginning of combat on your turn, another target creature gets +2/+2
+/// and loses all abilities until end of turn.
+pub fn invasion_of_muraganda() -> CardDefinition {
+    let plasm = CardDefinition {
+        name: "Primordial Plasm",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::LoseAllAbilities { what: Selector::Target(0), duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Muraganda",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![crate::card::BattleSubtype::Siege], ..Default::default() },
+        defense: 6,
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::Fight {
+                    attacker: Selector::Target(0),
+                    defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou.negate()) },
+                },
+            ])),
+        })],
+        back_face: Some(Box::new(plasm)),
+        ..Default::default()
+    }
+}
+
+/// Dispense Justice — {2}{W} instant. Target player sacrifices an attacking
+/// creature; metalcraft — two instead.
+pub fn dispense_justice() -> CardDefinition {
+    spell(
+        "Dispense Justice",
+        cost(&[generic(2), w()]),
+        CardType::Instant,
+        Effect::Sacrifice {
+            who: target_filtered(R::Player),
+            count: Value::IfPred {
+                pred: Box::new(Predicate::MetalcraftActive { who: PlayerRef::You }),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::ONE),
+            },
+            filter: R::Creature.and(R::IsAttacking),
+        },
+    )
+}
+
+/// Turtle Blimp — {5} 3/4 flying artifact Vehicle. When it enters, create a
+/// 2/2 red Mutant. Crew 2.
+pub fn turtle_blimp() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        triggered_abilities: vec![etb(make(1, token("Mutant", 2, 2, vec![Color::Red], vec![CreatureType::Mutant])))],
+        ..spell("Turtle Blimp", cost(&[generic(5)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Magma Pummeler — {X}{R}{R} 0/0 Elemental. Enters with X +1/+1 counters.
+/// Damage to it while it has one is prevented and removes that many counters;
+/// when counters are removed this way, it deals that much damage to any
+/// target. (Fires on any +1/+1 counter removal — INCOMPLETE_CARDS.)
+pub fn magma_pummeler() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        static_abilities: vec![StaticAbility {
+            description: "If damage would be dealt to this while it has a +1/+1 counter, prevent it and remove that many +1/+1 counters.",
+            effect: StaticEffect::PreventDamageByRemovingCounters {
+                kind: CounterType::PlusOnePlusOne,
+                single: false,
+                even_without: false,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterRemoved(CounterType::PlusOnePlusOne), EventScope::SelfSource),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::TriggerEventAmount },
+        }],
+        ..creature("Magma Pummeler", cost(&[x(), r(), r()]), vec![CreatureType::Elemental], 0, 0)
+    }
+}
+
+/// Turtle Tracks — {2}{G} sorcery. Any number of target players may each
+/// search for a basic land and put it onto the battlefield. (Only you search:
+/// the caster targets themselves — INCOMPLETE_CARDS.)
+pub fn turtle_tracks() -> CardDefinition {
+    spell(
+        "Turtle Tracks",
+        cost(&[generic(2), g()]),
+        CardType::Sorcery,
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    )
+}

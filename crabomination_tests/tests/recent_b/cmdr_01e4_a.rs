@@ -2825,3 +2825,162 @@ fn quicksmith_rebel_arms_an_artifact() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2);
 }
+
+/// Make a Wish returns two graveyard cards; Expose Evil taps two and
+/// investigates.
+#[test]
+fn make_a_wish_and_expose_evil() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    let wish = g.add_card_to_hand(0, catalog::make_a_wish());
+    cast(&mut g, wish, None);
+    assert_eq!((g.players[0].hand.len(), g.players[0].graveyard.len()), (2, 2), "two back, the Wish in the yard");
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let expose = g.add_card_to_hand(0, catalog::expose_evil());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: expose,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"));
+}
+
+/// Cauldron's Gift reanimates a creature with an extra +1/+1 counter.
+#[test]
+fn cauldrons_gift_returns_a_creature_bigger() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let gift = g.add_card_to_hand(0, catalog::cauldrons_gift());
+    cast(&mut g, gift, None);
+    assert_eq!(pt(&g, giant), (4, 4));
+}
+
+/// Rusted Relic is a 5/5 creature only under metalcraft.
+#[test]
+fn rusted_relic_wakes_with_metalcraft() {
+    let mut g = pod(2);
+    let relic = g.add_card_to_battlefield(0, catalog::rusted_relic());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    assert!(!g.computed_permanent(relic).unwrap().card_types().contains(&CardType::Creature));
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    assert!(g.computed_permanent(relic).unwrap().card_types().contains(&CardType::Creature));
+    assert_eq!(pt(&g, relic), (5, 5));
+}
+
+/// Dispense Justice takes two attackers with metalcraft.
+#[test]
+fn dispense_justice_doubles_with_metalcraft() {
+    for (artifacts, gone) in [(0, 1), (3, 2)] {
+        let mut g = pod(2);
+        for _ in 0..artifacts {
+            g.add_card_to_battlefield(0, catalog::sol_ring());
+        }
+        let attackers: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+        for &a in &attackers {
+            g.clear_sickness(a);
+        }
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(
+            attackers.iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(0) }).collect(),
+        ))
+        .expect("attack");
+        let justice = g.add_card_to_hand(0, catalog::dispense_justice());
+        flood(&mut g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: justice,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(attackers.iter().filter(|&&a| g.battlefield_find(a).is_none()).count(), gone, "{artifacts} artifacts");
+    }
+}
+
+/// Magma Pummeler shrugs damage off its counters and throws it back.
+#[test]
+fn magma_pummeler_returns_the_damage() {
+    let mut g = pod(2);
+    let pummeler = g.add_card_to_hand(0, catalog::magma_pummeler());
+    cast_x(&mut g, pummeler, None, Some(4));
+    assert_eq!(pt(&g, pummeler), (4, 4));
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(pummeler)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, pummeler), (1, 1), "three counters off, no damage marked");
+    assert_eq!(g.battlefield_find(pummeler).unwrap().damage, 0);
+    assert!(g.players[1].life < life || g.battlefield.iter().any(|c| c.controller == 1 && c.damage > 0), "three back at something");
+}
+
+/// Feast of Succession shrinks everything and crowns you.
+#[test]
+fn feast_of_succession_crowns_you() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let feast = g.add_card_to_hand(0, catalog::feast_of_succession());
+    cast(&mut g, feast, None);
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.monarch, Some(0));
+}
+
+/// Nature's Embrace pumps a creature, or turns a land into a two-mana land.
+#[test]
+fn natures_embrace_reads_its_host() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let embrace = g.add_card_to_hand(0, catalog::natures_embrace());
+    cast(&mut g, embrace, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (4, 4));
+    let mut g = pod(2);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let embrace = g.add_card_to_hand(0, catalog::natures_embrace());
+    cast(&mut g, embrace, Some(Target::Permanent(forest)));
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the granted two-mana ability");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+}
+
+/// Invasion of Muraganda grows a creature and has it fight.
+#[test]
+fn invasion_of_muraganda_grows_and_fights() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let invasion = g.add_card_to_hand(0, catalog::invasion_of_muraganda());
+    cast(&mut g, invasion, None);
+    assert_eq!(pt(&g, mine), (3, 3));
+    assert!(g.battlefield_find(theirs).is_none(), "a 3/3 beats a 2/2");
+}
