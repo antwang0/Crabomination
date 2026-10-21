@@ -135799,3 +135799,86 @@ pub const THE_FIFTEENTH_DOCTOR_15_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const THE_MOST_DANGEROUS_GAMER_COMMANDERS: &[CardFactory] = &[the_most_dangerous_gamer];
+
+/// **The Most Dangerous Gamer**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Forests + 10 Swamps = 99.
+/// The Most Dangerous Gamer (EDHREC, fetched 2026-10-21).
+pub const THE_MOST_DANGEROUS_GAMER_MAIN: &[CardFactory] = &[
+    arcane_signet, clown_car, cranial_plating, golgari_signet, inspiring_statuary,
+    lightning_greaves, mirrorworks, sculpting_steel, sol_ring, strength_testing_hammer,
+    swiftfoot_boots, talisman_of_resilience, vexing_puzzlebox, bojuka_bog, command_tower,
+    deathcap_glade, exotic_orchard, golgari_rot_farm, llanowar_wastes, necroblossom_snarl,
+    overgrown_tomb, rogues_passage, tainted_wood, temple_of_malady, twilight_mire,
+    undergrowth_stadium, woodland_cemetery, lifetime_pass_holder, atomwheel_acrobats,
+    celebr_8000, centaur_of_attention, corpsejack_menace, deadbeat_attendant, discourtesy_clerk,
+    draconian_gate_bot, duskshell_crawler, eternal_witness, forgotten_ancient,
+    kami_of_whispered_hopes, line_cutter, llanowar_elves, petting_zookeeper, quick_fixer,
+    resolute_veggiesaur, sarinth_steelseeker, soul_swindler, spinnerette_arachnobat,
+    squirrel_squatters, teething_wurmlet, winding_constrictor, xenosquirrels, hardened_scales,
+    high_score, hollowmurk_siege, hydras_growth, level_up, night_shift_of_the_living_dead,
+    phyrexian_arena, assassins_trophy, beast_within, heroic_intervention, pair_o_dice_lost,
+    putrefy, revitalizing_repast, saw_in_half, six_sided_die, snakeskin_veil, attempted_murder,
+    black_hole, coming_attraction, cultivate, farseek, kodamas_reach, natures_lore,
+    rampant_growth, sign_in_blood, step_right_up, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const DEE_KAY_COMMANDERS: &[CardFactory] = &[dee_kay_finder_of_the_lost];
+
+/// **Dee Kay, Finder of the Lost**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Swamps = 99.
+/// Dee Kay, Finder of the Lost (EDHREC, fetched 2026-10-21).
+pub const DEE_KAY_MAIN: &[CardFactory] = &[
+    arcane_signet, bucknards_everfull_purse, clown_car, conjurers_closet, dimir_signet,
+    ebony_fly, inspiring_statuary, luck_bobblehead, panharmonicon, sculpting_steel, sol_ring,
+    strength_testing_hammer, talisman_of_dominance, vexing_puzzlebox, archway_of_innovation,
+    choked_estuary, command_tower, darkwater_catacombs, dimir_aqueduct, drowned_catacomb,
+    mistvault_bridge, morphic_pool, reliquary_tower, seat_of_the_synod, shipwreck_marsh,
+    sunken_hollow, tainted_isle, vault_of_whispers, watery_grave, lifetime_pass_holder,
+    baleful_strix, bamboozling_beeble, celebr_8000, cyberdrive_awakener, deadbeat_attendant,
+    discourtesy_clerk, displacer_kitten, dissatisfied_customer, draconian_gate_bot,
+    feywild_trickster, golbez_crystal_collector, kappa_cannoneer, line_cutter, monitor_monitor,
+    pixie_guide, quick_fixer, replication_specialist, seasoned_buttoneer, shimmer_dragon,
+    solemn_simulacrum, soul_swindler, thought_monitor, vedalken_squirrel_whacker, xenosquirrels,
+    mechanized_production, motion_sickness, netherese_puzzle_ward,
+    night_shift_of_the_living_dead, thopter_spy_network, blur, boing, contact_other_plane,
+    counterspell, displace, ghostly_flicker, grave_endeavor, negate, planar_incision,
+    saw_in_half, six_sided_die, tezzeret_master_of_the_bridge, attempted_murder, black_hole,
+    command_performance, feed_the_swarm, myrkuls_edict, reverse_engineer, rise_and_shine,
+    step_right_up, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SPINNERETTE_COMMANDERS: &[CardFactory] = &[spinnerette_arachnobat];
+
+/// **Spinnerette, Arachnobat**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Forests + 11 Swamps = 99.
+/// Spinnerette, Arachnobat (EDHREC, fetched 2026-10-21).
+pub const SPINNERETTE_MAIN: &[CardFactory] = &[
+    arcane_signet, clown_car, golgari_signet, mirrorworks, sol_ring, strength_testing_hammer,
+    strionic_resonator, talisman_of_resilience, vexing_puzzlebox, bojuka_bog, command_tower,
+    exotic_orchard, golgari_rot_farm, overgrown_tomb, path_of_ancestry, reliquary_tower,
+    swarmyard, tainted_wood, temple_of_malady, twilight_mire, undergrowth_stadium,
+    woodland_cemetery, lifetime_pass_holder, arasta_of_the_endless_web, atomwheel_acrobats,
+    celebr_8000, centaur_of_attention, deadbeat_attendant, discourtesy_clerk,
+    draconian_gate_bot, drider, eternal_witness, hatchery_spider, ishkanah_grafwidow,
+    line_cutter, obelisk_spider, penumbra_spider, petting_zookeeper, quick_fixer,
+    resolute_veggiesaur, rotwidow_pack, sakura_tribe_elder, shelob_child_of_ungoliant,
+    soul_swindler, sporeweb_weaver, squirrel_squatters, the_most_dangerous_gamer,
+    twitching_doll, vegetation_abomination, webspinner_cuff, xenosquirrels,
+    curse_of_clinging_webs, done_for_the_day, doubling_season, moldervine_reclamation,
+    night_shift_of_the_living_dead, arachnogenesis, corrupted_conviction, deadly_dispute,
+    fake_your_own_death, golgari_charm, heroic_intervention, pair_o_dice_lost, putrefy,
+    saw_in_half, six_sided_die, attempted_murder, black_hole, coming_attraction, cultivate,
+    harmonize, kodamas_reach, natures_lore, rampant_growth, rise_of_the_witch_king,
+    step_right_up,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

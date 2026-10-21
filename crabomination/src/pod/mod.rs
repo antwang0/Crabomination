@@ -29514,6 +29514,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIFTEENTH_DOCTOR_15_COMMANDERS,
             main: decks::THE_FIFTEENTH_DOCTOR_15_MAIN,
         },
+        // Seat 4844: The Most Dangerous Gamer's EDHREC average deck. `--pod-decks 4844`.
+        PodDeck {
+            name: "The Most Dangerous Gamer (BG)",
+            commanders: decks::THE_MOST_DANGEROUS_GAMER_COMMANDERS,
+            main: decks::THE_MOST_DANGEROUS_GAMER_MAIN,
+        },
+        // Seat 4845: Dee Kay, Finder of the Lost's EDHREC average deck. `--pod-decks 4845`.
+        PodDeck {
+            name: "Dee Kay, Finder of the Lost (UB)",
+            commanders: decks::DEE_KAY_COMMANDERS,
+            main: decks::DEE_KAY_MAIN,
+        },
+        // Seat 4846: Spinnerette, Arachnobat's EDHREC average deck. `--pod-decks 4846`.
+        PodDeck {
+            name: "Spinnerette, Arachnobat (BG)",
+            commanders: decks::SPINNERETTE_COMMANDERS,
+            main: decks::SPINNERETTE_MAIN,
+        },
     ]
 }
 
@@ -36317,6 +36335,9 @@ mod tests {
             ("Lae'zel, Vlaakith's Champion and Haunted One", &[0x1CFF]),
             ("Amber Gristle O'Maul and Flaming Fist", &[0x1D00]),
             ("The Fifteenth Doctor and Yasmin Khan", &[0x1D01]),
+            ("The Most Dangerous Gamer", &[0x1D02]),
+            ("Dee Kay, Finder of the Lost", &[0x1D03]),
+            ("Spinnerette, Arachnobat", &[0x1D04]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
