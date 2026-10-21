@@ -10088,6 +10088,12 @@ pub enum Effect {
     /// spell (Peerless Samurai). Pushes onto `Player.pending_spell_discounts`,
     /// keyed on the spells-cast tally so it lapses with the next spell.
     GrantNextSpellDiscountThisTurn { amount: Value },
+    /// "The next [filter] spell you cast this turn costs {amount} less to
+    /// cast" (Invasion of the Giants III — the next Giant spell). The grant
+    /// waits on `Player.next_matching_spell_discounts` for the first cast
+    /// that matches `filter`, which takes the discount and consumes it; a
+    /// cast that doesn't match passes it by. Cleared at end of turn.
+    GrantNextMatchingSpellDiscountThisTurn { filter: crate::card::SelectionRequirement, amount: u32 },
     /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
     /// creatures." Each of slots `0..max_targets` is an optional creature
     /// target (filtered by `filter`); every supplied target gains one +1/+1

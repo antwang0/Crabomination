@@ -560,6 +560,11 @@ pub struct PlayerData {
     /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
     #[serde(default)]
     pub pending_spell_discounts: crate::oftenempty::OftenEmpty<(u32, u32)>,
+    /// "The next [filter] spell you cast this turn costs {N} less"
+    /// (Invasion of the Giants): `(filter, N)` until a matching cast consumes
+    /// it (`game/effects/next_spell_discount.rs`).
+    #[serde(default)]
+    pub next_matching_spell_discounts: crate::oftenempty::OftenEmpty<(crate::card::SelectionRequirement, u32)>,
     /// "The next spell you cast this turn has affinity for artifacts" (Saheeli,
     /// the Gifted): `spells_cast_this_turn` at grant. The discount is counted
     /// as the spell is cast, not as it's granted.
@@ -2020,6 +2025,7 @@ impl Player {
             creature_flash_until_your_turn: false,
             pending_is_discounts: Default::default(),
             pending_spell_discounts: Default::default(),
+            next_matching_spell_discounts: Default::default(),
             pending_affinity_next_spell: Default::default(),
             pending_affinity_next_noncreature: Default::default(),
             face_down_discount_this_turn: 0,

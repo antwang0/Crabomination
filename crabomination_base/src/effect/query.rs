@@ -938,6 +938,7 @@ impl Effect {
             Effect::SpellsCostMoreThisTurn { who, .. } => player_has_target(who),
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
+            Effect::GrantNextMatchingSpellDiscountThisTurn { .. } => false,
             Effect::Noop
             | Effect::LockOpponentsManaValueUntilYourNextTurn { .. }
             | Effect::DamageToPlayersAndBattlesPlusThisTurn { .. }

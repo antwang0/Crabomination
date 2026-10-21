@@ -18,6 +18,7 @@ mod die_exchange;
 mod soul_echo;
 mod great_aurora;
 mod lose_unspent;
+mod next_spell_discount;
 mod artifact_subtypes;
 mod energy_sweep;
 mod among;
@@ -24755,6 +24756,10 @@ impl GameState {
                 self.each_player_keeps_permanents_rest_phase_out(*keep, effect, ctx, events)
             }
             Effect::LoseUnspentMana { who } => self.lose_unspent_mana(who, ctx, events),
+            Effect::GrantNextMatchingSpellDiscountThisTurn { filter, amount } => {
+                self.grant_next_matching_spell_discount(ctx.controller, filter, *amount);
+                Ok(())
+            }
             Effect::SpellsCostMoreThisTurn { who, amount } => {
                 for p in self.resolve_players(who, ctx) {
                     let tax = &mut self.players[p].spell_tax_this_turn;

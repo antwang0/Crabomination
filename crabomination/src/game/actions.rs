@@ -2683,6 +2683,9 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
         }
         reduction = reduction.saturating_add(state.noncreature_affinity_reduction(caster, card));
     }
+    // "The next [filter] spell you cast this turn costs {N} less"
+    // (Invasion of the Giants); the matching cast consumes it.
+    reduction = reduction.saturating_add(state.next_matching_spell_discount(caster, card));
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
     // grants (Urza, Planeswalker's +2). Cleared at cleanup.
     for (filter, amount) in &state.players[caster].turn_spell_discounts {
@@ -13424,6 +13427,7 @@ impl GameState {
                 next_spell_grant = true;
             }
         }
+        self.consume_next_matching_spell_discounts(p, face.as_ref().unwrap_or(&card));
         self.spells_cast_this_turn += 1;
         if card.cast_from_graveyard && !self.players[p].used_graveyard_this_turn {
             self.players[p].used_graveyard_this_turn = true;

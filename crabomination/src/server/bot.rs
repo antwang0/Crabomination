@@ -18119,6 +18119,7 @@ fn no_cost_reduction_possible(
     !card.has_self_cost_reduction()
         && p.pending_is_discounts.is_empty()
         && p.pending_spell_discounts.is_empty()
+        && p.next_matching_spell_discounts.is_empty()
         && p.turn_spell_discounts.is_empty()
         && state.extra_cast_reduction == 0
         // Saheeli's next-spell affinity and a "spells that player casts cost
