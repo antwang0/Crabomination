@@ -10101,11 +10101,14 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
         .iter()
         .any(|c| c.gather_scan_bits() & crate::card::gather_spec::ARTIFACTS_ARE_EQUIPMENT != 0);
     // A granted crew (Kotori, Swift Reconfiguration) needs the layers; ask
-    // them only on a board where something grants one.
+    // them only on a board where something grants one — Captain Rex
+    // Nebula's until-end-of-turn crew 2 rides the instance's EOT bag (a
+    // debug pod tripped the sink gate's assert on it, seed 9442).
     let crew_granted = state.battlefield.iter().any(|c| {
         c.definition.static_abilities.iter().any(|sa| {
             matches!(&sa.effect, crate::effect::StaticEffect::GrantKeyword { keyword: crate::card::Keyword::Crew(_), .. })
         }) || c.definition.equipped_bonus.as_ref().is_some_and(|b| b.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Crew(_))))
+            || c.granted_keywords_eot.iter().any(|k| matches!(k, crate::card::Keyword::Crew(_)))
     });
     let saddle_granted = saddle_is_granted(state);
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
