@@ -134706,3 +134706,118 @@ pub const SHARKEY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const BRINELIN_28_COMMANDERS: &[CardFactory] = &[brinelin_the_moon_kraken, keleth_sunmane_familiar];
+
+/// **Brinelin, the Moon Kraken and Keleth, Sunmane Familiar**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 5 Islands + 9 Plains = 98.
+/// Brinelin, the Moon Kraken and Keleth, Sunmane Familiar (EDHREC, fetched 2026-10-21).
+pub const BRINELIN_28_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, chariot_of_the_sun, gilded_lotus, ichormoon_gauntlet,
+    relic_of_legends, sol_grail, sol_ring, sol_talisman, sun_droplet, talisman_of_progress,
+    the_immortal_sun, azorius_chancery, azorius_guildgate, boreal_shelf, celestial_colonnade,
+    coastal_tower, command_tower, flooded_strand, floodfarm_verge, fortified_beachhead,
+    lonely_arroyo, mystic_gate, port_town, prairie_stream, razortide_bridge, restless_anchorage,
+    sea_of_clouds, seachrome_coast, skycloud_expanse, temple_of_enlightenment, tranquil_cove,
+    absolute_virtue, ajanis_sunstriker, arashin_sunshield, dawnbringer_cleric,
+    elesh_norn_grand_cenobite, gavony_dawnguard, heliod_god_of_the_sun, hullbreaker_horror,
+    jin_gitaxias_core_augur, jin_gitaxias_progress_tyrant, lunar_avenger, lunar_mystic,
+    moon_heron, moon_eating_dog, moonblade_shinobi, moonbow_illusionist, moonfolk_puzzlemaker,
+    moonlit_scavengers, moonshae_pixie, moonshaker_cavalry, myr_moonvessel, nephalia_moondrakes,
+    patron_of_the_moon, solarion, sunblade_samurai, sunblast_angel, suncleanser,
+    sunscorch_regent, bound_by_moonsilver, lunar_force, moonlit_wake, omen_of_the_sun,
+    rhystic_study, sun_clasp, flawless_maneuver, mana_tithe, miscalculation, moonlace, negate,
+    pale_moon, swords_to_plowshares, unified_will, tamiyo_the_moon_sage,
+    teferi_who_slows_the_sunset, approach_of_the_second_sun, benediction_of_moons,
+    blue_suns_twilight, sea_gate_restoration, solar_tide, sunfall, sunlance, sunset_revelry,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const GLACIAN_30_COMMANDERS: &[CardFactory] = &[glacian_powerstone_engineer, kediss_emberclaw_familiar];
+
+/// **Glacian, Powerstone Engineer and Kediss, Emberclaw Familiar**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Islands + 7 Mountains + 2 Wastes = 98.
+/// Glacian, Powerstone Engineer and Kediss, Emberclaw Familiar (EDHREC, fetched
+/// 2026-10-21).
+pub const GLACIAN_30_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_wastes,
+    snow_covered_wastes, abbot_of_keral_keep, aberrant_mind_sorcerer, aberrant_researcher,
+    academy_drake, academy_elite, academy_journeymage, academy_researchers, academy_wall,
+    acolyte_hybrid, adric_mathematical_genius, advanced_hoverguard, aeronaut_tinkerer,
+    agent_of_kotis, archaeomancer, archaeomender, body_of_knowledge, brudiclad_telchor_engineer,
+    crackdown_construct, dominus_of_fealty, eager_construct, eldrazi_obligator,
+    eldrazi_skyspawner, embersmith, filigree_attendant, filigree_crawler, filigree_familiar,
+    filigree_sages, immobilizer_eldrazi, living_lore, myriad_construct, shao_jun,
+    sliver_construct, soul_of_new_phyrexia, sparring_construct, vedalken_anatomist,
+    vedalken_certarch, vedalken_engineer, vedalken_plotter, voltaic_construct, agility,
+    agoraphobia, aqueous_form, arcane_flight, awaken_the_ancient, backfire, betrayal,
+    bonds_of_quicksilver, cave_sense, chant_of_the_skifsang, claws_of_valakut,
+    cloak_of_invisibility, coma_veil, containment_membrane, infinite_reflection,
+    consuming_vortex, crushing_pain, cut_the_earthly_bond, kaito_cunning_infiltrator,
+    saheeli_filigree_master, abandon_the_post, eerie_procession,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, wastes, wastes,
+];
+
+pub const ARMIX_21_COMMANDERS: &[CardFactory] = &[armix_filigree_thrasher, radiant_serra_archangel];
+
+/// **Armix, Filigree Thrasher and Radiant, Serra Archangel**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 13 Plains + 12 Swamps = 98.
+/// Armix, Filigree Thrasher and Radiant, Serra Archangel (EDHREC, fetched 2026-10-21).
+pub const ARMIX_21_MAIN: &[CardFactory] = &[
+    akromas_memorial, arcane_signet, bladed_battle_fan, ecologists_terrarium, ghost_lantern,
+    ominous_parcel, orzhov_cluestone, orzhov_locket, shield_of_the_avatar,
+    silver_shroud_costume, sol_ring, sunset_pyramid, talisman_of_hierarchy, transmogrant_altar,
+    wayfarers_bauble, bojuka_bog, command_tower, great_hall_of_starnheim, isolated_chapel,
+    myriad_landscape, path_of_ancestry, restless_fortress, secluded_courtyard,
+    shineshadow_snarl, tainted_field, unclaimed_territory, vault_of_the_archangel,
+    westvale_abbey, windbrisk_heights, invasion_of_new_capenna, invasion_of_tolvada,
+    aron_benalias_ruin, blood_artist, burnished_hart, custodi_soulbinders,
+    drana_liberator_of_malakir, eagle_of_deliverance, firja_judge_of_valor, hangarback_walker,
+    hope_of_ghirapur, hovermyr, jazal_goldmane, krav_the_unredeemed, lightkeeper_of_emeria,
+    ornithopter, pentavus, pilgrims_eye, regna_the_redeemer, restoration_gearsmith,
+    sentry_of_the_underworld, seraph_of_new_capenna, sivriss_nightmare_speaker,
+    skittering_surveyor, triplicate_titan, triskelavus, circle_of_despair, ethereal_absolution,
+    feast_of_the_victorious_dead, glasswing_grace, profane_procession, vampiric_rites,
+    altars_reap, final_payment, night_day, profit_loss, start_finish, utter_end, angelic_purge,
+    debt_to_the_deathless, decree_of_justice, graceful_restoration, path_of_peril, rout,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const ARMIX_22_COMMANDERS: &[CardFactory] = &[armix_filigree_thrasher, siani_eye_of_the_storm];
+
+/// **Armix, Filigree Thrasher and Siani, Eye of the Storm**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 15 Islands + 6 Swamps = 98.
+/// Armix, Filigree Thrasher and Siani, Eye of the Storm (EDHREC, fetched 2026-10-21).
+pub const ARMIX_22_MAIN: &[CardFactory] = &[
+    arcane_signet, etherium_astrolabe, fellwar_stone, lightning_greaves, sculpting_steel,
+    sol_ring, talisman_of_dominance, tezzerets_gatebreaker, the_everflowing_well, welding_jar,
+    bojuka_bog, buried_ruin, castle_doom, choked_estuary, command_tower, darksteel_citadel,
+    evolving_wilds, fetid_pools, ghost_quarter, glimmervoid, mistvault_bridge, power_depot,
+    scavenger_grounds, seat_of_the_synod, temple_of_deceit, terramorphic_expanse,
+    vault_of_whispers, arcbound_condor, arcbound_stinger, canoptek_scarab_swarm, chief_engineer,
+    chromescale_drake, chronomancer, cyberdrive_awakener, cyclonus_the_saboteur, diversion_unit,
+    etherium_pteramander, etherium_sculptor, filigree_attendant, foundry_inspector,
+    jhoiras_familiar, junk_diver, malcators_watcher, oaken_siren, ornithopter,
+    ornithopter_of_paradise, phyrexian_metamorph, psychomancer, research_thief,
+    sai_master_thopterist, salvage_slasher, sharding_sphinx, szarekh_the_silent_king,
+    thought_monitor, valkyrie_aerial_unit, vault_skirge, winter_cursed_rider, wizard_replica,
+    agent_of_the_iron_throne, biotransference, efficient_construction, mirrodin_besieged,
+    phyrexian_scriptures, tezzerets_touch, thopter_spy_network, drown_in_the_loch,
+    into_thin_air, machine_over_matter, magnetic_flux, negate, reality_heist, slip_out_the_back,
+    tezzeret_master_of_metal, haunt_the_network, tezzerets_ambition, tezzerets_betrayal,
+    their_name_is_death,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp,
+];

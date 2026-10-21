@@ -29280,6 +29280,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHARKEY_COMMANDERS,
             main: decks::SHARKEY_MAIN,
         },
+        // Seat 4805: Brinelin, the Moon Kraken and Keleth, Sunmane Familiar's EDHREC average deck. `--pod-decks 4805`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Keleth, Sunmane Familiar (WU)",
+            commanders: decks::BRINELIN_28_COMMANDERS,
+            main: decks::BRINELIN_28_MAIN,
+        },
+        // Seat 4806: Glacian, Powerstone Engineer and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 4806`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Kediss, Emberclaw Familiar (UR)",
+            commanders: decks::GLACIAN_30_COMMANDERS,
+            main: decks::GLACIAN_30_MAIN,
+        },
+        // Seat 4807: Armix, Filigree Thrasher and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4807`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Radiant, Serra Archangel (WB)",
+            commanders: decks::ARMIX_21_COMMANDERS,
+            main: decks::ARMIX_21_MAIN,
+        },
+        // Seat 4808: Armix, Filigree Thrasher and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4808`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Siani, Eye of the Storm (UB)",
+            commanders: decks::ARMIX_22_COMMANDERS,
+            main: decks::ARMIX_22_MAIN,
+        },
     ]
 }
 
@@ -35985,6 +36009,10 @@ mod tests {
             ("Aegar, the Freezing Flame", &[0x1CD8]),
             ("Sauron, the Lidless Eye", &[0x1CD9]),
             ("Sharkey, Tyrant of the Shire", &[0x1CDA]),
+            ("Brinelin, the Moon Kraken and Keleth, Sunmane Familiar", &[0x1CDB]),
+            ("Glacian, Powerstone Engineer and Kediss, Emberclaw Familiar", &[0x1CDC]),
+            ("Armix, Filigree Thrasher and Radiant, Serra Archangel", &[0x1CDD]),
+            ("Armix, Filigree Thrasher and Siani, Eye of the Storm", &[0x1CDE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
