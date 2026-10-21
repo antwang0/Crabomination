@@ -1020,3 +1020,21 @@ fn cr_800_4_gusthas_scepter_stash_bins_when_control_is_lost() {
     cast_x(&mut g, 1, shatter, Some(Target::Permanent(sc)), None);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "binned with the Scepter gone");
 }
+
+/// Draconian Gate-Bot opens an Attraction (CR 717.4) or destroys one, which
+/// goes to its owner's junkyard (CR 717.6).
+#[test]
+fn cr_717_6_draconian_gate_bot_opens_or_junks_an_attraction() {
+    let mut g = pod(2);
+    g.seat_attraction_deck(0, vec![catalog::information_booth()]);
+    let bot = g.add_card_to_hand(0, catalog::draconian_gate_bot());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    cast_x(&mut g, 0, bot, None, None);
+    let booth = g.battlefield.iter().find(|c| c.definition.name == "Information Booth").map(|c| c.id).expect("opened");
+    let bot2 = g.add_card_to_hand(1, catalog::draconian_gate_bot());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1), DecisionAnswer::Target(Target::Permanent(booth))]));
+    g.active_player_idx = 1;
+    cast_x(&mut g, 1, bot2, None, None);
+    assert!(g.battlefield_find(booth).is_none());
+    assert!(g.players[0].attraction_junkyard.iter().any(|c| c.id == booth));
+}

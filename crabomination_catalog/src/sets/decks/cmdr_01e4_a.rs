@@ -5074,12 +5074,16 @@ pub fn dire_fleet_warmonger() -> CardDefinition {
     }
 }
 
-/// Draconian Gate-Bot — {5} 4/2 artifact Robot. Its enters modes open an
-/// Attraction or destroy one; the engine has no Attractions (no Attraction
-/// deck, none on the battlefield), so both modes do nothing here.
+/// Draconian Gate-Bot — {5} 4/2 artifact Robot. When it enters, choose one:
+/// open an Attraction (CR 717.4); or destroy target Attraction (to its
+/// owner's junkyard, CR 717.6).
 pub fn draconian_gate_bot() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::OpenAnAttraction,
+            Effect::Destroy { what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Attraction)) },
+        ]))],
         ..creature("Draconian Gate-Bot", cost(&[generic(5)]), vec![CreatureType::Robot], 4, 2)
     }
 }
