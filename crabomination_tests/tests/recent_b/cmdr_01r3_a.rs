@@ -4,6 +4,8 @@
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+use crabomination::game::effects::EffectContext;
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -241,4 +243,67 @@ fn feral_encounter_exiles_a_creature_castable_this_turn() {
     let ex = g.exile.iter().find(|c| c.id == bears).expect("the creature is exiled");
     assert!(!ex.face_down && ex.may_play_until.is_some());
     assert_eq!(g.players[0].library.len(), 7);
+}
+
+/// CR 706.6 — Vedalken Squirrel-Whacker enters as the two rolls (5/6), and a
+/// d6 its controller later rolls as a 1 is exchanged with the larger base stat:
+/// the roll reads 6 and the creature becomes 5/1.
+#[test]
+fn cr_706_6_squirrel_whacker_rolls_its_body_and_trades_a_low_roll() {
+    let mut g = pod(2);
+    let whacker = g.add_card_to_hand(0, catalog::vedalken_squirrel_whacker());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(5), DecisionAnswer::DieRoll(6)]));
+    cast(&mut g, whacker, None);
+    let cp = g.computed_permanent(whacker).expect("a */* survives its as-enters roll");
+    assert_eq!((cp.power, cp.toughness), (5, 6));
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)]));
+    let roll = Effect::RollDie {
+        sides: 6,
+        count: Value::ONE,
+        modifier: Value::Const(0),
+        reroll_at_most: 0,
+        ignore_lowest: 0,
+        results: vec![(6, 6, Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        on_doubles: None,
+    };
+    g.resolve_effect(&roll, &EffectContext::for_ability(whacker, 0, None)).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the 1 became a 6");
+    let cp = g.computed_permanent(whacker).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 1));
+}
+
+/// CR 614.1a — Soul Echo: once the opponent chooses, damage to its controller
+/// removes echo counters instead, until that player's next turn; life at 0
+/// doesn't lose the game.
+#[test]
+fn cr_614_1a_soul_echo_turns_damage_into_counters_until_your_next_upkeep() {
+    let mut g = pod(3);
+    let echo = g.add_card_to_hand(0, catalog::soul_echo());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: echo, target: None, additional_targets: vec![], mode: None, x_value: Some(3) })
+        .expect("cast X=3");
+    drain_stack(&mut g);
+    let count = |g: &GameState| g.battlefield_find(echo).unwrap().counter_count(CounterType::Echo);
+    assert_eq!(count(&g), 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let stamp = Effect::PlayerMayStampSourceTurn { who: Selector::Player(PlayerRef::Seat(1)) };
+    g.resolve_effect(&stamp, &EffectContext::for_ability(echo, 0, None)).unwrap();
+    let hit = |g: &mut GameState, n| {
+        let dmg = Effect::DealDamage { to: Selector::Player(PlayerRef::Seat(0)), amount: Value::Const(n) };
+        g.resolve_effect(&dmg, &EffectContext::for_ability(echo, 1, None)).unwrap();
+    };
+    let life = g.players[0].life;
+    hit(&mut g, 2);
+    assert_eq!((g.players[0].life, count(&g)), (life, 1));
+    g.turn_number += 1;
+    g.active_player_idx = 1;
+    hit(&mut g, 5);
+    assert_eq!((g.players[0].life, count(&g)), (life, 0), "still replaced, with nothing left to remove");
+    g.turn_number += 1;
+    g.active_player_idx = 0;
+    hit(&mut g, life);
+    assert_eq!(g.players[0].life, 0, "the controller's own turn ends the replacement");
+    g.check_state_based_actions();
+    assert!(g.players[0].is_alive(), "0 life doesn't lose");
 }

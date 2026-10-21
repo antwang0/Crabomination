@@ -10,6 +10,7 @@ use crate::effect::shortcut::{craft, magecraft, target_filtered};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value, ZoneDest,
 };
+use crate::game::types::TurnStep;
 use crate::mana::{Color, cost, g, generic, hybrid, r, u, w, x};
 
 /// Arcane Proxy — {7} 4/3 artifact creature Wizard; prototype {1}{U}{U} 2/1
@@ -373,6 +374,61 @@ pub fn feral_encounter() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Vedalken Squirrel-Whacker — {3}{U} */* Vedalken Guest. As it enters, roll
+/// a d6 twice: base power the first result, base toughness the second. If you
+/// would roll one or more d6, you may exchange one result with its base power
+/// or base toughness (CR 706.6).
+pub fn vedalken_squirrel_whacker() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::RollDiceSetBasePt { sides: 6 }),
+        static_abilities: vec![StaticAbility {
+            description: "Exchange a d6 result with this creature's base power or toughness.",
+            effect: StaticEffect::MayExchangeD6WithSelfBasePt,
+        }],
+        ..creature(
+            "Vedalken Squirrel-Whacker",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Vedalken, CreatureType::Guest],
+            0,
+            0,
+        )
+    }
+}
+
+/// Soul Echo — {X}{W}{W} enchantment; enters with X echo counters. You don't
+/// lose the game for having 0 or less life. At the beginning of your upkeep,
+/// sacrifice it with no echo counters on it; otherwise target opponent may
+/// choose that each 1 damage dealt to you until your next upkeep removes an
+/// echo counter from it instead (CR 614.1a).
+pub fn soul_echo() -> CardDefinition {
+    let echoes = Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Echo };
+    CardDefinition {
+        name: "Soul Echo",
+        cost: cost(&[x(), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        enters_with_counters: Some((CounterType::Echo, Value::XFromCost)),
+        static_abilities: vec![
+            StaticAbility {
+                description: "You don't lose the game for having 0 or less life.",
+                effect: StaticEffect::ControllerDoesntLoseForZeroLife,
+            },
+            StaticAbility {
+                description: "Damage to you removes echo counters instead while chosen.",
+                effect: StaticEffect::ReplaceDamageToYouRemovingStampedCounters { kind: CounterType::Echo },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtMost(echoes, Value::Const(0)),
+                then: Box::new(Effect::SacrificeSource),
+                else_: Box::new(Effect::PlayerMayStampSourceTurn { who: target_filtered(R::OpponentPlayer) }),
+            },
+        }],
         ..Default::default()
     }
 }

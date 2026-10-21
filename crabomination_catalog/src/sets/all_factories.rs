@@ -18885,6 +18885,8 @@ static DECKS: &[Factory] = &[
     super::decks::invasion_of_arcavios,
     super::decks::fungal_behemoth,
     super::decks::feral_encounter,
+    super::decks::vedalken_squirrel_whacker,
+    super::decks::soul_echo,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
