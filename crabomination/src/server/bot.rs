@@ -3511,6 +3511,11 @@ impl HeuristicBot {
                 {
                     return Some(BotStep::plain(a));
                 }
+                // Pods: arm a "when you next cast" copy watcher (Zevlor) ahead
+                // of the spell it would copy.
+                if let Some(a) = super::next_spell_copy::pick_arm_next_spell_copy(state, seat) {
+                    return Some(BotStep::plain(a));
+                }
                 let action = main_phase_action_with(state, seat, self.scored, &self.weights);
                 // CR 702.143a — nothing better to do: foretell with the idle mana.
                 if matches!(action.action, GameAction::PassPriority)
