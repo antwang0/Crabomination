@@ -162,7 +162,7 @@ fn crafted_pt(state: &GameState, back: &crate::card::CardDefinition, picks: &[(c
             (set.len() as i32, set.len() as i32)
         }
         Some(DynamicPt::ExiledWithSourceTotalPower) => {
-            let p = defs().map(|d| d.power).sum::<i32>();
+            let p = defs().map(|d| d.power).fold(0i32, i32::saturating_add);
             (p, p)
         }
         _ => (back.power, back.toughness),

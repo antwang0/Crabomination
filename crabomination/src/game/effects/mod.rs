@@ -39116,7 +39116,7 @@ impl GameState {
                             let pl = &self.players[ctx.controller];
                             let owned = self.battlefield.iter().filter(|c| c.owner == ctx.controller && c.id != source);
                             for c in pl.library.iter().chain(pl.hand.iter()).chain(owned) {
-                                if c.definition.is_creature() {
+                                if self.computed_is_creature(c) {
                                     for v in [c.definition.power, c.definition.toughness] {
                                         counts[v.clamp(0, 16) as usize] += 1;
                                     }

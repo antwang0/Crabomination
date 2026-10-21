@@ -2116,7 +2116,10 @@ const ATTACK_BATCH_SIGNED_OFF: &[&str] = &["Sabotage Strategist", "Orim's Prayer
 /// opponent, … that player" is printed (Firkraag). `EventScope::
 /// AnyPlayerAttacks` is the fifth: once per declaration, whoever declares it
 /// (Frontier Warmonger's "one or more creatures attack one of your
-/// opponents").
+/// opponents"). `EventScope::OpponentOfYoursAttacked` is the sixth: the
+/// combat dispatcher fires it once per attacked opponent, never per attacker
+/// (Squall, Gunblade Duelist's "… attack one of your opponents, … defending
+/// player").
 #[test]
 fn every_batched_attack_trigger_fires_once_a_declaration() {
     clause_ratchet(
@@ -2134,6 +2137,7 @@ fn every_batched_attack_trigger_fires_once_a_declaration() {
                 || body.contains("kind: YouAttack")
                 || body.contains("scope: YouAttackedPlayer")
                 || body.contains("scope: AnyPlayerAttacks")
+                || body.contains("scope: OpponentOfYoursAttacked")
         },
     );
 }
