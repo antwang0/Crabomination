@@ -7262,3 +7262,549 @@ pub fn wing_puncture() -> CardDefinition {
         },
     )
 }
+
+// ── Batch twenty-five (five- and six-gap pair decks) ────────────────────────
+
+fn artifact_cast(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+        effect,
+    }
+}
+
+fn from_gy_return_tapped(mana: ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: mana,
+        from_graveyard: true,
+        discard_cost: Some((R::Any, 2)),
+        effect: Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        ..Default::default()
+    }
+}
+
+/// Lifesmith — {1}{G} 2/1 Human Artificer. Whenever you cast an artifact
+/// spell, you may pay {1}; if you do, you gain 3 life.
+pub fn lifesmith() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![artifact_cast(Effect::MayPay {
+            description: "Pay {1} to gain 3 life?".into(),
+            mana_cost: cost(&[generic(1)]),
+            body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            else_: None,
+        })],
+        ..creature("Lifesmith", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 1)
+    }
+}
+
+/// Painsmith — {1}{B} 2/1 Human Artificer. Whenever you cast an artifact
+/// spell, you may have target creature get +2/+0 and gain deathtouch until
+/// end of turn.
+pub fn painsmith() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![artifact_cast(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                pump(target_filtered(R::Creature), 2, 0),
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            ])),
+        })],
+        ..creature("Painsmith", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 1)
+    }
+}
+
+/// Renegade's Getaway — {2}{B} instant. Target permanent gains indestructible
+/// until end of turn. Create a 1/1 colorless Servo artifact creature token.
+pub fn renegades_getaway() -> CardDefinition {
+    let servo = TokenDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..token("Servo", 1, 1, vec![], vec![CreatureType::Servo])
+    };
+    spell(
+        "Renegade's Getaway",
+        cost(&[generic(2), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::GrantKeyword { what: target_filtered(R::Permanent), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            make(1, servo),
+        ]),
+    )
+}
+
+/// Tidy Conclusion — {3}{B}{B} instant. Destroy target creature. You gain 1
+/// life for each artifact you control.
+pub fn tidy_conclusion() -> CardDefinition {
+    spell(
+        "Tidy Conclusion",
+        cost(&[generic(3), b(), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)))),
+            },
+        ]),
+    )
+}
+
+/// Resourceful Return — {1}{B} sorcery. Return target creature card from your
+/// graveyard to your hand. If you control an artifact, draw a card.
+pub fn resourceful_return() -> CardDefinition {
+    spell(
+        "Resourceful Return",
+        cost(&[generic(1), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Creature.and(R::InYourGraveyard)), to: ZoneDest::Hand(PlayerRef::You) },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou))),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Alabaster Kirin — {3}{W} 2/3 Kirin. Flying, vigilance.
+pub fn alabaster_kirin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        ..creature("Alabaster Kirin", cost(&[generic(3), w()]), vec![CreatureType::Kirin], 2, 3)
+    }
+}
+
+/// Angelheart Protector — {2}{W} 3/2 Human Cleric. When it enters, target
+/// creature you control gains indestructible until end of turn.
+pub fn angelheart_protector() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            keyword: Keyword::Indestructible,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Angelheart Protector", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Cleric], 3, 2)
+    }
+}
+
+/// Beloved Princess — {W} 1/1 Human Noble. Lifelink. Can't be blocked by
+/// creatures with power 3 or greater.
+pub fn beloved_princess() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink, Keyword::CantBeBlockedBy(Box::new(R::PowerAtLeast(3)))],
+        ..creature("Beloved Princess", cost(&[w()]), vec![CreatureType::Human, CreatureType::Noble], 1, 1)
+    }
+}
+
+/// Cloudseeder — {1}{U} 1/1 flying Faerie Spellshaper. {U}, {T}, discard a
+/// card: create a 1/1 blue flying Faerie named Cloud Sprite that can block
+/// only creatures with flying.
+pub fn cloudseeder() -> CardDefinition {
+    let sprite = TokenDefinition {
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        ..token("Cloud Sprite", 1, 1, vec![Color::Blue], vec![CreatureType::Faerie])
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: make(1, sprite),
+            ..Default::default()
+        }],
+        ..creature("Cloudseeder", cost(&[generic(1), u()]), vec![CreatureType::Faerie, CreatureType::Spellshaper], 1, 1)
+    }
+}
+
+/// Eternal Isolation — {1}{W} sorcery. Put target creature with power 4 or
+/// greater on the bottom of its owner's library.
+pub fn eternal_isolation() -> CardDefinition {
+    spell(
+        "Eternal Isolation",
+        cost(&[generic(1), w()]),
+        CardType::Sorcery,
+        Effect::Move {
+            what: target_filtered(R::Creature.and(R::PowerAtLeast(4))),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
+        },
+    )
+}
+
+/// False Defeat — {3}{W} sorcery. Return target creature card from your
+/// graveyard to the battlefield.
+pub fn false_defeat() -> CardDefinition {
+    spell(
+        "False Defeat",
+        cost(&[generic(3), w()]),
+        CardType::Sorcery,
+        Effect::Move {
+            what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    )
+}
+
+/// Darling of the Masses — {2}{G}{W} 2/4 Elf Citizen. Other Citizens you
+/// control get +1/+0. Whenever it attacks, create a 1/1 green and white
+/// Citizen.
+pub fn darling_of_the_masses() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other Citizens you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Citizen).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![on_attack(make(
+            1,
+            token("Citizen", 1, 1, vec![Color::Green, Color::White], vec![CreatureType::Citizen]),
+        ))],
+        ..creature("Darling of the Masses", cost(&[generic(2), g(), w()]), vec![CreatureType::Elf, CreatureType::Citizen], 2, 4)
+    }
+}
+
+/// Elderleaf Mentor — {3}{G} 3/2 Elf Warrior. When it enters, create a 1/1
+/// green Elf Warrior.
+pub fn elderleaf_mentor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(make(
+            1,
+            token("Elf Warrior", 1, 1, vec![Color::Green], vec![CreatureType::Elf, CreatureType::Warrior]),
+        ))],
+        ..creature("Elderleaf Mentor", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 3, 2)
+    }
+}
+
+/// Elturgard Ranger — {4}{G} 4/1 Human Elf Ranger. Reach. When it enters,
+/// create a 2/2 green Wolf.
+pub fn elturgard_ranger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(make(1, token("Wolf", 2, 2, vec![Color::Green], vec![CreatureType::Wolf])))],
+        ..creature(
+            "Elturgard Ranger",
+            cost(&[generic(4), g()]),
+            vec![CreatureType::Human, CreatureType::Elf, CreatureType::Ranger],
+            4,
+            1,
+        )
+    }
+}
+
+/// Ledev Champion — {1}{G}{W} 2/2 Elf Knight. Whenever it attacks, you may tap
+/// any number of untapped creatures you control; it gets +1/+1 for each.
+/// {3}{G}{W}: create a 1/1 white Soldier with lifelink.
+pub fn ledev_champion() -> CardDefinition {
+    let soldier = TokenDefinition {
+        keywords: vec![Keyword::Lifelink],
+        ..token("Soldier", 1, 1, vec![Color::White], vec![CreatureType::Soldier])
+    };
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::TapAnyNumberThenPumpPerTapped {
+            filter: R::Creature.and(R::ControlledByYou).and(R::Untapped).and(R::OtherThanSource),
+            power: 1,
+            toughness: 1,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g(), w()]),
+            effect: make(1, soldier),
+            ..Default::default()
+        }],
+        ..creature("Ledev Champion", cost(&[generic(1), g(), w()]), vec![CreatureType::Elf, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Oakhame Ranger // Bring Back — {G/W}x4 2/2 Elf Knight Ranger. {T}:
+/// creatures you control get +1/+1 until end of turn. Adventure {G/W}x4
+/// sorcery: create two 1/1 white Humans.
+pub fn oakhame_ranger() -> CardDefinition {
+    let gw = || hybrid(Color::Green, Color::White);
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: pump(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), 1, 1),
+            ..Default::default()
+        }],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Bring Back",
+            cost: cost(&[gw(), gw(), gw(), gw()]),
+            card_types: vec![CardType::Sorcery],
+            effect: make(2, token("Human", 1, 1, vec![Color::White], vec![CreatureType::Human])),
+        })),
+        ..creature(
+            "Oakhame Ranger",
+            cost(&[gw(), gw(), gw(), gw()]),
+            vec![CreatureType::Elf, CreatureType::Knight, CreatureType::Ranger],
+            2,
+            2,
+        )
+    }
+}
+
+/// Gilt-Leaf Ambush — {2}{G} Kindred instant — Elf. Create two 1/1 green Elf
+/// Warriors. Clash with an opponent; if you win, those creatures gain
+/// deathtouch until end of turn.
+pub fn gilt_leaf_ambush() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Kindred, CardType::Instant],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        ..spell(
+            "Gilt-Leaf Ambush",
+            cost(&[generic(2), g()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                make(2, token("Elf Warrior", 1, 1, vec![Color::Green], vec![CreatureType::Elf, CreatureType::Warrior])),
+                Effect::ClashWithOpponent {
+                    on_win: Box::new(Effect::GrantKeyword {
+                        what: Selector::LastCreatedTokens,
+                        keyword: Keyword::Deathtouch,
+                        duration: Duration::EndOfTurn,
+                    }),
+                    on_lose: None,
+                    with: None,
+                },
+            ]),
+        )
+    }
+}
+
+/// Brightwood Tracker — {3}{G} 2/4 Elf Scout. {5}{G}, {T}: look at the top
+/// four; you may put a creature card from among them into your hand; the rest
+/// go to the bottom in a random order.
+pub fn brightwood_tracker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), g()]),
+            tap_cost: true,
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                rest_bottom_random: true,
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                take: Some(Value::ONE),
+                pick_filter: Some(R::Creature),
+                optional: true,
+                ..Default::default()
+            })),
+            ..Default::default()
+        }],
+        ..creature("Brightwood Tracker", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Scout], 2, 4)
+    }
+}
+
+/// Safewright Cavalry — {3}{G} 4/4 Elf Warrior. Can't be blocked by more than
+/// one creature. {5}: target Elf you control gets +2/+2 until end of turn.
+pub fn safewright_cavalry() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedByMoreThanOne],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            effect: pump(target_filtered(R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou)), 2, 2),
+            ..Default::default()
+        }],
+        ..creature("Safewright Cavalry", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 4, 4)
+    }
+}
+
+/// Stoic Grove-Guide — {4}{B/G} 5/4 Elf Druid. {1}{B/G}, exile it from your
+/// graveyard: create a 2/2 black and green Elf. Activate only as a sorcery.
+pub fn stoic_grove_guide() -> CardDefinition {
+    let bg = || hybrid(Color::Black, Color::Green);
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), bg()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: make(1, token("Elf", 2, 2, vec![Color::Black, Color::Green], vec![CreatureType::Elf])),
+            ..Default::default()
+        }],
+        ..creature("Stoic Grove-Guide", cost(&[generic(4), bg()]), vec![CreatureType::Elf, CreatureType::Druid], 5, 4)
+    }
+}
+
+/// Requiting Hex — {B} instant. As an additional cost you may blight 1.
+/// Destroy target creature with mana value 2 or less; if the cost was paid,
+/// you gain 2 life.
+pub fn requiting_hex() -> CardDefinition {
+    CardDefinition {
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::Blight { n: 1 }),
+        ..spell(
+            "Requiting Hex",
+            cost(&[b()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Creature.and(R::ManaValueAtMost(2))) },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Unforgiving Aim — {2}{G} instant. Choose one: destroy target creature with
+/// flying; destroy target enchantment; or create a 2/2 black and green Elf.
+pub fn unforgiving_aim() -> CardDefinition {
+    spell(
+        "Unforgiving Aim",
+        cost(&[generic(2), g()]),
+        CardType::Instant,
+        Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))) },
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+            make(1, token("Elf", 2, 2, vec![Color::Black, Color::Green], vec![CreatureType::Elf])),
+        ]),
+    )
+}
+
+/// Incorrigible Youths — {3}{R}{R} 4/3 Vampire. Haste. Madness {2}{R}.
+pub fn incorrigible_youths() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste, Keyword::Madness(cost(&[generic(2), r()]))],
+        ..creature("Incorrigible Youths", cost(&[generic(3), r(), r()]), vec![CreatureType::Vampire], 4, 3)
+    }
+}
+
+/// Insatiable Gorgers — {2}{R}{R} 5/3 Vampire Berserker. Attacks each combat
+/// if able. Madness {3}{R}.
+pub fn insatiable_gorgers() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MustAttack, Keyword::Madness(cost(&[generic(3), r()]))],
+        ..creature("Insatiable Gorgers", cost(&[generic(2), r(), r()]), vec![CreatureType::Vampire, CreatureType::Berserker], 5, 3)
+    }
+}
+
+/// Abandon Reason — {2}{R} instant. Up to two target creatures each get +1/+0
+/// and gain first strike until end of turn. Madness {1}{R}.
+pub fn abandon_reason() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[generic(1), r()]))],
+        ..spell(
+            "Abandon Reason",
+            cost(&[generic(2), r()]),
+            CardType::Instant,
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::Seq(vec![
+                    pump(Selector::Target(0), 1, 0),
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+                ])),
+            },
+        )
+    }
+}
+
+/// Distemper of the Blood — {1}{R} sorcery. Target creature gets +2/+2 and
+/// gains trample until end of turn. Madness {R}.
+pub fn distemper_of_the_blood() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[r()]))],
+        ..spell(
+            "Distemper of the Blood",
+            cost(&[generic(1), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                pump(target_filtered(R::Creature), 2, 2),
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+        )
+    }
+}
+
+/// Advanced Stitchwing — {3}{U}{U} 3/4 flying Zombie Horror. {2}{U}, discard
+/// two cards: return it from your graveyard to the battlefield tapped.
+pub fn advanced_stitchwing() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![from_gy_return_tapped(cost(&[generic(2), u()]))],
+        ..creature("Advanced Stitchwing", cost(&[generic(3), u(), u()]), vec![CreatureType::Zombie, CreatureType::Horror], 3, 4)
+    }
+}
+
+/// Stitchwing Skaab — {3}{U} 3/1 flying Zombie Horror. {1}{U}, discard two
+/// cards: return it from your graveyard to the battlefield tapped.
+pub fn stitchwing_skaab() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![from_gy_return_tapped(cost(&[generic(1), u()]))],
+        ..creature("Stitchwing Skaab", cost(&[generic(3), u()]), vec![CreatureType::Zombie, CreatureType::Horror], 3, 1)
+    }
+}
+
+/// Diver Skaab — {3}{U}{U} 3/5 Zombie. Exploit. When it exploits a creature,
+/// target creature's owner puts it on the top or bottom of their library.
+pub fn diver_skaab() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::exploit(Effect::Move {
+            what: target_filtered(R::Creature),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::OwnerChoice },
+        })],
+        ..creature("Diver Skaab", cost(&[generic(3), u(), u()]), vec![CreatureType::Zombie], 3, 5)
+    }
+}
+
+/// Lich Lord of Unx — {1}{U}{B} 2/2 Zombie Wizard. {U}{B}, {T}: create a 1/1
+/// blue and black Zombie Wizard. {U}{U}{B}{B}: target player loses X life and
+/// mills X cards (X = Zombies you control).
+pub fn lich_lord_of_unx() -> CardDefinition {
+    let zombies = || Value::CountOf(Box::new(Selector::EachPermanent(R::HasCreatureType(CreatureType::Zombie).and(R::ControlledByYou))));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[u(), b()]),
+                tap_cost: true,
+                effect: make(1, token("Zombie Wizard", 1, 1, vec![Color::Blue, Color::Black], vec![CreatureType::Zombie, CreatureType::Wizard])),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u(), u(), b(), b()]),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife { who: target_filtered(R::Player), amount: zombies() },
+                    Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: zombies() },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..creature("Lich Lord of Unx", cost(&[generic(1), u(), b()]), vec![CreatureType::Zombie, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Stitched Drake — {1}{U}{U} 3/4 flying Zombie Drake. As an additional cost,
+/// exile a creature card from your graveyard.
+pub fn stitched_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::ExileFromGraveyard { filter: R::Creature, count: 1 }],
+        ..creature("Stitched Drake", cost(&[generic(1), u(), u()]), vec![CreatureType::Zombie, CreatureType::Drake], 3, 4)
+    }
+}
+
+/// Wight — {1}{B} 3/2 Zombie Soldier. Enters tapped. Life Drain — whenever a
+/// creature dealt damage by it this turn dies, create a tapped 2/2 black
+/// Zombie and exile that card.
+pub fn wight() -> CardDefinition {
+    let zombie = TokenDefinition { tapped: true, ..token("Zombie", 2, 2, vec![Color::Black], vec![CreatureType::Zombie]) };
+    CardDefinition {
+        static_abilities: vec![crate::sets::enters_tapped()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::DamagedBySourceThisTurn,
+            }),
+            effect: Effect::Seq(vec![make(1, zombie), Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile }]),
+        }],
+        ..creature("Wight", cost(&[generic(1), b()]), vec![CreatureType::Zombie, CreatureType::Soldier], 3, 2)
+    }
+}

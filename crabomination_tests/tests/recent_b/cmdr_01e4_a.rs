@@ -3174,3 +3174,123 @@ fn lat_nam_adept_grows_on_the_second_draw() {
     cast(&mut g, study, None);
     assert_eq!(pt(&g, adept), (4, 4));
 }
+
+/// Tidy Conclusion gains a life per artifact; Resourceful Return draws with
+/// an artifact out.
+#[test]
+fn tidy_conclusion_and_resourceful_return_count_artifacts() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let tidy = g.add_card_to_hand(0, catalog::tidy_conclusion());
+    cast(&mut g, tidy, Some(Target::Permanent(bear)));
+    assert_eq!(g.players[0].life, life + 2);
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let ret = g.add_card_to_hand(0, catalog::resourceful_return());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, ret, Some(Target::Permanent(giant)));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "the Giant back plus a card");
+}
+
+/// Darling of the Masses makes a Citizen per attack and pumps the others.
+#[test]
+fn darling_of_the_masses_rallies_citizens() {
+    let mut g = pod(2);
+    let darling = g.add_card_to_battlefield(0, catalog::darling_of_the_masses());
+    attack_with(&mut g, &[darling]);
+    let citizen = g.battlefield.iter().find(|c| c.definition.name == "Citizen").expect("a Citizen").id;
+    assert_eq!(pt(&g, citizen), (2, 1));
+    assert_eq!(pt(&g, darling), (2, 4), "only the others");
+}
+
+/// Requiting Hex gains 2 life only when blighted.
+#[test]
+fn requiting_hex_rewards_the_blight() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hex = g.add_card_to_hand(0, catalog::requiting_hex());
+    let life = g.players[0].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: hex,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("blighted");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Wight turns what it kills into a tapped Zombie and exiles the corpse.
+#[test]
+fn wight_drains_its_victims() {
+    let mut g = pod(2);
+    let wight = g.add_card_to_battlefield(0, catalog::wight());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(wight);
+    let fight = g.add_card_to_hand(0, catalog::aggressive_instinct());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fight,
+        target: Some(Target::Permanent(wight)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "the dead Bears exiled");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie" && c.controller == 0 && c.tapped));
+}
+
+/// Lich Lord of Unx drains and mills by the Zombie count.
+#[test]
+fn lich_lord_of_unx_counts_zombies() {
+    let mut g = pod(2);
+    let lord = g.add_card_to_battlefield(0, catalog::lich_lord_of_unx());
+    g.add_card_to_battlefield(0, catalog::wight());
+    let (life, library) = (g.players[1].life, g.players[1].library.len());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lord,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("drain");
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[1].library.len()), (life - 2, library - 2));
+}
+
+/// Stitchwing Skaab climbs back from the graveyard for two discards.
+#[test]
+fn stitchwing_skaab_returns_tapped() {
+    let mut g = pod(2);
+    let skaab = g.add_card_to_graveyard(0, catalog::stitchwing_skaab());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, skaab, 0).expect("return");
+    assert!(g.battlefield_find(skaab).is_some_and(|c| c.tapped));
+    assert!(g.players[0].hand.is_empty());
+}
+
+/// Cloudseeder's Cloud Sprite blocks only flyers.
+#[test]
+fn cloudseeder_makes_a_cloud_sprite() {
+    let mut g = pod(2);
+    let seeder = g.add_card_to_battlefield(0, catalog::cloudseeder());
+    g.clear_sickness(seeder);
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, seeder, 0).expect("seed");
+    let sprite = g.battlefield.iter().find(|c| c.definition.name == "Cloud Sprite").expect("token");
+    assert!(sprite.definition.keywords.contains(&Keyword::CanBlockOnlyFlying));
+}
