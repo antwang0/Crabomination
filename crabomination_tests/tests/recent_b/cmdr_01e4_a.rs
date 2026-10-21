@@ -3065,3 +3065,112 @@ fn dredging_claw_follows_the_dead() {
     assert!(g.battlefield_find(giant).is_some());
     assert_eq!(g.battlefield_find(claw).unwrap().attached_to, Some(giant));
 }
+
+/// Centaur Peacemaker gives every player 4 life.
+#[test]
+fn centaur_peacemaker_feeds_the_table() {
+    let mut g = pod(3);
+    let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let centaur = g.add_card_to_hand(0, catalog::centaur_peacemaker());
+    cast(&mut g, centaur, None);
+    assert!(g.players.iter().zip(&before).all(|(p, b)| p.life == b + 4));
+}
+
+/// Academy Drake enters with two counters only when kicked.
+#[test]
+fn academy_drake_kicked_grows() {
+    let mut g = pod(2);
+    let drake = g.add_card_to_hand(0, catalog::academy_drake());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: drake,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, drake), (4, 4));
+}
+
+/// Halo Scarab trades itself from the graveyard for a Treasure.
+#[test]
+fn halo_scarab_leaves_a_treasure() {
+    let mut g = pod(2);
+    let scarab = g.add_card_to_graveyard(0, catalog::halo_scarab());
+    activate(&mut g, scarab, 0).expect("from the graveyard");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"));
+    assert!(g.exile.iter().any(|c| c.id == scarab));
+}
+
+/// Sea Hag's arrival takes 4 power off each opposing creature.
+#[test]
+fn sea_hag_softens_the_opposition() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let hag = g.add_card_to_hand(0, catalog::sea_hag());
+    cast(&mut g, hag, None);
+    assert_eq!((pt(&g, giant), pt(&g, mine)), ((-1, 3), (3, 3)));
+}
+
+/// Briber's Purse spends a gem counter to keep a creature home.
+#[test]
+fn bribers_purse_spends_gems() {
+    let mut g = pod(2);
+    let purse = g.add_card_to_hand(0, catalog::bribers_purse());
+    cast_x(&mut g, purse, None, Some(2));
+    assert_eq!(g.battlefield_find(purse).unwrap().counter_count(CounterType::Gem), 2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: purse,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("bribe");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(purse).unwrap().counter_count(CounterType::Gem), 1);
+    let bear = g.computed_permanent(bear).unwrap();
+    assert!(bear.keywords().contains(&Keyword::CantAttack) && bear.keywords().contains(&Keyword::CantBlock));
+}
+
+/// Ent-Draught Basin's X must equal the target's power.
+#[test]
+fn ent_draught_basin_matches_power_to_x() {
+    let mut g = pod(2);
+    let basin = g.add_card_to_battlefield(0, catalog::ent_draught_basin());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let feed = |g: &mut GameState, t| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: basin,
+            ability_index: 0,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            x_value: Some(2),
+            mode: None,
+        })
+    };
+    assert!(feed(&mut g, giant).is_err(), "power 3 isn't X = 2");
+    feed(&mut g, bear).expect("power 2 is");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (3, 3));
+}
+
+/// Lat-Nam Adept grows on the second draw of a turn, not the first.
+#[test]
+fn lat_nam_adept_grows_on_the_second_draw() {
+    let mut g = pod(2);
+    let adept = g.add_card_to_battlefield(0, catalog::lat_nam_adept());
+    let study = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, study, None);
+    assert_eq!(pt(&g, adept), (4, 4));
+}

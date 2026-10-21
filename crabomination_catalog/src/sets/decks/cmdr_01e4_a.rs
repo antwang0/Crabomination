@@ -6724,3 +6724,541 @@ pub fn sacellum_godspeaker() -> CardDefinition {
         ..creature("Sacellum Godspeaker", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Druid], 2, 2)
     }
 }
+
+// ── Batch twenty-four (five-gap pair decks) ─────────────────────────────────
+
+fn second_draw() -> EventSpec {
+    EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+        .with_filter(Predicate::ValueEquals(Value::CardsDrawnThisTurn(PlayerRef::You), Value::Const(2)))
+        .once_per_turn()
+}
+
+fn on_attack(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect }
+}
+
+fn pump(what: Selector, p: i32, t: i32) -> Effect {
+    Effect::PumpPT { what, power: Value::Const(p), toughness: Value::Const(t), duration: Duration::EndOfTurn }
+}
+
+/// Centaur Peacemaker — {1}{G}{W} 3/3 Centaur Cleric. When it enters, each
+/// player gains 4 life.
+pub fn centaur_peacemaker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(4) })],
+        ..creature("Centaur Peacemaker", cost(&[generic(1), g(), w()]), vec![CreatureType::Centaur, CreatureType::Cleric], 3, 3)
+    }
+}
+
+/// Golden-Scale Aeronaut — {4}{W} 2/3 flying Dwarf Pilot. Backup 1.
+pub fn golden_scale_aeronaut() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::backup(1, vec![Keyword::Flying])],
+        ..creature("Golden-Scale Aeronaut", cost(&[generic(4), w()]), vec![CreatureType::Dwarf, CreatureType::Pilot], 2, 3)
+    }
+}
+
+/// Oakshade Stalker // Moonlit Ambusher — {2}{G} 3/3 Human Ranger Werewolf;
+/// castable with flash for {2} more. Daybound. Back: a 6/3 nightbound
+/// Werewolf.
+pub fn oakshade_stalker() -> CardDefinition {
+    let ambusher = CardDefinition {
+        name: "Moonlit Ambusher",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 6,
+        toughness: 3,
+        keywords: vec![Keyword::Nightbound],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Daybound],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(4), g()]),
+            flash: true,
+            ..Default::default()
+        }),
+        back_face: Some(Box::new(ambusher)),
+        ..creature(
+            "Oakshade Stalker",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Human, CreatureType::Ranger, CreatureType::Werewolf],
+            3,
+            3,
+        )
+    }
+}
+
+/// Rosemane Centaur — {3}{G}{W} 4/4 Centaur Soldier. Convoke, vigilance.
+pub fn rosemane_centaur() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke, Keyword::Vigilance],
+        ..creature("Rosemane Centaur", cost(&[generic(3), g(), w()]), vec![CreatureType::Centaur, CreatureType::Soldier], 4, 4)
+    }
+}
+
+/// Vernadi Shieldmate — {1}{G/W} 2/2 Human Soldier. Vigilance.
+pub fn vernadi_shieldmate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        ..creature(
+            "Vernadi Shieldmate",
+            cost(&[generic(1), hybrid(Color::Green, Color::White)]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            2,
+            2,
+        )
+    }
+}
+
+/// Paladin's Shield — {1}{W} Equipment with flash. When it enters, attach it
+/// to target creature you control. Equipped creature gets +0/+2. Equip {3}.
+pub fn paladins_shield() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(3)]))],
+        ..equipment(
+            "Paladin's Shield",
+            cost(&[generic(1), w()]),
+            cost(&[generic(3)]),
+            EquipBonus { toughness: 2, ..Default::default() },
+        )
+    }
+}
+
+/// Charging Paladin — {2}{W} 2/2 Human Knight. Whenever it attacks, it gets
+/// +0/+3 until end of turn.
+pub fn charging_paladin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(pump(Selector::This, 0, 3))],
+        ..creature("Charging Paladin", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Ledev Guardian — {3}{W} 2/4 Human Knight. Convoke.
+pub fn ledev_guardian() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke],
+        ..creature("Ledev Guardian", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 4)
+    }
+}
+
+/// Blessed Alliance — {1}{W} instant, escalate {2}. Choose one or more: target
+/// player gains 4 life; untap up to two target creatures (one here —
+/// INCOMPLETE_CARDS); target opponent sacrifices an attacking creature.
+pub fn blessed_alliance() -> CardDefinition {
+    CardDefinition {
+        escalate: Some(crate::card::Escalate::Mana(cost(&[generic(2)]))),
+        ..spell(
+            "Blessed Alliance",
+            cost(&[generic(1), w()]),
+            CardType::Instant,
+            Effect::ChooseModesCast {
+                min: 1,
+                max: 3,
+                allow_repeats: false,
+                modes: vec![
+                    Effect::GainLife { who: target_filtered(R::Player), amount: Value::Const(4) },
+                    Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+                    Effect::Sacrifice {
+                        who: target_filtered(R::OpponentPlayer),
+                        count: Value::ONE,
+                        filter: R::Creature.and(R::IsAttacking),
+                    },
+                ],
+            },
+        )
+    }
+}
+
+/// Reknit — {1}{G/W} instant. Regenerate target permanent.
+pub fn reknit() -> CardDefinition {
+    spell(
+        "Reknit",
+        cost(&[generic(1), hybrid(Color::Green, Color::White)]),
+        CardType::Instant,
+        Effect::Regenerate { what: target_filtered(R::Permanent) },
+    )
+}
+
+/// Staff of the Flame Magus — {3} artifact. Whenever you cast a red spell or a
+/// Mountain you control enters, you gain 1 life.
+pub fn staff_of_the_flame_magus() -> CardDefinition {
+    let gain = || Effect::GainLife { who: Selector::You, amount: Value::ONE };
+    let source_is = |kind: EventKind, filter: R| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter }),
+        effect: gain(),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            source_is(EventKind::SpellCast, R::HasColor(Color::Red)),
+            source_is(EventKind::EntersBattlefield, R::HasLandType(LandType::Mountain)),
+        ],
+        ..spell("Staff of the Flame Magus", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Dawning Angel — {4}{W} 3/2 flying Angel. When it enters, you gain 4 life.
+pub fn dawning_angel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(4) })],
+        ..creature("Dawning Angel", cost(&[generic(4), w()]), vec![CreatureType::Angel], 3, 2)
+    }
+}
+
+/// Tavern Ruffian // Tavern Smasher — {3}{R} 2/5 Human Warrior Werewolf,
+/// daybound; back a 6/5 nightbound Werewolf.
+pub fn tavern_ruffian() -> CardDefinition {
+    let smasher = CardDefinition {
+        name: "Tavern Smasher",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Nightbound],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Daybound],
+        back_face: Some(Box::new(smasher)),
+        ..creature(
+            "Tavern Ruffian",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Werewolf],
+            2,
+            5,
+        )
+    }
+}
+
+/// Divine Favor — {1}{W} Aura. When it enters, you gain 3 life. Enchanted
+/// creature gets +1/+3.
+pub fn divine_favor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        ..aura("Divine Favor", cost(&[generic(1), w()]), Some(EquipBonus { power: 1, toughness: 3, ..Default::default() }))
+    }
+}
+
+/// Ainok Guide — {1}{G} 1/1 Dog Scout. When it enters, choose one: a +1/+1
+/// counter on it; or search for a basic land and put it on top.
+pub fn ainok_guide() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            },
+        ]))],
+        ..creature("Ainok Guide", cost(&[generic(1), g()]), vec![CreatureType::Dog, CreatureType::Scout], 1, 1)
+    }
+}
+
+/// Anointer of Champions — {W} 1/1 Human Cleric. {T}: target attacking
+/// creature gets +1/+1 until end of turn.
+pub fn anointer_of_champions() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: pump(target_filtered(R::Creature.and(R::IsAttacking)), 1, 1),
+            ..Default::default()
+        }],
+        ..creature("Anointer of Champions", cost(&[w()]), vec![CreatureType::Human, CreatureType::Cleric], 1, 1)
+    }
+}
+
+/// Orchard Spirit — {2}{G} 2/2 Spirit. Can't be blocked except by creatures
+/// with flying or reach.
+pub fn orchard_spirit() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(
+            R::HasKeyword(Keyword::Flying).or(R::HasKeyword(Keyword::Reach)),
+        ))],
+        ..creature("Orchard Spirit", cost(&[generic(2), g()]), vec![CreatureType::Spirit], 2, 2)
+    }
+}
+
+/// Glorious Charge — {1}{W} instant. Creatures you control get +1/+1 until
+/// end of turn.
+pub fn glorious_charge() -> CardDefinition {
+    spell(
+        "Glorious Charge",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        pump(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), 1, 1),
+    )
+}
+
+/// Seize the Initiative — {W} instant. Target creature gets +1/+1 and gains
+/// first strike until end of turn.
+pub fn seize_the_initiative() -> CardDefinition {
+    spell(
+        "Seize the Initiative",
+        cost(&[w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            pump(target_filtered(R::Creature), 1, 1),
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+        ]),
+    )
+}
+
+/// Academy Drake — {2}{U} 2/2 flying Drake. Kicker {4}; kicked, it enters
+/// with two +1/+1 counters.
+pub fn academy_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Kicker(cost(&[generic(4)]))],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SpellWasKicked),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::Const(0)),
+            },
+        )),
+        ..creature("Academy Drake", cost(&[generic(2), u()]), vec![CreatureType::Drake], 2, 2)
+    }
+}
+
+/// Drownyard Explorers — {3}{U} 2/4 Human Wizard. When it enters, investigate.
+pub fn drownyard_explorers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(crate::effect::shortcut::investigate(1))],
+        ..creature("Drownyard Explorers", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 4)
+    }
+}
+
+/// Halo Scarab — {2} 2/1 artifact creature Insect. {2}, exile it from your
+/// graveyard: create a Treasure token.
+pub fn halo_scarab() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: make(1, crabomination_base::tokens::treasure_token()),
+            ..Default::default()
+        }],
+        ..creature("Halo Scarab", cost(&[generic(2)]), vec![CreatureType::Insect], 2, 1)
+    }
+}
+
+/// Sea Hag // Aquatic Ingress — {4}{U} 3/5 Hag. When it enters, creatures
+/// your opponents control get -4/-0 until end of turn. Adventure {2}{U}
+/// instant: up to two target creatures each get +1/+0 and can't be blocked
+/// this turn.
+pub fn sea_hag() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(pump(Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)), -4, 0))],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Aquatic Ingress",
+            cost: cost(&[generic(2), u()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::Seq(vec![
+                    pump(Selector::Target(0), 1, 0),
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+                ])),
+            },
+        })),
+        ..creature("Sea Hag", cost(&[generic(4), u()]), vec![CreatureType::Hag], 3, 5)
+    }
+}
+
+/// Steelgaze Griffin — {4}{U} 2/4 flying Griffin. Whenever you draw your
+/// second card each turn, it gets +2/+0 until end of turn.
+pub fn steelgaze_griffin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility { event: second_draw(), effect: pump(Selector::This, 2, 0) }],
+        ..creature("Steelgaze Griffin", cost(&[generic(4), u()]), vec![CreatureType::Griffin], 2, 4)
+    }
+}
+
+/// Arcane Encyclopedia — {3} artifact. {3}, {T}: draw a card.
+pub fn arcane_encyclopedia() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Book], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..spell("Arcane Encyclopedia", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Briber's Purse — {X} artifact. Enters with X gem counters. {1}, {T}, remove
+/// a gem counter: target creature can't attack or block this turn.
+pub fn bribers_purse() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Gem, Value::XFromCost)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Gem, 1)),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::CantAttack, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..spell("Briber's Purse", cost(&[x()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Flight Spellbomb — {1} artifact. {T}, sacrifice it: target creature gains
+/// flying until end of turn. When it is put into a graveyard from the
+/// battlefield, you may pay {U}; if you do, draw a card.
+pub fn flight_spellbomb() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {U} to draw a card?".into(),
+                mana_cost: cost(&[u()]),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: None,
+            },
+        }],
+        ..spell("Flight Spellbomb", cost(&[generic(1)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Fountain of Ichor — {3} artifact. {T}: add one mana of any color. {3}: it
+/// becomes a 3/3 Dinosaur artifact creature until end of turn.
+pub fn fountain_of_ichor() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            crate::sets::tap_add_any_color(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Dinosaur],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..spell("Fountain of Ichor", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Cradle of Safety — {1}{U} Aura with flash, enchant creature you control.
+/// When it enters, enchanted creature gains hexproof until end of turn.
+/// Enchanted creature gets +1/+1.
+pub fn cradle_of_safety() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        })],
+        ..aura("Cradle of Safety", cost(&[generic(1), u()]), Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }))
+    }
+}
+
+/// Ent-Draught Basin — {2} artifact. {X}, {T}: put a +1/+1 counter on target
+/// creature with power X. Activate only as a sorcery.
+pub fn ent_draught_basin() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::PowerExactlyXFromCost)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..spell("Ent-Draught Basin", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Gatekeeper Gargoyle — {6} 3/3 flying artifact creature Gargoyle. It enters
+/// with a +1/+1 counter for each Gate you control.
+pub fn gatekeeper_gargoyle() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountOf(Box::new(Selector::EachPermanent(R::HasLandType(LandType::Gate).and(R::ControlledByYou)))),
+        )),
+        ..creature("Gatekeeper Gargoyle", cost(&[generic(6)]), vec![CreatureType::Gargoyle], 3, 3)
+    }
+}
+
+/// Lat-Nam Adept — {3}{U} 3/3 Human Wizard. Whenever you draw your second
+/// card each turn, put a +1/+1 counter on it.
+pub fn lat_nam_adept() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: second_draw(),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..creature("Lat-Nam Adept", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Tel-Jilad Defiance — {1}{G} instant. Target creature gains protection from
+/// artifacts until end of turn. Draw a card.
+pub fn tel_jilad_defiance() -> CardDefinition {
+    spell(
+        "Tel-Jilad Defiance",
+        cost(&[generic(1), g()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::ProtectionFromMatching(Box::new(R::Artifact)),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Wing Puncture — {G} instant. Target creature you control deals damage
+/// equal to its power to target creature with flying.
+pub fn wing_puncture() -> CardDefinition {
+    spell(
+        "Wing Puncture",
+        cost(&[g()]),
+        CardType::Instant,
+        Effect::DealDamageFrom {
+            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::HasKeyword(Keyword::Flying)) },
+            amount: Value::PowerOf(Box::new(Selector::Target(0))),
+        },
+    )
+}
