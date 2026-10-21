@@ -11157,6 +11157,11 @@ pub enum Effect {
     /// put it on the bottom of its owner's library instead" (Quintorius,
     /// Loremaster).
     BottomInsteadAfterGrantedCast { what: Selector },
+    /// Mark the may-play permission on each card `what` resolves to (chain
+    /// after `GrantMayPlay`): "if you do, it enters tapped" — a land played
+    /// or a permanent spell cast through the grant enters the battlefield
+    /// tapped (Kaldring, the Rimestaff; CR 614.1c).
+    EntersTappedAfterGrantedPlay { what: Selector },
     /// Mark the may-play permissions on each card `what` resolves to as one
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.

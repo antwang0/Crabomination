@@ -65,6 +65,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                enters_tapped: false,
             });
             card.granted_alt_cast_cost_eot =
                 Some(crate::mana::ManaCost::new(vec![crate::mana::generic(card.definition.cost.cmc())]));

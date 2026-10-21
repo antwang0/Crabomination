@@ -715,6 +715,7 @@ fn a_may_play_grant_lets_you_play_an_exiled_land() {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            enters_tapped: false,
         });
     g.perform_action(GameAction::PlayLand(land)).expect("play it from exile");
     assert!(g.battlefield.iter().any(|c| c.id == land), "the land is on the battlefield");

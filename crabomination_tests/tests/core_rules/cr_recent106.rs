@@ -1217,6 +1217,7 @@ fn cr_601_2f_a_paid_may_play_cast_is_taxed() {
             one_cast_group: None,
             bottom_after: false,
             undaunted: false,
+            enters_tapped: false,
         });
         c.granted_alt_cast_cost_eot = Some(ManaCost::new(vec![ManaSymbol::Colored(Color::Red)]));
     }

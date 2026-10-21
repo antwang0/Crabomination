@@ -39,6 +39,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        enters_tapped: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
                 }

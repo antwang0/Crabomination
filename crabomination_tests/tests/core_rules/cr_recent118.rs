@@ -1342,7 +1342,7 @@ fn cr_400_7_a_drawn_card_loses_its_play_permission() {
     let perm = crabomination::card::MayPlayPermission {
         cast_only: false, locks_further_casts: false, one_cast_group: None, player: 0, granted_turn: g.turn_number,
         duration: crabomination::card::MayPlayDuration::EndOfThisTurn, exile_after: false, miracle: false,
-        pay_life: false, bottom_after: false, undaunted: false,
+        pay_life: false, bottom_after: false, undaunted: false, enters_tapped: false,
     };
     g.players[0].library.iter_mut().find(|c| c.id == top).unwrap().may_play_until = Some(perm);
     g.draw_one(0, &mut Vec::new());
@@ -1379,7 +1379,7 @@ fn cr_400_7_a_graveyard_permission_does_not_follow_a_card_to_hand() {
     let perm = crabomination::card::MayPlayPermission {
         cast_only: true, locks_further_casts: false, one_cast_group: None, player: 0, granted_turn: g.turn_number,
         duration: crabomination::card::MayPlayDuration::EndOfThisTurn, exile_after: false, miracle: false,
-        pay_life: false, bottom_after: false, undaunted: false,
+        pay_life: false, bottom_after: false, undaunted: false, enters_tapped: false,
     };
     g.players[0].graveyard.iter_mut().find(|c| c.id == card).unwrap().may_play_until = Some(perm);
     let back = Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) };

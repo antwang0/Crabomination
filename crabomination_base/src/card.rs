@@ -1579,6 +1579,11 @@ pub struct MayPlayPermission {
     /// rides the grant, so it outlives the granting permanent.
     #[serde(default)]
     pub undaunted: bool,
+    /// "If you do, it enters tapped" (Kaldring, the Rimestaff): a land played
+    /// or a permanent spell cast through this grant enters tapped. Set by
+    /// `Effect::EntersTappedAfterGrantedPlay`.
+    #[serde(default)]
+    pub enters_tapped: bool,
 }
 
 /// The engine's bound on counters of one kind on one object. The rules set

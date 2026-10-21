@@ -5396,6 +5396,9 @@ impl GameState {
             if card.may_play_until.is_some() {
                 self.fire_played_this_way(card.id);
             }
+            if card.may_play_until.is_some_and(|m| m.enters_tapped) {
+                card.tapped = true;
+            }
             card.may_play_until = None;
             card.granted_alt_cast_cost_eot = None;
             // CR 305.1 / 110.2 — the player who plays a land controls it. An
@@ -5505,8 +5508,12 @@ impl GameState {
             };
             if unlimited { None } else { self.graveyard_land_play_grant(p, Some(card_id)) }
         };
-        let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
             .ok_or(GameError::NotALand(card_id))?;
+        // Kaldring — a land played through an enters-tapped grant.
+        if card.may_play_until.is_some_and(|m| m.enters_tapped && m.player == p) {
+            card.tapped = true;
+        }
         self.entered_from_graveyard_this_turn.insert(card_id);
         let mut events = self.place_land_card(p, card, false)?;
         self.note_left_graveyard(p, card_id, &mut events);
@@ -15215,6 +15222,11 @@ impl GameState {
         let locks_further_casts = card.may_play_until.is_some_and(|m| m.locks_further_casts);
         let played_this_way = card.may_play_until.is_some();
         let bottom_after = card.may_play_until.is_some_and(|m| m.bottom_after);
+        // Kaldring — "if you do, it enters tapped": the resolving permanent
+        // reads the same set Edgar's graveyard casts fill.
+        if card.may_play_until.is_some_and(|m| m.enters_tapped) {
+            self.graveyard_cast_enters_tapped.insert(card.id);
+        }
         if bottom_after != card.bottom_on_leave_stack {
             card.bottom_on_leave_stack = bottom_after;
         }
@@ -17481,6 +17493,7 @@ impl GameState {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            enters_tapped: false,
         });
         card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
             crate::mana::generic(card.definition.cost.cmc()),

@@ -4346,6 +4346,7 @@ impl GameState {
                     pay_life: false,
                     bottom_after: false,
                     undaunted: false,
+                    enters_tapped: false,
                 });
                 card.exiled_with = ctx.source;
                 events.push(GameEvent::PermanentExiled { card_id: card.id });
@@ -15708,6 +15709,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(cost);
                         self.step_bounded_may_play = true;
@@ -20673,6 +20675,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                         card.granted_alt_cast_cost_eot =
                             Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
@@ -25191,6 +25194,7 @@ impl GameState {
                                         pay_life: false,
                                         bottom_after: false,
                                         undaunted: false,
+                                        enters_tapped: false,
                                     });
                                     // No granted cost: the cast is free.
                                     c.granted_alt_cast_cost_eot = None;
@@ -29421,6 +29425,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: *grant == G::CreatureMayWhileExiled,
+                            enters_tapped: false,
                         });
                     }
                     // Gonti's "spend mana as though it were mana of any type"
@@ -31538,6 +31543,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        enters_tapped: false,
                     });
                     card.exiled_with = Some(source);
                     self.exile.push(card);
@@ -32759,6 +32765,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                     }
                 }
@@ -33156,6 +33163,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                         self.exile.push(*card);
                         events.push(GameEvent::PermanentExiled { card_id });
@@ -37272,6 +37280,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        enters_tapped: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
                     self.exile.push(card);
@@ -42585,6 +42594,7 @@ impl GameState {
                                 pay_life: false,
                                 bottom_after: false,
                                 undaunted: false,
+                                enters_tapped: false,
                             });
                             // Pay-to-cast rider (CR 609.4b): "any color" is
                             // the own cost with its coloured pips generic,
@@ -42664,6 +42674,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        enters_tapped: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
                 }
@@ -43367,6 +43378,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                     }
                 }
@@ -43714,6 +43726,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                         if *pay_own_cost {
                             // "Spend mana as though it were mana of any type"
@@ -43756,6 +43769,7 @@ impl GameState {
                             pay_life: true,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                     }
                 }
@@ -43793,6 +43807,18 @@ impl GameState {
             // Fixed to an `AddCounter` as its trigger was created; reached only
             // outside a counter event.
             Effect::AddCounterOfTriggerKind { .. } => Ok(()),
+
+            Effect::EntersTappedAfterGrantedPlay { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if let Some(card) = self.find_card_anywhere_mut(cid)
+                        && let Some(perm) = card.may_play_until.as_mut()
+                    {
+                        perm.enters_tapped = true;
+                    }
+                }
+                Ok(())
+            }
 
             Effect::BottomInsteadAfterGrantedCast { what } => {
                 for ent in self.resolve_selector(what, ctx) {
@@ -44290,6 +44316,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            enters_tapped: false,
                         });
                         if !*free {
                             card.granted_alt_cast_cost_eot = Some(real_cost);

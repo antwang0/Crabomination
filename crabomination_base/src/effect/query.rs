@@ -2381,6 +2381,7 @@ impl Effect {
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
+            | Effect::EntersTappedAfterGrantedPlay { what }
             | Effect::OneCastAmongGranted { what }
             | Effect::GrantedCastOnly { what }
             | Effect::OneCastPerTurnAmongGranted { what }
@@ -3508,6 +3509,7 @@ impl Effect {
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
+            | Effect::EntersTappedAfterGrantedPlay { what }
             | Effect::OneCastAmongGranted { what }
             | Effect::GrantedCastOnly { what }
             | Effect::OneCastPerTurnAmongGranted { what }

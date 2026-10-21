@@ -9566,6 +9566,7 @@ impl GameState {
                         one_cast_group: None,
                         bottom_after: false,
                         undaunted: false,
+                        enters_tapped: false,
                     });
                     // Cast paying its own cost (the alt cost shares the grant's lifetime).
                     c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());

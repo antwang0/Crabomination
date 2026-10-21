@@ -1038,3 +1038,42 @@ fn cr_717_6_draconian_gate_bot_opens_or_junks_an_attraction() {
     assert!(g.battlefield_find(booth).is_none());
     assert!(g.players[0].attraction_junkyard.iter().any(|c| c.id == booth));
 }
+
+/// "You may play that card this turn. If you do, it enters tapped" (CR
+/// 614.1c, Kaldring's grant): a land played and a creature cast from the
+/// graveyard through an enters-tapped grant both enter tapped.
+#[test]
+fn cr_614_1c_an_enters_tapped_grant_taps_the_land_and_the_creature() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    let land = g.add_card_to_graveyard(0, catalog::snow_covered_forest());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for id in [land, bears] {
+        let grant = Effect::Seq(vec![
+            Effect::GrantMayPlay {
+                what: Selector::Target(0),
+                duration: crabomination::card::MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+            Effect::EntersTappedAfterGrantedPlay { what: Selector::Target(0) },
+        ]);
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(id)), 0, 0);
+        g.resolve_effect(&grant, &ctx).unwrap();
+    }
+    g.perform_action(GameAction::PlayLandFromGraveyard(land)).expect("play");
+    assert!(g.battlefield_find(land).unwrap().tapped);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).unwrap().tapped);
+}

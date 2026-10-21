@@ -132,6 +132,7 @@ impl GameState {
                     one_cast_group: None,
                     bottom_after: false,
                     undaunted: false,
+                    enters_tapped: false,
                 });
                 c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());
             }
