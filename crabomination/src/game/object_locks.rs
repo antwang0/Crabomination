@@ -1,8 +1,9 @@
 //! Per-object "can't" locks (CR 614.17): "[it] can't have counters put on
 //! it" (`StaticEffect::CantHaveCountersPutOn`, Melira's Keepers, Blossombind)
 //! and "[it] can't become untapped" (`StaticEffect::CantBecomeUntapped`,
-//! Frozen in Ice, Blossombind). Each reads `This` on the object itself or
-//! `AttachedTo(This)` on an Aura / Equipment attached to it.
+//! Frozen in Ice, Blossombind). Each reads `This` on the object itself,
+//! `AttachedTo(This)` on an Aura / Equipment attached to it, or
+//! `ChosenPermanentOfSource` for the permanent its source remembered.
 
 use crate::card::CardId;
 use crate::effect::{Selector, StaticEffect};
@@ -13,6 +14,8 @@ fn reaches(applies_to: &Selector, src: &crate::card::CardInstance, cid: CardId) 
     match applies_to {
         Selector::This => src.id == cid,
         Selector::AttachedTo(inner) => matches!(**inner, Selector::This) && src.attached_to == Some(cid),
+        // Suncleanser's "for as long as this creature remains": its remembered target.
+        Selector::ChosenPermanentOfSource => src.chosen_permanent == Some(cid),
         _ => false,
     }
 }
@@ -28,7 +31,7 @@ impl GameState {
     /// The per-object half of [`Self::counters_locked_on`].
     pub(crate) fn counters_locked_on_object(&self, cid: CardId) -> bool {
         self.battlefield.iter().any(|c| {
-            (c.id == cid || c.attached_to == Some(cid))
+            (c.id == cid || c.attached_to == Some(cid) || c.chosen_permanent == Some(cid))
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(self.active_static(&sa.effect, c),
                         Some(StaticEffect::CantHaveCountersPutOn { applies_to }) if reaches(applies_to, c, cid))
@@ -50,7 +53,7 @@ impl GameState {
     /// untap step or by an effect.
     pub fn cant_become_untapped(&self, cid: CardId) -> bool {
         self.battlefield.iter().any(|c| {
-            (c.id == cid || c.attached_to == Some(cid))
+            (c.id == cid || c.attached_to == Some(cid) || c.chosen_permanent == Some(cid))
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(self.active_static(&sa.effect, c),
                         Some(StaticEffect::CantBecomeUntapped { applies_to }) if reaches(applies_to, c, cid))

@@ -4094,8 +4094,8 @@ pub enum StaticEffect {
     CountersCantBePlaced,
     /// CR 122.1 / 614.17 — "[it] can't have counters put on it": the per-object
     /// sibling of `CountersCantBePlaced`. `applies_to` is `This` (Melira's
-    /// Keepers) or `AttachedTo(This)` (Blossombind); read by
-    /// `GameState::counters_locked_on`.
+    /// Keepers), `AttachedTo(This)` (Blossombind) or `ChosenPermanentOfSource`
+    /// (Suncleanser); read by `GameState::counters_locked_on`.
     CantHaveCountersPutOn { applies_to: Selector },
     /// CR 701.26b / 614.17 — "[it] can't become untapped": neither the untap step nor
     /// an effect untaps it (Blossombind, Frozen in Ice). `applies_to` is
