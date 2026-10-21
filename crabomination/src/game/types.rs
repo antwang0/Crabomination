@@ -2183,7 +2183,8 @@ impl GameAction {
     /// The card a cast variant names when that variant runs the hand pipeline
     /// (`cast_spell_with_convoke`) and so can cast a commander from the
     /// command zone on a hop (CR 903.8): kicker, bestow, waterbend, convoke,
-    /// delve, a face-down morph / disguise cast. The command zone's own action (`CastFromCommandZone`: plain,
+    /// delve, a face-down morph / disguise cast, an Adventure (CR 715.3). The
+    /// command zone's own action (`CastFromCommandZone`: plain,
     /// alternative) and mutate have their own paths.
     pub(crate) fn command_zone_hop_card(&self) -> Option<CardId> {
         use GameAction as A;
@@ -2196,7 +2197,8 @@ impl GameAction {
             | A::CastSpellConvoke { card_id, .. }
             | A::CastSpellDelve { card_id, .. }
             | A::CastSpellConvokeDelve { card_id, .. }
-            | A::CastFaceDown { card_id } => Some(*card_id),
+            | A::CastFaceDown { card_id }
+            | A::CastAdventure { card_id, .. } => Some(*card_id),
             _ => None,
         }
     }

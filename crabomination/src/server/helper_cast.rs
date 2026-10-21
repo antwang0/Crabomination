@@ -163,4 +163,23 @@ mod tests {
         assert!(step.settled.is_some_and(|s| s.stack.iter().any(|i| matches!(i,
             crate::game::types::StackItem::Spell { card, .. } if card.id == hogaak))));
     }
+
+    /// CR 903.9a — the owner's "may": the bot keeps a commander that went on
+    /// an Adventure in exile (its creature is castable there, untaxed) and
+    /// sends any other exiled commander home.
+    #[test]
+    fn the_bot_keeps_an_adventured_commander_in_exile() {
+        use crate::decision::{Decision, DecisionAnswer};
+        let mut g = crate::game::game_with_format(crate::format::Format::Commander, 3);
+        let beorn = g.seat_commanders(0, vec![crate::catalog::beorn_reluctant_host()])[0];
+        let mut card = g.players[0].command.remove(0);
+        card.on_adventure = true;
+        g.exile.push(card);
+        let ask = Decision::CommanderRedirect { commander: beorn, would_be: crate::card::Zone::Exile };
+        let w = super::super::bot::EvalWeights::default();
+        let answer = |g: &GameState| super::super::bot::decide_pending_policy(g, 0, &w, &ask, false);
+        assert!(matches!(answer(&g), DecisionAnswer::Bool(false)));
+        g.exile.iter_mut().for_each(|c| c.on_adventure = false);
+        assert!(matches!(answer(&g), DecisionAnswer::Bool(true)));
+    }
 }

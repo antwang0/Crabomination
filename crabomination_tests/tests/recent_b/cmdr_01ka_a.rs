@@ -342,3 +342,31 @@ fn cr_903_8_a_morph_commander_is_cast_face_down_from_the_command_zone() {
     assert!(g.is_commander(akroma));
     assert_eq!(g.commander_cast_count.get(&akroma), Some(&2));
 }
+
+/// CR 903.8 + 715.3 — an Adventure commander casts its Adventure from the
+/// command zone, tax included; it resolves into exile on an adventure, and
+/// the creature cast from exile there is not a command-zone cast, so the tax
+/// count stays put (Beorn's Till and Tend {1}{G} + {2}, then Beorn {4}{G}).
+#[test]
+fn cr_903_8_an_adventure_commander_adventures_from_the_command_zone() {
+    let (mut g, beorn) = commander_pod(catalog::beorn_reluctant_host());
+    g.commander_cast_count.insert(beorn, 1);
+    g.players[0].mana_pool.add(Color::Green, 3);
+    let adventure = GameAction::CastAdventure { card_id: beorn, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(adventure.clone()).is_err(), "two plus a two tax is four");
+    assert!(g.players[0].command.iter().any(|c| c.id == beorn));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // CR 903.9a — its owner declines to send it home from exile.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.perform_action(adventure).expect("the Adventure from the command zone");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == beorn && c.on_adventure), "on an adventure");
+    assert_eq!(g.commander_cast_count.get(&beorn), Some(&2));
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventureCreature { card_id: beorn, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("the creature from exile, no tax");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(beorn).is_some());
+    assert_eq!(g.commander_cast_count.get(&beorn), Some(&2), "not a command-zone cast");
+}

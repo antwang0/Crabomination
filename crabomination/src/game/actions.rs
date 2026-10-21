@@ -9572,6 +9572,18 @@ impl GameState {
         } else {
             adv.cost.clone()
         };
+        // CR 903.8 — an Adventure cast from the command zone (on the
+        // dispatcher's hop) owes the commander tax, ahead of the discounts.
+        let commander_hop = self.casting_hop == Some((card_id, crate::game::HopFrom::CommandZone));
+        let mut tax_life = 0;
+        if commander_hop && let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
+            let (tax, life) = self.commander_tax_for(card);
+            cost.add_generic(tax);
+            tax_life = life;
+            if !self.cost_life_payable(p, self.players[p].life, tax_life) {
+                return Err(GameError::InsufficientLife);
+            }
+        }
         // CR 601.2f / 715.3 — the Adventure spell's taxes and discounts.
         if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
             let probe = super::cast_cost::half_spell_probe(card, Some(adv.name), &adv.cost, &adv.card_types);
@@ -9588,6 +9600,10 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
+        if commander_hop {
+            self.pay_life_cost(p, tax_life);
+            *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
+        }
         // A hop through the hand (Muldrotha, Chainer, a library-top grant) is
         // a cast from the card's real zone, not from the hand.
         card.cast_from_hand = self.casting_hop.is_none_or(|(id, _)| id != card_id);

@@ -3666,6 +3666,13 @@ fn decide_pending_policy_inner(
         return decide_pending_policy_inner(state, seat, w, &d, eval_modes);
     }
     match decision {
+        // CR 903.9a — the owner's "may": a commander on an Adventure stays in
+        // exile, where its creature half is cast with no tax (CR 715.4).
+        crate::decision::Decision::CommanderRedirect { commander, would_be: crate::card::Zone::Exile }
+            if state.exile.iter().any(|c| c.id == *commander && c.on_adventure) =>
+        {
+            crate::decision::DecisionAnswer::Bool(false)
+        }
         // Smarter mulligan than AutoDecider's blanket Keep:
         // ship hands that are flooded or screwed on lands.
         crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
@@ -9061,6 +9068,24 @@ pub(super) fn cast_candidates<'a>(
         castable.push((action, false));
     }
     });
+
+    // CR 903.8 + 715.3 — a commander's Adventure from the command zone (on
+    // the hand pipeline's hop), targeted or not: the creature is then cast
+    // from exile with no tax. Empty outside Commander.
+    for &id in &state.players[seat].commanders {
+        let Some(c) = state.players[seat].command.iter().find(|c| c.id == id) else { continue };
+        let Some(adv) = c.definition.has_adventure() else { continue };
+        let (target, additional_targets) = if adv.effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(&adv.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        castable.push((GameAction::CastAdventure { card_id: id, target, additional_targets, mode: None, x_value: None }, false));
+    }
 
     // An Adventure granted from the graveyard (Hildibrand Manderville): every
     // one, targeted or not — the card is otherwise dead there. Empty outside
