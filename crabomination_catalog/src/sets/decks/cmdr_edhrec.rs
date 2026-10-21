@@ -6047,7 +6047,7 @@ pub fn chakram_retriever() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::PartnerWith("Chakram Slinger".into())],
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search("Chakram Slinger"), TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::Untap { what: target_filtered(R::Creature), up_to: None },
         }],
