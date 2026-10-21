@@ -3712,3 +3712,46 @@ fn count_nefaria_costs_three_less_after_a_sacrifice() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(nefaria).is_some());
 }
+
+#[test]
+fn cr_702_26_teferi_timeless_voyager_keeps_them_out_through_your_next_turn() {
+    let mut g = pod(3);
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_timeless_voyager());
+    g.battlefield_find_mut(teferi).unwrap().add_counters(CounterType::Loyalty, 8);
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let other = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi,
+        ability_index: 2,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    })
+    .expect("−8");
+    drain_stack(&mut g);
+    assert!(g.phased_out.iter().any(|c| c.id == wurm), "the targeted opponent's creature phased out");
+    assert!(g.battlefield_find(other).is_some(), "the other opponent's didn't");
+    let mut pass_to = |g: &mut GameState, seat: usize, step: TurnStep| {
+        while !(g.active_player_idx == seat && g.step == step) {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    };
+    pass_to(&mut g, 1, TurnStep::Draw);
+    assert!(g.phased_out.iter().any(|c| c.id == wurm), "its controller's next untap step doesn't phase it in");
+    pass_to(&mut g, 0, TurnStep::PostCombatMain);
+    assert!(g.phased_out.iter().any(|c| c.id == wurm), "still out during your next turn");
+    pass_to(&mut g, 1, TurnStep::Draw);
+    assert!(g.battlefield_find(wurm).is_some(), "your next turn has ended: it phases in at its controller's untap");
+}
+
+#[test]
+fn niambi_fetches_teferi_from_the_graveyard_and_the_sentinel_reads_him() {
+    let mut g = pod(2);
+    let timebender = g.add_card_to_graveyard(0, catalog::teferi_timebender());
+    let sentinel = g.add_card_to_battlefield(0, catalog::teferis_sentinel());
+    assert_eq!(pt(&g, sentinel), (2, 6));
+    let niambi = g.add_card_to_hand(0, catalog::niambi_faithful_healer());
+    cast(&mut g, niambi, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == timebender), "Teferi, Timebender came back to hand");
+    cast(&mut g, timebender, None);
+    assert_eq!(pt(&g, sentinel), (6, 6), "+4/+0 with a Teferi planeswalker");
+}

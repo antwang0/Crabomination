@@ -18958,6 +18958,12 @@ static DECKS: &[Factory] = &[
     super::decks::nettlevine_blight,
     super::decks::stench_of_decay,
     super::decks::mephitic_vapors,
+    super::decks::niambi_faithful_healer,
+    super::decks::historian_of_zhalfir,
+    super::decks::teferis_protege,
+    super::decks::teferis_sentinel,
+    super::decks::teferis_wavecaster,
+    super::decks::teferi_timeless_voyager,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
     // cmdr_01r3_a (session 01R3xh4r)

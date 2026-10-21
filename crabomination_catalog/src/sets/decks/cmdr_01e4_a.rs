@@ -9263,3 +9263,128 @@ pub fn mephitic_vapors() -> CardDefinition {
         ]),
     )
 }
+
+/// "You may search your library and/or graveyard for a card named `name`,
+/// reveal it, and put it into your hand" (Niambi, Teferi's Wavecaster): the
+/// graveyard copy when there is one (no shuffle), else a library search.
+fn fetch_named_to_hand(name: &'static str) -> Effect {
+    let in_graveyard = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::HasName(name.into()) };
+    Effect::If {
+        cond: Predicate::SelectorExists(in_graveyard()),
+        then: Box::new(Effect::Move { what: Selector::one_of(in_graveyard()), to: ZoneDest::Hand(PlayerRef::You) }),
+        else_: Box::new(Effect::Search { who: PlayerRef::You, filter: R::HasName(name.into()), to: ZoneDest::Hand(PlayerRef::You) }),
+    }
+}
+
+fn you_control_a_teferi() -> Predicate {
+    Predicate::SelectorExists(mine(R::Planeswalker.and(R::HasPlaneswalkerType(PlaneswalkerSubtype::Teferi))))
+}
+
+/// Niambi, Faithful Healer — {1}{W}{U} legendary 2/2 Human Cleric. When it
+/// enters, you may fetch Teferi, Timebender from your library and/or
+/// graveyard.
+pub fn niambi_faithful_healer() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(fetch_named_to_hand("Teferi, Timebender"))],
+        ..creature("Niambi, Faithful Healer", cost(&[generic(1), w(), u()]), vec![CreatureType::Human, CreatureType::Cleric], 2, 2)
+    }
+}
+
+/// Historian of Zhalfir — {2}{U}{U} 3/3 Human Wizard. Whenever it attacks, if
+/// you control a Teferi planeswalker, draw a card (CR 603.4 intervening-if).
+pub fn historian_of_zhalfir() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(you_control_a_teferi()),
+            effect: Effect::If {
+                cond: you_control_a_teferi(),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Historian of Zhalfir", cost(&[generic(2), u(), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Teferi's Protege — {2}{U} 2/3 Human Wizard. {1}{U}, {T}: draw a card, then
+/// discard a card.
+pub fn teferis_protege() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Teferi's Protege", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Teferi's Sentinel — {5} 2/6 Golem artifact creature; +4/+0 as long as you
+/// control a Teferi planeswalker.
+pub fn teferis_sentinel() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control a Teferi planeswalker, this creature gets +4/+0.",
+            effect: StaticEffect::PumpSelfIf { condition: you_control_a_teferi(), power: 4, toughness: 0, keywords: vec![] },
+        }],
+        ..creature("Teferi's Sentinel", cost(&[generic(5)]), vec![CreatureType::Golem], 2, 6)
+    }
+}
+
+/// Teferi's Wavecaster — {3}{U}{U} 3/3 Merfolk Wizard with flash. When it
+/// enters, you may fetch Teferi, Timeless Voyager from your library and/or
+/// graveyard.
+pub fn teferis_wavecaster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(fetch_named_to_hand("Teferi, Timeless Voyager"))],
+        ..creature("Teferi's Wavecaster", cost(&[generic(3), u(), u()]), vec![CreatureType::Merfolk, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Teferi, Timeless Voyager — {4}{U}{U} Teferi, loyalty 4. +1: draw a card.
+/// −3: put target creature on top of its owner's library. −8: each creature
+/// target opponent controls phases out; until the end of your next turn,
+/// they can't phase in.
+pub fn teferi_timeless_voyager() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, Supertype};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    CardDefinition {
+        name: "Teferi, Timeless Voyager",
+        cost: cost(&[generic(4), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Teferi], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            loyalty(1, Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            loyalty(
+                -3,
+                Effect::Move {
+                    what: target_filtered(R::Creature),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        pos: LibraryPosition::Top,
+                    },
+                },
+            ),
+            loyalty(
+                -8,
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::PhaseOutUntilYourNextTurnEnds {
+                        what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
