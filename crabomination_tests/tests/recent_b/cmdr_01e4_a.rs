@@ -2407,3 +2407,32 @@ fn nevermaker_tops_a_permanent_as_it_leaves() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(g.players[1].library.first().map(|c| c.id), Some(bear), "on top");
 }
+
+/// CR 101.2 — Memory Vessel: everyone plays from their exiled seven, not
+/// their hand, until the Vessel's controller's next turn begins.
+#[test]
+fn memory_vessel_swaps_hands_for_the_top_seven() {
+    let mut g = pod(3);
+    let vessel = g.add_card_to_battlefield(0, catalog::memory_vessel());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    activate(&mut g, vessel, 0).expect("activate");
+    assert!(g.players.iter().all(|p| p.library.len() == 3), "seven exiled from each library");
+    g.priority.player_with_priority = 0;
+    assert!(
+        matches!(g.perform_action(GameAction::PlayLand(forest)), Err(GameError::SpellNameLocked)),
+        "the hand is locked"
+    );
+    let island = g.exile.iter().find(|c| c.owner == 0 && c.definition.name == "Island").unwrap().id;
+    g.perform_action(GameAction::PlayLand(island)).expect("an exiled card plays");
+    let pass_until = |g: &mut GameState, seat: usize| {
+        while g.active_player_idx != seat {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    };
+    pass_until(&mut g, 1);
+    assert_eq!(g.players[1].hand_locked_until_turn_of, Some(0), "still locked on seat 1's turn");
+    assert!(g.exile.iter().filter(|c| c.owner == 1).all(|c| c.may_play_until.is_some()));
+    pass_until(&mut g, 0);
+    assert!(g.players.iter().all(|p| p.hand_locked_until_turn_of.is_none()));
+    assert!(g.exile.iter().all(|c| c.may_play_until.is_none()), "the window closed");
+}

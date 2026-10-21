@@ -5383,3 +5383,35 @@ pub fn dimir_strandcatcher() -> CardDefinition {
         )
     }
 }
+
+/// Memory Vessel — {3}{R}{R} artifact. {T}, exile it: each player exiles the
+/// top seven cards of their library. Until your next turn, players may play
+/// the cards they exiled this way, and can't play cards from their hand.
+/// Activate only as a sorcery.
+pub fn memory_vessel() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::ClearLastMoved,
+                Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::EachPlayer, count: Value::Const(7) },
+                    to: ZoneDest::Exile,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::UntilSeatsNextTurn { seat: 0 },
+                    to_owner: true,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                Effect::PlayersCantPlayFromHandUntilYourNextTurn { who: PlayerRef::EachPlayer },
+            ]),
+            ..Default::default()
+        }],
+        ..spell("Memory Vessel", cost(&[generic(3), r(), r()]), CardType::Artifact, Effect::Noop)
+    }
+}
