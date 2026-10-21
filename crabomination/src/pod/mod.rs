@@ -29106,6 +29106,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELLYN_HARBREEZE_15_COMMANDERS,
             main: decks::ELLYN_HARBREEZE_15_MAIN,
         },
+        // Seat 4776: The Fifteenth Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 4776`.
+        PodDeck {
+            name: "The Fifteenth Doctor and K-9, Mark I (UR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_14_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_14_MAIN,
+        },
+        // Seat 4777: Brinelin, the Moon Kraken and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4777`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::BRINELIN_26_COMMANDERS,
+            main: decks::BRINELIN_26_MAIN,
+        },
+        // Seat 4778: Brinelin, the Moon Kraken and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4778`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Siani, Eye of the Storm (U)",
+            commanders: decks::BRINELIN_27_COMMANDERS,
+            main: decks::BRINELIN_27_MAIN,
+        },
+        // Seat 4779: Ishai, Ojutai Dragonspeaker and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4779`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Sidar Kondo of Jamuraa (WUG)",
+            commanders: decks::ISHAI_10_COMMANDERS,
+            main: decks::ISHAI_10_MAIN,
+        },
+        // Seat 4780: The War Doctor and Jo Grant's EDHREC average deck. `--pod-decks 4780`.
+        PodDeck {
+            name: "The War Doctor and Jo Grant (WR)",
+            commanders: decks::THE_WAR_DOCTOR_11_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_11_MAIN,
+        },
+        // Seat 4781: The War Doctor and Amy Pond's EDHREC average deck. `--pod-decks 4781`.
+        PodDeck {
+            name: "The War Doctor and Amy Pond (WR)",
+            commanders: decks::THE_WAR_DOCTOR_12_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_12_MAIN,
+        },
+        // Seat 4782: The Thirteenth Doctor and Rose Noble's EDHREC average deck. `--pod-decks 4782`.
+        PodDeck {
+            name: "The Thirteenth Doctor and Rose Noble (UG)",
+            commanders: decks::THE_THIRTEENTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_THIRTEENTH_DOCTOR_12_MAIN,
+        },
+        // Seat 4783: Alena, Kessig Trapper and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4783`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::ALENA_32_COMMANDERS,
+            main: decks::ALENA_32_MAIN,
+        },
     ]
 }
 
@@ -35782,6 +35830,14 @@ mod tests {
             ("Alharu, Solemn Ritualist and Sidar Kondo of Jamuraa", &[0x1CBB]),
             ("Radiant, Serra Archangel and Sidar Kondo of Jamuraa", &[0x1CBC]),
             ("Ellyn Harbreeze, Busybody and Sword Coast Sailor", &[0x1CBD]),
+            ("The Fifteenth Doctor and K-9, Mark I", &[0x1CBE]),
+            ("Brinelin, the Moon Kraken and Sidar Kondo of Jamuraa", &[0x1CBF]),
+            ("Brinelin, the Moon Kraken and Siani, Eye of the Storm", &[0x1CC0]),
+            ("Ishai, Ojutai Dragonspeaker and Sidar Kondo of Jamuraa", &[0x1CC1]),
+            ("The War Doctor and Jo Grant", &[0x1CC2]),
+            ("The War Doctor and Amy Pond", &[0x1CC3]),
+            ("The Thirteenth Doctor and Rose Noble", &[0x1CC4]),
+            ("Alena, Kessig Trapper and Ludevic, Necro-Alchemist", &[0x1CC5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
