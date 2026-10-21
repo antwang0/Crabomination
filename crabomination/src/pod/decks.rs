@@ -134821,3 +134821,57 @@ pub const ARMIX_22_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const DARGO_19_COMMANDERS: &[CardFactory] = &[dargo_the_shipwrecker, ludevic_necro_alchemist];
+
+/// **Dargo, the Shipwrecker and Ludevic, Necro-Alchemist**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 12 Islands + 15 Mountains = 98.
+/// Dargo, the Shipwrecker and Ludevic, Necro-Alchemist (EDHREC, fetched 2026-10-21).
+pub const DARGO_19_MAIN: &[CardFactory] = &[
+    arcane_signet, diamond_pick_axe, firdoch_core, repurposing_bay, seal_of_the_guildpact,
+    sol_ring, sword_of_once_and_future, talisman_of_creativity, the_everflowing_well,
+    command_tower, restless_spire, secluded_courtyard, shivan_reef, silverbluff_bridge,
+    steam_vents, sulfur_falls, swiftwater_cliffs, temple_of_epiphany, aegar_the_freezing_flame,
+    basalt_ravager, calamity_bearer, captain_lannery_storm, crystalline_giant, cyclone_summoner,
+    firbolg_flutist, frostfist_strider, galecaster_colossus, galvanic_giant, hamletback_goliath,
+    ingenious_prodigy, prophetic_titan, quakebringer, shatterskull_charger, skyraker_giant,
+    sunrise_sovereign, tectonic_giant, tempest_caller, thryx_the_sudden_storm, warchief_giant,
+    youthful_scholar, battle_of_frost_and_fire, curse_of_hospitality, frostcliff_siege,
+    invasion_of_the_giants, reflections_of_littjara, storm_the_vault, there_and_back_again,
+    beyeen_veil, displace, fact_or_fiction, filter_out, flame_of_anor, fling, frantic_search,
+    izzet_charm, lightning_bolt, march_of_swirling_mist, negate, riddles_in_the_dark,
+    rowdy_research, shore_up, spell_swindle, squash, alchemists_gambit, blasphemous_act,
+    destructive_tampering, glimpse_the_cosmos, grapeshot, lunar_insight, nibelheim_aflame,
+    seize_the_spotlight,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const ELIGETH_31_COMMANDERS: &[CardFactory] = &[eligeth_crossroads_augur, kediss_emberclaw_familiar];
+
+/// **Eligeth, Crossroads Augur and Kediss, Emberclaw Familiar**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 15 Islands + 12 Mountains = 98.
+/// Eligeth, Crossroads Augur and Kediss, Emberclaw Familiar (EDHREC, fetched 2026-10-21).
+pub const ELIGETH_31_MAIN: &[CardFactory] = &[
+    arcane_signet, fire_diamond, glasses_of_urza, izzet_signet, lens_of_clarity,
+    lightning_greaves, scroll_rack, sentinel_totem, sol_ring, talisman_of_creativity,
+    thought_vessel, wayfarers_bauble, witching_well, cascade_bluffs, command_tower,
+    izzet_boilerworks, mystic_sanctuary, reliquary_tower, scalding_tarn, steam_vents,
+    stormcarved_coast, swiftwater_cliffs, temple_of_epiphany, training_center, ahn_crop_crasher,
+    augury_owl, bronze_walrus, burning_prophet, cryptic_annelid, dune_mover,
+    geist_of_the_archives, llawan_cephalid_empress, master_of_predicaments, meldweb_curator,
+    myojin_of_cryptic_dreams, nimbus_champion, omenspeaker, orvar_the_all_form,
+    rootha_mercurial_artist, solemn_simulacrum, spellseeker, wall_of_runes, aqueous_form,
+    battle_of_frost_and_fire, jaces_sanctum, omen_of_the_sea, underworld_breach, verity_circle,
+    behold_the_multiverse, counterspell, deliberate, fact_or_fiction, hithlain_knots,
+    invoke_calamity, lightning_bolt, magma_jet, mana_short, negate, opt, telling_time,
+    thirst_for_discovery, crackle_with_power, foresee, mystic_speculation, preordain,
+    sakashimas_will, scrambleverse, serum_visions, tamiyos_epiphany, thieves_auction,
+    vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];

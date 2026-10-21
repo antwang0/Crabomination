@@ -29304,6 +29304,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARMIX_22_COMMANDERS,
             main: decks::ARMIX_22_MAIN,
         },
+        // Seat 4809: Dargo, the Shipwrecker and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4809`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::DARGO_19_COMMANDERS,
+            main: decks::DARGO_19_MAIN,
+        },
+        // Seat 4810: Eligeth, Crossroads Augur and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 4810`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Kediss, Emberclaw Familiar (UR)",
+            commanders: decks::ELIGETH_31_COMMANDERS,
+            main: decks::ELIGETH_31_MAIN,
+        },
     ]
 }
 
@@ -36013,6 +36025,8 @@ mod tests {
             ("Glacian, Powerstone Engineer and Kediss, Emberclaw Familiar", &[0x1CDC]),
             ("Armix, Filigree Thrasher and Radiant, Serra Archangel", &[0x1CDD]),
             ("Armix, Filigree Thrasher and Siani, Eye of the Storm", &[0x1CDE]),
+            ("Dargo, the Shipwrecker and Ludevic, Necro-Alchemist", &[0x1CDF]),
+            ("Eligeth, Crossroads Augur and Kediss, Emberclaw Familiar", &[0x1CE0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
