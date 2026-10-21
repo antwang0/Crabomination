@@ -1704,8 +1704,7 @@ fn library_top_is_index_zero() {
 #[test]
 fn printed_type_line_reads_only_shrink() {
     const CAPS: [(&str, usize); 7] = [
-        // 70: Animate Artifact's in-layer printed read (d5c8304d4, `mod.rs` gather).
-        ("definition.is_creature()", 70),
+        ("definition.is_creature()", 69),
         ("definition.subtypes.creature_types.contains", 22),
         ("definition.subtypes.land_types.contains", 10),
         ("definition.has_creature_type(", 2),
