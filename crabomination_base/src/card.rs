@@ -797,6 +797,8 @@ pub enum CounterType {
     Study,
     /// Book counters (Spell Satchel's magecraft stockpile).
     Book,
+    /// Gem counters (Briber's Purse).
+    Gem,
     /// Point counter — Strixhaven Stadium's combat-damage score. Ten or
     /// more on the Stadium ends the game for the damaged opponent.
     Point,
