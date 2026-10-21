@@ -96,6 +96,13 @@ def rust(page, fns, const, name, theme):
     missing = [m for m in main + cmd if m not in fns]
     if missing:
         sys.exit(f"missing: {missing}")
+    # EDHREC's average can come up a card or two short (The Fugitive Doctor
+    # and Peri Brown, 99): fill with its most common basic, and say so.
+    short = 100 - len(cmd) - len(main) - sum(basics.values())
+    if short > 0 and basics:
+        top = max(basics, key=basics.get)
+        basics[top] += short
+        theme += f" EDHREC's average is {short} short; {short} more {top} fill it."
     plural = lambda n, k: f"{k} {n}" + ("" if k == 1 or n.endswith("s") else "s")
     wrap = lambda t: textwrap.fill(t, 96, initial_indent="    ", subsequent_indent="    ")
     doc = textwrap.fill(f"{name} {theme}", 92, initial_indent="/// ", subsequent_indent="/// ")

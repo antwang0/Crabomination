@@ -28728,6 +28728,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AKROMA_21_COMMANDERS,
             main: decks::AKROMA_21_MAIN,
         },
+        // Seat 4713: Alora, Merry Thief and Sword Coast Sailor's EDHREC average deck. `--pod-decks 4713`.
+        PodDeck {
+            name: "Alora, Merry Thief and Sword Coast Sailor (U)",
+            commanders: decks::ALORA_20_COMMANDERS,
+            main: decks::ALORA_20_MAIN,
+        },
+        // Seat 4714: Anara, Wolvid Familiar and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4714`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::ANARA_26_COMMANDERS,
+            main: decks::ANARA_26_MAIN,
+        },
+        // Seat 4715: Ardenn, Intrepid Archaeologist and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4715`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Siani, Eye of the Storm (WU)",
+            commanders: decks::ARDENN_20_COMMANDERS,
+            main: decks::ARDENN_20_MAIN,
+        },
+        // Seat 4716: The Fugitive Doctor and Peri Brown's EDHREC average deck. `--pod-decks 4716`.
+        PodDeck {
+            name: "The Fugitive Doctor and Peri Brown (WRG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_17_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_17_MAIN,
+        },
+        // Seat 4717: Vhal, Candlekeep Researcher and Criminal Past's EDHREC average deck. `--pod-decks 4717`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Criminal Past (UB)",
+            commanders: decks::VHAL_18_COMMANDERS,
+            main: decks::VHAL_18_MAIN,
+        },
     ]
 }
 
@@ -35341,6 +35371,11 @@ mod tests {
             ("Halana, Kessig Ranger and Siani, Eye of the Storm", &[0x1C7C]),
             ("The Fifth Doctor and Amy Pond", &[0x1C7D]),
             ("Akroma, Vision of Ixidor and Dargo, the Shipwrecker", &[0x1C7E]),
+            ("Alora, Merry Thief and Sword Coast Sailor", &[0x1C7F]),
+            ("Anara, Wolvid Familiar and Sidar Kondo of Jamuraa", &[0x1C80]),
+            ("Ardenn, Intrepid Archaeologist and Siani, Eye of the Storm", &[0x1C81]),
+            ("The Fugitive Doctor and Peri Brown", &[0x1C82]),
+            ("Vhal, Candlekeep Researcher and Criminal Past", &[0x1C83]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
