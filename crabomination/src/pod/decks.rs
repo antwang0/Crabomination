@@ -132692,3 +132692,31 @@ pub const SIVRISS_16_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const VHAL_19_COMMANDERS: &[CardFactory] = &[vhal_candlekeep_researcher, guild_artisan];
+
+/// **Vhal, Candlekeep Researcher and Guild Artisan**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 16 Islands + 10 Mountains = 98.
+/// Vhal, Candlekeep Researcher and Guild Artisan (EDHREC, fetched 2026-10-21).
+pub const VHAL_19_MAIN: &[CardFactory] = &[
+    arcane_signet, buried_treasure, chromatic_sphere, colossus_hammer, conquerors_galleon,
+    fellwar_stone, golden_egg, guild_globe, horizon_stone, izzet_signet, kite_shield,
+    lightning_greaves, memory_vessel, mind_stone, mystic_forge, mystic_skull, nettlecyst,
+    prophetic_prism, slagwurm_armor, sol_ring, staff_of_compleation, sting_the_glinting_dagger,
+    sword_of_forge_and_frontier, tarrians_soulcleaver, command_tower, cori_mountain_monastery,
+    flamekin_village, frostboil_snarl, izzet_boilerworks, riverpyre_verge, shivan_reef,
+    spectacle_summit, spirebluff_canal, swiftwater_cliffs, corridor_monitor,
+    dire_fleet_daredevil, drafna_founder_of_lat_nam, eruth_tormented_prophet,
+    gale_waterdeep_prodigy, gogo_master_of_mimicry, gravestone_strider, imperial_recruiter,
+    jadzi_steward_of_fate, kelpie_guide, mystic_archaeologist, rograkh_son_of_rohgahh,
+    sage_of_the_beyond, scarecrow_guide, the_reality_chip, vizier_of_tumbling_sands, crab_umbra,
+    experimental_frenzy, freed_from_the_real, mirrormade, smoke, soothsaying, wizard_class,
+    an_offer_you_cant_refuse, behold_the_multiverse, bolt_bend, chaos_warp, commune_with_lava,
+    counterspell, rapid_hybridization, whir_of_invention, chandra_torch_of_defiance,
+    expressive_iteration, finale_of_revelation, ignite_the_future, impending_flux,
+    inspired_tinkering, ravenform,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];

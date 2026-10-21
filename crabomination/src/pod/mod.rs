@@ -28848,6 +28848,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIVRISS_16_COMMANDERS,
             main: decks::SIVRISS_16_MAIN,
         },
+        // Seat 4733: Vhal, Candlekeep Researcher and Guild Artisan's EDHREC average deck. `--pod-decks 4733`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Guild Artisan (UR)",
+            commanders: decks::VHAL_19_COMMANDERS,
+            main: decks::VHAL_19_MAIN,
+        },
     ]
 }
 
@@ -35481,6 +35487,7 @@ mod tests {
             ("Lae'zel, Vlaakith's Champion and Raised by Giants", &[0x1C90]),
             ("Radiant, Serra Archangel and Sakashima of a Thousand Faces", &[0x1C91]),
             ("Sivriss, Nightmare Speaker and Shameless Charlatan", &[0x1C92]),
+            ("Vhal, Candlekeep Researcher and Guild Artisan", &[0x1C93]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
