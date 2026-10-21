@@ -133126,3 +133126,30 @@ pub const RASAAD_YN_BASHIR_25_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const DURNAN_OF_THE_YAWNING_PORTAL_15_COMMANDERS: &[CardFactory] = &[durnan_of_the_yawning_portal, raised_by_giants];
+
+/// **Durnan of the Yawning Portal and Raised by Giants**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 28 Forests = 98.
+/// Durnan of the Yawning Portal and Raised by Giants (EDHREC, fetched 2026-10-21).
+pub const DURNAN_OF_THE_YAWNING_PORTAL_15_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lightning_greaves, mithril_coat, monster_manual, sol_ring,
+    swiftfoot_boots, the_great_henge, bonders_enclave, boseiju_who_endures, mosswort_bridge,
+    myriad_landscape, rogues_passage, shifting_woodland, war_room, apex_devastator,
+    arbor_adherent, battle_mammoth, beanstalk_giant, beast_whisperer, casal_lurkwood_pathfinder,
+    cultivator_colossus, druid_of_purification, elvish_mystic, emergent_woodwurm,
+    emissary_green, end_raze_forerunners, fyndhorn_elves, giant_ankheg,
+    goreclaw_terror_of_qal_sisma, green_slime, groundchuck_dirtbag, haywire_mite, jumbo_cactuar,
+    kamahl_heart_of_krosa, kogla_the_titan_ape, llanowar_elves, nyxbloom_ancient,
+    ohran_frostfang, old_gnawbone, sakura_tribe_elder, silverback_elder, solemn_simulacrum,
+    terastodon, the_tarrasque, thunderfoot_baloth, tireless_tracker, tlincalli_hunter,
+    toski_bearer_of_secrets, vorinclex, worldspine_wurm, zopandrel_hunger_dominus,
+    concordant_crossroads, garruks_uprising, greater_good, tribute_to_the_world_tree,
+    utopia_sprawl, wild_growth, beast_within, heroic_intervention, noxious_revival,
+    return_of_the_wildspeaker, garruk_unleashed, barroom_brawl, harmonize, kodamas_reach,
+    natures_lore, rampant_growth, rishkars_expertise, season_of_gathering,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];

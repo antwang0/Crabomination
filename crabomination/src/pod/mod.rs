@@ -28938,6 +28938,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RASAAD_YN_BASHIR_25_COMMANDERS,
             main: decks::RASAAD_YN_BASHIR_25_MAIN,
         },
+        // Seat 4748: Durnan of the Yawning Portal and Raised by Giants's EDHREC average deck. `--pod-decks 4748`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Raised by Giants (G)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_15_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_15_MAIN,
+        },
     ]
 }
 
@@ -35586,6 +35592,7 @@ mod tests {
             ("Rashida Scalebane", &[0x1C9F]),
             ("Lae'zel, Vlaakith's Champion and Acolyte of Bahamut", &[0x1CA0]),
             ("Rasaad yn Bashir and Acolyte of Bahamut", &[0x1CA1]),
+            ("Durnan of the Yawning Portal and Raised by Giants", &[0x1CA2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
