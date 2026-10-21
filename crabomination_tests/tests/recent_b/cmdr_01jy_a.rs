@@ -72,6 +72,9 @@ fn to_next_upkeep(g: &mut GameState) {
     let turn = g.turn_number;
     while !(g.step == TurnStep::Upkeep && g.turn_number > turn) {
         let _ = g.advance_step(Vec::new());
+        if !(g.step == TurnStep::Upkeep && g.turn_number > turn) {
+            drain_stack(g);
+        }
     }
     drain_stack(g);
 }
@@ -595,4 +598,71 @@ fn academy_loremaster_taxes_the_extra_draw() {
         x_value: None,
     });
     assert!(cast.is_err(), "{{R}} no longer pays for a taxed Bolt");
+}
+
+/// Jace's Sentinel is a 2/3 that can't be blocked only beside a Jace.
+#[test]
+fn jaces_sentinel_wakes_beside_a_jace() {
+    let mut g = pod(2);
+    let sentinel = g.add_card_to_battlefield(0, catalog::jaces_sentinel());
+    assert_eq!(pt(&g, sentinel), (1, 3));
+    g.add_card_to_battlefield(1, catalog::jace_arcane_strategist());
+    assert_eq!(pt(&g, sentinel), (1, 3), "an opponent's Jace is no help");
+    g.add_card_to_battlefield(0, catalog::jace_the_living_guildpact());
+    assert_eq!(pt(&g, sentinel), (2, 3));
+    assert!(g.computed_permanent(sentinel).unwrap().keywords().contains(&Keyword::Unblockable));
+}
+
+/// Thanos's power-up destroys every other creature of the chosen parity —
+/// zero is even (CR 702.193).
+#[test]
+fn thanos_snaps_one_parity() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let thanos = g.add_card_to_battlefield(0, catalog::thanos_the_mad_titan());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let token = g.add_card_to_battlefield(1, catalog::ornithopter());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: thanos,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: Some(1),
+    })
+    .expect("power-up, even");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(thanos).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.battlefield_find(bears).is_none(), "mana value 2 is even");
+    assert!(g.battlefield_find(token).is_none(), "mana value 0 is even");
+    assert!(g.battlefield_find(angel).is_some(), "mana value 5 is odd");
+}
+
+/// Tombstone Stairwell: each upkeep every player gets a Tombspawn per creature
+/// card in their graveyard; each end step destroys them.
+#[test]
+fn tombstone_stairwell_raises_and_razes_tombspawn() {
+    let mut g = pod(3);
+    // Seat 1's, so seat 0's upkeep carries no cumulative-upkeep payment.
+    g.add_card_to_battlefield(1, catalog::tombstone_stairwell());
+    for (seat, n) in [(0, 2), (2, 1)] {
+        for _ in 0..n {
+            g.add_card_to_graveyard(seat, catalog::grizzly_bears());
+        }
+    }
+    let tombspawn = |g: &GameState, seat: usize| {
+        g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Tombspawn").count()
+    };
+    g.active_player_idx = 2;
+    to_next_upkeep(&mut g);
+    assert_eq!(g.active_player_idx, 0);
+    assert_eq!((tombspawn(&g, 0), tombspawn(&g, 1), tombspawn(&g, 2)), (2, 0, 1));
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert_eq!(tombspawn(&g, 0) + tombspawn(&g, 2), 0, "destroyed at the end step");
 }

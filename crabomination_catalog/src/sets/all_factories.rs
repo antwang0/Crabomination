@@ -18390,6 +18390,9 @@ static DECKS: &[Factory] = &[
     super::decks::brazen_buccaneers,
     super::decks::academy_loremaster,
     super::decks::voracious_dragon,
+    super::decks::jaces_sentinel,
+    super::decks::thanos_the_mad_titan,
+    super::decks::tombstone_stairwell,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

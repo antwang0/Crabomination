@@ -9,7 +9,7 @@ use crate::effect::shortcut::{draw, etb, on_attack, partner_with_search, pump_ta
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LibraryPosition, LookPick, PlayerRef, Predicate, Selector, Value, ZoneDest,
 };
-use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
+use crate::mana::{Color, ManaCost, b, colorless, cost, g, generic, hybrid, r, u, w};
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -1029,5 +1029,107 @@ pub fn voracious_dragon() -> CardDefinition {
             ),
         })],
         ..creature("Voracious Dragon", cost(&[generic(3), r(), r()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Jace's Sentinel — {1}{U} 1/3 Merfolk Warrior. As long as you control a Jace
+/// planeswalker, it gets +1/+0 and can't be blocked.
+pub fn jaces_sentinel() -> CardDefinition {
+    let jace = || {
+        Predicate::SelectorExists(Selector::EachPermanent(
+            R::Planeswalker.and(R::HasPlaneswalkerType(PlaneswalkerSubtype::Jace)).and(R::ControlledByYou),
+        ))
+    };
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as you control a Jace planeswalker, this creature gets +1/+0.",
+                effect: StaticEffect::WhileCondition {
+                    condition: jace(),
+                    inner: Box::new(StaticEffect::PumpPT { applies_to: Selector::This, power: 1, toughness: 0 }),
+                },
+            },
+            StaticAbility {
+                description: "As long as you control a Jace planeswalker, this creature can't be blocked.",
+                effect: StaticEffect::WhileCondition {
+                    condition: jace(),
+                    inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Unblockable }),
+                },
+            },
+        ],
+        ..creature("Jace's Sentinel", cost(&[generic(1), u()]), vec![CreatureType::Merfolk, CreatureType::Warrior], 1, 3)
+    }
+}
+
+/// Thanos, the Mad Titan — {R}{W}{B} legendary 4/4 Eternal Villain with
+/// deathtouch and lifelink. Power-up — {C}{W}{U}{B}{R}{G}: two +1/+1 counters on
+/// Thanos; choose odd or even; destroy each other creature whose mana value is
+/// of the chosen quality (zero is even).
+pub fn thanos_the_mad_titan() -> CardDefinition {
+    let snap = |odd: bool| Effect::Destroy {
+        what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource).and(R::ManaValueParity { odd })),
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[colorless(1), w(), u(), b(), r(), g()]),
+            power_up: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                Effect::ChooseMode(vec![snap(true), snap(false)]),
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Thanos, the Mad Titan", cost(&[r(), w(), b()]), vec![CreatureType::Eternal, CreatureType::Villain], 4, 4)
+    }
+}
+
+/// Tombstone Stairwell — {2}{B}{B} World Enchantment, cumulative upkeep {1}{B}.
+/// At the beginning of each upkeep, each player creates a 2/2 black Zombie
+/// token with haste named Tombspawn for each creature card in their graveyard.
+/// At the beginning of each end step and when it leaves the battlefield,
+/// destroy all tokens created with it; they can't be regenerated.
+pub fn tombstone_stairwell() -> CardDefinition {
+    let tombspawn = TokenDefinition {
+        name: "Tombspawn".into(),
+        power: 2,
+        toughness: 2,
+        colors: vec![Color::Black],
+        keywords: vec![Keyword::Haste],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    let raze = || Effect::DestroyNoRegen { what: Selector::TokensCreatedBySource };
+    CardDefinition {
+        supertypes: vec![Supertype::World],
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1), b()])))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::AnyPlayer),
+                effect: Effect::EachPlayerDoes {
+                    who: PlayerRef::EachPlayer,
+                    body: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::count(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: R::Creature,
+                        }),
+                        definition: Arc::new(tombspawn),
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::End), EventScope::AnyPlayer),
+                effect: raze(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: raze(),
+            },
+        ],
+        ..spell("Tombstone Stairwell", cost(&[generic(2), b(), b()]), CardType::Enchantment, Effect::Noop)
     }
 }
