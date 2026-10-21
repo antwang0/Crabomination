@@ -195,6 +195,10 @@ the handoff.
   Dee Kay and Spinnerette's EDHREC averages — Soul Swindler, Squirrel Squatters, Spinnerette, Arachnobat, Motion
   Sickness, Dee Kay, Finder of the Lost, Done for the Day; Pick-a-Beeble (a prize Attraction); and The Most Dangerous
   Gamer's own "whenever you open an Attraction" / "claim the prize" triggers (CR 701.51c, 702.159b).
+  - *Note from `01KPxZ3H`* (`224bc528d`): **pod seats whose deck opens an Attraction now bring an Attraction deck**
+    (`pod::POD_ATTRACTIONS`, the catalog's fourteen `unf.rs` Attractions; `opens_attractions` walks every ability for
+    `Effect::OpenAnAttraction`), shuffled per game; the card-conservation audit counts `attraction_deck` and
+    `attraction_junkyard`. A new Attraction (Pick-a-Beeble) goes in that list; a new "open" effect in that walk.
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list
 
