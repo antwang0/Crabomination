@@ -19054,6 +19054,10 @@ static DECKS: &[Factory] = &[
     super::decks::recumbent_bliss,
     super::decks::fall_to_earth,
     super::decks::protective_response,
+    super::decks::blood_chin_fanatic,
+    super::decks::chief_of_the_scale,
+    super::decks::fearless_skald,
+    super::decks::chandras_outrage,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

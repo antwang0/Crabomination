@@ -933,3 +933,58 @@ fn protective_response_kills_an_attacker() {
     cast_x(&mut g, 0, resp, Some(Target::Permanent(giant)), None);
     assert!(g.battlefield_find(giant).is_none());
 }
+
+/// Blood-Chin Fanatic drains for the sacrificed Warrior's power (CR 602.2b:
+/// the sacrifice is a cost; a non-Warrior can't pay it), and Chief of the
+/// Scale toughens only its other Warriors.
+#[test]
+fn cr_602_2b_blood_chin_fanatic_drains_for_a_sacrificed_warrior() {
+    let mut g = pod(2);
+    let fan = g.add_card_to_battlefield(0, catalog::blood_chin_fanatic());
+    let chief = g.add_card_to_battlefield(0, catalog::chief_of_the_scale());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(fan).unwrap().toughness, 4, "another Warrior");
+    assert_eq!(g.computed_permanent(chief).unwrap().toughness, 3, "not itself");
+    assert_eq!(g.computed_permanent(bears).unwrap().toughness, 2, "not a Warrior");
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fan,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice the Chief");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(chief).is_none() && g.battlefield_find(bears).is_some());
+    assert_eq!(g.players[1].life, theirs - 2);
+    assert_eq!(g.players[0].life, mine + 2);
+}
+
+/// Fearless Skald backs up another creature (CR 702.164): a counter and
+/// double strike until end of turn.
+#[test]
+fn cr_702_164_fearless_skald_backs_up_with_double_strike() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let skald = g.add_card_to_hand(0, catalog::fearless_skald());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bears))]));
+    cast_x(&mut g, 0, skald, None, None);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.permanent_has_keyword(bears, &Keyword::DoubleStrike));
+    assert!(g.permanent_has_keyword(skald, &Keyword::DoubleStrike));
+}
+
+/// Chandra's Outrage hits the creature for 4 and its controller for 2.
+#[test]
+fn chandras_outrage_burns_creature_and_controller() {
+    let mut g = pod(3);
+    let giant = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let out = g.add_card_to_hand(0, catalog::chandras_outrage());
+    let life = g.players[2].life;
+    cast_x(&mut g, 0, out, Some(Target::Permanent(giant)), None);
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.players[2].life, life - 2);
+}

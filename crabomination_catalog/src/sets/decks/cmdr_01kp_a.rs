@@ -1343,3 +1343,92 @@ pub fn protective_response() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Lae'zel + Haunted One's two ─────────────────────────────────────────────
+
+/// Blood-Chin Fanatic — {1}{B}{B} 3/3 Orc Warrior. {1}{B}, sacrifice another
+/// Warrior creature: target player loses X life and you gain X life, where X
+/// is the sacrificed creature's power (last known, CR 608.2h).
+pub fn blood_chin_fanatic() -> CardDefinition {
+    CardDefinition {
+        name: "Blood-Chin Fanatic",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Orc, CreatureType::Warrior], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_other_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Warrior)), 1)),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: target_filtered(R::Player), amount: Value::SacrificedPower },
+                Effect::GainLife { who: Selector::You, amount: Value::SacrificedPower },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chief of the Scale — {W}{B} 2/3 Human Warrior. Other Warrior creatures you
+/// control get +0/+1.
+pub fn chief_of_the_scale() -> CardDefinition {
+    CardDefinition {
+        name: "Chief of the Scale",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Warrior], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Warrior creatures you control get +0/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Warrior))
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanSource),
+                ),
+                power: 0,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Amber Gristle O'Maul + Flaming Fist's two ───────────────────────────────
+
+/// Fearless Skald — {4}{R} 3/2 Dwarf Berserker. Backup 1 (CR 702.164) granting
+/// double strike; double strike.
+pub fn fearless_skald() -> CardDefinition {
+    CardDefinition {
+        name: "Fearless Skald",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Berserker], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![crate::effect::shortcut::backup(1, vec![Keyword::DoubleStrike])],
+        ..Default::default()
+    }
+}
+
+/// Chandra's Outrage — {2}{R}{R} instant. 4 damage to target creature and 2 to
+/// that creature's controller.
+pub fn chandras_outrage() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra's Outrage",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
