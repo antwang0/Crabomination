@@ -18390,6 +18390,7 @@ static DECKS: &[Factory] = &[
     super::decks::turtles_forever,
     super::decks::the_book_of_vile_darkness,
     super::decks::ogre_battlecaster,
+    super::decks::the_great_aurora,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

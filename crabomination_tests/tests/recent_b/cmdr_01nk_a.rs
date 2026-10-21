@@ -752,3 +752,22 @@ fn ogre_battlecaster_recasts_from_the_graveyard() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "cast, then exiled");
     assert_eq!(g.computed_permanent(ogre).unwrap().power, 4, "+1/+0 for the Bolt");
 }
+
+/// The Great Aurora: each player redraws as many cards as they shuffled in
+/// (hand plus permanents), then puts down the lands drawn.
+#[test]
+fn the_great_aurora_reshuffles_and_redraws_per_player() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::plains());
+    g.add_card_to_hand(1, catalog::hill_giant());
+    let ga = g.add_card_to_hand(0, catalog::the_great_aurora());
+    cast(&mut g, ga, None);
+    // Seat 1 shuffled in 3 and drew 3 (all Islands from `pod`'s library
+    // bar the two cards it put back) — lands among them went onto the
+    // battlefield.
+    let seat1_cards = g.players[1].hand.len()
+        + g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(seat1_cards, 3);
+    assert!(g.exile.iter().any(|c| c.id == ga), "exiled");
+}

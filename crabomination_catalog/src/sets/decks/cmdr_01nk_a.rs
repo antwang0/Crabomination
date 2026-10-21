@@ -1177,3 +1177,33 @@ pub fn ogre_battlecaster() -> CardDefinition {
         ..creature("Ogre Battlecaster", cost(&[generic(2), r()]), vec![CreatureType::Ogre, CreatureType::Shaman], 3, 3)
     }
 }
+
+/// The Great Aurora — {6}{G}{G}{G} sorcery. Each player shuffles their hand
+/// and every permanent they own into their library, then draws that many.
+/// Each player may put any number of land cards from their hand onto the
+/// battlefield (one seat after another, APNAP). Exile The Great Aurora.
+pub fn the_great_aurora() -> CardDefinition {
+    CardDefinition {
+        name: "The Great Aurora",
+        cost: cost(&[generic(6), g(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::EachPlayerShufflesHandAndPermanentsThenDraws,
+            Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::Land,
+                    count: Value::Const(i32::MAX),
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                    return_eot: false,
+                    then: None,
+                }),
+            },
+            Effect::ExileResolvingSpell,
+        ]),
+        ..Default::default()
+    }
+}
