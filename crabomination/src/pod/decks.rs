@@ -133181,3 +133181,145 @@ pub const MAIRSIL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const ICH_TEKIK_27_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, miara_thorn_of_the_glade];
+
+/// **Ich-Tekik, Salvage Splicer and Miara, Thorn of the Glade**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 10 Forests + 2 Swamps = 98.
+/// Ich-Tekik, Salvage Splicer and Miara, Thorn of the Glade (EDHREC, fetched 2026-10-21).
+pub const ICH_TEKIK_27_MAIN: &[CardFactory] = &[
+    aetherworks_marvel, arcane_signet, commanders_sphere, ghost_lantern, golem_foundry,
+    incubation_sac, maskwood_nexus, mycosynth_lattice, sol_ring, talisman_of_resilience,
+    tarrians_soulcleaver, titan_forge, unwinding_clock, boseiju_who_endures, cabal_coffers,
+    command_tower, darkbore_pathway, deathcap_glade, evolving_wilds, llanowar_wastes,
+    necroblossom_snarl, nurturing_peatland, oran_rief_the_vastwood, overgrown_tomb,
+    path_of_ancestry, shifting_woodland, takenuma_abandoned_mire, the_hunter_maze, the_shire,
+    three_tree_city, underground_mortuary, undergrowth_stadium, verdant_catacombs,
+    wastewood_verge, wooded_foothills, woodland_cemetery, yavimaya_cradle_of_growth,
+    abomination_of_llanowar, allosaurus_shepherd, beanstalk_giant, circle_of_dreams_druid,
+    compleated_huntmaster, cradle_clearcutter, deathrite_shaman, demon_of_dark_schemes,
+    elves_of_deep_shadow, elvish_archdruid, elvish_mystic, farhaven_elf, fierce_empath,
+    glissa_sunslayer, harald_king_of_skemfar, nadiers_nightblade, nissa_worldsoul_speaker,
+    peema_aether_seer, peema_trailblazer, quirion_ranger, seedborn_muse, solemn_simulacrum,
+    stridehangar_automaton, syr_ginger_the_meal_ender, triplicate_titan, tyvar_the_pummeler,
+    valentin_dean_of_the_vein, wirewood_symbiote, arboreal_alliance, doubling_season,
+    elven_chorus, gontis_machinations, prowess_of_the_fair, springleaf_parade, beast_within,
+    crop_rotation, deadly_rollick, heroic_intervention, krosan_grip, legolass_quick_reflexes,
+    natures_claim, village_rites, freyalise_llanowars_fury, die_young, imperial_seal,
+    kodamas_reach, live_fast, patriarchs_bidding, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp,
+];
+
+pub const FRANCISCO_24_COMMANDERS: &[CardFactory] = &[francisco_fowl_marauder, vial_smasher_the_fierce];
+
+/// **Francisco, Fowl Marauder and Vial Smasher the Fierce**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 16 Mountains + 11 Swamps = 98.
+/// Francisco, Fowl Marauder and Vial Smasher the Fierce (EDHREC, fetched 2026-10-21).
+pub const FRANCISCO_24_MAIN: &[CardFactory] = &[
+    arcane_signet, ashes_of_the_fallen, bolass_citadel, captains_hook, psychic_paper, sol_ring,
+    talisman_of_indulgence, the_one_ring, arena_of_glory, blood_crypt, command_tower,
+    dragonskull_summit, foreboding_ruins, graven_cairns, secluded_courtyard,
+    shizo_deaths_storehouse, smoldering_marsh, unclaimed_territory, breeches_eager_pillager,
+    dire_fleet_daredevil, enterprising_scallywag, erebor_flamesmith, fate_unraveler,
+    forerunner_of_the_coalition, gemcutter_buccaneer, gleeful_arsonist, glint_horn_buccaneer,
+    goblin_trailblazer, gray_merchant_of_asphodel, grim_hireling, kari_zev_skyship_raider,
+    lightning_rig_crew, magmakin_artillerist, mayhem_devil, ob_nixilis_captive_kingpin,
+    oonas_prowler, port_razer, professional_face_breaker, putrid_imp, ragavan_nimble_pilferer,
+    rampaging_ferocidon, raphael_fiendish_savior, reckless_lackey, the_lord_of_pain, triskelion,
+    walking_ballista, aria_of_flame, conspiracy, underworld_breach, armor_of_shadows, bedevil,
+    chaos_warp, dark_ritual, demand_answers, flare_of_duplication, go_for_the_throat,
+    imps_mischief, kolaghans_command, not_dead_after_all, rakdos_charm, return_the_favor,
+    terminate, tibalts_trickery, unexpected_windfall, vision_of_love, disrupt_decorum,
+    feed_the_swarm, nahiris_lithoforming, nahiris_warcrafting, reanimate, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ALENA_31_COMMANDERS: &[CardFactory] = &[alena_kessig_trapper, glacian_powerstone_engineer];
+
+/// **Alena, Kessig Trapper and Glacian, Powerstone Engineer**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 14 Islands + 9 Mountains = 98.
+/// Alena, Kessig Trapper and Glacian, Powerstone Engineer (EDHREC, fetched 2026-10-21).
+pub const ALENA_31_MAIN: &[CardFactory] = &[
+    arcane_signet, everflowing_chalice, fellwar_stone, fire_diamond, liquimetal_torque,
+    mind_stone, powerstone_shard, sky_diamond, sol_ring, thran_dynamo, umbral_mantle,
+    worn_powerstone, academy_ruins, ash_barrens, cascade_bluffs, command_tower, ferrous_lake,
+    frostboil_snarl, inventors_fair, path_of_ancestry, riverglide_pathway, shivan_reef,
+    silverbluff_bridge, sulfur_falls, temple_of_epiphany, combustible_gearhulk,
+    corridor_monitor, enigma_drake, etali_primal_storm, haughty_djinn, inferno_project,
+    kylox_visionary_inventor, melek_reforged_researcher, quicksmith_spy, renowned_weaponsmith,
+    sai_master_thopterist, silver_myr, thassas_oracle, thran_spider, treasure_mage, trophy_mage,
+    efficient_construction, mirrodin_besieged, arcane_denial, chaos_warp, comet_storm, dispel,
+    fling, increasing_vengeance, intellectual_offering, machine_over_matter, magma_opus, negate,
+    reality_heist, reality_shift, stoic_rebuttal, swan_song, unexpected_windfall,
+    whir_of_invention, deep_analysis, drafnas_restoration, fabricate, faithless_looting,
+    forging_the_anchor, immolating_gyre, invade_the_city, jeskas_will, megatons_fate,
+    rise_and_shine, rise_from_the_tides, season_of_weaving, seize_the_day, seize_the_spoils,
+    shape_anew, visions_of_ruin,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const BRINELIN_24_COMMANDERS: &[CardFactory] = &[brinelin_the_moon_kraken, prava_of_the_steel_legion];
+
+/// **Brinelin, the Moon Kraken and Prava of the Steel Legion**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 10 Islands + 7 Plains = 98.
+/// Brinelin, the Moon Kraken and Prava of the Steel Legion (EDHREC, fetched 2026-10-21).
+pub const BRINELIN_24_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, azorius_signet, chronicle_of_victory, coalition_relic,
+    sol_ring, talisman_of_progress, thought_vessel, wand_of_the_worldsoul, worn_powerstone,
+    adarkar_wastes, arid_mesa, celestial_colonnade, demolition_field, deserted_beach,
+    fortified_beachhead, glacial_fortress, hallowed_fountain, hengegate_pathway,
+    irrigated_farmland, path_of_ancestry, port_town, prairie_stream, reliquary_tower,
+    scalding_tarn, sea_of_clouds, terrain_generator, urzas_cave, windbrisk_heights,
+    windswept_heath, adeline_resplendent_cathar, aethersnipe, ao_the_dawn_sky,
+    baldin_century_herdmaster, belunas_gatekeeper, cathar_commando, chrome_host_seedshark,
+    docent_of_perfection, flockchaser_phantom, hero_of_bladehold, interdisciplinary_mascot,
+    kairi_the_swirling_sky, keeper_of_the_accord, lunarch_veteran, monastery_mentor,
+    myrel_shield_of_argive, plagon_lord_of_the_beach, platoon_dispenser, siege_veteran,
+    skystrike_officer, sphinx_of_the_second_sun, teferi_mage_of_zhalfir, detention_sphere,
+    grasp_of_fate, reconnaissance_mission, shadow_of_the_second_sun, shark_typhoon,
+    smugglers_share, banish_into_fable, brainstorm, call_the_coppercoats, commit_memory,
+    dovins_veto, final_showdown, kabira_takedown, perch_protection, protect_the_negotiators,
+    settle_the_wreckage, stroke_of_midnight, sublime_epiphany, teferis_protection,
+    three_steps_ahead, elspeth_suns_champion, teferi_temporal_archmage, the_wandering_emperor,
+    finale_of_glory, martial_coup, season_of_weaving, terminus, treasure_cruise,
+    white_suns_twilight,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const JESKA_10_COMMANDERS: &[CardFactory] = &[jeska_thrice_reborn, siani_eye_of_the_storm];
+
+/// **Jeska, Thrice Reborn and Siani, Eye of the Storm**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 9 Islands + 5 Mountains = 98.
+/// Jeska, Thrice Reborn and Siani, Eye of the Storm (EDHREC, fetched 2026-10-21).
+pub const JESKA_10_MAIN: &[CardFactory] = &[
+    arcane_signet, ebony_fly, fellwar_stone, fire_diamond, heart_of_ramos, isolation_cell,
+    izzet_signet, primal_amulet, ring_of_valkas, skullclamp, sky_diamond, sol_ring,
+    thought_vessel, wayfarers_bauble, ash_barrens, blinkmoth_nexus, boseiju_who_shelters_all,
+    command_beacon, fiery_islet, frostboil_snarl, glimmervoid, halimar_depths, myriad_landscape,
+    path_of_ancestry, riverglide_pathway, shivan_reef, soaring_seacliff, spinerock_knoll,
+    stormcarved_coast, sulfur_falls, ashling_flame_dancer, consecrated_sphinx,
+    dragons_rage_channeler, drakuseth_maw_of_flames, dream_eater, fatespinner,
+    glen_elendra_archmage, goldspan_dragon, keranos_god_of_storms, kolaghan_stormsinger,
+    kraum_ludevics_opus, mercurial_spelldancer, niv_mizzet_parun, ornithopter_of_paradise,
+    purphoros_bronze_blooded, siren_stormtamer, snapcaster_mage, spellseeker, stratus_dancer,
+    thassa_god_of_the_sea, vanguard_suppressor, city_on_fire, cryptic_pursuit,
+    quicksilver_dagger, rhystic_study, rowans_talent, archmages_charm, counterspell,
+    cryptic_command, flusterstorm, force_of_negation, force_of_will, jwari_disruption,
+    lightning_bolt, magmaquake, mana_drain, misdirection, reality_shift, reverberate,
+    silundi_vision, sublime_epiphany, swan_song, chandra_torch_of_defiance, mu_yanling,
+    crackle_with_power, earthquake, ignite_the_future, jeskas_will, knowledge_exploitation,
+    minds_desire, molten_disaster, nahiris_warcrafting, sea_gate_restoration,
+    shatterskull_smashing,
+    // Basics
+    island, island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain,
+];

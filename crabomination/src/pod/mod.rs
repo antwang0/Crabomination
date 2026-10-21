@@ -28950,6 +28950,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MAIRSIL_COMMANDERS,
             main: decks::MAIRSIL_MAIN,
         },
+        // Seat 4750: Ich-Tekik, Salvage Splicer and Miara, Thorn of the Glade's EDHREC average deck. `--pod-decks 4750`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Miara, Thorn of the Glade (BG)",
+            commanders: decks::ICH_TEKIK_27_COMMANDERS,
+            main: decks::ICH_TEKIK_27_MAIN,
+        },
+        // Seat 4751: Francisco, Fowl Marauder and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4751`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Vial Smasher the Fierce (BR)",
+            commanders: decks::FRANCISCO_24_COMMANDERS,
+            main: decks::FRANCISCO_24_MAIN,
+        },
+        // Seat 4752: Alena, Kessig Trapper and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 4752`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Glacian, Powerstone Engineer (UR)",
+            commanders: decks::ALENA_31_COMMANDERS,
+            main: decks::ALENA_31_MAIN,
+        },
+        // Seat 4753: Brinelin, the Moon Kraken and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4753`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Prava of the Steel Legion (WU)",
+            commanders: decks::BRINELIN_24_COMMANDERS,
+            main: decks::BRINELIN_24_MAIN,
+        },
+        // Seat 4754: Jeska, Thrice Reborn and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4754`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Siani, Eye of the Storm (UR)",
+            commanders: decks::JESKA_10_COMMANDERS,
+            main: decks::JESKA_10_MAIN,
+        },
     ]
 }
 
@@ -35600,6 +35630,11 @@ mod tests {
             ("Rasaad yn Bashir and Acolyte of Bahamut", &[0x1CA1]),
             ("Durnan of the Yawning Portal and Raised by Giants", &[0x1CA2]),
             ("Mairsil, the Pretender", &[0x1CA3]),
+            ("Ich-Tekik, Salvage Splicer and Miara, Thorn of the Glade", &[0x1CA4]),
+            ("Francisco, Fowl Marauder and Vial Smasher the Fierce", &[0x1CA5]),
+            ("Alena, Kessig Trapper and Glacian, Powerstone Engineer", &[0x1CA6]),
+            ("Brinelin, the Moon Kraken and Prava of the Steel Legion", &[0x1CA7]),
+            ("Jeska, Thrice Reborn and Siani, Eye of the Storm", &[0x1CA8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
