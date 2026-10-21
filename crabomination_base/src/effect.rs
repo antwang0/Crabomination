@@ -11087,6 +11087,13 @@ pub enum Effect {
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.
     OneCastAmongGranted { what: Selector },
+    /// "When you play a card this way, [body]" (Fires of Mount Doom), chained
+    /// after a `GrantMayPlay`: each card `what` resolves to is registered
+    /// (turn-scoped) with this source and controller, and playing it — a cast
+    /// or a land drop through its permission — pushes `body` as a trigger of
+    /// the source (CR 603.2), the played card its subject. An unplayed
+    /// registration lapses at cleanup.
+    WhenPlayedThisWayThisTurn { what: Selector, body: Box<Effect> },
     /// The "up to `plays`" sibling of `OneCastAmongGranted` (March of Reckless
     /// Joy's "you may play up to two of those cards"): the grants form one
     /// group that `plays` plays spend (`ColdState.group_plays_left`).

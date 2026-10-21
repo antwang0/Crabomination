@@ -5879,6 +5879,7 @@ impl GameState {
         clear_turn!(self.excess_damaged_seats);
         clear_turn!(self.one_cast_groups_spent_this_turn);
         clear_turn!(self.granted_cast_mv_caps);
+        clear_turn!(self.played_this_way_triggers);
         clear_turn!(self.creature_damage_sources);
         clear_cold!(self.permanents_amplified_counter_this_turn);
         // CR 603-style "Nth time this turn" escalation counters reset.

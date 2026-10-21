@@ -19,6 +19,7 @@ mod soul_echo;
 mod great_aurora;
 mod lose_unspent;
 mod next_spell_discount;
+mod played_this_way;
 mod artifact_subtypes;
 mod energy_sweep;
 mod among;
@@ -24756,6 +24757,10 @@ impl GameState {
                 self.each_player_keeps_permanents_rest_phase_out(*keep, effect, ctx, events)
             }
             Effect::LoseUnspentMana { who } => self.lose_unspent_mana(who, ctx, events),
+            Effect::WhenPlayedThisWayThisTurn { what, body } => {
+                self.register_played_this_way(what, body, ctx);
+                Ok(())
+            }
             Effect::GrantNextMatchingSpellDiscountThisTurn { filter, amount } => {
                 self.grant_next_matching_spell_discount(ctx.controller, filter, *amount);
                 Ok(())

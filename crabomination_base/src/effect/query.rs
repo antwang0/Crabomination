@@ -939,6 +939,7 @@ impl Effect {
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::GrantNextMatchingSpellDiscountThisTurn { .. } => false,
+            Effect::WhenPlayedThisWayThisTurn { .. } => false,
             Effect::Noop
             | Effect::LockOpponentsManaValueUntilYourNextTurn { .. }
             | Effect::DamageToPlayersAndBattlesPlusThisTurn { .. }

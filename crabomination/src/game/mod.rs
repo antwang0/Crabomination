@@ -1513,6 +1513,11 @@ pub struct TurnRegistries {
     /// evaluated for. Cleared at cleanup.
     #[serde(default)]
     pub(crate) granted_cast_mv_caps: Vec<(CardId, crate::effect::Value, usize, Option<CardId>)>,
+    /// `Effect::WhenPlayedThisWayThisTurn`: a granted card, the source and
+    /// controller of its "when you play a card this way" trigger, and the
+    /// trigger's body. Spent by the play; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) played_this_way_triggers: Vec<(CardId, CardId, usize, crate::effect::Effect)>,
     /// Sources that dealt damage to another creature this turn (Wolverine,
     /// Best There Is). Cleared at cleanup.
     #[serde(default)]

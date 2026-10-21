@@ -5386,6 +5386,9 @@ impl GameState {
             if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
                 self.spend_one_cast_group(group);
             }
+            if card.may_play_until.is_some() {
+                self.fire_played_this_way(card.id);
+            }
             card.may_play_until = None;
             card.granted_alt_cast_cost_eot = None;
             // CR 305.1 / 110.2 — the player who plays a land controls it. An
@@ -15193,6 +15196,7 @@ impl GameState {
         // Clear any outstanding may-play permission — once the card is
         // cast, the grant (and its miracle alt-cost) is consumed.
         let locks_further_casts = card.may_play_until.is_some_and(|m| m.locks_further_casts);
+        let played_this_way = card.may_play_until.is_some();
         let bottom_after = card.may_play_until.is_some_and(|m| m.bottom_after);
         if bottom_after != card.bottom_on_leave_stack {
             card.bottom_on_leave_stack = bottom_after;
@@ -15256,6 +15260,10 @@ impl GameState {
         );
         if locks_further_casts {
             self.players[p].cant_cast_matching_this_turn.push(crate::card::SelectionRequirement::Any);
+        }
+        // Above the spell it was cast for (CR 603.3).
+        if played_this_way {
+            self.fire_played_this_way(card_id);
         }
         Ok(events)
     }
