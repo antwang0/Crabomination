@@ -3309,6 +3309,9 @@ pub enum Duration {
     /// The keyword-counter sibling: "for as long as that creature has a
     /// shadow counter on it" (Minas Morgul). CR 122.1b's kinds only.
     WhileHasKeywordCounter(KeywordCounterKind),
+    /// CR 611.2c — "for as long as it remains tapped" read of the AFFECTED
+    /// permanent (Braided Net's lock), not the source (`WhileSourceTapped`).
+    WhileTapped,
 }
 
 /// CR 122.1b — the keyword counters, as a `Copy` tag a `Duration` can carry.
@@ -14375,6 +14378,10 @@ pub enum Effect {
     /// "Each player shuffles all cards from their hand and all permanents they
     /// own into their library, then draws that many cards" (The Great Aurora).
     EachPlayerShufflesHandAndPermanentsThenDraws,
+    /// "Each player chooses up to `keep` cards in their hand, then shuffles
+    /// the rest into their library" (Worldpurge): APNAP choices, then each
+    /// seat shuffles its own rest in.
+    EachPlayerKeepsUpToFromHandShufflesRest { keep: u32 },
     /// "[Player] loses all unspent mana" (Mana Short, Worldpurge) — an
     /// effect, so Upwelling's step-end exception doesn't stop it (CR 500.4);
     /// Yurlok's mana burn sees the loss.

@@ -12,6 +12,7 @@ mod mill_until;
 mod all_but_one;
 mod any_player_sacrifice;
 mod flux;
+mod keep_from_hand;
 mod great_aurora;
 mod lose_unspent;
 mod artifact_subtypes;
@@ -363,6 +364,7 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::UntilTurnedFaceDown => EffectDuration::Indefinite,
         crate::effect::Duration::WhileHasCounter(kind) => EffectDuration::WhileHasCounter(kind),
         crate::effect::Duration::WhileHasKeywordCounter(kind) => EffectDuration::WhileHasKeywordCounter(kind),
+        crate::effect::Duration::WhileTapped => EffectDuration::WhileTapped,
     }
 }
 
@@ -24766,6 +24768,9 @@ impl GameState {
             Effect::EachPlayerDiscardsAnyThenDrawsThatMany => self.each_player_discards_any_then_draws(effect, ctx, events),
             Effect::EachPlayerShufflesHandAndPermanentsThenDraws => {
                 self.each_player_shuffles_hand_and_permanents_then_draws(ctx, events)
+            }
+            Effect::EachPlayerKeepsUpToFromHandShufflesRest { keep } => {
+                self.each_player_keeps_from_hand_shuffles_rest(*keep, effect, ctx, events)
             }
             Effect::LoseUnspentMana { who } => self.lose_unspent_mana(who, ctx, events),
             Effect::SpellsCostMoreThisTurn { who, amount } => {

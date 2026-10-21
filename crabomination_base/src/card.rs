@@ -1132,6 +1132,8 @@ pub enum CounterType {
     Ember,
     /// Fraying Line's rope counters (a creature without one is exiled).
     Rope,
+    /// Braided Net's net counters.
+    Net,
 }
 
 /// Every zone a card can occupy.

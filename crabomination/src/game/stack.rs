@@ -7717,13 +7717,15 @@ impl GameState {
                     || still_tapped.contains(&e.source)
             });
         }
-        // CR 611.2c — "for as long as it has a [kind] counter on it": kept
-        // while every affected permanent still carries one.
+        // CR 611.2c — "for as long as it has a [kind] counter on it" / "as
+        // long as it remains tapped": kept while every affected permanent
+        // still carries one / is still tapped.
         if self.continuous_effects.iter().any(|e| {
             matches!(
                 e.duration,
                 crate::game::layers::EffectDuration::WhileHasCounter(_)
                     | crate::game::layers::EffectDuration::WhileHasKeywordCounter(_)
+                    | crate::game::layers::EffectDuration::WhileTapped
             )
         }) {
             let holds = |g: &Self, e: &crate::game::layers::ContinuousEffect| {
@@ -7731,9 +7733,10 @@ impl GameState {
                 let has = |c: &crate::card::CardInstance| match e.duration {
                     D::WhileHasCounter(kind) => c.counter_count(kind) > 0,
                     D::WhileHasKeywordCounter(kind) => c.keyword_counters.get(&kind.keyword()).copied().unwrap_or(0) > 0,
+                    D::WhileTapped => c.tapped,
                     _ => true,
                 };
-                if !matches!(e.duration, D::WhileHasCounter(_) | D::WhileHasKeywordCounter(_)) {
+                if !matches!(e.duration, D::WhileHasCounter(_) | D::WhileHasKeywordCounter(_) | D::WhileTapped) {
                     return true;
                 }
                 match &e.affected {

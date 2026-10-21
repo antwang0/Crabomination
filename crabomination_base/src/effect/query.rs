@@ -1016,6 +1016,7 @@ impl Effect {
             | Effect::AnyPlayerMaySacrificeToTopdeckSource { .. }
             | Effect::EachPlayerDiscardsAnyThenDrawsThatMany
             | Effect::EachPlayerShufflesHandAndPermanentsThenDraws
+            | Effect::EachPlayerKeepsUpToFromHandShufflesRest { .. }
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }

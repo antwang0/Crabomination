@@ -78,6 +78,8 @@ pub enum EffectDuration {
     WhileHasCounter(crate::card::CounterType),
     /// The keyword-counter sibling (Minas Morgul's shadow counter).
     WhileHasKeywordCounter(crate::effect::KeywordCounterKind),
+    /// Lasts while each affected permanent stays tapped (Braided Net).
+    WhileTapped,
 }
 
 // ── Layer classification ───────────────────────────────────────────────────────
