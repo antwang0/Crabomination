@@ -243,3 +243,94 @@ fn bloodhaze_wolverine_wakes_on_the_second_draw() {
     assert_eq!(pt(&g, wolverine), (3, 2), "the second and third draws trigger once");
     assert!(g.computed_permanent(wolverine).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
+
+/// Weathered Runestone: a nonland permanent card can't be reanimated and
+/// nothing is cast from a graveyard; a land card still enters from one.
+#[test]
+fn weathered_runestone_locks_graveyards_for_nonland_permanents() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::weathered_runestone());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    let back = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::Target(0),
+        to: crabomination::effect::ZoneDest::Battlefield {
+            controller: crabomination::effect::PlayerRef::You,
+            tapped: false,
+        },
+    };
+    for what in [bears, land] {
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(what)), 0, 0);
+        g.resolve_effect(&back, &ctx).unwrap();
+    }
+    assert!(g.battlefield_find(bears).is_none(), "a creature card stays in the graveyard");
+    assert!(g.battlefield_find(land).is_some(), "a land card isn't covered");
+    let current = g.add_card_to_graveyard(0, catalog::direct_current());
+    flood(&mut g, 0);
+    g.add_card_to_hand(0, catalog::island());
+    let jump = g.perform_action(GameAction::CastSpell {
+        card_id: current,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(jump.is_err(), "no jump-start from the graveyard");
+}
+
+/// Knight of Cliffhaven levels: 2/2, then 2/3 flier at 1, then 4/4 flying
+/// vigilance at 4 (CR 702.87 / 711).
+#[test]
+fn knight_of_cliffhaven_levels_up() {
+    let mut g = pod(2);
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_cliffhaven());
+    assert_eq!(pt(&g, knight), (2, 2));
+    activate(&mut g, knight, 0, None).unwrap();
+    assert_eq!(pt(&g, knight), (2, 3));
+    for _ in 0..3 {
+        activate(&mut g, knight, 0, None).unwrap();
+    }
+    assert_eq!(pt(&g, knight), (4, 4));
+    let knight = g.computed_permanent(knight).unwrap();
+    let kws = knight.keywords();
+    assert!(kws.contains(&Keyword::Flying) && kws.contains(&Keyword::Vigilance));
+}
+
+/// Flower // Flourish: the left half fetches a basic Forest or Plains, the
+/// right half pumps the team (CR 709.3).
+#[test]
+fn flower_flourish_halves() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::plains());
+    let flower = g.add_card_to_hand(0, catalog::flower_flourish());
+    cast_as(&mut g, 0, flower, None);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Plains"));
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let flourish = g.add_card_to_hand(0, catalog::flower_flourish());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: flourish,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Flourish");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bears), (4, 4));
+}
+
+/// Tenacity untaps the creatures it pumps.
+#[test]
+fn tenacity_pumps_and_untaps() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().tapped = true;
+    let tenacity = g.add_card_to_hand(0, catalog::tenacity());
+    cast_as(&mut g, 0, tenacity, None);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bears).unwrap().tapped);
+    assert_eq!(pt(&g, bears), (3, 3));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Lifelink));
+}

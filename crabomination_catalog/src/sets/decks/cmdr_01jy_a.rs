@@ -2,12 +2,13 @@
 //! `tests/recent_b/cmdr_01jy_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{draw, etb, on_attack, partner_with_search, pump_target, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, Effect, LookPick, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, cost, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
+use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -310,5 +311,222 @@ pub fn direct_current() -> CardDefinition {
             CardType::Sorcery,
             Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
         )
+    }
+}
+
+fn yours() -> Selector {
+    Selector::EachPermanent(R::Creature.and(R::ControlledByYou))
+}
+
+fn pump_each(what: Selector, p: i32, t: i32) -> Effect {
+    Effect::PumpPT { what, power: Value::Const(p), toughness: Value::Const(t), duration: Duration::EndOfTurn }
+}
+
+fn grant_each(what: Selector, keyword: Keyword) -> Effect {
+    Effect::GrantKeyword { what, keyword, duration: Duration::EndOfTurn }
+}
+
+/// Cloudchaser Kestrel — {1}{W}{W} 2/2 flying Bird. Entering, destroy target
+/// enchantment. {W}: target permanent becomes white until end of turn.
+pub fn cloudchaser_kestrel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Destroy { what: target_filtered(R::Enchantment) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::BecomeColor {
+                what: target_filtered(R::Permanent),
+                colors: vec![Color::White],
+                duration: Duration::EndOfTurn,
+                additive: false,
+            },
+            ..Default::default()
+        }],
+        ..creature("Cloudchaser Kestrel", cost(&[generic(1), w(), w()]), vec![CreatureType::Bird], 2, 2)
+    }
+}
+
+/// Knight of Cliffhaven — {1}{W} 2/2 Kor Knight leveler. Level up {3}.
+/// LEVEL 1-3: 2/3 flying. LEVEL 4+: 4/4 flying, vigilance.
+pub fn knight_of_cliffhaven() -> CardDefinition {
+    CardDefinition {
+        level_bands: vec![
+            LevelBand { min: 1, max: Some(3), power: 2, toughness: 3, keywords: vec![Keyword::Flying] },
+            LevelBand { min: 4, max: None, power: 4, toughness: 4, keywords: vec![Keyword::Flying, Keyword::Vigilance] },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Level, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Knight of Cliffhaven", cost(&[generic(1), w()]), vec![CreatureType::Kor, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Tenacity — {3}{W} instant. Creatures you control get +1/+1 and gain
+/// lifelink until end of turn. Untap those creatures.
+pub fn tenacity() -> CardDefinition {
+    spell(
+        "Tenacity",
+        cost(&[generic(3), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            pump_each(yours(), 1, 1),
+            grant_each(yours(), Keyword::Lifelink),
+            Effect::Untap { what: yours(), up_to: None },
+        ]),
+    )
+}
+
+/// Engineered Might — {3}{G}{W} sorcery. Choose one — target creature gets
+/// +5/+5 and trample; or creatures you control get +2/+2 and vigilance.
+pub fn engineered_might() -> CardDefinition {
+    spell(
+        "Engineered Might",
+        cost(&[generic(3), g(), w()]),
+        CardType::Sorcery,
+        Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                pump_each(target_filtered(R::Creature), 5, 5),
+                grant_each(Selector::Target(0), Keyword::Trample),
+            ]),
+            Effect::Seq(vec![pump_each(yours(), 2, 2), grant_each(yours(), Keyword::Vigilance)]),
+        ]),
+    )
+}
+
+/// Flower // Flourish — {G/W} sorcery: search for a basic Forest or Plains to
+/// hand. // {4}{G}{W} sorcery: creatures you control get +2/+2 until end of turn.
+pub fn flower_flourish() -> CardDefinition {
+    CardDefinition {
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), g(), w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: pump_each(yours(), 2, 2),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..spell(
+            "Flower // Flourish",
+            cost(&[hybrid(Color::Green, Color::White)]),
+            CardType::Sorcery,
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand.and(R::HasLandType(LandType::Forest).or(R::HasLandType(LandType::Plains))),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        )
+    }
+}
+
+/// Needle Storm — {2}{G} sorcery. 4 damage to each creature with flying.
+pub fn needle_storm() -> CardDefinition {
+    spell(
+        "Needle Storm",
+        cost(&[generic(2), g()]),
+        CardType::Sorcery,
+        Effect::DealDamage {
+            to: Selector::EachPermanent(R::Creature.and(R::HasKeyword(Keyword::Flying))),
+            amount: Value::Const(4),
+        },
+    )
+}
+
+/// Weathered Runestone — {2} artifact. Nonland permanent cards in graveyards
+/// and libraries can't enter the battlefield; players can't cast spells from
+/// graveyards or libraries.
+pub fn weathered_runestone() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Nonland permanent cards in graveyards and libraries can't enter the battlefield. Players can't cast spells from graveyards or libraries.",
+            effect: StaticEffect::NonlandPermanentGraveyardLibraryLockdown,
+        }],
+        ..spell("Weathered Runestone", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Shadowstorm Vizier — {U}{B} 1/3 flying Human Cleric. Whenever you cycle or
+/// discard a card, it gets +1/+1 until end of turn.
+pub fn shadowstorm_vizier() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: pump_each(Selector::This, 1, 1),
+        }],
+        ..creature("Shadowstorm Vizier", cost(&[u(), b()]), vec![CreatureType::Human, CreatureType::Cleric], 1, 3)
+    }
+}
+
+/// Sacred Excavation — {3}{U} sorcery. Return up to two target cards with
+/// cycling from your graveyard to your hand.
+pub fn sacred_excavation() -> CardDefinition {
+    spell(
+        "Sacred Excavation",
+        cost(&[generic(3), u()]),
+        CardType::Sorcery,
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::HasCyclingAbility.and(R::InYourGraveyard),
+            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+        },
+    )
+}
+
+/// Aviation Pioneer — {2}{U} 1/2 Human Artificer. Entering, create a 1/1
+/// colorless Thopter artifact creature token with flying.
+pub fn aviation_pioneer() -> CardDefinition {
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Arc::new(thopter),
+        })],
+        ..creature("Aviation Pioneer", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Artificer], 1, 2)
+    }
+}
+
+/// Mimic — {2} artifact Treasure. {T}, sacrifice it: one mana of any color.
+/// {2}: it becomes a 3/3 Shapeshifter artifact creature until end of turn.
+pub fn mimic() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Treasure], ..Default::default() },
+        activated_abilities: vec![
+            crabomination_base::tokens::treasure_token().activated_abilities[0].clone(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Shapeshifter],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..spell("Mimic", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Rimeshield Frost Giant — {3}{U}{U} 4/5 Giant Warrior, ward {3}.
+pub fn rimeshield_frost_giant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(3))],
+        ..creature("Rimeshield Frost Giant", cost(&[generic(3), u(), u()]), vec![CreatureType::Giant, CreatureType::Warrior], 4, 5)
     }
 }
