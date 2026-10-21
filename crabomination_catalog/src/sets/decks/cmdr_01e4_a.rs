@@ -5598,3 +5598,222 @@ pub fn barroom_brawl() -> CardDefinition {
         ]),
     )
 }
+
+// ── Batch twenty (two-gap pair halves) ──────────────────────────────────────
+
+/// Oona's Prowler — {1}{B} 3/1 flying Faerie Rogue. Discard a card: it gets
+/// -2/-0 until end of turn. Any player may activate this ability.
+pub fn oonas_prowler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            any_player: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(-2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Oona's Prowler", cost(&[generic(1), b()]), vec![CreatureType::Faerie, CreatureType::Rogue], 3, 1)
+    }
+}
+
+/// Nahiri's Warcrafting — {1}{R}{R} sorcery. 5 damage to target creature,
+/// planeswalker, or battle; look at the top X cards (X = the excess damage),
+/// exile one, bottom the rest randomly; you may play the exiled card this turn.
+pub fn nahiris_warcrafting() -> CardDefinition {
+    spell(
+        "Nahiri's Warcrafting",
+        cost(&[generic(1), r(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(R::Creature.or(R::Planeswalker).or(R::HasCardType(CardType::Battle))),
+                amount: Value::Const(5),
+            },
+            Effect::LookTopExileOneMayPlay {
+                count: Value::ExcessDamageDealtThisResolution,
+                who: PlayerRef::You,
+                grant: crate::effect::LookExileGrant::PlayThisTurn,
+            },
+        ]),
+    )
+}
+
+/// Kolaghan Stormsinger — {R} 1/1 Human Shaman. Haste. Megamorph {R}. When it
+/// is turned face up, target creature gains haste until end of turn.
+pub fn kolaghan_stormsinger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste, Keyword::Megamorph(cost(&[r()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Kolaghan Stormsinger", cost(&[r()]), vec![CreatureType::Human, CreatureType::Shaman], 1, 1)
+    }
+}
+
+/// Interdisciplinary Mascot — {6}{U}{U} 5/5 Elemental Fractal. Convoke, ward
+/// {3}. When it enters, look at the top four cards; put one into your hand and
+/// the rest on the bottom in a random order.
+pub fn interdisciplinary_mascot() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Convoke, Keyword::Ward(WardCost::generic(3))],
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            rest_bottom_random: true,
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            take: Some(Value::ONE),
+            ..Default::default()
+        })))],
+        ..creature(
+            "Interdisciplinary Mascot",
+            cost(&[generic(6), u(), u()]),
+            vec![CreatureType::Elemental, CreatureType::Fractal],
+            5,
+            5,
+        )
+    }
+}
+
+/// Banish into Fable — {4}{W}{U} instant. When you cast it from your hand,
+/// copy it if you control an artifact, then copy it if you control an
+/// enchantment. Return target nonland permanent to its owner's hand; you
+/// create a 2/2 white Knight with vigilance.
+pub fn banish_into_fable() -> CardDefinition {
+    let control = |t: CardType| {
+        Predicate::ValueAtLeast(
+            Value::CountOf(Box::new(Selector::EachPermanent(R::HasCardType(t).and(R::ControlledByYou)))),
+            Value::ONE,
+        )
+    };
+    let copy = || Effect::CopySpellMayChooseTargets { what: Selector::This, count: Value::ONE };
+    let knight = TokenDefinition {
+        keywords: vec![Keyword::Vigilance],
+        ..token("Knight", 2, 2, vec![Color::White], vec![CreatureType::Knight])
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(Predicate::CastFromHand),
+            effect: Effect::Seq(vec![
+                Effect::If { cond: control(CardType::Artifact), then: Box::new(copy()), else_: Box::new(Effect::Noop) },
+                Effect::If { cond: control(CardType::Enchantment), then: Box::new(copy()), else_: Box::new(Effect::Noop) },
+            ]),
+        }],
+        ..spell(
+            "Banish into Fable",
+            cost(&[generic(4), w(), u()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Permanent.and(R::Land.negate())),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                make(1, knight),
+            ]),
+        )
+    }
+}
+
+/// Gonti's Machinations — {B} enchantment. Whenever you lose life for the
+/// first time each turn, you get {E}. Pay {E}{E}, sacrifice it: each opponent
+/// loses 3 life; you gain life equal to the life lost this way.
+pub fn gontis_machinations() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl)
+                .with_filter(Predicate::FirstBatchThisTurn {
+                    who: PlayerRef::You,
+                    kind: crate::effect::FirstBatchKind::LifeLost,
+                })
+                .once_per_turn(),
+            effect: Effect::AddEnergy(Value::ONE),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            energy_cost: 2,
+            sac_cost: true,
+            effect: Effect::DrainLifeLost {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
+        ..spell("Gonti's Machinations", cost(&[b()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Die Young — {1}{B} sorcery. Choose target creature. You get {E}{E}, then
+/// you may pay any amount of {E}; the creature gets -1/-1 until end of turn
+/// for each {E} paid.
+pub fn die_young() -> CardDefinition {
+    let paid = || Value::Times(Box::new(Value::Const(-1)), Box::new(Value::EnergyPaidThisEffect));
+    spell(
+        "Die Young",
+        cost(&[generic(1), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(2)),
+            Effect::PayAnyEnergy {
+                then: Box::new(Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: paid(),
+                    toughness: paid(),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+    )
+}
+
+/// Quicksmith Spy — {3}{U} 2/3 Human Artificer. When it enters, target
+/// artifact you control gains "{T}: Draw a card" for as long as you control
+/// this creature (chosen as it enters, held while it stays — INCOMPLETE_CARDS).
+pub fn quicksmith_spy() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChoosePermanentForSource { filter: R::Artifact.and(R::ControlledByYou) })],
+        static_abilities: vec![StaticAbility {
+            description: "The chosen artifact has \"{T}: Draw a card.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::ChosenPermanentOfSource,
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..creature("Quicksmith Spy", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 3)
+    }
+}
+
+/// Shape Anew — {3}{U} sorcery. The controller of target artifact sacrifices
+/// it, then reveals until an artifact card, puts it onto the battlefield, and
+/// shuffles the rest into their library.
+pub fn shape_anew() -> CardDefinition {
+    let controller = || PlayerRef::ControllerOf(Box::new(Selector::Target(0)));
+    spell(
+        "Shape Anew",
+        cost(&[generic(3), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::SacrificePermanent { what: target_filtered(R::Artifact) },
+            Effect::RevealUntilFind {
+                who: controller(),
+                find: R::Artifact,
+                to: ZoneDest::Battlefield { controller: controller(), tapped: false },
+                cap: Value::Const(200),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::ShuffleIntoLibrary,
+            },
+        ]),
+    )
+}

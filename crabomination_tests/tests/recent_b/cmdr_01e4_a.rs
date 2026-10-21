@@ -2562,3 +2562,114 @@ fn barroom_brawl_picks_on_the_left() {
     g.players[1].eliminated = true;
     assert_eq!(g.opponent_to_left_of(0), Some(2), "the next living opponent");
 }
+
+/// Oona's Prowler's shrink is anyone's to activate.
+#[test]
+fn oonas_prowler_can_be_shrunk_by_an_opponent() {
+    let mut g = pod(2);
+    let prowler = g.add_card_to_battlefield(0, catalog::oonas_prowler());
+    g.add_card_to_hand(1, catalog::island());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prowler,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("an opponent activates");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, prowler), (1, 1));
+    assert!(g.players[1].hand.is_empty(), "the activating opponent discarded");
+}
+
+/// Nahiri's Warcrafting digs as deep as its excess damage.
+#[test]
+fn nahiris_warcrafting_digs_by_the_excess() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::nahiris_warcrafting());
+    let library = g.players[0].library.len();
+    cast(&mut g, spell, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].library.len(), library - 1, "one of the three exiled");
+    assert!(g.exile.iter().any(|c| c.owner == 0 && c.may_play_until.is_some()));
+}
+
+/// Banish into Fable copies itself once per artifact / enchantment clause.
+#[test]
+fn banish_into_fable_copies_for_artifact_and_enchantment() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    let targets: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    let banish = g.add_card_to_hand(0, catalog::banish_into_fable());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: banish,
+        target: Some(Target::Permanent(targets[0])),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    g.resolve_top_of_stack().expect("the cast trigger");
+    assert_eq!(g.stack.len(), 3, "the spell and two copies");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Knight"));
+}
+
+/// Gonti's Machinations banks one energy for the turn's first life loss, then
+/// cashes two in for a drain.
+#[test]
+fn gontis_machinations_banks_the_first_loss() {
+    let mut g = pod(2);
+    let gonti = g.add_card_to_battlefield(0, catalog::gontis_machinations());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, Some(Target::Player(0)));
+    }
+    assert_eq!(g.players[0].energy, 1, "only the first loss");
+    g.players[0].energy = 2;
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    activate(&mut g, gonti, 0).expect("cash in");
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 3, theirs - 3));
+    assert!(g.battlefield_find(gonti).is_none());
+}
+
+/// Die Young pays its two energy into -2/-2.
+#[test]
+fn die_young_spends_energy_on_the_shrink() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::die_young());
+    cast(&mut g, spell, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].energy, 0);
+}
+
+/// Quicksmith Spy teaches an artifact to draw while the Spy stays.
+#[test]
+fn quicksmith_spy_grants_a_draw_ability() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let spy = g.add_card_to_hand(0, catalog::quicksmith_spy());
+    cast(&mut g, spy, None);
+    let hand = g.players[0].hand.len();
+    activate(&mut g, ring, 1).expect("the granted draw");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Shape Anew trades an artifact for the next artifact in its controller's
+/// library.
+#[test]
+fn shape_anew_rerolls_an_artifact() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let stone = g.add_card_to_library(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::shape_anew());
+    cast(&mut g, spell, Some(Target::Permanent(ring)));
+    assert!(g.battlefield_find(ring).is_none());
+    assert_eq!(g.battlefield_find(stone).map(|c| c.controller), Some(1));
+}
