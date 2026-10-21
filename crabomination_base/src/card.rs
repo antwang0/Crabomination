@@ -3867,6 +3867,10 @@ pub enum SelectionRequirement {
     /// CR 115.7 — a stack spell with exactly one target ("target spell with a
     /// single target" — Ricochet Trap, Deflection).
     SpellWithSingleTarget,
+    /// A stack spell that targets only a single opponent of the evaluating
+    /// player or a single permanent one controls (Zevlor, Elturel Exile).
+    /// Read by the card walk too, so a "when you next cast" gate sees it.
+    SpellTargetsOnlyOneOpponentOrTheirs,
     /// CR 115.1 — a stack spell or ability with one or more targets ("target
     /// spell or ability with one or more targets" — Wyll's Reversal).
     SpellWithAnyTarget,
@@ -4958,6 +4962,7 @@ impl SelectionRequirement {
             | Self::SpellWouldDestroyALandYouControl
             | Self::SpellTargetsOnlySource
             | Self::SpellWithSingleTarget
+            | Self::SpellTargetsOnlyOneOpponentOrTheirs
             | Self::SpellNotCastFromHand => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_stack_object() || b.mentions_stack_object()

@@ -6877,6 +6877,7 @@ impl GameState {
                         }
                         _ => false,
                     }),
+                    R::SpellTargetsOnlyOneOpponentOrTheirs => self.spell_targets_only_one_opponent_or_theirs(card.id, controller),
                     // CR 115.1 — "with one or more targets" (Wyll's Reversal).
                     R::SpellWithAnyTarget => self.stack.iter().any(|si| match si {
                         StackItem::Spell { card: c, target, additional_targets, .. } if c.id == card.id => {
@@ -8352,6 +8353,8 @@ impl GameState {
             // Tyrant's "a blocking creature an opponent controls dies").
             R::IsBlocking => self.left_while_blocking.contains(&card.id),
             // Battlefield-state predicates can't be evaluated for library cards.
+            // Zevlor's "when you next cast" gate reads the cast card here.
+            R::SpellTargetsOnlyOneOpponentOrTheirs => self.spell_targets_only_one_opponent_or_theirs(card.id, controller),
             R::Tapped | R::Untapped | R::Unattached
             | R::IsUnblocked | R::IsBlocked | R::InCombatWithSource
             | R::IsAttackingAlone | R::IsBlockingAlone
@@ -8437,5 +8440,23 @@ mod tests {
         let total = Value::TotalCountersOn { what: Box::new(Selector::EachPermanent(R::Creature)) };
         assert_eq!(g.evaluate_value(&total, &ctx), i32::MAX);
         assert_eq!(g.counters_among_permanents_of(0), u32::MAX);
+    }
+}
+
+impl GameState {
+    /// The stack spell `cid` targets exactly one thing, and it is an opponent
+    /// of `seat` or a permanent one controls (Zevlor, Elturel Exile).
+    pub(crate) fn spell_targets_only_one_opponent_or_theirs(&self, cid: CardId, seat: usize) -> bool {
+        self.stack.iter().any(|si| match si {
+            StackItem::Spell { card: c, target: Some(t), additional_targets, .. }
+                if c.id == cid && additional_targets.is_empty() =>
+            {
+                match t {
+                    Target::Player(p) => !self.same_team(*p, seat),
+                    Target::Permanent(id) => self.battlefield_find(*id).is_some_and(|o| !self.same_team(o.controller, seat)),
+                }
+            }
+            _ => false,
+        })
     }
 }

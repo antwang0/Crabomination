@@ -1,7 +1,8 @@
 //! "…if another opponent controls one or more nonland permanents that spell
 //! could target, choose one of those permanents. Copy that spell. The copy
-//! targets the chosen permanent." — Exterminator Magmarch; and Feather,
-//! Radiant Arbiter's paid copies onto chosen creatures.
+//! targets the chosen permanent." — Exterminator Magmarch; Feather, Radiant
+//! Arbiter's paid copies onto chosen creatures; and Zevlor, Elturel Exile's
+//! copy for each other opponent.
 
 use super::{EffectContext, PickValue};
 use crate::card::CardId;
@@ -152,6 +153,86 @@ impl GameState {
                 && let Some(StackItem::Spell { target: t, .. }) = self.stack.last_mut()
             {
                 *t = Some(Target::Permanent(aim));
+            }
+            self.remark_stack_targets(self.stack.len().saturating_sub(1));
+        }
+        Ok(())
+    }
+
+    /// Zevlor, Elturel Exile — the spell `what` resolves to targets one
+    /// opponent or one permanent an opponent controls; for each *other*
+    /// opponent (turn order, CR 101.4) the copier chooses that player or a
+    /// permanent they control the spell could target, and a copy is aimed
+    /// there (CR 707.10c). An opponent offering no legal target gets no copy.
+    /// Headless: the same kind as the original — the player, or their
+    /// priciest permanent.
+    pub(super) fn copy_spell_for_each_other_opponent(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        effect: &Effect,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let Some(spell_id) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_card_id()) else {
+            return Ok(());
+        };
+        let Some((def, aimed)) = self.stack.iter().rev().find_map(|s| match s {
+            StackItem::Spell { card, target: Some(t), .. } if card.id == spell_id => Some((card.definition.arc(), t.clone())),
+            _ => None,
+        }) else {
+            return Ok(());
+        };
+        let first = match &aimed {
+            Target::Player(p) => Some(*p),
+            Target::Permanent(id) => self.battlefield_find(*id).map(|c| c.controller),
+        };
+        let at_player = matches!(aimed, Target::Player(_));
+        let legal = self.enumerate_legal_targets(&def.effect, me);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut aims: Vec<Target> = Vec::new();
+        for opp in self.opponents_of(me) {
+            if Some(opp) == first {
+                continue;
+            }
+            let mut mine: Vec<Target> = legal
+                .iter()
+                .filter(|t| match t {
+                    Target::Player(p) => *p == opp,
+                    Target::Permanent(id) => self.battlefield_find(*id).is_some_and(|c| c.controller == opp),
+                })
+                .cloned()
+                .collect();
+            if mine.is_empty() {
+                continue;
+            }
+            // The headless pick first: the asker's fallback.
+            let value = |t: &Target| match t {
+                Target::Player(_) => if at_player { u32::MAX } else { 0 },
+                Target::Permanent(id) => self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc() + 1),
+            };
+            mine.sort_by_key(|t| std::cmp::Reverse(value(t)));
+            let Some(aim) = self.ask_seat_target_logged(
+                &mut cursor,
+                me,
+                format!("Choose seat {opp} or a permanent they control for a copy"),
+                source,
+                mine,
+                effect,
+            ) else {
+                return Ok(());
+            };
+            aims.push(aim);
+        }
+        self.clear_answer_log();
+        for aim in aims {
+            let before = self.stack.len();
+            self.copy_stack_spell_controlled(spell_id, 1, false, Some(me), None, events);
+            if self.stack.len() > before
+                && let Some(StackItem::Spell { target: t, .. }) = self.stack.last_mut()
+            {
+                *t = Some(aim);
             }
             self.remark_stack_targets(self.stack.len().saturating_sub(1));
         }

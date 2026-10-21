@@ -43936,6 +43936,9 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopySpellForEachOtherOpponent { what } => {
+                self.copy_spell_for_each_other_opponent(what, ctx, effect, events)
+            }
             Effect::CopySpellOntoAnotherOpponentsPermanent { what } => {
                 self.copy_spell_onto_another_opponents_permanent(what, ctx, effect, events)
             }

@@ -11381,6 +11381,11 @@ pub enum Effect {
     /// `what` is the spell (a `SpellCast` trigger's `TriggerSource`); the copy
     /// is the copier's (CR 707.10c).
     CopySpellOntoAnotherOpponentsPermanent { what: Selector },
+    /// Zevlor, Elturel Exile — "for each other opponent, choose that player or
+    /// a permanent they control, copy that spell, and the copy targets the
+    /// chosen player or permanent". `what` is the spell (the trigger's
+    /// `TriggerSource`); the copies are the copier's (CR 707.10c).
+    CopySpellForEachOtherOpponent { what: Selector },
 
     /// Exile the top card of `who`'s library and stamp a may-play
     /// permission on it for `duration`. Used by Conspiracy Theorist,

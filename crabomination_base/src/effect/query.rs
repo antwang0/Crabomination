@@ -2399,7 +2399,7 @@ impl Effect {
             Effect::Ripple { .. } => false,
             Effect::RevealTopMayCastOneFree { .. } | Effect::RevealTopMayCastFreeKeepOnTop { .. } => false,
             Effect::EachPlayerDrawsDamageTheyDealtToSource => false,
-            Effect::CopySpellOntoAnotherOpponentsPermanent { .. } => false,
+            Effect::CopySpellOntoAnotherOpponentsPermanent { .. } | Effect::CopySpellForEachOtherOpponent { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::PlayerExilesPermanents { count, .. }
             | Effect::PlayerReturnsPermanentsToHand { count, .. } => value_has_target(count),
