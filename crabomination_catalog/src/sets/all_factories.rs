@@ -18840,6 +18840,10 @@ static DECKS: &[Factory] = &[
     super::decks::wing_puncture,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
+    // cmdr_01r3_a (session 01R3xh4r)
+    super::decks::arcane_proxy,
+    super::decks::worldpurge,
+    super::decks::braided_net,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
