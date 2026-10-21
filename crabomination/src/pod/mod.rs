@@ -29370,6 +29370,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABDEL_ADRIAN_14_COMMANDERS,
             main: decks::ABDEL_ADRIAN_14_MAIN,
         },
+        // Seat 4820: Akroma, Vision of Ixidor and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4820`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Numa, Joraga Chieftain (WG)",
+            commanders: decks::AKROMA_26_COMMANDERS,
+            main: decks::AKROMA_26_MAIN,
+        },
     ]
 }
 
@@ -36090,6 +36096,7 @@ mod tests {
             ("Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder", &[0x1CE7]),
             ("Anara, Wolvid Familiar and Rebbec, Architect of Ascension", &[0x1CE8]),
             ("Abdel Adrian, Gorion's Ward and Criminal Past", &[0x1CE9]),
+            ("Akroma, Vision of Ixidor and Numa, Joraga Chieftain", &[0x1CEA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

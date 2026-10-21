@@ -135127,3 +135127,30 @@ pub const ABDEL_ADRIAN_14_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const AKROMA_26_COMMANDERS: &[CardFactory] = &[akroma_vision_of_ixidor, numa_joraga_chieftain];
+
+/// **Akroma, Vision of Ixidor and Numa, Joraga Chieftain**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 24 Plains = 98.
+/// Akroma, Vision of Ixidor and Numa, Joraga Chieftain (EDHREC, fetched 2026-10-21).
+pub const AKROMA_26_MAIN: &[CardFactory] = &[
+    angels_tomb, arcane_signet, commanders_sphere, moonsilver_spear, scroll_of_avacyn, sol_ring,
+    valkyries_sword, abandoned_outpost, blossoming_sands, command_tower, evolving_wilds,
+    fountain_of_cho, gingerbread_cabin, high_market, path_of_ancestry, reliquary_tower,
+    sapseep_forest, seraph_sanctuary, shimmerdrift_vale, stirring_wildwood, tranquil_expanse,
+    wirewood_lodge, invasion_of_dominaria, aegis_angel, akroma_angel_of_wrath, angel_of_renewal,
+    angelic_field_marshal, angelic_guardian, archangel, archangel_of_thune,
+    avacyn_angel_of_hope, baneslayer_angel, beast_whisperer, elvish_archdruid, emeria_shepherd,
+    exquisite_archangel, fyndhorn_elves, herald_of_war, imperious_perfect, jagged_scar_archers,
+    llanowar_elves, lyra_dawnbringer, nissas_chosen, paragon_of_modernity, platinum_angel,
+    pristine_angel, resolute_archangel, righteous_valkyrie, segovian_angel, serra_angel,
+    serras_guardian, starnheim_aspirant, tajuru_archer, tajuru_pathwarden, timberwatch_elf,
+    voice_of_all, youthful_valkyrie, opal_archangel, serra_bestiary, serras_boon, serras_hymn,
+    altars_light, angels_mercy, elven_ambush, guardian_angel, puncturing_light,
+    elspeth_resplendent, freyalise_llanowars_fury, nissa_revane, serra_the_benevolent,
+    angelic_edict, defy_death, empyrial_storm, entreat_the_angels,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
