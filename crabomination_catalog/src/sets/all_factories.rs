@@ -18888,6 +18888,9 @@ static DECKS: &[Factory] = &[
     super::decks::vedalken_squirrel_whacker,
     super::decks::soul_echo,
     super::decks::mindlink_mech,
+    super::decks::encrust,
+    super::decks::ice_floe,
+    super::decks::lifecraft_awakening,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

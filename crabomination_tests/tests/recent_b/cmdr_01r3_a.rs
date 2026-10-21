@@ -1,7 +1,7 @@
 //! Commander: the 2026-10-21 (`01R3xh4r`) one-gap pair closers
 //! (`decks::cmdr_01r3_a`).
 
-use crabomination::card::{CardId, CounterType, Keyword};
+use crabomination::card::{CardId, CardType, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, PlayerRef, Selector, Value};
@@ -324,4 +324,37 @@ fn cr_707_9b_mindlink_mech_copies_its_crew_as_a_four_three() {
     assert_eq!((cp.power, cp.toughness), (4, 3));
     assert!(cp.def.is_artifact() && cp.keywords().contains(&Keyword::Flying));
     assert!(!cp.def.activated_abilities.is_empty(), "it has the Dragon's pump");
+}
+
+/// Encrust reaches an artifact as well as a creature: an enchanted Mind
+/// Stone's activated abilities can't be activated (CR 602.5c).
+#[test]
+fn cr_602_5c_encrust_locks_an_artifact() {
+    let mut g = pod(2);
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let aura = g.add_card_to_hand(0, catalog::encrust());
+    cast(&mut g, aura, Some(Target::Permanent(stone)));
+    assert!(g.computed_permanent(stone).unwrap().keywords().contains(&Keyword::CantActivateAbilities));
+}
+
+/// Lifecraft Awakening animates a noncreature artifact as a 0/0 Construct
+/// carrying the X counters; an artifact creature only gets the counters.
+#[test]
+fn lifecraft_awakening_animates_only_a_noncreature_artifact() {
+    let mut g = pod(2);
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::lifecraft_awakening());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(stone)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast X=2");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(stone).expect("a 2/2, not a dead 0/0");
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Artifact));
+    assert_eq!((cp.power, cp.toughness), (2, 2));
 }

@@ -2,7 +2,8 @@
 //! `tests/recent_b/cmdr_01r3_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
+    ActivatedAbility, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
     Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Zone,
 };
@@ -474,6 +475,76 @@ pub fn mindlink_mech() -> CardDefinition {
                 Effect::SetArtifactSubtypes { what: Selector::This, subtypes: vec![ArtifactSubtype::Vehicle] },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Encrust — {1}{U}{U} Aura, enchant artifact or creature. Enchanted permanent
+/// doesn't untap during its controller's untap step and its activated
+/// abilities can't be activated.
+pub fn encrust() -> CardDefinition {
+    CardDefinition {
+        name: "Encrust",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Artifact.or(R::Creature)) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted permanent doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
+        }],
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::CantActivateAbilities], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Ice Floe — land. You may choose not to untap it during your untap step.
+/// {T}: tap target creature without flying that's attacking you; it doesn't
+/// untap during its controller's untap step for as long as this land remains
+/// tapped.
+pub fn ice_floe() -> CardDefinition {
+    CardDefinition {
+        name: "Ice Floe",
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::TapAndUntapLock {
+                what: target_filtered(R::Creature.and(R::IsAttackingYou).and(R::HasKeyword(Keyword::Flying).negate())),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lifecraft Awakening — {X}{G} instant. Put X +1/+1 counters on target
+/// artifact you control; if it isn't a creature or Vehicle, it becomes a 0/0
+/// Construct artifact creature.
+pub fn lifecraft_awakening() -> CardDefinition {
+    let artifact = || target_filtered(R::Artifact.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Lifecraft Awakening",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: artifact(), kind: CounterType::PlusOnePlusOne, amount: Value::XFromCost },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::BecomeCreature {
+                    what: artifact(),
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    creature_types: vec![CreatureType::Construct],
+                    keywords: vec![],
+                    duration: Duration::Permanent,
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }
