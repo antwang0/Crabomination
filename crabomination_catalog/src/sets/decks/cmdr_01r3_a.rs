@@ -2,13 +2,15 @@
 //! `tests/recent_b/cmdr_01r3_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, LandType, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
     TriggeredAbility, Zone,
 };
-use crate::effect::shortcut::{craft, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{Color, cost, g, generic, hybrid, r, u, w};
+use crate::effect::shortcut::{craft, magecraft, target_filtered};
+use crate::effect::{
+    DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value, ZoneDest,
+};
+use crate::mana::{Color, cost, g, generic, hybrid, r, u, w, x};
 
 /// Arcane Proxy — {7} 4/3 artifact creature Wizard; prototype {1}{U}{U} 2/1
 /// (CR 702.160). When it enters, if you cast it, exile target instant or
@@ -227,5 +229,150 @@ pub fn disciple_of_caelus_nin() -> CardDefinition {
             3,
             4,
         )
+    }
+}
+
+/// Geistflame Reservoir — {2}{R} artifact. Whenever you cast an instant or
+/// sorcery spell, put a charge counter on it. {1}{R}, {T}, remove any number
+/// of charge counters: that much damage to any target. {1}{R}, {T}: exile the
+/// top card of your library; you may play it this turn.
+pub fn geistflame_reservoir() -> CardDefinition {
+    CardDefinition {
+        name: "Geistflame Reservoir",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Charge,
+            amount: Value::ONE,
+        })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                tap_cost: true,
+                remove_counter_x: Some(CounterType::Charge),
+                effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::XFromCost },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                tap_cost: true,
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Invasion of Arcavios // Invocation of the Founders — {3}{U}{U} Siege,
+/// defense 7. When it enters, search your library and/or graveyard for an
+/// instant or sorcery card you own and put it into your hand (outside the game
+/// holds nothing in Commander, CR 903.11). Back: whenever you cast an instant
+/// or sorcery spell from your hand, you may copy it and choose new targets.
+pub fn invasion_of_arcavios() -> CardDefinition {
+    let spell = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    let founders = CardDefinition {
+        name: "Invocation of the Founders",
+        card_types: vec![CardType::Enchantment],
+        color_indicator: vec![Color::Blue],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(spell()),
+                Predicate::CastSpellFromHand,
+            ])),
+            effect: Effect::MayDo {
+                description: "Copy that spell?".into(),
+                body: Box::new(Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Arcavios",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() },
+        defense: 7,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::SearchZones {
+                who: PlayerRef::You,
+                zones: vec![Zone::Library, Zone::Graveyard],
+                filter: spell(),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        back_face: Some(Box::new(founders)),
+        ..Default::default()
+    }
+}
+
+/// Fungal Behemoth — {3}{G} */* Fungus; P/T = +1/+1 counters on creatures you
+/// control. Suspend X—{X}{G}{G}, X can't be 0. Whenever a time counter is
+/// removed from it while it's exiled, you may put a +1/+1 counter on target
+/// creature.
+pub fn fungal_behemoth() -> CardDefinition {
+    let counters = || Value::CountersOn {
+        what: Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
+        kind: CounterType::PlusOnePlusOne,
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Suspend(0, cost(&[x(), g(), g()]))],
+        static_abilities: vec![StaticAbility {
+            description: "P/T equal to the +1/+1 counters on creatures you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: counters(), toughness: counters() },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterRemoved(CounterType::Time), EventScope::SelfSource).while_suspended(),
+            effect: Effect::MayDo {
+                description: "Put a +1/+1 counter on target creature?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..creature("Fungal Behemoth", cost(&[generic(3), g()]), vec![CreatureType::Fungus], 0, 0)
+    }
+}
+
+/// Feral Encounter — {G}{G} sorcery. Look at the top five; you may exile a
+/// creature card among them and cast it this turn; the rest go to the bottom
+/// at random. At the beginning of the next combat this turn, target creature
+/// you control deals damage equal to its power to up to one target creature
+/// you don't control.
+pub fn feral_encounter() -> CardDefinition {
+    CardDefinition {
+        name: "Feral Encounter",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LookTopExileOneMayPlay {
+                count: Value::Const(5),
+                who: PlayerRef::You,
+                grant: LookExileGrant::CreatureMayThisTurn,
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextCombatThisTurn,
+                body: Box::new(Effect::OptionalTargets {
+                    min: 1,
+                    body: Box::new(Effect::DealDamageEqualToPower {
+                        source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        target: target_filtered(R::Creature.and(R::ControlledByYou.negate())),
+                    }),
+                }),
+            },
+        ]),
+        ..Default::default()
     }
 }

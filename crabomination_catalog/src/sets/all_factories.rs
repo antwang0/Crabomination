@@ -18849,6 +18849,10 @@ static DECKS: &[Factory] = &[
     super::decks::dire_wolves,
     super::decks::natures_blessing,
     super::decks::disciple_of_caelus_nin,
+    super::decks::geistflame_reservoir,
+    super::decks::invasion_of_arcavios,
+    super::decks::fungal_behemoth,
+    super::decks::feral_encounter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

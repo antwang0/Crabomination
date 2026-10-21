@@ -167,3 +167,78 @@ fn cr_702_22_dire_wolves_band_with_a_plains() {
     g.add_card_to_battlefield(0, catalog::plains());
     assert!(bands(&g));
 }
+
+/// Geistflame Reservoir banks a charge counter per instant or sorcery cast,
+/// then spends any number of them as damage (the X removed, CR 107.3).
+#[test]
+fn geistflame_reservoir_banks_spells_and_fires_x() {
+    let mut g = pod(2);
+    let res = g.add_card_to_battlefield(0, catalog::geistflame_reservoir());
+    for _ in 0..3 {
+        let opt = g.add_card_to_hand(0, catalog::opt());
+        cast(&mut g, opt, None);
+    }
+    assert_eq!(g.battlefield_find(res).unwrap().counter_count(CounterType::Charge), 3);
+    let life = g.players[1].life;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: res,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("fire two");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.battlefield_find(res).unwrap().counter_count(CounterType::Charge), 1);
+}
+
+/// Invasion of Arcavios fetches an instant or sorcery from the graveyard as
+/// well as the library (CR 903.11: nothing waits outside the game).
+#[test]
+fn invasion_of_arcavios_finds_a_graveyard_sorcery() {
+    let mut g = pod(2);
+    let div = g.add_card_to_graveyard(0, catalog::divination());
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_arcavios());
+    cast(&mut g, inv, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == div));
+}
+
+/// Fungal Behemoth's P/T counts +1/+1 counters on every creature its
+/// controller has — not an opponent's.
+#[test]
+fn fungal_behemoth_counts_counters_on_your_creatures() {
+    let mut g = pod(2);
+    let fb = g.add_card_to_battlefield(0, catalog::fungal_behemoth());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().add_counters(CounterType::PlusOnePlusOne, 5);
+    g.battlefield_find_mut(fb).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let cp = g.computed_permanent(fb).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "three counters, plus its own +1/+1");
+}
+
+/// Feral Encounter exiles a creature from the top five face up, castable this
+/// turn; the other four go to the bottom.
+#[test]
+fn feral_encounter_exiles_a_creature_castable_this_turn() {
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let fe = g.add_card_to_hand(0, catalog::feral_encounter());
+    cast(&mut g, fe, None);
+    let ex = g.exile.iter().find(|c| c.id == bears).expect("the creature is exiled");
+    assert!(!ex.face_down && ex.may_play_until.is_some());
+    assert_eq!(g.players[0].library.len(), 7);
+}
