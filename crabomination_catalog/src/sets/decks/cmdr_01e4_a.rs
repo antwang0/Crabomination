@@ -8773,3 +8773,58 @@ pub fn tezzerets_betrayal() -> CardDefinition {
         ]),
     )
 }
+
+/// Nimbus Champion — {5}{U} 4/4 flying Avatar Warrior. Whenever it attacks,
+/// you may return target creature to its owner's hand if its power is at most
+/// the number of Warriors your team controls (you control, outside team play).
+pub fn nimbus_champion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    count_mine(R::HasCreatureType(CreatureType::Warrior)),
+                    Value::PowerOf(Box::new(Selector::Target(0))),
+                ),
+                then: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+        })],
+        ..creature("Nimbus Champion", cost(&[generic(5), u()]), vec![CreatureType::Avatar, CreatureType::Warrior], 4, 4)
+    }
+}
+
+/// Frostfist Strider — {3}{U}{U} 4/4 Elemental Giant. Ward {2}. When it enters,
+/// tap target creature an opponent controls and put a stun counter on it.
+pub fn frostfist_strider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::generic(2))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+        ]))],
+        ..creature("Frostfist Strider", cost(&[generic(3), u(), u()]), vec![CreatureType::Elemental, CreatureType::Giant], 4, 4)
+    }
+}
+
+/// Destructive Tampering — {2}{R} sorcery. Choose one: destroy target
+/// artifact; or creatures without flying can't block this turn.
+pub fn destructive_tampering() -> CardDefinition {
+    spell(
+        "Destructive Tampering",
+        cost(&[generic(2), r()]),
+        CardType::Sorcery,
+        Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::HasKeyword(Keyword::Flying).negate())),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}

@@ -18931,6 +18931,9 @@ static DECKS: &[Factory] = &[
     super::decks::tezzeret_master_of_metal,
     super::decks::tezzerets_ambition,
     super::decks::tezzerets_betrayal,
+    super::decks::nimbus_champion,
+    super::decks::frostfist_strider,
+    super::decks::destructive_tampering,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
     // cmdr_01r3_a (session 01R3xh4r)

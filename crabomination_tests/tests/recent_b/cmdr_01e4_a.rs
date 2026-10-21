@@ -3495,3 +3495,23 @@ fn salvage_slasher_counts_scrap() {
     g.add_card_to_graveyard(0, catalog::mind_stone());
     assert_eq!(pt(&g, slasher), (3, 1));
 }
+
+/// Nimbus Champion bounces only what its Warriors can match; Frostfist
+/// Strider stuns on arrival.
+#[test]
+fn nimbus_champion_and_frostfist_strider() {
+    let mut g = pod(2);
+    let champ = g.add_card_to_battlefield(0, catalog::nimbus_champion());
+    let small = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(small))]));
+    attack_with(&mut g, &[champ]);
+    assert!(g.players[1].hand.iter().any(|c| c.id == small), "power 1 <= one Warrior");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let strider = g.add_card_to_hand(0, catalog::frostfist_strider());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    g.step = TurnStep::PostCombatMain;
+    cast(&mut g, strider, None);
+    let bear = g.battlefield_find(bear).unwrap();
+    assert!(bear.tapped && bear.counter_count(CounterType::Stun) == 1);
+}
