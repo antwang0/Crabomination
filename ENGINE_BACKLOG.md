@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
-| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 39 cards, 19 seats, ten primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--39-cards-19-seats-ten-primitives) | 29 |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 40 cards, 20 seats, eleven primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--40-cards-20-seats-eleven-primitives) | 31 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes](#fixedopen-2026-10-20-commander-run-01nkae5b--46-one-gap-closers-45-seats-two-bug-classes) | 37 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 181 seats, 467 cards, seven bug classes](#fixedopen-2026-10-20-commander-run-01e4rmul--181-seats-467-cards-seven-bug-classes) | 8 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
@@ -241,7 +241,7 @@ the handoff.
 - **Aegar approximation:** "a spell you controlled" is read as an instant or sorcery you OWN — a resolved spell sits in
   its owner's graveyard by dispatch, past `last_known_controller`; a stolen cast is the gap.
 
-## FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 39 cards, 19 seats, ten primitives
+## FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 40 cards, 20 seats, eleven primitives
 
 - **Seats** 4776-4783, 4790-4796 (seat numbers raced with `01E4rMUL` three times: re-seat after every rebase), closed by
   `decks::cmdr_01r3_a` (tests `recent_b/cmdr_01r3_a.rs`, 20): one-gap Arcane Proxy, Worldpurge, Braided Net, Vedalken
@@ -253,7 +253,12 @@ the handoff.
   Safana + Shameless Charlatan (Silver-Inlaid Dagger, Elusive Tormentor, Fate Transfer; Tezzeret, Master of Metal landed
   first in `cmdr_01e4_a`), The Eighth Doctor + Amy Pond (Invasion of Vryn, Ceremonious Rejection, Deny Entry, Kiss of the
   Amesha), Amber Gristle + Dungeon Delver (Command of Unsummoning, Put Away, Symbol of Unsummoning). Primitive
-  `Effect::BinExiledWithSourceNamedLike` (Jester's Scepter).
+  `Effect::BinExiledWithSourceNamedLike` (Jester's Scepter; ⚠ `ActivatedAbility::exiled_with_self_to_graveyard_cost`
+  already pays the same cost shape — fold the two if a third card needs it).
+- **Eye of Ojer Taq** (seat 4818, Anara + Rebbec): `ActivatedAbility::craft_exile_sharing_type` ("craft with two that
+  share a card type", `game/craft_each.rs`), `Effect::ChooseCardTypeSharedByExiledWithSource` (the back face's as-enters
+  pick over the cards the craft linked to it), `Effect::NextSpellOfSourceChosenTypeFreeThisTurn` (`Player.free_next_spell_types`,
+  a {0} cost taken like Rooftop Storm's and spent by the matching cast). Census seed 9433: both abilities activated.
 - **Primitives:** `Effect::EachPlayerKeepsUpToFromHandShufflesRest` (Worldpurge); `Duration::WhileTapped` — CR 611.2c
   read of the *affected* permanent (Braided Net); `StaticEffect::PermanentsCantPhaseIn` (holds the untap step, Time and
   Tide's swap, and releases an "until it leaves" holder into the untap step) + `Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut`
@@ -268,8 +273,7 @@ the handoff.
   counter costs, and in an opponent's declare attackers step locks the biggest creature attacking it. ⚠ The same census
   still lists other tappers unused (Entrancing Lyre, Cyclopean Snare, Aboshan): each is a different cost shape — check them
   against `costs_ok` before adding a picker.
-- **OPEN (one-gap left):** Eye of Ojer Taq (craft with two sharing a card type, the back's chosen-type free next spell);
-  Apple of Eden / Springsage Ritual / Gustha's Scepter / Pick-Axe close only Faceless One / Piper decks (illegal). The
+- **OPEN (one-gap left):** none legal — Apple of Eden / Springsage Ritual / Gustha's Scepter / Pick-Axe close only Faceless One / Piper decks (illegal). The
   Seventh Doctor + Graham O'Brien needs Attractions (Monitor Monitor, Command Performance). ⚠ 1,343 legal zero-gap pair
   decks are unseated (`edhrec_scan_pairs.py --legal --max 0`): the convention seats only decks a session's own cards close.
 
