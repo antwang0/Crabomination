@@ -5441,6 +5441,11 @@ impl GameState {
                 Some(on_bf && card.protected_by.is_some_and(|p| p != controller && !self.same_team(p, controller)))
             }
             R::ControlledByActivePlayer => Some(on_bf && card.controller == self.active_player_idx),
+            R::ControlledByOpponentToYourLeft => Some(if on_bf {
+                self.opponent_to_left_of(controller) == Some(card.controller)
+            } else {
+                self.last_known_controller(cid, None).is_some_and(|c| self.opponent_to_left_of(controller) == Some(c))
+            }),
             R::ControlledBySeat(q) => Some(if on_bf {
                 card.controller == *q as usize
             } else {
@@ -5866,6 +5871,13 @@ impl GameState {
                 }
                 Target::Player(p) => *p == self.active_player_idx,
             },
+            R::ControlledByOpponentToYourLeft => {
+                let left = self.opponent_to_left_of(controller);
+                match target {
+                    Target::Permanent(cid) => left.is_some() && self.last_known_controller(*cid, hint) == left,
+                    Target::Player(p) => left == Some(*p),
+                }
+            }
             R::ControlledBySeat(q) => match target {
                 Target::Permanent(cid) => self.last_known_controller(*cid, hint) == Some(*q as usize),
                 Target::Player(p) => *p == *q as usize,
@@ -7617,6 +7629,7 @@ impl GameState {
             }
             R::ControlledByActivePlayer => card.controller == self.active_player_idx,
             R::ControlledBySeat(q) => card.controller == *q as usize,
+            R::ControlledByOpponentToYourLeft => self.opponent_to_left_of(controller) == Some(card.controller),
             R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
                 self.deaths.graveyard_from_battlefield_this_turn.contains(&card.id)

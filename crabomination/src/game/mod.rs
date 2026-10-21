@@ -6495,6 +6495,14 @@ impl GameState {
         (1..n).map(|k| (from + k) % n).find(|&i| self.players[i].is_alive()).unwrap_or(from)
     }
 
+    /// "The opponent to your left": the nearest living opponent clockwise of
+    /// `from` ([`player_to_left_of`](Self::player_to_left_of) skipping
+    /// teammates); `None` with no opponent left.
+    pub fn opponent_to_left_of(&self, from: usize) -> Option<usize> {
+        let n = self.players.len();
+        (1..n).map(|k| (from + k) % n).find(|&i| self.players[i].is_alive() && !self.same_team(i, from))
+    }
+
     pub fn next_alive_seat(&self, from: usize) -> usize {
         let n = self.players.len();
         for step in 1..=n {

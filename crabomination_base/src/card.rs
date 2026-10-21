@@ -3313,6 +3313,9 @@ pub enum SelectionRequirement {
     /// Controlled by one fixed seat (a spell by its caster) — the filter of a
     /// resolved "protection from that player" grant.
     ControlledBySeat(u8),
+    /// Controlled by "the opponent to your left" (Barroom Brawl) — the nearest
+    /// living opponent clockwise of the evaluating player (CR 101.4 seats).
+    ControlledByOpponentToYourLeft,
     /// Controlled by the player the effect's source chose as it entered
     /// (`chosen_player`) — a spell by its caster. Emissary of Grudges: "if
     /// it's controlled by the chosen player".
