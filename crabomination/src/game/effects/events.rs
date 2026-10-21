@@ -220,8 +220,6 @@ fn event_payload_matches(
         (EventKind::DealtCombatDamage, GameEvent::DamageDealt { to_card, combat, .. }) => {
             to_card.is_some() && *combat
         }
-        // CR 120.10 — a "noncombat damage" excess trigger skips combat's.
-        (EventKind::DealtExcessDamage { noncombat_only }, GameEvent::ExcessCombatDamage { .. }) => !noncombat_only,
         // Chandra's Spitfire — keyed on a player dealt *noncombat* damage.
         (
             EventKind::PlayerDealtNoncombatDamage,
