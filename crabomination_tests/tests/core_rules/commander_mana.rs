@@ -669,7 +669,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | RedInstantSorceryCopy | InstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard | SpellFromExile
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | PartySpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
-                | AuraOrEquipmentSpells | KnightOrEquipmentSpells | DwarfEquipmentOrSagaSpells | CreatureSpellWithNoAbilities | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter | NonHumanCreatureCastCounter | CreatureGainsRiot
+                | AuraOrEquipmentSpells | KnightOrEquipmentSpells | DwarfEquipmentOrSagaSpells | CreatureSpellWithNoAbilities | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter | NonHumanCreatureCastCounter | MulticoloredCreatureCastCounter | CreatureGainsRiot
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
                 | SpellsOnly | TypeSpellOrItsAbility(_) | KickedSpellsOnly | PowerUpOnly | NotSpellsFromHand => {}
             }
@@ -721,6 +721,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             MountOrVehicleSpells,
             CreatureCastCounter,
             NonHumanCreatureCastCounter,
+            MulticoloredCreatureCastCounter,
             CreatureGainsRiot,
             CreatureOfEitherTypeOrItsAbility(CreatureType::Bear, CreatureType::Elf),
             ColorlessSpellsOrAbilities,

@@ -433,6 +433,11 @@ impl GameState {
         {
             card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, attendant));
         }
+        // Guildmages' Forum — the same, for a multicolored creature spell.
+        let forum = spent.spent_count(SpendRestriction::MulticoloredCreatureCastCounter);
+        if kind.creature && kind.multicolored && forum > 0 {
+            card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, forum));
+        }
         // Jade Orb of Dragonkind — a Dragon creature spell enters with a
         // counter per pip and hexproof until its caster's next turn.
         let dragon = kind.creature
