@@ -14355,6 +14355,10 @@ pub enum Effect {
     /// effect, so Upwelling's step-end exception doesn't stop it (CR 500.4);
     /// Yurlok's mana burn sees the loss.
     LoseUnspentMana { who: PlayerRef },
+    /// Each permanent `what` names has exactly `subtypes` as its artifact
+    /// subtypes from now on — "it isn't an Equipment" (Dancing Sword), an
+    /// indefinite layer-4 rewrite.
+    SetArtifactSubtypes { what: Selector, subtypes: Vec<crate::card::ArtifactSubtype> },
 
     AnyPlayerMayAccept {
         who: PlayerRef,

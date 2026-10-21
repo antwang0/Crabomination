@@ -934,6 +934,7 @@ impl Effect {
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
             Effect::LoseUnspentMana { who } => player_has_target(who),
+            Effect::SetArtifactSubtypes { what, .. } => sel_has_target(what),
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop

@@ -14,6 +14,7 @@ mod any_player_sacrifice;
 mod flux;
 mod great_aurora;
 mod lose_unspent;
+mod artifact_subtypes;
 mod energy_sweep;
 mod among;
 mod may_cost;
@@ -24767,6 +24768,10 @@ impl GameState {
                 self.each_player_shuffles_hand_and_permanents_then_draws(ctx, events)
             }
             Effect::LoseUnspentMana { who } => self.lose_unspent_mana(who, ctx, events),
+            Effect::SetArtifactSubtypes { what, subtypes } => {
+                self.set_artifact_subtypes(what, subtypes, ctx);
+                Ok(())
+            }
             Effect::AnyPlayerMaySacrificeToTopdeckSource { filter } => {
                 self.any_player_may_sacrifice_to_topdeck_source(filter, effect, ctx, events)
             }
