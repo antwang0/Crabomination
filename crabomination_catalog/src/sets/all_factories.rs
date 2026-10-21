@@ -18392,6 +18392,7 @@ static DECKS: &[Factory] = &[
     super::decks::ogre_battlecaster,
     super::decks::the_great_aurora,
     super::decks::invasion_of_gobakhan,
+    super::decks::spinning_wheel_kick,
     // cmdr_01e4_a (session 01E4rMUL)
     super::decks::dragonloft_idol,
     super::decks::scion_of_ugin,

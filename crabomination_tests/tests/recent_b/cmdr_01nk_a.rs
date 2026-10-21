@@ -783,3 +783,19 @@ fn invasion_of_gobakhan_exiles_an_opponents_card() {
     assert!(g.battlefield_find(inv).is_some(), "the Siege is out");
     assert!(g.exile.iter().any(|c| c.id == bears), "the Bears went to exile");
 }
+
+/// CR 601.2c — Spinning Wheel Kick: the creature in slot 0 deals its power to
+/// each of the X targets after it (X = 2 here), not to itself.
+#[test]
+fn cr_601_2c_spinning_wheel_kick_hits_x_targets() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let swk = g.add_card_to_hand(0, catalog::spinning_wheel_kick());
+    cast_with(&mut g, swk, Some(Target::Permanent(giant)), vec![Target::Permanent(a), Target::Permanent(b)], Some(2), None);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "3 damage each");
+    assert!(g.battlefield_find(c).is_some(), "not a target");
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 0, "the kicker deals, takes nothing");
+}

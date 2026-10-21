@@ -1255,3 +1255,42 @@ pub fn invasion_of_gobakhan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Spinning Wheel Kick — {X}{X}{G}{G} sorcery. Target creature you control
+/// deals damage equal to its power to each of X target creatures and/or
+/// planeswalkers. Slot 0 is the kicker, slots 1..=X its victims
+/// (`Effect::SlotGroups`, CR 601.2c).
+pub fn spinning_wheel_kick() -> CardDefinition {
+    CardDefinition {
+        name: "Spinning Wheel Kick",
+        cost: cost(&[x(), x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::SlotGroups(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 1,
+                    filter: R::Creature.and(R::ControlledByYou),
+                    effect: Box::new(Effect::Noop),
+                },
+                Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::Creature.or(R::Planeswalker),
+                        effect: Box::new(Effect::Noop),
+                    }),
+                },
+            ]),
+            Effect::ForEach {
+                selector: Selector::TargetsFrom(1),
+                body: Box::new(Effect::DealDamageFrom {
+                    source: Selector::Target(0),
+                    to: Selector::TriggerSource,
+                    amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
