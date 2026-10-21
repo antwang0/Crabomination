@@ -187,6 +187,12 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — single-commander closers
+
+- **CLAIMED (`01KPxZ3H`, 2026-10-21) — don't duplicate:** Tetzin's four (Tetzin, Gnome Champion; Chalice of Life; Sunbird
+  Standard; Unstable Glyphbridge), Squall's two (Squall, Gunblade Duelist; Duelist's Flame), Captain Rex Nebula's two
+  (Captain Rex Nebula; Mysterious Limousine), Satsuki's two (Teachings of the Kirin; Storyweave).
+
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
 - **Seats** (git log `Pod:` under session `01Jywzky`): 21 partner-pair decks from the two-/three-gap lists (Amber
