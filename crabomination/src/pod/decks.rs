@@ -133486,3 +133486,170 @@ pub const BREECHES_30_MAIN: &[CardFactory] = &[
     island, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const KEDISS_15_COMMANDERS: &[CardFactory] = &[kediss_emberclaw_familiar, slurrk_all_ingesting];
+
+/// **Kediss, Emberclaw Familiar and Slurrk, All-Ingesting**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 14 Forests + 9 Mountains = 98.
+/// Kediss, Emberclaw Familiar and Slurrk, All-Ingesting (EDHREC, fetched 2026-10-21).
+pub const KEDISS_15_MAIN: &[CardFactory] = &[
+    lightning_greaves, ozolith_the_shattered_spire, skateboard, sol_ring, the_ooze,
+    turtle_blimp, turtle_van, cinder_glade, command_tower, evolving_wilds, gruul_guildgate,
+    rockfall_vale, rootbound_crag, rugged_highlands, terramorphic_expanse, timber_gorge,
+    turtle_lair, wooded_foothills, acidic_slime, akki_battle_squad, archetype_of_aggression,
+    beast_whisperer, biogenic_ooze, biowaste_blob, corrosive_ooze, evolution_witness,
+    experiment_one, goblin_anarchomancer, grumgully_the_generous, kami_of_whispered_hopes,
+    kinetic_ooze, lizard_blades, loyal_guardian, magma_pummeler, mutagen_man_living_ooze,
+    noggle_robber, oran_rief_ooze, predator_ooze, temperamental_oozewagg, tervigon,
+    thundering_raiju, toxic_scorpion, branching_evolution, doubling_season, garruks_uprising,
+    hardened_scales, level_up, march_of_the_world_ooze, master_chef, ninja_pizza,
+    rhythm_of_the_wild, sphere_grid, tribute_to_the_world_tree, turtle_power, fling, fog,
+    inspiring_call, return_of_the_wildspeaker, special_move, starstorm, thrill_of_possibility,
+    untimely_malfunction, chandra_torch_of_defiance, cultivate, farseek, hull_breach,
+    increasing_savagery, kodamas_reach, mark_of_mutiny, mutant_chain_reaction, natures_lore,
+    rampant_growth, super_combo, three_visits, turtle_tracks,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const AKROMA_23_COMMANDERS: &[CardFactory] = &[akroma_vision_of_ixidor, ich_tekik_salvage_splicer];
+
+/// **Akroma, Vision of Ixidor and Ich-Tekik, Salvage Splicer**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Forests + 11 Plains = 98.
+/// Akroma, Vision of Ixidor and Ich-Tekik, Salvage Splicer (EDHREC, fetched 2026-10-21).
+pub const AKROMA_23_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, hedron_archive, incubation_sac, mind_stone,
+    nexus_of_becoming, patchwork_banner, rusted_relic, sol_ring, thousand_moons_smithy,
+    ancient_den, birnin_zana_plaza, bountiful_promenade, canopy_vista, command_tower,
+    darksteel_citadel, dread_statuary, gavony_township, karns_bastion, lush_portico,
+    myriad_landscape, overgrown_farmland, selesnya_sanctuary, sunpetal_grove, temple_garden,
+    temple_of_plenty, the_great_mound, thornglint_bridge, tree_of_tales, urzas_mine,
+    wooded_bastion, invasion_of_muraganda, blade_splicer, bronze_guardian, cradle_clearcutter,
+    cryptothrall, darksteel_colossus, darksteel_splicer, geode_golem, golden_guardian,
+    howling_golem, illustrious_wanderglyph, karn_legacy_reforged, liliana_the_faultless,
+    losheel_clockwork_scholar, master_splicer, maul_splicer, meteor_golem,
+    mondrak_glory_dominus, phyrexian_hulk, phyrexian_triniform, platinum_emperion,
+    rootwire_amalgam, sandstorm_salvager, sensor_splicer, solemn_simulacrum, soulless_jailer,
+    triplicate_titan, vital_splicer, wurmcoil_engine, doubling_season, elemental_bond,
+    sidequest_catch_a_fish, skrelvs_hive, smothering_tithe, sphere_grid,
+    tribute_to_the_world_tree, akromas_will, beast_within, dispatch, dispense_justice,
+    rootborn_defenses, sundering_growth, swords_to_plowshares, ugin_the_ineffable, cultivate,
+    explosive_vegetation, kodamas_reach, organic_extinction, rampant_growth, splicers_skill,
+    // Basics
+    forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const RASAAD_YN_BASHIR_26_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, cloakwood_hermit];
+
+/// **Rasaad yn Bashir and Cloakwood Hermit**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Forests + 11 Plains = 98.
+/// Rasaad yn Bashir and Cloakwood Hermit (EDHREC, fetched 2026-10-21).
+pub const RASAAD_YN_BASHIR_26_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, sol_ring, strandwalker, trailblazers_torch, wayfarers_bauble,
+    ba_sing_se, boseiju_who_endures, brokers_hideout, canopy_vista, command_tower,
+    eclipsed_realms, gathering_place, idyllic_grange, lush_portico, rogues_passage,
+    scattered_groves, secret_tunnel, temple_garden, thriving_heath, yavimaya_cradle_of_growth,
+    angelic_wall, belligerent_brontodon, bosk_banneret, caravan_hurda, dauntless_dourbark,
+    dawnbringer_cleric, fangorn_tree_shepherd, fecund_greenshell, ferrafor_young_yew,
+    formidable_speaker, generous_ent, giant_ox, goliath_paladin, great_forest_druid,
+    icetill_explorer, kazandu_nectarpot, leaf_crowned_elder, midnight_duelist, moonlit_lamenter,
+    nyleas_forerunner, orchard_warden, primal_druid, six, timber_protector,
+    toph_earthbending_master, treebeard_gracious_host, treefolk_harbinger,
+    verdeloth_the_ancient, warden_of_the_woods, white_plume_adventurer, wickerbough_elder,
+    yoked_ox, earthbender_ascension, garruks_uprising, heros_resolve, lignify, oblivion_ring,
+    sapling_nursery, savage_hunger, spider_climb, stoneskin, the_birth_of_meletis, battle_menu,
+    boon_of_safety, condemn, crib_swap, enlightened_tutor, tower_defense, warriors_lesson,
+    cultivate, farseek, kodamas_reach, rampant_growth, secret_rendezvous, spry_and_mighty,
+    tend_the_sprigs,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ICH_TEKIK_28_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, sidar_kondo_of_jamuraa];
+
+/// **Ich-Tekik, Salvage Splicer and Sidar Kondo of Jamuraa**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 9 Forests + 8 Plains = 98.
+/// Ich-Tekik, Salvage Splicer and Sidar Kondo of Jamuraa (EDHREC, fetched 2026-10-21).
+pub const ICH_TEKIK_28_MAIN: &[CardFactory] = &[
+    arcane_signet, baseball_bat, commanders_sphere, ecologists_terrarium, explorers_cache,
+    explosive_apparatus, found_footage, fountainport_bell, heaped_harvest, jack_o_lantern,
+    kaslems_stonetree, patchwork_banner, sol_ring, springleaf_drum, travelers_amulet,
+    wayfarers_bauble, blossoming_sands, command_bridge, command_tower, etched_cornfield,
+    evolving_wilds, fortified_village, hidden_nursery, myriad_landscape, path_of_ancestry,
+    temple_of_the_false_god, terramorphic_expanse, uncharted_haven, warped_landscape,
+    ambitious_farmhand, avacyns_pilgrim, coalition_skyknight, dawnhart_rejuvenator,
+    disruptor_wanderglyph, epitaph_golem, flight_deck_coordinator, haliya_ascendant_cadet,
+    hamlet_vanguard, intrepid_adversary, lunarch_veteran, mikaeus_the_lunarch,
+    orphans_of_the_wheat, orzhov_advokist, samite_herbalist, somberwald_sage, stern_constable,
+    thalia_heretic_cathar, the_wandering_rescuer, thousand_moons_infantry, timberland_guide,
+    torens_fist_of_the_angels, twilight_drover, unruly_mob, veteran_survivor, cryptolith_rite,
+    ghostly_prison, glorious_sunrise, hunters_talent, acrobatic_leap, aim_high, argivian_find,
+    biosynthic_burst, clear_shot, escape_from_orthanc, expose_evil, flare_of_faith,
+    pillar_launch, riverguards_reflexes, second_harvest, turn_the_earth, coordinated_clobbering,
+    dewdrop_cure, ents_fury, for_the_common_good, join_the_dance, kodamas_reach, make_a_wish,
+    pull_through_the_weft, rampant_growth, scale_the_heights, sunset_revelry,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const FALTHIS_25_COMMANDERS: &[CardFactory] = &[falthis_shadowcat_familiar, gilanra_caller_of_wirewood];
+
+/// **Falthis, Shadowcat Familiar and Gilanra, Caller of Wirewood**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 22 Forests + 5 Swamps = 98.
+/// Falthis, Shadowcat Familiar and Gilanra, Caller of Wirewood (EDHREC, fetched
+/// 2026-10-21).
+pub const FALTHIS_25_MAIN: &[CardFactory] = &[
+    dungeoneers_pack, golgari_cluestone, golgari_locket, hierophants_chalice,
+    lantern_of_revealing, magnifying_glass, manalith, moss_diamond, raiders_karve,
+    thieves_tools, wolfhunters_quiver, evolving_wilds, fertile_thicket, golgari_guildgate,
+    jungle_hollow, painted_bluffs, rupture_spire, shimmering_grotto, terramorphic_expanse,
+    unknown_shores, annoyed_altisaur, broodspinner, colossal_dreadmaw, cynical_loner,
+    deadly_recluse, dragon_scarred_bear, dread_linnorm, elvish_rejuvenator, emerald_dragon,
+    fyndhorn_elder, giant_ankheg, greater_sandwurm, halsin_emerald_archdruid, heroes_bane,
+    lurking_roper, owlbear, primordial_wurm, sarevok_deathbringer, sifter_wurm,
+    starlit_soothsayer, terrain_elemental, thornweald_archer, three_tree_rootweaver,
+    wary_watchdog, whisperer_of_the_wilds, wickerfolk_thresher, yargle_glutton_of_urborg,
+    yavimaya_enchantress, agent_of_the_shadow_thieves, demonic_lore, fertile_ground,
+    fruit_of_the_first_tree, karametras_favor, lure, natures_embrace, bladebrand, blinding_fog,
+    boon_of_boseiju, broken_wings, giant_growth, hunters_insight, murder, putrefy,
+    ambitions_cost, blood_divination, enlarge, feast_of_succession, harmonize, natures_way,
+    prey_upon, souls_might,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const RASAAD_YN_BASHIR_27_COMMANDERS: &[CardFactory] = &[rasaad_yn_bashir, criminal_past];
+
+/// **Rasaad yn Bashir and Criminal Past**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 7 Plains + 12 Swamps = 98.
+/// Rasaad yn Bashir and Criminal Past (EDHREC, fetched 2026-10-21).
+pub const RASAAD_YN_BASHIR_27_MAIN: &[CardFactory] = &[
+    commanders_sphere, delvers_torch, dungeoneers_pack, lothlorien_blade, necron_monolith,
+    nuka_nuke_launcher, sarevoks_tome, surestrike_trident, trailblazers_torch,
+    wine_of_blood_and_iron, wondrous_crucible, arena, bojuka_bog, bonders_enclave,
+    caves_of_koilos, command_tower, desolate_mire, dungeon_descent, evolving_wilds, fetid_heath,
+    isolated_chapel, mariposa_military_base, myriad_landscape, orzhov_basilica, reliquary_tower,
+    rogues_passage, shineshadow_snarl, susur_secundi_void_altar, temple_of_silence,
+    vault_of_the_archangel, airlift_chaplain, baldin_century_herdmaster, billowing_shriekmass,
+    bloodcurdler, festerleech, gloom_stalker, goliath_paladin, inversion_behemoth,
+    luminate_primordial, millikin, radiant_solar, ravenloft_adventurer,
+    safana_calimport_cutthroat, screeching_scorchbeast, seasoned_dungeoneer,
+    sivriss_nightmare_speaker, snarling_gorehound, triumphant_adventurer, veteran_dungeoneer,
+    vicious_battlerager, wailing_ghoul, white_plume_adventurer, zombie_ogre, dying_wish,
+    farrels_mantle, gauntlets_of_light, murder_investigation, precipitous_drop, sigil_of_myrkul,
+    sinstrikers_will, thorough_investigation, undercellar_sweep, vault_12_the_necropolis,
+    spirit_flare, transmutation, your_temple_is_under_attack, cauldrons_gift, diresight,
+    fates_reversal, from_the_catacombs, gixs_command, nights_whisper, nuclear_fallout,
+    rakshasas_secret, read_the_bones, risky_research, solar_tide, wave_of_reckoning,
+    welcome_the_dead,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

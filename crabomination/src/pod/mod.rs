@@ -29016,6 +29016,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BREECHES_30_COMMANDERS,
             main: decks::BREECHES_30_MAIN,
         },
+        // Seat 4761: Kediss, Emberclaw Familiar and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4761`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Slurrk, All-Ingesting (RG)",
+            commanders: decks::KEDISS_15_COMMANDERS,
+            main: decks::KEDISS_15_MAIN,
+        },
+        // Seat 4762: Akroma, Vision of Ixidor and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 4762`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Ich-Tekik, Salvage Splicer (WG)",
+            commanders: decks::AKROMA_23_COMMANDERS,
+            main: decks::AKROMA_23_MAIN,
+        },
+        // Seat 4763: Rasaad yn Bashir and Cloakwood Hermit's EDHREC average deck. `--pod-decks 4763`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Cloakwood Hermit (WG)",
+            commanders: decks::RASAAD_YN_BASHIR_26_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_26_MAIN,
+        },
+        // Seat 4764: Ich-Tekik, Salvage Splicer and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4764`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::ICH_TEKIK_28_COMMANDERS,
+            main: decks::ICH_TEKIK_28_MAIN,
+        },
+        // Seat 4765: Falthis, Shadowcat Familiar and Gilanra, Caller of Wirewood's EDHREC average deck. `--pod-decks 4765`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Gilanra, Caller of Wirewood (BG)",
+            commanders: decks::FALTHIS_25_COMMANDERS,
+            main: decks::FALTHIS_25_MAIN,
+        },
+        // Seat 4766: Rasaad yn Bashir and Criminal Past's EDHREC average deck. `--pod-decks 4766`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Criminal Past (WB)",
+            commanders: decks::RASAAD_YN_BASHIR_27_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_27_MAIN,
+        },
     ]
 }
 
@@ -35677,6 +35713,12 @@ mod tests {
             ("Safana, Calimport Cutthroat and Cultist of the Absolute", &[0x1CAC]),
             ("Krark, the Thumbless and Radiant, Serra Archangel", &[0x1CAD]),
             ("Breeches, Brazen Plunderer and Kraum, Ludevic's Opus", &[0x1CAE]),
+            ("Kediss, Emberclaw Familiar and Slurrk, All-Ingesting", &[0x1CAF]),
+            ("Akroma, Vision of Ixidor and Ich-Tekik, Salvage Splicer", &[0x1CB0]),
+            ("Rasaad yn Bashir and Cloakwood Hermit", &[0x1CB1]),
+            ("Ich-Tekik, Salvage Splicer and Sidar Kondo of Jamuraa", &[0x1CB2]),
+            ("Falthis, Shadowcat Familiar and Gilanra, Caller of Wirewood", &[0x1CB3]),
+            ("Rasaad yn Bashir and Criminal Past", &[0x1CB4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
