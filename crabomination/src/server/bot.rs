@@ -9841,8 +9841,22 @@ pub(super) fn cast_candidates<'a>(
         }
         None => true,
     });
+    // CR 732.2 — an optional loop is one its player stops: a card already cast
+    // `RECAST_LOOP_CAP` times this turn is held. Enduring Renewal handed back
+    // the one-drops Phyrexian Altar sacrificed to pay for the next, 16,000
+    // actions to the cap (four-seat pod, seeds 1174/1201/1806/2732, 23568).
+    let cast = &state.players[seat].spell_ids_cast_this_turn;
+    if cast.len() >= RECAST_LOOP_CAP {
+        out.retain(|(a, _)| {
+            a.cast_card_id().is_none_or(|id| cast.iter().filter(|&&c| c == id).count() < RECAST_LOOP_CAP)
+        });
+    }
     out
 }
+
+/// Casts of one card in one turn past which the bot treats the next as an
+/// optional loop and holds it (see the end of [`cast_candidates`]).
+const RECAST_LOOP_CAP: usize = 12;
 
 /// Which of [`main_phase_action_with`]'s fallback generators a board can still
 /// produce an action for.
@@ -27941,6 +27955,27 @@ mod tests {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![pricey], "a Gain keeps the biggest"),
             other => panic!("expected Cards, got {other:?}"),
         }
+    }
+
+    /// CR 732.2 — a card already cast `RECAST_LOOP_CAP` times this turn is not
+    /// offered again: Enduring Renewal + Phyrexian Altar recast the same
+    /// one-drops to the 16,000-action cap (four-seat pod, seed 23568).
+    #[test]
+    fn bot_holds_a_card_recast_to_the_loop_cap() {
+        let mut g = two_player_game();
+        g.step = crate::game::types::TurnStep::PreCombatMain;
+        let bears = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        let offered = |g: &GameState| {
+            cast_candidates(g, 0, &EvalWeights::default(), None).iter().any(|(a, _)| a.cast_card_id() == Some(bears))
+        };
+        assert!(offered(&g));
+        for _ in 0..RECAST_LOOP_CAP - 1 {
+            g.players[0].spell_ids_cast_this_turn.push(bears);
+        }
+        assert!(offered(&g), "one short of the cap");
+        g.players[0].spell_ids_cast_this_turn.push(bears);
+        assert!(!offered(&g), "at the cap the loop stops");
     }
 
     /// CR 732.2 — an "up to N" upside counts toward the optional-loop cap: past
