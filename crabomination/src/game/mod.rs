@@ -35851,6 +35851,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
+            | StaticEffect::HasNonmanaActivatedAbilitiesOfOpponentLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             // Scheming Fence — read by the grant gather / grant scan.
             | StaticEffect::HasActivatedAbilitiesOfChosenPermanent
@@ -36133,6 +36134,7 @@ fn static_effect_to_effects(
             // `activate_ability` (Cursed Totem); no layer effect.
             | StaticEffect::CreatureActivatedAbilitiesLocked
             | StaticEffect::OpponentsCreatureAbilitiesLocked
+            | StaticEffect::OpponentsLandNonmanaAbilitiesLocked
             // CountersCantBePlaced (Solemnity) — consulted at every
             // counter-placement site via `counters_locked`; no layer effect.
             | StaticEffect::CountersCantBePlaced

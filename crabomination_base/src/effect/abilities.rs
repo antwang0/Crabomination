@@ -4042,6 +4042,15 @@ pub enum StaticEffect {
     /// the battlefield." The battlefield sibling of
     /// `HasActivatedAbilitiesOfGraveyardLands`.
     HasActivatedAbilitiesOfBattlefieldLands,
+    /// Sharkey, Tyrant of the Shire — "has all activated abilities of lands
+    /// your opponents control except mana abilities", spent with mana of any
+    /// type (the `any_color` activation flag, as Manascape Refractor's).
+    /// Read live by `granted_abilities_of`.
+    HasNonmanaActivatedAbilitiesOfOpponentLands,
+    /// Sharkey — "activated abilities of lands your opponents control can't
+    /// be activated unless they're mana abilities." Checked in
+    /// `activate_ability` against the land's controller's opponents.
+    OpponentsLandNonmanaAbilitiesLocked,
     /// Phyrexian Vindicator — "If damage would be dealt to this creature,
     /// prevent it. When damage is prevented this way, this creature deals
     /// CR 118.9 — "Rather than pay the mana cost for a spell, its controller

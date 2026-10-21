@@ -8600,6 +8600,7 @@ impl CardDefinition {
                     sa.effect,
                     crate::effect::StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
                         | crate::effect::StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
+                        | crate::effect::StaticEffect::HasNonmanaActivatedAbilitiesOfOpponentLands
                 )
             }),
             ..Default::default()

@@ -1325,6 +1325,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::HasActivatedAbilitiesOfCounteredCreatures
             | SE::HasActivatedAbilitiesOfGraveyardLands
             | SE::HasActivatedAbilitiesOfBattlefieldLands
+            | SE::HasNonmanaActivatedAbilitiesOfOpponentLands
             | SE::HasActivatedAbilitiesOfLibraryTop { .. }
             | SE::HasActivatedAbilitiesOfChosenPermanent => flags |= mana_summary::SELF_GRANT,
             SE::CounteredCreaturesHaveAbilitiesOfExiledWithSource => {
@@ -21063,6 +21064,7 @@ impl GameState {
             (false, false, false, false, false, false);
         let (mut drana, mut refractor, mut trazyn, mut robaran) = (false, false, false, false);
         let mut fence = false;
+        let mut sharkey = false;
         let mut gy_filters: Vec<&crate::card::SelectionRequirement> = Vec::new();
         let mut caged: Option<crate::card::CounterType> = None;
         let mut brained: Option<crate::card::CounterType> = None;
@@ -21090,6 +21092,7 @@ impl GameState {
                 StaticEffect::HasActivatedAbilitiesOfOpponentCreatures => drana = true,
                 StaticEffect::HasActivatedAbilitiesOfGraveyardLands => safehouse = true,
                 StaticEffect::HasActivatedAbilitiesOfBattlefieldLands => refractor = true,
+                StaticEffect::HasNonmanaActivatedAbilitiesOfOpponentLands => sharkey = true,
                 // Conspicuous Snoop, read below off the same list — this pass
                 // is the one that already has it in cache.
                 StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. } => snoop = true,
@@ -21340,6 +21343,16 @@ impl GameState {
         if refractor {
             for land in self.battlefield.iter().filter(|c| c.id != card_id && c.definition.is_land()) {
                 out.extend(land.definition.activated_abilities.iter());
+            }
+        }
+        // Sharkey — the non-mana abilities of its opponents' lands.
+        if sharkey {
+            for land in self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.is_land() && !self.same_team(c.controller, me.controller))
+            {
+                out.extend(land.definition.activated_abilities.iter().filter(|ab| !is_mana_ability(&ab.effect)));
             }
         }
         // Conspicuous Snoop — while the controller's library top matches the
@@ -22535,6 +22548,19 @@ impl GameState {
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);
             }
+        }
+
+        // Sharkey — a land's non-mana abilities are shut off while one of its
+        // controller's opponents controls the lock.
+        if !ability_is_mana
+            && !source_in_gy
+            && !source_in_hand
+            && let Some(ctrl) = bf_src!().filter(|c| c.definition.is_land()).map(|c| c.controller)
+            && self.opponent_has_static(ctrl, |e| {
+                matches!(e, crate::effect::StaticEffect::OpponentsLandNonmanaAbilitiesLocked)
+            })
+        {
+            return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
         // Cursed Totem / Damping Matrix lock: non-mana activated abilities of
