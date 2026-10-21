@@ -2286,3 +2286,46 @@ fn curious_homunculus_reads_its_way_up() {
     }
     assert_eq!(pt(&g, homunculus), (3, 4));
 }
+
+/// Brand of Ill Omen binds the enchanted creature's controller, not its own.
+#[test]
+fn brand_of_ill_omen_locks_the_enchanted_controller() {
+    for (host_seat, locked) in [(0, true), (1, false)] {
+        let mut g = pod(2);
+        let host = g.add_card_to_battlefield(host_seat, catalog::grizzly_bears());
+        let brand = g.add_card_to_hand(0, catalog::brand_of_ill_omen());
+        cast(&mut g, brand, Some(Target::Permanent(host)));
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        flood(&mut g, 0);
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: bear,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        assert_eq!(cast.is_err(), locked, "Brand on seat {host_seat}'s creature");
+    }
+}
+
+/// CR 301.5c — an Equipment that is also a creature can't equip: a danced
+/// Dancing Sword (cmdr_01jy_a's) is refused a new host.
+#[test]
+fn cr_301_5c_a_creature_equipment_cant_equip() {
+    let mut g = pod(2);
+    let sword = g.add_card_to_battlefield(0, catalog::dancing_sword());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (4, 3));
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, sword), (2, 1));
+    assert!(g.computed_permanent(sword).unwrap().keywords().contains(&Keyword::Flying));
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    assert!(g.perform_action(GameAction::Equip { equipment: sword, target: other }).is_err());
+}

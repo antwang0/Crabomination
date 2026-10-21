@@ -18696,6 +18696,7 @@ static DECKS: &[Factory] = &[
     super::decks::the_mana_rig,
     super::decks::shreds_of_sanity,
     super::decks::curious_homunculus,
+    super::decks::brand_of_ill_omen,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

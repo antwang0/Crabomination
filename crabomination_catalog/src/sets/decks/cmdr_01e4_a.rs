@@ -5225,3 +5225,18 @@ pub fn curious_homunculus() -> CardDefinition {
         ..creature("Curious Homunculus", cost(&[generic(1), u()]), vec![CreatureType::Homunculus], 1, 1)
     }
 }
+
+// ── Batch sixteen (one-gap decks) ───────────────────────────────────────────
+
+/// Brand of Ill Omen — {3}{R} Aura. Cumulative upkeep {R}. Enchanted
+/// creature's controller can't cast creature spells.
+pub fn brand_of_ill_omen() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CumulativeUpkeep(crate::card::CumulativeUpkeepCost::Mana(cost(&[r()])))],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature's controller can't cast creature spells.",
+            effect: StaticEffect::EnchantedControllerCantCastCreatureSpells,
+        }],
+        ..aura("Brand of Ill Omen", cost(&[generic(3), r()]), None)
+    }
+}
