@@ -28986,6 +28986,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRIGID_COMMANDERS,
             main: decks::BRIGID_MAIN,
         },
+        // Seat 4756: Abdel Adrian, Gorion's Ward and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 4756`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Acolyte of Bahamut (WG)",
+            commanders: decks::ABDEL_ADRIAN_13_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_13_MAIN,
+        },
+        // Seat 4757: Sengir, the Dark Baron and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4757`.
+        PodDeck {
+            name: "Sengir, the Dark Baron and Siani, Eye of the Storm (UB)",
+            commanders: decks::SENGIR_6_COMMANDERS,
+            main: decks::SENGIR_6_MAIN,
+        },
+        // Seat 4758: Safana, Calimport Cutthroat and Cultist of the Absolute's EDHREC average deck. `--pod-decks 4758`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Cultist of the Absolute (B)",
+            commanders: decks::SAFANA_24_COMMANDERS,
+            main: decks::SAFANA_24_MAIN,
+        },
+        // Seat 4759: Krark, the Thumbless and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4759`.
+        PodDeck {
+            name: "Krark, the Thumbless and Radiant, Serra Archangel (WR)",
+            commanders: decks::KRARK_10_COMMANDERS,
+            main: decks::KRARK_10_MAIN,
+        },
+        // Seat 4760: Breeches, Brazen Plunderer and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 4760`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Kraum, Ludevic's Opus (UR)",
+            commanders: decks::BREECHES_30_COMMANDERS,
+            main: decks::BREECHES_30_MAIN,
+        },
     ]
 }
 
@@ -35642,6 +35672,11 @@ mod tests {
             ("Brinelin, the Moon Kraken and Prava of the Steel Legion", &[0x1CA7]),
             ("Jeska, Thrice Reborn and Siani, Eye of the Storm", &[0x1CA8]),
             ("Brigid, Clachan's Heart", &[0x1CA9]),
+            ("Abdel Adrian, Gorion's Ward and Acolyte of Bahamut", &[0x1CAA]),
+            ("Sengir, the Dark Baron and Siani, Eye of the Storm", &[0x1CAB]),
+            ("Safana, Calimport Cutthroat and Cultist of the Absolute", &[0x1CAC]),
+            ("Krark, the Thumbless and Radiant, Serra Archangel", &[0x1CAD]),
+            ("Breeches, Brazen Plunderer and Kraum, Ludevic's Opus", &[0x1CAE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
