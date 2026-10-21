@@ -384,3 +384,63 @@ fn cr_702_173_monastery_raid_freerunning_exiles_x() {
     drain_stack(&mut g);
     assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 4);
 }
+
+/// Slayer's Plate makes a Spirit only when its creature was a Human: Elite
+/// Vanguard dying leaves one; Grizzly Bears dying leaves none.
+#[test]
+fn slayers_plate_spirit_needs_a_human() {
+    for (def, spirits) in [(catalog::elite_vanguard(), 1), (catalog::grizzly_bears(), 0)] {
+        let mut g = pod(2);
+        let plate = g.add_card_to_battlefield(0, catalog::slayers_plate());
+        let body = g.add_card_to_battlefield(0, def);
+        g.battlefield_find_mut(plate).unwrap().attached_to = Some(body);
+        let bolt = g.add_card_to_hand(0, catalog::murder());
+        cast(&mut g, bolt, Some(Target::Permanent(body)));
+        assert!(g.battlefield_find(body).is_none());
+        let made = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
+        assert_eq!(made, spirits);
+    }
+}
+
+/// CR 614.9 — Kor Dirge sends the chosen source's damage to the second target
+/// all turn: two hits on the Bears land on the Hill Giant.
+#[test]
+fn cr_614_9_kor_dirge_redirects_a_chosen_source_all_turn() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // The headless chooser names the first hostile source.
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let dirge = g.add_card_to_hand(0, catalog::kor_dirge());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dirge,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![Target::Permanent(giant)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    for _ in 0..2 {
+        let hit = Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE };
+        g.resolve_effect(&hit, &EffectContext::for_ability(dragon, 1, Some(Target::Permanent(bears)))).unwrap();
+    }
+    assert_eq!(g.battlefield_find(bears).unwrap().damage, 0);
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 2);
+}
+
+/// Braids's Frightful Return chapter III: an opponent with nothing to
+/// sacrifice loses 2 life and its controller draws (CR 714.2b — the chapter
+/// triggers as the third lore counter lands).
+#[test]
+fn cr_714_2b_braidss_frightful_return_chapter_three_punishes() {
+    let mut g = pod(2);
+    let saga = g.add_card_to_battlefield(0, catalog::braidss_frightful_return());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    let (life, hand) = (g.players[1].life, g.players[0].hand.len());
+    let lore = Effect::AddCounter { what: Selector::This, kind: CounterType::Lore, amount: Value::ONE };
+    g.resolve_effect(&lore, &EffectContext::for_ability(saga, 0, None)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[0].hand.len()), (life - 2, hand + 1));
+}

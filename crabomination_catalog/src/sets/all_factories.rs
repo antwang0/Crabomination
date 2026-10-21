@@ -18894,6 +18894,9 @@ static DECKS: &[Factory] = &[
     super::decks::deadly_wanderings,
     super::decks::grotesque_mutation,
     super::decks::monastery_raid,
+    super::decks::slayers_plate,
+    super::decks::braidss_frightful_return,
+    super::decks::kor_dirge,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

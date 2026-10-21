@@ -5,8 +5,9 @@ use crate::card::{
     ActivatedAbility, AlternativeCost, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
     Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TriggeredAbility, Zone,
+    TokenDefinition, TriggeredAbility, Zone,
 };
+use std::sync::Arc;
 use crate::effect::shortcut::{craft, freerunning, magecraft, target_filtered};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value, ZoneDest,
@@ -613,6 +614,113 @@ pub fn monastery_raid() -> CardDefinition {
             effect_override: Some(raid(Value::XFromCost)),
             ..freerunning(cost(&[x(), r()]))
         }),
+        ..Default::default()
+    }
+}
+
+/// Slayer's Plate — {3} Equipment: +4/+2. Whenever equipped creature dies, if
+/// it was a Human, create a 1/1 white Spirit creature token with flying. Equip
+/// {3}. The trigger rides the Plate (`EnchantedBySource` reads the death-time
+/// attachment), so the Spirit is the Plate controller's.
+pub fn slayers_plate() -> CardDefinition {
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Slayer's Plate",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus { power: 4, toughness: 2, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Human) },
+            ),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(spirit) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Braids's Frightful Return — {2}{B} Saga, read ahead (CR 714.3c). I: you may
+/// sacrifice a creature; if you do, each opponent discards a card. II: return
+/// target creature card from your graveyard to your hand. III: target opponent
+/// may sacrifice a nonland, nontoken permanent; if they don't, they lose 2 life
+/// and you draw a card.
+pub fn braidss_frightful_return() -> CardDefinition {
+    CardDefinition {
+        name: "Braids's Frightful Return",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        read_ahead: true,
+        saga_chapters: vec![
+            (
+                1,
+                Effect::MaySacrifice {
+                    description: "Sacrifice a creature to make each opponent discard?".into(),
+                    filter: R::Creature,
+                    count: Value::ONE,
+                    then: Box::new(Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::ONE,
+                        random: false,
+                    }),
+                    else_: None,
+                },
+            ),
+            (
+                2,
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ),
+            (
+                3,
+                Effect::Punisher {
+                    chooser: target_filtered(R::OpponentPlayer),
+                    options: vec![Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::You),
+                        count: Value::ONE,
+                        filter: R::Permanent.and(R::Land.negate()).and(R::IsToken.negate()),
+                    }],
+                    otherwise: Box::new(Effect::Seq(vec![
+                        Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(2) },
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ])),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kor Dirge — {2}{B} instant. All damage that would be dealt this turn to
+/// target creature you control by a source of your choice is dealt to another
+/// target creature instead (CR 614.9).
+pub fn kor_dirge() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Dirge",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamageFromChosenSource {
+            filter: R::Any,
+            reflect: false,
+            to: Some(target_filtered(R::Creature.and(R::ControlledByYou))),
+            gain_life: false,
+            redirect_to: Some(Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0)) }),
+            whole_turn: true,
+            exile_top_per_prevented: false,
+        },
         ..Default::default()
     }
 }
