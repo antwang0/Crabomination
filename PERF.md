@@ -20279,6 +20279,21 @@ the probe clones and resolves on every main-phase candidate. Candidate: memoise
 the probe verdict per (seat, settled-state digest) within a decision, or gate it
 on the candidate itself being a permanent spell/token-maker.
 
+2026-10-21 (`01KabMxS`), the same probe nested: game 41 of `--pod-decks
+723,1391,1475,2098 --seed 9461` (Adventure commanders) runs 6.0 s against
+0.1-0.4 s for its neighbours, at the same length (43 turns, 2,634 actions).
+
+```
+callgrind, that game alone, release    52.51 G Ir
+  loop_hazard::sets_up_loop            47.49 G (90.4 %)
+    resolve_probe -> settle_to_quiescence -> decide_pending_policy_inner
+      decide_choose_cards::{closure#7}  46.69 G (88.9 %)   a ChooseCards sim inside the probe
+```
+
+Trajectory-specific: the pre-change binary at the same seed plays a different
+game (0.125 s), and seeds 9462-9465 read within ±10 % of it. Candidate: answer
+pending choices inside the probe with the cheap policy (`eval_modes = false`).
+
 ### 2026-10-04 — the CR 120.10 excess tally reads lethal damage on every hit
 
 `note_excess_damage` (`effects/movement.rs`, `01WwQaPJ`) costs +0.197 % Ir on
