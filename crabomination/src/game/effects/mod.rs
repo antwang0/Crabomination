@@ -44378,6 +44378,18 @@ impl GameState {
                 self.cast_immediate(what, source_zone, &false, &false, &true, &0, Some(cost), false, ctx, events)
             }
 
+            Effect::CastImmediatePayingExtra { what, source_zone, extra, exile_after } => {
+                let own = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map(|c| c.definition.cost.clone());
+                let Some(mut total) = own else { return Ok(()) };
+                total.symbols.extend(extra.symbols.iter().cloned());
+                self.cast_immediate(what, source_zone, exile_after, &true, &false, &0, Some(&total), false, ctx, events)
+            }
+
             Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap, total_mana_value } => {
                 // "Cast any number ... without paying" with CONTROLLER-CHOSEN
                 // ORDER: offer each remaining castable card; after any accept,

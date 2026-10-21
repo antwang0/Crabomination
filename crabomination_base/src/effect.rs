@@ -8312,6 +8312,16 @@ pub enum Effect {
     ShuffleIntoTopPile { what: Selector, depth: Value },
     /// "Copy it. You may cast the copy by paying `cost` rather than paying its
     /// mana cost" (Blue Mage's Cane) — an alternative cost for a copy cast as
+    /// "You may cast [what] by paying `extra` in addition to its other costs.
+    /// If that spell would be put into a graveyard, exile it instead"
+    /// (`exile_after`) — Ogre Battlecaster's graveyard instant/sorcery. The
+    /// card's own cost plus `extra`, taxes and discounts on top.
+    CastImmediatePayingExtra {
+        what: Selector,
+        source_zone: crate::card::Zone,
+        extra: crate::mana::ManaCost,
+        exile_after: bool,
+    },
     /// this resolves; taxes and discounts still apply.
     CastCopyForCost { what: Selector, source_zone: crate::card::Zone, cost: crate::mana::ManaCost },
     /// "That creature enters with N additional [kind] counters" on a spell

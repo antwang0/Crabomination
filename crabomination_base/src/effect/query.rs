@@ -2369,7 +2369,8 @@ impl Effect {
             Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CastImmediateForLife { what, .. }
             | Effect::CastImmediateAnyManaType { what, .. }
-            | Effect::CastCopyForCost { what, .. } => {
+            | Effect::CastCopyForCost { what, .. }
+            | Effect::CastImmediatePayingExtra { what, .. } => {
                 sel_has_target(what)
             }
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
@@ -3013,6 +3014,7 @@ impl Effect {
             | Effect::CastImmediateForLife { what, .. }
             | Effect::CastImmediateAnyManaType { what, .. }
             | Effect::CastCopyForCost { what, .. }
+            | Effect::CastImmediatePayingExtra { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
             | Effect::CopySpellAsOneOneSpirit { what }
@@ -5959,6 +5961,7 @@ impl Effect {
                 | Effect::CastImmediateForLife { what, .. }
                 | Effect::CastImmediateAnyManaType { what, .. }
                 | Effect::CastCopyForCost { what, .. }
+                | Effect::CastImmediatePayingExtra { what, .. }
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }
                 | Effect::NameCreatureType { what }
