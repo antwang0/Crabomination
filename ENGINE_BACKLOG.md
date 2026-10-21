@@ -196,6 +196,9 @@ the handoff.
   Lemures, Ray of Enfeeblement), Suki, Kyoshi Captain's three (Paired Tactician, Resplendent Marshal, Rush of Battle),
   Sokka, Wolf Cove's Protector's three (Agent of Atlas, Reluctant Dounguard, Sun-Dappled Celebrant), Brawn's two
   (Brawn, Amadeus Cho; Oko, Lorwyn Liege), The Wasp's two (Wasp, Shrinking Savior; Quantum Reduction).
+- **CLAIMED (`01KPxZ3H`, 2026-10-21, third batch) — don't duplicate:** Wasp, Shrinking Savior's four (Amulet of
+  Safekeeping, Mystic Subdual, Hysterical Blindness, Uncomfortable Chill); Zevlor, Elturel Exile (taken over from
+  `01Jywzky`'s single-commander claim, which left it OPEN).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
