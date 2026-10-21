@@ -233,6 +233,14 @@ the handoff.
   `01Jywzky`'s single-commander claim, which left it OPEN).
 - **CLAIMED (`01KPxZ3H`, 2026-10-21, fourth batch) — don't duplicate:** Tivadar of Thorn's five (Tivadar of Thorn,
   Lightwielder Paladin, Justice, Luminesce, Surge of Salvation).
+  - *Note from `01E4rMUL`* (wrote these before seeing the claim, then backed them out): **a resolving spell is in
+    no zone**, so `evaluate_requirement_static(f, &Target::Permanent(spell), ..)` and `find_card_anywhere` both miss it.
+    Luminesce on `PreventAllDamageByMatchingThisTurn { filter: black_or_red }` let a Lightning Bolt through until
+    `all_damage_from_source_matches_a_shield` judged `scratch.resolving_spell_snapshot`'s definition with
+    `layers::requirement_matches_card`; Justice needs the same in `fire_spell_damage_listeners` plus a walk of
+    `AnyPlayer` `DealsDamage` listeners gated on `dealer_filter` (the permanent path's Phase 1.6 binds the dealer
+    as `TriggerSource`, so `ControllerOf(TriggerSource)` + `TriggerEventAmount` is the whole body). (`Not(Human)`
+    passes on the unfindable spell by accident, which is why Repel the Abominable never showed it.)
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
