@@ -135772,3 +135772,30 @@ pub const AMBER_GRISTLE_OMAUL_15_MAIN: &[CardFactory] = &[
     mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const THE_FIFTEENTH_DOCTOR_15_COMMANDERS: &[CardFactory] = &[the_fifteenth_doctor, yasmin_khan];
+
+/// **The Fifteenth Doctor and Yasmin Khan**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 18 Islands + 11 Mountains = 98.
+/// The Fifteenth Doctor and Yasmin Khan (EDHREC, fetched 2026-10-21).
+pub const THE_FIFTEENTH_DOCTOR_15_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, ankh_of_mishra, arcane_signet, basalt_monolith, clock_of_omens,
+    cloud_key, dark_sphere, darksteel_relic, dowsing_device, gusthas_scepter, haunted_cloak,
+    herbal_poultice, inspiring_statuary, lavaspur_boots, lotus_petal, mox_amber,
+    senseis_divining_top, sol_ring, spellbook, sword_of_the_ages, talisman_of_creativity,
+    tormods_crypt, darksteel_citadel, eroded_canyon, great_furnace, scene_of_the_crime,
+    seat_of_the_synod, silverbluff_bridge, steam_vents, sulfur_falls, thundering_falls,
+    ancient_copper_dragon, archmage_of_runes, bilbo_retired_burglar, chrome_dome,
+    chrome_host_seedshark, firkraag_cunning_instigator, jaws_relentless_predator,
+    jetfire_ingenious_scientist, johann_apprentice_sorcerer, kappa_cannoneer,
+    kozilek_butcher_of_truth, malcolm_the_eyes, memnite, ornithopter, ornithopter_of_paradise,
+    pain_distributor, phyrexian_walker, saheeli_the_suns_brilliance, steel_hellkite,
+    twinflame_tyrant, unctus_grand_metatect, void_winnower, arcane_bombardment, storm_the_vault,
+    treachery, access_denied, aethersnatch, farsight_ritual, mana_drain, mishras_onslaught,
+    pongify, swan_song, unexpected_windfall, whir_of_invention, blue_suns_twilight,
+    saheelis_directive, seize_the_spotlight, step_between_worlds,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

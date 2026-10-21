@@ -29508,6 +29508,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AMBER_GRISTLE_OMAUL_15_COMMANDERS,
             main: decks::AMBER_GRISTLE_OMAUL_15_MAIN,
         },
+        // Seat 4843: The Fifteenth Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 4843`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Yasmin Khan (UR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_15_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_15_MAIN,
+        },
     ]
 }
 
@@ -36251,6 +36257,7 @@ mod tests {
             ("Black Widow, Daring Operative", &[0x1CFE]),
             ("Lae'zel, Vlaakith's Champion and Haunted One", &[0x1CFF]),
             ("Amber Gristle O'Maul and Flaming Fist", &[0x1D00]),
+            ("The Fifteenth Doctor and Yasmin Khan", &[0x1D01]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
