@@ -450,6 +450,7 @@ impl Effect {
                 f(else_);
             }
             Effect::ForEach { body, .. }
+            | Effect::WhenPlayedThisWayThisTurn { body, .. }
             | Effect::ForEachChosen { body, .. }
             | Effect::WatchCombatDamageUntilYourNextTurn { body, .. }
             | Effect::Repeat { body, .. }
