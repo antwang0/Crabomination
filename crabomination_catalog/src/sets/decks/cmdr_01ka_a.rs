@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{Effect, KeywordAct, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, b, cost, g, generic, u};
+use crate::mana::{Color, b, cost, g, generic, hybrid, u};
 use crabomination_base::tokens::treasure_token;
 use std::sync::Arc;
 
@@ -232,5 +232,28 @@ pub fn done_for_the_day() -> CardDefinition {
             ]),
         }],
         ..Default::default()
+    }
+}
+
+/// Hogaak, Arisen Necropolis — {5}{B/G}{B/G} 8/8 legendary Avatar, trample.
+/// You can't spend mana to cast it: convoke and delve pay it all (both apply
+/// after the total cost, so they pay a commander's tax too — CR 702.51a /
+/// 702.66a / 903.8). You may cast it from your graveyard.
+pub fn hogaak_arisen_necropolis() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Convoke, Keyword::Delve, Keyword::Trample],
+        no_mana_spend: true,
+        static_abilities: vec![StaticAbility {
+            description: "You may cast this card from your graveyard.",
+            effect: StaticEffect::CastSelfFromGraveyard,
+        }],
+        ..creature(
+            "Hogaak, Arisen Necropolis",
+            cost(&[generic(5), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+            vec![CreatureType::Avatar],
+            8,
+            8,
+        )
     }
 }

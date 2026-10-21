@@ -19076,6 +19076,7 @@ static DECKS: &[Factory] = &[
     super::decks::motion_sickness,
     super::decks::dee_kay_finder_of_the_lost,
     super::decks::done_for_the_day,
+    super::decks::hogaak_arisen_necropolis,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -4,7 +4,7 @@
 use crabomination::card::{CardId, CardInstance, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, TurnStep};
+use crabomination::game::types::{GameAction, GameError, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -189,4 +189,106 @@ fn cr_717_2a_a_pod_seat_that_opens_attractions_brings_an_attraction_deck() {
     assert_eq!(names.len(), deck.len(), "one of each name");
     assert_eq!(t.players[0].library.len(), 99, "outside the 100");
     assert!(t.players[1].attraction_deck.is_empty());
+}
+
+// ── Convoke / delve from the command zone and the graveyard; Hogaak ────────
+
+fn commander_pod(def: crabomination::card::CardDefinition) -> (GameState, CardId) {
+    let mut g = game_with_format(crabomination::format::Format::Commander, 3);
+    let cmd = g.seat_commanders(0, vec![def])[0];
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    (g, cmd)
+}
+
+fn helper_cast(g: &mut GameState, card_id: CardId, convoke: &[CardId], delve: &[CardId]) -> Result<(), GameError> {
+    g.perform_action(GameAction::CastSpellConvokeDelve {
+        card_id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        convoke_creatures: convoke.to_vec(),
+        delve_cards: delve.to_vec(),
+    })
+    .map(|_| ())
+}
+
+fn bodies(g: &mut GameState, n: usize, def: fn() -> crabomination::card::CardDefinition) -> Vec<CardId> {
+    (0..n).map(|_| ready(g, 0, def())).collect()
+}
+
+fn graveyard(g: &mut GameState, n: usize) -> Vec<CardId> {
+    (0..n).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect()
+}
+
+/// CR 903.8 + 702.51a — the commander tax is an additional cost and convoke
+/// applies after the total cost, so tapping creatures pays a convoke
+/// commander's printed cost and its {2} tax from the command zone (Kasla).
+#[test]
+fn cr_903_8_convoke_pays_a_commanders_tax_from_the_command_zone() {
+    let (mut g, kasla) = commander_pod(catalog::kasla_the_broken_halo());
+    g.commander_cast_count.insert(kasla, 1);
+    // {3}{U}{R}{W} + {2}: the {U}{R} from mana, the rest from six white creatures.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let helpers = bodies(&mut g, 6, catalog::savannah_lions);
+    assert!(helper_cast(&mut g, kasla, &helpers[..5], &[]).is_err(), "one short of the generic, white pip and tax");
+    helper_cast(&mut g, kasla, &helpers, &[]).expect("convoked from the command zone");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the mana paid the blue and red pips");
+    assert!(g.battlefield_find(kasla).is_some());
+    assert!(helpers.iter().all(|h| g.battlefield_find(*h).unwrap().tapped));
+    assert_eq!(g.commander_cast_count.get(&kasla), Some(&2), "a command-zone cast, counted");
+}
+
+/// Hogaak can't be cast with mana: a plain cast with a full pool fails, and
+/// convoke + delve with the pool full leaves the pool untouched. Two black
+/// creatures pay the {B/G}{B/G}; five graveyard cards the {5}.
+#[test]
+fn hogaak_is_paid_by_convoke_and_delve_never_by_mana() {
+    let mut g = pod(3);
+    let hogaak = g.add_card_to_hand(0, catalog::hogaak_arisen_necropolis());
+    flood(&mut g, 0);
+    let pool = g.players[0].mana_pool.clone();
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: hogaak, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "you can't spend mana to cast it"
+    );
+    let knights = bodies(&mut g, 2, catalog::vampire_nighthawk);
+    let gy = graveyard(&mut g, 5);
+    assert!(helper_cast(&mut g, hogaak, &knights[..1], &gy).is_err(), "one short — mana may not cover it");
+    assert!(!g.battlefield_find(knights[0]).unwrap().tapped, "a failed cast untaps its helper");
+    helper_cast(&mut g, hogaak, &knights, &gy).expect("convoke + delve pay it all");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hogaak).is_some());
+    assert_eq!(g.players[0].mana_pool.total(), pool.total(), "no mana spent");
+    assert!(gy.iter().all(|c| g.exile.iter().any(|e| e.id == *c)), "delved");
+}
+
+/// "You may cast this card from your graveyard" — Hogaak's own permission
+/// (CR 601.2 from a zone other than the hand); and as a commander, the {2}
+/// tax is paid by one more helper (CR 903.8).
+#[test]
+fn cr_903_8_hogaak_casts_from_the_graveyard_and_the_command_zone() {
+    let mut g = pod(3);
+    let hogaak = g.add_card_to_graveyard(0, catalog::hogaak_arisen_necropolis());
+    let knights = bodies(&mut g, 2, catalog::vampire_nighthawk);
+    let gy = graveyard(&mut g, 5);
+    helper_cast(&mut g, hogaak, &knights, &gy).expect("cast from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hogaak).is_some());
+
+    let (mut g, cmd) = commander_pod(catalog::hogaak_arisen_necropolis());
+    g.commander_cast_count.insert(cmd, 1);
+    let knights = bodies(&mut g, 2, catalog::vampire_nighthawk);
+    let gy = graveyard(&mut g, 5);
+    assert!(helper_cast(&mut g, cmd, &knights, &gy).is_err(), "the tax is still owed");
+    let more = graveyard(&mut g, 2);
+    let gy: Vec<CardId> = gy.into_iter().chain(more).collect();
+    helper_cast(&mut g, cmd, &knights, &gy).expect("seven delved pay {5} + {2} tax");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cmd).is_some());
 }
