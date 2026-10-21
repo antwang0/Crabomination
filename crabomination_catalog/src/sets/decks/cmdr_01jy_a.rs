@@ -1133,3 +1133,100 @@ pub fn tombstone_stairwell() -> CardDefinition {
         ..spell("Tombstone Stairwell", cost(&[generic(2), b(), b()]), CardType::Enchantment, Effect::Noop)
     }
 }
+
+fn kicked_cast() -> EventSpec {
+    EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellWasKicked)
+}
+
+fn kicked_etb(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::SpellWasKicked),
+        effect,
+    }
+}
+
+/// Hallar, the Firefletcher — {1}{R}{G} legendary 3/3 Elf Archer, trample.
+/// Whenever you cast a kicked spell, a +1/+1 counter on Hallar, then it deals
+/// damage equal to its +1/+1 counters to each opponent.
+pub fn hallar_the_firefletcher() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: kicked_cast(),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+                },
+            ]),
+        }],
+        ..creature("Hallar, the Firefletcher", cost(&[generic(1), r(), g()]), vec![CreatureType::Elf, CreatureType::Archer], 3, 3)
+    }
+}
+
+/// Ghitu Chronicler — {1}{R} 1/3 Human Wizard, kicker {3}{R}. Entering kicked,
+/// return target instant or sorcery card from your graveyard to your hand.
+pub fn ghitu_chronicler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(3), r()]))],
+        triggered_abilities: vec![kicked_etb(Effect::Move {
+            what: target_filtered(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature("Ghitu Chronicler", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Wizard], 1, 3)
+    }
+}
+
+/// Murasa Sproutling — {2}{G} 3/3 Plant Elemental, kicker {1}{G}. Entering
+/// kicked, return target card with a kicker ability from your graveyard to your
+/// hand.
+pub fn murasa_sproutling() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), g()]))],
+        triggered_abilities: vec![kicked_etb(Effect::Move {
+            what: target_filtered(R::HasKickerAbility.and(R::InYourGraveyard)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature("Murasa Sproutling", cost(&[generic(2), g()]), vec![CreatureType::Plant, CreatureType::Elemental], 3, 3)
+    }
+}
+
+/// Vine Gecko — {1}{G} 2/2 Elemental Lizard. The first kicked spell you cast
+/// each turn costs {1} less. Whenever you cast a kicked spell, a +1/+1 counter
+/// on it.
+pub fn vine_gecko() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "The first kicked spell you cast each turn costs {1} less to cast.",
+            effect: StaticEffect::FirstKickedSpellEachTurnCostsLess { amount: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: kicked_cast(),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..creature("Vine Gecko", cost(&[generic(1), g()]), vec![CreatureType::Elemental, CreatureType::Lizard], 2, 2)
+    }
+}
+
+/// Reclaim the Wastes — {G} sorcery, kicker {3}. Search for a basic land card
+/// (two if kicked), reveal it, put it into your hand, then shuffle.
+pub fn reclaim_the_wastes() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        ..spell(
+            "Reclaim the Wastes",
+            cost(&[g()]),
+            CardType::Sorcery,
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::Sum(vec![Value::ONE, Value::OneIf(Box::new(Predicate::SpellWasKicked))]),
+            },
+        )
+    }
+}

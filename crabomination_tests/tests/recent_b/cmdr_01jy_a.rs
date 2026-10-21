@@ -666,3 +666,44 @@ fn tombstone_stairwell_raises_and_razes_tombspawn() {
     drain_stack(&mut g);
     assert_eq!(tombspawn(&g, 0) + tombspawn(&g, 2), 0, "destroyed at the end step");
 }
+
+fn cast_kicked(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<(), GameError> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Vine Gecko discounts only the turn's first kicked spell, and grows on each;
+/// Hallar grows and burns each opponent for its counters.
+#[test]
+fn vine_gecko_and_hallar_feed_on_kicker() {
+    use crabomination::card::CounterType;
+    let mut g = pod(3);
+    let gecko = g.add_card_to_battlefield(0, catalog::vine_gecko());
+    let hallar = g.add_card_to_battlefield(0, catalog::hallar_the_firefletcher());
+    let first = g.add_card_to_hand(0, catalog::reclaim_the_wastes());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_kicked(&mut g, first, None).expect("{G} + kicker {3}, one less");
+    let second = g.add_card_to_hand(0, catalog::reclaim_the_wastes());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(cast_kicked(&mut g, second, None).is_err(), "the discount is the turn's first only");
+    assert_eq!(g.battlefield_find(gecko).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(hallar).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!((g.players[1].life, g.players[2].life), (19, 19));
+}
+
+/// Murasa Sproutling, kicked, returns a card with kicker; unkicked it does
+/// nothing (CR 603.4 intervening if).
+#[test]
+fn murasa_sproutling_returns_a_kicker_card() {
+    let mut g = pod(2);
+    let chronicler = g.add_card_to_graveyard(0, catalog::ghitu_chronicler());
+    let sprout = g.add_card_to_hand(0, catalog::murasa_sproutling());
+    flood(&mut g, 0);
+    cast_kicked(&mut g, sprout, None).expect("kicked");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == chronicler));
+}

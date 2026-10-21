@@ -18393,6 +18393,11 @@ static DECKS: &[Factory] = &[
     super::decks::jaces_sentinel,
     super::decks::thanos_the_mad_titan,
     super::decks::tombstone_stairwell,
+    super::decks::hallar_the_firefletcher,
+    super::decks::ghitu_chronicler,
+    super::decks::murasa_sproutling,
+    super::decks::vine_gecko,
+    super::decks::reclaim_the_wastes,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,
