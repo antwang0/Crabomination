@@ -135716,3 +135716,59 @@ pub const BLACK_WIDOW_7_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const LAEZEL_14_COMMANDERS: &[CardFactory] = &[laezel_vlaakiths_champion, haunted_one];
+
+/// **Lae'zel, Vlaakith's Champion and Haunted One**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Plains + 11 Swamps = 98.
+/// Lae'zel, Vlaakith's Champion and Haunted One (EDHREC, fetched 2026-10-21).
+pub const LAEZEL_14_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_souls, heralds_horn, honor_worn_shaku, orzhov_signet,
+    pyre_of_heroes, relic_of_legends, sol_ring, springleaf_drum, talisman_of_hierarchy,
+    bojuka_bog, brightclimb_pathway, caves_of_koilos, command_tower, concealed_courtyard,
+    fetid_heath, godless_shrine, isolated_chapel, orzhov_basilica, path_of_ancestry,
+    secluded_courtyard, shattered_sanctum, survivors_encampment, tainted_field,
+    unclaimed_territory, vault_of_champions, vault_of_the_archangel, accursed_marauder,
+    angel_of_indemnity, arashin_foremost, assault_intercessor, avenger_of_the_fallen,
+    banewhip_punisher, blood_chin_fanatic, blood_chin_rager, bloodsoaked_champion,
+    butcher_of_malakir, chief_of_the_edge, chief_of_the_scale, fleshbag_marauder,
+    harper_recruiter, mardu_strike_leader, mardu_woe_reaper, merciless_executioner,
+    mindblade_render, primaris_eliminator, resplendent_marshal, rhys_the_evermore,
+    seasoned_dungeoneer, shakedown_heavy, sister_repentia, solemn_recruit,
+    space_marine_devastator, species_specialist, tallyman_of_nurgle, tenacious_underdog,
+    ultramarines_honour_guard, urdnan_dromoka_warrior, barrensteppe_siege,
+    etchings_of_the_chosen, folk_hero, raiders_spoils, retribution_of_the_ancients,
+    together_forever, anguished_unmaking, corrupted_conviction, deadly_dispute, despark,
+    path_to_exile, secure_the_wastes, swords_to_plowshares, village_rites,
+    vraska_betrayals_sting, black_suns_zenith, damn, damning_verdict, sign_in_blood, victimize,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const AMBER_GRISTLE_OMAUL_15_COMMANDERS: &[CardFactory] = &[amber_gristle_omaul, flaming_fist];
+
+/// **Amber Gristle O'Maul and Flaming Fist**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 11 Mountains + 14 Plains = 98.
+/// Amber Gristle O'Maul and Flaming Fist (EDHREC, fetched 2026-10-21).
+pub const AMBER_GRISTLE_OMAUL_15_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, dueling_rapier, inventors_axe, marble_diamond,
+    masterwork_of_ingenuity, mishras_research_desk, sol_ring, swordsmans_steel,
+    talisman_of_conviction, umezawas_jitte, zephyr_boots, ancient_den, battlefield_forge,
+    boros_garrison, buried_ruin, clifftop_retreat, command_tower, rugged_prairie, sundown_pass,
+    the_lonely_mountain, alexios_deimos_of_kosmos, battlefield_raptor, faerie_guidemother,
+    fearless_skald, hangar_scrounger, kellan_the_fae_blooded, kitesail_cleric,
+    kili_the_resourceful, lion_sash, miners_guidewing, mothrider_patrol,
+    nelly_borca_impulsive_accuser, ornithopter_of_paradise, phoenix_chick, puresteel_paladin,
+    rabbit_battery, rubblebelt_maaka, rustwing_falcon, segovian_angel, sram_senior_edificer,
+    stoneforge_mystic, swooping_lookout, topplegeist, witch_enchanter, demonic_ruckus,
+    fighter_class, forge_anew, mob_mentality, sigardas_aid, skyblades_boon, adamant_will,
+    antagonize, arresters_zeal, barge_in, blacksmiths_skill, borrowed_hostility, brute_force,
+    chandras_outrage, dawn_charm, dreadmaws_ire, jump_scare, legion_leadership,
+    might_of_the_meek, rouse_the_mob, surge_of_salvation, titans_strength, ancestral_anger,
+    crash_through, rile, steelshapers_gift, sundering_eruption, wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

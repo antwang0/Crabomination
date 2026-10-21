@@ -29496,6 +29496,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLACK_WIDOW_7_COMMANDERS,
             main: decks::BLACK_WIDOW_7_MAIN,
         },
+        // Seat 4841: Lae'zel, Vlaakith's Champion and Haunted One's EDHREC average deck. `--pod-decks 4841`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Haunted One (WB)",
+            commanders: decks::LAEZEL_14_COMMANDERS,
+            main: decks::LAEZEL_14_MAIN,
+        },
+        // Seat 4842: Amber Gristle O'Maul and Flaming Fist's EDHREC average deck. `--pod-decks 4842`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Flaming Fist (WR)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_15_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_15_MAIN,
+        },
     ]
 }
 
@@ -36237,6 +36249,8 @@ mod tests {
             ("The Howling Commandos", &[0x1CFC]),
             ("The Falcon, Sam Wilson", &[0x1CFD]),
             ("Black Widow, Daring Operative", &[0x1CFE]),
+            ("Lae'zel, Vlaakith's Champion and Haunted One", &[0x1CFF]),
+            ("Amber Gristle O'Maul and Flaming Fist", &[0x1D00]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
