@@ -5467,10 +5467,15 @@ impl GameState {
             // "For the first time each turn" life-gain gates key on the same
             // turn boundary.
             pl.gained_life_earlier_this_turn = false;
-            if pl.token_batches_this_turn != 0 || pl.surveil_batches_this_turn != 0 || pl.scry_batches_this_turn != 0 {
+            if pl.token_batches_this_turn != 0
+                || pl.surveil_batches_this_turn != 0
+                || pl.scry_batches_this_turn != 0
+                || pl.life_loss_batches_this_turn != 0
+            {
                 pl.token_batches_this_turn = 0;
                 pl.surveil_batches_this_turn = 0;
                 pl.scry_batches_this_turn = 0;
+                pl.life_loss_batches_this_turn = 0;
             }
             // Cards drawn "this turn" is the same kind of tally: every seat
             // draws on other players' turns (Elenda and Azor's end step,

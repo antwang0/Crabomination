@@ -21018,6 +21018,7 @@ impl GameState {
                     src.attached_to == Some(me.id)
                 }
                 Selector::This => src.id == me.id,
+                Selector::ChosenPermanentOfSource => src.chosen_permanent == Some(me.id),
                 _ => false,
             };
             if reaches {
@@ -21178,6 +21179,13 @@ impl GameState {
                 // condition-gated (Gobhobbler Rats' Hellbent regenerate).
                 Selector::This => {
                     if src.id == card_id {
+                        out.push(*ability);
+                    }
+                }
+                // "Target artifact gains '…' for as long as you control this"
+                // (Quicksmith Spy): the source's remembered permanent.
+                Selector::ChosenPermanentOfSource => {
+                    if src.chosen_permanent == Some(card_id) {
                         out.push(*ability);
                     }
                 }

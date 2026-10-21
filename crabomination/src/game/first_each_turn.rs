@@ -8,7 +8,7 @@ use super::{GameState, seat_bit};
 
 impl GameState {
     pub(crate) fn tally_first_each_turn_batches(&mut self, events: &[GameEvent]) {
-        let (mut tokens, mut surveils, mut scries) = (0u64, 0u64, 0u64);
+        let (mut tokens, mut surveils, mut scries, mut losses) = (0u64, 0u64, 0u64, 0u64);
         for e in events {
             match *e {
                 GameEvent::TokenCreated { card_id } => {
@@ -18,10 +18,11 @@ impl GameState {
                 }
                 GameEvent::ScriedOrSurveiled { player, surveil: true, .. } => surveils |= seat_bit(player),
                 GameEvent::ScriedOrSurveiled { player, surveil: false, .. } => scries |= seat_bit(player),
+                GameEvent::LifeLost { player, amount } if amount > 0 => losses |= seat_bit(player),
                 _ => {}
             }
         }
-        if tokens | surveils | scries == 0 {
+        if tokens | surveils | scries | losses == 0 {
             return;
         }
         for p in 0..self.players.len() {
@@ -37,6 +38,10 @@ impl GameState {
             if scries & b != 0 {
                 let pl = &mut self.players[p];
                 pl.scry_batches_this_turn = pl.scry_batches_this_turn.saturating_add(1);
+            }
+            if losses & b != 0 {
+                let pl = &mut self.players[p];
+                pl.life_loss_batches_this_turn = pl.life_loss_batches_this_turn.saturating_add(1);
             }
         }
     }

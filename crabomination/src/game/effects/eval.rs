@@ -3034,6 +3034,7 @@ impl GameState {
                     match kind {
                         crate::effect::FirstBatchKind::TokensCreated => pl.token_batches_this_turn == 1,
                         crate::effect::FirstBatchKind::Surveiled => pl.surveil_batches_this_turn == 1,
+                        crate::effect::FirstBatchKind::LifeLost => pl.life_loss_batches_this_turn == 1,
                     }
                 })
                 .unwrap_or(false),

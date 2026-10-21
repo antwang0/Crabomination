@@ -727,6 +727,10 @@ pub struct PlayerData {
     /// this turn" (`Predicate::ScriedOrSurveiledThisTurn`).
     #[serde(default)]
     pub scry_batches_this_turn: u8,
+    /// Event batches this turn in which this player lost life
+    /// (`FirstBatchKind::LifeLost`).
+    #[serde(default)]
+    pub life_loss_batches_this_turn: u8,
     /// Number of cards this player has drawn on the current turn. Reset
     /// to 0 in `do_untap`. Powers Strixhaven's Quandrix scaling — e.g.
     /// Fractal Anomaly creates a 0/0 with X +1/+1 counters where X is
@@ -1900,6 +1904,7 @@ impl Player {
             life_gained_this_turn: 0,
             gained_life_earlier_this_turn: false,
             token_batches_this_turn: 0,
+            life_loss_batches_this_turn: 0,
             surveil_batches_this_turn: 0,
             scry_batches_this_turn: 0,
             cards_drawn_this_turn: 0,

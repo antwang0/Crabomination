@@ -1939,6 +1939,9 @@ pub const UNBOUND_OBJECT_STAMP: u64 = u64::MAX;
 pub enum FirstBatchKind {
     TokensCreated,
     Surveiled,
+    /// "Whenever you lose life for the first time each turn" (Gonti's
+    /// Machinations).
+    LifeLost,
 }
 
 /// A boolean game-state condition (for `Effect::If` / cast-time checks).
