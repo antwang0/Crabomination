@@ -135633,3 +135633,57 @@ pub const MYRA_THE_MAGNIFICENT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const THE_HOWLING_COMMANDOS_COMMANDERS: &[CardFactory] = &[the_howling_commandos];
+
+/// **The Howling Commandos**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// The Howling Commandos (EDHREC, fetched 2026-10-21).
+pub const THE_HOWLING_COMMANDOS_MAIN: &[CardFactory] = &[
+    plus_two_mace, accorders_shield, armillary_sphere, armory_of_iroas, bone_saw, defense_grid,
+    explorers_scope, grim_monolith, raiders_karve, the_one_ring, vexing_bauble,
+    weathered_runestone, ancient_tomb, captivating_cave, conduit_pylons, desert_of_the_true,
+    idyllic_grange, lazotep_quarry, urzas_saga, abzan_skycaptain, advance_scout,
+    aerie_auxiliary, affa_protector, ainok_bond_kin, akrasan_squire, akroan_skyguard,
+    alms_collector, ampryn_tactician, ardent_recruit, ardent_soldier, aven_cloudchaser,
+    azorius_arrester, charismatic_conqueror, conclave_equenaut, conclave_phalanx,
+    court_street_denizen, crusader_of_odric, drogskol_infantry, esper_sentinel, fencing_ace,
+    goldmeadow_harrier, haazda_snare_squad, hardened_escort, pillardrop_rescuer,
+    scrapwork_cohort, sergeant_at_arms, walking_ballista, banishing_light,
+    befriending_the_moths, candletrap, circle_of_protection_green, cooped_up, cowed_by_wisdom,
+    hold_for_ransom, smothering_tithe, acrobatic_maneuver, battlefield_promotion, break_ties,
+    ephemerate, excise, feat_of_resistance, lapse_of_certainty, lorans_escape, mana_tithe,
+    repel_the_darkness, topple_the_statue, your_temple_is_under_attack, breath_of_life,
+    hexhaven_battalion, late_to_dinner,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const THE_FALCON_2_COMMANDERS: &[CardFactory] = &[the_falcon_sam_wilson];
+
+/// **The Falcon, Sam Wilson**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Plains = 99.
+/// The Falcon, Sam Wilson (EDHREC, fetched 2026-10-21).
+pub const THE_FALCON_2_MAIN: &[CardFactory] = &[
+    bagel_and_schmear, costume_closet, iconic_shield, starnheim_memento, web_shooters,
+    secluded_steppe, agent_of_atlas, agents_of_shield, ajanis_pridemate, angel_of_vitality,
+    ant_man_scott_lang, basris_acolyte, basris_lieutenant, bishops_soldier, brave_brawler,
+    brightmare, captain_america_steve_rogers, captain_mar_vell_space_born,
+    flash_thompson_spider_fan, giada_font_of_hope, hawkeye_clint_barton, herald_of_the_sun,
+    hero_in_training, inspiring_overseer, kinscaer_sentry, lightwalker, mandroid_squadron,
+    mockingbird_bobbi_morse, okoye_dora_milaje_leader, patron_of_the_valiant,
+    peggy_carter_secret_agent, qala_ajanis_pridemate, rooftop_percher, sandsteppe_outcast,
+    serra_angel, speakeasy_server, spider_man_web_slinger, star_pupil, starling_aerial_ally,
+    steadfast_sentry, the_wasp_janet_van_dyne, urdnan_dromoka_warrior, valkyrie_harbinger,
+    valkyrior_skyrider, wanderbrine_preacher, wanderbrine_trapper, winter_soldier_bucky_barnes,
+    youthful_valkyrie, banishing_light, kinbinding, pacifism, recumbent_bliss,
+    spiral_into_solitude, battlefield_promotion, captains_defense, destroy_evil, divine_arrow,
+    fall_to_earth, keep_out, light_of_hope, protective_response, soldier_on, swift_response,
+    basris_solidarity, borough_backup, hawkeyes_shot, shatter_the_sky, wondrous_revival,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

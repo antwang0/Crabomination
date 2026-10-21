@@ -29478,6 +29478,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MYRA_THE_MAGNIFICENT_COMMANDERS,
             main: decks::MYRA_THE_MAGNIFICENT_MAIN,
         },
+        // Seat 4838: The Howling Commandos's EDHREC average deck. `--pod-decks 4838`.
+        PodDeck {
+            name: "The Howling Commandos (W)",
+            commanders: decks::THE_HOWLING_COMMANDOS_COMMANDERS,
+            main: decks::THE_HOWLING_COMMANDOS_MAIN,
+        },
+        // Seat 4839: The Falcon, Sam Wilson's EDHREC average deck. `--pod-decks 4839`.
+        PodDeck {
+            name: "The Falcon, Sam Wilson (W)",
+            commanders: decks::THE_FALCON_2_COMMANDERS,
+            main: decks::THE_FALCON_2_MAIN,
+        },
     ]
 }
 
@@ -36216,6 +36228,8 @@ mod tests {
             ("Keleth, Sunmane Familiar and Thrasios, Triton Hero", &[0x1CF9]),
             ("Tivadar of Thorn", &[0x1CFA]),
             ("Myra the Magnificent", &[0x1CFB]),
+            ("The Howling Commandos", &[0x1CFC]),
+            ("The Falcon, Sam Wilson", &[0x1CFD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
