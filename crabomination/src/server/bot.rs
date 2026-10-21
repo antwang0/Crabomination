@@ -10090,6 +10090,11 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             m |= sink::DISCARD_ACT;
         }
     }
+    // CR 903.8 — a morph / disguise commander may be cast face down from the
+    // command zone too.
+    if state.players[seat].command.iter().any(|c| c.definition.has_morph_ability()) {
+        m |= sink::MORPH;
+    }
     // One grant scan for the whole tail. Six generators built their own; the
     // gates now skip all six on a board with nothing for them.
     let scan = state.grant_scan();
@@ -10248,11 +10253,13 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     m
 }
 
-/// Cast a hand card face down for {3} (CR 702.36 Morph / 702.166 Disguise).
+/// Cast a hand card face down for {3} (CR 702.36 Morph / 702.166 Disguise),
+/// or a morph commander from the command zone for {3} plus its tax (CR 903.8).
 fn pick_face_down_cast(state: &GameState, seat: usize, probe: &GameState) -> Option<GameAction> {
-    state.players[seat]
-        .hand
+    let pl = &state.players[seat];
+    pl.hand
         .iter()
+        .chain(pl.command.iter())
         .filter(|c| c.definition.has_morph_ability())
         .map(|c| GameAction::CastFaceDown { card_id: c.id })
         .find(|a| GameState::would_accept_on(probe, a.clone()))

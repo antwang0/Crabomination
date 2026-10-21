@@ -9178,22 +9178,23 @@ impl GameState {
 
     pub(crate) fn cast_face_down(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let has_morph = self
-            .players[p]
-            .hand
-            .iter()
-            .find(|c| c.id == card_id)
-            .map(|c| c.definition.has_morph_ability())
-            .ok_or(GameError::CardNotInHand(card_id))?;
-        if !has_morph {
+        let card = self.players[p].hand.iter().find(|c| c.id == card_id).ok_or(GameError::CardNotInHand(card_id))?;
+        if !card.definition.has_morph_ability() {
             return Err(GameError::CardNotInHand(card_id));
         }
+        // CR 903.8 — a commander cast face down from the command zone (on the
+        // dispatcher's hop) still owes its tax.
+        let commander_hop = self.casting_hop == Some((card_id, crate::game::HopFrom::CommandZone));
+        let (tax, tax_life) = if commander_hop { self.commander_tax_for(card) } else { (0, 0) };
         // Morph is a creature cast: sorcery-speed timing.
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        if !self.cost_life_payable(p, self.players[p].life, tax_life) {
+            return Err(GameError::InsufficientLife);
+        }
         let cost = crate::mana::ManaCost {
-            symbols: vec![crate::mana::ManaSymbol::Generic(self.face_down_cast_cost(p))],
+            symbols: vec![crate::mana::ManaSymbol::Generic(self.face_down_cast_cost(p) + tax)],
         };
         let forced_only = self.players[p].manual_mana;
         let kind = crate::mana::SpellKind {
@@ -9208,10 +9209,17 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
+        if commander_hop {
+            self.pay_life_cost(p, tax_life);
+            *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
+        }
         let mut card = self
             .players[p]
             .remove_from_hand(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        if commander_hop {
+            card.cast_from_hand = false;
+        }
         card.turn_face_down();
         // Panoptic Projektor's discount is spent by this cast.
         if self.players[p].next_face_down_discount_this_turn != 0 {

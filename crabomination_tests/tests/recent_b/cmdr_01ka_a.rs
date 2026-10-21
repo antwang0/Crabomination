@@ -322,3 +322,23 @@ fn cr_903_8_a_commander_is_kicked_from_the_command_zone() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Karox Bladewing"), "kicked");
     assert_eq!(g.commander_cast_count.get(&verix), Some(&2));
 }
+
+/// CR 903.8 + 702.37 — a morph commander is cast face down from the command
+/// zone for {3} plus its tax, as a 2/2 that is still the commander; the cast
+/// counts toward the next tax.
+#[test]
+fn cr_903_8_a_morph_commander_is_cast_face_down_from_the_command_zone() {
+    let (mut g, akroma) = commander_pod(catalog::akroma_angel_of_fury());
+    g.commander_cast_count.insert(akroma, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let face_down = |g: &mut GameState| g.perform_action(GameAction::CastFaceDown { card_id: akroma });
+    assert!(face_down(&mut g).is_err(), "three plus a two tax is five");
+    assert!(g.players[0].command.iter().any(|c| c.id == akroma));
+    g.players[0].mana_pool.add_colorless(1);
+    face_down(&mut g).expect("face down from the command zone");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(akroma).expect("on the battlefield");
+    assert!(p.face_down);
+    assert!(g.is_commander(akroma));
+    assert_eq!(g.commander_cast_count.get(&akroma), Some(&2));
+}
