@@ -12,6 +12,7 @@ mod mill_until;
 mod all_but_one;
 mod any_player_sacrifice;
 mod flux;
+mod great_aurora;
 mod energy_sweep;
 mod among;
 mod may_cost;
@@ -24761,6 +24762,9 @@ impl GameState {
                 self.any_player_may_pay_life_to_counter_this(*life, ctx, effect, events)
             }
             Effect::EachPlayerDiscardsAnyThenDrawsThatMany => self.each_player_discards_any_then_draws(effect, ctx, events),
+            Effect::EachPlayerShufflesHandAndPermanentsThenDraws => {
+                self.each_player_shuffles_hand_and_permanents_then_draws(ctx, events)
+            }
             Effect::AnyPlayerMaySacrificeToTopdeckSource { filter } => {
                 self.any_player_may_sacrifice_to_topdeck_source(filter, effect, ctx, events)
             }

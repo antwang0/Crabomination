@@ -14345,6 +14345,9 @@ pub enum Effect {
     /// cards" (Flux): APNAP choices, discards together, then each seat draws
     /// its OWN count.
     EachPlayerDiscardsAnyThenDrawsThatMany,
+    /// "Each player shuffles all cards from their hand and all permanents they
+    /// own into their library, then draws that many cards" (The Great Aurora).
+    EachPlayerShufflesHandAndPermanentsThenDraws,
 
     AnyPlayerMayAccept {
         who: PlayerRef,

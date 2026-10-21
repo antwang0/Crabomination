@@ -1012,6 +1012,7 @@ impl Effect {
             | Effect::AnyPlayerMayPayLifeToCounterThis { .. }
             | Effect::AnyPlayerMaySacrificeToTopdeckSource { .. }
             | Effect::EachPlayerDiscardsAnyThenDrawsThatMany
+            | Effect::EachPlayerShufflesHandAndPermanentsThenDraws
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
