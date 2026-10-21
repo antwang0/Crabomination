@@ -2,7 +2,7 @@
 //! `tests/recent_b/cmdr_01jy_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, EquipBonus, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{draw, etb, on_attack, partner_with_search, pump_target, target_filtered};
@@ -528,5 +528,55 @@ pub fn rimeshield_frost_giant() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(3))],
         ..creature("Rimeshield Frost Giant", cost(&[generic(3), u(), u()]), vec![CreatureType::Giant, CreatureType::Warrior], 4, 5)
+    }
+}
+
+/// Tromp the Domains — {5}{G} sorcery. Domain — until end of turn, creatures
+/// you control gain trample and get +1/+1 for each basic land type among lands
+/// you control.
+pub fn tromp_the_domains() -> CardDefinition {
+    let domain = || Value::DomainCount(PlayerRef::You);
+    spell(
+        "Tromp the Domains",
+        cost(&[generic(5), g()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::PumpPT { what: yours(), power: domain(), toughness: domain(), duration: Duration::EndOfTurn },
+            grant_each(yours(), Keyword::Trample),
+        ]),
+    )
+}
+
+/// Dancing Sword — {1}{W} Equipment, equip {1}. Equipped creature gets +2/+1.
+/// When equipped creature dies, you may have this become a 2/1 Construct
+/// artifact creature with flying and ward {1}; if you do, it isn't an Equipment.
+pub fn dancing_sword() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Have Dancing Sword become a 2/1 flying Construct?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreature {
+                            what: Selector::This,
+                            power: Value::Const(2),
+                            toughness: Value::Const(1),
+                            creature_types: vec![CreatureType::Construct],
+                            keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::generic(1))],
+                            duration: Duration::Permanent,
+                        },
+                        Effect::SetArtifactSubtypes { what: Selector::This, subtypes: vec![] },
+                    ])),
+                },
+            }],
+            triggers_on_equipment: true,
+            ..Default::default()
+        }),
+        ..spell("Dancing Sword", cost(&[generic(1), w()]), CardType::Artifact, Effect::Noop)
     }
 }

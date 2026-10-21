@@ -18375,6 +18375,8 @@ static DECKS: &[Factory] = &[
     super::decks::aviation_pioneer,
     super::decks::mimic,
     super::decks::rimeshield_frost_giant,
+    super::decks::tromp_the_domains,
+    super::decks::dancing_sword,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

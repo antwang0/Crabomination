@@ -334,3 +334,40 @@ fn tenacity_pumps_and_untaps() {
     assert_eq!(pt(&g, bears), (3, 3));
     assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Lifelink));
 }
+
+/// Dancing Sword: once its creature dies it may stand up as a 2/1 flying
+/// Construct, and it is no longer an Equipment (CR 301.5).
+#[test]
+fn dancing_sword_dances_when_its_creature_dies() {
+    let mut g = pod(2);
+    let sword = g.add_card_to_battlefield(0, catalog::dancing_sword());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bears }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bears), (4, 3));
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.remove_to_graveyard_with_triggers(bears);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+    let sword = g.computed_permanent(sword).expect("the sword stays");
+    assert_eq!((sword.power, sword.toughness), (2, 1));
+    assert!(sword.keywords().contains(&Keyword::Flying));
+    assert!(sword.subtypes().artifact_subtypes.is_empty(), "it isn't an Equipment");
+}
+
+/// Tromp the Domains pumps by the basic land types among your lands.
+#[test]
+fn tromp_the_domains_counts_basic_types() {
+    let mut g = pod(2);
+    for land in [catalog::forest(), catalog::island(), catalog::island()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tromp = g.add_card_to_hand(0, catalog::tromp_the_domains());
+    cast_as(&mut g, 0, tromp, None);
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bears), (4, 4));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Trample));
+}
