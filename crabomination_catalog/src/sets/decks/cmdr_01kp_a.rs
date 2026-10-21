@@ -1432,3 +1432,48 @@ pub fn chandras_outrage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The Fifteenth Doctor + Yasmin Khan's one ────────────────────────────────
+
+/// Gustha's Scepter — {0} artifact. {T}: exile a card from your hand face
+/// down (you may look at it). {T}: return a card you own exiled with it to
+/// your hand. When you lose control of it (CR 800.4 — by a control change or
+/// by its leaving the battlefield), the cards exiled with it go to their
+/// owners' graveyards. Only its controller stashes, and the stash empties on
+/// every control change, so every card still under it is the controller's.
+pub fn gusthas_scepter() -> CardDefinition {
+    let bin = || Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Graveyard };
+    CardDefinition {
+        name: "Gustha's Scepter",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::ExileChosenFromHand {
+                    from: Selector::You,
+                    count: Value::ONE,
+                    filter: R::Any,
+                    link_to_source: true,
+                    face_down: true,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Move {
+                    what: Selector::one_of(Selector::CardExiledWithSource),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: bin(),
+            },
+            TriggeredAbility { event: EventSpec::new(EventKind::LostControlOfThis, EventScope::SelfSource), effect: bin() },
+        ],
+        ..Default::default()
+    }
+}

@@ -19058,6 +19058,7 @@ static DECKS: &[Factory] = &[
     super::decks::chief_of_the_scale,
     super::decks::fearless_skald,
     super::decks::chandras_outrage,
+    super::decks::gusthas_scepter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

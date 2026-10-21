@@ -988,3 +988,35 @@ fn chandras_outrage_burns_creature_and_controller() {
     assert!(g.battlefield_find(giant).is_none());
     assert_eq!(g.players[2].life, life - 2);
 }
+
+/// Gustha's Scepter stashes a card face down and fetches it back; destroyed
+/// (CR 800.4: leaving the battlefield loses control), its stash goes to the
+/// graveyard.
+#[test]
+fn cr_800_4_gusthas_scepter_stash_bins_when_control_is_lost() {
+    let mut g = pod(2);
+    let sc = ready(&mut g, 0, catalog::gusthas_scepter());
+    g.players[0].hand.clear();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let act = |i| GameAction::ActivateAbility {
+        card_id: sc,
+        ability_index: i,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    g.perform_action(act(0)).expect("stash");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.face_down));
+    g.battlefield_find_mut(sc).unwrap().tapped = false;
+    g.perform_action(act(1)).expect("fetch");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt));
+    g.battlefield_find_mut(sc).unwrap().tapped = false;
+    g.perform_action(act(0)).expect("stash again");
+    drain_stack(&mut g);
+    let shatter = g.add_card_to_hand(1, catalog::shatter());
+    cast_x(&mut g, 1, shatter, Some(Target::Permanent(sc)), None);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "binned with the Scepter gone");
+}
