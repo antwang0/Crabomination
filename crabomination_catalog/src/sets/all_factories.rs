@@ -18402,6 +18402,10 @@ static DECKS: &[Factory] = &[
     super::decks::dragon_hunter,
     super::decks::shieldhide_dragon,
     super::decks::grand_master_of_flowers,
+    super::decks::endling,
+    super::decks::hateflayer,
+    super::decks::minion_of_leshrac,
+    super::decks::torchling,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

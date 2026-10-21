@@ -1355,3 +1355,112 @@ pub fn grand_master_of_flowers() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn self_grant(mana: ManaCost, keyword: Keyword) -> ActivatedAbility {
+    ActivatedAbility { mana_cost: mana, effect: grant_each(Selector::This, keyword), ..Default::default() }
+}
+
+fn self_pump(mana: ManaCost, p: i32, t: i32) -> ActivatedAbility {
+    ActivatedAbility { mana_cost: mana, effect: pump_each(Selector::This, p, t), ..Default::default() }
+}
+
+/// Endling — {2}{B}{B} 3/3 Zombie Shapeshifter. {B}: menace; {B}: deathtouch;
+/// {B}: undying (each until end of turn). {1}: +1/−1 or −1/+1 until end of turn.
+pub fn endling() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            self_grant(cost(&[b()]), Keyword::Menace),
+            self_grant(cost(&[b()]), Keyword::Deathtouch),
+            self_grant(cost(&[b()]), Keyword::Undying),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::ChooseMode(vec![pump_each(Selector::This, 1, -1), pump_each(Selector::This, -1, 1)]),
+                ..Default::default()
+            },
+        ],
+        ..creature("Endling", cost(&[generic(2), b(), b()]), vec![CreatureType::Zombie, CreatureType::Shapeshifter], 3, 3)
+    }
+}
+
+/// Hateflayer — {5}{R}{R} 5/5 Elemental with wither. {2}{R}, {Q}: it deals
+/// damage equal to its power to any target.
+pub fn hateflayer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Wither],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            untap_self_cost: true,
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+            ..Default::default()
+        }],
+        ..creature("Hateflayer", cost(&[generic(5), r(), r()]), vec![CreatureType::Elemental], 5, 5)
+    }
+}
+
+/// Minion of Leshrac — {4}{B}{B}{B} 5/5 Demon Minion, protection from black.
+/// At the beginning of your upkeep, it deals 5 damage to you unless you
+/// sacrifice another creature; if it deals damage this way, tap it. {T}:
+/// destroy target creature or land.
+pub fn minion_of_leshrac() -> CardDefinition {
+    let other = || R::Creature.and(R::ControlledByYou).and(R::OtherThanSource);
+    let bite = || {
+        Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::You, amount: Value::Const(5) },
+            Effect::Tap { what: Selector::This },
+        ])
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Protection(Color::Black)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(other())),
+                then: Box::new(Effect::MayDoElse {
+                    description: "Sacrifice another creature (else Minion of Leshrac deals 5 damage to you)?".into(),
+                    body: Box::new(Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: other() }),
+                    else_: Box::new(bite()),
+                }),
+                else_: Box::new(bite()),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Destroy { what: target_filtered(R::Creature.or(R::Land)) },
+            ..Default::default()
+        }],
+        ..creature("Minion of Leshrac", cost(&[generic(4), b(), b(), b()]), vec![CreatureType::Demon, CreatureType::Minion], 5, 5)
+    }
+}
+
+/// Torchling — {3}{R}{R} 3/3 Shapeshifter. {R}: untap it. {R}: target creature
+/// blocks it this turn if able. {R}: change the target of target spell that
+/// targets only it. {1}: +1/−1 until end of turn. {1}: −1/+1 until end of turn.
+pub fn torchling() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::MustBlockSource { what: target_filtered(R::Creature), chooser: None },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::ChangeSpellTarget {
+                    what: target_filtered(R::IsSpellOnStack.and(R::SpellTargetsOnlySource)),
+                },
+                ..Default::default()
+            },
+            self_pump(cost(&[generic(1)]), 1, -1),
+            self_pump(cost(&[generic(1)]), -1, 1),
+        ],
+        ..creature("Torchling", cost(&[generic(3), r(), r()]), vec![CreatureType::Shapeshifter], 3, 3)
+    }
+}

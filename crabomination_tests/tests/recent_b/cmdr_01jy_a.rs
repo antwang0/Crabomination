@@ -747,3 +747,32 @@ fn alabaster_dragon_shuffles_home() {
     assert!(g.players[0].graveyard.iter().all(|c| c.id != dragon));
     assert!(g.players[0].library.iter().any(|c| c.id == dragon));
 }
+
+/// Minion of Leshrac with no other creature to feed it bites its controller
+/// for 5 at upkeep and taps; {T} destroys a creature or land.
+#[test]
+fn minion_of_leshrac_bites_without_fodder() {
+    let mut g = pod(2);
+    let minion = g.add_card_to_battlefield(0, catalog::minion_of_leshrac());
+    g.clear_sickness(minion);
+    let life = g.players[0].life;
+    g.active_player_idx = 1;
+    to_next_upkeep(&mut g);
+    assert_eq!(g.active_player_idx, 0);
+    assert_eq!(g.players[0].life, life - 5);
+    assert!(g.battlefield_find(minion).unwrap().tapped, "dealt damage this way: tapped");
+}
+
+/// Hateflayer's {Q} ability needs it tapped; it untaps and deals its power.
+#[test]
+fn hateflayer_untaps_to_fire() {
+    let mut g = pod(2);
+    let flayer = g.add_card_to_battlefield(0, catalog::hateflayer());
+    g.clear_sickness(flayer);
+    assert!(activate(&mut g, flayer, 0, Some(Target::Player(1))).is_err(), "{{Q}} needs it tapped");
+    g.battlefield_find_mut(flayer).unwrap().tapped = true;
+    let life = g.players[1].life;
+    activate(&mut g, flayer, 0, Some(Target::Player(1))).expect("{{2}}{{R}}, {{Q}}");
+    assert!(!g.battlefield_find(flayer).unwrap().tapped);
+    assert_eq!(g.players[1].life, life - 5);
+}
