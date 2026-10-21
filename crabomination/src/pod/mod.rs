@@ -29364,6 +29364,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANARA_29_COMMANDERS,
             main: decks::ANARA_29_MAIN,
         },
+        // Seat 4819: Abdel Adrian, Gorion's Ward and Criminal Past's EDHREC average deck. `--pod-decks 4819`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Criminal Past (WB)",
+            commanders: decks::ABDEL_ADRIAN_14_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_14_MAIN,
+        },
     ]
 }
 
@@ -36083,6 +36089,7 @@ mod tests {
             ("Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist", &[0x1CE6]),
             ("Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder", &[0x1CE7]),
             ("Anara, Wolvid Familiar and Rebbec, Architect of Ascension", &[0x1CE8]),
+            ("Abdel Adrian, Gorion's Ward and Criminal Past", &[0x1CE9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

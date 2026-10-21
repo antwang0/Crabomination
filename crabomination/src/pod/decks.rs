@@ -135099,3 +135099,31 @@ pub const ANARA_29_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ABDEL_ADRIAN_14_COMMANDERS: &[CardFactory] = &[abdel_adrian_gorions_ward, criminal_past];
+
+/// **Abdel Adrian, Gorion's Ward and Criminal Past**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 14 Plains + 6 Swamps = 98.
+/// Abdel Adrian, Gorion's Ward and Criminal Past (EDHREC, fetched 2026-10-21).
+pub const ABDEL_ADRIAN_14_MAIN: &[CardFactory] = &[
+    aligned_hedron_network, arcane_signet, commanders_sphere, orzhov_signet, sol_ring,
+    command_tower, orzhov_basilica, orzhov_guildgate, shattered_sanctum, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, snow_covered_swamp, accursed_marauder,
+    angel_of_finality, archon_of_coronation, charming_prince, daxos_blessed_by_the_sun,
+    hawkeye_clint_barton, impassioned_orator, kutzils_flanker, loyal_warhound,
+    luminous_broodmoth, moonshaker_cavalry, preston_the_vanisher, priest_of_ancient_lore,
+    shambling_ghast, skyclave_apparition, solemn_simulacrum, soul_warden, sun_titan,
+    sunblast_angel, ajanis_welcome, authority_of_the_consuls, cage_of_hands, call_for_unity,
+    candletrap, choking_restraints, citizens_arrest, cooped_up, far_traveler, grasp_of_fate,
+    oppressive_rays, prison_term, smile_at_death, soaring_hope, teleportation_circle,
+    touch_the_spirit_realm, weight_of_conscience, acrobatic_maneuver, call_the_coppercoats,
+    cloudshift, cut_down, ephemerate, go_for_the_throat, heartless_act, heros_downfall,
+    justiciars_portal, diabolic_intent, farewell, revoke_existence, settle_beyond_reality,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp,
+];
