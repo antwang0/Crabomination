@@ -29352,6 +29352,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GLACIAN_31_COMMANDERS,
             main: decks::GLACIAN_31_MAIN,
         },
+        // Seat 4817: Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder's EDHREC average deck. `--pod-decks 4817`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder (WR)",
+            commanders: decks::ALHARU_31_COMMANDERS,
+            main: decks::ALHARU_31_MAIN,
+        },
     ]
 }
 
@@ -36069,6 +36075,7 @@ mod tests {
             ("Amber Gristle O'Maul and Dungeon Delver", &[0x1CE4]),
             ("Breeches, Brazen Plunderer and Radiant, Serra Archangel", &[0x1CE5]),
             ("Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist", &[0x1CE6]),
+            ("Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder", &[0x1CE7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

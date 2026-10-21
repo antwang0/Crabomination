@@ -135046,3 +135046,29 @@ pub const GLACIAN_31_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, mountain, mountain, mountain, mountain,
 ];
+
+pub const ALHARU_31_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, bruse_tarl_boorish_herder];
+
+/// **Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder**'s EDHREC average deck, card for card:
+/// 62 nonbasic cards + 13 Mountains + 23 Plains = 98.
+/// Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder (EDHREC, fetched 2026-10-21).
+pub const ALHARU_31_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, captains_claws, idol_of_endurance, scrabbling_claws, sol_ring,
+    command_tower, tectonic_edge, alpine_watchdog, aurelia_exemplar_of_justice, bartered_cow,
+    battle_hurda, bloodthirsty_adversary, bronzeplate_boar, canyon_jerboa, caravan_hurda,
+    crashing_drawbridge, devouring_hellion, dire_fleet_daredevil, flametongue_yearling,
+    holy_cow, ilharg_the_raze_boar, inquisitors_ox, iron_myr, ironhoof_boar, karlov_watchdog,
+    kinsbaile_courier, lion_sash, ox_of_agonas, phelia_exuberant_shepherd, pillarfield_ox,
+    possessed_goat, raging_bull, rambunctious_mutt, rescue_retriever, sanctifier_of_souls,
+    selfless_savior, spirited_companion, thriving_ibex, wandering_champion, yoked_ox,
+    zodiac_dog, zodiac_goat, farmstead, felidar_retreat, gerrards_battle_cry, gleam_of_battle,
+    sparring_regimen, wedding_announcement, astral_confrontation, boros_charm,
+    call_the_coppercoats, chaos_warp, defend_the_campus, steer_clear, nahiri_the_unforgiving,
+    banishing_slash, gaze_of_justice, makindi_stampede, ondu_rising, return_to_the_ranks,
+    shatter_the_sky,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
