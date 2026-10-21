@@ -76,6 +76,9 @@ fn plain(card_id: CardId) -> GameAction {
     }
 }
 
+/// Which creature colors can pay one convoked pip.
+type ColorFit = Box<dyn Fn(&[crate::mana::Color]) -> bool>;
+
 /// The most `card`'s keywords let it pay with: convoke / improvise helpers
 /// (one per colored pip they can cover first, then generic) and delve cards,
 /// enough between them for its whole cost plus `tax` — `None` if a spell that
@@ -102,7 +105,7 @@ fn payment(state: &GameState, seat: usize, card: &CardInstance, tax: u32) -> Opt
     let mut taps: Vec<CardId> = Vec::new();
     let mut generic = tax;
     for sym in &card.definition.cost.symbols {
-        let fits: Option<Box<dyn Fn(&[crate::mana::Color]) -> bool>> = match *sym {
+        let fits: Option<ColorFit> = match *sym {
             ManaSymbol::Colored(c) if convoke => Some(Box::new(move |cs| cs.contains(&c))),
             ManaSymbol::Hybrid(a, b) if convoke => Some(Box::new(move |cs| cs.contains(&a) || cs.contains(&b))),
             ManaSymbol::Generic(n) => {
