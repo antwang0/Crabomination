@@ -29490,6 +29490,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FALCON_2_COMMANDERS,
             main: decks::THE_FALCON_2_MAIN,
         },
+        // Seat 4840: Black Widow, Daring Operative's EDHREC average deck. `--pod-decks 4840`.
+        PodDeck {
+            name: "Black Widow, Daring Operative (B)",
+            commanders: decks::BLACK_WIDOW_7_COMMANDERS,
+            main: decks::BLACK_WIDOW_7_MAIN,
+        },
     ]
 }
 
@@ -36230,6 +36236,7 @@ mod tests {
             ("Myra the Magnificent", &[0x1CFB]),
             ("The Howling Commandos", &[0x1CFC]),
             ("The Falcon, Sam Wilson", &[0x1CFD]),
+            ("Black Widow, Daring Operative", &[0x1CFE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

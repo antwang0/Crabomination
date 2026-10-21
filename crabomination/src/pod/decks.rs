@@ -135687,3 +135687,32 @@ pub const THE_FALCON_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const BLACK_WIDOW_7_COMMANDERS: &[CardFactory] = &[black_widow_daring_operative];
+
+/// **Black Widow, Daring Operative**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Black Widow, Daring Operative (EDHREC, fetched 2026-10-21). EDHREC's average lists the
+/// digital-only Hela, Mistress of Darkness (not Commander-legal, CR 903.5); 1 more Swamp
+/// takes its slot.
+pub const BLACK_WIDOW_7_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, jet_medallion, lightning_greaves, silver_shroud_costume,
+    sol_ring, swiftfoot_boots, the_soul_stone, whispersilk_cloak, access_tunnel, bojuka_bog,
+    cabal_coffers, crypt_of_agadeem, rogues_passage, shizo_deaths_storehouse,
+    takenuma_abandoned_mire, the_black_gate, urborg_tomb_of_yawgmoth, accursed_marauder,
+    angel_of_suffering, avenger_of_the_fallen, barrowgoyf, boggart_trawler, crypt_ghast,
+    dark_matter_manipulator, deathcap_marionette, doombot_harbinger, dreadhound, filth,
+    gnawing_vermin, golgari_thug, gorging_vulture, grave_researcher, graveblade_marauder,
+    gray_merchant_of_asphodel, leaden_myr, madame_hydra_reanimated, massacre_wurm, millikin,
+    mire_triton, morbid_opportunist, ornithopter_of_paradise, overlord_of_the_balemurk,
+    plaguecrafter, sewer_nemesis, shinra_reinforcements, shriekmaw, siegfried_famed_swordsman,
+    solemn_simulacrum, stinkweed_imp, stitchers_supplier, syr_konrad_the_grim,
+    the_warring_triad, undead_butler, cemetery_tampering, out_of_the_tombs, oversold_cemetery,
+    ripples_of_undeath, dark_ritual, deadly_dispute, deadly_rollick, malakir_rebirth,
+    songs_of_the_damned, withering_torment, breach_the_multiverse, buried_alive, dread_summons,
+    living_death, nights_whisper, reanimate, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
