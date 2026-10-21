@@ -3388,6 +3388,7 @@ impl HeuristicBot {
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights)
                         .or_else(|| super::fog::pick_fog(state, seat))
+                        .or_else(|| super::combat_grant::pick_combat_self_grant(state, seat))
                     {
                         return Some(BotStep::plain(a));
                     }
@@ -3415,6 +3416,7 @@ impl HeuristicBot {
                 }
                 if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights)
                     .or_else(|| super::team_combat::pick_team_combat_ability(state, seat, &self.weights))
+                    .or_else(|| super::combat_grant::pick_combat_self_grant(state, seat))
                 {
                     return Some(BotStep::plain(a));
                 }
