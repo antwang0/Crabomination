@@ -132557,3 +132557,31 @@ pub const SAFANA_23_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_TWELFTH_DOCTOR_21_COMMANDERS: &[CardFactory] = &[the_twelfth_doctor, donna_noble];
+
+/// **The Twelfth Doctor and Donna Noble**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 10 Islands + 13 Mountains = 98.
+/// The Twelfth Doctor and Donna Noble (EDHREC, fetched 2026-10-21).
+pub const THE_TWELFTH_DOCTOR_21_MAIN: &[CardFactory] = &[
+    arcane_signet, blazing_sunsteel, darksteel_plate, endurance_bobblehead, fiendlash,
+    mind_stone, mithril_coat, ore_rich_stalactite, pariahs_shield, shield_of_kaldra, sol_ring,
+    sol_talisman, talisman_of_creativity, thought_vessel, cascade_bluffs, command_tower,
+    desolate_lighthouse, evolving_wilds, frostboil_snarl, myriad_landscape, plaza_of_heroes,
+    reliquary_tower, stormcarved_coast, sulfur_falls, temple_of_epiphany,
+    temple_of_the_false_god, trenzalore_clocktower, archmage_emeritus, bohn_beguiling_balladeer,
+    brash_taunter, conspiracy_theorist, etali_primal_storm, giggling_skitterspike,
+    goblin_electromancer, goldnight_castigator, ill_tempered_loner,
+    lier_disciple_of_the_drowned, snapcaster_mage, sphinx_of_forgotten_lore, storm_kiln_artist,
+    stuffy_doll, the_reality_chip, yasmin_khan, fiery_emancipation, founding_the_third_path,
+    return_the_past, the_flux, underworld_breach, visions_of_phyrexia, arcbond,
+    behold_the_multiverse, chaos_warp, counterspell, demon_bolt, galvanic_iteration,
+    harvest_pyre, lightning_bolt, redirect, seething_song, think_twice,
+    chandra_torch_of_defiance, blasphemous_act, chain_reaction, delete, expressive_iteration,
+    faithless_looting, finale_of_promise, ignite_the_future, insult_injury, mana_geyser,
+    past_in_flames, ponder, ravenform, rolling_earthquake, star_of_extinction,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];

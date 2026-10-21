@@ -28818,6 +28818,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAFANA_23_COMMANDERS,
             main: decks::SAFANA_23_MAIN,
         },
+        // Seat 4728: The Twelfth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 4728`.
+        PodDeck {
+            name: "The Twelfth Doctor and Donna Noble (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_21_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_21_MAIN,
+        },
     ]
 }
 
@@ -35446,6 +35452,7 @@ mod tests {
             ("Glacian, Powerstone Engineer and Sengir, the Dark Baron", &[0x1C8B]),
             ("Numa, Joraga Chieftain and Rograkh, Son of Rohgahh", &[0x1C8C]),
             ("Safana, Calimport Cutthroat and Candlekeep Sage", &[0x1C8D]),
+            ("The Twelfth Doctor and Donna Noble", &[0x1C8E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
