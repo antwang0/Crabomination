@@ -72,6 +72,8 @@ pub(crate) mod prevent_static {
     pub const ALL_BUT_ONE: u32 = 1 << 14;
     /// `PreventDamageToYouAndYoursFromNamed` (Gideon's Intervention).
     pub const NAMED_SHIELD: u32 = 1 << 15;
+    /// `PreventAllSpellDamage` (Energy Storm).
+    pub const ALL_SPELL: u32 = 1 << 16;
 }
 
 /// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -112,6 +114,7 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 SE::PreventSpellDamageToYouAndYourOtherPermanents => prevent_static::SPELL_SHIELD,
                 SE::PreventAllButOneDamageToYouAndYourHeroes => prevent_static::ALL_BUT_ONE,
                 SE::PreventDamageToYouAndYoursFromNamed => prevent_static::NAMED_SHIELD,
+                SE::PreventAllSpellDamage => prevent_static::ALL_SPELL,
                 _ => 0,
             };
         }
@@ -1114,6 +1117,17 @@ impl GameState {
                 });
                 return 0;
             }
+        }
+        // Energy Storm — "prevent all damage that would be dealt by instant
+        // and sorcery spells."
+        if statics & prevent_static::ALL_SPELL != 0 && amount > 0 && source.is_some_and(|s| self.damage_source_is_spell(s))
+        {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: if let EntityRef::Player(p) = ent { Some(p) } else { None },
+                to_card: if let EntityRef::Permanent(c) = ent { Some(c) } else { None },
+            });
+            return 0;
         }
         // Rem Karolus — "if a spell would deal damage to you or another
         // permanent you control, prevent that damage."

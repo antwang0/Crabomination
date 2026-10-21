@@ -35448,6 +35448,7 @@ fn static_effect_to_effects(
             | StaticEffect::EnchantedPlayerCantActivateNonManaAbilities
             | StaticEffect::PreventAllDamageToControllerFromOthersSources
             | StaticEffect::PreventSpellDamageToYouAndYourOtherPermanents
+            | StaticEffect::PreventAllSpellDamage
             | StaticEffect::PreventDamageToYouAndYoursFromNamed
             | StaticEffect::SpellDamageToOpponentsBonus { .. }
             | StaticEffect::AddDamageFromColorSpells { .. }

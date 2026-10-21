@@ -2002,6 +2002,10 @@ pub enum StaticEffect {
     /// damage, read in `apply_prevention_shields`; the static's own permanent
     /// is not covered.
     PreventSpellDamageToYouAndYourOtherPermanents,
+    /// "Prevent all damage that would be dealt by instant and sorcery spells"
+    /// (Energy Storm) — every recipient. Only an instant or sorcery deals
+    /// damage as a spell (CR 608.2), so it reads `damage_source_is_spell`.
+    PreventAllSpellDamage,
     /// "If a spell would deal damage to an opponent or a permanent an opponent
     /// controls, it deals that much damage plus `amount` instead" (Rem
     /// Karolus) — any spell's, not only yours.
