@@ -2356,6 +2356,10 @@ pub enum StaticEffect {
     /// enter the battlefield, and players can't cast spells from graveyards
     /// or libraries.
     GraveyardLibraryLockdown,
+    /// Weathered Runestone: Grafdigger's Cage over NONLAND PERMANENT cards —
+    /// none enters from a graveyard or library, and players can't cast spells
+    /// from graveyards or libraries.
+    NonlandPermanentGraveyardLibraryLockdown,
     /// Kunoros, Hound of Athreos: the graveyard-only sibling — creature
     /// cards in graveyards can't enter the battlefield and players can't
     /// cast spells from graveyards (library plays unaffected).

@@ -11251,6 +11251,17 @@ impl GameState {
         })
     }
 
+    /// Weathered Runestone — the nonland-permanent Cage.
+    pub(crate) fn nonland_graveyard_library_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::NonlandPermanentGraveyardLibraryLockdown))
+        })
+    }
+
     /// True while graveyards specifically are locked — Grafdigger's Cage or
     /// the graveyard-only Kunoros lockdown.
     pub(crate) fn graveyard_locked(&self) -> bool {
@@ -11303,6 +11314,10 @@ impl GameState {
             || (def.is_permanent()
                 && zone == Zone::Graveyard
                 && self.graveyard_exile_locked())
+            || (def.is_permanent()
+                && !def.is_land()
+                && matches!(zone, Zone::Graveyard | Zone::Library)
+                && self.nonland_graveyard_library_locked())
     }
 
     /// The escape cost `card` can be cast for from `p`'s graveyard: its
@@ -11479,6 +11494,7 @@ impl GameState {
                 || self.graveyard_cast_activation_locked()
                 || self.graveyard_play_pooled_for.is_some_and(|only| only != caster)))
             || (matches!(zone, Zone::Library) && self.graveyard_library_locked())
+            || (matches!(zone, Zone::Graveyard | Zone::Library) && self.nonland_graveyard_library_locked())
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)
                 && self.graveyard_exile_locked())
@@ -35894,6 +35910,7 @@ fn static_effect_to_effects(
             | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::SelfHasKeywordWhilePredicate { .. }
             | StaticEffect::GraveyardLibraryLockdown
+            | StaticEffect::NonlandPermanentGraveyardLibraryLockdown
             | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
