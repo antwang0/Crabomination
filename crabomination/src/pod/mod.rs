@@ -29460,6 +29460,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZEVLOR_COMMANDERS,
             main: decks::ZEVLOR_MAIN,
         },
+        // Seat 4835: Keleth, Sunmane Familiar and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 4835`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Thrasios, Triton Hero (WUG)",
+            commanders: decks::KELETH_22_COMMANDERS,
+            main: decks::KELETH_22_MAIN,
+        },
     ]
 }
 
@@ -36195,6 +36201,7 @@ mod tests {
             ("Niambi, Faithful Healer", &[0x1CF6]),
             ("Wasp, Shrinking Savior", &[0x1CF7]),
             ("Zevlor, Elturel Exile", &[0x1CF8]),
+            ("Keleth, Sunmane Familiar and Thrasios, Triton Hero", &[0x1CF9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

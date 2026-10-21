@@ -135549,3 +135549,33 @@ pub const ZEVLOR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp,
 ];
+
+pub const KELETH_22_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, thrasios_triton_hero];
+
+/// **Keleth, Sunmane Familiar and Thrasios, Triton Hero**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 4 Forests + 5 Islands + 4 Plains = 98.
+/// Keleth, Sunmane Familiar and Thrasios, Triton Hero (EDHREC, fetched 2026-10-21).
+pub const KELETH_22_MAIN: &[CardFactory] = &[
+    arcane_signet, chronicle_of_victory, dawn_blessed_pennant, lotus_petal, patchwork_banner,
+    sol_ring, talisman_of_curiosity, talisman_of_progress, boseiju_who_endures,
+    bountiful_promenade, breeding_pool, command_tower, dreamroot_cascade, exotic_orchard,
+    flooded_strand, hallowed_fountain, misty_rainforest, otawara_soaring_city, path_of_ancestry,
+    rejuvenating_springs, reliquary_tower, savannah, sparas_headquarters, temple_garden,
+    tropical_island, tundra, windswept_heath, yavimaya_cradle_of_growth, adept_watershaper,
+    biomancers_familiar, birds_of_paradise, deepchannel_duelist, deepway_navigator,
+    elvish_mystic, emperor_mihail_ii, enduring_vitality, esper_sentinel, eternal_witness,
+    hakbal_of_the_surging_soul, kioras_follower, kopala_warden_of_waves,
+    kumena_tyrant_of_orazca, llanowar_elves, lord_of_atlantis, master_of_the_pearl_trident,
+    merfolk_sovereign, merrow_reejerey, mist_dancer, namor_atlantean_king,
+    namor_scourge_of_the_seas, seedborn_muse, svyelun_of_sea_and_sky, tatyova_benthic_druid,
+    thassas_oracle, vodalian_hexcatcher, brokers_ascendancy, cryptolith_rite,
+    deeproot_pilgrimage, deeproot_waters, kindred_discovery, mystic_remora, rhystic_study,
+    training_grounds, wilderness_reclamation, an_offer_you_cant_refuse, arcane_denial,
+    beast_within, counterspell, cyclonic_rift, eladamris_call, flusterstorm, generous_gift,
+    growth_spiral, heroic_intervention, path_to_exile, swan_song, swords_to_plowshares,
+    oko_lorwyn_liege, cultivate, farewell, farseek, green_suns_zenith, natures_lore,
+    rampant_growth, syggs_command,
+    // Basics
+    forest, forest, forest, forest, island, island, island, island, island, plains, plains,
+    plains, plains,
+];
