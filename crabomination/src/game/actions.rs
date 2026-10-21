@@ -11835,9 +11835,12 @@ impl GameState {
         // Colored-aware target-conditional reduction (Brush Off's "{1}{U}
         // less if it targets an instant or sorcery spell") — mandatory per
         // CR 601.2f, removed pip-by-pip.
+        // "If it targets" is any of its targets (Hunter's Mark's second).
         if let Some((filter, less)) = &card.definition.self_cost_reduction_cost_if_target
-            && let Some(tgt) = target.as_ref()
-            && self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+            && target
+                .iter()
+                .chain(additional_targets.iter())
+                .any(|tgt| self.evaluate_requirement_static(filter, tgt, p, Some(card.id)))
         {
             cost.reduce_by_cost(less);
         }
@@ -16176,8 +16179,10 @@ impl GameState {
         // Colored-aware target-conditional reduction — applies uniformly
         // across cast paths (CR 601.2f).
         if let Some((filter, less)) = &card.definition.self_cost_reduction_cost_if_target
-            && let Some(tgt) = target.as_ref()
-            && self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+            && target
+                .iter()
+                .chain(additional_targets.iter())
+                .any(|tgt| self.evaluate_requirement_static(filter, tgt, p, Some(card.id)))
         {
             mana_cost.reduce_by_cost(less);
         }
