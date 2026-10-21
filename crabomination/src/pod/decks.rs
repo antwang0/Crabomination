@@ -135302,3 +135302,141 @@ pub const THE_SEVENTH_DOCTOR_9_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, island, island, island, island, island,
     island, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const LOOT_4_COMMANDERS: &[CardFactory] = &[loot_the_anomaly];
+
+/// **Loot, the Anomaly**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Loot, the Anomaly (EDHREC, fetched 2026-10-21).
+pub const LOOT_4_MAIN: &[CardFactory] = &[
+    accorders_shield, agathas_soul_cauldron, arcane_signet, belbes_armor,
+    captain_americas_shield, cathars_shield, ensnaring_bridge, jet_medallion, meekstone,
+    my_precious, skeleton_key, slagwurm_armor, sol_ring, swiftfoot_boots, thieves_tools,
+    access_tunnel, bojuka_bog, cabal_coffers, cabal_stronghold, escape_tunnel,
+    nykthos_shrine_to_nyx, rogues_passage, urborg_tomb_of_yawgmoth, bitterbloom_bearer,
+    blood_artist, bloodghast, cabal_trainee, crypt_ghast, gravecrawler, hyalopterous_lemure,
+    jadar_ghoulcaller_of_nephalia, morbid_opportunist, nether_traitor, nine_lives_familiar,
+    ophiomancer, pawn_of_ulamog, pitiless_plunderer, proft_sinister_mastermind,
+    reassembling_skeleton, shirei_shizos_caretaker, stitchers_supplier, viscid_lemures,
+    zulaport_cutthroat, animate_dead, bitterblossom, black_market_connections,
+    cast_into_darkness, clinging_darkness, despondency, greels_caress, mourning,
+    phyrexian_arena, torment, dark_ritual, deadly_dispute, deadly_rollick, defile,
+    imps_mischief, marsh_gas, ray_of_enfeeblement, tragic_slip, withering_torment, wring_flesh,
+    garruk_veiled_butcher, buried_alive, feed_the_swarm, nights_whisper, reanimate,
+    sign_in_blood, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const SUKI_3_COMMANDERS: &[CardFactory] = &[suki_kyoshi_captain];
+
+/// **Suki, Kyoshi Captain**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Suki, Kyoshi Captain (EDHREC, fetched 2026-10-21).
+pub const SUKI_3_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, heralds_horn, inquisitorial_rosette, obsidian_battle_axe,
+    oketras_monument, patchwork_banner, pearl_medallion, sol_ring, spear_of_heliod,
+    swiftfoot_boots, vanquishers_banner, abandoned_air_temple, dalkovan_encampment,
+    minas_tirith, myriad_landscape, path_of_ancestry, rogues_passage, war_room,
+    windbrisk_heights, adaptive_automaton, arashin_foremost, aurora_champion, beskir_shieldmate,
+    black_panther_most_dangerous, boon_bringer_valkyrie, dragonscale_general,
+    god_eternal_oketra, harper_recruiter, hatut_zeraze_strike_force, herald_of_dromoka,
+    hercules_olympian_hero, jazal_goldmane, katara_heroic_healer, mardu_woe_reaper,
+    paired_tactician, resplendent_marshal, seasoned_dungeoneer, space_marine_devastator,
+    steward_of_solidarity, suki_courageous_rescuer, thunderwolf_cavalry,
+    triumph_of_saint_katherine, ultramarines_honour_guard, urdnan_dromoka_warrior,
+    usher_of_the_fallen, vexilus_praetor, zephyrim, always_watching, defenders_of_humanity,
+    flowering_of_the_white_tree, folk_hero, honor_of_the_pure, radiant_destiny, rally_the_ranks,
+    tocasias_welcome, and_they_shall_know_no_fear, flare_of_fortitude, generous_gift,
+    path_to_exile, secure_the_wastes, stroke_of_midnight, swords_to_plowshares,
+    unbreakable_formation, will_of_the_mardu, your_temple_is_under_attack, austere_command,
+    cut_a_deal, mass_calcify, rush_of_battle, secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const SOKKA_5_COMMANDERS: &[CardFactory] = &[sokka_wolf_coves_protector];
+
+/// **Sokka, Wolf Cove's Protector**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Plains = 99.
+/// Sokka, Wolf Cove's Protector (EDHREC, fetched 2026-10-21).
+pub const SOKKA_5_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, commanders_sphere, explorers_scope, heraldic_banner,
+    leyline_axe, marble_diamond, oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots,
+    tamiyos_journal, castle_ardenvale, eiganjo_seat_of_the_empire, myriad_landscape,
+    path_of_ancestry, rogues_passage, war_room, agent_13_sharon_carter, agent_of_atlas,
+    angelic_overseer, avacyn_angel_of_hope, bastion_protector, bola_slinger,
+    changeling_wayfinder, curious_farm_animals, danitha_capashen, earth_kingdom_protectors,
+    enduring_innocence, hawkeye_clint_barton, healers_hawk, kuldotha_forgemaster,
+    kyoshi_warriors, loran_of_the_third_path, mondrak_glory_dominus, odric_master_tactician,
+    reluctant_dounguard, rooftop_percher, selfless_samurai, serra_ascendant,
+    sun_dappled_celebrant, thalia_heretic_cathar, wall_of_omens, wanderbrine_preacher,
+    water_tribe_captain, welcoming_vampire, always_watching, anointed_procession,
+    armed_with_proof, cathars_crusade, liminal_hold, spiral_into_solitude, auspicious_arrival,
+    brave_the_elements, disenchant, fateful_absence, generous_gift, inspired_charge, keep_out,
+    path_to_exile, sokkas_sword_training, stroke_of_midnight, swords_to_plowshares,
+    austere_command, cut_a_deal, secret_rendezvous, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const BRAWN_COMMANDERS: &[CardFactory] = &[brawn_amadeus_cho];
+
+/// **Brawn, Amadeus Cho**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Forests + 12 Islands = 99.
+/// Brawn, Amadeus Cho (EDHREC, fetched 2026-10-21).
+pub const BRAWN_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, ozolith_the_shattered_spire, simic_signet, sol_ring,
+    swiftfoot_boots, the_great_henge, thought_vessel, boseiju_who_endures, breeding_pool,
+    command_tower, dreamroot_cascade, exotic_orchard, flooded_grove, hinterland_harbor,
+    misty_rainforest, rejuvenating_springs, reliquary_tower, simic_growth_chamber,
+    sodden_verdure, waterlogged_grove, yavimaya_coast, aesi_tyrant_of_gyre_strait,
+    birds_of_paradise, bold_biochemist, bushmaster_coiled_henchman, cathedral_acolyte,
+    coiling_oracle, consecrated_sphinx, doc_samson_super_psychiatrist, elvish_mystic,
+    eternal_witness, fyndhorn_elves, goliath_mass_manipulator, hulk_strongest_there_is,
+    kami_of_whispered_hopes, laboratory_maniac, lilysplash_mentor, llanowar_elves,
+    psychosis_crawler, selvala_heart_of_the_wilds, she_hulk_jade_defender,
+    tatyova_benthic_druid, viv_vision_teen_synthezoid, zimone_quandrix_prodigy,
+    advancing_the_spirit, guardian_project, kindred_discovery, mystic_remora, terrasymbiosis,
+    the_legend_of_kyoshi, wizard_class, an_offer_you_cant_refuse, arcane_denial, beast_within,
+    counterspell, decisive_denial, eureka_moment, growth_spiral, heroic_intervention,
+    inspiring_call, negate, planar_genesis, rapid_hybridization, return_of_the_wildspeaker,
+    swan_song, oko_lorwyn_liege, cultivate, farseek, kodamas_reach, lessons_from_life,
+    natures_lore, rampant_growth, rishkars_expertise, sea_gate_restoration, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
+
+pub const THE_WASP_2_COMMANDERS: &[CardFactory] = &[the_wasp_winsome_avenger];
+
+/// **The Wasp, Winsome Avenger**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// The Wasp, Winsome Avenger (EDHREC, fetched 2026-10-21).
+pub const THE_WASP_2_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, arc_reactor, benders_waterskin, captain_americas_shield, gilded_lotus,
+    heros_blade, hulkbuster_armor, kimoyo_beads, minds_eye, primal_amulet, relic_of_legends,
+    sol_ring, super_suit, swiftfoot_boots, the_fantasticar, the_ten_rings, thought_vessel,
+    thran_dynamo, tome_of_legends, trading_post, unstable_molecule_suit, whispersilk_cloak,
+    agna_qela, arcane_lighthouse, arch_of_orazca, homeward_path, mystic_sanctuary,
+    reliquary_tower, war_room, deadeye_navigator, displacer_kitten, hydroelectric_specimen,
+    impossible_man, iron_spider_stark_upgrade, kid_loki, machine_man_model_x_51,
+    ms_marvel_kamala_khan, repulsor_bots, scourge_of_fleets, spellskite, summon_bahamut,
+    the_watcher_in_the_water, the_wondrous_wasp, wasp_shrinking_savior, wiccan_rising_magician,
+    propaganda, quantum_reduction, reconnaissance_mission, secret_invasion, starks_ingenuity,
+    aetherize, beyeen_veil, blur, brainstorm, dismissive_denial, ghostly_flicker,
+    hide_on_the_ceiling, jwari_disruption, opt, think_twice, waterbenders_restoration,
+    we_say_thee_nay, deep_analysis, fantastic_elasticity, pym_particles, recurring_insight,
+    sea_gate_restoration, season_of_weaving, splash_portal, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];

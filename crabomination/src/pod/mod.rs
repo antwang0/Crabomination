@@ -29406,6 +29406,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_SEVENTH_DOCTOR_9_COMMANDERS,
             main: decks::THE_SEVENTH_DOCTOR_9_MAIN,
         },
+        // Seat 4826: Loot, the Anomaly's EDHREC average deck. `--pod-decks 4826`.
+        PodDeck {
+            name: "Loot, the Anomaly (B)",
+            commanders: decks::LOOT_4_COMMANDERS,
+            main: decks::LOOT_4_MAIN,
+        },
+        // Seat 4827: Suki, Kyoshi Captain's EDHREC average deck. `--pod-decks 4827`.
+        PodDeck {
+            name: "Suki, Kyoshi Captain (W)",
+            commanders: decks::SUKI_3_COMMANDERS,
+            main: decks::SUKI_3_MAIN,
+        },
+        // Seat 4828: Sokka, Wolf Cove's Protector's EDHREC average deck. `--pod-decks 4828`.
+        PodDeck {
+            name: "Sokka, Wolf Cove's Protector (W)",
+            commanders: decks::SOKKA_5_COMMANDERS,
+            main: decks::SOKKA_5_MAIN,
+        },
+        // Seat 4829: Brawn, Amadeus Cho's EDHREC average deck. `--pod-decks 4829`.
+        PodDeck {
+            name: "Brawn, Amadeus Cho (UG)",
+            commanders: decks::BRAWN_COMMANDERS,
+            main: decks::BRAWN_MAIN,
+        },
+        // Seat 4830: The Wasp, Winsome Avenger's EDHREC average deck. `--pod-decks 4830`.
+        PodDeck {
+            name: "The Wasp, Winsome Avenger (U)",
+            commanders: decks::THE_WASP_2_COMMANDERS,
+            main: decks::THE_WASP_2_MAIN,
+        },
     ]
 }
 
@@ -36132,6 +36162,11 @@ mod tests {
             ("Tetzin, Gnome Champion", &[0x1CED]),
             ("Satsuki, the Living Lore", &[0x1CEE]),
             ("The Seventh Doctor and Graham O'Brien", &[0x1CEF]),
+            ("Loot, the Anomaly", &[0x1CF0]),
+            ("Suki, Kyoshi Captain", &[0x1CF1]),
+            ("Sokka, Wolf Cove's Protector", &[0x1CF2]),
+            ("Brawn, Amadeus Cho", &[0x1CF3]),
+            ("The Wasp, Winsome Avenger", &[0x1CF4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
