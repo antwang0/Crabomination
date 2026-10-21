@@ -8,6 +8,8 @@
 //! - CR 607.2b — a linked exile-and-return pair only returns the cards the
 //!   linked ability itself exiled.
 //! - CR 705.2 — one coin flip per iteration of a repeated effect.
+//! - CR 111.13 — a copy of a permanent spell becomes a token as it resolves
+//!   but is not "created", so a token doubler doesn't apply to it.
 
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
@@ -204,4 +206,25 @@ fn cr_705_2_one_flip_per_blocking_creature() {
         2,
         "one blocker was fogged, the other wasn't"
     );
+}
+
+/// CR 111.13 — a copy of a permanent spell becomes a token as it resolves but
+/// is not "created": the Sixth Doctor's copy of Esika's Chariot under Mondrak
+/// is one Chariot, not two, while each Chariot's own Cats are doubled.
+#[test]
+fn cr_111_13_a_resolving_spell_copy_is_not_a_created_token() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::mondrak_glory_dominus());
+    g.add_card_to_battlefield(0, catalog::the_sixth_doctor());
+    let chariot = g.add_card_to_hand(0, catalog::esikas_chariot());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.perform_action(GameAction::CastSpell { card_id: chariot, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    while !g.stack.is_empty() {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    let named = |g: &GameState, n: &str| g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == n).count();
+    assert_eq!(named(&g, "Esika's Chariot"), 2, "the printed Chariot and one copy");
+    assert_eq!(named(&g, "Cat"), 8, "each Chariot's two Cats, doubled");
 }
