@@ -67,7 +67,12 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
             })
         })
         .collect();
-    if grants.is_empty() {
+    let self_grants = || {
+        state.battlefield.iter().any(|c| {
+            c.controller == seat && c.definition.activated_abilities.iter().any(|ab| self_grant(&ab.effect).is_some())
+        })
+    };
+    if grants.is_empty() && !self_grants() {
         return None;
     }
     let statics = crate::game::combat::attack_static_scan(state);
@@ -116,7 +121,71 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
             }
         }
     }
+    // A ready attacker's own untapped "{cost}: this gets -1/-0 and gains
+    // flying" (Hyalopterous Lemure, Viscid Lemures' swampwalk — never
+    // activated in 160 Loot pods, seeds 9445/9446): bought once, while it
+    // still has power left and the keyword is evasion here.
+    for &(power, creature) in &ready {
+        let Some(card) = state.battlefield_find(creature) else { continue };
+        for (index, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Some((keyword, dp)) = self_grant(&ab.effect) else { continue };
+            if ab.tap_cost
+                || ab.sac_cost
+                || power + dp <= 0
+                || !evasion_here(state, seat, keyword)
+                || state.computed_permanent(creature).is_some_and(|cp| cp.keywords().has_kw(keyword))
+            {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: creature,
+                ability_index: index,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
     None
+}
+
+/// "This gains [keyword] until end of turn", alone or beside a constant pump
+/// of itself: the keyword and the power change.
+fn self_grant(e: &Effect) -> Option<(&Keyword, i32)> {
+    use crate::effect::Value;
+    match e {
+        Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::EndOfTurn } => Some((keyword, 0)),
+        Effect::Seq(v) => {
+            let mut kw = None;
+            let mut dp = 0;
+            for s in v {
+                match s {
+                    Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::EndOfTurn } if kw.is_none() => {
+                        kw = Some(keyword)
+                    }
+                    Effect::PumpPT { what: Selector::This, power: Value::Const(p), duration: Duration::EndOfTurn, .. } => dp += p,
+                    _ => return None,
+                }
+            }
+            kw.map(|k| (k, dp))
+        }
+        _ => None,
+    }
+}
+
+/// An attack keyword, or landwalk against an opponent who controls that land
+/// type (CR 702.14c).
+fn evasion_here(state: &GameState, seat: usize, k: &Keyword) -> bool {
+    match k {
+        Keyword::Landwalk(lt) => state.opponents_of(seat).iter().any(|&o| {
+            state.battlefield.iter().any(|c| c.controller == o && c.definition.subtypes.land_types.contains(lt))
+        }),
+        k => attack_keyword(k),
+    }
 }
 
 /// Whom a haste grant in `e` reaches, if `e` is one — alone, or among
@@ -332,5 +401,23 @@ mod tests {
         g.clear_sickness(zombie);
         let a = pick_evasion_grant(&g, 0).expect("menace for the Corpse");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, target: None, .. } if card_id == lord));
+    }
+
+    /// Hyalopterous Lemure buys its own flying once before a pod attack, and
+    /// not a second time.
+    #[test]
+    fn a_lemure_buys_its_own_flying_once() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let lemure = g.add_card_to_battlefield(0, crate::catalog::hyalopterous_lemure());
+        g.clear_sickness(lemure);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let a = pick_evasion_grant(&g, 0).expect("buy flying");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == lemure));
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert!(pick_evasion_grant(&g, 0).is_none(), "already flying");
     }
 }
