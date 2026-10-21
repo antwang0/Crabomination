@@ -10932,7 +10932,7 @@ impl GameState {
         // and every other path asserts the two answers agree.
         if !bestow
             && let Some(hand_card) = self.players[p].hand.iter().find(|c| c.id == card_id)
-            && self.sorcery_timing_bars(p, hand_card, cost_statics)
+            && self.sorcery_timing_bars_at(p, hand_card, cost_statics, x_value.unwrap_or(0))
             && !self.flash_by_target(p, hand_card, target.as_ref())
         {
             cast_census::early(line!());
@@ -11168,7 +11168,7 @@ impl GameState {
             // the suite and every `debug-assertions` sweep re-run the
             // predicate here and fail if the stamps moved the answer.
             debug_assert!(
-                !self.sorcery_timing_bars(p, &card, cost_statics)
+                !self.sorcery_timing_bars_at(p, &card, cost_statics, x_value.unwrap_or(0))
                     || self.flash_by_target(p, &card, target.as_ref()),
                 "the hoisted CR 601.2 timing gate and the stamped card disagree",
             );
@@ -18225,7 +18225,20 @@ impl GameState {
         card: &crate::card::CardInstance,
         cost_statics: u32,
     ) -> bool {
-        let flash_granted = self.flash_granted_for_with(p, card, cost_statics);
+        self.sorcery_timing_bars_at(p, card, cost_statics, 0)
+    }
+
+    /// [`Self::sorcery_timing_bars`] for a cast announcing `x` — a
+    /// `SelfFlashIf` condition reads it (Silver Scrutiny's "if X is 3 or
+    /// less"). Callers that don't know X yet ask at 0.
+    pub(crate) fn sorcery_timing_bars_at(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        cost_statics: u32,
+        x: u32,
+    ) -> bool {
+        let flash_granted = self.flash_granted_for_at(p, card, cost_statics, x);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         must_be_sorcery_speed
@@ -18239,10 +18252,21 @@ impl GameState {
         card: &crate::card::CardInstance,
         statics: u32,
     ) -> bool {
+        self.flash_granted_for_at(p, card, statics, 0)
+    }
+
+    /// [`Self::flash_granted_for_with`] with the cast's X for `SelfFlashIf`.
+    fn flash_granted_for_at(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        statics: u32,
+        x: u32,
+    ) -> bool {
         let self_flash = !self.player_locked_to_sorcery_timing(p)
             && card.definition.static_abilities.iter().any(|sa| {
                 if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, x);
                     self.evaluate_predicate(condition, &ctx)
                 } else {
                     false
