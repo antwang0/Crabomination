@@ -986,6 +986,7 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     ("Frenetic Efreet", "printed `{0}: Flip a coin. …`"),
     ("Frenetic Sliver", "printed `{0}:` flip granted to all Slivers — a win exiles the Sliver, a loss sacrifices it, so each activation removes its source"),
     ("Hopping Automaton", "printed `{0}: This creature gets -1/-1 and gains flying …`"),
+    ("Hyalopterous Lemure", "printed `{0}: This creature gets -1/-0 and gains flying until end of turn.`"),
     ("Knowledge Vault", "printed `{0}: Sacrifice this artifact. If you do, …` — the sacrifice is its first step"),
     ("Lancers en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
     ("Mist Dragon", "printed `{0}: gains flying` / `{0}: loses flying`"),
@@ -999,6 +1000,7 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     ("Spirit Mirror", "printed `{0}: Destroy target Reflection.`"),
     ("Spirit en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
     ("Urza's Avenger", "printed `{0}: This creature gets -1/-1 and gains …`"),
+    ("Viscid Lemures", "printed `{0}: This creature gets -1/-0 and gains swampwalk until end of turn.`"),
     ("Warrior en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
     // ⚠ NOT a printed `{0}`: the card's first ability is the *static*
     // "If this creature would be destroyed, regenerate it", modelled as a free
