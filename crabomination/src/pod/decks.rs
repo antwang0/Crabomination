@@ -135911,3 +135911,32 @@ pub const JORN_MAIN: &[CardFactory] = &[
     blizzard_brawl, blood_on_the_snow, cultivate, dead_of_winter, farseek, glacial_revelation,
     into_the_north, kodamas_reach, rampant_growth, villainous_wealth,
 ];
+
+pub const HOGAAK_COMMANDERS: &[CardFactory] = &[hogaak_arisen_necropolis];
+
+/// **Hogaak, Arisen Necropolis**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 8 Forests + 7 Swamps = 99.
+/// Hogaak, Arisen Necropolis (EDHREC, fetched 2026-10-21).
+pub const HOGAAK_MAIN: &[CardFactory] = &[
+    altar_of_dementia, altar_of_the_wretched, arcane_signet, sol_ring, the_skullspore_nexus,
+    bojuka_bog, command_tower, dakmor_salvage, deathcap_glade, dryad_arbor, evolving_wilds,
+    golgari_rot_farm, khalni_garden, llanowar_wastes, nurturing_peatland, overgrown_tomb,
+    shifting_woodland, tainted_wood, takenuma_abandoned_mire, twilight_mire,
+    underground_mortuary, undergrowth_stadium, verdant_catacombs, woodland_cemetery,
+    aftermath_analyst, birds_of_paradise, blanchwood_prowler, bloodghast,
+    circle_of_the_land_druid, dark_matter_manipulator, deathrite_shaman, disciple_of_bolas,
+    disciple_of_freyalise, elves_of_deep_shadow, elvish_mystic, eternal_witness, fyndhorn_elves,
+    golgari_grave_troll, golgari_thug, hermit_druid, infested_thrinax, jarad_golgari_lich_lord,
+    korozda_guildmage, llanowar_elves, lluwen_imperfect_naturalist, nyx_weaver, old_rutstein,
+    sakura_tribe_elder, satyr_wayfinder, seedship_broodtender, six, skull_prophet,
+    stinkweed_imp, stitchers_supplier, syr_konrad_the_grim, town_greeter, undead_butler,
+    animate_dead, bridge_from_below, greater_good, insidious_roots, ripples_of_undeath,
+    zombie_infestation, abrupt_decay, assassins_trophy, beast_within, entomb,
+    grapple_with_the_past, grisly_salvage, momentous_fall, return_of_the_wildspeaker,
+    tend_the_pests, grist_the_hunger_tide, bala_ged_recovery, dread_return, life_from_the_loam,
+    lifes_legacy, living_death, malevolent_rumble, morbid_curiosity, reanimate,
+    rishkars_expertise, toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];

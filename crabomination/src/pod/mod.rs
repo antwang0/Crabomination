@@ -29538,6 +29538,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JORN_COMMANDERS,
             main: decks::JORN_MAIN,
         },
+        // Seat 4848: Hogaak, Arisen Necropolis's EDHREC average deck. `--pod-decks 4848`.
+        PodDeck {
+            name: "Hogaak, Arisen Necropolis (BG)",
+            commanders: decks::HOGAAK_COMMANDERS,
+            main: decks::HOGAAK_MAIN,
+        },
     ]
 }
 
@@ -36346,6 +36352,7 @@ mod tests {
             ("Dee Kay, Finder of the Lost", &[0x1D03]),
             ("Spinnerette, Arachnobat", &[0x1D04]),
             ("Jorn, God of Winter", &[0x1D05]),
+            ("Hogaak, Arisen Necropolis", &[0x1D06]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
