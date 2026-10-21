@@ -5001,6 +5001,11 @@ pub struct ActivatedAbility {
     /// the least that makes a "power X or less" target legal (Aryel).
     #[serde(default)]
     pub tap_n_x: bool,
+    /// The `tap_n_filter` picks must all share a creature type — "tap two
+    /// untapped creatures you control that share a creature type" (Weight of
+    /// Conscience). Changelings share every type.
+    #[serde(default)]
+    pub tap_n_share_creature_type: bool,
     /// "Tap any number of untapped [`tap_n_filter`] you control with total
     /// power N or greater:" (Mossbridge Troll): the count is ignored; the
     /// highest-power matches other than the source are tapped until their

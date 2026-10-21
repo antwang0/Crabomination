@@ -23781,6 +23781,9 @@ impl GameState {
                 }
                 picks
             } else {
+                if ability.tap_n_share_creature_type {
+                    candidates = self.creatures_sharing_a_type(&candidates, count);
+                }
                 if candidates.len() < count {
                     return Err(GameError::SelectionRequirementViolated);
                 }
