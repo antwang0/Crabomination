@@ -133653,3 +133653,86 @@ pub const RASAAD_YN_BASHIR_27_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ICH_TEKIK_29_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, sengir_the_dark_baron];
+
+/// **Ich-Tekik, Salvage Splicer and Sengir, the Dark Baron**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 11 Forests + 13 Swamps = 98.
+/// Ich-Tekik, Salvage Splicer and Sengir, the Dark Baron (EDHREC, fetched 2026-10-21).
+pub const ICH_TEKIK_29_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, dredging_claw, golem_foundry, golgari_locket, golgari_signet,
+    horizon_spellbomb, jade_seedstones, kaslems_stonetree, meltstriders_gear, mind_stone,
+    phantom_train, sol_ring, the_earth_crystal, the_fire_nation_drill, titan_forge,
+    arcane_lighthouse, captivating_cave, hidden_necropolis, hidden_nursery, pit_of_offerings,
+    secret_tunnel, skycoach_waypoint, titans_grave, urzas_tower, vernal_fen,
+    armix_filigree_thrasher, bottle_golems, brass_herald, campus_guide, cheerful_osteomancer,
+    chronomaton, cradle_clearcutter, darksteel_colossus, darksteel_sentinel, dross_golem,
+    emil_vastlands_roamer, gingerbrute, golem_artisan, howling_golem, hulk_brutal_brawler,
+    iron_bully, junktroller, maelstrom_colossus, mer_ek_nightblade, meteor_golem, namazu_trader,
+    paramecia_coloniex, patchwork_automaton, pirate_peddlers, rootwire_amalgam,
+    solemn_simulacrum, soulless_jailer, tangle_golem, agent_of_the_iron_throne, arachnoform,
+    branching_evolution, dawns_reflection, garruks_uprising, alchemists_gift, bake_into_a_pie,
+    fight_on, stomped_by_the_foot, wander_off, zukos_conviction, ugin_the_ineffable,
+    culling_ritual, cultivate, diregraf_rebirth, embrace_oblivion, final_act, forever_young,
+    the_crowd_goes_wild, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const BRINELIN_25_COMMANDERS: &[CardFactory] = &[brinelin_the_moon_kraken, numa_joraga_chieftain];
+
+/// **Brinelin, the Moon Kraken and Numa, Joraga Chieftain**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 11 Forests + 4 Islands = 98.
+/// Brinelin, the Moon Kraken and Numa, Joraga Chieftain (EDHREC, fetched 2026-10-21).
+pub const BRINELIN_25_MAIN: &[CardFactory] = &[
+    moonsnare_prototype, pyre_of_heroes, replicating_ring, simic_signet, springleaf_drum,
+    blighted_woodland, cephalid_coliseum, command_tower, dreamroot_cascade, fabled_passage,
+    flooded_grove, hinterland_harbor, meditation_pools, memorial_to_unity, mosswort_bridge,
+    overflowing_basin, paradox_gardens, quandrix_campus, rain_slicked_copse, sodden_verdure,
+    survivors_encampment, temple_of_mystery, thriving_isle, vineglimmer_snarl,
+    waterlogged_grove, yavimaya_coast, aethersnipe, anticausal_vestige, centaur_omenreader,
+    champions_of_the_perfect, citanul_stalwart, conduit_of_ruin, defiler_of_dreams,
+    devourer_of_destiny, drowner_of_truth, drownyard_lurker, elvish_archdruid, elvish_mystic,
+    fauna_shaman, fyndhorn_elves, gene_pollinator, gilanra_caller_of_wirewood,
+    goreclaw_terror_of_qal_sisma, gyre_sage, incubation_druid, jaspera_sentinel,
+    joraga_treespeaker, krosan_drover, llanowar_elves, master_biomancer, oblivion_sower,
+    priest_of_titania, sacellum_godspeaker, scourge_of_fleets, selvala_heart_of_the_wilds,
+    shigeki_jukai_visionary, spellweaver_duo, tanufel_rimespeaker, timeless_witness,
+    topiary_lecturer, ulvenwald_oddity, viridian_joiner, wretched_gryff, kozileks_unsealing,
+    monstrous_vortex, confounding_riddle, decisive_denial, out_of_bounds, plasm_capture,
+    quandrix_charm, quandrix_command, repulsive_mutation, supreme_will, thassas_intervention,
+    ugins_binding, vivien_on_the_hunt, bridgeworks_battle, croaking_counterpart,
+    elvish_promenade, natures_lore, neoform, quasiduplicate, visions_of_dominance,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island,
+];
+
+pub const ALHARU_28_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, kydele_chosen_of_kruphix];
+
+/// **Alharu, Solemn Ritualist and Kydele, Chosen of Kruphix**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 10 Forests + 6 Islands + 7 Plains = 98.
+/// Alharu, Solemn Ritualist and Kydele, Chosen of Kruphix (EDHREC, fetched 2026-10-21).
+pub const ALHARU_28_MAIN: &[CardFactory] = &[
+    decanter_of_endless_water, folio_of_fancies, simic_cluestone, simic_keyrune, sol_ring,
+    thought_vessel, wedding_ring, alchemists_refuge, blossoming_sands, cryptic_spires,
+    fertile_thicket, forge_of_heroes, fortified_village, littjara_mirrorlake, myriad_landscape,
+    port_town, prairie_stream, seaside_citadel, skycloud_expanse, temple_of_enlightenment,
+    temple_of_mystery, acidic_slime, battering_krasis, beetleform_mage, enduring_innocence,
+    enduring_vitality, experiment_kraj, galadhrim_guide, grand_arbiter_augustin_iv,
+    hydroid_krasis, kianne_corrupted_memory, lilysplash_mentor, merfolk_skydiver,
+    momir_vig_simic_visionary, phelia_exuberant_shepherd, pilgrims_eye, rumbling_sentry,
+    sheltering_ancient, sita_varma_masked_racer, spark_double, torens_fist_of_the_angels,
+    unyielding_gatekeeper, divine_intervention, elven_chorus, krasis_incubation, so_shiny,
+    an_offer_you_cant_refuse, arcane_denial, blue_suns_zenith, ethereal_haze, fog,
+    inspiring_call, intellectual_offering, negate, oblation, orims_chant, pause_for_reflection,
+    perch_protection, render_silent, repudiate_replicate, snakeskin_veil, summary_judgment,
+    jace_wielder_of_mysteries, collective_voyage, croaking_counterpart, healing_technique,
+    modify_memory, overcome, replication_technique, secret_rendezvous, seek_the_wilds,
+    the_crowd_goes_wild, time_wipe, wear_down, wrath_of_god,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains,
+];

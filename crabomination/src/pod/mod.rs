@@ -29052,6 +29052,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RASAAD_YN_BASHIR_27_COMMANDERS,
             main: decks::RASAAD_YN_BASHIR_27_MAIN,
         },
+        // Seat 4767: Ich-Tekik, Salvage Splicer and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 4767`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Sengir, the Dark Baron (BG)",
+            commanders: decks::ICH_TEKIK_29_COMMANDERS,
+            main: decks::ICH_TEKIK_29_MAIN,
+        },
+        // Seat 4768: Brinelin, the Moon Kraken and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4768`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Numa, Joraga Chieftain (UG)",
+            commanders: decks::BRINELIN_25_COMMANDERS,
+            main: decks::BRINELIN_25_MAIN,
+        },
+        // Seat 4769: Alharu, Solemn Ritualist and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4769`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Kydele, Chosen of Kruphix (WUG)",
+            commanders: decks::ALHARU_28_COMMANDERS,
+            main: decks::ALHARU_28_MAIN,
+        },
     ]
 }
 
@@ -35719,6 +35737,9 @@ mod tests {
             ("Ich-Tekik, Salvage Splicer and Sidar Kondo of Jamuraa", &[0x1CB2]),
             ("Falthis, Shadowcat Familiar and Gilanra, Caller of Wirewood", &[0x1CB3]),
             ("Rasaad yn Bashir and Criminal Past", &[0x1CB4]),
+            ("Ich-Tekik, Salvage Splicer and Sengir, the Dark Baron", &[0x1CB5]),
+            ("Brinelin, the Moon Kraken and Numa, Joraga Chieftain", &[0x1CB6]),
+            ("Alharu, Solemn Ritualist and Kydele, Chosen of Kruphix", &[0x1CB7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
