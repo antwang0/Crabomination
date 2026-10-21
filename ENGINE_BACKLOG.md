@@ -20,6 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 26 cards, 15 seats, nine primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--26-cards-15-seats-nine-primitives) | 25 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes](#fixedopen-2026-10-20-commander-run-01nkae5b--46-one-gap-closers-45-seats-two-bug-classes) | 37 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 131 seats, 265 cards, five bug classes](#fixedopen-2026-10-20-commander-run-01e4rmul--131-seats-265-cards-five-bug-classes) | 8 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
@@ -224,6 +225,27 @@ the handoff.
   Surge of Salvation want a by-colour prevention shield over a seat's creatures — `PreventionTarget` has no
   creatures-of-seat key).
 
+## FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 26 cards, 15 seats, nine primitives
+
+- **Seats** 4776-4783, 4790-4796 (seat numbers raced with `01E4rMUL` three times: re-seat after every rebase), closed by
+  `decks::cmdr_01r3_a` (tests `recent_b/cmdr_01r3_a.rs`, 20): one-gap Arcane Proxy, Worldpurge, Braided Net, Vedalken
+  Squirrel-Whacker (two Wyll pairs), Soul Echo, Mindlink Mech; two-gap Dire Wolves + Nature's Blessing, Disciple of
+  Caelus Nin + Deem Worthy / Duskrider Peregrine, Fungal Behemoth + Feral Encounter, Geistflame Reservoir + Invasion of
+  Arcavios; three-gap Ice Floe + Encrust + Lifecraft Awakening, Deadly Wanderings + Grotesque Mutation + Monastery Raid,
+  Slayer's Plate + Braids's Frightful Return + Kor Dirge.
+- **Primitives:** `Effect::EachPlayerKeepsUpToFromHandShufflesRest` (Worldpurge); `Duration::WhileTapped` — CR 611.2c
+  read of the *affected* permanent (Braided Net); `StaticEffect::PermanentsCantPhaseIn` (holds the untap step, Time and
+  Tide's swap, and releases an "until it leaves" holder into the untap step) + `Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut`
+  (Disciple of Caelus Nin; the PhaseOut arm's body is now `phase_out_permanents`); `DelayedTriggerKind::NextCombatThisTurn`,
+  `LookExileGrant::CreatureMayThisTurn` (Feral Encounter); `Effect::RollDiceSetBasePt` + `StaticEffect::MayExchangeD6WithSelfBasePt`
+  (CR 706.6, read in `roll_one_die`); `Effect::PlayerMayStampSourceTurn` + `StaticEffect::ReplaceDamageToYouRemovingStampedCounters`
+  (Soul Echo, in the damage-static lane); `CounterType::Net` / `Echo` (named in the client's counter matches).
+- Monastery Raid needed no "freerunning was paid" predicate: `AlternativeCost.effect_override` on `freerunning(..)`.
+- **OPEN (one-gap left):** Eye of Ojer Taq (craft with two sharing a card type, the back's chosen-type free next spell);
+  Apple of Eden / Springsage Ritual / Gustha's Scepter / Pick-Axe close only Faceless One / Piper decks (illegal). The
+  Seventh Doctor + Graham O'Brien needs Attractions (Monitor Monitor, Command Performance). ⚠ 1,343 legal zero-gap pair
+  decks are unseated (`edhrec_scan_pairs.py --legal --max 0`): the convention seats only decks a session's own cards close.
+
 ## FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes
 
 - **Seats** 4630-4635, 4642-4658, 4672-4675, 4681-4682, 4690-4700, 4706-4707, 4718-4720: partner-pair EDHREC
@@ -256,7 +278,7 @@ the handoff.
 - ⚠ Before adding a variant, grep the WHOLE enum: `SpendRestriction::KickedOnly` duplicated `KickedSpellsOnly`
   (reverted) and only core_rules' exhaustive walk caught it.
 - **CLAIMED (`01E4rMUL`, 2026-10-21) — don't duplicate:** Merchant's Dockhand (needs a "tap X untapped artifacts" cost); Sacred Boon (Breeches+Radiant's last card: the +0/+1 counters per prevented damage need a counter kind on `PreventionShield`) (landed — batch twenty-five's thirty-two, seats 4784-4789 (Amber Gristle jointly with `01R3xh4r`'s Geistflame Reservoir); batch twenty-four's thirty-four, seats 4770-4775; assist + batch twenty-three's seven, seats 4767-4769; batch twenty-two's twenty-two, seats 4761-4766; batch twenty-one's sixteen, seats 4756-4760; batch twenty's nine two-gap halves, seats 4750-4754; Invasion of New Phyrexia, Long Rest, Halls of Mist, Three Bowls of Porridge, Barroom Brawl landed: seats 4740-4744, 4748).
-- **CLAIMED (`01R3xh4r`, 2026-10-21) — don't duplicate:** one-gap Arcane Proxy, Worldpurge, Braided Net, Soul Echo, Mindlink Mech, Eye of Ojer Taq, Vedalken Squirrel-Whacker; two-gap Dire Wolves + Nature's Blessing, Disciple of Caelus Nin + Deem Worthy + Duskrider Peregrine, Monitor Monitor + Command Performance, Fungal Behemoth + Feral Encounter, Geistflame Reservoir + Invasion of Arcavios; three-gap Ice Floe + Encrust + Lifecraft Awakening, Deadly Wanderings + Grotesque Mutation + Monastery Raid, Slayer's Plate + Braids's Frightful Return + Kor Dirge.
+- **CLAIMED (`01R3xh4r`, 2026-10-21) — landed:** every card it named (seats 4776-4783, 4790-4796) bar Eye of Ojer Taq and Monitor Monitor + Command Performance, which are released (see `01R3xh4r` above).
 - **CLAIMED (`01Jywzky`, 2026-10-21) — don't duplicate:** the SINGLE-commander list (`edhrec_scan_top.py`): Rashida Scalebane's four (Alabaster Dragon, Dragon Hunter, Shieldhide Dragon, Grand Master of Flowers), Mairsil's four (Endling, Hateflayer, Minion of Leshrac, Torchling), Fires of Mount Doom (Sauron), Aegar, the Freezing Flame + its deck (Giant's Amulet, Battle of Frost and Fire, Invasion of the Giants), Zevlor, Sharkey, Hogaak.
 - **OPEN (one-gap closers left, each a primitive):** Vedalken Squirrel-Whacker (2 decks: the d6 exchange
   replacement in `roll_one_die` — needs a seat-routed ask outside an effect), Invasion of New Phyrexia (2 decks: the
