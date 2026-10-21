@@ -29154,6 +29154,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALENA_32_COMMANDERS,
             main: decks::ALENA_32_MAIN,
         },
+        // Seat 4784: Amber Gristle O'Maul and Passionate Archaeologist's EDHREC average deck. `--pod-decks 4784`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Passionate Archaeologist (R)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_13_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_13_MAIN,
+        },
+        // Seat 4785: Falthis, Shadowcat Familiar and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4785`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Numa, Joraga Chieftain (BG)",
+            commanders: decks::FALTHIS_26_COMMANDERS,
+            main: decks::FALTHIS_26_MAIN,
+        },
+        // Seat 4786: Siani, Eye of the Storm and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4786`.
+        PodDeck {
+            name: "Siani, Eye of the Storm and Tormod, the Desecrator (UB)",
+            commanders: decks::SIANI_9_COMMANDERS,
+            main: decks::SIANI_9_MAIN,
+        },
+        // Seat 4787: Akroma, Vision of Ixidor and Ghost of Ramirez DePietro's EDHREC average deck. `--pod-decks 4787`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Ghost of Ramirez DePietro (WU)",
+            commanders: decks::AKROMA_24_COMMANDERS,
+            main: decks::AKROMA_24_MAIN,
+        },
+        // Seat 4788: Armix, Filigree Thrasher and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 4788`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Kamahl, Heart of Krosa (BG)",
+            commanders: decks::ARMIX_20_COMMANDERS,
+            main: decks::ARMIX_20_MAIN,
+        },
+        // Seat 4789: Numa, Joraga Chieftain and Prava of the Steel Legion's EDHREC average deck. `--pod-decks 4789`.
+        PodDeck {
+            name: "Numa, Joraga Chieftain and Prava of the Steel Legion (WG)",
+            commanders: decks::NUMA_11_COMMANDERS,
+            main: decks::NUMA_11_MAIN,
+        },
     ]
 }
 
@@ -35838,6 +35874,12 @@ mod tests {
             ("The War Doctor and Amy Pond", &[0x1CC3]),
             ("The Thirteenth Doctor and Rose Noble", &[0x1CC4]),
             ("Alena, Kessig Trapper and Ludevic, Necro-Alchemist", &[0x1CC5]),
+            ("Amber Gristle O'Maul and Passionate Archaeologist", &[0x1CC6]),
+            ("Falthis, Shadowcat Familiar and Numa, Joraga Chieftain", &[0x1CC7]),
+            ("Siani, Eye of the Storm and Tormod, the Desecrator", &[0x1CC8]),
+            ("Akroma, Vision of Ixidor and Ghost of Ramirez DePietro", &[0x1CC9]),
+            ("Armix, Filigree Thrasher and Kamahl, Heart of Krosa", &[0x1CCA]),
+            ("Numa, Joraga Chieftain and Prava of the Steel Legion", &[0x1CCB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
