@@ -29256,6 +29256,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AKROMA_25_COMMANDERS,
             main: decks::AKROMA_25_MAIN,
         },
+        // Seat 4801: Ruhan of the Fomori's EDHREC average deck. `--pod-decks 4801`.
+        PodDeck {
+            name: "Ruhan of the Fomori (WUR)",
+            commanders: decks::RUHAN_OF_THE_FOMORI_COMMANDERS,
+            main: decks::RUHAN_OF_THE_FOMORI_MAIN,
+        },
+        // Seat 4802: Aegar, the Freezing Flame's EDHREC average deck. `--pod-decks 4802`.
+        PodDeck {
+            name: "Aegar, the Freezing Flame (UR)",
+            commanders: decks::AEGAR_COMMANDERS,
+            main: decks::AEGAR_MAIN,
+        },
+        // Seat 4803: Sauron, the Lidless Eye's EDHREC average deck. `--pod-decks 4803`.
+        PodDeck {
+            name: "Sauron, the Lidless Eye (BR)",
+            commanders: decks::SAURON_4_COMMANDERS,
+            main: decks::SAURON_4_MAIN,
+        },
+        // Seat 4804: Sharkey, Tyrant of the Shire's EDHREC average deck. `--pod-decks 4804`.
+        PodDeck {
+            name: "Sharkey, Tyrant of the Shire (UB)",
+            commanders: decks::SHARKEY_COMMANDERS,
+            main: decks::SHARKEY_MAIN,
+        },
     ]
 }
 
@@ -35957,6 +35981,10 @@ mod tests {
             ("Ich-Tekik, Salvage Splicer and Numa, Joraga Chieftain", &[0x1CD4]),
             ("Glacian, Powerstone Engineer and Numa, Joraga Chieftain", &[0x1CD5]),
             ("Akroma, Vision of Ixidor and Nadier, Agent of the Duskenel", &[0x1CD6]),
+            ("Ruhan of the Fomori", &[0x1CD7]),
+            ("Aegar, the Freezing Flame", &[0x1CD8]),
+            ("Sauron, the Lidless Eye", &[0x1CD9]),
+            ("Sharkey, Tyrant of the Shire", &[0x1CDA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

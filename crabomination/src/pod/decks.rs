@@ -134592,3 +134592,117 @@ pub const AKROMA_25_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, swamp,
 ];
+
+pub const RUHAN_OF_THE_FOMORI_COMMANDERS: &[CardFactory] = &[ruhan_of_the_fomori];
+
+/// **Ruhan of the Fomori**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 5 Islands + 6 Mountains + 6 Plains = 99.
+/// Ruhan of the Fomori (EDHREC, fetched 2026-10-21).
+pub const RUHAN_OF_THE_FOMORI_MAIN: &[CardFactory] = &[
+    arcane_signet, assault_suit, azorius_signet, boros_signet, colossus_hammer, fellwar_stone,
+    izzet_signet, lightning_greaves, loxodon_warhammer, mithril_coat, sol_ring, sunforger,
+    swiftfoot_boots, sword_of_vengeance, sword_of_the_animist, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, battlefield_forge, clifftop_retreat,
+    command_tower, exotic_orchard, glacial_fortress, hallowed_fountain, mystic_monastery,
+    path_of_ancestry, prairie_stream, raugrin_triome, rogues_passage, sacred_foundry,
+    sea_of_clouds, shivan_reef, spectator_seating, steam_vents, sulfur_falls,
+    sunhome_fortress_of_the_legion, training_center, aegar_the_freezing_flame,
+    boldwyr_aggressor, bre_of_clan_stoutarm, bruenor_battlehammer, calamity_bearer,
+    curious_colossus, cyclone_summoner, dalakos_crafter_of_wonders, kediss_emberclaw_familiar,
+    puresteel_paladin, quakebringer, raiyuu_storms_edge, realm_cloaked_giant,
+    sram_senior_edificer, stinkdrinker_daredevil, stonehewer_giant, sun_titan,
+    sunrise_sovereign, thryx_the_sudden_storm, aqueous_form, forge_anew, ghostly_prison,
+    propaganda, rhystic_study, sigardas_aid, steel_of_the_godhead, whirlwind_of_thought,
+    boros_charm, chaos_warp, counterspell, crush_underfoot, deflecting_palm, dovins_veto,
+    generous_gift, legion_leadership, path_to_exile, swords_to_plowshares, teferis_protection,
+    wear_tear, blasphemous_act, fire_giants_fury, glimpse_the_cosmos, open_the_armory,
+    single_combat, steelshapers_gift,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains,
+];
+
+pub const AEGAR_COMMANDERS: &[CardFactory] = &[aegar_the_freezing_flame];
+
+/// **Aegar, the Freezing Flame**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Islands + 13 Mountains = 99.
+/// Aegar, the Freezing Flame (EDHREC, fetched 2026-10-21).
+pub const AEGAR_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, giants_amulet, heralds_horn, izzet_signet, mind_stone,
+    sol_ring, talisman_of_creativity, thought_vessel, cascade_bluffs, command_tower,
+    frostboil_snarl, hall_of_storm_giants, izzet_boilerworks, path_of_ancestry, reliquary_tower,
+    riptide_laboratory, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    temple_of_epiphany, archmage_of_runes, basalt_ravager, boldwyr_aggressor, bonecrusher_giant,
+    borderland_behemoth, calamity_bearer, cyclone_summoner, frost_titan, giant_harbinger,
+    goliath_daydreamer, hamletback_goliath, harmonic_prodigy, inferno_titan, prophetic_titan,
+    quakebringer, stinkdrinker_daredevil, sunrise_sovereign, surtland_elementalist,
+    surtland_flinger, tectonic_giant, thryx_the_sudden_storm, thundercloud_shaman,
+    toralf_god_of_fury, warchief_giant, battle_of_frost_and_fire, giants_grasp,
+    invasion_of_the_giants, reflections_of_littjara, warstorm_surge, abrade, chaos_warp,
+    counterspell, crush_underfoot, fall_of_the_hammer, flame_of_anor, ghostfire_slice,
+    giantfall, izzet_charm, lightning_bolt, negate, squash, starstorm, wizards_lightning,
+    wizards_retort, blasphemous_act, calamity_of_cinders, chain_reaction, fire_giants_fury,
+    flame_slash, glimpse_the_cosmos, hell_to_pay, mana_geyser, mizzium_mortars,
+    star_of_extinction,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const SAURON_4_COMMANDERS: &[CardFactory] = &[sauron_the_lidless_eye];
+
+/// **Sauron, the Lidless Eye**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Swamps = 99.
+/// Sauron, the Lidless Eye (EDHREC, fetched 2026-10-21).
+pub const SAURON_4_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, commanders_sphere, conjurers_closet, fellwar_stone,
+    mind_stone, rakdos_signet, sol_ring, talisman_of_indulgence, the_one_ring, barad_dur,
+    blood_crypt, bloodfell_caves, bojuka_bog, command_tower, dragonskull_summit, evolving_wilds,
+    foreboding_ruins, luxury_suite, mount_doom, smoldering_marsh, sulfurous_springs,
+    tainted_peak, temple_of_malice, azog_morias_ruin, bolg_of_the_north,
+    braids_arisen_nightmare, captivating_crew, dunland_crebain, easterling_vanguard,
+    gollum_scheming_guide, gothmog_morgul_lieutenant, grishnakh_brash_instigator,
+    grima_wormtongue, kardur_doomscourge, mahadi_emporium_master, mauhur_uruk_hai_captain,
+    mayhem_devil, mordor_trebuchet, oliphaunt, orcish_bowmasters, smaug_wicked_worm,
+    solemn_simulacrum, the_balrog_durins_bane, the_balrog_flame_of_udun,
+    ugluk_of_the_white_hand, viscera_seer, voracious_fell_beast, witch_king_bringer_of_ruin,
+    zealous_conscripts, animate_dead, call_of_the_ring, fires_of_mount_doom, goblin_bombardment,
+    march_from_the_black_gate, phyrexian_arena, bedevil, cast_into_the_fire, chaos_warp,
+    corrupted_conviction, dark_ritual, deadly_dispute, nasty_end, rakdos_charm, terminate,
+    village_rites, act_of_treason, blasphemous_act, faithless_looting, feed_the_swarm,
+    fire_of_orthanc, foray_of_orcs, insurrection, lash_of_the_balrog, mordor_muster, reanimate,
+    swarming_of_moria, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SHARKEY_COMMANDERS: &[CardFactory] = &[sharkey_tyrant_of_the_shire];
+
+/// **Sharkey, Tyrant of the Shire**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 8 Islands + 7 Swamps = 99.
+/// Sharkey, Tyrant of the Shire (EDHREC, fetched 2026-10-21).
+pub const SHARKEY_MAIN: &[CardFactory] = &[
+    arcane_signet, crucible_of_worlds, dimir_signet, expedition_map, ghirapur_orrery,
+    illusionists_bracers, manascape_refractor, mirran_safehouse, sol_ring, swiftfoot_boots,
+    talisman_of_dominance, thousand_year_elixir, world_map, bojuka_bog, command_tower,
+    creeping_tar_pit, dimir_aqueduct, drowned_catacomb, evolving_wilds, maze_of_ith,
+    minamo_school_at_waters_edge, morphic_pool, oboro_palace_in_the_clouds, polluted_delta,
+    reliquary_tower, rivendell, rogues_passage, sunken_hollow, thespians_stage,
+    underground_river, urborg_tomb_of_yawgmoth, urzas_cave, vesuva, watery_grave,
+    agent_of_treachery, aphetto_alchemist, baleful_strix, coveted_falcon, faerie_mastermind,
+    fatestitcher, hostage_taker, ioreth_of_the_healing_house, kelpie_guide,
+    marvin_murderous_mimic, notion_thief, ob_nixilis_the_fallen, omen_hawker,
+    sire_of_stagnation, solemn_simulacrum, tideforce_elemental, tiller_engine, vedalken_plotter,
+    vizier_of_tumbling_sands, walking_atlas, caustic_tar, chamber_of_manipulation,
+    freed_from_the_real, noxious_field, pemmins_aura, propaganda, retreat_to_coralhelm,
+    sunken_field, the_trickster_gods_heist, training_grounds, underworld_connections,
+    an_offer_you_cant_refuse, arcane_denial, counterspell, dramatic_reversal, frantic_search,
+    go_for_the_throat, infernal_grasp, negate, rapid_hybridization, shifting_borders,
+    withering_torment, donate, feed_the_swarm, political_trickery, ringsight,
+    shifting_loyalties, subjugate_the_hobbits, toxic_deluge, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
