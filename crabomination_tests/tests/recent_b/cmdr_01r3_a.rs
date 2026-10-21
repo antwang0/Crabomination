@@ -358,3 +358,29 @@ fn lifecraft_awakening_animates_only_a_noncreature_artifact() {
     assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Artifact));
     assert_eq!((cp.power, cp.toughness), (2, 2));
 }
+
+/// CR 702.173 — Monastery Raid exiles two, or X when its freerunning cost was
+/// paid; the exiled cards stay playable.
+#[test]
+fn cr_702_173_monastery_raid_freerunning_exiles_x() {
+    let mut g = pod(2);
+    let raid = g.add_card_to_hand(0, catalog::monastery_raid());
+    cast(&mut g, raid, None);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 2);
+
+    let mut g = pod(2);
+    g.players[0].freerunning_unlocked_this_turn = true;
+    let raid = g.add_card_to_hand(0, catalog::monastery_raid());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: raid,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("freerunning X=4");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 4);
+}

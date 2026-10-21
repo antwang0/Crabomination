@@ -2,17 +2,17 @@
 //! `tests/recent_b/cmdr_01r3_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    ActivatedAbility, AlternativeCost, ArtifactSubtype, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
     Keyword, LandType, MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Zone,
 };
-use crate::effect::shortcut::{craft, magecraft, target_filtered};
+use crate::effect::shortcut::{craft, freerunning, magecraft, target_filtered};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{Color, cost, g, generic, hybrid, r, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 /// Arcane Proxy — {7} 4/3 artifact creature Wizard; prototype {1}{U}{U} 2/1
 /// (CR 702.160). When it enters, if you cast it, exile target instant or
@@ -545,6 +545,74 @@ pub fn lifecraft_awakening() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Deadly Wanderings — {3}{B}{B} enchantment. As long as you control exactly
+/// one creature, it gets +2/+0 and has deathtouch and lifelink.
+pub fn deadly_wanderings() -> CardDefinition {
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Deadly Wanderings",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control exactly one creature, it gets +2/+0 and has deathtouch and lifelink.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::ValueEquals(Value::count(yours()), Value::ONE),
+                applies_to: yours(),
+                power: 2,
+                toughness: 0,
+                keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grotesque Mutation — {1}{B} instant: target creature gets +3/+1 and gains
+/// lifelink until end of turn.
+pub fn grotesque_mutation() -> CardDefinition {
+    CardDefinition {
+        name: "Grotesque Mutation",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(3),
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Monastery Raid — {2}{R} sorcery, freerunning {X}{R} (CR 702.173). Exile the
+/// top two cards of your library — the top X if the freerunning cost was paid —
+/// and you may play them until the end of your next turn.
+pub fn monastery_raid() -> CardDefinition {
+    let raid = |count| Effect::ExileTopAndGrantMayPlay {
+        who: PlayerRef::You,
+        count,
+        duration: MayPlayDuration::EndOfControllersNextTurn,
+        pay_any_color: false,
+        max_mana_value: None,
+        pay_own_cost: true,
+        uncast_penalty: None,
+    };
+    CardDefinition {
+        name: "Monastery Raid",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: raid(Value::Const(2)),
+        alternative_cost: Some(AlternativeCost {
+            effect_override: Some(raid(Value::XFromCost)),
+            ..freerunning(cost(&[x(), r()]))
+        }),
         ..Default::default()
     }
 }
