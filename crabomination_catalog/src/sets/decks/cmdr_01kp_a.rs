@@ -1689,7 +1689,7 @@ pub fn rime_transfusion() -> CardDefinition {
                     mana_cost: snow(1),
                     effect: Effect::GrantKeyword {
                         what: Selector::This,
-                        keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::Creature.and(R::IsSnow))),
+                        keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::Creature.and(R::HasSupertype(Supertype::Snow)))),
                         duration: Duration::EndOfTurn,
                     },
                     ..Default::default()

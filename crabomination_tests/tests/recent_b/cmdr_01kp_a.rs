@@ -1218,7 +1218,8 @@ fn glittering_frost_and_rime_transfusion() {
     .expect("{S} off the frosted Forest");
     drain_stack(&mut g);
     assert!(g.permanent_has_keyword(bears, &Keyword::CantBeBlockedExceptBy(Box::new(
-        crabomination::card::SelectionRequirement::Creature.and(crabomination::card::SelectionRequirement::IsSnow)
+        crabomination::card::SelectionRequirement::Creature
+            .and(crabomination::card::SelectionRequirement::HasSupertype(crabomination::card::Supertype::Snow))
     ))));
     assert_eq!(g.players[0].mana_pool.total(), 1, "the Frost's extra mana floats");
 }
