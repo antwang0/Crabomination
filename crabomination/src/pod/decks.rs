@@ -134286,3 +134286,88 @@ pub const NUMA_11_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const WYLL_15_COMMANDERS: &[CardFactory] = &[wyll_blade_of_frontiers, shameless_charlatan];
+
+/// **Wyll, Blade of Frontiers and Shameless Charlatan**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Islands + 11 Mountains = 98.
+/// Wyll, Blade of Frontiers and Shameless Charlatan (EDHREC, fetched 2026-10-21).
+pub const WYLL_15_MAIN: &[CardFactory] = &[
+    arcane_signet, bucknards_everfull_purse, component_pouch, ebony_fly, izzet_signet, sol_ring,
+    strength_testing_hammer, swiftfoot_boots, sword_of_hours, talisman_of_creativity,
+    the_deck_of_many_things, thought_vessel, treasure_chest, vexing_puzzlebox, wand_of_wonder,
+    wizards_spellbook, cascade_bluffs, command_tower, exotic_orchard, frostboil_snarl,
+    izzet_boilerworks, reliquary_tower, shivan_reef, steam_vents, stormcarved_coast,
+    sulfur_falls, temple_of_epiphany, training_center, underdark_rift, aberrant_mind_sorcerer,
+    ancient_copper_dragon, ancient_silver_dragon, arcane_investigator, bamboozling_beeble,
+    brazen_dwarf, celebr_8000, chaos_channeler, chaos_dragon, delina_wild_mage, djinni_windseer,
+    earth_cult_elemental, farideh_devils_chosen, feywild_trickster, hoarding_ogre, iron_mastiff,
+    mathise_surge_channeler, pixie_guide, scion_of_stygia, swarming_goblins,
+    vedalken_squirrel_whacker, barbarian_class, maddening_hex, netherese_puzzle_ward,
+    priority_boarding, wizard_class, an_offer_you_cant_refuse, berserkers_frenzy, boing,
+    chaos_warp, contact_other_plane, counterspell, critical_hit, diviners_portent,
+    faridehs_fireball, gales_redirection, negate, pongify, wylls_reversal, arcane_endeavor,
+    blasphemous_act, circuits_act, cone_of_cold, power_of_persuasion, reckless_endeavor,
+    slight_malfunction, thunderwave,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const WYLL_16_COMMANDERS: &[CardFactory] = &[wyll_blade_of_frontiers, feywild_visitor];
+
+/// **Wyll, Blade of Frontiers and Feywild Visitor**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 11 Islands + 12 Mountains = 98.
+/// Wyll, Blade of Frontiers and Feywild Visitor (EDHREC, fetched 2026-10-21).
+pub const WYLL_16_MAIN: &[CardFactory] = &[
+    arcane_signet, bucknards_everfull_purse, component_pouch, ebony_fly, goblin_morningstar,
+    izzet_signet, sol_ring, spiked_pit_trap, strength_testing_hammer, swiftfoot_boots,
+    sword_of_hours, the_deck_of_many_things, treasure_chest, vexing_puzzlebox, wand_of_wonder,
+    wizards_spellbook, cascade_bluffs, command_tower, evolving_wilds, frostboil_snarl,
+    izzet_boilerworks, reliquary_tower, rogues_passage, shivan_reef, stormcarved_coast,
+    sulfur_falls, temple_of_epiphany, underdark_rift, aberrant_mind_sorcerer,
+    ancient_copper_dragon, ancient_silver_dragon, arcane_investigator, bamboozling_beeble,
+    brazen_dwarf, chaos_channeler, chaos_dragon, clay_golem, delina_wild_mage, djinni_windseer,
+    draconic_visitor, earth_cult_elemental, farideh_devils_chosen, feywild_trickster,
+    hoarding_ogre, iron_mastiff, mathise_surge_channeler, pixie_guide, scion_of_stygia,
+    swarming_goblins, vedalken_squirrel_whacker, barbarian_class, maddening_hex,
+    netherese_puzzle_ward, priority_boarding, wizard_class, berserkers_frenzy, boing,
+    chaos_warp, contact_other_plane, counterspell, critical_hit, diviners_portent,
+    faridehs_fireball, gales_redirection, lightning_bolt, negate, wylls_reversal,
+    arcane_endeavor, blasphemous_act, circuits_act, cone_of_cold, power_of_persuasion,
+    reckless_endeavor, slight_malfunction, thunderwave,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const THE_FOURTEENTH_DOCTOR_9_COMMANDERS: &[CardFactory] = &[the_fourteenth_doctor, yasmin_khan];
+
+/// **The Fourteenth Doctor and Yasmin Khan**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 3 Forests + 2 Islands + 4 Mountains + 5 Plains = 98.
+/// The Fourteenth Doctor and Yasmin Khan (EDHREC, fetched 2026-10-21).
+pub const THE_FOURTEENTH_DOCTOR_9_MAIN: &[CardFactory] = &[
+    arcane_signet, chronatog_totem, lightning_greaves, sol_ring, sonic_screwdriver, tardis,
+    talisman_of_creativity, the_one_ring, the_stasis_coffin, vedalken_orrery, alchemists_refuge,
+    command_tower, deserted_beach, emergence_zone, exotic_orchard, flooded_strand,
+    gallifrey_council_chamber, magosi_the_waterveil, maze_of_ith, mystic_monastery,
+    overgrown_farmland, path_of_ancestry, rejuvenating_springs, sea_of_clouds, seaside_citadel,
+    sparas_headquarters, stormcarved_coast, sundown_pass, talon_gates_of_madara,
+    terrain_generator, trenzalore_clocktower, chronatog, drumbellower, esper_sentinel,
+    keeper_of_the_accord, rose_noble, seedborn_muse, the_eighth_doctor, the_eleventh_doctor,
+    the_fifteenth_doctor, the_fifth_doctor, the_first_doctor, the_fourth_doctor,
+    the_fugitive_doctor, the_ninth_doctor, the_second_doctor, the_seventh_doctor,
+    the_sixth_doctor, the_tenth_doctor, the_third_doctor, the_thirteenth_doctor,
+    the_twelfth_doctor, the_war_doctor, an_unearthly_child, awakening, elephant_grass,
+    gallifrey_stands, hunting_grounds, leyline_of_anticipation, mystic_remora, parallax_wave,
+    primal_order, smugglers_share, soul_echo, sulfuric_vortex, the_eleventh_hour,
+    urban_burgeoning, everybody_lives, heroic_intervention, path_to_exile, perch_protection,
+    reverse_the_polarity, swords_to_plowshares, teferis_protection, time_lord_regeneration,
+    citywide_bust, disrupt_decorum, farewell, return_to_the_light_realms, single_combat,
+    sylvan_scrying, taunt_from_the_rampart, the_five_doctors, twice_upon_a_time,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains,
+];

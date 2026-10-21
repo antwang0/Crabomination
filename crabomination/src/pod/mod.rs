@@ -29190,6 +29190,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NUMA_11_COMMANDERS,
             main: decks::NUMA_11_MAIN,
         },
+        // Seat 4790: Wyll, Blade of Frontiers and Shameless Charlatan's EDHREC average deck. `--pod-decks 4790`.
+        PodDeck {
+            name: "Wyll, Blade of Frontiers and Shameless Charlatan (UR)",
+            commanders: decks::WYLL_15_COMMANDERS,
+            main: decks::WYLL_15_MAIN,
+        },
+        // Seat 4791: Wyll, Blade of Frontiers and Feywild Visitor's EDHREC average deck. `--pod-decks 4791`.
+        PodDeck {
+            name: "Wyll, Blade of Frontiers and Feywild Visitor (UR)",
+            commanders: decks::WYLL_16_COMMANDERS,
+            main: decks::WYLL_16_MAIN,
+        },
+        // Seat 4792: The Fourteenth Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 4792`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Yasmin Khan (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_9_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_9_MAIN,
+        },
     ]
 }
 
@@ -35880,6 +35898,9 @@ mod tests {
             ("Akroma, Vision of Ixidor and Ghost of Ramirez DePietro", &[0x1CC9]),
             ("Armix, Filigree Thrasher and Kamahl, Heart of Krosa", &[0x1CCA]),
             ("Numa, Joraga Chieftain and Prava of the Steel Legion", &[0x1CCB]),
+            ("Wyll, Blade of Frontiers and Shameless Charlatan", &[0x1CCC]),
+            ("Wyll, Blade of Frontiers and Feywild Visitor", &[0x1CCD]),
+            ("The Fourteenth Doctor and Yasmin Khan", &[0x1CCE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
