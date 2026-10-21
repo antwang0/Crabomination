@@ -1364,6 +1364,7 @@ impl Effect {
             | Effect::RemoveAllRadCounters { who }
             | Effect::PlayerCantCastMatchingThisTurn { who, .. }
             | Effect::PlayerCantCastMatchingDuringTheirNextTurn { who, .. }
+            | Effect::PlayersCantPlayFromHandUntilYourNextTurn { who }
             | Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who }
             | Effect::ChooseFromHandToTopOfLibrary { who, .. }
             | Effect::GrantCreatureSpellsFlashThisTurn { who }
@@ -3244,7 +3245,8 @@ impl Effect {
             | Effect::ExileFromGraveyard { who, .. }
             | Effect::Fateseal { who, .. }
             | Effect::PlayerCantCastMatchingThisTurn { who, .. }
-            | Effect::PlayerCantCastMatchingDuringTheirNextTurn { who, .. } => {
+            | Effect::PlayerCantCastMatchingDuringTheirNextTurn { who, .. }
+            | Effect::PlayersCantPlayFromHandUntilYourNextTurn { who } => {
                 implicit_player_if_bare_player_ref(who)
             }
             Effect::PlayerCantPlayLandsThisTurn { player }

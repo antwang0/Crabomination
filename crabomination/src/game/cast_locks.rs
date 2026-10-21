@@ -9,6 +9,21 @@ use crate::card::{CardId, CardInstance};
 use crate::game::GameError;
 
 impl GameState {
+    /// CR 101.2 — Memory Vessel's "can't play cards from their hand": a land
+    /// play or a cast of a card in the acting player's hand while their
+    /// `hand_locked_until_turn_of` is armed.
+    pub(crate) fn hand_play_lock_rejection(&self, action: &crate::game::GameAction) -> Option<GameError> {
+        use crate::game::GameAction;
+        let p = self.priority.player_with_priority;
+        self.players.get(p)?.hand_locked_until_turn_of?;
+        let card = match action {
+            GameAction::PlayLand(id) | GameAction::PlayLandBack(id) => Some(*id),
+            _ if action.is_cast() => action.cast_card_id(),
+            _ => None,
+        }?;
+        self.players[p].hand.iter().any(|c| c.id == card).then_some(GameError::SpellNameLocked)
+    }
+
     /// The spell-name locks (Meddling Mage, Ashiok's Erasure, Circu, Academic
     /// Probation): `true` when `p` can't cast a spell named `name`.
     pub(crate) fn spell_name_locked(&self, p: usize, name: &str) -> bool {

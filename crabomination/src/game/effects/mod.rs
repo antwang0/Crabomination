@@ -40468,6 +40468,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayersCantPlayFromHandUntilYourNextTurn { who } => {
+                for seat in self.resolve_players(who, ctx) {
+                    self.players[seat].hand_locked_until_turn_of = Some(ctx.controller);
+                }
+                Ok(())
+            }
+
             Effect::PlayerCantCastMatchingDuringTheirNextTurn { who, filter } => {
                 for seat in self.resolve_players(who, ctx) {
                     self.cast_locks_next_turn.push((seat, filter.clone()));
@@ -43468,6 +43475,13 @@ impl GameState {
                                 .and_then(|s| self.battlefield_find(s).map(|c| c.controller))
                                 .unwrap_or(granter_player);
                             (recipient, crate::card::MayPlayDuration::UntilSeatsNextEndStep { seat })
+                        }
+                        crate::card::MayPlayDuration::UntilSeatsNextTurn { .. } => {
+                            let seat = ctx
+                                .source
+                                .and_then(|s| self.battlefield_find(s).map(|c| c.controller))
+                                .unwrap_or(granter_player);
+                            (recipient, crate::card::MayPlayDuration::UntilSeatsNextTurn { seat })
                         }
                         d => (recipient, d.bound_to_source(ctx.source)),
                     };

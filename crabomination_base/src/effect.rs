@@ -9089,6 +9089,10 @@ pub enum Effect {
     /// turn" (Azor, the Lawbringer): each player `who` names gets a
     /// `PlayerCantCastMatchingThisTurn` lock as their next turn begins.
     PlayerCantCastMatchingDuringTheirNextTurn { who: PlayerRef, filter: SelectionRequirement },
+    /// "Until your next turn, [who] can't play cards from their hand" (Memory
+    /// Vessel): arms `Player.hand_locked_until_turn_of` with the resolving
+    /// controller's seat; it clears as that seat's next turn begins.
+    PlayersCantPlayFromHandUntilYourNextTurn { who: PlayerRef },
     /// CR 602 — "that player can't activate abilities that aren't mana
     /// abilities" this turn (Abeyance). Sets
     /// `Player.cant_activate_nonmana_abilities_this_turn`, cleared at cleanup.

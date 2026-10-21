@@ -21625,6 +21625,9 @@ impl GameState {
         {
             return Err(GameError::EpicLocked);
         }
+        if let Some(e) = self.hand_play_lock_rejection(&action) {
+            return Err(e);
+        }
         // Every CR 601 cast-time lock — and the split-second gate that sits
         // among them — behind one battlefield walk. The gate was eleven
         // blocks, each taking its own whole-board `static_abilities` walk,

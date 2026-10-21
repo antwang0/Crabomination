@@ -1104,6 +1104,10 @@ pub struct PlayerData {
     /// begins (`game::draw_skip_shield`).
     #[serde(default)]
     pub attackable_only_by_until_next_turn: Option<Box<crate::card::SelectionRequirement>>,
+    /// CR 101.2 — "until your next turn, players can't play cards from their
+    /// hand" (Memory Vessel): the seat whose next turn lifts the lock.
+    #[serde(default)]
+    pub hand_locked_until_turn_of: Option<usize>,
     /// Non-mana activated abilities this player activated this turn — the
     /// Commander bot's activation-loop brake (`server::activation_cap`).
     /// Reset for every seat as each turn begins.
@@ -1981,6 +1985,7 @@ impl Player {
             all_damage_prevented_this_turn: false,
             all_damage_prevented_until_next_turn: false,
             attackable_only_by_until_next_turn: None,
+            hand_locked_until_turn_of: None,
             nonmana_activations_this_turn: 0,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             protected_from_seats_eot: 0,

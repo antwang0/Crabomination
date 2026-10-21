@@ -1344,6 +1344,10 @@ pub enum MayPlayDuration {
     /// as `seat`'s next end step begins, whoever holds it. Printed with seat
     /// 0; `GrantMayPlay` binds the granting source's controller.
     UntilSeatsNextEndStep { seat: usize },
+    /// "Until **your** next turn" over a card another player holds (Memory
+    /// Vessel): ends as `seat`'s next turn begins, by the turn-change sweep.
+    /// Printed with seat 0; `GrantMayPlay` binds the source's controller.
+    UntilSeatsNextTurn { seat: usize },
     /// "During any turn you attacked with a token, you may play that card"
     /// (Neyali, Suns' Vanguard). Never expires; the turn sweep parks the
     /// permission's `player` at [`MAY_PLAY_DORMANT`] and declaring a token

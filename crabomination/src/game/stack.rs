@@ -5154,6 +5154,13 @@ impl GameState {
         if self.players[p].attackable_only_by_until_next_turn.is_some() {
             self.players[p].attackable_only_by_until_next_turn = None;
         }
+        // Memory Vessel's hand lock binds every seat until *its* controller's
+        // next turn, so this turn's player releases the seats it locked.
+        for q in 0..self.players.len() {
+            if self.players[q].hand_locked_until_turn_of == Some(p) {
+                self.players[q].hand_locked_until_turn_of = None;
+            }
+        }
         if self.players[p].protected_from_seats_until_next_turn != 0 {
             self.players[p].protected_from_seats_until_next_turn = 0;
         }
@@ -6147,6 +6154,7 @@ impl GameState {
                     crate::card::MayPlayDuration::EndOfControllersNextTurn => {
                         ended_active == perm.player && ended_turn > perm.granted_turn
                     }
+                    crate::card::MayPlayDuration::UntilSeatsNextTurn { seat } => seat == next_active,
                     crate::card::MayPlayDuration::WhileExiled
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControls { .. }
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { .. }
