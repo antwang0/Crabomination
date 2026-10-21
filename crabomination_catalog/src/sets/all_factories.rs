@@ -18725,6 +18725,9 @@ static DECKS: &[Factory] = &[
     super::decks::ore_rich_stalactite,
     super::decks::dimir_strandcatcher,
     super::decks::memory_vessel,
+    super::decks::invasion_of_new_phyrexia,
+    super::decks::long_rest,
+    super::decks::halls_of_mist,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
 ];

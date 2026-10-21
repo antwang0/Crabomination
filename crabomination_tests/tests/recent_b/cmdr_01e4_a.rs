@@ -2436,3 +2436,79 @@ fn memory_vessel_swaps_hands_for_the_top_seven() {
     assert!(g.players.iter().all(|p| p.hand_locked_until_turn_of.is_none()));
     assert!(g.exile.iter().all(|c| c.may_play_until.is_none()), "the window closed");
 }
+
+/// Invasion of New Phyrexia makes X Knights; Teferi's −3 taps creatures and
+/// shuffles away an opposing permanent of mana value up to the count.
+#[test]
+fn invasion_of_new_phyrexia_and_teferis_shuffle() {
+    let mut g = pod(2);
+    let invasion = g.add_card_to_hand(0, catalog::invasion_of_new_phyrexia());
+    cast_x(&mut g, invasion, None, Some(2));
+    let knights = || g.battlefield.iter().filter(|c| c.definition.name == "Knight" && c.controller == 0).count();
+    assert_eq!(knights(), 2);
+    let mut g = pod(2);
+    let teferi = *catalog::invasion_of_new_phyrexia().back_face.unwrap();
+    let teferi = g.add_card_to_battlefield(0, teferi);
+    let mine: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: teferi, ability_index: 2, target: None, x_value: None })
+        .expect("-3");
+    drain_stack(&mut g);
+    assert!(mine.iter().all(|&b| g.battlefield_find(b).unwrap().tapped), "both tapped");
+    assert!(g.battlefield_find(theirs).is_none(), "an MV-2 permanent shuffled away");
+    assert!(g.players[1].library.iter().any(|c| c.id == theirs));
+    // One creature tapped: X = 1 can't reach a mana value 2 permanent.
+    let mut g = pod(2);
+    let teferi = g.add_card_to_battlefield(0, *catalog::invasion_of_new_phyrexia().back_face.unwrap());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: teferi, ability_index: 2, target: None, x_value: None })
+        .expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_some(), "X = 1 is short of mana value 2");
+}
+
+/// Long Rest returns X cards of distinct mana values; eight or more resets
+/// life to the starting total.
+#[test]
+fn long_rest_returns_distinct_values_and_resets_life() {
+    let mut g = pod(2);
+    let pool = [
+        catalog::forest(), catalog::llanowar_elves(), catalog::grizzly_bears(), catalog::hill_giant(),
+        catalog::serra_angel(), catalog::murder(), catalog::lightning_bolt(), catalog::sol_ring(),
+    ];
+    for card in pool {
+        g.add_card_to_graveyard(0, card);
+    }
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life = 5;
+    let rest = g.add_card_to_hand(0, catalog::long_rest());
+    cast_x(&mut g, rest, None, Some(3));
+    assert_eq!(g.players[0].hand.len(), 3);
+    let mut mvs: Vec<u32> = g.players[0].hand.iter().map(|c| c.definition.cost.cmc()).collect();
+    mvs.sort_unstable();
+    mvs.dedup();
+    assert_eq!(mvs.len(), 3, "different mana values");
+    assert_eq!(g.players[0].life, 5);
+}
+
+/// Halls of Mist keeps a creature that attacked last turn from attacking.
+#[test]
+fn halls_of_mist_rests_last_turns_attackers() {
+    for attacked_last_turn in [false, true] {
+        let mut g = pod(2);
+        g.add_card_to_battlefield(1, catalog::halls_of_mist());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.battlefield_find_mut(bear).unwrap().attacked_last_turn = attacked_last_turn;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let attack = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Player(1),
+        }]));
+        assert_eq!(attack.is_err(), attacked_last_turn);
+    }
+}

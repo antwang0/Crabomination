@@ -5415,3 +5415,133 @@ pub fn memory_vessel() -> CardDefinition {
         ..spell("Memory Vessel", cost(&[generic(3), r(), r()]), CardType::Artifact, Effect::Noop)
     }
 }
+
+// ── Batch nineteen (claimed one-gap closers) ────────────────────────────────
+
+/// Invasion of New Phyrexia // Teferi Akosa of Zhalfir — {X}{W}{U} Siege,
+/// defense 6. When it enters, create X 2/2 white and blue Knight tokens with
+/// vigilance. Back (loyalty 4): +1 draw two, then discard two unless you
+/// discard a creature card; −2 an emblem "Knights you control get +1/+0 and
+/// have ward {1}"; −3 tap any number of untapped creatures you control, and
+/// when you do, shuffle target nonland permanent an opponent controls with
+/// mana value X or less into its owner's library (X = creatures tapped).
+pub fn invasion_of_new_phyrexia() -> CardDefinition {
+    use crate::card::{BattleSubtype, LoyaltyAbility, PlaneswalkerSubtype, Supertype};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let knights = || Selector::EachPermanent(R::HasCreatureType(CreatureType::Knight).and(R::ControlledByYou));
+    let knight = TokenDefinition {
+        keywords: vec![Keyword::Vigilance],
+        ..token("Knight", 2, 2, vec![Color::White, Color::Blue], vec![CreatureType::Knight])
+    };
+    let teferi = CardDefinition {
+        name: "Teferi Akosa of Zhalfir",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Teferi], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::DiscardUnlessKind { who: PlayerRef::You, count: Value::Const(2), instead: R::Creature },
+                ]),
+            ),
+            loyalty(
+                -2,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Teferi Akosa of Zhalfir".into(),
+                    triggered: vec![],
+                    statics: vec![
+                        StaticAbility {
+                            description: "Knights you control get +1/+0.",
+                            effect: StaticEffect::PumpPT { applies_to: knights(), power: 1, toughness: 0 },
+                        },
+                        StaticAbility {
+                            description: "Knights you control have ward {1}.",
+                            effect: StaticEffect::GrantKeyword {
+                                applies_to: knights(),
+                                keyword: Keyword::Ward(WardCost::generic(1)),
+                            },
+                        },
+                    ],
+                },
+            ),
+            loyalty(
+                -3,
+                Effect::TapAnyNumberThen {
+                    filter: R::Creature.and(R::ControlledByYou),
+                    body: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(
+                                R::Permanent
+                                    .and(R::Land.negate())
+                                    .and(R::ControlledByOpponent)
+                                    .and(R::ManaValueAtMostXFromCost),
+                            ),
+                            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Shuffled },
+                        }),
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of New Phyrexia",
+        cost: cost(&[x(), w(), u()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() },
+        defense: 6,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: Arc::new(knight),
+        })],
+        back_face: Some(Box::new(teferi)),
+        ..Default::default()
+    }
+}
+
+/// Long Rest — {X}{G}{G}{G} sorcery. Return X cards with different mana values
+/// from your graveyard to your hand; with eight or more returned, your life
+/// total becomes your starting life total. Exile it. (The X cards are picked
+/// at resolution rather than targeted — INCOMPLETE_CARDS.)
+pub fn long_rest() -> CardDefinition {
+    CardDefinition {
+        exile_on_resolve: true,
+        ..spell(
+            "Long Rest",
+            cost(&[x(), g(), g(), g()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::ClearLastMoved,
+                Effect::ReturnDistinctManaValuesFromGraveyard { who: PlayerRef::You, max: Some(Value::XFromCost) },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(Selector::LastMoved)), Value::Const(8)),
+                    then: Box::new(Effect::SetLifeTotal { who: Selector::You, amount: Value::StartingLifeTotal }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Halls of Mist — land. Cumulative upkeep {1}. Creatures that attacked during
+/// their controller's last turn can't attack.
+pub fn halls_of_mist() -> CardDefinition {
+    CardDefinition {
+        name: "Halls of Mist",
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::CumulativeUpkeep(crate::card::CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures that attacked during their controller's last turn can't attack.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature),
+                keyword: Keyword::CantAttackIfAttackedLastTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
