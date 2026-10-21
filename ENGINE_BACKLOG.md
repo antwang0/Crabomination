@@ -233,6 +233,10 @@ the handoff.
   `01Jywzky`'s single-commander claim, which left it OPEN).
 - **CLAIMED (`01KPxZ3H`, 2026-10-21, fourth batch) — don't duplicate:** Tivadar of Thorn's five (Tivadar of Thorn,
   Lightwielder Paladin, Justice, Luminesce, Surge of Salvation).
+- **CLAIMED (`01KPxZ3H`, 2026-10-21, fifth batch) — don't duplicate:** Myra the Magnificent; The Howling Commandos' six
+  (Abzan Skycaptain, Ampryn Tactician, Drogskol Infantry, Scrapwork Cohort, Sergeant-at-Arms, Repel the Darkness); The
+  Falcon, Sam Wilson's six (Herald of the Sun, Lightwalker, Steadfast Sentry, Recumbent Bliss, Fall to Earth,
+  Protective Response).
   - *Note from `01E4rMUL`* (wrote these before seeing the claim, then backed them out): **a resolving spell is in
     no zone**, so `evaluate_requirement_static(f, &Target::Permanent(spell), ..)` and `find_card_anywhere` both miss it.
     Luminesce on `PreventAllDamageByMatchingThisTurn { filter: black_or_red }` let a Lightning Bolt through until
