@@ -29070,6 +29070,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALHARU_28_COMMANDERS,
             main: decks::ALHARU_28_MAIN,
         },
+        // Seat 4770: Anara, Wolvid Familiar and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4770`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Radiant, Serra Archangel (WG)",
+            commanders: decks::ANARA_28_COMMANDERS,
+            main: decks::ANARA_28_MAIN,
+        },
+        // Seat 4771: Imoen, Mystic Trickster and Hardy Outlander's EDHREC average deck. `--pod-decks 4771`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Hardy Outlander (UG)",
+            commanders: decks::IMOEN_29_COMMANDERS,
+            main: decks::IMOEN_29_MAIN,
+        },
+        // Seat 4772: The Twelfth Doctor and Dan Lewis's EDHREC average deck. `--pod-decks 4772`.
+        PodDeck {
+            name: "The Twelfth Doctor and Dan Lewis (UR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_23_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_23_MAIN,
+        },
+        // Seat 4773: Alharu, Solemn Ritualist and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4773`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::ALHARU_29_COMMANDERS,
+            main: decks::ALHARU_29_MAIN,
+        },
+        // Seat 4774: Radiant, Serra Archangel and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 4774`.
+        PodDeck {
+            name: "Radiant, Serra Archangel and Sidar Kondo of Jamuraa (WG)",
+            commanders: decks::RADIANT_10_COMMANDERS,
+            main: decks::RADIANT_10_MAIN,
+        },
+        // Seat 4775: Ellyn Harbreeze, Busybody and Sword Coast Sailor's EDHREC average deck. `--pod-decks 4775`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Sword Coast Sailor (WU)",
+            commanders: decks::ELLYN_HARBREEZE_15_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_15_MAIN,
+        },
     ]
 }
 
@@ -35740,6 +35776,12 @@ mod tests {
             ("Ich-Tekik, Salvage Splicer and Sengir, the Dark Baron", &[0x1CB5]),
             ("Brinelin, the Moon Kraken and Numa, Joraga Chieftain", &[0x1CB6]),
             ("Alharu, Solemn Ritualist and Kydele, Chosen of Kruphix", &[0x1CB7]),
+            ("Anara, Wolvid Familiar and Radiant, Serra Archangel", &[0x1CB8]),
+            ("Imoen, Mystic Trickster and Hardy Outlander", &[0x1CB9]),
+            ("The Twelfth Doctor and Dan Lewis", &[0x1CBA]),
+            ("Alharu, Solemn Ritualist and Sidar Kondo of Jamuraa", &[0x1CBB]),
+            ("Radiant, Serra Archangel and Sidar Kondo of Jamuraa", &[0x1CBC]),
+            ("Ellyn Harbreeze, Busybody and Sword Coast Sailor", &[0x1CBD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
