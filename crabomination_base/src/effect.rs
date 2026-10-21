@@ -14659,6 +14659,12 @@ pub enum Effect {
     /// "Prevent all damage that sources of the color of your choice would deal
     /// this turn" (Prismatic Strands) — the recipient-less sibling of
     /// [`Effect::PreventAllDamageFromChosenColorThisTurn`].
+    /// "Prevent all damage that [colors] sources would deal this turn"
+    /// (Luminesce) — or, with `to_your_creatures`, "… would deal to
+    /// creatures you control this turn" (Surge of Salvation). One turn-long
+    /// shield per colour (CR 615.1); a source of several colours is caught by
+    /// each.
+    PreventDamageFromColorsThisTurn { colors: Vec<crate::mana::Color>, #[serde(default)] to_your_creatures: bool },
     PreventAllDamageFromChosenColorGlobally,
 
     /// "Other players can't play lands or cast spells from their graveyards

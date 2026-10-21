@@ -1,7 +1,8 @@
 //! CR 615 — "If a spell you control would deal damage to an opponent, prevent
 //! that damage and create a token for each 1 prevented" (Hostility), and the
 //! "whenever a source you control deals damage" listeners a resolving spell
-//! reaches (The Red Terror, Ghyrson Starn).
+//! reaches (The Red Terror, Ghyrson Starn) — and anyone's "whenever a [red]
+//! creature or spell deals damage" (Justice).
 
 use crate::card::CardId;
 use crate::effect::{Effect, PlayerRef, StaticEffect, Value};
@@ -88,6 +89,51 @@ impl GameState {
                     fires.push((c.id, ta.effect.clone()));
                 }
             }
+        }
+        // "Whenever a red creature or spell deals damage" (Justice): an
+        // `AnyPlayer` `DealsDamage` listener on anyone's permanent, its
+        // `dealer_filter` read off the spell. One trigger per spell, its
+        // amount the spell's total (2004-10-04 ruling) — a later recipient
+        // adds to the fire already on the stack.
+        let mut any: Vec<(CardId, usize, Effect, Option<crate::card::SelectionRequirement>)> = Vec::new();
+        for c in self.battlefield.iter().filter(|c| !stripped.contains(&c.id)) {
+            for ta in &c.definition.triggered_abilities {
+                if ta.event.scope == EventScope::AnyPlayer && ta.event.kind == EventKind::DealsDamage {
+                    any.push((c.id, c.controller, ta.effect.clone(), ta.event.dealer_filter.clone()));
+                }
+            }
+        }
+        // The resolving spell is in no zone (CR 608.2): read it off the
+        // resolution's snapshot.
+        let spell = if any.is_empty() {
+            None
+        } else {
+            self.find_card_anywhere(src).cloned().or_else(|| {
+                self.scratch
+                    .resolving_spell_snapshot
+                    .as_ref()
+                    .filter(|r| r.card_id == src)
+                    .map(|r| crate::card::CardInstance::new(src, r.definition.clone(), caster))
+            })
+        };
+        any.retain(|(_, _, _, f)| {
+            f.as_ref().is_none_or(|f| spell.as_ref().is_some_and(|sp| self.evaluate_requirement_on_card(f, sp, caster)))
+        });
+        for (listener, ctrl, effect, _) in any {
+            let fired = self.stack.iter_mut().rev().find(|si| {
+                matches!(si, crate::game::types::StackItem::Trigger { source, trigger_source, .. }
+                    if *source == listener && *trigger_source == Some(EntityRef::Card(src)))
+            });
+            if let Some(crate::game::types::StackItem::Trigger { event_amount, .. }) = fired {
+                *event_amount += amount;
+                continue;
+            }
+            self.push_stack(
+                crate::game::TriggerPush::new(listener, ctrl, effect)
+                    .trigger_source(Some(EntityRef::Card(src)))
+                    .event_amount(amount)
+                    .build(),
+            );
         }
         for (listener, effect) in fires {
             self.push_stack(

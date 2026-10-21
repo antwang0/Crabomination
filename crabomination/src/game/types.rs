@@ -2628,6 +2628,11 @@ pub enum PreventionTarget {
     /// source of your choice would deal to you and/or permanents you control"
     /// (Refraction Trap). Matches the seat and everything it controls.
     PlayerAndPermanents(usize),
+    /// Every creature `.0` controls, now or later this turn: "prevent all
+    /// damage [black and/or red] sources would deal to creatures you control
+    /// this turn" (Surge of Salvation — read per damage event, so a creature
+    /// you gain control of later is covered too).
+    CreaturesOf(usize),
     /// A floating shield with no recipient restriction: "the next time a source
     /// of your choice would deal damage to any target this turn, prevent that
     /// damage" (Martyr's Cause). Pair with `source` + `one_event`.

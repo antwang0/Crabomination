@@ -1166,6 +1166,7 @@ impl Effect {
             Effect::EachPlayerMillsYouMayCastOne { count } => value_has_target(count),
             Effect::ExileAnyNumberFromGraveyardOnSource { .. }
             | Effect::PreventAllDamageFromChosenColorGlobally
+            | Effect::PreventDamageFromColorsThisTurn { .. }
             | Effect::ShamansTrance => false,
             Effect::AnyPlayerMayAccept { who, accepted, otherwise, .. } => {
                 matches!(who, PlayerRef::Target(_))

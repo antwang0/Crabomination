@@ -1223,6 +1223,14 @@ impl GameState {
                 .map(|c| PreventionTarget::PlayerAndPermanents(c.controller)),
             EntityRef::Card(_) => None,
         };
+        // Surge of Salvation — a shield over a seat's creatures.
+        let creature_key = match ent {
+            EntityRef::Permanent(c) => self
+                .battlefield_find(c)
+                .filter(|c| self.computed_is_creature(c))
+                .map(|c| PreventionTarget::CreaturesOf(c.controller)),
+            _ => None,
+        };
         let mut remaining = amount;
         let mut prevented = 0u32;
         // CR 615.1 — life gained by `gain_life` shields that soak damage.
@@ -1275,6 +1283,7 @@ impl GameState {
             .filter(|(_, s)| {
                 (s.target == key
                     || Some(s.target) == team_key
+                    || Some(s.target) == creature_key
                     || s.target == PreventionTarget::Anything)
                     && (s.source.is_none() || s.source == source)
                     && (!src_known || s.source_color.is_none_or(|c| src_colors.contains(&c)))

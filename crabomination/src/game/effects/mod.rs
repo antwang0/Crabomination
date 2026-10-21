@@ -33256,6 +33256,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventDamageFromColorsThisTurn { colors, to_your_creatures } => {
+                let target = if *to_your_creatures {
+                    crate::game::types::PreventionTarget::CreaturesOf(ctx.controller)
+                } else {
+                    crate::game::types::PreventionTarget::Anything
+                };
+                for &color in colors {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
+                        target,
+                        source_color: Some(color),
+                        ..Default::default()
+                    });
+                }
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromChosenColorGlobally => {
                 // Prismatic Strands — a turn-long fog keyed to one source
                 // color, with no recipient restriction (CR 615.1).
