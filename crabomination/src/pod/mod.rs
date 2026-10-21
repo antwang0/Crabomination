@@ -28890,6 +28890,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KEDISS_14_COMMANDERS,
             main: decks::KEDISS_14_MAIN,
         },
+        // Seat 4740: The Twelfth Doctor and Tegan Jovanka's EDHREC average deck. `--pod-decks 4740`.
+        PodDeck {
+            name: "The Twelfth Doctor and Tegan Jovanka (WUR)",
+            commanders: decks::THE_TWELFTH_DOCTOR_22_COMMANDERS,
+            main: decks::THE_TWELFTH_DOCTOR_22_MAIN,
+        },
+        // Seat 4741: Halsin, Emerald Archdruid and Hardy Outlander's EDHREC average deck. `--pod-decks 4741`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Hardy Outlander (G)",
+            commanders: decks::HALSIN_18_COMMANDERS,
+            main: decks::HALSIN_18_MAIN,
+        },
+        // Seat 4742: Livio, Oathsworn Sentinel and Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 4742`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Siani, Eye of the Storm (WU)",
+            commanders: decks::LIVIO_11_COMMANDERS,
+            main: decks::LIVIO_11_MAIN,
+        },
+        // Seat 4743: Ardenn, Intrepid Archaeologist and Brinelin, the Moon Kraken's EDHREC average deck. `--pod-decks 4743`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Brinelin, the Moon Kraken (WU)",
+            commanders: decks::ARDENN_21_COMMANDERS,
+            main: decks::ARDENN_21_MAIN,
+        },
     ]
 }
 
@@ -35530,6 +35554,10 @@ mod tests {
             ("Kiora of Salt and Sand", &[0x1C97]),
             ("Gideon the Oathless", &[0x1C98]),
             ("Kediss, Emberclaw Familiar and Nadier, Agent of the Duskenel", &[0x1C99]),
+            ("The Twelfth Doctor and Tegan Jovanka", &[0x1C9A]),
+            ("Halsin, Emerald Archdruid and Hardy Outlander", &[0x1C9B]),
+            ("Livio, Oathsworn Sentinel and Siani, Eye of the Storm", &[0x1C9C]),
+            ("Ardenn, Intrepid Archaeologist and Brinelin, the Moon Kraken", &[0x1C9D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
