@@ -777,7 +777,7 @@ pub fn toralf_god_of_fury() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealtExcessNoncombatDamage, EventScope::OpponentControl).with_filter(
+            event: EventSpec::new(EventKind::DealtExcessDamage { noncombat_only: true }, EventScope::OpponentControl).with_filter(
                 Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.or(R::Planeswalker) },
             ),
             effect: Effect::DealDamage {

@@ -1365,8 +1365,10 @@ pub fn fall_of_cair_andros() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            // CR 120.10 — the excess is the event's amount.
-            event: EventSpec::new(EventKind::DealtExcessNoncombatDamage, EventScope::OpponentControl),
+            // CR 120.10 — the excess is the event's amount. A planeswalker's
+            // excess (CR 120.4a) rides the same event, so name the creature.
+            event: EventSpec::new(EventKind::DealtExcessDamage { noncombat_only: true }, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
             effect: amass(Value::TriggerEventAmount),
         }],
         activated_abilities: vec![ActivatedAbility {

@@ -164,7 +164,9 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::ControlChanged { .. } => bits!(K::GainedControlOfThis, K::LostControlOfThis),
         E::Explored { .. } => bits!(K::Explored),
         E::Connived { .. } => bits!(K::Connived),
-        E::ExcessNoncombatDamage { .. } => bits!(K::DealtExcessNoncombatDamage),
+        E::ExcessNoncombatDamage { .. } | E::ExcessCombatDamage { .. } => {
+            bits!(K::DealtExcessDamage { noncombat_only: false })
+        }
         E::Discovered { .. } => bits!(K::Discovered),
         E::BecameMonstrous { .. } => bits!(K::BecameMonstrous),
         E::Transformed { .. } => bits!(K::Transformed),
@@ -492,7 +494,8 @@ fn reference_event_kind_matches(
         }
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::Connived, GameEvent::Connived { .. }) => true,
-        (EventKind::DealtExcessNoncombatDamage, GameEvent::ExcessNoncombatDamage { .. }) => true,
+        (EventKind::DealtExcessDamage { .. }, GameEvent::ExcessNoncombatDamage { .. }) => true,
+        (EventKind::DealtExcessDamage { noncombat_only }, GameEvent::ExcessCombatDamage { .. }) => !noncombat_only,
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
@@ -1567,6 +1570,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::RolledNaturalMax { player }
         | GameEvent::RingTempted { player, .. }
         | GameEvent::ExcessNoncombatDamage { controller: player, .. }
+        | GameEvent::ExcessCombatDamage { controller: player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
         | GameEvent::LibraryShuffled { player, .. }
@@ -1668,7 +1672,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::CumulativeUpkeepUnpaid { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Connived { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::ExcessNoncombatDamage { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::ExcessNoncombatDamage { card_id, .. } | GameEvent::ExcessCombatDamage { card_id, .. } => {
+            Some(EntityRef::Permanent(*card_id))
+        }
         GameEvent::BecameMonstrous { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
@@ -1883,6 +1889,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::Explored { card_id, .. }
         | GameEvent::Connived { card_id, .. }
         | GameEvent::ExcessNoncombatDamage { card_id, .. }
+        | GameEvent::ExcessCombatDamage { card_id, .. }
         | GameEvent::BecameMonstrous { card_id, .. }
         | GameEvent::Transformed { card_id }
         | GameEvent::Mutated { card_id }
@@ -2145,6 +2152,7 @@ mod tests {
             E::Explored { card_id: c, controller: 0, explored_land: true },
             E::Connived { card_id: c, controller: 0 },
             E::ExcessNoncombatDamage { card_id: c, controller: 1, amount: 2 },
+            E::ExcessCombatDamage { card_id: c, controller: 1, amount: 2 },
             E::Discovered { player: 0, value: 3 },
             E::BecameMonstrous { card_id: c, n: 2 },
             E::Transformed { card_id: c },
@@ -2240,7 +2248,8 @@ mod tests {
             K::DealsDamage,
             K::DealtDamage,
             K::DealtCombatDamage,
-            K::DealtExcessNoncombatDamage,
+            K::DealtExcessDamage { noncombat_only: true },
+            K::DealtExcessDamage { noncombat_only: false },
             K::PlayerDealtNoncombatDamage,
             K::YourSourceDealtNoncombatDamageEqualToToughness,
             K::PlayerDamaged,

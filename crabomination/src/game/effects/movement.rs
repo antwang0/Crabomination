@@ -493,13 +493,39 @@ impl GameState {
     }
 
     /// CR 120.4a — damage beyond a planeswalker's loyalty is excess too.
-    pub(crate) fn note_planeswalker_excess(&mut self, cid: CardId, amount: u32) {
+    /// Returns the excess.
+    pub(crate) fn note_planeswalker_excess(&mut self, cid: CardId, amount: u32) -> u32 {
         if let Some(c) = self.battlefield_find(cid)
             && amount > c.counter_count(CounterType::Loyalty)
         {
-            let seat = c.controller;
+            let (seat, excess) = (c.controller, amount - c.counter_count(CounterType::Loyalty));
             self.note_excess_damaged_seat(seat);
+            return excess;
         }
+        0
+    }
+
+    /// CR 120.10 / 120.4a — announce `excess` damage just noted on `cid` (a
+    /// creature or planeswalker still on the battlefield) as the matching
+    /// excess-damage event. Noncombat excess also feeds
+    /// `DealtExcessDamage { noncombat_only }` (Fall of Cair Andros, Toralf).
+    pub(crate) fn push_excess_damage_event(
+        &self,
+        cid: CardId,
+        excess: u32,
+        combat: bool,
+        events: &mut Vec<GameEvent>,
+    ) {
+        if excess == 0 {
+            return;
+        }
+        let Some(c) = self.battlefield_find(cid) else { return };
+        let controller = c.controller;
+        events.push(if combat {
+            GameEvent::ExcessCombatDamage { card_id: cid, controller, amount: excess }
+        } else {
+            GameEvent::ExcessNoncombatDamage { card_id: cid, controller, amount: excess }
+        });
     }
 
     fn note_excess_damaged_seat(&mut self, seat: usize) {
@@ -2071,7 +2097,8 @@ impl GameState {
                     .map(|c| c.definition.is_battle())
                     .unwrap_or(false);
                 if is_pw {
-                    self.note_planeswalker_excess(cid, amount);
+                    let excess = self.note_planeswalker_excess(cid, amount);
+                    self.push_excess_damage_event(cid, excess, false, events);
                     let current = self.battlefield_find(cid).map_or(0, |c| c.counter_count(CounterType::Loyalty));
                     let floored = self.loyalty_after_damage(cid, current, amount);
                     if let Some(c) = self.battlefield_find_mut(cid) {
@@ -2130,11 +2157,8 @@ impl GameState {
                     let excess = self.note_excess_damage(cid, amount, source_has_deathtouch, source);
                     self.excess_damage_this_resolution =
                         self.excess_damage_this_resolution.saturating_add(excess);
-                    if excess > 0
-                        && let Some(c) = self.battlefield_find(cid)
-                        && self.computed_is_creature(c)
-                    {
-                        events.push(GameEvent::ExcessNoncombatDamage { card_id: cid, controller: c.controller, amount: excess });
+                    if self.battlefield_find(cid).is_some_and(|c| self.computed_is_creature(c)) {
+                        self.push_excess_damage_event(cid, excess, false, events);
                     }
                     // Name of the damaging source, read before the mutable
                     // borrow (Blazing Effigy's per-name tally).

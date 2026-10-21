@@ -5834,7 +5834,7 @@ pub fn magmatic_galleon() -> CardDefinition {
                 amount: Value::Const(5),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealtExcessNoncombatDamage, EventScope::OpponentControl)
+                event: EventSpec::new(EventKind::DealtExcessDamage { noncombat_only: true }, EventScope::OpponentControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Creature,

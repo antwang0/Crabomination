@@ -4061,11 +4061,14 @@ pub enum EventKind {
     /// Ultron's "whenever a creature you control connives"). The conniver is
     /// the event subject; matched to `GameEvent::Connived`.
     Connived,
-    /// CR 120.10 — a creature was dealt excess NONCOMBAT damage. The creature
-    /// is the event subject, its controller the actor (so `OpponentControl`
-    /// reads "a creature an opponent controls"); the excess rides in as
-    /// `Value::TriggerEventAmount` (Fall of Cair Andros).
-    DealtExcessNoncombatDamage,
+    /// CR 120.10 / 120.4a — a creature or planeswalker was dealt excess
+    /// damage. The permanent is the event subject, its controller the actor
+    /// (so `OpponentControl` reads "an opponent controls"); the excess rides
+    /// in as `Value::TriggerEventAmount`. `noncombat_only` matches
+    /// `GameEvent::ExcessNoncombatDamage` alone (Fall of Cair Andros);
+    /// without it `GameEvent::ExcessCombatDamage` matches too (Aegar, the
+    /// Freezing Flame). One payload variant: the kind mask is full.
+    DealtExcessDamage { noncombat_only: bool },
     /// CR 701.57 — the controller performed a discover (Curator of Sun's
     /// Creation's "whenever you discover" payoff). The discovering player is
     /// the event subject; matched to `GameEvent::Discovered`. The discover

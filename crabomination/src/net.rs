@@ -3022,6 +3022,8 @@ pub enum GameEventWire {
     AttractionVisited { card_id: CardId },
     /// Wire mirror of `GameEvent::DeathStepEnded` (CR 608.2c).
     DeathStepEnded,
+    /// Wire mirror of `GameEvent::ExcessCombatDamage` (CR 120.10).
+    ExcessCombatDamage { card_id: CardId, controller: usize, amount: u32 },
 }
 
 /// The wire form of an action's events, minus the engine-internal markers.
@@ -3277,6 +3279,11 @@ impl From<&GameEvent> for GameEventWire {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
             }
             GameEvent::ExcessNoncombatDamage { card_id, controller, amount } => GameEventWire::ExcessNoncombatDamage {
+                card_id: *card_id,
+                controller: *controller,
+                amount: *amount,
+            },
+            GameEvent::ExcessCombatDamage { card_id, controller, amount } => GameEventWire::ExcessCombatDamage {
                 card_id: *card_id,
                 controller: *controller,
                 amount: *amount,
@@ -3663,7 +3670,7 @@ impl GameEventWire {
             }
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::Connived { card_id, .. } => format!("{} connived", name(*card_id)),
-            E::ExcessNoncombatDamage { card_id, amount, .. } => {
+            E::ExcessNoncombatDamage { card_id, amount, .. } | E::ExcessCombatDamage { card_id, amount, .. } => {
                 format!("{} was dealt {amount} excess damage", name(*card_id))
             }
             E::Discovered { player, value } => format!("{} discovered {value}", pn(*player)),

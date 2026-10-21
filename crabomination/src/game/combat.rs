@@ -5213,7 +5213,8 @@ impl GameState {
                     // the whole combat-damage event onto another creature.
                     let blocker_id =
                         self.turn_damage_redirect_for(blocker_id).unwrap_or(blocker_id);
-                    self.note_excess_damage(blocker_id, dealt.max(0) as u32, atk.has_deathtouch, Some(atk.id));
+                    let excess = self.note_excess_damage(blocker_id, dealt.max(0) as u32, atk.has_deathtouch, Some(atk.id));
+                    self.push_excess_damage_event(blocker_id, excess, true, events);
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
                         b.dealt_damage_this_turn = true;
                         b.damage_dealt_to_this_turn += dealt.max(0) as u32;
@@ -5432,7 +5433,9 @@ impl GameState {
                             || bc.keywords().has_kw(&Keyword::Infect)
                             || bc.keywords().has_kw(&Keyword::Wither);
                         let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
-                        self.note_excess_damage(hit, dmg, bc.keywords().has_kw(&Keyword::Deathtouch), Some(bid));
+                        let excess =
+                            self.note_excess_damage(hit, dmg, bc.keywords().has_kw(&Keyword::Deathtouch), Some(bid));
+                        self.push_excess_damage_event(hit, excess, true, events);
                         // CR 614.16 / 122.1 — infect/wither counters are a
                         // placement, scaled before the mutable borrow.
                         let infect_n = if infect && !self.counters_locked() {
@@ -6287,7 +6290,8 @@ impl GameState {
                     })
                     .or_else(|| self.unblocked_combat_damage_absorber(p, atk.id))
                 {
-                    self.note_excess_damage(redirect, amount, atk.has_deathtouch, Some(atk.id));
+                    let excess = self.note_excess_damage(redirect, amount, atk.has_deathtouch, Some(atk.id));
+                    self.push_excess_damage_event(redirect, excess, true, events);
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage = c.damage.saturating_add(amount);
                         c.dealt_damage_this_turn = true;
@@ -6463,7 +6467,8 @@ impl GameState {
                     }
                 }
                 let amount = amount - spill;
-                self.note_planeswalker_excess(pw_id, amount);
+                let excess = self.note_planeswalker_excess(pw_id, amount);
+                self.push_excess_damage_event(pw_id, excess, true, events);
                 let current =
                     self.battlefield_find(pw_id).map_or(0, |c| c.counter_count(crate::card::CounterType::Loyalty));
                 let floored = self.loyalty_after_damage(pw_id, current, amount);

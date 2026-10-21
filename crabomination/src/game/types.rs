@@ -3147,6 +3147,10 @@ pub enum GameEvent {
     /// CR 120.10 — `card_id` (controlled by `controller`) was dealt `amount`
     /// excess noncombat damage.
     ExcessNoncombatDamage { card_id: CardId, controller: usize, amount: u32 },
+    /// CR 120.10 / 120.4a — the combat half of the excess-damage pair: a
+    /// creature or planeswalker was dealt combat damage beyond lethal (beyond
+    /// its loyalty). `EventKind::DealtExcessDamage { noncombat_only: true }` skips it.
+    ExcessCombatDamage { card_id: CardId, controller: usize, amount: u32 },
     /// CR 701.57 — `player` performed a discover for `value` (Curator of
     /// Sun's Creation's "whenever you discover" payoff reads `value` via
     /// `Value::TriggerEventAmount`).
