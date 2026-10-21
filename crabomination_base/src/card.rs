@@ -3175,6 +3175,9 @@ pub enum SelectionRequirement {
     /// The card has any cycling ability (Cycling / CyclingLife /
     /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
     HasCyclingAbility,
+    /// CR 702.33 — the card has a kicker ability (any kicker, a "kicker and/or"
+    /// pair, or a non-mana kicker cost). Murasa Sproutling's return.
+    HasKickerAbility,
     /// Has an activated ability — printed, a loyalty ability, or a keyword
     /// that is one (equip, crew, reconfigure, cycling): The Enigma Jewel's
     /// "four or more nonlands with activated abilities".
@@ -8711,6 +8714,12 @@ impl CardDefinition {
     /// CR 702.128 / 702.129 — does this card print embalm or eternalize?
     pub fn has_embalm_or_eternalize(&self) -> bool {
         self.activated_abilities.iter().any(crate::effect::ActivatedAbility::is_embalm_like)
+    }
+
+    /// CR 702.33 — any kicker: a mana kicker, a "kicker and/or" pair, or a
+    /// non-mana kicker cost.
+    pub fn has_kicker_ability(&self) -> bool {
+        self.has_kicker().is_some() || !self.kicker_options.is_empty() || self.kicker_action_cost.is_some()
     }
 
     pub fn has_cycling_ability(&self) -> bool {

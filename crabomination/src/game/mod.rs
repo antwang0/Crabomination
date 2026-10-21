@@ -36074,6 +36074,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayPlayLandsFromGraveyard
             | StaticEffect::MayPlayLandsFromGraveyardMatching(_)
             | StaticEffect::FirstMatchingSpellEachTurnCostsLess { .. }
+            | StaticEffect::FirstKickedSpellEachTurnCostsLess { .. }
             | StaticEffect::PlayCardsFromGraveyardDuringYourTurn
             // MayReturnFromGraveyardInsteadOfLearn — consulted at the top of
             // `Effect::Learn` (Retriever Phoenix); no layer effect.

@@ -1181,6 +1181,10 @@ pub struct PlayerData {
     /// Reset for every seat at the turn boundary.
     #[serde(default)]
     pub spell_tax_this_turn: u32,
+    /// Kicked spells this player has cast this turn — Vine Gecko's "the first
+    /// kicked spell you cast each turn". Reset at the turn boundary.
+    #[serde(default)]
+    pub kicked_spells_cast_this_turn: u32,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -1995,6 +1999,7 @@ impl Player {
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,
             spell_tax_this_turn: 0,
+            kicked_spells_cast_this_turn: 0,
             graveyard_ids_this_turn: Default::default(),
             milled_ids_this_turn: Default::default(),
             instants_or_sorceries_cast_this_turn: 0,

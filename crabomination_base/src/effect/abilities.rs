@@ -710,6 +710,9 @@ pub enum StaticEffect {
     /// discount lapses once a matching spell has already been cast this turn.
     /// Generic-only, like every other flat reduction.
     FirstMatchingSpellEachTurnCostsLess { filter: SelectionRequirement, amount: u32 },
+    /// "The first kicked spell you cast each turn costs {`amount`} less"
+    /// (Vine Gecko) — keyed on `Player.kicked_spells_cast_this_turn`.
+    FirstKickedSpellEachTurnCostsLess { amount: u32 },
     /// "The first [filter] spell you cast each turn costs {1} less to cast
     /// for each [kind] counter on this" (Zimone, Infinite Analyst). The
     /// per-counter sibling of `FirstMatchingSpellEachTurnCostsLess`.

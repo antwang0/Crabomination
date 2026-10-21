@@ -2374,6 +2374,15 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     reduction += amount;
                 }
+                // Vine Gecko — the turn's first kicked spell (the cast stamps
+                // `kicked` before its cost is computed).
+                StaticEffect::FirstKickedSpellEachTurnCostsLess { amount }
+                    if src.controller == caster
+                        && card.kicked
+                        && state.players[caster].kicked_spells_cast_this_turn == 0 =>
+                {
+                    reduction += amount;
+                }
                 // Battlefield Thaumaturge — {N} less per creature the
                 // instant/sorcery targets.
                 StaticEffect::YourISSpellsCostLessPerTargetCreature { amount }
@@ -13432,6 +13441,9 @@ impl GameState {
             }
             if fdef.card_types.contains(&crate::card::CardType::Sorcery) {
                 me.sorceries_cast_this_turn += 1;
+            }
+            if card.kicked {
+                me.kicked_spells_cast_this_turn += 1;
             }
         }
         // Arboria — "cast a spell … during their last turn".
