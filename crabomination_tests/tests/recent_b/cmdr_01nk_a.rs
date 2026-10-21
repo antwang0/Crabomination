@@ -734,3 +734,21 @@ fn the_book_of_vile_darkness_assembles_vecna() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
     assert_eq!((g.players[0].life, g.players[0].hand.len()), (life - 2, cards + 1), "the Eye's trigger, on Vecna");
 }
+
+/// Ogre Battlecaster recasts a graveyard instant for its cost plus {R}{R},
+/// grows by its mana value, and the instant is exiled afterwards.
+#[test]
+fn ogre_battlecaster_recasts_from_the_graveyard() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let ogre = g.add_card_to_battlefield(0, catalog::ogre_battlecaster());
+    g.clear_sickness(ogre);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ogre, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "cast, then exiled");
+    assert_eq!(g.computed_permanent(ogre).unwrap().power, 4, "+1/+0 for the Bolt");
+}

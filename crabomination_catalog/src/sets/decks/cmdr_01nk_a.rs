@@ -1144,3 +1144,36 @@ pub fn the_book_of_vile_darkness() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ogre Battlecaster — {2}{R} 3/3 first strike Ogre Shaman. Whenever it
+/// attacks, you may cast target instant or sorcery card from your graveyard
+/// by paying {R}{R} in addition to its other costs; it's exiled instead of
+/// going to a graveyard. When you cast it, this creature gets +X/+0 until end
+/// of turn, X its mana value.
+pub fn ogre_battlecaster() -> CardDefinition {
+    let it = || Selector::Target(0);
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::CastImmediatePayingExtra {
+                what: target_filtered(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
+                ),
+                source_zone: Zone::Graveyard,
+                extra: cost(&[r(), r()]),
+                exile_after: true,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: it(), filter: R::IsSpellOnStack },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ManaValueOf(Box::new(it())),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..creature("Ogre Battlecaster", cost(&[generic(2), r()]), vec![CreatureType::Ogre, CreatureType::Shaman], 3, 3)
+    }
+}
