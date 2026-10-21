@@ -5083,3 +5083,145 @@ pub fn draconian_gate_bot() -> CardDefinition {
         ..creature("Draconian Gate-Bot", cost(&[generic(5)]), vec![CreatureType::Robot], 4, 2)
     }
 }
+
+// ── Batch fifteen (one- and two-gap decks) ──────────────────────────────────
+
+/// Splitting the Powerstone — {2}{U} sorcery. As an additional cost,
+/// sacrifice an artifact. Create two tapped Powerstone tokens; if the
+/// sacrificed artifact was legendary, draw a card.
+pub fn splitting_the_powerstone() -> CardDefinition {
+    let powerstone = TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() };
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Artifact.and(R::ControlledByYou),
+            count: 1,
+        }],
+        ..spell(
+            "Splitting the Powerstone",
+            cost(&[generic(2), u()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: Arc::new(powerstone) },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::SacrificedCard,
+                        filter: R::HasSupertype(crate::card::Supertype::Legendary),
+                    },
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// The Mana Rig — {3} legendary artifact. Whenever you cast a multicolored
+/// spell, create a tapped Powerstone token. {X}{X}{X}, {T}: look at the top X
+/// cards of your library; put up to two into your hand and the rest on the
+/// bottom in a random order.
+pub fn the_mana_rig() -> CardDefinition {
+    let powerstone = TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() };
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Multicolored,
+            }),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(powerstone) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), x(), x()]),
+            tap_cost: true,
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                rest_bottom_random: true,
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                take: Some(Value::Const(2)),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }],
+        ..spell("The Mana Rig", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Shreds of Sanity — {2}{R} sorcery. Return up to one target instant card
+/// and up to one target sorcery card from your graveyard to your hand, then
+/// discard a card. Exile it.
+pub fn shreds_of_sanity() -> CardDefinition {
+    let gy_slot = |slot: u8, card_type: CardType| Selector::TargetFiltered {
+        slot,
+        filter: R::HasCardType(card_type).and(R::InYourGraveyard),
+    };
+    CardDefinition {
+        exile_on_resolve: true,
+        ..spell(
+            "Shreds of Sanity",
+            cost(&[generic(2), r()]),
+            CardType::Sorcery,
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: gy_slot(0, CardType::Instant), to: ZoneDest::Hand(PlayerRef::You) },
+                    Effect::Move { what: gy_slot(1, CardType::Sorcery), to: ZoneDest::Hand(PlayerRef::You) },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ])),
+            },
+        )
+    }
+}
+
+/// Curious Homunculus // Voracious Reader — {1}{U} 1/1 Homunculus. {T}: add
+/// {C}, spent only on instants and sorceries. At the beginning of your upkeep,
+/// with three or more instant and/or sorcery cards in your graveyard,
+/// transform it. Back: a 3/4 colorless Eldrazi Homunculus with prowess;
+/// instant and sorcery spells you cast cost {1} less.
+pub fn curious_homunculus() -> CardDefinition {
+    let spells = R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    let reader = CardDefinition {
+        name: "Voracious Reader",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Homunculus],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![crate::effect::shortcut::prowess()],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less.",
+            effect: StaticEffect::CostReduction { filter: spells.clone(), amount: 1 },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::ONE)),
+                    crate::mana::SpendRestriction::InstantSorceryOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(
+                Predicate::ValueAtLeast(
+                    Value::CountOf(Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: spells,
+                    })),
+                    Value::Const(3),
+                ),
+            ),
+            effect: Effect::Transform { what: Selector::This },
+        }],
+        back_face: Some(Box::new(reader)),
+        ..creature("Curious Homunculus", cost(&[generic(1), u()]), vec![CreatureType::Homunculus], 1, 1)
+    }
+}

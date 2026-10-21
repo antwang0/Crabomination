@@ -18657,6 +18657,10 @@ static DECKS: &[Factory] = &[
     super::decks::thriving_rats,
     super::decks::dire_fleet_warmonger,
     super::decks::draconian_gate_bot,
+    super::decks::splitting_the_powerstone,
+    super::decks::the_mana_rig,
+    super::decks::shreds_of_sanity,
+    super::decks::curious_homunculus,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

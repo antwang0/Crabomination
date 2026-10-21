@@ -2205,3 +2205,84 @@ fn dire_fleet_warmonger_eats_for_trample() {
     assert_eq!(pt(&g, orc), (5, 5));
     assert!(g.computed_permanent(orc).unwrap().keywords().contains(&Keyword::Trample));
 }
+
+/// Splitting the Powerstone draws only off a legendary sacrifice.
+#[test]
+fn splitting_the_powerstone_draws_off_a_legend() {
+    for legendary in [false, true] {
+        let mut g = pod(2);
+        let fodder = if legendary { catalog::the_mana_rig() } else { catalog::sol_ring() };
+        let art = g.add_card_to_battlefield(0, fodder);
+        let split = g.add_card_to_hand(0, catalog::splitting_the_powerstone());
+        let hand = g.players[0].hand.len();
+        cast(&mut g, split, None);
+        assert!(g.battlefield_find(art).is_none(), "sacrificed");
+        let stones: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Powerstone").collect();
+        assert_eq!(stones.len(), 2);
+        assert!(stones.iter().all(|c| c.tapped));
+        assert_eq!(g.players[0].hand.len(), hand - 1 + usize::from(legendary), "legendary {legendary}");
+    }
+}
+
+/// The Mana Rig makes a Powerstone off a multicolored spell and digs for X.
+#[test]
+fn the_mana_rig_powers_up_and_digs() {
+    let mut g = pod(2);
+    let rig = g.add_card_to_battlefield(0, catalog::the_mana_rig());
+    let demon = g.add_card_to_hand(0, catalog::rakshasa_deathdealer());
+    cast(&mut g, demon, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Powerstone").count(), 1);
+    let hand = g.players[0].hand.len();
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rig,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("dig");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// Shreds of Sanity returns an instant and a sorcery, then discards, then
+/// exiles itself.
+#[test]
+fn shreds_of_sanity_returns_both_halves() {
+    let mut g = pod(2);
+    let murder = g.add_card_to_graveyard(0, catalog::murder());
+    let syphon = g.add_card_to_graveyard(0, catalog::agonizing_syphon());
+    let shreds = g.add_card_to_hand(0, catalog::shreds_of_sanity());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shreds,
+        target: Some(Target::Permanent(murder)),
+        additional_targets: vec![Target::Permanent(syphon)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "two back, one discarded");
+    assert!(g.exile.iter().any(|c| c.id == shreds));
+}
+
+/// Curious Homunculus transforms at upkeep with three instants and sorceries
+/// in the graveyard; the Reader discounts them.
+#[test]
+fn curious_homunculus_reads_its_way_up() {
+    let mut g = pod(2);
+    let homunculus = g.add_card_to_battlefield(0, catalog::curious_homunculus());
+    for card in [catalog::murder(), catalog::murder(), catalog::agonizing_syphon()] {
+        g.add_card_to_graveyard(0, card);
+    }
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Draw {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(pt(&g, homunculus), (3, 4));
+}
