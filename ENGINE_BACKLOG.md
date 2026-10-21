@@ -274,9 +274,9 @@ the handoff.
 - **FIXED (bot, Commander only):** `server/pre_combat_tap.rs` matched only a bare `Effect::Tap` and refused any
   remove-counter cost, so a 6-seat census (seed 9432) never activated Braided Net (a `Seq` led by its tap, paid with a net
   counter) or Ice Floe (`TapAndUntapLock` on a creature attacking you). It now reads the first effect of a `Seq`, accepts
-  counter costs, and in an opponent's declare attackers step locks the biggest creature attacking it. ⚠ The same census
-  still lists other tappers unused (Entrancing Lyre, Cyclopean Snare, Aboshan): each is a different cost shape — check them
-  against `costs_ok` before adding a picker.
+  counter costs, sizes an {X} to the target's power when the filter reads X (Entrancing Lyre), and in an opponent's declare
+  attackers step locks the biggest creature attacking it. Census seed 9434: Lyre, Cyclopean Snare, Braided Net, Ice Floe
+  all activated. Still unused: Aboshan, Cephalid Emperor (a tap-another-creature cost).
 - **OPEN (one-gap left):** none legal — Apple of Eden / Springsage Ritual / Gustha's Scepter / Pick-Axe close only Faceless One / Piper decks (illegal). The
   Seventh Doctor + Graham O'Brien needs Attractions (Monitor Monitor, Command Performance). ⚠ 1,343 legal zero-gap pair
   decks are unseated (`edhrec_scan_pairs.py --legal --max 0`): the convention seats only decks a session's own cards close.
