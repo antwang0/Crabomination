@@ -430,6 +430,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Supply => "Supply",
         CounterType::Book => "Book",
         CounterType::Gem => "Gem",
+        CounterType::Net => "Net",
         CounterType::Point => "Point",
         CounterType::Unlock => "Unlock",
         CounterType::Silver => "Silver",
