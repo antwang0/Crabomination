@@ -18995,6 +18995,9 @@ static DECKS: &[Factory] = &[
     super::decks::soulblade_renewer,
     super::decks::jesters_scepter,
     super::decks::eye_of_ojer_taq,
+    // cmdr_01kp_a (session 01KPxZ3H)
+    super::decks::squall_gunblade_duelist,
+    super::decks::duelists_flame,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
