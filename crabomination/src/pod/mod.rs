@@ -29466,6 +29466,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KELETH_22_COMMANDERS,
             main: decks::KELETH_22_MAIN,
         },
+        // Seat 4836: Tivadar of Thorn's EDHREC average deck. `--pod-decks 4836`.
+        PodDeck {
+            name: "Tivadar of Thorn (W)",
+            commanders: decks::TIVADAR_OF_THORN_COMMANDERS,
+            main: decks::TIVADAR_OF_THORN_MAIN,
+        },
     ]
 }
 
@@ -36202,6 +36208,7 @@ mod tests {
             ("Wasp, Shrinking Savior", &[0x1CF7]),
             ("Zevlor, Elturel Exile", &[0x1CF8]),
             ("Keleth, Sunmane Familiar and Thrasios, Triton Hero", &[0x1CF9]),
+            ("Tivadar of Thorn", &[0x1CFA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

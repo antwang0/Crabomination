@@ -135579,3 +135579,29 @@ pub const KELETH_22_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, island, island, island, plains, plains,
     plains, plains,
 ];
+
+pub const TIVADAR_OF_THORN_COMMANDERS: &[CardFactory] = &[tivadar_of_thorn];
+
+/// **Tivadar of Thorn**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Tivadar of Thorn (EDHREC, fetched 2026-10-21).
+pub const TIVADAR_OF_THORN_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, commanders_plate, distorting_lens, heraldic_banner,
+    mind_stone, oketras_monument, pearl_medallion, sol_ring, sting_the_glinting_dagger,
+    sword_of_the_animist, castle_ardenvale, emeria_the_sky_ruin, minas_tirith, myriad_landscape,
+    nykthos_shrine_to_nyx, war_room, auriok_champion, benalish_marshal, crimson_acolyte,
+    crovax_ascendant_hero, east_mark_cavalier, elesh_norn_grand_cenobite, esper_sentinel,
+    fiendslayer_paladin, foothill_guide, grand_abolisher, honorable_scout, keeper_of_the_accord,
+    knight_of_the_white_orchid, knights_of_thorn, kor_firewalker, lightwielder_paladin,
+    loran_of_the_third_path, mangara_the_diplomat, mentor_of_the_meek, mother_of_runes,
+    paladin_en_vec, sanctifier_en_vec, scuttlemutt, silver_knight, southern_paladin, sun_titan,
+    thalia_heretic_cathar, absolute_law, authority_of_the_consuls, ghostly_prison,
+    honor_of_the_pure, justice, land_tax, rune_of_protection_red, smothering_tithe,
+    teleportation_circle, warmth, celestial_purge, enlightened_tutor, ephemerate, generous_gift,
+    luminesce, path_to_exile, shields_of_velis_vel, surge_of_salvation, swords_to_plowshares,
+    austere_command, farewell, mass_calcify, tivadars_crusade, vanquish_the_horde, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
