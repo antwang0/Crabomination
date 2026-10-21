@@ -19059,6 +19059,13 @@ static DECKS: &[Factory] = &[
     super::decks::fearless_skald,
     super::decks::chandras_outrage,
     super::decks::gusthas_scepter,
+    // cmdr_01ka_a (session 01KabMxS)
+    super::decks::soul_swindler,
+    super::decks::squirrel_squatters,
+    super::decks::spinnerette_arachnobat,
+    super::decks::motion_sickness,
+    super::decks::dee_kay_finder_of_the_lost,
+    super::decks::done_for_the_day,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
@@ -31609,6 +31616,7 @@ static UNF: &[Factory] = &[
     super::unf::quick_fixer,
     super::unf::coming_attraction,
     super::unf::the_most_dangerous_gamer,
+    super::unf::pick_a_beeble,
     super::unf::complaints_clerk,
 ];
 static USG: &[Factory] = &[

@@ -1404,3 +1404,6 @@ pub use cmdr_01r3_a::*;
 #[path = "../../../src/sets/decks/cmdr_01kp_a.rs"]
 mod cmdr_01kp_a;
 pub use cmdr_01kp_a::*;
+#[path = "../../../src/sets/decks/cmdr_01ka_a.rs"]
+mod cmdr_01ka_a;
+pub use cmdr_01ka_a::*;

@@ -93,6 +93,50 @@ pub fn balloon_stand() -> CardDefinition {
     )
 }
 
+/// Pick-a-Beeble — Visit: roll a d6, put that many luck counters on it and
+/// create a Treasure; then with six or more luck counters, claim the prize
+/// (CR 702.159b): two Treasures, sacrifice it, open an Attraction.
+pub fn pick_a_beeble() -> CardDefinition {
+    let treasures = |n| Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(n),
+        definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+    };
+    attraction(
+        "Pick-a-Beeble",
+        &[2, 3, 6],
+        Effect::Seq(vec![
+            Effect::RollDie {
+                sides: 6,
+                count: Value::ONE,
+                modifier: Value::Const(0),
+                reroll_at_most: 0,
+                ignore_lowest: 0,
+                results: vec![(
+                    1,
+                    6,
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::Luck, amount: Value::LastDieRoll },
+                )],
+                on_doubles: None,
+            },
+            treasures(1),
+            Effect::If {
+                cond: crate::effect::Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Luck },
+                    Value::Const(6),
+                ),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::ClaimThePrize,
+                    treasures(2),
+                    Effect::SacrificeSource,
+                    Effect::OpenAnAttraction,
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
 /// Bounce Chamber — Visit: bounce the lowest-toughness creature you don't
 /// control.
 pub fn bounce_chamber() -> CardDefinition {
@@ -407,6 +451,8 @@ pub fn coming_attraction() -> CardDefinition {
 /// The Most Dangerous Gamer — {2}{B}{G} 2/2 legendary deathtouch; opens an
 /// Attraction on entry and on attack, growing with each one opened.
 pub fn the_most_dangerous_gamer() -> CardDefinition {
+    use crate::effect::KeywordAct;
+    let performed = |act| EventSpec::new(EventKind::Performed(act), EventScope::YourControl);
     CardDefinition {
         name: "The Most Dangerous Gamer",
         cost: cost(&[generic(2), b(), g()]),
@@ -420,22 +466,21 @@ pub fn the_most_dangerous_gamer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![
-            etb(Effect::Seq(vec![
-                Effect::OpenAnAttraction,
-                Effect::AddCounter {
+            etb(Effect::OpenAnAttraction),
+            crate::effect::shortcut::on_attack(Effect::OpenAnAttraction),
+            // CR 701.51c — only an Attraction that entered from the deck.
+            TriggeredAbility {
+                event: performed(KeywordAct::OpenedAttraction),
+                effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },
-            ])),
-            crate::effect::shortcut::on_attack(Effect::Seq(vec![
-                Effect::OpenAnAttraction,
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            ])),
+            },
+            TriggeredAbility {
+                event: performed(KeywordAct::ClaimedPrize),
+                effect: Effect::Destroy { what: target_filtered(R::Permanent) },
+            },
         ],
         ..Default::default()
     }
