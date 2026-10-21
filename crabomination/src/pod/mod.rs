@@ -29472,6 +29472,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TIVADAR_OF_THORN_COMMANDERS,
             main: decks::TIVADAR_OF_THORN_MAIN,
         },
+        // Seat 4837: Myra the Magnificent's EDHREC average deck. `--pod-decks 4837`.
+        PodDeck {
+            name: "Myra the Magnificent (UR)",
+            commanders: decks::MYRA_THE_MAGNIFICENT_COMMANDERS,
+            main: decks::MYRA_THE_MAGNIFICENT_MAIN,
+        },
     ]
 }
 
@@ -36209,6 +36215,7 @@ mod tests {
             ("Zevlor, Elturel Exile", &[0x1CF8]),
             ("Keleth, Sunmane Familiar and Thrasios, Triton Hero", &[0x1CF9]),
             ("Tivadar of Thorn", &[0x1CFA]),
+            ("Myra the Magnificent", &[0x1CFB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

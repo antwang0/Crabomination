@@ -135605,3 +135605,31 @@ pub const TIVADAR_OF_THORN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const MYRA_THE_MAGNIFICENT_COMMANDERS: &[CardFactory] = &[myra_the_magnificent];
+
+/// **Myra the Magnificent**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Mountains = 99.
+/// Myra the Magnificent (EDHREC, fetched 2026-10-21).
+pub const MYRA_THE_MAGNIFICENT_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, inspiring_statuary, izzet_signet, lightning_greaves, sol_ring,
+    talisman_of_creativity, thought_vessel, archway_of_innovation, cascade_bluffs,
+    command_tower, exotic_orchard, frostboil_snarl, izzet_boilerworks, mystic_sanctuary,
+    reliquary_tower, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    temple_of_epiphany, training_center, archmage_emeritus, bamboozling_beeble,
+    galazeth_prismari, goblin_electromancer, guttersnipe, monitor_monitor, niv_mizzet_parun,
+    pixie_guide, storm_kiln_artist, stormcatch_mentor, talrand_sky_summoner,
+    third_path_iconoclast, urza_lord_high_artificer, vedalken_squirrel_whacker,
+    veyran_voice_of_duality, wyll_blade_of_frontiers, young_pyromancer, barbarian_class,
+    fiery_inscription, metallurgic_summonings, sorcerer_class, thousand_year_storm, abrade,
+    an_offer_you_cant_refuse, big_score, brainstorm, chaos_warp, consider, counterspell,
+    delayed_blast_fireball, frantic_search, izzet_charm, lightning_bolt, opt, pongify,
+    prismari_command, seething_song, snap, thrill_of_possibility, unexpected_windfall,
+    saheeli_sublime_artificer, ancestral_vision, blasphemous_act, command_performance,
+    expressive_iteration, faithless_looting, gitaxian_probe, grapeshot, inevitable_betrayal,
+    jeskas_will, mana_geyser, ponder, preordain, serum_visions, solve_the_equation,
+    stitch_in_time, time_warp,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
