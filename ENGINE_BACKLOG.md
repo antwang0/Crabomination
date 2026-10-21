@@ -231,6 +231,8 @@ the handoff.
 - **CLAIMED (`01KPxZ3H`, 2026-10-21, third batch) — don't duplicate:** Wasp, Shrinking Savior's four (Amulet of
   Safekeeping, Mystic Subdual, Hysterical Blindness, Uncomfortable Chill); Zevlor, Elturel Exile (taken over from
   `01Jywzky`'s single-commander claim, which left it OPEN).
+- **CLAIMED (`01KPxZ3H`, 2026-10-21, fourth batch) — don't duplicate:** Tivadar of Thorn's five (Tivadar of Thorn,
+  Lightwielder Paladin, Justice, Luminesce, Surge of Salvation).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
