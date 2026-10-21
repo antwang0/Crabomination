@@ -3528,3 +3528,27 @@ fn sacred_boon_banks_toughness() {
     assert_eq!(pt(&g, bear), (2, 5), "three prevented, three +0/+1 counters");
     assert_eq!(g.battlefield_find(bear).unwrap().damage, 0);
 }
+
+/// Merchant's Dockhand digs as deep as the artifacts it taps.
+#[test]
+fn merchants_dockhand_taps_artifacts_to_dig() {
+    let mut g = pod(2);
+    let hand = g.add_card_to_battlefield(0, catalog::merchants_dockhand());
+    g.clear_sickness(hand);
+    let rings: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::mind_stone())).collect();
+    let cards = g.players[0].hand.len();
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hand,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("dig");
+    drain_stack(&mut g);
+    assert!(rings.iter().all(|&r| g.battlefield_find(r).unwrap().tapped));
+    assert_eq!(g.players[0].hand.len(), cards + 1);
+}

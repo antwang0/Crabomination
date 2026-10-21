@@ -8845,3 +8845,26 @@ pub fn sacred_boon() -> CardDefinition {
         },
     )
 }
+
+/// Merchant's Dockhand — {1} 1/2 artifact creature Construct. {3}{U}, {T}, tap
+/// X untapped artifacts you control: look at the top X cards; put one into
+/// your hand and the rest on the bottom.
+pub fn merchants_dockhand() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            tap_cost: true,
+            tap_n_filter: Some((R::Artifact.and(R::OtherThanSource), 0)),
+            tap_n_x: true,
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                take: Some(Value::ONE),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }],
+        ..creature("Merchant's Dockhand", cost(&[generic(1)]), vec![CreatureType::Construct], 1, 2)
+    }
+}
