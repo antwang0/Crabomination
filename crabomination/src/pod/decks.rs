@@ -132282,3 +132282,85 @@ pub const VHAL_18_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, swamp, swamp,
 ];
+
+pub const BURAKOS_16_COMMANDERS: &[CardFactory] = &[burakos_party_leader, cultist_of_the_absolute];
+
+/// **Burakos, Party Leader and Cultist of the Absolute**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 26 Swamps = 98.
+/// Burakos, Party Leader and Cultist of the Absolute (EDHREC, fetched 2026-10-21).
+pub const BURAKOS_16_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_holding, bontus_monument, charcoal_diamond, dungeon_map, eye_of_vecna,
+    fifty_feet_of_rope, hand_of_vecna, jet_medallion, lantern_of_revealing, multiclass_baldric,
+    sarevoks_tome, sol_ring, swiftfoot_boots, the_book_of_vile_darkness, throne_of_eldraine,
+    trailblazers_torch, baldurs_gate, cabal_coffers, cabal_stronghold, myriad_landscape,
+    treasure_vault, westvale_abbey, witchs_cottage, bloodsoaked_champion, butcher_of_malakir,
+    crypt_ghast, cult_conscript, death_priest_of_myrkul, disciple_of_the_vault, festering_newt,
+    foggy_swamp_hunters, graveblade_marauder, grim_haruspex, grim_hireling, gutterbones,
+    jadar_ghoulcaller_of_nephalia, lo_and_li_twin_tutors, malakir_blood_priest,
+    morbid_opportunist, novice_occultist, priest_of_forgotten_gods, reassembling_skeleton,
+    safana_calimport_cutthroat, skirsdag_high_priest, taborax_hopes_demise, underdark_explorer,
+    valgavoths_faithful, viconia_drow_apostate, voldaren_bloodcaster, zulaport_cutthroat,
+    agent_of_the_iron_throne, black_market, black_market_connections,
+    funeral_room_awakening_hall, open_the_graves, revel_in_riches, dark_ritual, deadly_alliance,
+    deadly_dispute, defile, feign_death, tragic_slip, tevesh_szat_doom_of_fools, coveted_prize,
+    desperate_plea, feed_the_swarm, ruinous_waterbending, scarring_memories, sign_in_blood,
+    thwart_the_grave, torment_of_hailfire,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GALE_20_COMMANDERS: &[CardFactory] = &[gale_waterdeep_prodigy, criminal_past];
+
+/// **Gale, Waterdeep Prodigy and Criminal Past**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 8 Swamps = 98.
+/// Gale, Waterdeep Prodigy and Criminal Past (EDHREC, fetched 2026-10-21).
+pub const GALE_20_MAIN: &[CardFactory] = &[
+    arcane_signet, sol_ring, staff_of_the_mind_magus, cephalid_coliseum, command_tower,
+    contaminated_aquifer, dimir_aqueduct, ice_tunnel, port_of_karfell, restless_reef, rivendell,
+    sunken_hollow, underground_river, watery_grave, abhorrent_oculus, baral_chief_of_compliance,
+    curious_homunculus, daring_apprentice, fallaji_archaeologist, fog_bank, glasspool_mimic,
+    gnawing_vermin, haughty_djinn, kitsa_otterball_elite, laboratory_maniac, malevolent_hermit,
+    mausoleum_wanderer, mercurial_spelldancer, psychic_frog, satoru_the_infiltrator,
+    sea_gate_stormcaller, siren_stormtamer, spellseeker, stitchers_supplier, valley_floodcaller,
+    wizards_of_thay, court_of_cunning, jaces_sanctum, out_of_the_tombs, complete_the_circuit,
+    confounding_riddle, cremate, domineering_will, drag_the_canal, forbidden_alchemy,
+    into_the_flood_maw, mental_note, otherworldly_gaze, psychic_spiral, quicken,
+    run_away_together, see_double, silundi_vision, siphon_insight, split_decision,
+    thought_scour, three_steps_ahead, waterlogged_teachings, jace_memory_adept,
+    breach_the_multiverse, call_of_the_death_dweller, chart_a_course, command_the_dreadhorde,
+    discovery_dispersal, gitaxian_probe, glimpse_the_unthinkable, hard_evidence,
+    haunting_imitation, lively_dirge, nights_whisper, pieces_of_the_puzzle, preordain,
+    reanimate, silver_scrutiny, strategic_planning, unearth, victimize, void_snare,
+    wail_of_the_forgotten,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ANARA_27_COMMANDERS: &[CardFactory] = &[anara_wolvid_familiar, ich_tekik_salvage_splicer];
+
+/// **Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 24 Forests = 98.
+/// Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer (EDHREC, fetched 2026-10-21).
+pub const ANARA_27_MAIN: &[CardFactory] = &[
+    arcane_signet, candy_trail, conversion_chamber, culling_dais, erratic_portal,
+    god_pharaohs_statue, golden_egg, golem_foundry, ichor_wellspring, kaslems_stonetree,
+    mask_of_the_jadecrafter, prized_statue, sol_ring, soul_guide_lantern, spare_supplies,
+    the_mightstone_and_weakstone, throne_of_geth, titan_forge, witchs_oven, buried_ruin,
+    darksteel_citadel, echoing_deeps, fomori_vault, hall_of_tagsin, haunted_fengraf,
+    hidden_nursery, inventors_fair, mystifying_maze, phyrexias_core, temple_of_the_false_god,
+    tree_of_tales, voldaren_estate, ancestral_statue, ancient_stone_idol, bottle_golems,
+    brass_secretary, campus_guide, clay_golem, cradle_clearcutter, darksteel_colossus,
+    fangren_marauder, foundry_inspector, geode_golem, golden_guardian, howling_golem,
+    limestone_golem, lodestone_golem, maelstrom_colossus, myr_retriever, patchwork_automaton,
+    roaming_throne, rootwire_amalgam, sandstorm_salvager, sarinth_steelseeker,
+    syr_ginger_the_meal_ender, teething_wurmlet, tough_cookie, triplicate_titan, vital_splicer,
+    workshop_assistant, omnipresence, puppet_crafting, artisans_sorrow, bind, bite_down,
+    emerald_charm, force_of_vigor, harrow, mirran_mettle, karn_living_legacy, cultivate,
+    fallaji_excavation, rampant_growth, winding_way,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest,
+];

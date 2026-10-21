@@ -28758,6 +28758,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VHAL_18_COMMANDERS,
             main: decks::VHAL_18_MAIN,
         },
+        // Seat 4718: Burakos, Party Leader and Cultist of the Absolute's EDHREC average deck. `--pod-decks 4718`.
+        PodDeck {
+            name: "Burakos, Party Leader and Cultist of the Absolute (B)",
+            commanders: decks::BURAKOS_16_COMMANDERS,
+            main: decks::BURAKOS_16_MAIN,
+        },
+        // Seat 4719: Gale, Waterdeep Prodigy and Criminal Past's EDHREC average deck. `--pod-decks 4719`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Criminal Past (UB)",
+            commanders: decks::GALE_20_COMMANDERS,
+            main: decks::GALE_20_MAIN,
+        },
+        // Seat 4720: Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer's EDHREC average deck. `--pod-decks 4720`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer (G)",
+            commanders: decks::ANARA_27_COMMANDERS,
+            main: decks::ANARA_27_MAIN,
+        },
     ]
 }
 
@@ -35376,6 +35394,9 @@ mod tests {
             ("Ardenn, Intrepid Archaeologist and Siani, Eye of the Storm", &[0x1C81]),
             ("The Fugitive Doctor and Peri Brown", &[0x1C82]),
             ("Vhal, Candlekeep Researcher and Criminal Past", &[0x1C83]),
+            ("Burakos, Party Leader and Cultist of the Absolute", &[0x1C84]),
+            ("Gale, Waterdeep Prodigy and Criminal Past", &[0x1C85]),
+            ("Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer", &[0x1C86]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
