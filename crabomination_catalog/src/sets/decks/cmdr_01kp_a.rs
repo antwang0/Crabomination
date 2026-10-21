@@ -1086,3 +1086,38 @@ pub fn surge_of_salvation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Myra the Magnificent — {2}{U}{R} 2/4 legendary Human Performer. Whenever
+/// you cast an instant or sorcery spell from your hand, open an Attraction
+/// (CR 717). {X}, {T}: exile target instant or sorcery card with mana value X
+/// from your graveyard and choose an Attraction you control without a midway
+/// counter; put one on it, and for as long as it stays on the battlefield,
+/// whenever you visit it, copy the exiled card and you may cast the copy free.
+pub fn myra_the_magnificent() -> CardDefinition {
+    let spell = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Myra the Magnificent",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Performer], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: spell() },
+                Predicate::CastSpellFromHand,
+            ])),
+            effect: Effect::OpenAnAttraction,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            effect: Effect::ExileOntoAttractionWithMidway {
+                what: target_filtered(spell().and(R::InYourGraveyard).and(R::ManaValueExactlyXFromCost)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

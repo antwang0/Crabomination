@@ -692,3 +692,39 @@ fn tivadar_and_lightwielder_paladin_hunt_red() {
     }
     assert!(g.exile.iter().any(|c| c.id == piker), "the red permanent of the damaged player");
 }
+
+/// Myra the Magnificent (CR 717): an instant cast from hand opens an
+/// Attraction; her {X}, {T} exiles Divination onto it with a midway counter,
+/// and visiting it later copies Divination for free.
+#[test]
+fn myra_puts_a_midway_spell_on_an_attraction() {
+    let mut g = pod(2);
+    let myra = ready(&mut g, 0, catalog::myra_the_magnificent());
+    let id = g.next_id();
+    g.players[0].attraction_deck.push(crabomination::card::CardInstance::new(id, catalog::balloon_stand(), 0));
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast_x(&mut g, 0, opt, None, None);
+    let stand = g.battlefield.iter().find(|c| c.definition.name == "Balloon Stand").map(|c| c.id).expect("opened");
+    let div = g.add_card_to_graveyard(0, catalog::divination());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: myra,
+        ability_index: 0,
+        target: Some(Target::Permanent(div)),
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("X = 3");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == div));
+    assert_eq!(g.battlefield_find(stand).unwrap().counter_count(CounterType::Midway), 1);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(2)]));
+    let roll = crabomination::effect::Effect::RollToVisitAttractions;
+    let evs = g.resolve_effect(&roll, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.len() >= hand + 2, "the copied Divination resolved");
+}

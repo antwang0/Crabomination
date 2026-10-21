@@ -19041,6 +19041,7 @@ static DECKS: &[Factory] = &[
     super::decks::justice,
     super::decks::luminesce,
     super::decks::surge_of_salvation,
+    super::decks::myra_the_magnificent,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
