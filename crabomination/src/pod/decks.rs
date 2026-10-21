@@ -135440,3 +135440,29 @@ pub const THE_WASP_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const COUNT_NEFARIA_COMMANDERS: &[CardFactory] = &[count_nefaria];
+
+/// **Count Nefaria**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Count Nefaria (EDHREC, fetched 2026-10-21).
+pub const COUNT_NEFARIA_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, conquerors_galleon, helm_of_the_gods, nettlecyst, sol_ring,
+    unerring_sling, vessel_of_endless_rest, blast_zone, bojuka_bog, desert_of_the_glorified,
+    hidden_grotto, isolated_watchtower, lazotep_quarry, night_market, the_seedcore, urzas_cave,
+    agent_of_erebos, ambush_gigapede, aphemia_the_cacophony, blood_servitor, bushmeat_poacher,
+    demon_of_fates_design, erebos_bleak_hearted, fallen_cleric, fear_of_the_dark, flayed_one,
+    lingering_tormentor, mortivore, phyrexian_marauder, pitiless_plunderer, psychosis_crawler,
+    stuffy_doll, thornplate_intimidator, thoughtrender_lamia, tragic_banshee, void_beckoner,
+    casting_of_bones, consecrated_by_blood, court_of_locthwain, curse_of_disturbance,
+    curse_of_the_restless_dead, dark_privilege, eternal_thirst, fallen_ideal, gift_of_doom,
+    hedonists_trove, kayas_ghostform, mind_slash, nettlevine_blight, palace_siege, phyresis,
+    vampiric_link, culling_the_weak, dark_ritual, deadly_dispute, fanatical_offering,
+    lethal_exploit, renegades_getaway, stench_of_decay, village_rites, bankrupt_in_blood,
+    bloodchiefs_thirst, bone_shards, despoil, doomsday_confluence, feed_the_swarm, gixs_caress,
+    go_blank, mephitic_vapors, morbid_curiosity,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

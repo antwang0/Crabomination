@@ -29436,6 +29436,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_WASP_2_COMMANDERS,
             main: decks::THE_WASP_2_MAIN,
         },
+        // Seat 4831: Count Nefaria's EDHREC average deck. `--pod-decks 4831`.
+        PodDeck {
+            name: "Count Nefaria (B)",
+            commanders: decks::COUNT_NEFARIA_COMMANDERS,
+            main: decks::COUNT_NEFARIA_MAIN,
+        },
     ]
 }
 
@@ -36167,6 +36173,7 @@ mod tests {
             ("Sokka, Wolf Cove's Protector", &[0x1CF2]),
             ("Brawn, Amadeus Cho", &[0x1CF3]),
             ("The Wasp, Winsome Avenger", &[0x1CF4]),
+            ("Count Nefaria", &[0x1CF5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
