@@ -29208,6 +29208,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FOURTEENTH_DOCTOR_9_COMMANDERS,
             main: decks::THE_FOURTEENTH_DOCTOR_9_MAIN,
         },
+        // Seat 4793: The Fifth Doctor and Martha Jones's EDHREC average deck. `--pod-decks 4793`.
+        PodDeck {
+            name: "The Fifth Doctor and Martha Jones (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_12_MAIN,
+        },
     ]
 }
 
@@ -35901,6 +35907,7 @@ mod tests {
             ("Wyll, Blade of Frontiers and Shameless Charlatan", &[0x1CCC]),
             ("Wyll, Blade of Frontiers and Feywild Visitor", &[0x1CCD]),
             ("The Fourteenth Doctor and Yasmin Khan", &[0x1CCE]),
+            ("The Fifth Doctor and Martha Jones", &[0x1CCF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

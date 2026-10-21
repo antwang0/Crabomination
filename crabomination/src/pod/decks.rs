@@ -134371,3 +134371,32 @@ pub const THE_FOURTEENTH_DOCTOR_9_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, mountain, mountain, mountain, mountain, plains,
     plains, plains, plains, plains,
 ];
+
+pub const THE_FIFTH_DOCTOR_12_COMMANDERS: &[CardFactory] = &[the_fifth_doctor, martha_jones];
+
+/// **The Fifth Doctor and Martha Jones**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 16 Islands + 8 Plains = 98.
+/// The Fifth Doctor and Martha Jones (EDHREC, fetched 2026-10-21).
+pub const THE_FIFTH_DOCTOR_12_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, dawnsire_sunstar_dreadnought, guidelight_pathmaker,
+    halo_fountain, invasion_submersible, lumen_class_frigate, magitek_armor, mindlink_mech,
+    prodigys_prototype, smugglers_copter, sol_ring, specimen_freighter, the_eternity_elevator,
+    the_seriema, uthros_research_craft, uthros_scanship, wedgelight_rammer,
+    adagia_windswept_bastion, agna_qela, lonely_arroyo, port_town, prairie_stream,
+    skybridge_towers, temple_of_enlightenment, tranquil_cove, trenzalore_clocktower,
+    uthros_titanic_godcore, ambling_stormshell, bounding_felidar, captain_america_living_legend,
+    crystalline_crawler, dennick_pious_apprentice, deranged_assistant, elite_scaleguard,
+    emeria_shepherd, emry_lurker_of_the_loch, etherium_sculptor, glimmer_seeker,
+    hangarback_walker, invisible_woman_sue_storm, ioreth_of_the_healing_house, kappa_cannoneer,
+    katara_bending_prodigy, mendicant_core_guidelight, oasis_gardener, reluctant_role_model,
+    sai_master_thopterist, sunstar_chaplain, urza_powerstone_prodigy, vedalken_engineer,
+    vega_the_watcher, veteran_survivor, whirler_rogue, zephyr_singer, fall_of_the_thran,
+    intruder_alarm, resourceful_defense, search_the_premises, cancel, dawns_truce,
+    jwari_disruption, moogles_valor, reality_shift, ripples_of_potential, transcendent_message,
+    true_loves_kiss, unbreakable_formation, approach_of_the_second_sun, dance_of_the_manse,
+    day_of_judgment, deep_analysis, destined_confrontation, universal_surveillance,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
