@@ -192,6 +192,10 @@ the handoff.
 - **CLAIMED (`01KPxZ3H`, 2026-10-21) — don't duplicate:** Tetzin's four (Tetzin, Gnome Champion; Chalice of Life; Sunbird
   Standard; Unstable Glyphbridge), Squall's two (Squall, Gunblade Duelist; Duelist's Flame), Captain Rex Nebula's two
   (Captain Rex Nebula; Mysterious Limousine), Satsuki's two (Teachings of the Kirin; Storyweave).
+- **CLAIMED (`01KPxZ3H`, 2026-10-21, second batch) — don't duplicate:** Loot's three (Hyalopterous Lemure, Viscid
+  Lemures, Ray of Enfeeblement), Suki, Kyoshi Captain's three (Paired Tactician, Resplendent Marshal, Rush of Battle),
+  Sokka, Wolf Cove's Protector's three (Agent of Atlas, Reluctant Dounguard, Sun-Dappled Celebrant), Brawn's two
+  (Brawn, Amadeus Cho; Oko, Lorwyn Liege), The Wasp's two (Wasp, Shrinking Savior; Quantum Reduction).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
