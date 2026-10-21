@@ -506,3 +506,36 @@ fn cr_712_elusive_tormentor_becomes_insidious_mist() {
     assert_eq!(cp.def.name, "Insidious Mist");
     assert!(cp.keywords().contains(&Keyword::Indestructible) && cp.keywords().contains(&Keyword::Unblockable));
 }
+
+/// CR 702.167a/c — Eye of Ojer Taq crafts with two graveyard sorceries; Apex
+/// Observatory enters tapped naming Sorcery, and its grant casts the next
+/// sorcery for nothing (spent by that cast).
+#[test]
+fn cr_702_167_eye_of_ojer_taq_crafts_on_a_shared_type() {
+    let mut g = pod(2);
+    let eye = g.add_card_to_battlefield(0, catalog::eye_of_ojer_taq());
+    g.add_card_to_graveyard(0, catalog::divination());
+    g.add_card_to_graveyard(0, catalog::divination());
+    g.add_card_to_graveyard(0, catalog::opt());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility { card_id: eye, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("craft");
+    drain_stack(&mut g);
+    let apex = g.battlefield_find(eye).expect("returned transformed");
+    assert_eq!(apex.definition.name, "Apex Observatory");
+    assert!(apex.tapped, "it enters tapped");
+    assert_eq!(apex.chosen_card_type, Some(CardType::Sorcery), "Opt's Instant is not shared");
+    assert_eq!(g.players[0].graveyard.len(), 1, "two Divinations exiled, Opt kept");
+    g.battlefield_find_mut(eye).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility { card_id: eye, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("grant");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.empty();
+    let div = g.add_card_to_hand(0, catalog::divination());
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("free cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cast for free and resolved");
+    assert!(g.players[0].free_next_spell_types.is_empty(), "the grant is spent");
+}

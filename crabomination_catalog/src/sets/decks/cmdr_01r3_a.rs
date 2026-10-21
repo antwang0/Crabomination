@@ -7,7 +7,9 @@ use crate::card::{
     MayPlayDuration, Prototype, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Zone,
 };
-use crate::effect::shortcut::{craft, freerunning, magecraft, partner_with_search, support, target_filtered};
+use crate::effect::shortcut::{
+    craft, craft_sharing_type, freerunning, magecraft, partner_with_search, support, target_filtered,
+};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LibraryPosition, LookExileGrant, PlayerRef, Predicate, Selector, Value,
     ZoneDest,
@@ -1014,6 +1016,37 @@ pub fn jesters_scepter() -> CardDefinition {
             ]),
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Eye of Ojer Taq // Apex Observatory — {3} artifact: {T}: add one mana of any
+/// color; craft with two that share a card type {6} (CR 702.167a). Apex
+/// Observatory enters tapped; as it enters, choose a card type shared among
+/// two exiled cards used to craft it. {T}: the next spell you cast this turn of
+/// the chosen type can be cast without paying its mana cost.
+pub fn eye_of_ojer_taq() -> CardDefinition {
+    let apex = CardDefinition {
+        name: "Apex Observatory",
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        as_enters_effect: Some(Effect::ChooseCardTypeSharedByExiledWithSource),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::NextSpellOfSourceChosenTypeFreeThisTurn,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Eye of Ojer Taq",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![crate::sets::tap_add_any_color(), craft_sharing_type(cost(&[generic(6)]), 2)],
+        back_face: Some(Box::new(apex)),
         ..Default::default()
     }
 }

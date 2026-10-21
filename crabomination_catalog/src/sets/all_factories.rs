@@ -18984,6 +18984,7 @@ static DECKS: &[Factory] = &[
     super::decks::visions_of_duplicity,
     super::decks::soulblade_renewer,
     super::decks::jesters_scepter,
+    super::decks::eye_of_ojer_taq,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
