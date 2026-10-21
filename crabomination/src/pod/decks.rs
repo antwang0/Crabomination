@@ -134400,3 +134400,84 @@ pub const THE_FIFTH_DOCTOR_12_MAIN: &[CardFactory] = &[
     island, island, island, island, island, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const VHAL_20_COMMANDERS: &[CardFactory] = &[vhal_candlekeep_researcher, cloakwood_hermit];
+
+/// **Vhal, Candlekeep Researcher and Cloakwood Hermit**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 8 Forests + 14 Islands = 98.
+/// Vhal, Candlekeep Researcher and Cloakwood Hermit (EDHREC, fetched 2026-10-21).
+pub const VHAL_20_MAIN: &[CardFactory] = &[
+    basalt_monolith, clock_of_omens, colossus_hammer, combine_chrysalis, god_pharaohs_statue,
+    nuisance_engine, ring_of_evos_isle, rocket_launcher, senseis_divining_top, skullclamp,
+    sol_ring, swashbucklers_whip, umbral_mantle, arcane_lighthouse, command_tower, coral_atoll,
+    crystal_vein, evolving_wilds, forge_of_heroes, hidden_grotto, ice_floe, lonely_sandbar,
+    maze_of_ith, myriad_landscape, reliquary_tower, simic_growth_chamber, tranquil_thicket,
+    underdark_rift, aphetto_alchemist, arbor_elf, caelorna_coral_tyrant, containment_construct,
+    deadeye_quartermaster, elvish_mystic, fog_bank, guard_gomazoa, gyre_engineer,
+    imperious_perfect, kioras_follower, knights_of_dol_amroth, loyal_inventor,
+    omarthis_ghostfire_initiate, oneirophage, padeem_consul_of_innovation, phantasmal_dragon,
+    priest_of_titania, star_whale, tangled_florahedron, transit_mage, tribute_mage,
+    trinket_mage, trophy_mage, voltaic_construct, zahid_djinn_of_the_lamp, encrust,
+    freed_from_the_real, pemmins_aura, power_artifact, presence_of_gond, propaganda,
+    rhystic_study, sugar_coat, collective_resistance, counterspell, force_of_will,
+    lifecraft_awakening, mana_drain, mana_leak, mirror_match, natures_claim,
+    rapid_hybridization, argivian_restoration, contentious_plan, fabricate,
+    irenicuss_vile_duplication, monstrous_onslaught,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const ALENA_33_COMMANDERS: &[CardFactory] = &[alena_kessig_trapper, falthis_shadowcat_familiar];
+
+/// **Alena, Kessig Trapper and Falthis, Shadowcat Familiar**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Mountains + 8 Swamps = 98.
+/// Alena, Kessig Trapper and Falthis, Shadowcat Familiar (EDHREC, fetched 2026-10-21).
+pub const ALENA_33_MAIN: &[CardFactory] = &[
+    arcane_signet, barrow_blade, blazing_sunsteel, commanders_sphere, genji_glove, gilded_lotus,
+    lightning_greaves, rakdos_signet, slayers_plate, sol_ring, spidersilk_net, swiftfoot_boots,
+    talisman_of_indulgence, bloodfell_caves, command_tower, dragonskull_summit, evolving_wilds,
+    exotic_orchard, foreboding_ruins, graven_cairns, molten_slagheap, myriad_landscape,
+    rakdos_carnarium, reliquary_tower, shadowblood_ridge, smoldering_marsh, tainted_peak,
+    temple_of_malice, terramorphic_expanse, vault_of_whispers, ahriman, archfiend_of_depravity,
+    bilious_skulldweller, blazing_bomb, brash_taunter, drakuseth_maw_of_flames,
+    kardur_doomscourge, rakshasa_debaser, scheming_silvertongue, sepulchral_primordial,
+    sinister_gnarlbark, storm_kiln_artist, summon_primal_odin, tree_of_perdition, tsabo_tavoc,
+    tyrants_familiar, vampire_nighthawk, visara_the_dreadful, yargle_glutton_of_urborg,
+    aspect_of_lamprey, braidss_frightful_return, changing_loyalty, dictate_of_the_twin_gods,
+    firebreathing, origin_of_thor, skeletal_grimace, sunbirds_invocation, abrade, chaos_warp,
+    dark_ritual, kor_dirge, lightning_bolt, rakdos_charm, return_the_favor, seething_song,
+    terminate, thunderbolt, beacon_of_unrest, blasphemous_act, bloodsoaked_insight,
+    chain_reaction, corpse_explosion, faithless_looting, fiery_confluence, mana_geyser,
+    pillar_of_flame, profane_command, shattering_spree,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KEDISS_16_COMMANDERS: &[CardFactory] = &[kediss_emberclaw_familiar, tormod_the_desecrator];
+
+/// **Kediss, Emberclaw Familiar and Tormod, the Desecrator**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Mountains + 10 Swamps = 98.
+/// Kediss, Emberclaw Familiar and Tormod, the Desecrator (EDHREC, fetched 2026-10-21).
+pub const KEDISS_16_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, nim_deathmantle, rakdos_signet, scroll_rack, sol_ring,
+    the_one_ring, whip_of_erebos, badlands, blackcleave_cliffs, blood_crypt, bojuka_bog,
+    command_tower, dragonskull_summit, graven_cairns, raucous_theater, wooded_foothills,
+    boggart_trawler, combustible_gearhulk, decadent_dragon, etali_primal_storm, foulmire_knight,
+    grenzo_havoc_raiser, grim_hireling, inti_seneschal_of_the_sun, manaforge_cinder,
+    murderous_rider, ob_nixilis_captive_kingpin, party_thrasher, professional_face_breaker,
+    prosper_tome_bound, ragavan_nimble_pilferer, rev_tithe_extractor, robber_of_the_rich,
+    urabrask_heretic_praetor, vault_skirge, vito_thorn_of_the_dusk_rose, count_on_luck,
+    deadly_wanderings, dragon_mantle, mindmoil, passionate_archaeologist, stolen_strategy,
+    alchemists_gift, balduvian_rage, chaos_warp, deadly_rollick, expedite, faithless_salvaging,
+    fell_the_profane, fling, grotesque_mutation, hatred, rakdos_charm, rush_of_vitality,
+    thrill_of_possibility, unexpected_windfall, chandra_fire_artisan, chandra_torch_of_defiance,
+    agadeems_awakening, blasphemous_edict, browbeat, crash_through, demonic_tutor,
+    diabolic_tutor, essence_infusion, faithless_looting, feed_the_swarm, head_games,
+    jeskas_will, magmatic_insight, molten_psyche, monastery_raid, petty_larceny,
+    rousing_refrain, shatterskull_smashing, unbreakable_bond,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -29214,6 +29214,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIFTH_DOCTOR_12_COMMANDERS,
             main: decks::THE_FIFTH_DOCTOR_12_MAIN,
         },
+        // Seat 4794: Vhal, Candlekeep Researcher and Cloakwood Hermit's EDHREC average deck. `--pod-decks 4794`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Cloakwood Hermit (UG)",
+            commanders: decks::VHAL_20_COMMANDERS,
+            main: decks::VHAL_20_MAIN,
+        },
+        // Seat 4795: Alena, Kessig Trapper and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 4795`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Falthis, Shadowcat Familiar (BR)",
+            commanders: decks::ALENA_33_COMMANDERS,
+            main: decks::ALENA_33_MAIN,
+        },
+        // Seat 4796: Kediss, Emberclaw Familiar and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4796`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Tormod, the Desecrator (BR)",
+            commanders: decks::KEDISS_16_COMMANDERS,
+            main: decks::KEDISS_16_MAIN,
+        },
     ]
 }
 
@@ -35908,6 +35926,9 @@ mod tests {
             ("Wyll, Blade of Frontiers and Feywild Visitor", &[0x1CCD]),
             ("The Fourteenth Doctor and Yasmin Khan", &[0x1CCE]),
             ("The Fifth Doctor and Martha Jones", &[0x1CCF]),
+            ("Vhal, Candlekeep Researcher and Cloakwood Hermit", &[0x1CD0]),
+            ("Alena, Kessig Trapper and Falthis, Shadowcat Familiar", &[0x1CD1]),
+            ("Kediss, Emberclaw Familiar and Tormod, the Desecrator", &[0x1CD2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
