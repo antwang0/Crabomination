@@ -18418,6 +18418,10 @@ static DECKS: &[Factory] = &[
     super::decks::crossroads_watcher,
     super::decks::militias_pride,
     super::decks::eclipsed_kithkin,
+    super::decks::aegar_the_freezing_flame,
+    super::decks::giants_amulet,
+    super::decks::battle_of_frost_and_fire,
+    super::decks::invasion_of_the_giants,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

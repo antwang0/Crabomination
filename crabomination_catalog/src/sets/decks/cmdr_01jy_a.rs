@@ -2,7 +2,7 @@
 //! `tests/recent_b/cmdr_01jy_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, EnchantmentSubtype, EquipBonus, LoyaltyAbility, PlaneswalkerSubtype, Supertype, Zone, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, ConditionalEquipBonus, EnchantmentSubtype, EquipBonus, LoyaltyAbility, PlaneswalkerSubtype, Supertype, Zone, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{draw, etb, on_attack, partner_with_search, pump_target, target_filtered};
@@ -1776,4 +1776,153 @@ pub fn eclipsed_kithkin() -> CardDefinition {
         })))],
         ..creature("Eclipsed Kithkin", cost(&[gw(), gw()]), vec![CreatureType::Kithkin, CreatureType::Scout], 2, 1)
     }
+}
+
+/// Aegar, the Freezing Flame — {1}{U}{R} legendary 3/3 Giant Wizard. Whenever
+/// a creature or planeswalker an opponent controls is dealt excess damage
+/// (CR 120.10 / 120.4a, combat or not), if a Giant, Wizard or spell you
+/// controlled dealt damage to it this turn, draw a card.
+pub fn aegar_the_freezing_flame() -> CardDefinition {
+    // A resolved spell sits in its owner's graveyard by the time the event
+    // dispatches, past any "controlled" read: the caster of an instant or
+    // sorcery is its owner bar a stolen cast.
+    let mine = R::HasCreatureType(CreatureType::Giant)
+        .or(R::HasCreatureType(CreatureType::Wizard))
+        .and(R::ControlledByYou)
+        .or(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::OwnedByYou));
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtExcessDamage { noncombat_only: false }, EventScope::OpponentControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.or(R::Planeswalker).and(R::DamagedThisTurnByMatching(Box::new(mine))),
+                },
+            ),
+            effect: draw(1),
+        }],
+        ..creature(
+            "Aegar, the Freezing Flame",
+            cost(&[generic(1), u(), r()]),
+            vec![CreatureType::Giant, CreatureType::Wizard],
+            3,
+            3,
+        )
+    }
+}
+
+/// Giant's Amulet — {U} Equipment, equip {2}. Entering, you may pay {3}{U}
+/// for a 4/4 blue Giant Wizard token, then attach this Equipment to it.
+/// Equipped creature gets +0/+1 and has hexproof as long as it's untapped.
+pub fn giants_amulet() -> CardDefinition {
+    let giant = TokenDefinition {
+        name: "Giant Wizard".into(),
+        power: 4,
+        toughness: 4,
+        colors: vec![Color::Blue],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant, CreatureType::Wizard], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Giant's Amulet",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            toughness: 1,
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::Untapped,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Hexproof],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::MayPay {
+            description: "Pay {3}{U} for a 4/4 Giant Wizard wearing Giant's Amulet?".into(),
+            mana_cost: cost(&[generic(3), u()]),
+            body: Box::new(Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(giant) },
+                Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            ])),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
+
+fn saga(name: &'static str, mana: ManaCost, chapters: Vec<(u32, Effect)>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: chapters,
+        ..Default::default()
+    }
+}
+
+/// Battle of Frost and Fire — {3}{U}{R} Saga. I: 4 damage to each non-Giant
+/// creature and each planeswalker. II: scry 3. III: whenever you cast a spell
+/// with mana value 5 or greater this turn, draw two cards, then discard a card.
+pub fn battle_of_frost_and_fire() -> CardDefinition {
+    let victims = R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Giant)))).or(R::Planeswalker);
+    saga(
+        "Battle of Frost and Fire",
+        cost(&[generic(3), u(), r()]),
+        vec![
+            (1, Effect::DealDamage { to: Selector::EachPermanent(victims), amount: Value::Const(4) }),
+            (2, Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) }),
+            (
+                3,
+                Effect::OnEachSpellCastThisTurn {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ManaValueAtLeast(5) },
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ),
+        ],
+    )
+}
+
+/// Invasion of the Giants — {U}{R} Saga. I: scry 2. II: draw a card, then you
+/// may reveal a Giant card from your hand; when you do, 2 damage to target
+/// opponent or planeswalker. III: the next Giant spell you cast this turn
+/// costs {2} less.
+pub fn invasion_of_the_giants() -> CardDefinition {
+    let giant = || R::HasCreatureType(CreatureType::Giant);
+    saga(
+        "Invasion of the Giants",
+        cost(&[u(), r()]),
+        vec![
+            (1, Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            (
+                2,
+                Effect::Seq(vec![
+                    draw(1),
+                    // CR 603.7 — the reflexive trigger targets once the
+                    // reveal is made.
+                    Effect::IfRevealFromHand {
+                        filter: giant(),
+                        then: Box::new(Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::DealDamage {
+                                to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)),
+                                amount: Value::Const(2),
+                            }),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            ),
+            (3, Effect::GrantNextMatchingSpellDiscountThisTurn { filter: giant(), amount: 2 }),
+        ],
+    )
 }

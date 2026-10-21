@@ -1,7 +1,7 @@
 //! Commander: the 2026-10-21 (`01Jywzky`) pair-deck closers
 //! (`decks::cmdr_01jy_a`) and the primitives they need.
 
-use crabomination::card::{CardId, Keyword};
+use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -832,4 +832,160 @@ fn thoughtweft_imbuer_pumps_a_lone_attacker() {
     let farmer = g.add_card_to_battlefield(0, catalog::wary_farmer());
     attack_with(&mut g, &[farmer]);
     assert_eq!(pt(&g, farmer), (5, 5), "two Kithkin: +2/+2");
+}
+
+/// Aegar draws when an opponent's creature is dealt excess damage (CR 120.10)
+/// by a spell or a Giant/Wizard its controller controlled — combat damage
+/// included — but not on exactly lethal damage, nor on an opponent's spell.
+#[test]
+fn aegar_draws_on_excess_from_its_own_side() {
+    let mut g = pod(3);
+    let aegar = g.add_card_to_battlefield(0, catalog::aegar_the_freezing_flame());
+    let hand = |g: &GameState| g.players[0].hand.len();
+    // Lightning Bolt (an instant you control) at a 2/2: one excess, a draw.
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let before = hand(&g);
+    cast_as(&mut g, 0, bolt, Some(Target::Permanent(bears)));
+    drain_stack(&mut g);
+    assert_eq!(hand(&g), before, "bolt left the hand, the draw replaced it");
+    // Shock at a 2/2 is exactly lethal: no excess.
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    let before = hand(&g);
+    cast_as(&mut g, 0, shock, Some(Target::Permanent(bears)));
+    drain_stack(&mut g);
+    assert_eq!(hand(&g), before - 1);
+    // Another opponent's Bolt: the damage wasn't Aegar's side's.
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(2, catalog::lightning_bolt());
+    let before = hand(&g);
+    cast_as(&mut g, 2, bolt, Some(Target::Permanent(bears)));
+    drain_stack(&mut g);
+    assert_eq!(hand(&g), before);
+    // CR 120.4a — Bolt at a 2-loyalty planeswalker: one excess, a draw.
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    g.battlefield_find_mut(jace).unwrap().counters.insert(CounterType::Loyalty, 2);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let before = hand(&g);
+    cast_as(&mut g, 0, bolt, Some(Target::Permanent(jace)));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(jace).is_none());
+    assert_eq!(hand(&g), before);
+    // Combat: Aegar (a Giant) blocked by a 2/1 deals one excess.
+    let lions = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    g.clear_sickness(aegar);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: aegar, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(lions, aegar)])).expect("block");
+    drain_stack(&mut g);
+    let before = hand(&g);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(lions).is_none());
+    assert_eq!(hand(&g), before + 1);
+}
+
+fn lore(g: &mut GameState, saga: CardId) {
+    let add = crabomination::effect::Effect::AddCounter {
+        what: crabomination::effect::Selector::ExactObjects(vec![saga]),
+        kind: CounterType::Lore,
+        amount: crabomination::card::Value::ONE,
+    };
+    let evs = g.resolve_effect(&add, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// Giant's Amulet's paid ETB makes a 4/4 Giant Wizard wearing it: 4/5, and
+/// hexproof only while untapped.
+#[test]
+fn giants_amulet_dresses_its_giant() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let amulet = g.add_card_to_hand(0, catalog::giants_amulet());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    cast_as(&mut g, 0, amulet, None);
+    drain_stack(&mut g);
+    let giant = g.battlefield.iter().find(|c| c.definition.name == "Giant Wizard").map(|c| c.id).expect("token");
+    assert_eq!(g.battlefield_find(amulet).unwrap().attached_to, Some(giant));
+    assert_eq!(pt(&g, giant), (4, 5));
+    assert!(g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Hexproof));
+    g.battlefield_find_mut(giant).unwrap().tapped = true;
+    assert!(!g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Hexproof));
+}
+
+/// Battle of Frost and Fire: I spares Giants and kills the rest (planeswalkers
+/// too); III loots twice-over on each spell of mana value 5+ this turn.
+#[test]
+fn battle_of_frost_and_fire_spares_giants_and_rewards_big_spells() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aegar = g.add_card_to_battlefield(1, catalog::aegar_the_freezing_flame());
+    let jace = g.add_card_to_battlefield(1, catalog::jace_beleren());
+    let battle = g.add_card_to_hand(0, catalog::battle_of_frost_and_fire());
+    cast_as(&mut g, 0, battle, None);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+    assert!(g.battlefield_find(jace).is_none());
+    assert!(g.battlefield_find(aegar).is_some(), "a Giant is spared");
+    lore(&mut g, battle);
+    lore(&mut g, battle);
+    // A cheap spell draws nothing; a five-drop draws two and discards one.
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    let hand = g.players[0].hand.len();
+    cast_as(&mut g, 0, shock, Some(Target::Player(1)));
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1);
+    let big = g.add_card_to_hand(0, catalog::battle_of_frost_and_fire());
+    let hand = g.players[0].hand.len();
+    let yard = g.players[0].graveyard.len();
+    cast_as(&mut g, 0, big, None);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2 - 1);
+    assert!(g.players[0].graveyard.len() > yard);
+}
+
+/// Invasion of the Giants: II reveals a Giant for 2 to an opponent; III makes
+/// only the NEXT Giant spell {2} cheaper — a non-Giant cast passes it by.
+#[test]
+fn invasion_of_the_giants_pings_and_discounts_the_next_giant() {
+    let mut g = pod(2);
+    let saga = g.add_card_to_battlefield(0, catalog::invasion_of_the_giants());
+    let first = g.add_card_to_hand(0, catalog::aegar_the_freezing_flame());
+    let life = g.players[1].life;
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 1);
+    lore(&mut g, saga);
+    assert_eq!(g.players[1].life, life - 2);
+    lore(&mut g, saga);
+    // A Shock between doesn't spend the grant.
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast_as(&mut g, 0, shock, Some(Target::Player(1)));
+    drain_stack(&mut g);
+    // {1}{U}{R} less {2}: {U}{R} pays for Aegar.
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: first, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("discounted Giant");
+    drain_stack(&mut g);
+    // Spent: the next Giant pays full price.
+    let second = g.add_card_to_hand(0, catalog::aegar_the_freezing_flame());
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: second, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err()
+    );
 }
