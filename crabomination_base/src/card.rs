@@ -2079,6 +2079,11 @@ pub enum Keyword {
     /// Suspend accelerant (Deep-Sea Kraken): while this card is suspended,
     /// remove a time counter from it whenever an opponent casts a spell.
     SuspendAccelerant,
+    /// CR 702.132 — Assist: "another player can pay up to [N] of this spell's
+    /// generic cost." No seat is offered the payment: in a free-for-all pod
+    /// every opponent declining is a legal (and the bots') choice, so the
+    /// caster always pays the full cost (INCOMPLETE_CARDS).
+    Assist,
     Convoke,
     /// CR 702.126 — Improvise: artifacts you control can help cast this
     /// spell (each tapped artifact pays {1}). Rides the Convoke cast path

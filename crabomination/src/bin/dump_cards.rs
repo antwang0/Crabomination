@@ -73,6 +73,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Undying => "Undying",
         Keyword::Cascade => "Cascade",
         Keyword::Epic => "Epic",
+        Keyword::Assist => "Assist",
         Keyword::Convoke => "Convoke",
         Keyword::Improvise => "Improvise",
         Keyword::TapCreaturesForGeneric => "Tap creatures for {1} each",
