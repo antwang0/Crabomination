@@ -29358,6 +29358,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALHARU_31_COMMANDERS,
             main: decks::ALHARU_31_MAIN,
         },
+        // Seat 4818: Anara, Wolvid Familiar and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 4818`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Rebbec, Architect of Ascension (WG)",
+            commanders: decks::ANARA_29_COMMANDERS,
+            main: decks::ANARA_29_MAIN,
+        },
     ]
 }
 
@@ -36076,6 +36082,7 @@ mod tests {
             ("Breeches, Brazen Plunderer and Radiant, Serra Archangel", &[0x1CE5]),
             ("Glacian, Powerstone Engineer and Ludevic, Necro-Alchemist", &[0x1CE6]),
             ("Alharu, Solemn Ritualist and Bruse Tarl, Boorish Herder", &[0x1CE7]),
+            ("Anara, Wolvid Familiar and Rebbec, Architect of Ascension", &[0x1CE8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -135072,3 +135072,30 @@ pub const ALHARU_31_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ANARA_29_COMMANDERS: &[CardFactory] = &[anara_wolvid_familiar, rebbec_architect_of_ascension];
+
+/// **Anara, Wolvid Familiar and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 7 Forests + 21 Plains = 98.
+/// Anara, Wolvid Familiar and Rebbec, Architect of Ascension (EDHREC, fetched 2026-10-21).
+pub const ANARA_29_MAIN: &[CardFactory] = &[
+    animation_module, arcane_signet, argent_dais, commanders_sphere, darksteel_reactor,
+    eye_of_ojer_taq, fabrication_foundry, hedge_shredder, hedron_archive, inspiring_statuary,
+    lightning_greaves, liquimetal_coating, lumbering_worldwagon, nyami_class_mother_ship,
+    norns_annex, perpetual_timepiece, royal_talon_fighter_jet, salvation_engine,
+    selesnya_signet, sol_ring, swiftfoot_boots, thousand_moons_smithy, thunderous_velocipede,
+    vibranium_mining_mech, adagia_windswept_bastion, ancient_den, darksteel_citadel,
+    inventors_fair, power_depot, scene_of_the_crime, thornglint_bridge, tree_of_tales,
+    autonomous_assembler, brightglass_gearhulk, bronze_guardian, darksteel_angel,
+    digsite_engineer, ethersworn_canonist, foundry_inspector, gandalf_the_white, haywire_mite,
+    indomitable_archangel, ironsoul_enforcer, jhoiras_familiar, lion_sash, metallurgeon,
+    meteor_golem, oviya_pashiri_sage_lifecrafter, panther_robot, solemn_simulacrum,
+    surge_conductor, twitching_doll, elspeth_conquers_death, hannas_custody, skrelvs_hive,
+    swift_reconfiguration, dispatch, gideons_sacrifice, path_to_exile, reprieve, snakeskin_veil,
+    swords_to_plowshares, karn_living_legacy, karn_the_great_creator, abuelos_awakening,
+    austere_command, brilliant_restoration, farewell, late_to_dinner, soulscour,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
