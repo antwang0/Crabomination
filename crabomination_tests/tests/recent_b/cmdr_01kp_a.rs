@@ -1,7 +1,8 @@
 //! Commander: the 2026-10-21 (`01KPxZ3H`) single-commander closers
 //! (`decks::cmdr_01kp_a`).
 
-use crabomination::card::{CardDefinition, CardId, Keyword};
+use crabomination::card::{ArtifactSubtype, CardDefinition, CardId, CardType, Keyword};
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::catalog;
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -120,4 +121,78 @@ fn duelists_flame_pumps_a_blocked_creature_and_casts_off_its_damage() {
     assert_eq!(g.players[0].hand.len(), hand + 2, "Divination was cast free");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == div));
     assert_eq!(g.players[0].library.len(), 1, "two drawn, the rest bottomed");
+}
+
+fn rex_trigger(g: &mut GameState, rex: CardId, target: CardId) {
+    let fx = catalog::captain_rex_nebula().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(rex, 0, Some(Target::Permanent(target)), 0);
+    let evs = g.resolve_effect(&fx, &ctx).expect("rex");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// Captain Rex Nebula (2022 ruling): the target loses its card types and
+/// creature types, becomes a Vehicle artifact with base P/T its mana value and
+/// crew 2; crewing it adds Creature but no creature types back; it all ends at
+/// cleanup (CR 514.2).
+#[test]
+fn rex_nebula_turns_a_permanent_into_a_crewable_mana_value_vehicle() {
+    let mut g = pod(2);
+    let rex = ready(&mut g, 0, catalog::captain_rex_nebula());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    rex_trigger(&mut g, rex, giant);
+    let cp = g.computed_permanent(giant).unwrap();
+    assert_eq!(cp.card_types(), &[CardType::Artifact], "no longer a creature");
+    assert_eq!(cp.subtypes().artifact_subtypes, vec![ArtifactSubtype::Vehicle]);
+    assert!(cp.subtypes().creature_types.is_empty(), "loses Giant");
+    g.perform_action(GameAction::Crew { vehicle: giant, crew_creatures: vec![rex] }).expect("crew 2");
+    let cp = g.computed_permanent(giant).unwrap();
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Artifact));
+    assert!(cp.subtypes().creature_types.is_empty(), "crewing doesn't bring Giant back");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "base P/T = mana value 4");
+    g.do_cleanup(&mut vec![]);
+    let cp = g.computed_permanent(giant).unwrap();
+    assert_eq!(cp.card_types(), &[CardType::Creature]);
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// Crash Land: the Vehicle deals combat damage, the d6 comes up equal to its
+/// mana value, so it is sacrificed and then deals that much damage.
+#[test]
+fn rex_nebula_crash_land_sacrifices_on_its_mana_value() {
+    let mut g = pod(2);
+    let rex = ready(&mut g, 0, catalog::captain_rex_nebula());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    rex_trigger(&mut g, rex, bears);
+    g.perform_action(GameAction::Crew { vehicle: bears, crew_creatures: vec![rex] }).expect("crew 2");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(2)]));
+    let life = g.players[1].life;
+    attack(&mut g, 0, &[(bears, 1)]);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bears), "sacrificed on a 2");
+    assert_eq!(g.players[1].life, life - 4, "2 combat + 2 crash");
+}
+
+/// Mysterious Limousine: each entry/attack exiles a creature until it leaves
+/// (CR 610.3) and swaps the previous one back; when it leaves, the last one
+/// returns too.
+#[test]
+fn mysterious_limousine_swaps_its_prisoner_and_frees_it_on_leaving() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let limo = g.add_card_to_hand(0, catalog::mysterious_limousine());
+    cast_x(&mut g, 0, limo, None, None);
+    assert!(g.exile.iter().any(|c| c.id == bears), "the ETB took the only other creature");
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let fx = catalog::mysterious_limousine().triggered_abilities[1].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(limo, 0, Some(Target::Permanent(giant)), 0);
+    g.resolve_effect(&fx, &ctx).expect("swap");
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    assert!(g.battlefield_find(bears).is_some(), "the old prisoner came back");
+    let destroy = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![limo]) };
+    g.resolve_effect(&destroy, &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0)).expect("destroy");
+    assert!(g.battlefield_find(giant).is_some(), "freed when the Limousine left");
 }
