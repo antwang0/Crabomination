@@ -935,6 +935,7 @@ impl Effect {
             Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
             Effect::LoseUnspentMana { who } => player_has_target(who),
             Effect::SetArtifactSubtypes { what, .. } => sel_has_target(what),
+            Effect::SpellsCostMoreThisTurn { who, .. } => player_has_target(who),
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop

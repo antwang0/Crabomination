@@ -1829,6 +1829,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
     if state.players[caster].first_spell_tax_charges > 0 {
         tax += 1;
     }
+    tax += state.players[caster].spell_tax_this_turn;
     // "Costs {N} more if it targets a [filter]" (Vanish into Eternity).
     if let Some((filter, n)) = &card.definition.cost_increase_if_targets
         && let Some(t) = target

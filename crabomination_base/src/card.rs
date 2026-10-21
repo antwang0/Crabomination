@@ -9447,6 +9447,10 @@ pub struct CardCold {
     /// instant or sorcery was cast: it is exiled with that permanent as it
     /// resolves (`game/absorb.rs`).
     pub absorbed_by: Option<CardId>,
+    /// CR 702.82 — the creatures this permanent devoured as it entered, as
+    /// they last existed (Voracious Dragon's "twice the number of Goblins it
+    /// devoured"). Cleared as it leaves the battlefield. In-memory only.
+    pub devoured: Vec<CardInstance>,
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.

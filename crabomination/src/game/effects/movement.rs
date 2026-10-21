@@ -3598,6 +3598,9 @@ impl GameState {
             if !c.granted_statics.is_empty() {
                 c.granted_statics.clear();
             }
+            if !c.devoured.is_empty() {
+                c.devoured.clear();
+            }
             if !c.granted_activated_abilities.is_empty()
                 || !c.granted_activated_eot.is_empty()
                 || !c.exhausted_abilities.is_empty()

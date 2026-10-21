@@ -1172,6 +1172,11 @@ pub struct PlayerData {
     /// (Case of the Gorgon's Kiss).
     #[serde(default)]
     pub creature_cards_to_graveyard_this_turn: u32,
+    /// Generic mana every spell this player casts costs more this turn —
+    /// Academy Loremaster's "spells they cast this turn cost {2} more".
+    /// Reset for every seat at the turn boundary.
+    #[serde(default)]
+    pub spell_tax_this_turn: u32,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -1984,6 +1989,7 @@ impl Player {
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,
+            spell_tax_this_turn: 0,
             graveyard_ids_this_turn: Default::default(),
             milled_ids_this_turn: Default::default(),
             instants_or_sorceries_cast_this_turn: 0,

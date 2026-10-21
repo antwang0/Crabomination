@@ -1229,6 +1229,9 @@ pub enum Value {
     /// cast provenance (`CardInstance.cast_mana_spent_by_color`) — Clay
     /// Champion's "for each {G}{G} spent to cast it". 0 when it wasn't cast.
     SourceCastManaOfColor(crate::mana::Color),
+    /// CR 702.82 — the creatures the source devoured that match the filter,
+    /// read as they last existed (Voracious Dragon's Goblins).
+    DevouredMatching(crate::card::SelectionRequirement),
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),
@@ -14363,6 +14366,10 @@ pub enum Effect {
     /// subtypes from now on — "it isn't an Equipment" (Dancing Sword), an
     /// indefinite layer-4 rewrite.
     SetArtifactSubtypes { what: Selector, subtypes: Vec<crate::card::ArtifactSubtype> },
+    /// "Spells [who] casts this turn cost {`amount`} more to cast" (Academy
+    /// Loremaster) — `Player.spell_tax_this_turn`, cleared at the turn
+    /// boundary.
+    SpellsCostMoreThisTurn { who: PlayerRef, amount: u32 },
 
     AnyPlayerMayAccept {
         who: PlayerRef,

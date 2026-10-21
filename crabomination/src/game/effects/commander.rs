@@ -933,12 +933,18 @@ impl GameState {
                 })
                 .collect()
         };
-        let mut devoured = 0u32;
+        let mut eaten = Vec::new();
         for id in chosen {
-            if self.battlefield_find(id).is_some() {
+            if let Some(c) = self.battlefield_find(id).cloned() {
                 self.sacrifice_one(id, ctrl, events);
-                devoured += 1;
+                eaten.push(c);
             }
+        }
+        let devoured = eaten.len() as u32;
+        if !eaten.is_empty()
+            && let Some(me) = self.battlefield_find_mut(cid)
+        {
+            me.devoured = eaten;
         }
         let n = if per == 0 { devoured * devoured } else { devoured * per };
         if n == 0 {

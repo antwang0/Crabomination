@@ -5348,6 +5348,7 @@ impl GameState {
             }
             pl.cards_to_graveyard_this_turn = 0;
             pl.creature_cards_to_graveyard_this_turn = 0;
+            pl.spell_tax_this_turn = 0;
             pl.graveyard_ids_this_turn.clear();
             if !pl.milled_ids_this_turn.is_empty() {
                 pl.milled_ids_this_turn.clear();

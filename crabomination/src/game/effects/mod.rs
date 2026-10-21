@@ -24768,6 +24768,13 @@ impl GameState {
                 self.each_player_shuffles_hand_and_permanents_then_draws(ctx, events)
             }
             Effect::LoseUnspentMana { who } => self.lose_unspent_mana(who, ctx, events),
+            Effect::SpellsCostMoreThisTurn { who, amount } => {
+                for p in self.resolve_players(who, ctx) {
+                    let tax = &mut self.players[p].spell_tax_this_turn;
+                    *tax = tax.saturating_add(*amount);
+                }
+                Ok(())
+            }
             Effect::SetArtifactSubtypes { what, subtypes } => {
                 self.set_artifact_subtypes(what, subtypes, ctx);
                 Ok(())
