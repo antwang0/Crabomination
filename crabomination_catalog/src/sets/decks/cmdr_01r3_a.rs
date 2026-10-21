@@ -911,7 +911,7 @@ pub fn elusive_tormentor() -> CardDefinition {
     let mist = CardDefinition {
         name: "Insidious Mist",
         card_types: vec![CardType::Creature],
-        color_indicator: vec![Color::Black],
+        color_indicator: vec![Color::Blue],
         subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
         power: 0,
         toughness: 1,
