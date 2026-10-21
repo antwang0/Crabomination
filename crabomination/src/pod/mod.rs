@@ -28776,6 +28776,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANARA_27_COMMANDERS,
             main: decks::ANARA_27_MAIN,
         },
+        // Seat 4721: Imoen, Mystic Trickster and Inspiring Leader's EDHREC average deck. `--pod-decks 4721`.
+        PodDeck {
+            name: "Imoen, Mystic Trickster and Inspiring Leader (WU)",
+            commanders: decks::IMOEN_28_COMMANDERS,
+            main: decks::IMOEN_28_MAIN,
+        },
+        // Seat 4722: Livio, Oathsworn Sentinel and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 4722`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Slurrk, All-Ingesting (WG)",
+            commanders: decks::LIVIO_10_COMMANDERS,
+            main: decks::LIVIO_10_MAIN,
+        },
     ]
 }
 
@@ -35397,6 +35409,8 @@ mod tests {
             ("Burakos, Party Leader and Cultist of the Absolute", &[0x1C84]),
             ("Gale, Waterdeep Prodigy and Criminal Past", &[0x1C85]),
             ("Anara, Wolvid Familiar and Ich-Tekik, Salvage Splicer", &[0x1C86]),
+            ("Imoen, Mystic Trickster and Inspiring Leader", &[0x1C87]),
+            ("Livio, Oathsworn Sentinel and Slurrk, All-Ingesting", &[0x1C88]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

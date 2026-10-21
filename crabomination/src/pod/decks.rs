@@ -132364,3 +132364,58 @@ pub const ANARA_27_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest,
 ];
+
+pub const IMOEN_28_COMMANDERS: &[CardFactory] = &[imoen_mystic_trickster, inspiring_leader];
+
+/// **Imoen, Mystic Trickster and Inspiring Leader**'s EDHREC average deck, card for card:
+/// 62 nonbasic cards + 16 Islands + 20 Plains = 98.
+/// Imoen, Mystic Trickster and Inspiring Leader (EDHREC, fetched 2026-10-21).
+pub const IMOEN_28_MAIN: &[CardFactory] = &[
+    bag_of_holding, basilisk_collar, blade_of_selves, bloodthirsty_blade, cloak_of_the_bat,
+    dancing_sword, delvers_torch, dungeon_map, dungeoneers_pack, fifty_feet_of_rope,
+    goggles_of_night, horn_of_valhalla, lightning_greaves, mimic, multiclass_baldric,
+    mystery_key, robe_of_the_archmagi, skullclamp, sol_ring, spiked_pit_trap, swiftfoot_boots,
+    the_deck_of_many_things, treasure_chest, tricksters_talisman, vexing_puzzlebox,
+    command_tower, dungeon_descent, evolving_wilds, rogues_passage, treasure_vault,
+    aarakocra_sneak, abdel_adrian_gorions_ward, alora_merry_thief, aven_mindcensor,
+    dawnbringer_cleric, dragonborn_looter, dwarfhold_champion, frontline_medic,
+    gale_waterdeep_prodigy, gray_harbor_merfolk, hama_pashar_ruin_seeker, hammers_of_moradin,
+    harper_recruiter, iron_golem, mikaeus_the_lunarch, moon_blessed_cleric, mother_of_runes,
+    nimbleclaw_adept, priest_of_ancient_lore, rimeshield_frost_giant, rumor_gatherer,
+    seasoned_dungeoneer, shortcut_seeker, solemn_recruit, soulknife_spy, veteran_dungeoneer,
+    volo_itinerant_scholar, yuan_ti_malison, artificer_class, teleportation_circle,
+    wizard_class, contraband_livestock,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const LIVIO_10_COMMANDERS: &[CardFactory] = &[livio_oathsworn_sentinel, slurrk_all_ingesting];
+
+/// **Livio, Oathsworn Sentinel and Slurrk, All-Ingesting**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 17 Forests + 8 Plains = 98.
+/// Livio, Oathsworn Sentinel and Slurrk, All-Ingesting (EDHREC, fetched 2026-10-21).
+pub const LIVIO_10_MAIN: &[CardFactory] = &[
+    arcane_signet, ozolith_the_shattered_spire, the_ozolith, boseiju_who_endures,
+    branchloft_pathway, canopy_vista, command_tower, gavony_township, hushwood_verge,
+    krosan_verge, myriad_landscape, overgrown_farmland, sunpetal_grove, windswept_heath,
+    wooded_bastion, acidic_slime, aeve_progenitor_ooze, armorcraft_judge, bloodspore_thrinax,
+    bulwark_ox, canyon_jerboa, capricopian, centaur_chieftain, circle_of_dreams_druid,
+    corrosive_ooze, daysquad_marshal, defiler_of_vigor, disciple_of_freyalise,
+    evolution_witness, fertilid, forgotten_ancient, good_fortune_unicorn, green_slime,
+    hamza_guardian_of_arashin, incubation_druid, iridescent_hornbeetle, kozileks_predator,
+    kutzil_malamet_exemplar, loam_dryad, metastatic_evangel, mitotic_slime, ochre_jelly,
+    oran_rief_ooze, oviya_pashiri_sage_lifecrafter, patron_of_the_valiant, ravenous_slime,
+    scavenging_ooze, scurry_of_squirrels, selesnya_evangel, stampede_driver,
+    temperamental_oozewagg, tender_wildguide, angelic_exaltation, carpet_of_flowers,
+    felidar_retreat, setessan_training, archdruids_charm, clever_concealment, flawless_maneuver,
+    fog, heroic_intervention, inspiring_call, animists_awakening, awaken_the_woods,
+    basris_solidarity, call_the_scions, camaraderie, collective_voyage, damning_verdict,
+    flower_flourish, inspiring_roar, overcome, tromp_the_domains,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
