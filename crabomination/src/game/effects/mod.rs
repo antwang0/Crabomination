@@ -45343,9 +45343,10 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .collect(),
-            Selector::AllTargets => ctx
+            Selector::AllTargets | Selector::TargetsFrom(_) => ctx
                 .targets
                 .iter()
+                .skip(if let Selector::TargetsFrom(n) = sel { *n as usize } else { 0 })
                 .filter_map(|t| match target_to_entity(t) {
                     EntityRef::Permanent(id) if self.battlefield_find(id).is_some() => {
                         Some(EntityRef::Permanent(id))

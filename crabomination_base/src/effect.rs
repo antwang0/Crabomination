@@ -304,6 +304,9 @@ pub enum Selector {
     /// Upgrade ("distribute counters among 1–3 creatures, then double the
     /// counters on each of those creatures").
     AllTargets,
+    /// [`Selector::AllTargets`] from slot `n` on — "each of X target
+    /// creatures" after a first target (Spinning Wheel Kick's damage dealer).
+    TargetsFrom(u8),
     /// "…a card at random from among them" — resolve the inner selector and
     /// keep one entity chosen uniformly at random (Volatile Chimera).
     RandomOf(Box<Selector>),
