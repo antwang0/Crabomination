@@ -2022,6 +2022,11 @@ impl GameState {
             // A permanent reads its own stamped count; a resolving spell
             // (Spell Contortion) reads the count threaded onto the context.
             Value::OneIf(pred) => self.evaluate_predicate(pred, ctx) as i32,
+            Value::SourceCastManaOfColor(color) => ctx
+                .source
+                .and_then(|s| self.find_card_anywhere(s))
+                .and_then(|c| c.cast_mana_spent_by_color.iter().find(|(c, _)| c == color).map(|(_, n)| *n as i32))
+                .unwrap_or(0),
             Value::TimesKicked => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))

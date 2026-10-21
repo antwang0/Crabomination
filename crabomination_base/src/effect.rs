@@ -1225,6 +1225,10 @@ pub enum Value {
     /// Nonland cards exiled by the enclosing
     /// [`Effect::ExileTopBatchesUntilLandLast`] (Rally the Horde).
     NonlandCardsExiledThisEffect,
+    /// The `color` mana spent casting the source permanent, from its stamped
+    /// cast provenance (`CardInstance.cast_mana_spent_by_color`) — Clay
+    /// Champion's "for each {G}{G} spent to cast it". 0 when it wasn't cast.
+    SourceCastManaOfColor(crate::mana::Color),
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),
