@@ -1812,6 +1812,7 @@ impl GameState {
                 self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _, _)| c == p).count() as i32
             }
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::DistinctColorsSpent => ctx.mana_spent_by_color.iter().filter(|(_, n)| *n > 0).count() as i32,
             Value::CreaturesThatCombatDamagedAPlayerThisTurn(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 let mut seen: Vec<CardId> = Vec::new();

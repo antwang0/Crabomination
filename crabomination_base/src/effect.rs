@@ -1507,6 +1507,13 @@ pub enum Value {
     /// from `EffectContext.converged_value` here. Used by Prismatic
     /// Ending and Pest Control.
     ConvergedValue,
+    /// The number of distinct colors among the mana spent on the resolving
+    /// spell or ability (CR 601.2h / 602.2b), read from
+    /// `EffectContext.mana_spent_by_color` — so, unlike `ConvergedValue`, an
+    /// activated ability counts the mana paid to activate it ("if exactly
+    /// three colors of mana were spent to activate this ability" — Paragon
+    /// of Modernity).
+    DistinctColorsSpent,
     /// Mana from artifact sources spent to cast the source (Coin of Mastery's
     /// enters-with rider): the `CardData::cast_artifact_mana` stamp, so 0 for
     /// a permanent that wasn't cast.
