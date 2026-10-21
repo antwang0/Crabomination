@@ -464,6 +464,18 @@ marker only at a word start), and **104 are real**: the audit's output is the
 list, each doc names its gap. One was a body bug and is fixed (Expressive
 Iteration bottomed an unseen card). Whole catalog: 841 → 795 rows.
 
+## Commander additions of session `01Jywzky` (2026-10-21) — the approximations named
+
+Open 🟡 rows (each card plays; the clause named is approximated):
+
+| Card | Gap |
+| --- | --- |
+| 🟡 Covenant of Minds | "Put those cards into your graveyard" is a mill of three (a mill trigger sees it); the three are not revealed first. |
+| 🟡 Grand Master of Flowers | "Search your library and/or graveyard" takes a graveyard Monk first and searches the library only when there is none — no choice. |
+| 🟡 Minion of Leshrac | Taps after its 5 damage even when that damage was prevented ("if it deals damage this way"). |
+| 🟡 Militia's Pride | The Kithkin Soldier attacks the source's default defender (the controller's first opponent), not a defender its controller picks (CR 508.4). |
+| 🟡 Tombstone Stairwell | Its upkeep trigger has no intervening "if this enchantment is on the battlefield" re-check at resolution beyond the source still being there. |
+
 ## Commander additions of session `01NkAE5B` (2026-10-20) — the approximations named
 
 Open 🟡 rows (each card plays; the clause named is approximated):

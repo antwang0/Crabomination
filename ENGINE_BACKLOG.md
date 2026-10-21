@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes](#fixedopen-2026-10-20-commander-run-01nkae5b--46-one-gap-closers-45-seats-two-bug-classes) | 37 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01E4rMUL`) — 131 seats, 265 cards, five bug classes](#fixedopen-2026-10-20-commander-run-01e4rmul--131-seats-265-cards-five-bug-classes) | 8 |
 | Cards & rules | [FIXED/OPEN 2026-10-20 (Commander run, `01DDeUtc`, part two) — 59 one-gap pair closers, 65 seats, 12 primitives](#fixedopen-2026-10-20-commander-run-01ddeutc-part-two--59-one-gap-pair-closers-65-seats-12-primitives) | 31 |
@@ -184,6 +185,44 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
+
+- **Seats** (git log `Pod:` under session `01Jywzky`): 21 partner-pair decks from the two-/three-gap lists (Amber
+  Gristle + Street Urchin, Halana + Keleth, Halana + Siani, Fifth Doctor + Amy Pond, Akroma + Dargo, Alora + Sword
+  Coast Sailor, Anara + Sidar, Ardenn + Siani, Fugitive Doctor + Peri Brown, Vhal + Criminal Past, Imoen + Inspiring
+  Leader, Livio + Slurrk, Akroma + Slurrk, Glacian + Sengir, Numa + Rograkh, Safana + Candlekeep Sage, Ganax +
+  Criminal Past, Lae'zel + Raised by Giants, Radiant + Sakashima, Kediss + Nadier, Lae'zel / Rasaad + Acolyte of
+  Bahamut) and **nine SINGLE-commander averages, far more played than any pair**: Brigid, Clachan's Heart (EDHREC
+  rank 393), Thanos (792), Mairsil (1043), Jace, Vryn's Prodigy (1068), Hallar (1253), Kiora of Salt and Sand
+  (2678, was complete), Gideon the Oathless (3150), Rashida Scalebane (3239). ⚠ **`scripts/edhrec_scan_top.py` is
+  the richer list now** — the pair lists are down to primitives; filter it to Commander-legal commanders and cards
+  (the scan doesn't) and rank by EDHREC rank, not by gap.
+- **Cards:** 99 in `decks::cmdr_01jy_a` (tests `recent_b/cmdr_01jy_a.rs`, 41). Chakram Retriever gained its
+  missing partner-with search (CR 702.124j).
+- **Primitives:** `Effect::LoseUnspentMana` (Mana Short; Yurlok burns it); `StaticEffect::PreventAllSpellDamage`
+  (Energy Storm); `NonlandPermanentGraveyardLibraryLockdown` (Weathered Runestone); `Effect::SetArtifactSubtypes`
+  (Dancing Sword's "isn't an Equipment"); `Value::SourceCastManaOfColor` (Clay Champion; identity walk reads it);
+  `StaticEffect::OpponentsMaxUntapsPerStep` (Dovin Baan's emblem, read from emblems in the untap step);
+  `Effect::SpellsCostMoreThisTurn` (Academy Loremaster, `Player.spell_tax_this_turn`); `Value::DevouredMatching`
+  (`CardCold.devoured`, Voracious Dragon); `FirstKickedSpellEachTurnCostsLess` + `R::HasKickerAbility` (Vine Gecko,
+  Murasa Sproutling); `Keyword::CanBlockCreatureTypeAsThoughReach` (Dragon Hunter — `can_block_attacker_typed`
+  takes an attacker-type thunk); `Keyword::ProtectionFromEachOpponent` (CR 702.16j, Figure of Fable);
+  `PlaneswalkerSubtype::Bahamut`. `edhrec_deck.py` pads a 99-card average with its most common basic.
+- **Bot:** `server/modal_wipe.rs` (a ChooseMode-of-board-destroys ability — Thanos's power-up — fires with the mode
+  that nets the most opposing mana value); `server/combat_grant.rs` (after blocks, buy a self-grant deathtouch /
+  first strike / undying / indestructible that flips the fight). Both Commander-only.
+- **OPEN (bot):** Mairsil's deck — Torchling's five abilities, Endling's menace / ±1 and Hateflayer's {Q} shot are
+  never activated (census seed 9409); Grand Master of Flowers' lock +1 never chosen over the search +1.
+- **OPEN (single-commander closers, each a primitive):** Zevlor (654 — per-opponent copies of a single-target
+  spell), Aegar (831) + Ruhan (911) — "dealt excess damage" for COMBAT damage and planeswalkers (only noncombat emits
+  `ExcessNoncombatDamage`) plus the `damaged_by_this_turn` "Giant, Wizard or spell you controlled" read; Hogaak
+  (929 — convoke + delve in one cast, no mana); Jorn (483, ten snow cards — Boreal Outrider needs snow mana spent by
+  color, Glittering Frost an enchanted-land-is-snow + extra mana, The Three Seasons' chapter III); Sauron's Fires of
+  Mount Doom ("when you play a card this way" — a `MayPlayPermission` carries no granter); Tivadar (Justice needs
+  `DealsDamage` with `AnyPlayer` scope for spells: `fire_spell_damage_listeners` walks `YourControl` only; Luminesce /
+  Surge of Salvation want a by-colour prevention shield over a seat's creatures — `PreventionTarget` has no
+  creatures-of-seat key).
 
 ## FIXED/OPEN 2026-10-20 (Commander run, `01NkAE5B`) — 46 one-gap closers, 45 seats, two bug classes
 

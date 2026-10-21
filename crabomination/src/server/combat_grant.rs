@@ -35,23 +35,23 @@ pub(super) fn pick_combat_self_grant(state: &GameState, seat: usize) -> Option<G
         let has = |kws: &[Keyword], k: &Keyword| kws.contains(k);
         let strikes_first = |kws: &[Keyword]| has(kws, &Keyword::FirstStrike) || has(kws, &Keyword::DoubleStrike);
         let kills = o.power > 0
-            && !has(&tkw, &Keyword::Indestructible)
-            && (has(&okw, &Keyword::Deathtouch) || o.power >= t.toughness - theirs.damage as i32);
+            && !has(tkw, &Keyword::Indestructible)
+            && (has(okw, &Keyword::Deathtouch) || o.power >= t.toughness - theirs.damage as i32);
         let dies = t.power > 0
-            && !has(&okw, &Keyword::Indestructible)
-            && (has(&tkw, &Keyword::Deathtouch) || t.power >= o.toughness - ours.damage as i32);
+            && !has(okw, &Keyword::Indestructible)
+            && (has(tkw, &Keyword::Deathtouch) || t.power >= o.toughness - ours.damage as i32);
         for (index, ab) in ours.definition.activated_abilities.iter().enumerate() {
             let Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::EndOfTurn | Duration::EndOfCombat } =
                 &ab.effect
             else {
                 continue;
             };
-            if ab.tap_cost || has(&okw, keyword) {
+            if ab.tap_cost || has(okw, keyword) {
                 continue;
             }
             let useful = match keyword {
-                Keyword::Deathtouch => !kills && o.power > 0 && !has(&tkw, &Keyword::Indestructible),
-                Keyword::FirstStrike | Keyword::DoubleStrike => kills && dies && !strikes_first(&tkw),
+                Keyword::Deathtouch => !kills && o.power > 0 && !has(tkw, &Keyword::Indestructible),
+                Keyword::FirstStrike | Keyword::DoubleStrike => kills && dies && !strikes_first(tkw),
                 Keyword::Indestructible => dies,
                 Keyword::Undying => dies && ours.counter_count(CounterType::PlusOnePlusOne) == 0,
                 _ => false,
