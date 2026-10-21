@@ -28980,6 +28980,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JESKA_10_COMMANDERS,
             main: decks::JESKA_10_MAIN,
         },
+        // Seat 4755: Brigid, Clachan's Heart's EDHREC average deck. `--pod-decks 4755`.
+        PodDeck {
+            name: "Brigid, Clachan's Heart (WG)",
+            commanders: decks::BRIGID_COMMANDERS,
+            main: decks::BRIGID_MAIN,
+        },
     ]
 }
 
@@ -35635,6 +35641,7 @@ mod tests {
             ("Alena, Kessig Trapper and Glacian, Powerstone Engineer", &[0x1CA6]),
             ("Brinelin, the Moon Kraken and Prava of the Steel Legion", &[0x1CA7]),
             ("Jeska, Thrice Reborn and Siani, Eye of the Storm", &[0x1CA8]),
+            ("Brigid, Clachan's Heart", &[0x1CA9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

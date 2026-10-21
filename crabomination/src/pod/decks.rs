@@ -133323,3 +133323,31 @@ pub const JESKA_10_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const BRIGID_COMMANDERS: &[CardFactory] = &[brigid_clachans_heart];
+
+/// **Brigid, Clachan's Heart**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Forests + 11 Plains = 99.
+/// Brigid, Clachan's Heart (EDHREC, fetched 2026-10-21).
+pub const BRIGID_MAIN: &[CardFactory] = &[
+    arcane_signet, chronicle_of_victory, mirrormind_crown, skullclamp, sol_ring,
+    staff_of_domination, umbral_mantle, boseiju_who_endures, bountiful_promenade, brushland,
+    canopy_vista, command_tower, eclipsed_realms, fortified_village, hushwood_verge,
+    overgrown_farmland, path_of_ancestry, sungrass_prairie, sunpetal_grove, temple_garden,
+    windswept_heath, avacyns_pilgrim, ballyrush_banneret, birds_of_paradise,
+    bristlebane_battler, champion_of_the_clachan, craterhoof_behemoth, crossroads_watcher,
+    delighted_halfling, dundoolin_weaver, eclipsed_kithkin, elvish_mystic, esper_sentinel,
+    eternal_witness, figure_of_fable, formidable_speaker, fyndhorn_elves, goldmeadow_nomad,
+    kinsbaile_aspirant, kinsbaile_borderguard, kinscaer_sentry, kithkin_harbinger,
+    kithkin_mourncaller, kutzil_malamet_exemplar, llanowar_elves, mirror_entity, quirion_ranger,
+    seedcradle_witch, thoughtweft_imbuer, thoughtweft_lieutenant, voice_of_victory,
+    walking_ballista, wary_farmer, wizened_cenn, beastmaster_ascension, caretakers_talent,
+    clachan_festival, growing_rites_of_itlimoc, kinbinding, militias_pride, springleaf_parade,
+    beast_within, chord_of_calling, eladamris_call, generous_gift, grand_crescendo,
+    heroic_intervention, march_of_the_multitudes, path_to_exile, second_harvest,
+    swords_to_plowshares, ajani_outland_chaperone, brigids_command, camaraderie, cultivate,
+    finale_of_devastation, green_suns_zenith, natures_rhythm, shamanic_revelation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
