@@ -72,7 +72,9 @@ pub(super) fn pick_pre_combat_tap(state: &GameState, seat: usize) -> Option<Game
                 && ab.energy_cost == 0
                 && ab.remove_all_counters_cost.is_none()
                 && ab.exile_other_filter.is_none()
-                && !ab.mana_cost.has_x();
+                // An {X} is sized to the target's power when the filter
+                // reads X (Entrancing Lyre's "power X or less").
+                && (!ab.mana_cost.has_x() || ab.effect.primary_target_filter().is_some_and(|f| f.names_x_or_converge()));
             let Some(r) = reach(&ab.effect).filter(|_| costs_ok) else { continue };
             let targets: Vec<Target> = match r {
                 Reach::Creature { lock } if lock || !attacking => {
@@ -82,12 +84,16 @@ pub(super) fn pick_pre_combat_tap(state: &GameState, seat: usize) -> Option<Game
                 _ => continue,
             };
             for t in targets {
+                let x_value = ab.mana_cost.has_x().then(|| match t {
+                    Target::Permanent(id) => foes.iter().find(|f| f.1 == id).map_or(0, |f| f.0.max(0) as u32),
+                    Target::Player(_) => 0,
+                });
                 let action = GameAction::ActivateAbility {
                     card_id: c.id,
                     ability_index: i,
                     target: Some(t),
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value,
                     mode: None,
                 };
                 if state.would_accept(action.clone()) {
@@ -166,5 +172,20 @@ mod tests {
         g.priority.player_with_priority = 0;
         let a = pick_pre_combat_tap(&g, 0).expect("lock");
         assert!(matches!(a, GameAction::ActivateAbility { target: Some(Target::Permanent(t)), .. } if t == giant));
+    }
+
+    /// Entrancing Lyre's {X} is paid at the target's power.
+    #[test]
+    fn entrancing_lyre_pays_x_at_the_targets_power() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.add_card_to_battlefield(0, crate::catalog::entrancing_lyre());
+        let giant = g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+        g.players[0].mana_pool.add_colorless(3);
+        g.step = TurnStep::BeginCombat;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let a = pick_pre_combat_tap(&g, 0).expect("tap");
+        assert!(matches!(a, GameAction::ActivateAbility { target: Some(Target::Permanent(t)), x_value: Some(3), .. } if t == giant));
     }
 }
