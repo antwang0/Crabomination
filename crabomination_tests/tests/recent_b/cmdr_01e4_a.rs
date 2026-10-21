@@ -3515,3 +3515,16 @@ fn nimbus_champion_and_frostfist_strider() {
     let bear = g.battlefield_find(bear).unwrap();
     assert!(bear.tapped && bear.counter_count(CounterType::Stun) == 1);
 }
+
+/// Sacred Boon turns prevented damage into +0/+1 counters.
+#[test]
+fn sacred_boon_banks_toughness() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boon = g.add_card_to_hand(0, catalog::sacred_boon());
+    cast(&mut g, boon, Some(Target::Permanent(bear)));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bear)));
+    assert_eq!(pt(&g, bear), (2, 5), "three prevented, three +0/+1 counters");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0);
+}

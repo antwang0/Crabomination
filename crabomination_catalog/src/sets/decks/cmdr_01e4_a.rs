@@ -8828,3 +8828,20 @@ pub fn destructive_tampering() -> CardDefinition {
         ]),
     )
 }
+
+/// Sacred Boon — {1}{W} instant. Prevent the next 3 damage that would be dealt
+/// to target creature this turn; it gets a +0/+1 counter for each 1 damage
+/// prevented (placed as it's prevented, not at the next end step —
+/// INCOMPLETE_CARDS).
+pub fn sacred_boon() -> CardDefinition {
+    spell(
+        "Sacred Boon",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::PreventNextDamageWithCounters {
+            target: target_filtered(R::Creature),
+            amount: Value::Const(3),
+            counter: Some(CounterType::PlusZeroPlusOne),
+        },
+    )
+}
