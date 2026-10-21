@@ -3672,3 +3672,43 @@ fn angels_tomb_and_scroll_of_avacyn_make_and_count_an_angel() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
     assert_eq!(g.players[0].life, life + 5, "the Tomb is an Angel this turn");
 }
+
+#[test]
+fn nettlevine_blight_eats_its_host_and_moves_on_at_the_host_controllers_end_step() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let blight = g.add_card_to_hand(0, catalog::nettlevine_blight());
+    cast(&mut g, blight, Some(Target::Permanent(wurm)));
+    // Seat 0's own end step: not the host's controller's.
+    g.step = TurnStep::PostCombatMain;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_some(), "only the host's controller's end step");
+    while !(g.active_player_idx == 1 && g.step == TurnStep::End) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "the Wurm was sacrificed");
+    assert_eq!(g.battlefield_find(blight).and_then(|c| c.attached_to), Some(forest), "the Blight moved to the Forest");
+}
+
+#[test]
+fn count_nefaria_costs_three_less_after_a_sacrifice() {
+    let mut g = pod(2);
+    let nefaria = g.add_card_to_hand(0, catalog::count_nefaria());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Black, 4);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: nefaria, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err(),
+        "{{6}}{{B}} with four mana"
+    );
+    g.players[0].permanents_sacrificed_this_turn = 1;
+    g.perform_action(GameAction::CastSpell { card_id: nefaria, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{3}{B} after a sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(nefaria).is_some());
+}

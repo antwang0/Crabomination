@@ -18954,6 +18954,10 @@ static DECKS: &[Factory] = &[
     super::decks::puncturing_light,
     super::decks::paragon_of_modernity,
     super::decks::guardian_angel,
+    super::decks::count_nefaria,
+    super::decks::nettlevine_blight,
+    super::decks::stench_of_decay,
+    super::decks::mephitic_vapors,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
     // cmdr_01r3_a (session 01R3xh4r)

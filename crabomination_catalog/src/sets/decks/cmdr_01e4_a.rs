@@ -9196,3 +9196,70 @@ pub fn guardian_angel() -> CardDefinition {
         Effect::PreventNextDamage { target: target_filtered(R::any_target()), amount: Value::XFromCost },
     )
 }
+
+/// Count Nefaria — {6}{B} legendary 6/6 flying Human Villain. Costs {3} less
+/// if you've sacrificed a permanent this turn.
+pub fn count_nefaria() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        self_cost_reduction_if: Some((
+            Predicate::PermanentsSacrificedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE },
+            3,
+        )),
+        ..creature("Count Nefaria", cost(&[generic(6), b()]), vec![CreatureType::Human, CreatureType::Villain], 6, 6)
+    }
+}
+
+/// Nettlevine Blight — {4}{B}{B} Aura, enchant creature or land. Enchanted
+/// permanent has "At the beginning of your end step, sacrifice this permanent
+/// and attach Nettlevine Blight to a creature or land you control." The
+/// trigger is printed on the Aura and keyed on the host's controller's end
+/// step (as Instill Furor); that player picks the new host.
+pub fn nettlevine_blight() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                filter: Some(Predicate::EntityMatches { what: host(), filter: R::ControlledByActivePlayer }),
+                ..EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+            },
+            effect: Effect::Seq(vec![
+                Effect::SacrificePermanent { what: host() },
+                Effect::ChooseOneAmong {
+                    what: Selector::ControlledBy { who: PlayerRef::ActivePlayer, filter: R::Creature.or(R::Land) },
+                    chooser: PlayerRef::ActivePlayer,
+                    chosen: Box::new(Effect::Attach { what: Selector::This, to: Selector::SeparatedPile { chosen: true } }),
+                    other: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..aura_on("Nettlevine Blight", cost(&[generic(4), b(), b()]), R::Creature.or(R::Land), None)
+    }
+}
+
+/// Stench of Decay — {1}{B}{B} Instant. Nonartifact creatures get -1/-1 until
+/// end of turn.
+pub fn stench_of_decay() -> CardDefinition {
+    spell(
+        "Stench of Decay",
+        cost(&[generic(1), b(), b()]),
+        CardType::Instant,
+        pump(Selector::EachPermanent(R::Creature.and(R::Artifact.negate())), -1, -1),
+    )
+}
+
+/// Mephitic Vapors — {2}{B} Sorcery. All creatures get -1/-1 until end of
+/// turn. Surveil 2.
+pub fn mephitic_vapors() -> CardDefinition {
+    spell(
+        "Mephitic Vapors",
+        cost(&[generic(2), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            pump(Selector::EachPermanent(R::Creature), -1, -1),
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+    )
+}
