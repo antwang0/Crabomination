@@ -171,6 +171,9 @@ fn walk(v: &Value, out: &mut ColorSet) {
                     // ExtraManaKind::Fixed — "adds an additional {R}" (Gauntlet
                     // of Might, Wild Growth) is a printed symbol.
                     "Fixed" => color_of(p, out),
+                    // "For each {G}{G} spent to cast it" (Clay Champion) — the
+                    // spent-mana count names a printed symbol.
+                    "SourceCastManaOfColor" => color_of(p, out),
                     // CR 903.4 — the color indicator, and a characteristic-
                     // defining color (the Kobolds' red, Transguild Courier).
                     "color_indicator" | "color_override" => each_color(p, out),
