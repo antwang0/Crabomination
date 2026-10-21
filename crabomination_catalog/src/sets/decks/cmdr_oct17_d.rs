@@ -38,7 +38,7 @@ pub fn seasons_past() -> CardDefinition {
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Sorcery],
         library_bottom_on_resolve: true,
-        effect: Effect::ReturnDistinctManaValuesFromGraveyard { who: PlayerRef::You },
+        effect: Effect::ReturnDistinctManaValuesFromGraveyard { who: PlayerRef::You, max: None },
         ..Default::default()
     }
 }

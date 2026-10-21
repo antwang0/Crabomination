@@ -12,10 +12,12 @@ impl GameState {
     /// `Effect::ReturnDistinctManaValuesFromGraveyard` — the player picks any
     /// number of their graveyard cards; a second card of a mana value already
     /// picked is dropped (CR 202.3). A headless seat takes one card of every
-    /// mana value, nonland first.
+    /// mana value, nonland first. `max` caps the picks (Long Rest's X); the
+    /// returned cards are published on `Selector::LastMoved`.
     pub(super) fn return_distinct_mana_values_from_graveyard(
         &mut self,
         who: &PlayerRef,
+        max: Option<&crate::effect::Value>,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -39,10 +41,20 @@ impl GameState {
                 }
             }
         }
+        let cap = max.map_or(cards.len(), |v| self.evaluate_value(v, ctx).max(0) as usize).min(cards.len());
+        if cap == 0 {
+            return Ok(());
+        }
+        // A capped pick keeps the greatest mana values first.
+        if cap < auto.len() {
+            let mv_of = |id: &CardId| cards.iter().find(|(c, ..)| c == id).map_or(0, |c| c.1);
+            auto.sort_by_key(|id| std::cmp::Reverse(mv_of(id)));
+            auto.truncate(cap);
+        }
         let candidates: Vec<(CardId, String)> = cards.iter().map(|(id, _, _, n)| (*id, n.clone())).collect();
         let mut cursor = 0;
         let source = ctx.source.unwrap_or(CardId(0));
-        let max = cards.len() as u32;
+        let max = cap as u32;
         let Some(picked) = self.ask_seat_cards_logged(
             &mut cursor,
             p,
@@ -64,8 +76,14 @@ impl GameState {
             if seen.contains(&mv) {
                 continue;
             }
+            if seen.len() == cap {
+                break;
+            }
             seen.push(mv);
             self.move_card_to(id, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+            if self.players[p].hand.iter().any(|c| c.id == id) {
+                self.scratch.last_moved_cards.push(id);
+            }
         }
         Ok(())
     }

@@ -28301,8 +28301,8 @@ impl GameState {
                 self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }
-            Effect::ReturnDistinctManaValuesFromGraveyard { who } => {
-                self.return_distinct_mana_values_from_graveyard(who, effect, ctx, events)
+            Effect::ReturnDistinctManaValuesFromGraveyard { who, max } => {
+                self.return_distinct_mana_values_from_graveyard(who, max.as_ref(), effect, ctx, events)
             }
 
             Effect::CreatureDeathsDrainToughnessThisTurn => {

@@ -7807,8 +7807,14 @@ pub enum Effect {
     DamagedOpponentCreaturesDieThisTurn,
     /// "Return any number of cards with different mana values from your
     /// graveyard to your hand" (Seasons Past). The picker keeps at most one
-    /// card per mana value.
-    ReturnDistinctManaValuesFromGraveyard { who: PlayerRef },
+    /// card per mana value; `max` caps the count ("return X target cards with
+    /// different mana values" — Long Rest). Publishes the returns on
+    /// `Selector::LastMoved`.
+    ReturnDistinctManaValuesFromGraveyard {
+        who: PlayerRef,
+        #[serde(default)]
+        max: Option<Value>,
+    },
     /// Shriveling Rot mode 2 — "until end of turn, whenever a creature dies,
     /// that creature's controller loses life equal to its toughness".
     CreatureDeathsDrainToughnessThisTurn,

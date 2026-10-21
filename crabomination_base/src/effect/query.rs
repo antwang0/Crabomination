@@ -2431,7 +2431,7 @@ impl Effect {
             | Effect::DamagedCreaturesDieThisTurn
             | Effect::DamagedOpponentCreaturesDieThisTurn
             | Effect::CreatureDeathsDrainToughnessThisTurn => false,
-            Effect::ReturnDistinctManaValuesFromGraveyard { who } => player_has_target(who),
+            Effect::ReturnDistinctManaValuesFromGraveyard { who, .. } => player_has_target(who),
             Effect::AddCountersOfChosenKind { amount, .. } => value_has_target(amount),
             Effect::ExileSelfReturnTransformed | Effect::ReturnSelfTransformedTappedToOwner => false,
             Effect::PutOnLibraryFromHand { who, count } => {
