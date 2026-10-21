@@ -259,6 +259,10 @@ the handoff.
     passes on the unfindable spell by accident, which is why Repel the Abominable never showed it.)
 - **CLAIMED (`01KPxZ3H`, 2026-10-21, sixth batch) — don't duplicate:** Lae'zel + Haunted One's two (Blood-Chin
   Fanatic, Chief of the Scale); Amber Gristle O'Maul + Flaming Fist's two (Fearless Skald, Chandra's Outrage).
+- **CLAIMED (`01KPxZ3H`, 2026-10-21, seventh batch) — don't duplicate:** Jorn, God of Winter's ten (Jorn // Kaldring,
+  Abominable Treefolk, Boreal Outrider, Conifer Wurm, Hailstorm Valkyrie, Spirit of the Aldergard, Glittering Frost, Rime
+  Transfusion, The Three Seasons, Glacial Revelation) and their primitives (snow mana provenance by colour, an
+  "attached permanent has a supertype" static, an enters-tapped may-play grant).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list
 
