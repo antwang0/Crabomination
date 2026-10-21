@@ -7864,6 +7864,24 @@ impl GameState {
                                 .any(|t| mine.contains(t))
                     })
             }
+            R::SharesCreatureTypeWithLastMoved => {
+                let mine = &card.definition.subtypes.creature_types;
+                let wild = self.card_off_battlefield_is_every_creature_type(card)
+                    || card.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
+                self.scratch.last_moved_cards.first().is_some_and(|&id| {
+                    self.find_card_anywhere(id).is_some_and(|c| {
+                        let theirs = &c.definition.subtypes.creature_types;
+                        // A permanent reads its computed types (Oko's "gains
+                        // all creature types").
+                        let on_bf = self.battlefield_find(card.id).is_some();
+                        (wild && !theirs.is_empty())
+                            || c.definition.keywords.has_kw(&crate::card::Keyword::Changeling) && !mine.is_empty()
+                            || theirs.iter().any(|t| {
+                                if on_bf { self.permanent_has_creature_type(card.id, *t) } else { mine.contains(t) }
+                            })
+                    })
+                })
+            }
             R::SharesLandTypeWithLastMoved => {
                 let mine = &card.definition.subtypes.land_types;
                 self.scratch.last_moved_cards.first().is_none_or(|&id| {

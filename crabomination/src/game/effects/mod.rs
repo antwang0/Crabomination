@@ -44937,6 +44937,13 @@ impl GameState {
             }
 
             Effect::CreateEmblem { who, name, triggered, statics } => {
+                // "Creatures you control of the chosen type" (Oko, Shadowmoor
+                // Scion's −6): an emblem has no source to read a choice off,
+                // so the type chosen this resolution is written in now.
+                let statics: Vec<crate::card::StaticAbility> = match self.chosen_creature_type_scratch {
+                    Some(ct) => statics.iter().map(|sa| concretize_chosen_type(sa, ct)).collect(),
+                    None => statics.clone(),
+                };
                 for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
                     if let EntityRef::Player(p) = ent {
                         self.players[p].emblems.push(crate::player::Emblem {
@@ -49008,5 +49015,23 @@ pub(crate) fn for_trigger_event(state: &GameState, effect: &Effect, ev: &GameEve
     let mut out = effect.clone();
     fix(&mut out, kind, crate::game::effects::events::counter_placer(state, ev));
     out
+}
+
+/// An emblem static's `IsSourceChosenCreatureType` leaves as the type `ct`
+/// chosen while it was made (CR 114.4: an emblem has no source to read).
+fn concretize_chosen_type(sa: &crate::card::StaticAbility, ct: crate::card::CreatureType) -> crate::card::StaticAbility {
+    use crate::effect::StaticEffect as SE;
+    let fix = |sel: &Selector| match sel {
+        Selector::EachPermanent(r) => Selector::EachPermanent(r.resolve_chosen_creature_type(Some(ct))),
+        other => other.clone(),
+    };
+    let effect = match &sa.effect {
+        SE::PumpPT { applies_to, power, toughness } => {
+            SE::PumpPT { applies_to: fix(applies_to), power: *power, toughness: *toughness }
+        }
+        SE::GrantKeyword { applies_to, keyword } => SE::GrantKeyword { applies_to: fix(applies_to), keyword: keyword.clone() },
+        other => other.clone(),
+    };
+    crate::card::StaticAbility { description: sa.description, effect }
 }
 

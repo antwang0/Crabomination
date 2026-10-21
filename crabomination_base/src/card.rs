@@ -3470,6 +3470,10 @@ pub enum SelectionRequirement {
     /// earlier pick of a two-step search (Myriad Landscape's "two basic land
     /// cards that share a land type"). True when nothing has moved yet.
     SharesLandTypeWithLastMoved,
+    /// Shares a creature type with the first card `Selector::LastMoved`
+    /// names (Resplendent Marshal's "the exiled card"); changelings share
+    /// every type (CR 702.73a). Matches nothing when nothing moved.
+    SharesCreatureTypeWithLastMoved,
     /// Shares a creature type with the ability's *source*, read from its
     /// last-known information when it has left the battlefield (Heirloom
     /// Blade's "a creature card that shares a creature type with it", on the
