@@ -135184,3 +135184,32 @@ pub const SQUALL_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
     plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const CAPTAIN_REX_NEBULA_COMMANDERS: &[CardFactory] = &[captain_rex_nebula];
+
+/// **Captain Rex Nebula**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Plains = 99.
+/// Captain Rex Nebula (EDHREC, fetched 2026-10-21).
+pub const CAPTAIN_REX_NEBULA_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, clown_car, colossal_plow, everflowing_chalice,
+    fleetwheel_cruiser, gastal_thrillroller, goliath_truck, hierophants_chalice,
+    ichor_wellspring, lithoform_engine, mind_stone, mysterious_limousine, parhelion_ii,
+    salvation_engine, skysovereign_consul_flagship, smugglers_buggy, sol_ring,
+    strionic_resonator, talisman_of_conviction, valors_flagship, vexing_puzzlebox,
+    battlefield_forge, boros_garrison, buried_ruin, clifftop_retreat, command_tower,
+    furycalm_snarl, mech_hangar, rogues_passage, rugged_prairie, sacred_foundry,
+    spectator_seating, sundown_pass, temple_of_triumph, aeronaut_admiral,
+    alibou_ancient_witness, blitz_automaton, brazen_dwarf, combat_thresher,
+    commander_sofia_daguerre, fallaji_dragon_engine, foundry_inspector, frogmyr_enforcer,
+    kolodin_triumph_caster, losheel_clockwork_scholar, scrap_trawler, skitterbeam_battalion,
+    solemn_simulacrum, speedway_fanatic, steel_seraph, threefold_thunderhulk, veteran_motorist,
+    voyager_quickwelder, wyll_blade_of_frontiers, barbarian_class, city_on_fire, legion_loyalty,
+    pias_revolution, priority_boarding, boros_charm, built_to_smash, chaos_warp, crash_and_burn,
+    fling, path_to_exile, swords_to_plowshares, chandra_spark_hunter, daretti_scrap_savant,
+    blasphemous_act, faithless_looting, hijack, reckless_handling, start_your_engines,
+    take_for_a_ride, trash_for_treasure,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
