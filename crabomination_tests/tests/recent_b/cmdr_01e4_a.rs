@@ -3730,7 +3730,7 @@ fn cr_702_26_teferi_timeless_voyager_keeps_them_out_through_your_next_turn() {
     drain_stack(&mut g);
     assert!(g.phased_out.iter().any(|c| c.id == wurm), "the targeted opponent's creature phased out");
     assert!(g.battlefield_find(other).is_some(), "the other opponent's didn't");
-    let mut pass_to = |g: &mut GameState, seat: usize, step: TurnStep| {
+    let pass_to = |g: &mut GameState, seat: usize, step: TurnStep| {
         while !(g.active_player_idx == seat && g.step == step) {
             g.perform_action(GameAction::PassPriority).expect("pass");
         }
