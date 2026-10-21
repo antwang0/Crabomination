@@ -4102,10 +4102,31 @@ impl GameState {
                 && c.phased_out_by.is_none()
                 && !c.attached_to.is_some_and(|h| g.phased_out.iter().any(|o| o.id == h))
         };
+        // CR 702.26 — "until the end of your next turn, they can't phase in"
+        // (Teferi, Timeless Voyager): a row holds while its player's next
+        // turn hasn't begun — this untap step is someone else's, so once it
+        // has begun it has also ended. A row whose permanent is back, or
+        // whose player left the game (CR 800.4a), goes.
+        if !self.cold.phase_in_locks.is_empty() {
+            let expired = |g: &Self, &(id, holder, until): &(crate::card::CardId, usize, u32)| {
+                !g.players[holder].is_alive()
+                    || g.players[holder].turns_begun >= until
+                    || !g.phased_out.iter().any(|c| c.id == id)
+            };
+            if self.cold.phase_in_locks.iter().any(|row| expired(self, row)) {
+                let keep: Vec<(crate::card::CardId, usize, u32)> =
+                    self.cold.phase_in_locks.iter().filter(|row| !expired(self, row)).copied().collect();
+                self.cold.phase_in_locks = keep;
+            }
+        }
         let hosts: Vec<crate::card::CardId> = if self.phase_in_locked() {
             Vec::new()
         } else {
-            self.phased_out.iter().filter(|c| returns_directly(self, c)).map(|c| c.id).collect()
+            self.phased_out
+                .iter()
+                .filter(|c| returns_directly(self, c) && !self.cold.phase_in_locks.iter().any(|&(id, _, _)| id == c.id))
+                .map(|c| c.id)
+                .collect()
         };
         let mut i = 0;
         while i < self.phased_out.len() {

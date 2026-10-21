@@ -18679,6 +18679,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PhaseOutUntilYourNextTurnEnds { what } => {
+                let ids: crate::fxhash::HashSet<crate::card::CardId> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let mark = events.len();
+                self.phase_out_permanents(ids, None, events);
+                let until = self.players[ctx.controller].turns_begun.saturating_add(1);
+                let locked: Vec<(crate::card::CardId, usize, u32)> = events[mark..]
+                    .iter()
+                    .filter_map(|e| match e {
+                        GameEvent::PermanentPhasedOut { card_id } => Some((*card_id, ctx.controller, until)),
+                        _ => None,
+                    })
+                    .collect();
+                if !locked.is_empty() {
+                    self.cold.phase_in_locks.extend(locked);
+                }
+                Ok(())
+            }
+
             Effect::Untap { what, up_to } => {
                 let cap = up_to
                     .as_ref()

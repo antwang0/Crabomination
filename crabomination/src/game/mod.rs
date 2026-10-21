@@ -1713,6 +1713,12 @@ pub struct ColdState {
     /// Cold: only that effect writes it.
     #[serde(default)]
     pub(crate) group_plays_left: Vec<(CardId, u32)>,
+    /// CR 702.26 — phased-out permanents that can't phase in until the
+    /// player's `turns_begun` reaches the count, as (permanent, player,
+    /// count): `Effect::PhaseOutUntilYourNextTurnEnds`. Cold: only that
+    /// effect writes it, and an untap step drops a row only when one expired.
+    #[serde(default)]
+    pub(crate) phase_in_locks: Vec<(CardId, usize, u32)>,
     /// `Duration::UntilSourceCast` grants as (permanent, source card, the
     /// ability): `finalize_cast` strips each when its source is cast (Emrakul,
     /// the Exigent Doom's land). Cold: only that grant writes it.

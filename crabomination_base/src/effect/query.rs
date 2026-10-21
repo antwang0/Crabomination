@@ -2106,6 +2106,7 @@ impl Effect {
             | Effect::ExileReturnAtYourNextUpkeep { what }
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }
             | Effect::PhaseOut { what, .. }
+            | Effect::PhaseOutUntilYourNextTurnEnds { what }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }
@@ -3091,6 +3092,7 @@ impl Effect {
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
             Effect::PhaseOut { what, .. }
+            | Effect::PhaseOutUntilYourNextTurnEnds { what }
             | Effect::TurnFaceDown { what }
             | Effect::TurnFaceDownAs { what, .. }
             | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
@@ -4386,6 +4388,7 @@ impl Effect {
             | Effect::TapAndLockWhileSourcePresent { .. }
             | Effect::TapBlockedByAndSkipUntap { .. } => format!("tap {}", self.target_phrase()),
             Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
+            Effect::PhaseOutUntilYourNextTurnEnds { .. } => format!("phase out {} until the end of your next turn", self.target_phrase()),
             Effect::RemoveFromCombat { .. } => {
                 format!("remove {} from combat", self.target_phrase())
             }
@@ -4875,6 +4878,7 @@ impl Effect {
             // "Tap all lands target player controls" takes a player
             // (Mistbind Clique); the plain selector forms don't.
             Effect::PhaseOut { what, .. }
+            | Effect::PhaseOutUntilYourNextTurnEnds { what }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }
@@ -5813,6 +5817,7 @@ impl Effect {
                     of.as_ref().and_then(|p| pref_find(p, slot))
                 }
                 Effect::PhaseOut { what, .. }
+            | Effect::PhaseOutUntilYourNextTurnEnds { what }
                 | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
             | Effect::RestrictMayPlayToCasting { what }

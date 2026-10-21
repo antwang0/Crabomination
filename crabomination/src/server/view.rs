@@ -3229,7 +3229,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DealDamageEqualToPower { .. } => "Deal damage equal to power",
         Effect::DealDamageFrom { .. } => "Deal damage",
         Effect::ExileTaggedWithSource { .. } | Effect::ExileWithSource { .. } => "Exile",
-        Effect::PhaseOut { .. } => "Phase out",
+        Effect::PhaseOut { .. } | Effect::PhaseOutUntilYourNextTurnEnds { .. } => "Phase out",
         Effect::TapAndUntapLock { .. } => "Tap and lock down",
         Effect::Transform { .. } => "Transform",
         Effect::AddKeywordCounter { .. } => "Add a keyword counter",

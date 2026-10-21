@@ -8945,6 +8945,12 @@ pub enum Effect {
         #[serde(default)]
         until_source_leaves: bool,
     },
+    /// CR 702.26 — "[what] phase out. Until the end of your next turn, they
+    /// can't phase in" (Teferi, Timeless Voyager's −8): each phases out as
+    /// `PhaseOut` does and carries a `ColdState::phase_in_locks` row its
+    /// controller's untap step honours until the resolving controller's next
+    /// turn has begun (and so, at that later untap step, ended).
+    PhaseOutUntilYourNextTurnEnds { what: Selector },
     /// "That player exiles a card at random from their hand. The player may
     /// play that card this turn" (Elkin Lair). The exile is stamped
     /// `exiled_with = source`, so a delayed trigger can bin whatever is left.
