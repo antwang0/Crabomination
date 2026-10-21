@@ -29225,7 +29225,7 @@ impl GameState {
                         G::InstantSorceryMvAtMostCountFree => {
                             (c.definition.is_instant() || c.definition.is_sorcery()) && c.definition.cost.cmc() as usize <= n
                         }
-                        G::CreatureMayWhileExiled => self.computed_is_creature(c),
+                        G::CreatureMayWhileExiled | G::CreatureMayThisTurn => self.computed_is_creature(c),
                         G::LegendaryCreatureFreeThisTurn => {
                             self.computed_is_creature(c)
                                 && c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
@@ -29240,6 +29240,7 @@ impl GameState {
                     grant,
                     G::CastFreeNonland
                         | G::CreatureMayWhileExiled
+                        | G::CreatureMayThisTurn
                         | G::LegendaryCreatureFreeThisTurn
                         | G::InstantSorceryMvAtMostCountFree
                 );
@@ -29271,6 +29272,7 @@ impl GameState {
                         }
                         G::PlayThisTurn
                         | G::CastFreeNonland
+                        | G::CreatureMayThisTurn
                         | G::LegendaryCreatureFreeThisTurn
                         | G::InstantSorceryMvAtMostCountFree => (false, crate::card::MayPlayDuration::EndOfThisTurn),
                         G::CreatureMayWhileExiled => (false, crate::card::MayPlayDuration::WhileExiled),

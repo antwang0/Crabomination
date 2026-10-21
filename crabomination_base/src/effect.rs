@@ -14634,6 +14634,9 @@ pub enum DelayedTriggerKind {
     /// Stampede): as `YourNextMainPhaseAny`, but it lapses at this turn's
     /// cleanup when no main phase is left.
     NextMainPhaseThisTurn,
+    /// "At the beginning of the next combat phase this turn" (Feral
+    /// Encounter): as `NextCombat`, but it lapses at this turn's cleanup.
+    NextCombatThisTurn,
     /// "At the beginning of the next cleanup step" (Waylay). Fires in the
     /// cleanup step of the turn it was registered in, so the objects it
     /// touches survive the end step.
@@ -14823,6 +14826,9 @@ pub enum LookExileGrant {
     /// Keldon Flamesage: you MAY exile an instant or sorcery card with mana
     /// value at most the look count, then cast it now without paying its cost.
     InstantSorceryMvAtMostCountFree,
+    /// Feral Encounter: you MAY exile a creature card, face up; cast it this
+    /// turn, paying its cost.
+    CreatureMayThisTurn,
 }
 
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).

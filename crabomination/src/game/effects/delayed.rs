@@ -44,7 +44,7 @@ pub(crate) fn delayed_kind_from_effect(
             DelayedKind::YourNextMainPhaseAny
         }
         DelayedTriggerKind::EndOfCombat => DelayedKind::EndOfCombat,
-        DelayedTriggerKind::NextCombat => DelayedKind::NextCombat,
+        DelayedTriggerKind::NextCombat | DelayedTriggerKind::NextCombatThisTurn => DelayedKind::NextCombat,
         DelayedTriggerKind::YourNextDeclareAttackersStep => {
             DelayedKind::PlayersNextDeclareAttackers { player: controller, after_turn: turn.saturating_sub(1) }
         }
@@ -70,7 +70,12 @@ pub(crate) fn delayed_kind_from_effect(
 /// duration (CR 603.7b) lapses at this turn's cleanup, fired or not. Every
 /// other kind runs on its own clock.
 pub(crate) fn delayed_expiry(k: DelayedTriggerKind, turn: u32) -> Option<u32> {
-    matches!(k, DelayedTriggerKind::NextMainPhaseThisTurn | DelayedTriggerKind::WhenYouCastTargetThisTurn)
+    matches!(
+        k,
+        DelayedTriggerKind::NextMainPhaseThisTurn
+            | DelayedTriggerKind::NextCombatThisTurn
+            | DelayedTriggerKind::WhenYouCastTargetThisTurn
+    )
         .then_some(turn)
 }
 
