@@ -22,10 +22,20 @@ pub(super) fn pick_combat_only_spell(state: &GameState, seat: usize, w: &EvalWei
     let blockers_step_only = |def: &crate::card::CardDefinition| {
         def.cast_condition.as_ref().is_some_and(names_declare_blockers)
     };
+    // "Target blocked creature you control" (Duelist's Flame) has a target
+    // only after blocks: never cast in 60 four-seat pods (seed 9441) before
+    // this. Commander games only, so two-player play is unchanged.
+    let commander = !state.players[seat].commanders.is_empty();
+    let blocked_ours = || {
+        state.attacking().iter().any(|a| {
+            state.attacker_is_blocked(a.attacker) && state.battlefield_find(a.attacker).is_some_and(|c| c.controller == seat)
+        })
+    };
     let combat_only = |def: &crate::card::CardDefinition| {
         def.cast_only_during_combat
             || ((matches!(def.effect, crate::effect::Effect::CopyAttackersAsBlockers) || blockers_step_only(def))
                 && attacked())
+            || (commander && def.effect.primary_target_filter().is_some_and(requires_blocked) && blocked_ours())
     };
     if !hand.iter().any(|c| combat_only(&c.definition)) {
         return None;
@@ -38,6 +48,17 @@ pub(super) fn pick_combat_only_spell(state: &GameState, seat: usize, w: &EvalWei
                 if hand.iter().any(|c| c.id == *card_id && combat_only(&c.definition)))
         })
         .find(|a| state.would_accept(a.clone()))
+}
+
+/// Does a target filter admit only blocked creatures (CR 509.1h)?
+fn requires_blocked(r: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match r {
+        R::IsBlocked => true,
+        R::And(a, b) => requires_blocked(a) || requires_blocked(b),
+        R::Or(a, b) => requires_blocked(a) && requires_blocked(b),
+        _ => false,
+    }
 }
 
 /// Does a cast condition require the declare blockers step?
@@ -124,5 +145,33 @@ mod tests {
         g.priority.player_with_priority = 0;
         let picked = pick_combat_only_spell(&g, 0, &EvalWeights::default());
         assert!(matches!(picked, Some(A::CastSpell { card_id, .. }) if card_id == gambit), "{picked:?}");
+    }
+
+    /// Duelist's Flame ("target blocked creature you control") is cast by a
+    /// Commander seat whose attacker was blocked, and not before blocks.
+    #[test]
+    fn a_blocked_creature_spell_is_cast_once_our_attacker_is_blocked() {
+        use crate::game::types::{Attack, AttackTarget, GameAction as A};
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        g.active_player_idx = 0;
+        let flame = g.add_card_to_hand(0, crate::catalog::duelists_flame());
+        let giant = g.add_card_to_battlefield(0, crate::catalog::hill_giant());
+        let bears = g.add_card_to_battlefield(1, crate::catalog::grizzly_bears());
+        g.clear_sickness(giant);
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add_colorless(2);
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(A::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(1) }]))
+            .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        let w = EvalWeights::default();
+        assert_eq!(pick_combat_only_spell(&g, 0, &w), None, "unblocked: no target");
+        g.priority.player_with_priority = 1;
+        g.perform_action(A::DeclareBlockers(vec![(bears, giant)])).expect("block");
+        g.priority.player_with_priority = 0;
+        let picked = pick_combat_only_spell(&g, 0, &w);
+        assert!(matches!(picked, Some(A::CastSpell { card_id, .. }) if card_id == flame));
     }
 }
