@@ -2,7 +2,7 @@
 //! `tests/recent_b/cmdr_01jy_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, EquipBonus, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, EnchantmentSubtype, EquipBonus, LoyaltyAbility, PlaneswalkerSubtype, Supertype, Zone, CounterType, LevelBand, SplitCard, SplitHalf, TokenDefinition, CardType, CreatureType, CumulativeUpkeepCost, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{draw, etb, on_attack, partner_with_search, pump_target, target_filtered};
@@ -578,5 +578,230 @@ pub fn dancing_sword() -> CardDefinition {
             ..Default::default()
         }),
         ..spell("Dancing Sword", cost(&[generic(1), w()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Racers' Ring — land, enters tapped. {T}: add {R} or {G}. {2}{R}{G}, {T},
+/// sacrifice it: draw a card.
+pub fn racers_ring() -> CardDefinition {
+    let mut land = crate::sets::dual_land_untyped("Racers' Ring", Color::Red, Color::Green, vec![]);
+    land.static_abilities.push(crate::sets::enters_tapped());
+    land.activated_abilities.push(ActivatedAbility {
+        mana_cost: cost(&[generic(2), r(), g()]),
+        tap_cost: true,
+        sac_cost: true,
+        effect: draw(1),
+        ..Default::default()
+    });
+    land
+}
+
+/// Riveteers Decoy — {1}{G} 3/1 Human Warrior; must be blocked if able.
+/// Blitz {3}{G}.
+pub fn riveteers_decoy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MustBeBlocked],
+        alternative_cost: Some(crate::effect::shortcut::blitz(cost(&[generic(3), g()]))),
+        ..creature("Riveteers Decoy", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 1)
+    }
+}
+
+/// Stunning Strike — {2}{U} Aura with flash. Entering, it taps enchanted
+/// creature and removes it from combat. While that creature isn't legendary,
+/// it doesn't untap during its controller's untap step.
+pub fn stunning_strike() -> CardDefinition {
+    let enchanted = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: enchanted() },
+            Effect::RemoveFromCombat { what: enchanted() },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "As long as enchanted creature isn't legendary, it doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntapGlobal {
+                applies_to: enchanted(),
+                condition: Some(Predicate::EntityMatches {
+                    what: enchanted(),
+                    filter: R::HasSupertype(Supertype::Legendary).negate(),
+                }),
+            },
+        }],
+        ..spell(
+            "Stunning Strike",
+            cost(&[generic(2), u()]),
+            CardType::Enchantment,
+            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        )
+    }
+}
+
+/// Check for Traps — {1}{B} sorcery. Target opponent reveals their hand; you
+/// exile a nonland card from it. An instant or flash card exiled this way costs
+/// them 1 life; otherwise you lose 1 life.
+pub fn check_for_traps() -> CardDefinition {
+    let quick = R::HasCardType(CardType::Instant).or(R::HasKeyword(Keyword::Flash));
+    spell(
+        "Check for Traps",
+        cost(&[generic(1), b()]),
+        CardType::Sorcery,
+        Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::Seq(vec![
+                Effect::RevealHand { who: PlayerRef::Target(0) },
+                Effect::MoveChosen {
+                    from: Selector::CardsInZone { who: PlayerRef::Target(0), zone: Zone::Hand, filter: R::Nonland },
+                    filter: None,
+                    count: Value::ONE,
+                    up_to: false,
+                    to: ZoneDest::Exile,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatchesAny { what: Selector::LastMoved, filter: quick },
+                    then: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE }),
+                    else_: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::ONE }),
+                },
+            ])),
+        },
+    )
+}
+
+/// Sliversmith — {2} 1/1 artifact creature Spellshaper. {1}, {T}, discard a
+/// card: create a 1/1 colorless Sliver artifact creature token named Metallic
+/// Sliver.
+pub fn sliversmith() -> CardDefinition {
+    let sliver = TokenDefinition {
+        name: "Metallic Sliver".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(sliver) },
+            ..Default::default()
+        }],
+        ..creature("Sliversmith", cost(&[generic(2)]), vec![CreatureType::Spellshaper], 1, 1)
+    }
+}
+
+/// Tezzeret the Schemer — {2}{U}{B} planeswalker, loyalty 5. +1: an Etherium
+/// Cell token ("{T}, sacrifice it: one mana of any color"). −2: target creature
+/// gets +X/−X until end of turn, X the artifacts you control. −7: an emblem —
+/// at the beginning of combat on your turn, target artifact you control
+/// becomes an artifact creature with base power and toughness 5/5.
+pub fn tezzeret_the_schemer() -> CardDefinition {
+    let cell = TokenDefinition {
+        name: "Etherium Cell".into(),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![crabomination_base::tokens::treasure_token().activated_abilities[0].clone()],
+        ..Default::default()
+    };
+    let artifacts = || Value::PermanentCountControlledByMatching(PlayerRef::You, R::Artifact);
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    CardDefinition {
+        name: "Tezzeret the Schemer",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Tezzeret], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(1, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(cell) }),
+            loyalty(
+                -2,
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: artifacts(),
+                    toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(artifacts())),
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            loyalty(
+                -7,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Tezzeret the Schemer".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::BecomeCreature {
+                            what: target_filtered(R::Artifact.and(R::ControlledByYou)),
+                            power: Value::Const(5),
+                            toughness: Value::Const(5),
+                            creature_types: vec![],
+                            keywords: vec![],
+                            duration: Duration::Permanent,
+                        },
+                    }],
+                    statics: vec![],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Prepare // Fight — {1}{W} instant: untap target creature; it gets +2/+2 and
+/// lifelink until end of turn. // {3}{G} sorcery, aftermath: target creature
+/// you control fights target creature an opponent controls.
+pub fn prepare_fight() -> CardDefinition {
+    CardDefinition {
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Fight {
+                    attacker: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..spell(
+            "Prepare // Fight",
+            cost(&[generic(1), w()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+                pump_each(Selector::Target(0), 2, 2),
+                grant_each(Selector::Target(0), Keyword::Lifelink),
+            ]),
+        )
+    }
+}
+
+/// Clay Champion — {X}{4} 2/2 artifact creature Construct. It enters with three
+/// +1/+1 counters for each {G}{G} spent to cast it; entering, up to two other
+/// target creatures you control each get a +1/+1 counter for each {W}{W} spent.
+pub fn clay_champion() -> CardDefinition {
+    let pairs = |c: Color| Value::DivDown(Box::new(Value::SourceCastManaOfColor(c)), 2);
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::Times(Box::new(pairs(Color::Green)), Box::new(Value::Const(3))),
+        )),
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+            effect: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: pairs(Color::White),
+            }),
+        })],
+        ..creature("Clay Champion", cost(&[crate::mana::x(), generic(4)]), vec![CreatureType::Construct], 2, 2)
     }
 }

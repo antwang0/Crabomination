@@ -371,3 +371,106 @@ fn tromp_the_domains_counts_basic_types() {
     assert_eq!(pt(&g, bears), (4, 4));
     assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Trample));
 }
+
+/// Check for Traps exiles the chosen nonland card; a flash card costs its
+/// owner a life, anything else costs the caster one.
+#[test]
+fn check_for_traps_charges_by_what_it_finds() {
+    for (card, theirs) in [(catalog::opt as fn() -> _, true), (catalog::grizzly_bears, false)] {
+        let mut g = pod(2);
+        let found = g.add_card_to_hand(1, card());
+        g.add_card_to_hand(1, catalog::forest());
+        let traps = g.add_card_to_hand(0, catalog::check_for_traps());
+        let (mine, opp) = (g.players[0].life, g.players[1].life);
+        cast_as(&mut g, 0, traps, Some(Target::Player(1)));
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == found), "the nonland card is exiled");
+        assert_eq!((g.players[0].life, g.players[1].life), if theirs { (mine, opp - 1) } else { (mine - 1, opp) });
+    }
+}
+
+/// Stunning Strike taps a creature and keeps a nonlegendary one tapped
+/// through its untap step.
+#[test]
+fn stunning_strike_holds_a_nonlegendary_creature_down() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let strike = g.add_card_to_hand(0, catalog::stunning_strike());
+    cast_as(&mut g, 0, strike, Some(Target::Permanent(bears)));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).unwrap().tapped);
+    g.active_player_idx = 0;
+    to_next_upkeep(&mut g);
+    assert_eq!(g.active_player_idx, 1);
+    assert!(g.battlefield_find(bears).unwrap().tapped, "doesn't untap");
+}
+
+/// Clay Champion counts {G}{G} pairs for its own counters and {W}{W} pairs
+/// for the creatures it targets.
+#[test]
+fn clay_champion_counts_colored_pairs() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let champion = g.add_card_to_hand(0, catalog::clay_champion());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: champion,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast for X = 2 with GGGG WW");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, champion), (8, 8), "two {{G}}{{G}} pairs: six counters");
+    assert_eq!(pt(&g, bears), (3, 3), "one {{W}}{{W}} pair: one counter");
+}
+
+/// Prepare // Fight: Fight is cast from the graveyard only (CR 702.127).
+#[test]
+fn prepare_fight_fights_from_the_graveyard() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let card = g.add_card_to_hand(0, catalog::prepare_fight());
+    flood(&mut g, 0);
+    let fight = |g: &mut GameState| {
+        g.perform_action(GameAction::CastAftermath {
+            card_id: card,
+            target: Some(Target::Permanent(giant)),
+            additional_targets: vec![Target::Permanent(bears)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(fight(&mut g).is_err(), "aftermath: not from the hand");
+    cast_as(&mut g, 0, card, Some(Target::Permanent(giant)));
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, giant), (5, 5));
+    flood(&mut g, 0);
+    fight(&mut g).expect("Fight from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+    assert!(g.exile.iter().any(|c| c.id == card), "then exiled");
+}
+
+/// Tezzeret the Schemer's −2 is +X/−X for the artifacts you control.
+#[test]
+fn tezzeret_the_schemer_minus_two_scales_with_artifacts() {
+    let mut g = pod(2);
+    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_the_schemer());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::mimic());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tez,
+        ability_index: 1,
+        target: Some(Target::Permanent(giant)),
+        x_value: None,
+    })
+    .expect("−2");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, giant), (5, 1));
+}
