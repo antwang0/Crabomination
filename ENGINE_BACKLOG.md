@@ -215,15 +215,25 @@ the handoff.
   first strike / undying / indestructible that flips the fight). Both Commander-only.
 - **OPEN (bot):** Mairsil's deck — Torchling's five abilities, Endling's menace / ±1 and Hateflayer's {Q} shot are
   never activated (census seed 9409); Grand Master of Flowers' lock +1 never chosen over the search +1.
+- **FIXED (second leg, seats 4801-4804 — Ruhan, Aegar, Sauron the Lidless Eye, Sharkey; 6 cards):** CR 120.10 /
+  120.4a excess damage from combat and to planeswalkers is an event (`GameEvent::ExcessCombatDamage`; noncombat
+  planeswalker excess now emits `ExcessNoncombatDamage`); `EventKind::DealtExcessNoncombatDamage` became the payload
+  variant `DealtExcessDamage { noncombat_only }` because the u128 kind mask is full. `Effect::
+  GrantNextMatchingSpellDiscountThisTurn` (`effects/next_spell_discount.rs`); Sharkey's
+  `OpponentsLandNonmanaAbilitiesLocked` + `HasNonmanaActivatedAbilitiesOfOpponentLands`; `Effect::
+  WhenPlayedThisWayThisTurn` (`effects/played_this_way.rs` — a turn-scoped table, since `MayPlayPermission` is `Copy`).
+  Cards: Aegar, Giant's Amulet, Battle of Frost and Fire, Invasion of the Giants, Sharkey, Fires of Mount Doom.
 - **OPEN (single-commander closers, each a primitive):** Zevlor (654 — per-opponent copies of a single-target
-  spell), Aegar (831) + Ruhan (911) — "dealt excess damage" for COMBAT damage and planeswalkers (only noncombat emits
-  `ExcessNoncombatDamage`) plus the `damaged_by_this_turn` "Giant, Wizard or spell you controlled" read; Hogaak
-  (929 — convoke + delve in one cast, no mana); Jorn (483, ten snow cards — Boreal Outrider needs snow mana spent by
-  color, Glittering Frost an enchanted-land-is-snow + extra mana, The Three Seasons' chapter III); Sauron's Fires of
-  Mount Doom ("when you play a card this way" — a `MayPlayPermission` carries no granter); Tivadar (Justice needs
-  `DealsDamage` with `AnyPlayer` scope for spells: `fire_spell_damage_listeners` walks `YourControl` only; Luminesce /
-  Surge of Salvation want a by-colour prevention shield over a seat's creatures — `PreventionTarget` has no
-  creatures-of-seat key).
+  spell: model on `copy_redirect.rs`'s Magmarch copy; the one-shot needs a "targets a single opponent or their
+  permanent" spell filter, `SpellTargetsMatching` reads permanents only); Hogaak (929 — a graveyard cast paid by
+  convoke + delve only, and a bot that assembles it); Jorn (483, ten snow cards — Boreal Outrider needs snow mana spent
+  by color, Glittering Frost an enchanted-land-is-snow + extra mana, The Three Seasons' chapter III); Tivadar (Justice
+  needs `DealsDamage` with `AnyPlayer` scope for spells: `fire_spell_damage_listeners` walks `YourControl` only;
+  Luminesce / Surge of Salvation want a by-colour prevention shield over a seat's creatures — `PreventionTarget` has
+  no creatures-of-seat key). ⚠ The rest of `edhrec_scan_top.py`'s one-card list (Itazura, Valko, Yume, Tolabow, …) is
+  NOT Commander-legal (Mystery Booster / Unfinity / Star Trek / Marvel promos) — the script has no legality filter.
+- **Aegar approximation:** "a spell you controlled" is read as an instant or sorcery you OWN — a resolved spell sits in
+  its owner's graveyard by dispatch, past `last_known_controller`; a stolen cast is the gap.
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 26 cards, 15 seats, nine primitives
 
@@ -279,7 +289,7 @@ the handoff.
   (reverted) and only core_rules' exhaustive walk caught it.
 - **CLAIMED (`01E4rMUL`, 2026-10-21) — don't duplicate:** Merchant's Dockhand (needs a "tap X untapped artifacts" cost); the PAIR decks Glacian+Kediss, Brinelin+Keleth, Armix+Radiant, Armix+Siani (27 cards: Academy Journeymage … Tezzeret's Betrayal); Sacred Boon (Breeches+Radiant's last card: the +0/+1 counters per prevented damage need a counter kind on `PreventionShield`) (landed — batch twenty-six's twenty-eight, seats 4797-4800; batch twenty-five's thirty-two, seats 4784-4789 (Amber Gristle jointly with `01R3xh4r`'s Geistflame Reservoir); batch twenty-four's thirty-four, seats 4770-4775; assist + batch twenty-three's seven, seats 4767-4769; batch twenty-two's twenty-two, seats 4761-4766; batch twenty-one's sixteen, seats 4756-4760; batch twenty's nine two-gap halves, seats 4750-4754; Invasion of New Phyrexia, Long Rest, Halls of Mist, Three Bowls of Porridge, Barroom Brawl landed: seats 4740-4744, 4748).
 - **CLAIMED (`01R3xh4r`, 2026-10-21) — landed:** every card it named (seats 4776-4783, 4790-4796) bar Eye of Ojer Taq and Monitor Monitor + Command Performance, which are released (see `01R3xh4r` above).
-- **CLAIMED (`01Jywzky`, 2026-10-21) — don't duplicate:** the SINGLE-commander list (`edhrec_scan_top.py`): Rashida Scalebane's four (Alabaster Dragon, Dragon Hunter, Shieldhide Dragon, Grand Master of Flowers), Mairsil's four (Endling, Hateflayer, Minion of Leshrac, Torchling), Fires of Mount Doom (Sauron), Aegar, the Freezing Flame + its deck (Giant's Amulet, Battle of Frost and Fire, Invasion of the Giants), Zevlor, Sharkey, Hogaak.
+- **CLAIMED (`01Jywzky`, 2026-10-21) — don't duplicate:** the SINGLE-commander list (`edhrec_scan_top.py`): Rashida Scalebane's four (Alabaster Dragon, Dragon Hunter, Shieldhide Dragon, Grand Master of Flowers), Mairsil's four (Endling, Hateflayer, Minion of Leshrac, Torchling), Zevlor, Hogaak (Fires of Mount Doom, Aegar + its deck and Sharkey LANDED, seats 4801-4804).
 - **OPEN (one-gap closers left, each a primitive):** Vedalken Squirrel-Whacker (2 decks: the d6 exchange
   replacement in `roll_one_die` — needs a seat-routed ask outside an effect), Invasion of New Phyrexia (2 decks: the
   Teferi back), Barroom Brawl (the opponent to your left + a copy offer), Arcane Proxy (a target filter reading the
