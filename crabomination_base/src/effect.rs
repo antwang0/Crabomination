@@ -14410,6 +14410,10 @@ pub enum Effect {
     /// is asked; yes stamps the source with this turn (`chosen_number`), no
     /// clears it. Read by `StaticEffect::ReplaceDamageToYouRemovingStampedCounters`.
     PlayerMayStampSourceTurn { who: Selector },
+    /// Put one card exiled with the source that shares a name with the spell
+    /// `what` resolves to into its owner's graveyard (Jester's Scepter's
+    /// "put a card exiled with this artifact into its owner's graveyard").
+    BinExiledWithSourceNamedLike { what: Selector },
     /// "[Player] loses all unspent mana" (Mana Short, Worldpurge) — an
     /// effect, so Upwelling's step-end exception doesn't stop it (CR 500.4);
     /// Yurlok's mana burn sees the loss.

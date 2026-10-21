@@ -16,6 +16,7 @@ mod keep_from_hand;
 mod keep_permanents;
 mod die_exchange;
 mod soul_echo;
+mod named_like;
 mod great_aurora;
 mod lose_unspent;
 mod next_spell_discount;
@@ -24752,6 +24753,10 @@ impl GameState {
                 self.each_player_keeps_from_hand_shuffles_rest(*keep, effect, ctx, events)
             }
             Effect::RollDiceSetBasePt { sides } => self.roll_dice_set_base_pt(*sides, ctx, events),
+            Effect::BinExiledWithSourceNamedLike { what } => {
+                self.bin_exiled_with_source_named_like(what, ctx, events);
+                Ok(())
+            }
             Effect::PlayerMayStampSourceTurn { who } => self.player_may_stamp_source_turn(who, effect, ctx, events),
             Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { keep } => {
                 self.each_player_keeps_permanents_rest_phase_out(*keep, effect, ctx, events)

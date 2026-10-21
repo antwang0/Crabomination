@@ -1021,6 +1021,7 @@ impl Effect {
             | Effect::EachPlayerKeepsUpToFromHandShufflesRest { .. }
             | Effect::EachPlayerKeepsUpToPermanentsRestPhaseOut { .. }
             | Effect::RollDiceSetBasePt { .. }
+            | Effect::BinExiledWithSourceNamedLike { .. }
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
