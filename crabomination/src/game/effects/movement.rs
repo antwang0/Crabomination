@@ -1243,6 +1243,7 @@ impl GameState {
         let mut exile_tolls: Vec<(usize, u32)> = Vec::new();
         let mut life_gain_to: Option<usize> = None;
         let mut counters_for_target: u32 = 0;
+        let mut counter_kind = CounterType::PlusOnePlusOne;
         // Kill-Suit Cultist — the permanent to destroy after the shield pass
         // when a `destroy` shield soaks this event.
         let mut destroy_after: Option<crate::card::CardId> = None;
@@ -1308,6 +1309,7 @@ impl GameState {
             }
             if soak > 0 && shield.counters_on_target {
                 counters_for_target += soak;
+                counter_kind = shield.counter_kind.unwrap_or(CounterType::PlusOnePlusOne);
             }
             if soak > 0 && let Some(seat) = shield.exile_top_for {
                 exile_tolls.push((seat, soak));
@@ -1351,11 +1353,11 @@ impl GameState {
         if counters_for_target > 0
             && let Some(cid) = to_card
         {
-            let n = self.place_counters(cid, CounterType::PlusOnePlusOne, counters_for_target);
+            let n = self.place_counters(cid, counter_kind, counters_for_target);
             if n > 0 {
                 events.push(GameEvent::CounterAdded {
                     card_id: cid,
-                    counter_type: CounterType::PlusOnePlusOne,
+                    counter_type: counter_kind,
                     count: n, placer: self.resolution_causer,
                 });
             }

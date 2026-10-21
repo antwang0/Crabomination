@@ -656,6 +656,7 @@ pub fn test_of_faith() -> CardDefinition {
         Effect::PreventNextDamageWithCounters {
             target: target_filtered(R::Creature),
             amount: Value::Const(3),
+            counter: None,
         },
     )
 }

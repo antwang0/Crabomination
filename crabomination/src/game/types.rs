@@ -2702,6 +2702,10 @@ pub struct PreventionShield {
     /// counter on that creature." Applies to the shielded permanent itself.
     #[serde(default)]
     pub counters_on_target: bool,
+    /// The kind `counters_on_target` places; `None` is +1/+1 (Sacred Boon's
+    /// +0/+1).
+    #[serde(default)]
+    pub counter_kind: Option<crate::card::CounterType>,
     /// Kill-Suit Cultist — "destroy that creature instead". When a shield
     /// on a permanent target soaks damage, destroy that permanent after the
     /// shield pass. Pairs with `one_event` (soaks the next event, then gone).

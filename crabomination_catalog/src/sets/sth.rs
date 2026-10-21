@@ -998,6 +998,7 @@ pub fn temper() -> CardDefinition {
         effect: Effect::PreventNextDamageWithCounters {
             target: target_filtered(R::Creature),
             amount: Value::XFromCost,
+            counter: None,
         },
         ..Default::default()
     }

@@ -2641,7 +2641,7 @@ impl Effect {
             | Effect::PreventAllDamageByTargetThisTurn { target } => sel_has_target(target),
             Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount }
-            | Effect::PreventNextDamageWithCounters { target, amount }
+            | Effect::PreventNextDamageWithCounters { target, amount, .. }
             | Effect::PreventNextDamageAndGainLife { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)
             }

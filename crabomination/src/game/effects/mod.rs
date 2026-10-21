@@ -41666,11 +41666,15 @@ impl GameState {
             }
 
             Effect::PreventNextDamage { target, amount }
-            | Effect::PreventNextDamageWithCounters { target, amount } => {
+            | Effect::PreventNextDamageWithCounters { target, amount, .. } => {
                 // CR 615.7 — push a "prevent the next N damage to target"
                 // shield consumed by `apply_prevention_shields`.
                 let counters =
                     matches!(effect, Effect::PreventNextDamageWithCounters { .. });
+                let counter_kind = match effect {
+                    Effect::PreventNextDamageWithCounters { counter, .. } => *counter,
+                    _ => None,
+                };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
@@ -41678,6 +41682,7 @@ impl GameState {
                             target: s,
                             remaining: Some(n),
                             counters_on_target: counters,
+                            counter_kind,
                             ..Default::default()
                         });
                     }

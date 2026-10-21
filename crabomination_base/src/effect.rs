@@ -13935,8 +13935,14 @@ pub enum Effect {
     /// "Prevent the next N damage that would be dealt to `target` this turn.
     /// For each 1 damage prevented this way, put a +1/+1 counter on it."
     /// Test of Faith — the counter rider rides the shield
-    /// (`counters_on_target`).
-    PreventNextDamageWithCounters { target: Selector, amount: Value },
+    /// (`counters_on_target`). `counter` overrides the kind (Sacred Boon's
+    /// +0/+1); `None` is +1/+1.
+    PreventNextDamageWithCounters {
+        target: Selector,
+        amount: Value,
+        #[serde(default)]
+        counter: Option<crate::card::CounterType>,
+    },
     /// CR 615.7 — "Prevent the next N damage that would be dealt *by* this
     /// permanent this turn" (Barbed Wire). The deal-side mirror of
     /// `PreventNextDamage`: a floating shield keyed to the source, soaking the
