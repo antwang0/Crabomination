@@ -18422,6 +18422,8 @@ static DECKS: &[Factory] = &[
     super::decks::giants_amulet,
     super::decks::battle_of_frost_and_fire,
     super::decks::invasion_of_the_giants,
+    super::decks::sharkey_tyrant_of_the_shire,
+    super::decks::fires_of_mount_doom,
     // cmdr_01dd_l (session 01DDeUtc)
     super::decks::dollhouse_of_horrors,
     super::decks::scheming_fence,

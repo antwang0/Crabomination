@@ -989,3 +989,57 @@ fn invasion_of_the_giants_pings_and_discounts_the_next_giant() {
             .is_err()
     );
 }
+
+/// Sharkey shuts off an opponent's Ghost Quarter except for its mana ability,
+/// and lends Sharkey the sacrifice ability — whose "sacrifice this" is Sharkey.
+#[test]
+fn sharkey_takes_its_opponents_land_abilities() {
+    let mut g = pod(2);
+    let sharkey = g.add_card_to_battlefield(0, catalog::sharkey_tyrant_of_the_shire());
+    g.clear_sickness(sharkey);
+    let quarter = g.add_card_to_battlefield(1, catalog::ghost_quarter());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let quarter_ability = |g: &mut GameState, index: usize, target: Option<Target>| {
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: quarter,
+            ability_index: index,
+            target,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(quarter_ability(&mut g, 1, Some(Target::Permanent(island))).is_err(), "locked");
+    assert!(quarter_ability(&mut g, 0, None).is_ok(), "a mana ability isn't");
+    g.battlefield_find_mut(quarter).unwrap().tapped = false;
+    activate(&mut g, sharkey, 0, Some(Target::Permanent(quarter))).expect("borrowed");
+    assert!(g.battlefield_find(quarter).is_none());
+    assert!(g.battlefield_find(sharkey).is_none(), "Sharkey paid the sacrifice");
+    assert!(g.battlefield_find(island).is_some());
+}
+
+/// Fires of Mount Doom: the ETB burns an opposing creature and destroys the
+/// Equipment on it; a card exiled by the {2}{R} and played (a land drop here)
+/// deals 2 to each player (CR 603.2 — "when you play a card this way").
+#[test]
+fn fires_of_mount_doom_burns_on_each_card_played_its_way() {
+    let mut g = pod(3);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(1, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bears);
+    let fires = g.add_card_to_hand(0, catalog::fires_of_mount_doom());
+    cast_as(&mut g, 0, fires, None);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+    assert!(g.battlefield_find(sword).is_none(), "its Equipment is destroyed");
+    let top = g.players[0].library[0].id;
+    activate(&mut g, fires, 0, None).expect("activate");
+    assert!(g.exile.iter().any(|c| c.id == top));
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(top)).expect("play it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some());
+    assert!(g.players.iter().zip(&life).all(|(p, l)| p.life == l - 2));
+}

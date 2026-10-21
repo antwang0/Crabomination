@@ -1926,3 +1926,76 @@ pub fn invasion_of_the_giants() -> CardDefinition {
         ],
     )
 }
+
+/// Sharkey, Tyrant of the Shire — {2}{U}{B} legendary 2/4 Avatar Rogue.
+/// Opponents' lands can't activate non-mana abilities; Sharkey has them all,
+/// payable with mana of any type.
+pub fn sharkey_tyrant_of_the_shire() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Activated abilities of lands your opponents control can't be activated unless they're mana abilities.",
+                effect: StaticEffect::OpponentsLandNonmanaAbilitiesLocked,
+            },
+            StaticAbility {
+                description: "Sharkey has all activated abilities of lands your opponents control except mana abilities. Mana of any type can be spent to activate Sharkey's abilities.",
+                effect: StaticEffect::HasNonmanaActivatedAbilitiesOfOpponentLands,
+            },
+        ],
+        ..creature(
+            "Sharkey, Tyrant of the Shire",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Avatar, CreatureType::Rogue],
+            2,
+            4,
+        )
+    }
+}
+
+/// Fires of Mount Doom — {2}{R} legendary enchantment. Entering, 2 damage to
+/// target creature an opponent controls and destroy all Equipment attached to
+/// it. {2}{R}: exile the top card; you may play it this turn; when you play a
+/// card this way, 2 damage to each player.
+pub fn fires_of_mount_doom() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            // The Equipment goes first: state-based actions wait for the
+            // whole ability (CR 704.3), so the order changes nothing, and the
+            // damage can leave the target unreadable as a permanent.
+            Effect::ForEach {
+                selector: Selector::AttachedToMe(Box::new(Selector::Target(0))),
+                body: Box::new(Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    },
+                    then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            Effect::DealDamage { to: target_filtered(R::Creature.and(R::ControlledByOpponent)), amount: Value::Const(2) },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::ONE, link_to_source: false, face_down: false },
+                Effect::GrantMayPlay {
+                    what: Selector::ExiledThisResolution { filter: R::Any },
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                Effect::WhenPlayedThisWayThisTurn {
+                    what: Selector::ExiledThisResolution { filter: R::Any },
+                    body: Box::new(Effect::DealDamage { to: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..spell("Fires of Mount Doom", cost(&[generic(2), r()]), CardType::Enchantment, Effect::Noop)
+    }
+}
