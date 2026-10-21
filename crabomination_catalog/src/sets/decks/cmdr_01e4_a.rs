@@ -9392,3 +9392,259 @@ pub fn teferi_timeless_voyager() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Leonardo, Worldly Warrior — {7}{W} legendary 5/5 Mutant Ninja Turtle with
+/// affinity for creatures and double strike.
+pub fn leonardo_worldly_warrior() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::DoubleStrike],
+        affinity_filter: Some(R::Creature.and(R::ControlledByYou)),
+        ..creature(
+            "Leonardo, Worldly Warrior",
+            cost(&[generic(7), w()]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle],
+            5,
+            5,
+        )
+    }
+}
+
+/// Wooden Cane — {3}{W} Equipment. When it enters, create a 2/2 red Mutant
+/// token and attach it to that. Equipped creature gets +2/+1. Equip {3}.
+pub fn wooden_cane() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(token("Mutant", 2, 2, vec![Color::Red], vec![CreatureType::Mutant])),
+            },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..equipment(
+            "Wooden Cane",
+            cost(&[generic(3), w()]),
+            cost(&[generic(3)]),
+            EquipBonus { power: 2, toughness: 1, ..Default::default() },
+        )
+    }
+}
+
+/// East Wind Avatar — {3}{W} 2/4 flying, vigilant Bird Spirit Avatar.
+/// Alliance — whenever another creature you control enters, it gets +1/+0
+/// until end of turn.
+pub fn east_wind_avatar() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: pump(Selector::This, 1, 0),
+        }],
+        ..creature(
+            "East Wind Avatar",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Bird, CreatureType::Spirit, CreatureType::Avatar],
+            2,
+            4,
+        )
+    }
+}
+
+/// Triceraton Regenta — {2}{W} 2/3 vigilant Dinosaur Noble. Whenever it
+/// attacks, untap up to one other target creature.
+pub fn triceraton_regenta() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![on_attack(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::Creature.and(R::OtherThanSource),
+            effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+        })],
+        ..creature("Triceraton Regenta", cost(&[generic(2), w()]), vec![CreatureType::Dinosaur, CreatureType::Noble], 2, 3)
+    }
+}
+
+/// Dimensional Exile — {1}{W} Aura, enchant basic land you control. When it
+/// enters, exile target creature an opponent controls until it leaves.
+pub fn dimensional_exile() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..aura_on(
+            "Dimensional Exile",
+            cost(&[generic(1), w()]),
+            R::Land.and(R::HasSupertype(Supertype::Basic)).and(R::ControlledByYou),
+            None,
+        )
+    }
+}
+
+/// Grounded for Life — {4}{W} Instant. Costs {3} less if it targets a tapped
+/// creature. Destroy target creature.
+pub fn grounded_for_life() -> CardDefinition {
+    CardDefinition {
+        self_cost_reduction_if_target: Some((R::Creature.and(R::Tapped), 3)),
+        ..spell(
+            "Grounded for Life",
+            cost(&[generic(4), w()]),
+            CardType::Instant,
+            Effect::Destroy { what: target_filtered(R::Creature) },
+        )
+    }
+}
+
+/// Leo's Guidance — {2}{W} Instant. Put a +1/+1 counter on each of up to
+/// three target creatures. Untap them.
+pub fn leos_guidance() -> CardDefinition {
+    spell(
+        "Leo's Guidance",
+        cost(&[generic(2), w()]),
+        CardType::Instant,
+        Effect::ApplyToTargets {
+            max_targets: 3,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+            ])),
+        },
+    )
+}
+
+/// Quicksilver, Pietro Maximoff — {2}{R} legendary 3/2 Mutant Hero with haste.
+pub fn quicksilver_pietro_maximoff() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Haste],
+        ..creature("Quicksilver, Pietro Maximoff", cost(&[generic(2), r()]), vec![CreatureType::Mutant, CreatureType::Hero], 3, 2)
+    }
+}
+
+/// Javelin of Lightning — {1}{R} Equipment with flash. When it enters, attach
+/// it to target creature you control. During your turn, equipped creature gets
+/// +2/+0 and has first strike. Equip {4}.
+pub fn javelin_of_lightning() -> CardDefinition {
+    let mut javelin = equipment(
+        "Javelin of Lightning",
+        cost(&[generic(1), r()]),
+        cost(&[generic(4)]),
+        EquipBonus {
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: R::Creature,
+                power: 2,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+                condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    );
+    javelin.keywords.push(Keyword::Flash);
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        ..javelin
+    }
+}
+
+/// Guildmages' Forum — Land. {T}: {C}. {1}, {T}: one mana of any color; spent
+/// on a multicolored creature spell, that creature enters with an additional
+/// +1/+1 counter.
+pub fn guildmages_forum() -> CardDefinition {
+    CardDefinition {
+        name: "Guildmages' Forum",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                        crate::mana::SpendRestriction::MulticoloredCreatureCastCounter,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Coal Stoker — {3}{R} 3/3 Elemental. When it enters, if you cast it from
+/// your hand, add {R}{R}{R}.
+pub fn coal_stoker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SourceCastFromOwnersHand,
+            then: Box::new(Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Red, Value::Const(3)) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature("Coal Stoker", cost(&[generic(3), r()]), vec![CreatureType::Elemental], 3, 3)
+    }
+}
+
+/// Havengul Vampire — {3}{R} 2/2 Vampire. A +1/+1 counter whenever it deals
+/// combat damage to a player and whenever another creature dies.
+pub fn havengul_vampire() -> CardDefinition {
+    let grow = || Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: grow(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource }),
+                effect: grow(),
+            },
+        ],
+        ..creature("Havengul Vampire", cost(&[generic(3), r()]), vec![CreatureType::Vampire], 2, 2)
+    }
+}
+
+/// Toxic Iguanar — {R} 1/1 Lizard; deathtouch as long as you control a green
+/// permanent.
+pub fn toxic_iguanar() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has deathtouch as long as you control a green permanent.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(mine(R::Permanent.and(R::HasColor(Color::Green)))),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Deathtouch],
+            },
+        }],
+        ..creature("Toxic Iguanar", cost(&[r()]), vec![CreatureType::Lizard], 1, 1)
+    }
+}
+
+/// Rockslide Ambush — {1}{R} Sorcery. It deals damage to target creature equal
+/// to the number of Mountains you control.
+pub fn rockslide_ambush() -> CardDefinition {
+    spell(
+        "Rockslide Ambush",
+        cost(&[generic(1), r()]),
+        CardType::Sorcery,
+        Effect::DealDamage {
+            to: target_filtered(R::Creature),
+            amount: count_mine(R::HasLandType(LandType::Mountain)),
+        },
+    )
+}

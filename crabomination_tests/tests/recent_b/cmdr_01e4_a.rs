@@ -3755,3 +3755,58 @@ fn niambi_fetches_teferi_from_the_graveyard_and_the_sentinel_reads_him() {
     cast(&mut g, timebender, None);
     assert_eq!(pt(&g, sentinel), (6, 6), "+4/+0 with a Teferi planeswalker");
 }
+
+/// CR 106.6 — Guildmages' Forum's mana rides the multicolored creature spell
+/// it pays for: that creature enters with a +1/+1 counter; a monocolored one
+/// doesn't.
+#[test]
+fn guildmages_forum_counters_a_multicolored_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let forum_cast = |creature: crabomination::card::CardDefinition, color: Color| {
+        let mut g = pod(2);
+        let forum = g.add_card_to_battlefield(0, catalog::guildmages_forum());
+        let id = g.add_card_to_hand(0, creature);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(color)]));
+        g.players[0].mana_pool = Default::default();
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility { card_id: forum, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("{1}, {T}");
+        drain_stack(&mut g);
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("one mana");
+        drain_stack(&mut g);
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(forum_cast(catalog::boros_recruit(), Color::Red), 1, "a {{R/W}} hybrid creature is multicolored");
+    assert_eq!(forum_cast(catalog::raging_goblin(), Color::Red), 0, "a mono-red one isn't");
+}
+
+#[test]
+fn javelin_of_lightning_arms_on_your_turn_only() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let javelin = g.add_card_to_hand(0, catalog::javelin_of_lightning());
+    cast(&mut g, javelin, Some(Target::Permanent(bears)));
+    assert_eq!(pt(&g, bears), (4, 2), "attached on entry, +2/+0 on your turn");
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::FirstStrike));
+    g.active_player_idx = 1;
+    assert_eq!(pt(&g, bears), (2, 2), "not on an opponent's turn");
+}
+
+#[test]
+fn wooden_cane_and_coal_stoker_pay_out_on_entry() {
+    let mut g = pod(2);
+    let cane = g.add_card_to_hand(0, catalog::wooden_cane());
+    cast(&mut g, cane, None);
+    let mutant = g.battlefield_find(cane).unwrap().attached_to.expect("attached to its Mutant");
+    assert_eq!(pt(&g, mutant), (4, 3));
+    let stoker = g.add_card_to_hand(0, catalog::coal_stoker());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: stoker, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "cast from hand: three red");
+}
