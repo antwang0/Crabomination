@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 6 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01kpxz3h--12-single-commander-seats-38-cards-the-single-commander-list) | 40 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01R3xh4r`) — 42 cards, 21 seats, thirteen primitives](#fixedopen-2026-10-21-commander-run-01r3xh4r--42-cards-21-seats-thirteen-primitives) | 34 |
@@ -187,6 +188,13 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders
+
+- **CLAIMED (`01KabMxS`, 2026-10-21) — don't duplicate:** the Attraction-rider closers for The Most Dangerous Gamer,
+  Dee Kay and Spinnerette's EDHREC averages — Soul Swindler, Squirrel Squatters, Spinnerette, Arachnobat, Motion
+  Sickness, Dee Kay, Finder of the Lost, Done for the Day; Pick-a-Beeble (a prize Attraction); and The Most Dangerous
+  Gamer's own "whenever you open an Attraction" / "claim the prize" triggers (CR 701.51c, 702.159b).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 12 single-commander seats, 38 cards, the single-commander list
 
