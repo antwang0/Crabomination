@@ -3413,3 +3413,85 @@ fn cr_800_4_timely_reinforcements_reads_one_opponent() {
         assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), tokens, "seat 1 has {seat1}");
     }
 }
+
+/// Tezzeret, Master of Metal's −8 takes every artifact and creature the
+/// target opponent controls — and nothing of the other opponent's.
+#[test]
+fn tezzeret_master_of_metal_ultimate_steals_one_board() {
+    let mut g = pod(3);
+    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_master_of_metal());
+    g.battlefield_find_mut(tez).unwrap().add_counters(CounterType::Loyalty, 5);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tez,
+        ability_index: 2,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    })
+    .expect("-8");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ring).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(other).unwrap().controller, 2);
+}
+
+/// Suncleanser strips a creature's counters and keeps new ones off it.
+#[test]
+fn suncleanser_scrubs_and_locks() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    let cleanser = g.add_card_to_hand(0, catalog::suncleanser());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cleanser,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0), DecisionAnswer::Target(Target::Permanent(bear))]));
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (2, 2), "counters gone");
+    assert!(g.counters_locked_on(bear));
+}
+
+/// Profane Procession turns into Tomb of the Dusk Rose on its third exile.
+#[test]
+fn profane_procession_becomes_the_tomb() {
+    let mut g = pod(2);
+    let proc_ = g.add_card_to_battlefield(0, catalog::profane_procession());
+    for _ in 0..3 {
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        flood(&mut g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: proc_,
+            ability_index: 0,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("exile");
+        drain_stack(&mut g);
+    }
+    let card = g.battlefield_find(proc_).unwrap();
+    assert!(card.transformed, "Tomb of the Dusk Rose");
+}
+
+/// Salvage Slasher grows with the artifact cards in your graveyard.
+#[test]
+fn salvage_slasher_counts_scrap() {
+    let mut g = pod(2);
+    let slasher = g.add_card_to_battlefield(0, catalog::salvage_slasher());
+    g.add_card_to_graveyard(0, catalog::sol_ring());
+    g.add_card_to_graveyard(0, catalog::mind_stone());
+    assert_eq!(pt(&g, slasher), (3, 1));
+}

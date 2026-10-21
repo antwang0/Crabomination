@@ -8268,3 +8268,508 @@ pub fn icatian_town() -> CardDefinition {
         make(4, token("Citizen", 1, 1, vec![Color::White], vec![CreatureType::Citizen])),
     )
 }
+
+// ── Batch twenty-seven (pair decks: artifacts, moons, Tezzeret) ─────────────
+
+fn aura_on(name: &'static str, mana: ManaCost, on: R, bonus: Option<EquipBonus>) -> CardDefinition {
+    CardDefinition { effect: Effect::Attach { what: Selector::This, to: target_filtered(on) }, ..aura(name, mana, bonus) }
+}
+
+fn dont_untap() -> StaticAbility {
+    StaticAbility {
+        description: "Enchanted permanent doesn't untap during its controller's untap step.",
+        effect: StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
+    }
+}
+
+/// Academy Journeymage — {4}{U} 3/2 Human Wizard; {1} less with a Wizard. When
+/// it enters, return target creature an opponent controls to its owner's hand.
+pub fn academy_journeymage() -> CardDefinition {
+    CardDefinition {
+        self_cost_reduction_if_control: vec![(R::HasCreatureType(CreatureType::Wizard).and(R::ControlledByYou), 1)],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        ..creature("Academy Journeymage", cost(&[generic(4), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 2)
+    }
+}
+
+/// Embersmith — {1}{R} 2/1 Human Artificer. Whenever you cast an artifact
+/// spell, you may pay {1}; if you do, it deals 1 damage to any target.
+pub fn embersmith() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![artifact_cast(Effect::MayPay {
+            description: "Pay {1} to deal 1 damage?".into(),
+            mana_cost: cost(&[generic(1)]),
+            body: Box::new(Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE }),
+            else_: None,
+        })],
+        ..creature("Embersmith", cost(&[generic(1), r()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 1)
+    }
+}
+
+/// Filigree Crawler — {4} 2/2 artifact creature Insect. When it dies, create
+/// a 1/1 colorless Thopter artifact creature token with flying.
+pub fn filigree_crawler() -> CardDefinition {
+    let thopter = TokenDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        ..token("Thopter", 1, 1, vec![], vec![CreatureType::Thopter])
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: make(1, thopter),
+        }],
+        ..creature("Filigree Crawler", cost(&[generic(4)]), vec![CreatureType::Insect], 2, 2)
+    }
+}
+
+/// Sliver Construct — {3} 2/2 artifact creature Sliver Construct.
+pub fn sliver_construct() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..creature("Sliver Construct", cost(&[generic(3)]), vec![CreatureType::Sliver, CreatureType::Construct], 2, 2)
+    }
+}
+
+/// Vedalken Certarch — {U} 1/1 Vedalken Wizard. Metalcraft — {T}: tap target
+/// artifact, creature, or land; activate only with three or more artifacts.
+pub fn vedalken_certarch() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::MetalcraftActive { who: PlayerRef::You }),
+            effect: Effect::Tap { what: target_filtered(R::Artifact.or(R::Creature).or(R::Land)) },
+            ..Default::default()
+        }],
+        ..creature("Vedalken Certarch", cost(&[u()]), vec![CreatureType::Vedalken, CreatureType::Wizard], 1, 1)
+    }
+}
+
+/// Bonds of Quicksilver — {3}{U} Aura with flash. Enchanted creature doesn't
+/// untap during its controller's untap step.
+pub fn bonds_of_quicksilver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![dont_untap()],
+        ..aura("Bonds of Quicksilver", cost(&[generic(3), u()]), None)
+    }
+}
+
+/// Chant of the Skifsang — {2}{U} Aura. Enchanted creature gets -13/-0.
+pub fn chant_of_the_skifsang() -> CardDefinition {
+    aura("Chant of the Skifsang", cost(&[generic(2), u()]), Some(EquipBonus { power: -13, ..Default::default() }))
+}
+
+/// Coma Veil — {4}{U} Aura (artifact or creature). Enchanted permanent doesn't
+/// untap during its controller's untap step.
+pub fn coma_veil() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![dont_untap()],
+        ..aura_on("Coma Veil", cost(&[generic(4), u()]), R::Artifact.or(R::Creature), None)
+    }
+}
+
+/// Sol Grail — {3} artifact. As it enters, choose a color. {T}: add one mana
+/// of the chosen color.
+pub fn sol_grail() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            ..Default::default()
+        }],
+        ..spell("Sol Grail", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Moon Heron — {3}{U} 3/2 flying Spirit Bird.
+pub fn moon_heron() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        ..creature("Moon Heron", cost(&[generic(3), u()]), vec![CreatureType::Spirit, CreatureType::Bird], 3, 2)
+    }
+}
+
+/// Moon-Eating Dog — {3}{U} 3/3 Dog. Flying while you control a Yanling
+/// planeswalker.
+pub fn moon_eating_dog() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control a Yanling planeswalker, this creature has flying.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Flying,
+                condition: Predicate::SelectorExists(mine(R::HasPlaneswalkerType(PlaneswalkerSubtype::Yanling))),
+            },
+        }],
+        ..creature("Moon-Eating Dog", cost(&[generic(3), u()]), vec![CreatureType::Dog], 3, 3)
+    }
+}
+
+/// Moonlit Scavengers — {5}{U} 4/5 Merfolk Rogue. When it enters, if you
+/// control an artifact or enchantment, return target creature an opponent
+/// controls to its owner's hand.
+pub fn moonlit_scavengers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SelectorExists(mine(R::Artifact.or(R::Enchantment)))),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..creature("Moonlit Scavengers", cost(&[generic(5), u()]), vec![CreatureType::Merfolk, CreatureType::Rogue], 4, 5)
+    }
+}
+
+/// Nephalia Moondrakes — {5}{U}{U} 5/5 flying Drake. When it enters, target
+/// creature gains flying until end of turn. {4}{U}{U}, exile it from your
+/// graveyard: creatures you control gain flying until end of turn.
+pub fn nephalia_moondrakes() -> CardDefinition {
+    let fly = |what| Effect::GrantKeyword { what, keyword: Keyword::Flying, duration: Duration::EndOfTurn };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(fly(target_filtered(R::Creature)))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), u(), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: fly(mine(R::Creature)),
+            ..Default::default()
+        }],
+        ..creature("Nephalia Moondrakes", cost(&[generic(5), u(), u()]), vec![CreatureType::Drake], 5, 5)
+    }
+}
+
+/// Suncleanser — {1}{W} 1/4 Human Cleric. When it enters, choose one: remove
+/// all counters from target creature, which can't have counters put on it
+/// while Suncleanser remains; or target opponent loses all counters (their
+/// "can't get counters" lock is not modelled — INCOMPLETE_CARDS).
+pub fn suncleanser() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::RemoveAllCounters { what: target_filtered(R::Creature) },
+                Effect::RememberPermanentOnSource { what: Selector::Target(0) },
+            ]),
+            Effect::RemoveAllPlayerCounters { who: PlayerRef::Target(0) },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "The chosen creature can't have counters put on it.",
+            effect: StaticEffect::CantHaveCountersPutOn { applies_to: Selector::ChosenPermanentOfSource },
+        }],
+        ..creature("Suncleanser", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Cleric], 1, 4)
+    }
+}
+
+/// Bound by Moonsilver — {2}{W} Aura. Enchanted creature can't attack or
+/// block (or transform — not modelled). Sacrifice another permanent: attach
+/// it to target creature; sorcery speed, once each turn.
+pub fn bound_by_moonsilver() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Permanent.and(R::OtherThanSource), 1)),
+            sorcery_speed: true,
+            once_per_turn: true,
+            effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..aura(
+            "Bound by Moonsilver",
+            cost(&[generic(2), w()]),
+            Some(EquipBonus { keywords: vec![Keyword::CantAttack, Keyword::CantBlock], ..Default::default() }),
+        )
+    }
+}
+
+/// Moonlace — {U} instant. Target permanent becomes colorless (spells aren't
+/// offered as targets — INCOMPLETE_CARDS).
+pub fn moonlace() -> CardDefinition {
+    spell(
+        "Moonlace",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::BecomeColor { what: target_filtered(R::Permanent), colors: vec![], duration: Duration::Permanent, additive: false },
+    )
+}
+
+/// Ominous Parcel — {1} artifact. {2}, {T}, sacrifice it: search for a basic
+/// land card, put it into your hand. {5}, {T}, sacrifice it: 4 damage to
+/// target creature.
+pub fn ominous_parcel() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search { who: PlayerRef::You, filter: R::IsBasicLand, to: ZoneDest::Hand(PlayerRef::You) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+                ..Default::default()
+            },
+        ],
+        ..spell("Ominous Parcel", cost(&[generic(1)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Restoration Gearsmith — {2}{W}{B} 3/3 Human Artificer. When it enters,
+/// return target artifact or creature card from your graveyard to your hand.
+pub fn restoration_gearsmith() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::Artifact.or(R::Creature).and(R::InYourGraveyard)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature("Restoration Gearsmith", cost(&[generic(2), w(), b()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 3)
+    }
+}
+
+/// Seraph of New Capenna // Seraph of New Phyrexia — {2}{W} 2/2 flying Angel
+/// Soldier. {4}{B/P}: transform it; sorcery speed. Back: a 3/3 flying
+/// Phyrexian Angel; whenever it attacks, you may sacrifice another creature
+/// or artifact for +2/+1 until end of turn.
+pub fn seraph_of_new_capenna() -> CardDefinition {
+    let phyrexia = CardDefinition {
+        name: "Seraph of New Phyrexia",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::White, Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian, CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+            description: "Sacrifice another creature or artifact".into(),
+            filter: R::Creature.or(R::Artifact).and(R::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(pump(Selector::This, 2, 1)),
+            else_: None,
+        })],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), crate::mana::phyrexian(Color::Black)]),
+            sorcery_speed: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(phyrexia)),
+        ..creature("Seraph of New Capenna", cost(&[generic(2), w()]), vec![CreatureType::Angel, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Profane Procession // Tomb of the Dusk Rose — {1}{W}{B} legendary
+/// enchantment. {3}{W}{B}: exile target creature; then with three or more
+/// cards exiled with it, transform it. Back: a legendary land; {T}: any color;
+/// {2}{W}{B}, {T}: put a creature card exiled with it onto the battlefield
+/// under your control.
+pub fn profane_procession() -> CardDefinition {
+    use crate::card::Supertype;
+    let tomb = CardDefinition {
+        name: "Tomb of the Dusk Rose",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_any_color(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), w(), b()]),
+                tap_cost: true,
+                effect: Effect::MoveChosen {
+                    from: Selector::CardsInZone { who: PlayerRef::EachPlayer, zone: Zone::Exile, filter: R::Creature.and(R::ExiledWithSource) },
+                    filter: None,
+                    count: Value::ONE,
+                    up_to: false,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), b()]),
+            effect: Effect::Seq(vec![
+                Effect::ExileLinked { what: target_filtered(R::Creature) },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::CardsExiledWithSourceCount, Value::Const(3)),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(tomb)),
+        ..spell("Profane Procession", cost(&[generic(1), w(), b()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Etherium Astrolabe — {2}{U} artifact with flash. {B}, {T}, sacrifice an
+/// artifact: draw a card.
+pub fn etherium_astrolabe() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Artifact, 1)),
+            sac_other_may_be_source: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..spell("Etherium Astrolabe", cost(&[generic(2), u()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Tezzeret's Gatebreaker — {4} artifact. When it enters, look at the top five;
+/// you may put a blue or artifact card from among them into your hand; the
+/// rest go to the bottom in a random order. {5}{U}, {T}, sacrifice it:
+/// creatures you control can't be blocked this turn.
+pub fn tezzerets_gatebreaker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            rest_bottom_random: true,
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            take: Some(Value::ONE),
+            pick_filter: Some(R::HasColor(Color::Blue).or(R::Artifact)),
+            optional: true,
+            ..Default::default()
+        })))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::GrantKeyword { what: mine(R::Creature), keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..spell("Tezzeret's Gatebreaker", cost(&[generic(4)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Salvage Slasher — {1}{B} 1/1 artifact creature Human Rogue. It gets +1/+0
+/// for each artifact card in your graveyard.
+pub fn salvage_slasher() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+0 for each artifact card in your graveyard.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Artifact },
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        ..creature("Salvage Slasher", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Rogue], 1, 1)
+    }
+}
+
+/// Tezzeret's Touch — {1}{U}{B} Aura (artifact). Enchanted artifact is a
+/// creature with base power and toughness 5/5 in addition to its other types.
+/// When enchanted artifact is put into a graveyard, return it to its owner's
+/// hand.
+pub fn tezzerets_touch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::EnchantedBySource),
+            effect: Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+        }],
+        ..aura_on(
+            "Tezzeret's Touch",
+            cost(&[generic(1), u(), b()]),
+            R::Artifact,
+            Some(EquipBonus { set_base_pt: Some((5, 5)), add_card_types: vec![CardType::Creature], ..Default::default() }),
+        )
+    }
+}
+
+/// Tezzeret, Master of Metal — {4}{U}{B} planeswalker, loyalty 5. +1: reveal
+/// until an artifact card, put it into your hand, the rest on the bottom in a
+/// random order. −3: target opponent loses life equal to the artifacts you
+/// control. −8: gain control of all artifacts and creatures target opponent
+/// controls.
+pub fn tezzeret_master_of_metal() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, Supertype};
+    let loyalty = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    CardDefinition {
+        name: "Tezzeret, Master of Metal",
+        cost: cost(&[generic(4), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Tezzeret], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: R::Artifact,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                    cap: Value::Const(200),
+                    life_per_revealed: 0,
+                    miss_dest: crate::effect::RevealMissDest::BottomRandom,
+                },
+            ),
+            loyalty(-3, Effect::LoseLife { who: target_filtered(R::OpponentPlayer), amount: count_mine(R::Artifact) }),
+            loyalty(
+                -8,
+                Effect::GainControl {
+                    what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Artifact.or(R::Creature) },
+                    to: None,
+                    duration: Duration::Permanent,
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tezzeret's Ambition — {3}{U}{U} sorcery. Draw three cards. If you control
+/// no artifacts, discard a card.
+pub fn tezzerets_ambition() -> CardDefinition {
+    spell(
+        "Tezzeret's Ambition",
+        cost(&[generic(3), u(), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(mine(R::Artifact)))),
+                then: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Tezzeret's Betrayal — {3}{U}{B} sorcery. Destroy target creature; you may
+/// search your library (the graveyard half is not offered) for Tezzeret,
+/// Master of Metal and put it into your hand.
+pub fn tezzerets_betrayal() -> CardDefinition {
+    spell(
+        "Tezzeret's Betrayal",
+        cost(&[generic(3), u(), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasName("Tezzeret, Master of Metal".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+    )
+}

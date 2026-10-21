@@ -2341,3 +2341,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kor Dirge | Kor Dirge's "source of your choice" is the headless first hostile source (`choose_damage_prevention_source`) | a ranked source pick |
 | 🟡 Start // Finish | Finish sacrifices its creature on resolution, not as an additional cost (`SplitHalf` carries no additional cost) | an additional-cost field on `SplitHalf` |
 | 🟡 Graven Abomination | exiles a card from any opponent's graveyard, not specifically the defending player's | a defending-player graveyard target filter |
+| 🟡 Suncleanser | the opponent mode removes their counters but not the "can't get counters" lock | a player-scoped counter lock |
+| 🟡 Moonlace | only permanents are offered as targets (not spells) | a spell-color layer |
+| 🟡 Bound by Moonsilver | "can't transform" is not modelled | a transform lock |
+| 🟡 Tezzeret's Betrayal | searches only the library for Tezzeret (not the graveyard) | a library-and/or-graveyard search |
