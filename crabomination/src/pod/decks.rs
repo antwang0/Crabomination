@@ -131726,3 +131726,86 @@ pub const SIVRISS_15_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LIVAAN_10_COMMANDERS: &[CardFactory] = &[livaan_cultist_of_tiamat, haunted_one];
+
+/// **Livaan, Cultist of Tiamat and Haunted One**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Mountains + 7 Swamps = 98.
+/// Livaan, Cultist of Tiamat and Haunted One (EDHREC, fetched 2026-10-21).
+pub const LIVAAN_10_MAIN: &[CardFactory] = &[
+    arc_reactor, arcane_signet, extinguisher_battleship, fellwar_stone, mind_stone,
+    rakdos_signet, relic_of_legends, sol_ring, springleaf_drum, talisman_of_indulgence,
+    thrumming_stone, blightstep_pathway, bojuka_bog, command_tower, dragonskull_summit,
+    exotic_orchard, foreboding_ruins, haunted_ridge, nesting_grounds, shadowblood_ridge,
+    smoldering_marsh, sulfurous_springs, survivors_encampment, tainted_peak,
+    terramorphic_expanse, war_room, ancient_brass_dragon, atsushi_the_blazing_sky,
+    balefire_dragon, cavern_hoard_dragon, desert_were_worm, dragons_rage_channeler,
+    emrakul_the_exigent_doom, goldspan_dragon, harmonic_prodigy, juri_master_of_the_revue,
+    keldon_flamesage, knollspine_dragon, ogre_battlecaster, plaguecrafter, storm_kiln_artist,
+    terror_of_the_peaks, twinflame_tyrant, bitter_reunion, collective_inferno, glistening_oil,
+    ion_storm, necropotence, retribution_of_the_ancients, big_score, chaos_warp, curtains_call,
+    deadly_dispute, deadly_rollick, deflecting_swat, delayed_blast_fireball, kazuuls_fury,
+    malakir_rebirth, rakdos_charm, souls_fire, unleash_fury, blasphemous_act, bloodline_bidding,
+    bloodsoaked_insight, burning_curiosity, chandras_ignition, essence_harvest, gravitic_punch,
+    inspired_tinkering, jeskas_will, mana_geyser, nights_whisper, rite_of_consumption,
+    secret_salvage, sign_in_blood, soul_immolation, sundering_eruption, vandalblast,
+    volcanic_salvo, wheel_of_fortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_FUGITIVE_DOCTOR_16_COMMANDERS: &[CardFactory] = &[the_fugitive_doctor, jamie_mccrimmon];
+
+/// **The Fugitive Doctor and Jamie McCrimmon**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 22 Forests + 5 Mountains = 98.
+/// The Fugitive Doctor and Jamie McCrimmon (EDHREC, fetched 2026-10-21).
+pub const THE_FUGITIVE_DOCTOR_16_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, chromatic_lantern, genesis_chamber, gruul_signet,
+    helm_of_awakening, lightning_greaves, mycosynth_lattice, network_terminal, patriars_seal,
+    relic_of_legends, sol_ring, talisman_of_impulse, tamiyos_journal, cinder_glade,
+    darksteel_citadel, dining_room, great_furnace, power_depot, rockfall_vale, rootbound_crag,
+    slagwoods_bridge, treasure_vault, tree_of_tales, academy_manufactor,
+    ashaya_soul_of_the_wild, automated_artificer, boreal_druid, bosh_iron_golem,
+    briarbridge_patrol, coercive_recruiter, copper_myr, elmar_ulvenwald_informant,
+    eternal_witness, fanatic_of_rhonas, foundry_inspector, frogmite, giggling_skitterspike,
+    hyrax_tower_scout, ilysian_caryatid, iron_myr, jaheira_friend_of_the_forest,
+    jhoiras_familiar, kediss_emberclaw_familiar, kiki_jiki_mirror_breaker,
+    marvin_murderous_mimic, mycosynth_golem, myr_enforcer, oxidda_golem, quirion_ranger,
+    selvala_heart_of_the_wilds, sharp_eyed_rookie, sojourners_companion, solemn_simulacrum,
+    tangle_golem, tireless_provisioner, tireless_tracker, walking_atlas, impact_tremors,
+    rising_of_the_day, warstorm_surge, weirding_wood, beast_within, chefs_kiss,
+    chord_of_calling, legolass_quick_reflexes, shared_summons, tamiyos_safekeeping, hull_breach,
+    the_great_aurora, time_of_need,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const ALHARU_27_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, radiant_serra_archangel];
+
+/// **Alharu, Solemn Ritualist and Radiant, Serra Archangel**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 29 Plains = 98.
+/// Alharu, Solemn Ritualist and Radiant, Serra Archangel (EDHREC, fetched 2026-10-21).
+pub const ALHARU_27_MAIN: &[CardFactory] = &[
+    arcane_signet, greatsword_of_tyr, hedron_archive, marble_diamond, pearl_medallion,
+    skullclamp, sol_ring, swiftfoot_boots, the_aetherspark, abandoned_air_temple, ancient_tomb,
+    emeria_the_sky_ruin, idyllic_grange, myriad_landscape, seraph_sanctuary,
+    invasion_of_gobakhan, abzan_battle_priest, abzan_falconer, aerith_gainsborough,
+    ainok_bond_kin, angelic_sleuth, archangel_of_thune, basris_lieutenant, battle_angels_of_tyr,
+    dr_beverly_crusher, envoy_of_the_ancestors, exemplar_of_light, gold_myr,
+    grateful_apparition, guide_of_souls, lion_sash, luminarch_aspirant, mangara_the_diplomat,
+    mentor_of_the_meek, merchant_of_truth, mikaeus_the_lunarch, remorseful_cleric,
+    rosie_cotton_of_south_lane, scholar_of_new_horizons, segovian_angel, soul_warden, sun_titan,
+    topplegeist, urdnan_dromoka_warrior, weathered_wayfarer, wojek_investigator,
+    authority_of_the_consuls, cathars_crusade, cleric_class, darksteel_mutation,
+    intangible_virtue, monologue_tax, smothering_tithe, smugglers_share, akromas_will, erode,
+    flawless_maneuver, generous_gift, parting_gust, path_to_exile, rebuff_the_wicked,
+    swords_to_plowshares, basri_ket, austere_command, blinding_light, farewell, fumigate,
+    gift_of_estates, tragic_arrogance,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];

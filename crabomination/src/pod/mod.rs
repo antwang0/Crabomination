@@ -28638,6 +28638,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIVRISS_15_COMMANDERS,
             main: decks::SIVRISS_15_MAIN,
         },
+        // Seat 4698: Livaan, Cultist of Tiamat and Haunted One's EDHREC average deck. `--pod-decks 4698`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Haunted One (BR)",
+            commanders: decks::LIVAAN_10_COMMANDERS,
+            main: decks::LIVAAN_10_MAIN,
+        },
+        // Seat 4699: The Fugitive Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 4699`.
+        PodDeck {
+            name: "The Fugitive Doctor and Jamie McCrimmon (RG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_16_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_16_MAIN,
+        },
+        // Seat 4700: Alharu, Solemn Ritualist and Radiant, Serra Archangel's EDHREC average deck. `--pod-decks 4700`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Radiant, Serra Archangel (W)",
+            commanders: decks::ALHARU_27_COMMANDERS,
+            main: decks::ALHARU_27_MAIN,
+        },
     ]
 }
 
@@ -35236,6 +35254,9 @@ mod tests {
             ("Esior, Wardwing Familiar and Kydele, Chosen of Kruphix", &[0x1C6D]),
             ("The Sixth Doctor and Tegan Jovanka", &[0x1C6E]),
             ("Sivriss, Nightmare Speaker and Dungeon Delver", &[0x1C6F]),
+            ("Livaan, Cultist of Tiamat and Haunted One", &[0x1C70]),
+            ("The Fugitive Doctor and Jamie McCrimmon", &[0x1C71]),
+            ("Alharu, Solemn Ritualist and Radiant, Serra Archangel", &[0x1C72]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
