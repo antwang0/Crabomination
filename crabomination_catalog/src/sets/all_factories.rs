@@ -19000,6 +19000,10 @@ static DECKS: &[Factory] = &[
     super::decks::duelists_flame,
     super::decks::captain_rex_nebula,
     super::decks::mysterious_limousine,
+    super::decks::tetzin_gnome_champion,
+    super::decks::chalice_of_life,
+    super::decks::sunbird_standard,
+    super::decks::unstable_glyphbridge,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

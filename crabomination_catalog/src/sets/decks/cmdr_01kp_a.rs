@@ -2,13 +2,15 @@
 //! `tests/recent_b/cmdr_01kp_a.rs`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword,
-    SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt, EventKind, EventScope,
+    EventSpec, ExileReturnZone, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::{target_any, target_filtered};
-use crate::effect::{Duration, Effect, LookExileGrant, PlayerRef, Predicate, Selector, Value};
+use crate::effect::shortcut::{craft, target_any, target_filtered};
+use crate::effect::{Duration, Effect, LookExileGrant, ManaPayload, PlayerRef, Predicate, Selector, Value};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, r, w, x};
+use crate::mana::{Color, b, cost, generic, r, u, w, x};
+use std::sync::Arc;
 
 /// Squall, Gunblade Duelist — {R}{W}{B} 3/2 legendary Human Mercenary, first
 /// strike. As it enters, choose a number. Whenever one or more creatures attack
@@ -174,6 +176,188 @@ pub fn mysterious_limousine() -> CardDefinition {
             TriggeredAbility { event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource), effect: swap() },
             TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: swap() },
         ],
+        ..Default::default()
+    }
+}
+
+fn etb(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource), effect }
+}
+
+/// Tetzin, Gnome Champion // The Golden-Gear Colossus — {U}{R}{W} 2/2
+/// legendary artifact creature Gnome. Whenever it or another double-faced
+/// artifact you control enters, mill three and you may put an artifact card
+/// milled this way into your hand. Craft with six artifacts {4}. The Colossus:
+/// 6/6 vigilance, trample; whenever it enters or attacks, transform up to one
+/// other target double-faced artifact you control and create two 1/1 Gnome
+/// artifact creature tokens.
+pub fn tetzin_gnome_champion() -> CardDefinition {
+    let gnome = Arc::new(TokenDefinition {
+        name: "Gnome".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        ..Default::default()
+    });
+    let gears = || {
+        Effect::Seq(vec![
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Transform {
+                    what: target_filtered(
+                        R::Artifact.and(R::ControlledByYou).and(R::HasBackFace).and(R::OtherThanSource),
+                    ),
+                }),
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: gnome.clone() },
+        ])
+    };
+    let colossus = CardDefinition {
+        name: "The Golden-Gear Colossus",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        color_indicator: vec![Color::White, Color::Blue, Color::Red],
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        triggered_abilities: vec![
+            etb(gears()),
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: gears() },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Tetzin, Gnome Champion",
+        cost: cost(&[u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.and(R::HasBackFace) },
+            ),
+            effect: Effect::MillThenToHand { amount: Value::Const(3), filter: R::Artifact, otherwise: None },
+        }],
+        activated_abilities: vec![craft(cost(&[generic(4)]), R::Artifact, 6)],
+        back_face: Some(Box::new(colossus)),
+        ..Default::default()
+    }
+}
+
+/// Chalice of Life // Chalice of Death — {3} artifact. {T}: you gain 1 life;
+/// then if you have at least 10 more than your starting life total, transform
+/// it. Chalice of Death: {T}: target player loses 5 life.
+pub fn chalice_of_life() -> CardDefinition {
+    let death = CardDefinition {
+        name: "Chalice of Death",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::LoseLife { who: target_filtered(R::Player), amount: Value::Const(5) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Chalice of Life",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::LifeOf(PlayerRef::You),
+                        Value::Sum(vec![Value::StartingLifeTotal, Value::Const(10)]),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(death)),
+        ..Default::default()
+    }
+}
+
+/// Sunbird Standard // Sunbird Effigy — {3} artifact. {T}: add one mana of any
+/// color. Craft with one or more {5}. Sunbird Effigy: */* flying, vigilance,
+/// haste Bird Construct, P/T the number of colors among the exiled cards used
+/// to craft it; {T}: for each of those colors, add one mana of it.
+pub fn sunbird_standard() -> CardDefinition {
+    let effigy = CardDefinition {
+        name: "Sunbird Effigy",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird, CreatureType::Construct], ..Default::default() },
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
+        dynamic_pt: Some(DynamicPt::ExiledWithSourceColorCount),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OneOfEachColorAmongExiledWithSource },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Sunbird Standard",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            craft(cost(&[generic(5)]), R::Any, 0),
+        ],
+        back_face: Some(Box::new(effigy)),
+        ..Default::default()
+    }
+}
+
+/// Unstable Glyphbridge // Sandswirl Wanderglyph — {3}{W}{W} artifact. When it
+/// enters, if you cast it, for each player you choose a creature with power 2
+/// or less they control; destroy every other creature. Craft with artifact
+/// {3}{W}{W}. Sandswirl Wanderglyph: 5/3 flying Golem; whenever an opponent
+/// casts a spell during their turn, they can't attack you or planeswalkers you
+/// control this turn; each opponent who attacked you or a planeswalker you
+/// control this turn can't cast spells.
+pub fn unstable_glyphbridge() -> CardDefinition {
+    let wanderglyph = CardDefinition {
+        name: "Sandswirl Wanderglyph",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        color_indicator: vec![Color::White],
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::Triggerer)),
+            effect: Effect::CantAttackPlayerOrWalkersThisTurn { who: PlayerRef::Triggerer, defender: PlayerRef::You },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each opponent who attacked you or a planeswalker you control this turn can't cast spells.",
+            effect: StaticEffect::OpponentsWhoAttackedYouCantCast,
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Unstable Glyphbridge",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::SourceWasCast),
+            effect: Effect::ChooseOnePerPlayerDestroyRest { keep: R::Creature.and(R::PowerAtMost(2)), of: R::Creature },
+        }],
+        activated_abilities: vec![craft(cost(&[generic(3), w(), w()]), R::Artifact, 1)],
+        back_face: Some(Box::new(wanderglyph)),
         ..Default::default()
     }
 }

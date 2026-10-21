@@ -196,3 +196,142 @@ fn mysterious_limousine_swaps_its_prisoner_and_frees_it_on_leaving() {
     g.resolve_effect(&destroy, &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0)).expect("destroy");
     assert!(g.battlefield_find(giant).is_some(), "freed when the Limousine left");
 }
+
+fn activate(g: &mut GameState, id: CardId, ability_index: usize, target: Option<Target>) {
+    flood(g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index, target, additional_targets: vec![], x_value: None, mode: None })
+        .expect("activate");
+    drain_stack(g);
+}
+
+/// CR 702.167 / 712 — Tetzin's mill trigger hears double-faced artifacts only
+/// (Sol Ring isn't one); crafting with six graveyard artifacts makes The
+/// Golden-Gear Colossus, whose entry transforms another double-faced artifact
+/// you control (Chalice of Life) and makes two Gnomes.
+#[test]
+fn cr_702_167_tetzin_crafts_the_colossus_which_flips_a_chalice() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::ornithopter());
+    }
+    let tetzin = g.add_card_to_hand(0, catalog::tetzin_gnome_champion());
+    cast_x(&mut g, 0, tetzin, None, None);
+    assert_eq!(g.players[0].graveyard.len(), 2, "three milled, one artifact taken");
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    let gy = g.players[0].graveyard.len();
+    cast_x(&mut g, 0, ring, None, None);
+    assert_eq!(g.players[0].graveyard.len(), gy, "Sol Ring isn't double-faced");
+    let chalice = g.add_card_to_battlefield(0, catalog::chalice_of_life());
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::ornithopter());
+    }
+    activate(&mut g, tetzin, 0, None);
+    let colossus = g.battlefield_find(tetzin).expect("returned transformed");
+    assert_eq!(colossus.definition.name, "The Golden-Gear Colossus");
+    assert_eq!(g.battlefield_find(chalice).unwrap().definition.name, "Chalice of Death");
+    let gnomes = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Gnome").count();
+    assert_eq!(gnomes, 2);
+}
+
+/// Chalice of Life transforms only once its controller is 10 above their
+/// starting life total (40 in Commander, CR 903.7), checked after the gain.
+#[test]
+fn chalice_of_life_transforms_ten_over_the_starting_life() {
+    let mut g = pod(2);
+    let chalice = g.add_card_to_battlefield(0, catalog::chalice_of_life());
+    let start = g.players[0].life;
+    g.players[0].life = start + 8;
+    activate(&mut g, chalice, 0, None);
+    assert_eq!(g.battlefield_find(chalice).unwrap().definition.name, "Chalice of Life", "start + 9");
+    g.battlefield_find_mut(chalice).unwrap().tapped = false;
+    activate(&mut g, chalice, 0, None);
+    assert_eq!(g.battlefield_find(chalice).unwrap().definition.name, "Chalice of Death", "start + 10");
+    g.battlefield_find_mut(chalice).unwrap().tapped = false;
+    let life = g.players[1].life;
+    activate(&mut g, chalice, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 5);
+}
+
+/// CR 702.167a "craft with one or more": Sunbird Standard exiles every card
+/// in the graveyard; the Effigy counts the colours among them (red, blue) for
+/// its P/T and taps for one mana of each.
+#[test]
+fn cr_702_167_sunbird_effigy_reads_the_colours_it_was_crafted_with() {
+    let mut g = pod(2);
+    let sunbird = g.add_card_to_battlefield(0, catalog::sunbird_standard());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::opt());
+    g.add_card_to_graveyard(0, catalog::shock());
+    activate(&mut g, sunbird, 1, None);
+    assert!(g.players[0].graveyard.is_empty(), "every graveyard card used to craft it");
+    let cp = g.computed_permanent(sunbird).unwrap();
+    assert_eq!(cp.def.name, "Sunbird Effigy");
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    g.players[0].mana_pool.empty();
+    g.clear_sickness(sunbird);
+    g.perform_action(GameAction::ActivateAbility { card_id: sunbird, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
+}
+
+/// Unstable Glyphbridge: its caster chooses one creature with power 2 or less
+/// for each player and destroys the rest (Hill Giant is never a keeper).
+#[test]
+fn unstable_glyphbridge_keeps_one_small_creature_a_player() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let theirs = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    let other = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let other2 = g.add_card_to_battlefield(2, catalog::savannah_lions());
+    let bridge = g.add_card_to_hand(0, catalog::unstable_glyphbridge());
+    cast_x(&mut g, 0, bridge, None, None);
+    assert!(g.battlefield_find(mine).is_some());
+    assert!(g.battlefield_find(giant).is_none(), "power 3 can't be chosen");
+    assert!(g.battlefield_find(theirs).is_some(), "seat 1's only small creature");
+    assert_eq!(
+        [other, other2].iter().filter(|id| g.battlefield_find(**id).is_some()).count(),
+        1,
+        "one of seat 2's two"
+    );
+}
+
+/// CR 508.1 — Sandswirl Wanderglyph: an opponent who casts a spell on their
+/// turn can't attack its controller or their planeswalker that turn (another
+/// opponent is fine), and one who attacked it can't cast spells after.
+#[test]
+fn cr_508_1_sandswirl_wanderglyph_splits_casting_from_attacking() {
+    let mut g = pod(3);
+    let glyph = g.add_card_to_battlefield(0, catalog::unstable_glyphbridge());
+    g.transform_permanent(glyph, &mut vec![]);
+    assert_eq!(g.battlefield_find(glyph).unwrap().definition.name, "Sandswirl Wanderglyph");
+    let jace = g.add_card_to_battlefield(0, catalog::jace_beleren());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let opt = g.add_card_to_hand(1, catalog::opt());
+    cast_x(&mut g, 1, opt, None, None);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    for target in [AttackTarget::Player(0), AttackTarget::Planeswalker(jace)] {
+        let swing = GameAction::DeclareAttackers(vec![Attack { attacker: bears, target }]);
+        assert!(g.perform_action(swing).is_err(), "cast this turn: can't attack seat 0 or its walker");
+    }
+    attack(&mut g, 1, &[(bears, 2)]);
+
+    let mut g = pod(3);
+    let glyph = g.add_card_to_battlefield(0, catalog::unstable_glyphbridge());
+    g.transform_permanent(glyph, &mut vec![]);
+    let bears = ready(&mut g, 2, catalog::grizzly_bears());
+    attack(&mut g, 2, &[(bears, 0)]);
+    g.step = TurnStep::PostCombatMain;
+    flood(&mut g, 2);
+    let opt = g.add_card_to_hand(2, catalog::opt());
+    g.priority.player_with_priority = 2;
+    let cast = GameAction::CastSpell { card_id: opt, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast).is_err(), "attacked seat 0 this turn: no spells");
+}
