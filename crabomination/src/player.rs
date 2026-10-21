@@ -463,6 +463,10 @@ pub struct PlayerCold {
     /// control this turn").
     #[serde(default)]
     pub attacked_walkers_of_this_turn: Vec<usize>,
+    /// CR 717.5 — `(turn_number, count)`: Attractions this player visited
+    /// during that turn. Stamped, not cleared — a stale turn reads as zero.
+    #[serde(default)]
+    pub attractions_visited: (u32, u32),
 }
 
 /// A seat's mutable state. Reached only through [`Player`], which owns it

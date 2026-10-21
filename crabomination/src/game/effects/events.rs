@@ -108,6 +108,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         | E::SpellCausedLifeGain { .. }
         | E::EchoPaid { .. }
         | E::StickerPlaced { .. }
+        | E::AttractionOpened { .. }
+        | E::PrizeClaimed { .. }
         | E::CardsPutIntoLibrary { .. }
         | E::TappedForTeamwork { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
@@ -312,6 +314,8 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::SpellCausedLifeGain, GameEvent::SpellCausedLifeGain { .. }) => true,
         (A::EchoPaid, GameEvent::EchoPaid { .. }) => true,
         (A::StickerPlaced, GameEvent::StickerPlaced { .. }) => true,
+        (A::OpenedAttraction, GameEvent::AttractionOpened { .. }) => true,
+        (A::ClaimedPrize, GameEvent::PrizeClaimed { .. }) => true,
         (A::CardsPutIntoLibrary, GameEvent::CardsPutIntoLibrary { .. }) => true,
         (A::TappedForTeamwork, GameEvent::TappedForTeamwork { .. }) => true,
         (A::ScryBottomed, GameEvent::ScryPerformed { bottomed, .. }) => *bottomed > 0,
@@ -1525,6 +1529,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::SpellCausedLifeGain { player, .. }
         | GameEvent::EchoPaid { controller: player, .. }
         | GameEvent::StickerPlaced { player, .. }
+        | GameEvent::AttractionOpened { player, .. }
+        | GameEvent::PrizeClaimed { player, .. }
         | GameEvent::CardsPutIntoLibrary { player, .. }
         | GameEvent::TappedForTeamwork { controller: player, .. }
         | GameEvent::ScryPerformed { player, .. }
@@ -1737,7 +1743,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::SpellCausedLifeGain { spell, .. } => Some(EntityRef::Card(*spell)),
         GameEvent::EchoPaid { card_id, .. }
         | GameEvent::TappedForTeamwork { card_id, .. }
-        | GameEvent::StickerPlaced { card_id, .. } => {
+        | GameEvent::StickerPlaced { card_id, .. }
+        | GameEvent::AttractionOpened { card_id, .. }
+        | GameEvent::PrizeClaimed { card_id, .. } => {
             Some(EntityRef::Permanent(*card_id))
         }
         GameEvent::LifeGained { player, .. }
@@ -1872,6 +1880,7 @@ pub(crate) fn emblem_event_matches(
 fn event_card(event: &GameEvent) -> Option<CardId> {
     match event {
         GameEvent::PermanentEntered { card_id }
+        | GameEvent::AttractionVisited { card_id }
         | GameEvent::PermanentExiled { card_id }
         | GameEvent::CreatureDied { card_id }
         | GameEvent::PermanentDied { card_id, .. }
@@ -2086,6 +2095,8 @@ mod tests {
             E::SpellCausedLifeGain { player: 0, spell: c, amount: 1 },
             E::EchoPaid { card_id: c, controller: 0 },
             E::StickerPlaced { card_id: c, player: 0 },
+            E::AttractionOpened { card_id: c, player: 0 },
+            E::PrizeClaimed { card_id: c, player: 0 },
             E::CardsPutIntoLibrary { player: 0, count: 1 },
             E::TappedForTeamwork { card_id: c, controller: 0 },
             E::CardsExiledFromHandOrBy { player: 0, count: 1 },
@@ -2281,6 +2292,8 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::SpellCausedLifeGain),
             K::Performed(crate::effect::KeywordAct::EchoPaid),
             K::Performed(crate::effect::KeywordAct::StickerPlaced),
+            K::Performed(crate::effect::KeywordAct::OpenedAttraction),
+            K::Performed(crate::effect::KeywordAct::ClaimedPrize),
             K::Performed(crate::effect::KeywordAct::CardsPutIntoLibrary),
             K::Performed(crate::effect::KeywordAct::TappedForTeamwork),
             K::Performed(crate::effect::KeywordAct::ScryBottomed),

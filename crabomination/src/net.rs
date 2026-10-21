@@ -3020,6 +3020,10 @@ pub enum GameEventWire {
     RolledToVisitAttractions { player: usize, result: u8 },
     /// Wire mirror of `GameEvent::AttractionVisited` (CR 717.5).
     AttractionVisited { card_id: CardId },
+    /// Wire mirror of `GameEvent::AttractionOpened` (CR 701.51c).
+    AttractionOpened { card_id: CardId, player: usize },
+    /// Wire mirror of `GameEvent::PrizeClaimed` (CR 702.159b).
+    PrizeClaimed { card_id: CardId, player: usize },
     /// Wire mirror of `GameEvent::DeathStepEnded` (CR 608.2c).
     DeathStepEnded,
     /// Wire mirror of `GameEvent::ExcessCombatDamage` (CR 120.10).
@@ -3040,6 +3044,12 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::AttractionVisited { card_id } => {
                 GameEventWire::AttractionVisited { card_id: *card_id }
+            }
+            GameEvent::AttractionOpened { card_id, player } => {
+                GameEventWire::AttractionOpened { card_id: *card_id, player: *player }
+            }
+            GameEvent::PrizeClaimed { card_id, player } => {
+                GameEventWire::PrizeClaimed { card_id: *card_id, player: *player }
             }
             GameEvent::TurnStarted { player, turn } => GameEventWire::TurnStarted {
                 player: *player,
@@ -3513,6 +3523,8 @@ impl GameEventWire {
                 format!("{} rolled a {result} to visit their Attractions", pn(*player))
             }
             E::AttractionVisited { card_id } => format!("{} was visited", name(*card_id)),
+            E::AttractionOpened { card_id, player } => format!("{} opened {}", pn(*player), name(*card_id)),
+            E::PrizeClaimed { card_id, player } => format!("{} claimed the prize of {}", pn(*player), name(*card_id)),
             // Engine-internal; the server never sends it.
             E::DeathStepEnded => String::new(),
             E::TurnStarted { player, turn } => format!("Turn {turn} — {}", pn(*player)),

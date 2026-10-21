@@ -3973,26 +3973,47 @@ impl GameState {
     /// lit up is visited, firing its visit ability (CR 717.5). A turn-based
     /// action: it doesn't use the stack, but the visit triggers do.
     pub(crate) fn roll_to_visit_attractions(&mut self, p: usize) -> Vec<GameEvent> {
-        let attractions: Vec<CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == p && !c.definition.attraction_lights.is_empty())
-            .map(|c| c.id)
-            .collect();
-        if attractions.is_empty() {
+        if !self.battlefield.iter().any(|c| c.controller == p && !c.definition.attraction_lights.is_empty()) {
             return Vec::new();
         }
+        self.roll_to_visit(p)
+    }
+
+    /// CR 701.52a — the roll itself (a d6 die roll, CR 706.2, so "whenever you
+    /// roll" listeners see it), then a visit per lit Attraction `p` controls,
+    /// each counted toward `p`'s visits this turn. Shared by the turn-based
+    /// action and `Effect::RollToVisitAttractions`.
+    pub(crate) fn roll_to_visit(&mut self, p: usize) -> Vec<GameEvent> {
         let result = self.roll_one_die(p, 6);
-        let mut events = vec![GameEvent::RolledToVisitAttractions { player: p, result }];
-        for id in attractions {
-            let lit = self
-                .battlefield_find(id)
-                .is_some_and(|c| c.definition.attraction_lights.contains(&result));
-            if lit {
-                events.push(GameEvent::AttractionVisited { card_id: id });
+        let mut events = vec![
+            GameEvent::DiceRolled { player: p, count: 1, high: result },
+            GameEvent::DieResult { player: p, result },
+            GameEvent::RolledToVisitAttractions { player: p, result },
+        ];
+        let lit: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && c.definition.attraction_lights.contains(&result))
+            .map(|c| c.id)
+            .collect();
+        if !lit.is_empty() {
+            let turn = self.turn_number;
+            let seen = self.attractions_visited_this_turn(p);
+            if let Some(pl) = self.players.get_mut(p) {
+                pl.attractions_visited = (turn, seen + lit.len() as u32);
             }
         }
+        events.extend(lit.into_iter().map(|card_id| GameEvent::AttractionVisited { card_id }));
         events
+    }
+
+    /// CR 717.5 — Attractions `p` has visited this turn.
+    pub(crate) fn attractions_visited_this_turn(&self, p: usize) -> u32 {
+        self.players
+            .get(p)
+            .map(|pl| pl.attractions_visited)
+            .filter(|&(turn, _)| turn == self.turn_number)
+            .map_or(0, |(_, n)| n)
     }
 
     pub(crate) fn do_rad_counters(&mut self) -> Vec<GameEvent> {

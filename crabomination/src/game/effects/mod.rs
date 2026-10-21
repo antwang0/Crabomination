@@ -31431,12 +31431,17 @@ impl GameState {
                     return Ok(());
                 }
                 let card = self.players[p].attraction_deck.remove(0);
+                let card_id = card.id;
                 self.place_card_in_dest(
                     card,
                     p,
                     &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
                     events,
                 );
+                // CR 701.51c — only an Attraction that actually entered was opened.
+                if self.battlefield_find(card_id).is_some() {
+                    events.push(GameEvent::AttractionOpened { card_id, player: p });
+                }
                 Ok(())
             }
 
@@ -36831,18 +36836,14 @@ impl GameState {
             }
             Effect::EachOtherPlayerMayCopy { what, except } => self.each_other_player_may_copy(what, except, ctx, events),
             Effect::RollToVisitAttractions => {
-                let p = ctx.controller;
-                let result = self.roll_one_die(p, 6);
-                events.push(GameEvent::DiceRolled { player: p, count: 1, high: result });
-                events.push(GameEvent::DieResult { player: p, result });
-                events.push(GameEvent::RolledToVisitAttractions { player: p, result });
-                let lit: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == p && c.definition.attraction_lights.contains(&result))
-                    .map(|c| c.id)
-                    .collect();
-                events.extend(lit.into_iter().map(|card_id| GameEvent::AttractionVisited { card_id }));
+                let visits = self.roll_to_visit(ctx.controller);
+                events.extend(visits);
+                Ok(())
+            }
+            Effect::ClaimThePrize => {
+                if let Some(card_id) = ctx.source {
+                    events.push(GameEvent::PrizeClaimed { card_id, player: ctx.controller });
+                }
                 Ok(())
             }
             Effect::NextRollExtraDieThisTurn { who } => {

@@ -1594,7 +1594,7 @@ impl Effect {
             }
             Effect::EachOtherPlayerMayCopy { what, except } => sel_has_target(what) || player_has_target(except),
             Effect::SwitchBlockers { first, second } => sel_has_target(first) || sel_has_target(second),
-            Effect::RollToVisitAttractions => false,
+            Effect::RollToVisitAttractions | Effect::ClaimThePrize => false,
             Effect::NextRollExtraDieThisTurn { who } => player_has_target(who),
             Effect::RemoveCountersFromAmongDrawAndLoseLife => false,
             Effect::RepeatWhileClashWon { body } => body.requires_target(),

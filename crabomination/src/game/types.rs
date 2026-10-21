@@ -2932,6 +2932,11 @@ pub enum GameEvent {
     /// CR 717.5 — one Attraction's lit-up numbers matched the roll, so its
     /// visit ability triggers.
     AttractionVisited { card_id: CardId },
+    /// CR 701.51c — `player` opened an Attraction: `card_id` entered from
+    /// their Attraction deck.
+    AttractionOpened { card_id: CardId, player: usize },
+    /// CR 702.159b — `player` claimed the prize of the Attraction `card_id`.
+    PrizeClaimed { card_id: CardId, player: usize },
     /// A card was put into exile from the battlefield, a graveyard or a library
     /// (CR 400.7 — the origin matters to Ketramose and Laelia). `from` is one
     /// [`crate::effect::exile_from`] bit; `player` is the zone's player (the

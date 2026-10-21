@@ -897,6 +897,9 @@ pub enum Value {
     /// ("as long as you've rolled three or more dice this turn" — The Space
     /// Family Goblinson; "your third die each turn" — Resolute Veggiesaur).
     DiceRolledThisTurn(PlayerRef),
+    /// CR 717.5 — Attractions the resolved players visited this turn, summed
+    /// ("for each Attraction you've visited this turn" — Squirrel Squatters).
+    AttractionsVisitedThisTurn(PlayerRef),
     /// CR 303.4 — how many `filter` permanents are attached to the players
     /// `who` resolves to ("the number of Curses attached to that player" —
     /// Curse of Thirst; "each Aura attached to you").
@@ -4340,6 +4343,12 @@ pub enum KeywordAct {
     /// count the amount, the first receiving library's owner the actor (Wan
     /// Shi Tong, All-Knowing; Dutiful Knowledge Seeker).
     CardsPutIntoLibrary,
+    /// CR 701.51c — a player opened an Attraction (it entered from their
+    /// Attraction deck); the opener is the actor, the Attraction the subject.
+    OpenedAttraction,
+    /// CR 702.159b — a player claimed an Attraction's prize; the player is the
+    /// actor, the Attraction the subject.
+    ClaimedPrize,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.
@@ -9280,6 +9289,11 @@ pub enum Effect {
     /// even with no Attraction out), then visit each Attraction you control
     /// with that number lit up (Line Cutter).
     RollToVisitAttractions,
+    /// CR 702.159b — "claim the prize": the controller claims the source
+    /// Attraction's prize. Emits the claim event for "whenever you claim the
+    /// prize of an Attraction" (The Most Dangerous Gamer); the prize's own
+    /// actions are the effects sequenced after it.
+    ClaimThePrize,
     /// "The next time [who] would roll one or more dice this turn, instead
     /// they roll that many dice plus one and you choose one of those rolls to
     /// ignore" (Bamboozling Beeble, CR 706.6): the effect controller ignores
