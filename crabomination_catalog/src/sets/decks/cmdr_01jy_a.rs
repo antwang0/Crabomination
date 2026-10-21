@@ -1464,3 +1464,316 @@ pub fn torchling() -> CardDefinition {
         ..creature("Torchling", cost(&[generic(3), r(), r()]), vec![CreatureType::Shapeshifter], 3, 3)
     }
 }
+
+// ── Brigid, Clachan's Heart's Kithkin ──────────────────────────────────────
+
+fn kithkin() -> R {
+    R::HasCreatureType(CreatureType::Kithkin)
+}
+
+fn gw() -> crate::mana::ManaSymbol {
+    hybrid(Color::Green, Color::White)
+}
+
+fn kithkin_token(types: Vec<CreatureType>, colors: Vec<Color>) -> TokenDefinition {
+    TokenDefinition {
+        name: "Kithkin".into(),
+        power: 1,
+        toughness: 1,
+        colors,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        ..Default::default()
+    }
+}
+
+fn gw_kithkin() -> Arc<TokenDefinition> {
+    Arc::new(kithkin_token(vec![CreatureType::Kithkin], vec![Color::Green, Color::White]))
+}
+
+/// Seedcradle Witch — {G/W} 1/1 Elf Shaman. {2}{G}{W}: target creature gets
+/// +3/+3 until end of turn; untap it.
+pub fn seedcradle_witch() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g(), w()]),
+            effect: Effect::Seq(vec![
+                pump_each(target_filtered(R::Creature), 3, 3),
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Seedcradle Witch", cost(&[gw()]), vec![CreatureType::Elf, CreatureType::Shaman], 1, 1)
+    }
+}
+
+/// Champion of the Clachan — {3}{W} 4/5 Kithkin Knight with flash. As an
+/// additional cost, behold a Kithkin and exile it. Other Kithkin you control
+/// get +1/+1. When it leaves the battlefield, the exiled card returns to its
+/// owner's hand.
+pub fn champion_of_the_clachan() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::BeholdAndExile { filter: kithkin() }],
+        static_abilities: vec![StaticAbility {
+            description: "Other Kithkin you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(kithkin()).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::CardExiledWithSource,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::CardExiledWithSource))),
+            },
+        }],
+        ..creature("Champion of the Clachan", cost(&[generic(3), w()]), vec![CreatureType::Kithkin, CreatureType::Knight], 4, 5)
+    }
+}
+
+/// Thoughtweft Lieutenant — {G}{W} 2/2 Kithkin Soldier. Whenever it or another
+/// Kithkin you control enters, target creature you control gets +1/+1 and
+/// trample until end of turn.
+pub fn thoughtweft_lieutenant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(kithkin()) }),
+            effect: Effect::Seq(vec![
+                pump_each(target_filtered(R::Creature.and(R::ControlledByYou)), 1, 1),
+                grant_each(Selector::Target(0), Keyword::Trample),
+            ]),
+        }],
+        ..creature("Thoughtweft Lieutenant", cost(&[g(), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Figure of Fable — {G/W} 1/1 Kithkin. {G/W}: it becomes a Kithkin Scout with
+/// base 2/3. {1}{G/W}{G/W}: if a Scout, a Kithkin Soldier with base 4/5.
+/// {3}{G/W}{G/W}{G/W}: if a Soldier, a Kithkin Avatar with base 7/8 and
+/// protection from each of your opponents.
+pub fn figure_of_fable() -> CardDefinition {
+    let become_ = |kind: CreatureType, p: i32, t: i32| {
+        vec![
+            Effect::BecomeCreatureType {
+                what: Selector::This,
+                creature_types: vec![CreatureType::Kithkin, kind],
+                duration: Duration::Permanent,
+            },
+            Effect::SetBasePT { what: Selector::This, power: Value::Const(p), toughness: Value::Const(t), duration: Duration::Permanent },
+        ]
+    };
+    let is = |kind: CreatureType| Predicate::EntityMatches { what: Selector::This, filter: R::HasCreatureType(kind) };
+    let mut avatar = become_(CreatureType::Avatar, 7, 8);
+    avatar.push(Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: Keyword::ProtectionFromEachOpponent,
+        duration: Duration::Permanent,
+    });
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[gw()]),
+                effect: Effect::Seq(become_(CreatureType::Scout, 2, 3)),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), gw(), gw()]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Scout),
+                    then: Box::new(Effect::Seq(become_(CreatureType::Soldier, 4, 5))),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), gw(), gw(), gw()]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Soldier),
+                    then: Box::new(Effect::Seq(avatar)),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Figure of Fable", cost(&[gw()]), vec![CreatureType::Kithkin], 1, 1)
+    }
+}
+
+/// Wary Farmer — {1}{G/W}{G/W} 3/3 Kithkin Citizen. At the beginning of your
+/// end step, if another creature entered under your control this turn,
+/// surveil 1.
+pub fn wary_farmer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::CreatureEnteredThisTurnMatching {
+                    who: PlayerRef::You,
+                    filter: R::OtherThanSource,
+                }),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..creature("Wary Farmer", cost(&[generic(1), gw(), gw()]), vec![CreatureType::Kithkin, CreatureType::Citizen], 3, 3)
+    }
+}
+
+/// Brigid's Command — {1}{G}{W} Kindred sorcery — Kithkin. Choose two: a token
+/// copy of target Kithkin you control; target player creates a 1/1 green and
+/// white Kithkin; target creature you control gets +3/+3; target creature you
+/// control fights target creature an opponent controls.
+pub fn brigids_command() -> CardDefinition {
+    let mine = || R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kithkin], ..Default::default() },
+        ..spell(
+            "Brigid's Command",
+            cost(&[generic(1), g(), w()]),
+            CardType::Sorcery,
+            Effect::ChooseModesCast {
+                min: 2,
+                max: 2,
+                allow_repeats: false,
+                modes: vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: target_filtered(mine().and(kithkin())),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![],
+                        no_mana_cost: false,
+                        enters_with_counters: None,
+                        remove_keywords: vec![],
+                    },
+                    Effect::TargetPlayerThen {
+                        filter: R::Player,
+                        then: Box::new(Effect::CreateToken { who: PlayerRef::Target(0), count: Value::ONE, definition: gw_kithkin() }),
+                    },
+                    pump_each(target_filtered(mine()), 3, 3),
+                    Effect::Fight {
+                        attacker: target_filtered(mine()),
+                        defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                    },
+                ],
+            },
+        )
+    }
+}
+
+/// Goldmeadow Nomad — {W} 1/2 Kithkin Scout. {W}, exile it from your
+/// graveyard: create a 1/1 green and white Kithkin token. Sorcery speed.
+pub fn goldmeadow_nomad() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: gw_kithkin() },
+            ..Default::default()
+        }],
+        ..creature("Goldmeadow Nomad", cost(&[w()]), vec![CreatureType::Kithkin, CreatureType::Scout], 1, 2)
+    }
+}
+
+/// Thoughtweft Imbuer — {3}{W} 0/5 Kithkin Advisor. Whenever a creature you
+/// control attacks alone, it gets +X/+X until end of turn, X the Kithkin you
+/// control.
+pub fn thoughtweft_imbuer() -> CardDefinition {
+    let x = || Value::PermanentCountControlledByMatching(PlayerRef::You, R::Creature.and(kithkin()));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
+            effect: Effect::PumpPT { what: Selector::TriggerSource, power: x(), toughness: x(), duration: Duration::EndOfTurn },
+        }],
+        ..creature("Thoughtweft Imbuer", cost(&[generic(3), w()]), vec![CreatureType::Kithkin, CreatureType::Advisor], 0, 5)
+    }
+}
+
+/// Kithkin Harbinger — {2}{W} 1/3 Kithkin Wizard. Entering, you may search for
+/// a Kithkin card, shuffle, and put it on top.
+pub fn kithkin_harbinger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: kithkin(),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+        })],
+        ..creature("Kithkin Harbinger", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Wizard], 1, 3)
+    }
+}
+
+/// Crossroads Watcher — {2}{G} 3/3 trample Kithkin Ranger. Whenever another
+/// creature you control enters, it gets +1/+0 until end of turn.
+pub fn crossroads_watcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::OtherThanSource) },
+            ),
+            effect: pump_each(Selector::This, 1, 0),
+        }],
+        ..creature("Crossroads Watcher", cost(&[generic(2), g()]), vec![CreatureType::Kithkin, CreatureType::Ranger], 3, 3)
+    }
+}
+
+/// Militia's Pride — {1}{W} Kindred enchantment — Kithkin. Whenever a nontoken
+/// creature you control attacks, you may pay {W}; if you do, create a 1/1
+/// white Kithkin Soldier token tapped and attacking.
+pub fn militias_pride() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Kindred, CardType::Enchantment],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kithkin], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::IsToken.negate(),
+            }),
+            effect: Effect::MayPay {
+                description: "Pay {W} for a 1/1 Kithkin Soldier tapped and attacking?".into(),
+                mana_cost: cost(&[w()]),
+                body: Box::new(Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(kithkin_token(
+                        vec![CreatureType::Kithkin, CreatureType::Soldier],
+                        vec![Color::White],
+                    )),
+                    cleanup: Default::default(),
+                    defender: None,
+                }),
+                else_: None,
+            },
+        }],
+        ..spell("Militia's Pride", cost(&[generic(1), w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Eclipsed Kithkin — {G/W}{G/W} 2/1 Kithkin Scout. Entering, look at the top
+/// four; you may reveal a Kithkin, Forest or Plains card and take it; the rest
+/// on the bottom at random.
+pub fn eclipsed_kithkin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            pick_filter: Some(kithkin().or(R::HasLandType(LandType::Forest)).or(R::HasLandType(LandType::Plains))),
+            optional: true,
+            rest_bottom_random: true,
+            ..Default::default()
+        })))],
+        ..creature("Eclipsed Kithkin", cost(&[gw(), gw()]), vec![CreatureType::Kithkin, CreatureType::Scout], 2, 1)
+    }
+}

@@ -776,3 +776,60 @@ fn hateflayer_untaps_to_fire() {
     assert!(!g.battlefield_find(flayer).unwrap().tapped);
     assert_eq!(g.players[1].life, life - 5);
 }
+
+/// Figure of Fable climbs Scout → Soldier → Avatar, each step only from the
+/// one before; the Avatar has protection from each opponent (CR 702.16j): an
+/// opponent's Bolt can't target it, and their creatures can't block it.
+#[test]
+fn cr_702_16j_figure_of_fable_climbs_to_an_avatar() {
+    let mut g = pod(3);
+    let fig = g.add_card_to_battlefield(0, catalog::figure_of_fable());
+    activate(&mut g, fig, 1, None).expect("not a Scout: does nothing");
+    assert_eq!(pt(&g, fig), (1, 1));
+    activate(&mut g, fig, 0, None).unwrap();
+    assert_eq!(pt(&g, fig), (2, 3));
+    activate(&mut g, fig, 1, None).unwrap();
+    assert_eq!(pt(&g, fig), (4, 5));
+    activate(&mut g, fig, 2, None).unwrap();
+    assert_eq!(pt(&g, fig), (7, 8));
+    let bolt = g.add_card_to_hand(2, catalog::lightning_bolt());
+    flood(&mut g, 2);
+    g.priority.player_with_priority = 2;
+    let shot = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(fig)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(shot.is_err(), "an opponent's spell can't target it");
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    attack_with(&mut g, &[fig]);
+    assert!(!g.blocker_can_block_attacker(bears, fig));
+}
+
+/// Militia's Pride pays {W} for a 1/1 Kithkin Soldier attacking beside a
+/// nontoken attacker.
+#[test]
+fn militias_pride_adds_an_attacking_soldier() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::militias_pride());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    attack_with(&mut g, &[bears]);
+    let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Kithkin" && c.tapped).count();
+    assert_eq!(soldiers, 1);
+    assert_eq!(g.attacking().len(), 2);
+}
+
+/// Thoughtweft Imbuer pumps a lone attacker by the Kithkin you control.
+#[test]
+fn thoughtweft_imbuer_pumps_a_lone_attacker() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::thoughtweft_imbuer());
+    let farmer = g.add_card_to_battlefield(0, catalog::wary_farmer());
+    attack_with(&mut g, &[farmer]);
+    assert_eq!(pt(&g, farmer), (5, 5), "two Kithkin: +2/+2");
+}
