@@ -2346,3 +2346,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bound by Moonsilver | "can't transform" is not modelled | a transform lock |
 | 🟡 Tezzeret's Betrayal | searches only the library for Tezzeret (not the graveyard) | a library-and/or-graveyard search |
 | 🟡 Sacred Boon | its +0/+1 counters land as the damage is prevented, not at the beginning of the next end step | a delayed per-prevention payout |
+| 🟡 Farmstead | the upkeep "pay {W}{W}: gain 1" trigger rides the Aura (the Aura controller's upkeep), not the enchanted land | a granted-trigger static on `AttachedTo(This)` |

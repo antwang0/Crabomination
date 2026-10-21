@@ -3552,3 +3552,33 @@ fn merchants_dockhand_taps_artifacts_to_dig() {
     assert!(rings.iter().all(|&r| g.battlefield_find(r).unwrap().tapped));
     assert_eq!(g.players[0].hand.len(), cards + 1);
 }
+
+/// Idol of Endurance holds the small creatures and lets one come back free.
+#[test]
+fn idol_of_endurance_recasts_a_small_creature() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let idol = g.add_card_to_hand(0, catalog::idol_of_endurance());
+    cast(&mut g, idol, None);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm), "mana value 6 stays");
+    activate(&mut g, idol, 0).expect("activate");
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast for free");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Gaze of Justice taps three white creatures to exile.
+#[test]
+fn gaze_of_justice_taps_three_white_creatures() {
+    let mut g = pod(2);
+    let whites: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::elite_vanguard())).collect();
+    let target = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let gaze = g.add_card_to_hand(0, catalog::gaze_of_justice());
+    cast(&mut g, gaze, Some(Target::Permanent(target)));
+    assert!(g.exile.iter().any(|c| c.id == target));
+    assert!(whites.iter().all(|&c| g.battlefield_find(c).unwrap().tapped));
+}

@@ -8868,3 +8868,144 @@ pub fn merchants_dockhand() -> CardDefinition {
         ..creature("Merchant's Dockhand", cost(&[generic(1)]), vec![CreatureType::Construct], 1, 2)
     }
 }
+
+// ── Batch twenty-eight (Alharu + Bruse Tarl) ────────────────────────────────
+
+/// Idol of Endurance — {2}{W} artifact. When it enters, exile all creature
+/// cards with mana value 3 or less from your graveyard until it leaves the
+/// battlefield. {1}{W}, {T}: until end of turn, you may cast a creature spell
+/// from among the cards exiled with it without paying its mana cost.
+pub fn idol_of_endurance() -> CardDefinition {
+    let exiled = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Exile, filter: R::Creature.and(R::ExiledWithSource) };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: R::Creature.and(R::ManaValueAtMost(3)),
+            },
+            return_to: crate::card::ExileReturnZone::Graveyard,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: exiled(),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: false,
+                    any_color: false,
+                },
+                Effect::OneCastAmongGranted { what: exiled() },
+            ]),
+            ..Default::default()
+        }],
+        ..spell("Idol of Endurance", cost(&[generic(2), w()]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Sanctifier of Souls — {3}{W} 2/3 Human Cleric. Whenever another creature
+/// you control enters, it gets +1/+1 until end of turn. {2}{W}, exile a
+/// creature card from your graveyard: create a 1/1 white flying Spirit.
+pub fn sanctifier_of_souls() -> CardDefinition {
+    let spirit = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Spirit", 1, 1, vec![Color::White], vec![CreatureType::Spirit])
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::OtherThanSource) },
+            ),
+            effect: pump(Selector::This, 1, 1),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            exile_other_filter: Some((R::Creature, 1)),
+            effect: make(1, spirit),
+            ..Default::default()
+        }],
+        ..creature("Sanctifier of Souls", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Cleric], 2, 3)
+    }
+}
+
+/// Thriving Ibex — {3}{W} 2/4 Goat. When it enters, you get {E}{E}. Whenever
+/// it attacks, you may pay {E}{E}; if you do, put a +1/+1 counter on it.
+pub fn thriving_ibex() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::PayEnergyValue {
+                amount: Value::Const(2),
+                then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+            }),
+        ],
+        ..creature("Thriving Ibex", cost(&[generic(3), w()]), vec![CreatureType::Goat], 2, 4)
+    }
+}
+
+/// Zodiac Dog — {2}{R} 2/2 Dog. Mountainwalk.
+pub fn zodiac_dog() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(LandType::Mountain)],
+        ..creature("Zodiac Dog", cost(&[generic(2), r()]), vec![CreatureType::Dog], 2, 2)
+    }
+}
+
+/// Zodiac Goat — {R} 1/1 Goat. Mountainwalk.
+pub fn zodiac_goat() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(LandType::Mountain)],
+        ..creature("Zodiac Goat", cost(&[r()]), vec![CreatureType::Goat], 1, 1)
+    }
+}
+
+/// Farmstead — {W}{W}{W} Aura (land). Enchanted land has "At the beginning of
+/// your upkeep, you may pay {W}{W}; if you do, you gain 1 life." (The trigger
+/// rides the Aura, so it is the Aura's controller's upkeep — INCOMPLETE_CARDS.)
+pub fn farmstead() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {W}{W} to gain 1 life?".into(),
+                mana_cost: cost(&[w(), w()]),
+                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+                else_: None,
+            },
+        }],
+        ..aura_on("Farmstead", cost(&[w(), w(), w()]), R::Land, None)
+    }
+}
+
+/// Astral Confrontation — {4}{W} instant; {1} less for each opponent you're
+/// attacking. Exile target creature.
+pub fn astral_confrontation() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast for each opponent you're attacking.",
+            effect: StaticEffect::SelfCostReducedByValue { amount: Value::OpponentsAttackedThisCombat },
+        }],
+        ..spell(
+            "Astral Confrontation",
+            cost(&[generic(4), w()]),
+            CardType::Instant,
+            Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Exile },
+        )
+    }
+}
+
+/// Gaze of Justice — {W} sorcery. As an additional cost, tap three untapped
+/// white creatures you control. Exile target creature. Flashback {5}{W}.
+pub fn gaze_of_justice() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), w()]))],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::TapPermanents {
+            filter: R::Creature.and(R::HasColor(Color::White)),
+            count: 3,
+        }],
+        ..spell("Gaze of Justice", cost(&[w()]), CardType::Sorcery, Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Exile })
+    }
+}
