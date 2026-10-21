@@ -216,7 +216,7 @@ the handoff.
   Scrutiny, CR 601.2c). Hand of Vecna pumps a Vecna when unequipped (The Book of Vile Darkness).
 - ⚠ Before adding a variant, grep the WHOLE enum: `SpendRestriction::KickedOnly` duplicated `KickedSpellsOnly`
   (reverted) and only core_rules' exhaustive walk caught it.
-- **CLAIMED (`01E4rMUL`, 2026-10-21) — don't duplicate:** Invasion of New Phyrexia, Long Rest, Halls of Mist.
+- **CLAIMED (`01E4rMUL`, 2026-10-21) — don't duplicate:** Three Bowls of Porridge, Tombstone Stairwell (Invasion of New Phyrexia, Long Rest, Halls of Mist landed: seats 4740-4743).
 - **CLAIMED (`01Jywzky`, 2026-10-21) — don't duplicate:** the SINGLE-commander list (`edhrec_scan_top.py`): Rashida Scalebane's four (Alabaster Dragon, Dragon Hunter, Shieldhide Dragon, Grand Master of Flowers), Mairsil's four (Endling, Hateflayer, Minion of Leshrac, Torchling), Fires of Mount Doom (Sauron), Aegar, the Freezing Flame + its deck (Giant's Amulet, Battle of Frost and Fire, Invasion of the Giants), Zevlor, Sharkey, Hogaak.
 - **OPEN (one-gap closers left, each a primitive):** Vedalken Squirrel-Whacker (2 decks: the d6 exchange
   replacement in `roll_one_die` — needs a seat-routed ask outside an effect), Invasion of New Phyrexia (2 decks: the
