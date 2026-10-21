@@ -29232,6 +29232,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KEDISS_16_COMMANDERS,
             main: decks::KEDISS_16_MAIN,
         },
+        // Seat 4797: Alharu, Solemn Ritualist and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 4797`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Kraum, Ludevic's Opus (WUR)",
+            commanders: decks::ALHARU_30_COMMANDERS,
+            main: decks::ALHARU_30_MAIN,
+        },
+        // Seat 4798: Ich-Tekik, Salvage Splicer and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4798`.
+        PodDeck {
+            name: "Ich-Tekik, Salvage Splicer and Numa, Joraga Chieftain (G)",
+            commanders: decks::ICH_TEKIK_30_COMMANDERS,
+            main: decks::ICH_TEKIK_30_MAIN,
+        },
+        // Seat 4799: Glacian, Powerstone Engineer and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 4799`.
+        PodDeck {
+            name: "Glacian, Powerstone Engineer and Numa, Joraga Chieftain (UG)",
+            commanders: decks::GLACIAN_29_COMMANDERS,
+            main: decks::GLACIAN_29_MAIN,
+        },
+        // Seat 4800: Akroma, Vision of Ixidor and Nadier, Agent of the Duskenel's EDHREC average deck. `--pod-decks 4800`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Nadier, Agent of the Duskenel (WB)",
+            commanders: decks::AKROMA_25_COMMANDERS,
+            main: decks::AKROMA_25_MAIN,
+        },
     ]
 }
 
@@ -35929,6 +35953,10 @@ mod tests {
             ("Vhal, Candlekeep Researcher and Cloakwood Hermit", &[0x1CD0]),
             ("Alena, Kessig Trapper and Falthis, Shadowcat Familiar", &[0x1CD1]),
             ("Kediss, Emberclaw Familiar and Tormod, the Desecrator", &[0x1CD2]),
+            ("Alharu, Solemn Ritualist and Kraum, Ludevic's Opus", &[0x1CD3]),
+            ("Ich-Tekik, Salvage Splicer and Numa, Joraga Chieftain", &[0x1CD4]),
+            ("Glacian, Powerstone Engineer and Numa, Joraga Chieftain", &[0x1CD5]),
+            ("Akroma, Vision of Ixidor and Nadier, Agent of the Duskenel", &[0x1CD6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

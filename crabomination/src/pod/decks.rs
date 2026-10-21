@@ -134481,3 +134481,114 @@ pub const KEDISS_16_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ALHARU_30_COMMANDERS: &[CardFactory] = &[alharu_solemn_ritualist, kraum_ludevics_opus];
+
+/// **Alharu, Solemn Ritualist and Kraum, Ludevic's Opus**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 4 Islands + 3 Mountains + 5 Plains = 98.
+/// Alharu, Solemn Ritualist and Kraum, Ludevic's Opus (EDHREC, fetched 2026-10-21).
+pub const ALHARU_30_MAIN: &[CardFactory] = &[
+    arcane_signet, bagel_and_schmear, embalmers_tools, jeskai_banner, jeskai_monument, sol_ring,
+    arid_mesa, azorius_guildgate, calciform_pools, clifftop_retreat, coastal_tower,
+    evolving_wilds, flooded_strand, glacial_fortress, hallowed_fountain, idyllic_beachfront,
+    mage_ring_network, mercadian_bazaar, plateau, prairie_stream, radiant_summit,
+    rugged_prairie, sacred_foundry, saprazzan_cove, scalding_tarn, sejiri_refuge, steam_vents,
+    terramorphic_expanse, training_center, tranquil_cove, transguild_promenade, tundra,
+    volcanic_island, aang_swift_savior, adherent_of_hope, ainok_bond_kin, air_nomad_student,
+    anti_venom_horrifying_healer, arana_heart_of_the_spider, arcbound_shikari,
+    ash_party_crasher, battlewise_hoplite, binding_mummy, blood_hound, celebrity_fencer,
+    dreadhorde_arcanist, dreadhorde_twins, dutiful_servants, fatestitcher, invading_manticore,
+    jason_bright_glowing_prophet, jeskai_devotee, jeskai_student, narset_jeskai_waymaster,
+    patchwork_crawler, priest_of_the_crossing, repository_skaab, runescale_stormbrood,
+    sibsig_appraiser, the_flood_of_mars, wizened_mentor, yusri_fortunes_flame,
+    battle_of_hoover_dam, builders_talent, jeskai_ascendancy, jeskai_runemark, liminal_hold,
+    stormplain_detainment, aangs_defense, absorb, angelic_intervention, dazzling_lights,
+    essence_capture, jeskai_revelation, lightning_strike, mighty_leap, redirect_lightning,
+    thrill_of_possibility, aangs_journey, basris_solidarity, blasphemous_act,
+    cleansing_wildfire, farewell, hour_of_eternity, retrieve_the_esper, supreme_verdict,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, plains, plains, plains,
+    plains, plains,
+];
+
+pub const ICH_TEKIK_30_COMMANDERS: &[CardFactory] = &[ich_tekik_salvage_splicer, numa_joraga_chieftain];
+
+/// **Ich-Tekik, Salvage Splicer and Numa, Joraga Chieftain**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 24 Forests = 98.
+/// Ich-Tekik, Salvage Splicer and Numa, Joraga Chieftain (EDHREC, fetched 2026-10-21).
+pub const ICH_TEKIK_30_MAIN: &[CardFactory] = &[
+    arcane_signet, armillary_sphere, bramble_armor, cultists_staff, dowsing_dagger,
+    incubation_sac, jack_o_lantern, mask_of_the_jadecrafter, moss_diamond, pristine_talisman,
+    sol_ring, lair_of_the_hydra, arborback_stomper, armorcraft_judge, beast_whisperer,
+    boulderbranch_golem, campus_guide, centaurs_herald, cradle_clearcutter,
+    cultivator_of_blades, evolution_witness, flaxen_intruder, golem_artisan, greenbelt_guardian,
+    high_rise_sawjack, imperious_perfect, karok_wrangler, kujar_seedsculptor, llanowar_scout,
+    masked_admirers, meteor_golem, nullmage_shepherd, oak_street_innkeeper, precursor_golem,
+    priest_of_titania, primordial_wurm, reckless_amplimancer, reclamation_sage,
+    reflective_golem, rishkar_peema_renegade, rooftop_percher, scaled_behemoth,
+    selvala_heart_of_the_wilds, serpent_blade_assailant, tajuru_blightblade, tajuru_paragon,
+    tajuru_snarecaster, tormods_cryptkeeper, wild_wanderer, wildheart_invoker,
+    wirewood_symbiote, blanchwood_armor, favor_of_jukai, master_chef, sandwurm_convergence,
+    wild_growth, big_play, bulls_strength, for_the_family, gaeas_gift, lifecrafters_gift,
+    preys_vengeance, primal_boost, return_to_nature, spore_cloud, thwart_the_enemy,
+    woodcutters_grit, bridgeworks_battle, fallaji_excavation, klothyss_design, overrun,
+    phytoburst, scale_the_heights, shoot_down,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest,
+];
+
+pub const GLACIAN_29_COMMANDERS: &[CardFactory] = &[glacian_powerstone_engineer, numa_joraga_chieftain];
+
+/// **Glacian, Powerstone Engineer and Numa, Joraga Chieftain**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 19 Forests + 11 Islands = 98.
+/// Glacian, Powerstone Engineer and Numa, Joraga Chieftain (EDHREC, fetched 2026-10-21).
+pub const GLACIAN_29_MAIN: &[CardFactory] = &[
+    arcane_signet, basalt_monolith, cloud_key, esoteric_duplicator, mana_vault, mishras_bauble,
+    ozolith_the_shattered_spire, raven_wings, riverchurn_monument, senseis_divining_top,
+    sol_ring, stone_of_erech, the_one_ring, vexing_bauble, ancient_tomb, breeding_pool,
+    misty_rainforest, myriad_landscape, biblioplex_assistant, circle_of_dreams_druid,
+    corridor_monitor, cyberdrive_awakener, elderleaf_mentor, elturgard_ranger, elvish_archdruid,
+    elvish_mystic, entourage_of_trest, evolution_witness, ezuri_renegade_leader,
+    foundry_inspector, graven_abomination, gust_skimmer, haldir_lorien_lieutenant,
+    maraleaf_rider, night_market_guard, patchwork_gnomes, phyrexian_metamorph, sanctuary_raptor,
+    sculptor_of_winter, tajuru_snarecaster, taunting_arbormage, thassas_oracle,
+    treetop_ambusher, trophy_mage, wildwood_tracker, leyline_of_abundance,
+    an_offer_you_cant_refuse, anticognition, elvish_fury, force_of_vigor, frost_breath,
+    gifts_ungiven, heroic_intervention, mana_drain, mindbreak_trap, peel_from_reality,
+    run_away_together, snakeskin_veil, spell_snuff, square_up, strength_in_numbers,
+    thwart_the_enemy, veil_of_summer, whir_of_invention, counsel_of_the_soratami, fabricate,
+    natures_rhythm, neoform,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const AKROMA_25_COMMANDERS: &[CardFactory] = &[akroma_vision_of_ixidor, nadier_agent_of_the_duskenel];
+
+/// **Akroma, Vision of Ixidor and Nadier, Agent of the Duskenel**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 29 Plains + 1 Swamp = 98.
+/// Akroma, Vision of Ixidor and Nadier, Agent of the Duskenel (EDHREC, fetched 2026-10-21).
+pub const AKROMA_25_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, halo_fountain, horn_of_valhalla, mind_stone, sol_ring,
+    staff_of_the_storyteller, thousand_moons_smithy, wand_of_the_worldsoul, command_tower,
+    evolving_wilds, forlorn_flats, isolated_chapel, memorial_to_glory, obscura_storefront,
+    shineshadow_snarl, terramorphic_expanse, invasion_of_belenon, invasion_of_tolvada,
+    adeline_resplendent_cathar, angelic_sell_sword, argivian_cavalier, denethor_ruling_steward,
+    doomed_traveler, ellyn_harbreeze_busybody, kambal_profiteering_mayor, mirkwood_bats,
+    monastery_mentor, ojer_taq_deepest_foundation, okoye_dora_milaje_leader, phantom_general,
+    prava_of_the_steel_legion, rosie_cotton_of_south_lane, securitron_squadron, teysa_karlov,
+    warren_warleader, blessed_sanctuary, builders_talent, cathars_call, defenders_of_humanity,
+    divine_visitation, ethereal_absolution, felidar_retreat, inspiring_leader,
+    intangible_virtue, leyline_of_the_meek, muster_the_departed, rabble_rousing, even_the_odds,
+    harsh_sustenance, midnight_haunting, path_to_exile, secure_the_wastes, start_finish,
+    swords_to_plowshares, take_up_arms, elspeth_tirel, decree_of_justice, hop_to_it,
+    hour_of_reckoning, icatian_town, inkling_summoning, makindi_stampede, martial_coup,
+    read_the_bones, sign_in_blood, spectral_procession, triplicate_spirits,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, swamp,
+];
