@@ -135494,3 +135494,58 @@ pub const NIAMBI_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const WASP_COMMANDERS: &[CardFactory] = &[wasp_shrinking_savior];
+
+/// **Wasp, Shrinking Savior**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Wasp, Shrinking Savior (EDHREC, fetched 2026-10-21).
+pub const WASP_MAIN: &[CardFactory] = &[
+    amulet_of_safekeeping, arcane_signet, cumber_stone, dowsing_dagger, lightning_greaves,
+    mind_stone, sapphire_medallion, sol_ring, swiftfoot_boots, thought_vessel, lonely_sandbar,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, terrain_generator, war_room,
+    beguiler_of_wills, chasm_skulker, crashing_drawbridge, echo_perceptive_prodigy, fog_bank,
+    hedron_crawler, iron_man_armored_avenger, laboratory_maniac, lyla_holographic_assistant,
+    merfolk_thaumaturgist, mindwhisker, ornithopter_of_paradise, psychosis_crawler, pupu_ufo,
+    sea_hag, serendib_sorcerer, spring_splasher, triskaidekaphile, waker_of_waves,
+    warkite_marauder, amphibian_downpour, behold_the_unspeakable, chant_of_the_skifsang,
+    dampening_pulse, fresh_start, gravitational_shift, meishin_the_mind_cage, mystic_subdual,
+    pin_to_the_earth, quantum_reduction, so_tiny, stasis_field, tightening_coils,
+    unable_to_scream, wizard_class, an_offer_you_cant_refuse, arcane_denial,
+    bewildering_blizzard, beyeen_veil, blinding_spray, counterspell, downsize,
+    eliminate_the_impossible, flatline, hampering_snare, hysterical_blindness, negate,
+    reverse_the_polarity, turn_the_tide, uncomfortable_chill, mu_yanling_sky_dancer,
+    asinine_antics, mass_diminish, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const ZEVLOR_COMMANDERS: &[CardFactory] = &[zevlor_elturel_exile];
+
+/// **Zevlor, Elturel Exile**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 7 Islands + 5 Mountains + 4 Swamps = 99.
+/// Zevlor, Elturel Exile (EDHREC, fetched 2026-10-21).
+pub const ZEVLOR_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, izzet_signet, mindsplice_apparatus,
+    rakdos_signet, sol_ring, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, twinning_staff, blood_crypt, command_tower, crumbling_necropolis,
+    dragonskull_summit, drowned_catacomb, exotic_orchard, luxury_suite, morphic_pool,
+    reliquary_tower, shipwreck_marsh, shivan_reef, smoldering_marsh, steam_vents,
+    stormcarved_coast, sulfur_falls, sunken_hollow, training_center, watery_grave,
+    xanders_lounge, archmage_emeritus, archmage_of_runes, cormela_glamour_thief,
+    exterminator_magmarch, goblin_electromancer, guttersnipe, ioreth_of_the_healing_house,
+    kess_dissident_mage, lier_disciple_of_the_drowned, nightscape_familiar, omen_hawker,
+    sedgemoor_witch, storm_kiln_artist, stormcatch_mentor, talrand_sky_summoner,
+    wizards_of_thay, arcane_bombardment, double_vision, training_grounds, abrade, bedevil,
+    chaos_warp, counterspell, dark_ritual, electrodominance, flick_a_coin, leadership_vacuum,
+    lightning_bolt, negate, peek, rakdos_charm, siphon_insight, snap, terminate, thought_scour,
+    professor_onyx, acquire, blasphemous_act, blue_suns_twilight, bribery, clone_legion,
+    cruel_ultimatum, gitaxian_probe, great_intelligences_plan, hell_to_pay, jeskas_will,
+    portent, rakdos_return, rivers_rebuke, rush_of_dread, stolen_goods, talent_of_the_telepath,
+    worst_fears,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp,
+];

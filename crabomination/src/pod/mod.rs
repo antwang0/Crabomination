@@ -29448,6 +29448,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NIAMBI_2_COMMANDERS,
             main: decks::NIAMBI_2_MAIN,
         },
+        // Seat 4833: Wasp, Shrinking Savior's EDHREC average deck. `--pod-decks 4833`.
+        PodDeck {
+            name: "Wasp, Shrinking Savior (U)",
+            commanders: decks::WASP_COMMANDERS,
+            main: decks::WASP_MAIN,
+        },
+        // Seat 4834: Zevlor, Elturel Exile's EDHREC average deck. `--pod-decks 4834`.
+        PodDeck {
+            name: "Zevlor, Elturel Exile (UBR)",
+            commanders: decks::ZEVLOR_COMMANDERS,
+            main: decks::ZEVLOR_MAIN,
+        },
     ]
 }
 
@@ -36181,6 +36193,8 @@ mod tests {
             ("The Wasp, Winsome Avenger", &[0x1CF4]),
             ("Count Nefaria", &[0x1CF5]),
             ("Niambi, Faithful Healer", &[0x1CF6]),
+            ("Wasp, Shrinking Savior", &[0x1CF7]),
+            ("Zevlor, Elturel Exile", &[0x1CF8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
