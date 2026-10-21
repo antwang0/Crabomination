@@ -587,8 +587,8 @@ fn cr_707_10c_zevlor_copies_a_single_target_spell_at_each_other_opponent() {
     let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     cast_x(&mut g, 0, bolt, Some(Target::Player(1)), None);
-    for seat in 1..4 {
-        assert_eq!(g.players[seat].life, life[seat] - 3, "seat {seat}");
+    for (seat, (p, was)) in g.players.iter().zip(&life).enumerate().skip(1) {
+        assert_eq!(p.life, was - 3, "seat {seat}");
     }
     assert_eq!(g.players[0].life, life[0]);
 }

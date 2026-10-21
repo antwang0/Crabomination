@@ -38,7 +38,7 @@ pub(super) fn pick_exile_onto_attraction(state: &GameState, seat: usize) -> Opti
                 .filter(|c| (c.definition.is_instant() || c.definition.is_sorcery()) && c.definition.cost.cmc() <= budget)
                 .map(|c| (c.definition.cost.cmc(), c.id))
                 .collect();
-            spells.sort_by(|a, b| b.0.cmp(&a.0));
+            spells.sort_by_key(|s| std::cmp::Reverse(s.0));
             for (mv, id) in spells {
                 let action = GameAction::ActivateAbility {
                     card_id: card.id,
