@@ -29376,6 +29376,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AKROMA_26_COMMANDERS,
             main: decks::AKROMA_26_MAIN,
         },
+        // Seat 4821: Squall, Gunblade Duelist's EDHREC average deck. `--pod-decks 4821`.
+        PodDeck {
+            name: "Squall, Gunblade Duelist (WBR)",
+            commanders: decks::SQUALL_2_COMMANDERS,
+            main: decks::SQUALL_2_MAIN,
+        },
     ]
 }
 
@@ -36097,6 +36103,7 @@ mod tests {
             ("Anara, Wolvid Familiar and Rebbec, Architect of Ascension", &[0x1CE8]),
             ("Abdel Adrian, Gorion's Ward and Criminal Past", &[0x1CE9]),
             ("Akroma, Vision of Ixidor and Numa, Joraga Chieftain", &[0x1CEA]),
+            ("Squall, Gunblade Duelist", &[0x1CEB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

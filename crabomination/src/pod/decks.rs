@@ -135154,3 +135154,33 @@ pub const AKROMA_26_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const SQUALL_2_COMMANDERS: &[CardFactory] = &[squall_gunblade_duelist];
+
+/// **Squall, Gunblade Duelist**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Mountains + 5 Plains + 4 Swamps = 99.
+/// Squall, Gunblade Duelist (EDHREC, fetched 2026-10-21).
+pub const SQUALL_2_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, blackblade_reforged, chainsaw, fellwar_stone,
+    lightning_greaves, skullclamp, sol_ring, swiftfoot_boots, talisman_of_conviction,
+    talisman_of_hierarchy, talisman_of_indulgence, battlefield_forge, blood_crypt,
+    bloodstained_mire, caves_of_koilos, clifftop_retreat, command_tower, dragonskull_summit,
+    exotic_orchard, godless_shrine, isolated_chapel, luxury_suite, marsh_flats, nomad_outpost,
+    sacred_foundry, savai_triome, shattered_sanctum, smoldering_marsh, spectator_seating,
+    sulfurous_springs, sundown_pass, vault_of_champions, adeline_resplendent_cathar,
+    anim_pakal_thousandth_moon, aurelia_the_law_above, baeloth_barrityl_entertainer,
+    bastion_protector, bothersome_quasit, breena_the_demagogue, esper_sentinel,
+    gix_yawgmoth_praetor, goblin_spymaster, grenzo_havoc_raiser, isshin_two_heavens_as_one,
+    karazikar_the_eye_tyrant, kardur_doomscourge, life_of_the_party, lightning_army_of_one,
+    loran_of_the_third_path, loyal_apprentice, maha_its_feathers_night, morbid_opportunist,
+    nelly_borca_impulsive_accuser, professional_face_breaker, rinoa_angel_wing,
+    seifer_balamb_rival, squall_seed_mercenary, vengeful_ancestor, curse_of_opulence,
+    duelists_heritage, eye_of_nidhogg, ghostly_prison, maximum_carnage, reconnaissance,
+    rite_of_the_raging_storm, windcrag_siege, anguished_unmaking, boros_charm, deflecting_palm,
+    duelists_flame, inkshield, legion_leadership, path_to_exile, stroke_of_midnight,
+    swords_to_plowshares, take_the_bait, blasphemous_act, disrupt_decorum, fast_forward,
+    fated_clash, ruinous_ultimatum, spectacular_showdown, taunt_from_the_rampart,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp,
+];
