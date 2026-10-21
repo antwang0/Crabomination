@@ -390,3 +390,185 @@ fn kirin_touched_orochi_exiles_then_makes_a_spirit() {
     assert!(g.exile.iter().any(|c| c.id == bears));
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit"));
 }
+
+/// The Lemures' {0}: -1/-0 and a keyword until end of turn, once per
+/// activation (Loot, the Anomaly's pair).
+#[test]
+fn the_lemures_trade_power_for_evasion() {
+    for (def, kw) in [
+        (catalog::hyalopterous_lemure(), Keyword::Flying),
+        (catalog::viscid_lemures(), Keyword::Landwalk(crabomination::card::LandType::Swamp)),
+    ] {
+        let mut g = pod(2);
+        let id = ready(&mut g, 0, def);
+        activate(&mut g, id, 0, None);
+        activate(&mut g, id, 0, None);
+        assert_eq!(g.battlefield_find(id).unwrap().power(), 2);
+        assert!(g.permanent_has_keyword(id, &kw));
+    }
+}
+
+/// Ray of Enfeeblement is -4/-1, or -4/-4 against a white creature.
+#[test]
+fn ray_of_enfeeblement_is_harsher_on_white() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ray = g.add_card_to_hand(0, catalog::ray_of_enfeeblement());
+    cast_x(&mut g, 0, ray, Some(Target::Permanent(giant)), None);
+    let c = g.battlefield_find(giant).unwrap();
+    assert_eq!((c.power(), c.toughness()), (-1, 2));
+    let mut g = pod(2);
+    let lions = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let ray = g.add_card_to_hand(0, catalog::ray_of_enfeeblement());
+    cast_x(&mut g, 0, ray, Some(Target::Permanent(lions)), None);
+    assert!(g.battlefield_find(lions).is_none(), "a white 4/4 gets -4/-4 and dies");
+}
+
+/// Paired Tactician grows only when another Warrior attacks beside it.
+#[test]
+fn paired_tactician_needs_a_second_warrior() {
+    let mut g = pod(2);
+    let pt = ready(&mut g, 0, catalog::paired_tactician());
+    attack(&mut g, 0, &[(pt, 1)]);
+    assert_eq!(g.battlefield_find(pt).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    let mut g = pod(2);
+    let pt = ready(&mut g, 0, catalog::paired_tactician());
+    let other = ready(&mut g, 0, catalog::paired_tactician());
+    attack(&mut g, 0, &[(pt, 1), (other, 1)]);
+    assert_eq!(g.battlefield_find(pt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Resplendent Marshal's ETB exiles a Warrior card; each other creature that
+/// shares a type with it (the Tactician, a Warrior) gets a counter — the
+/// Bear doesn't.
+#[test]
+fn resplendent_marshal_counts_types_shared_with_the_exiled_card() {
+    let mut g = pod(2);
+    let pt = ready(&mut g, 0, catalog::paired_tactician());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gone = g.add_card_to_graveyard(0, catalog::paired_tactician());
+    let marshal = g.add_card_to_hand(0, catalog::resplendent_marshal());
+    cast_x(&mut g, 0, marshal, None, None);
+    assert!(g.exile.iter().any(|c| c.id == gone));
+    assert_eq!(g.battlefield_find(pt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(g.battlefield_find(marshal).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "other than itself");
+}
+
+/// Rush of Battle: +2/+1 to the team, lifelink to its Warriors only.
+#[test]
+fn rush_of_battle_gives_warriors_lifelink() {
+    let mut g = pod(2);
+    let pt = ready(&mut g, 0, catalog::paired_tactician());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let rush = g.add_card_to_hand(0, catalog::rush_of_battle());
+    cast_x(&mut g, 0, rush, None, None);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 4);
+    assert!(g.permanent_has_keyword(pt, &Keyword::Lifelink));
+    assert!(!g.permanent_has_keyword(bear, &Keyword::Lifelink));
+}
+
+/// Reluctant Dounguard enters as a 2/2 and sheds a -1/-1 counter for each
+/// other creature that enters under its controller — never past zero.
+#[test]
+fn reluctant_dounguard_warms_up_as_creatures_join() {
+    let mut g = pod(2);
+    let dg = g.add_card_to_hand(0, catalog::reluctant_dounguard());
+    cast_x(&mut g, 0, dg, None, None);
+    assert_eq!(g.battlefield_find(dg).unwrap().power(), 2);
+    for _ in 0..3 {
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        cast_x(&mut g, 0, bear, None, None);
+    }
+    let c = g.battlefield_find(dg).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4));
+    assert_eq!(c.counter_count(CounterType::MinusOneMinusOne), 0);
+}
+
+/// Brawn's power-up (CR 702.193): a +1/+1 counter per card in hand, and only
+/// once.
+#[test]
+fn cr_702_193_brawn_powers_up_by_hand_size() {
+    let mut g = pod(2);
+    let brawn = g.add_card_to_hand(0, catalog::brawn_amadeus_cho());
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    cast_x(&mut g, 0, brawn, None, None);
+    assert_eq!(g.players[0].hand.len(), 4, "three Islands and the ETB draw");
+    activate(&mut g, brawn, 0, None);
+    assert_eq!(g.battlefield_find(brawn).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+    flood(&mut g, 0);
+    let again = GameAction::ActivateAbility { card_id: brawn, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None };
+    assert!(g.perform_action(again).is_err(), "activate only once");
+}
+
+/// Oko, Lorwyn Liege pays {G} at the start of the first main phase to turn
+/// into Oko, Shadowmoor Scion; the Scion's −6 emblem pumps only the chosen
+/// creature type (the Bears), written in as it's made (CR 114.4).
+#[test]
+fn oko_flips_and_its_emblem_keeps_the_chosen_type() {
+    let mut g = pod(2);
+    let oko = g.add_card_to_battlefield(0, catalog::oko_lorwyn_liege());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bear2 = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    flood(&mut g, 0);
+    g.step = TurnStep::PreCombatMain;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(oko).unwrap().definition.name, "Oko, Shadowmoor Scion");
+    g.battlefield_find_mut(oko).unwrap().counters.insert(CounterType::Loyalty, 6);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(crabomination::card::CreatureType::Bear)]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: oko, ability_index: 2, target: None, x_value: None })
+        .expect("-6");
+    drain_stack(&mut g);
+    let _ = bear2;
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "Bears were chosen");
+    assert!(g.permanent_has_keyword(bear, &Keyword::Hexproof));
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 3);
+}
+
+/// Wasp shrinks a 2/2 to -1/2 as she attacks, then draws for each creature
+/// with power below zero.
+#[test]
+fn wasp_draws_for_each_negative_power_creature() {
+    let mut g = pod(2);
+    let wasp = ready(&mut g, 0, catalog::wasp_shrinking_savior());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    attack(&mut g, 0, &[(wasp, 1)]);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, -1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Quantum Reduction: cast at instant speed only by teamwork (tapping
+/// creatures with total power 2), it leaves a Serra Angel at -1/4 without
+/// flying (CR 613.1f).
+#[test]
+fn quantum_reduction_flashes_in_by_teamwork() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let qr = g.add_card_to_hand(0, catalog::quantum_reduction());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let cast = || GameAction::CastSpell {
+        card_id: qr,
+        target: Some(Target::Permanent(angel)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast()).is_err(), "no creatures to tap: no flash");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.perform_action(cast()).expect("teamwork flash");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "tapped for teamwork");
+    let c = g.computed_permanent(angel).unwrap();
+    assert_eq!(c.power, -1);
+    assert!(!c.keywords().contains(&Keyword::Flying));
+}
