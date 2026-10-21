@@ -3582,3 +3582,43 @@ fn gaze_of_justice_taps_three_white_creatures() {
     assert!(g.exile.iter().any(|c| c.id == target));
     assert!(whites.iter().all(|&c| g.battlefield_find(c).unwrap().tapped));
 }
+
+/// Weight of Conscience needs two creatures that share a creature type.
+#[test]
+fn weight_of_conscience_needs_a_shared_type() {
+    for (second, ok) in [(catalog::hill_giant(), false), (catalog::grizzly_bears(), true)] {
+        let mut g = pod(2);
+        let target = g.add_card_to_battlefield(1, catalog::craw_wurm());
+        let weight = g.add_card_to_hand(0, catalog::weight_of_conscience());
+        cast(&mut g, weight, Some(Target::Permanent(target)));
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, second);
+        g.priority.player_with_priority = 0;
+        let act = g.perform_action(GameAction::ActivateAbility {
+            card_id: weight,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        assert_eq!(act.is_ok(), ok, "a Bear and a {}", if ok { "Bear" } else { "Giant" });
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(target).is_none(), ok);
+    }
+}
+
+/// Candletrap's exile is coven-gated.
+#[test]
+fn candletrap_exile_needs_coven() {
+    let mut g = pod(2);
+    let target = g.add_card_to_battlefield(1, catalog::craw_wurm());
+    let trap = g.add_card_to_hand(0, catalog::candletrap());
+    cast(&mut g, trap, Some(Target::Permanent(target)));
+    assert!(activate(&mut g, trap, 0).is_err(), "no coven yet");
+    for c in [catalog::llanowar_elves(), catalog::grizzly_bears(), catalog::hill_giant()] {
+        g.add_card_to_battlefield(0, c);
+    }
+    activate(&mut g, trap, 0).expect("powers 1, 2, 3");
+    assert!(g.exile.iter().any(|c| c.id == target));
+}

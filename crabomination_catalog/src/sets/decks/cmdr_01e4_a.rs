@@ -9009,3 +9009,95 @@ pub fn gaze_of_justice() -> CardDefinition {
         ..spell("Gaze of Justice", cost(&[w()]), CardType::Sorcery, Effect::Move { what: target_filtered(R::Creature), to: ZoneDest::Exile })
     }
 }
+
+// ── Batch twenty-nine (Abdel Adrian + Criminal Past) ────────────────────────
+
+fn enchanted_kw(kw: Keyword) -> StaticAbility {
+    StaticAbility {
+        description: "Enchanted creature keyword.",
+        effect: StaticEffect::GrantKeyword { applies_to: Selector::AttachedTo(Box::new(Selector::This)), keyword: kw },
+    }
+}
+
+fn exile_enchanted() -> Effect {
+    Effect::Exile { what: Selector::AttachedTo(Box::new(Selector::This)) }
+}
+
+/// Candletrap — {W} Aura. Enchanted creature has defender; combat damage it
+/// would deal is prevented. Coven — {2}{W}, sacrifice it: exile enchanted
+/// creature; only with three or more creatures of different powers.
+pub fn candletrap() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![enchanted_kw(Keyword::Defender), enchanted_kw(Keyword::DealsNoCombatDamage)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            sac_cost: true,
+            condition: Some(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: exile_enchanted(),
+            ..Default::default()
+        }],
+        ..aura("Candletrap", cost(&[w()]), None)
+    }
+}
+
+/// Choking Restraints — {2}{W} Aura. Enchanted creature can't attack or
+/// block. {3}{W}{W}, sacrifice it: exile enchanted creature.
+pub fn choking_restraints() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![enchanted_kw(Keyword::CantAttack), enchanted_kw(Keyword::CantBlock)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), w()]),
+            sac_cost: true,
+            effect: exile_enchanted(),
+            ..Default::default()
+        }],
+        ..aura("Choking Restraints", cost(&[generic(2), w()]), None)
+    }
+}
+
+/// Citizen's Arrest — {1}{W}{W} enchantment. When it enters, exile target
+/// creature or planeswalker an opponent controls until it leaves the
+/// battlefield.
+pub fn citizens_arrest() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent)),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..spell("Citizen's Arrest", cost(&[generic(1), w(), w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Soaring Hope — {4}{W} Aura. When it enters, you gain 3 life. Enchanted
+/// creature has flying. {W}: put it on top of its owner's library.
+pub fn soaring_hope() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        static_abilities: vec![enchanted_kw(Keyword::Flying)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+            },
+            ..Default::default()
+        }],
+        ..aura("Soaring Hope", cost(&[generic(4), w()]), None)
+    }
+}
+
+/// Weight of Conscience — {1}{W} Aura. Enchanted creature can't attack. Tap
+/// two untapped creatures you control that share a creature type: exile
+/// enchanted creature.
+pub fn weight_of_conscience() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![enchanted_kw(Keyword::CantAttack)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::Creature, 2)),
+            tap_n_share_creature_type: true,
+            effect: exile_enchanted(),
+            ..Default::default()
+        }],
+        ..aura("Weight of Conscience", cost(&[generic(1), w()]), None)
+    }
+}

@@ -18944,6 +18944,11 @@ static DECKS: &[Factory] = &[
     super::decks::farmstead,
     super::decks::astral_confrontation,
     super::decks::gaze_of_justice,
+    super::decks::candletrap,
+    super::decks::choking_restraints,
+    super::decks::citizens_arrest,
+    super::decks::soaring_hope,
+    super::decks::weight_of_conscience,
     super::decks::stunning_strike,
     super::decks::check_for_traps,
     // cmdr_01r3_a (session 01R3xh4r)
