@@ -2371,3 +2371,39 @@ fn mystic_skull_wakes_up() {
     activate(&mut g, skull, 1).expect("transform");
     assert_eq!(pt(&g, skull), (5, 6));
 }
+
+/// Dimir Strandcatcher draws at end step off three non-battlefield graveyard
+/// arrivals: resolved spells count, a dead creature doesn't.
+#[test]
+fn dimir_strandcatcher_counts_only_non_battlefield_arrivals() {
+    for (bolts, kill_bear, draws) in [(3, false, true), (2, true, false)] {
+        let mut g = pod(2);
+        g.add_card_to_battlefield(0, catalog::dimir_strandcatcher());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for i in 0..bolts {
+            let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+            let to = if kill_bear && i == 0 { Target::Permanent(bear) } else { Target::Player(1) };
+            cast(&mut g, bolt, Some(to));
+        }
+        let hand = g.players[0].hand.len();
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        while g.step != TurnStep::End {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + usize::from(draws), "{bolts} bolts, bear killed {kill_bear}");
+    }
+}
+
+/// Nevermaker tops a nonland permanent when it leaves the battlefield.
+#[test]
+fn nevermaker_tops_a_permanent_as_it_leaves() {
+    let mut g = pod(2);
+    let maker = g.add_card_to_battlefield(0, catalog::nevermaker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, Some(Target::Permanent(maker)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(bear), "on top");
+}

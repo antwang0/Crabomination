@@ -5349,3 +5349,54 @@ pub fn ore_rich_stalactite() -> CardDefinition {
         ..spell("Ore-Rich Stalactite", cost(&[generic(1), r()]), CardType::Artifact, Effect::Noop)
     }
 }
+
+// ── Batch eighteen (primitive-gated two-gap decks) ──────────────────────────
+
+/// Dimir Strandcatcher — {2}{U/B}{U/B} 3/3 flying Faerie Rogue. Whenever you
+/// attack, surveil X (X = opponents being attacked). At the beginning of each
+/// end step, if three or more cards were put into your graveyard from
+/// anywhere other than the battlefield this turn, draw a card.
+pub fn dimir_strandcatcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::OpponentsAttackedThisCombat },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                    Predicate::ValueAtLeast(
+                        Value::CardsPutIntoGraveyardNotFromBattlefieldThisTurn(PlayerRef::You),
+                        Value::Const(3),
+                    ),
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..creature(
+            "Dimir Strandcatcher",
+            cost(&[generic(2), hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+            vec![CreatureType::Faerie, CreatureType::Rogue],
+            3,
+            3,
+        )
+    }
+}
+
+/// Nevermaker — {3}{U} 2/3 flying Elemental. When it leaves the battlefield,
+/// put target nonland permanent on top of its owner's library. Evoke {3}{U}.
+pub fn nevermaker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(3), u()]))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent.and(R::Land.negate())),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+            },
+        }],
+        ..creature("Nevermaker", cost(&[generic(3), u()]), vec![CreatureType::Elemental], 2, 3)
+    }
+}
