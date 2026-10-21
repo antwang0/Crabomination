@@ -10291,6 +10291,12 @@ fn main_phase_action_with(
     if let Some(action) = super::spell_discount::pick_spell_discount(state, seat) {
         return BotStep::plain(action);
     }
+    // Commander games: convoke / delve payments `cast_candidates` doesn't
+    // build — a helper-keyword commander from the command zone, Hogaak
+    // (`server/helper_cast.rs`).
+    if let Some(step) = super::helper_cast::pick_helper_cast(state, seat) {
+        return step;
+    }
 
     // Everything castable this tick — see `cast_candidates`.
     let pool = cast_candidates(state, seat, w, Some(&have_mana));
