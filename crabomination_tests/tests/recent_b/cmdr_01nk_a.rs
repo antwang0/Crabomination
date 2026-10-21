@@ -771,3 +771,15 @@ fn the_great_aurora_reshuffles_and_redraws_per_player() {
     assert_eq!(seat1_cards, 3);
     assert!(g.exile.iter().any(|c| c.id == ga), "exiled");
 }
+
+/// Invasion of Gobakhan exiles a nonland card from the target opponent's
+/// hand as it enters.
+#[test]
+fn invasion_of_gobakhan_exiles_an_opponents_card() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_gobakhan());
+    cast(&mut g, inv, None);
+    assert!(g.battlefield_find(inv).is_some(), "the Siege is out");
+    assert!(g.exile.iter().any(|c| c.id == bears), "the Bears went to exile");
+}

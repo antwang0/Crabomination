@@ -1207,3 +1207,51 @@ pub fn the_great_aurora() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Invasion of Gobakhan // Lightshield Array — {1}{W} Siege, defense 3. When
+/// it enters, look at target opponent's hand; you may exile a nonland card
+/// from it, which its owner may play while it stays exiled for {2} more (the
+/// window is Elite Spellbinder's `ExileFromHandTaxed`). Back: at the
+/// beginning of your end step, a +1/+1 counter on each creature that attacked
+/// this turn; sacrifice it: creatures you control gain hexproof and
+/// indestructible until end of turn.
+pub fn invasion_of_gobakhan() -> CardDefinition {
+    let mine = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    let array = CardDefinition {
+        name: "Lightshield Array",
+        color_indicator: vec![Color::White],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::AttackedThisTurn)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: mine(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: mine(), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Gobakhan",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![crate::card::BattleSubtype::Siege], ..Default::default() },
+        defense: 3,
+        triggered_abilities: vec![etb(Effect::ExileFromHandTaxed {
+            from: target_filtered(R::OpponentPlayer),
+            count: Value::ONE,
+            filter: R::Nonland,
+            extra_cost: 2,
+        })],
+        back_face: Some(Box::new(array)),
+        ..Default::default()
+    }
+}
