@@ -43963,8 +43963,8 @@ pub fn aria_of_flame() -> CardDefinition {
 }
 
 /// Baral, Chief of Compliance — {1}{U} 1/3 Human Wizard. Instant and sorcery
-/// spells you cast cost {1} less. (The "whenever a spell you control counters a
-/// spell, loot" rider needs a counter-event trigger — dropped.)
+/// spells you cast cost {1} less; whenever a spell or ability you control
+/// counters a spell, you may draw a card, then discard one.
 pub fn baral_chief_of_compliance() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
