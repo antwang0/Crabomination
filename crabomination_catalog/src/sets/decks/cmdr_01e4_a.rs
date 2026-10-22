@@ -9951,3 +9951,200 @@ pub fn fire_shrine_keeper() -> CardDefinition {
 pub fn flowstone_infusion() -> CardDefinition {
     spell("Flowstone Infusion", cost(&[r()]), CardType::Instant, pump(target_filtered(R::Creature), 2, -2))
 }
+
+fn snow_land() -> R {
+    R::Land.and(R::IsSnow)
+}
+
+/// Arcum's Sleigh — {1} Artifact. {2}, {T}: target creature gains vigilance
+/// until end of turn; only during combat and only if defending player
+/// controls a snow land.
+pub fn arcums_sleigh() -> CardDefinition {
+    let combat = Predicate::Any(
+        [
+            TurnStep::BeginCombat,
+            TurnStep::DeclareAttackers,
+            TurnStep::DeclareBlockers,
+            TurnStep::FirstStrikeDamage,
+            TurnStep::CombatDamage,
+            TurnStep::EndCombat,
+        ]
+        .into_iter()
+        .map(Predicate::CurrentStepIs)
+        .collect(),
+    );
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            condition: Some(Predicate::All(vec![
+                combat,
+                Predicate::SelectorExists(Selector::ControlledBy { who: PlayerRef::DefendingPlayer, filter: snow_land() }),
+            ])),
+            effect: Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..spell("Arcum's Sleigh", cost(&[generic(1)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Arcum's Weathervane — {2} Artifact. {2}, {T}: target snow land is no longer
+/// snow. {2}, {T}: target nonsnow basic land becomes snow.
+pub fn arcums_weathervane() -> CardDefinition {
+    use crate::card::Supertype;
+    let vane = |filter: R, gain: bool| ActivatedAbility {
+        mana_cost: cost(&[generic(2)]),
+        tap_cost: true,
+        effect: Effect::ChangeSupertype { what: target_filtered(filter), supertype: Supertype::Snow, gain, duration: Duration::Permanent },
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            vane(snow_land(), false),
+            vane(R::Land.and(R::HasSupertype(Supertype::Basic)).and(R::IsSnow.negate()), true),
+        ],
+        ..spell("Arcum's Weathervane", cost(&[generic(2)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Sunstone — {3} Artifact. {2}, sacrifice a snow land: prevent all combat
+/// damage that would be dealt this turn.
+pub fn sunstone() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((snow_land().and(R::ControlledByYou), 1)),
+            effect: Effect::PreventAllCombatDamageThisTurn,
+            ..Default::default()
+        }],
+        ..spell("Sunstone", cost(&[generic(3)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Balduvian Conjurer — {1}{U} 0/2 Human Wizard. {T}: target snow land
+/// becomes a 2/2 creature until end of turn (still a land).
+pub fn balduvian_conjurer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeCreature {
+                what: target_filtered(snow_land()),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Balduvian Conjurer", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Wizard], 0, 2)
+    }
+}
+
+/// Balduvian Frostwaker — {2}{U} 1/1 Human Wizard. {U}, {T}: target snow land
+/// becomes a 2/2 blue Elemental creature with flying (still a land), for good.
+pub fn balduvian_frostwaker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            effect: crate::effect::shortcut::colored_animation(
+                Effect::BecomeCreature {
+                    what: target_filtered(snow_land()),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![Keyword::Flying],
+                    duration: Duration::Permanent,
+                },
+                &[Color::Blue],
+            ),
+            ..Default::default()
+        }],
+        ..creature("Balduvian Frostwaker", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Wizard], 1, 1)
+    }
+}
+
+/// Phyrexian Ironfoot — {3} 3/4 snow Phyrexian Construct artifact creature. It
+/// doesn't untap during your untap step. {1}{S}: untap it.
+pub fn phyrexian_ironfoot() -> CardDefinition {
+    use crate::card::Supertype;
+    let mut untap_cost = cost(&[generic(1)]);
+    untap_cost.symbols.push(crate::mana::ManaSymbol::Snow);
+    CardDefinition {
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: untap_cost,
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+            ..Default::default()
+        }],
+        ..creature("Phyrexian Ironfoot", cost(&[generic(3)]), vec![CreatureType::Phyrexian, CreatureType::Construct], 3, 4)
+    }
+}
+
+/// Storm Elemental — {5}{U} 3/4 flying Elemental. {U}, exile the top card of
+/// your library: tap target creature with flying. {U}, exile the top card of
+/// your library: if it's a snow land, +1/+1 until end of turn.
+pub fn storm_elemental() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                exile_top_cost: 1,
+                effect: Effect::Tap { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                exile_top_cost: 1,
+                effect: Effect::If {
+                    cond: Predicate::SelectorExists(Selector::ExiledForCost),
+                    then: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::ExiledForCost, filter: snow_land() },
+                        then: Box::new(pump(Selector::This, 1, 1)),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Storm Elemental", cost(&[generic(5), u()]), vec![CreatureType::Elemental], 3, 4)
+    }
+}
+
+/// Snowblind — {3}{G} Aura. Enchanted creature gets -X/-Y: X is the number of
+/// snow lands defending player controls if it's attacking, else the number its
+/// controller controls; Y is X or its toughness minus 1, whichever is smaller
+/// (its printed toughness — 🟡 in INCOMPLETE_CARDS).
+pub fn snowblind() -> CardDefinition {
+    let host = || Selector::attached_to(Selector::This);
+    let snow_of = |who: PlayerRef| Value::CountOf(Box::new(Selector::ControlledBy { who, filter: snow_land() }));
+    let x = || Value::IfAtLeast {
+        value: Box::new(Value::CountOf(Box::new(Selector::EachPermanent(R::AttachedToSource.and(R::IsAttacking))))),
+        threshold: 1,
+        then: Box::new(snow_of(PlayerRef::DefendingPlayerOf(Box::new(host())))),
+        else_: Box::new(snow_of(PlayerRef::ControllerOf(Box::new(host())))),
+    };
+    let y = Value::Min(
+        Box::new(x()),
+        Box::new(Value::Diff(Box::new(Value::BaseToughnessOf(Box::new(host()))), Box::new(Value::ONE))),
+    );
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature gets -X/-Y (snow lands).",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: host(),
+                power: Value::Negate(Box::new(x())),
+                toughness: Value::Negate(Box::new(Value::Max(Box::new(y), Box::new(Value::ZERO)))),
+            },
+        }],
+        ..aura("Snowblind", cost(&[generic(3), g()]), None)
+    }
+}

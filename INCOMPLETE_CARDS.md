@@ -2353,3 +2353,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Command Performance | {TK}{TK} is state only (no ticket costs exist); the sticker mode puts a name sticker (ability / P-T stickers aren't modelled) | ticket-cost stickers |
 | 🟡 Done for the Day | {TK} is state only, and the all-three sticker is a name sticker (as Command Performance) | ticket-cost stickers |
 | 🟡 The Most Dangerous Gamer | its type line drops Gamer ("Human Gamer Guest" — no `CreatureType::Gamer`) | the creature type |
+| 🟡 Snowblind | Y caps at the host's PRINTED toughness minus 1, not its current toughness (a pumped or shrunk host is read as printed) | a layer-7 read of the host's toughness that excludes this Aura's own -Y |

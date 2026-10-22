@@ -3869,3 +3869,51 @@ fn bronze_cudgels_grows_with_each_activation_and_relic_amulet_spends_its_charge(
     assert_eq!(g.battlefield_find(wurm).unwrap().damage, 2);
     assert_eq!(g.battlefield_find(amulet).unwrap().counter_count(CounterType::Charge), 0);
 }
+
+/// Snowblind's -X/-Y reads its host's controller's snow lands while it isn't
+/// attacking, and Y stops at toughness minus 1, so it never kills on its own.
+#[test]
+fn snowblind_shrinks_by_snow_lands_and_never_kills() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    for _ in 0..4 {
+        g.add_card_to_battlefield(1, catalog::snow_covered_forest());
+    }
+    let aura = g.add_card_to_hand(0, catalog::snowblind());
+    cast(&mut g, aura, Some(Target::Permanent(giant)));
+    assert_eq!(pt(&g, giant), (-1, 1), "X = 4; Y = min(4, 3 - 1) = 2");
+    assert!(g.battlefield_find(giant).is_some());
+}
+
+#[test]
+fn storm_elemental_reads_the_card_it_exiled_and_weathervane_makes_snow() {
+    let mut g = pod(2);
+    let elemental = g.add_card_to_battlefield(0, catalog::storm_elemental());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::snow_covered_island());
+    activate(&mut g, elemental, 1).expect("{U}, exile the top card");
+    assert_eq!(pt(&g, elemental), (4, 5), "a snow land: +1/+1");
+    let vane = g.add_card_to_battlefield(0, catalog::arcums_weathervane());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    activate_on(&mut g, vane, 1, Some(Target::Permanent(forest))).expect("{2}, {T}: becomes snow");
+    let snow = g.computed_permanent(forest).unwrap().supertypes().contains(&crabomination::card::Supertype::Snow);
+    assert!(snow, "the basic Forest is snow now");
+}
+
+#[test]
+fn phyrexian_ironfoot_untaps_for_snow_mana() {
+    let mut g = pod(2);
+    let ironfoot = g.add_card_to_battlefield(0, catalog::phyrexian_ironfoot());
+    g.battlefield_find_mut(ironfoot).unwrap().tapped = true;
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.priority.player_with_priority = 0;
+    let untap = GameAction::ActivateAbility { card_id: ironfoot, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None };
+    assert!(g.perform_action(untap.clone()).is_err(), "{{S}} needs mana from a snow source");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_snow(Color::Green, 1);
+    g.perform_action(untap).expect("{1}{S}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(ironfoot).unwrap().tapped);
+}
