@@ -4,7 +4,7 @@
 use crabomination::card::{CardId, CardInstance, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, GameError, TurnStep};
+use crabomination::game::types::{GameAction, GameError, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -397,4 +397,29 @@ fn cr_702_119_herigast_grants_emerge_at_the_spells_own_cost() {
     assert!(g.battlefield_find(angel).is_some());
     assert!(g.battlefield_find(giant).is_none(), "the Giant was sacrificed");
     assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+/// CR 502.3 — Alirios, Enraptured doesn't untap during its controller's untap
+/// step while they control a Reflection; with the Reflection gone, it does.
+#[test]
+fn cr_502_3_alirios_stays_tapped_while_you_control_a_reflection() {
+    let mut g = pod(2);
+    let alirios = g.add_card_to_hand(0, catalog::alirios_enraptured());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: alirios, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(alirios).unwrap().tapped, "enters tapped");
+    let reflection = g.battlefield.iter().find(|c| c.definition.name == "Reflection").unwrap().id;
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(alirios).unwrap().tapped, "kept down by the Reflection");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(reflection)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt the Reflection");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(reflection).is_none());
+    g.do_untap();
+    assert!(!g.battlefield_find(alirios).unwrap().tapped);
 }

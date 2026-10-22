@@ -185,4 +185,31 @@ mod tests {
         g.exile.iter_mut().for_each(|c| c.on_adventure = false);
         assert!(matches!(answer(&g), DecisionAnswer::Bool(true)));
     }
+
+    /// CR 702.66 — under Teval's "spells you cast have delve" the bot's delve
+    /// block offers a spell with no delve of its own: Hill Giant ({3}{R})
+    /// for {R} and three graveyard cards.
+    #[test]
+    fn the_bot_delves_under_tevals_grant() {
+        let mut g = crate::game::game_with_format(crate::format::Format::Commander, 3);
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let giant = g.add_card_to_hand(0, crate::catalog::hill_giant());
+        for _ in 0..3 {
+            g.add_card_to_graveyard(0, crate::catalog::island());
+        }
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        let w = super::super::bot::EvalWeights::default();
+        let delves = |g: &GameState| {
+            super::super::bot::cast_candidates(g, 0, &w, None).into_iter().any(|(a, _)| {
+                matches!(a, GameAction::CastSpellDelve { card_id, .. } if card_id == giant)
+                    && GameState::would_accept_on(g, a)
+            })
+        };
+        assert!(!delves(&g), "no delve without the grant");
+        g.add_card_to_battlefield(0, crate::catalog::teval_arbiter_of_virtue());
+        assert!(delves(&g));
+    }
 }

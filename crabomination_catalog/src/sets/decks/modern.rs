@@ -26871,7 +26871,7 @@ pub fn mutable_explorer() -> CardDefinition {
 
 /// Teval, Arbiter of Virtue — {2}{B}{G}{U} Legendary 6/6 Spirit Dragon. Flying,
 /// lifelink. Whenever you cast a spell, you lose life equal to its mana value.
-/// (The "spells you cast have delve" static is engine-wide ⏳ and dropped.)
+/// Spells you cast have delve (CR 702.66; `controller_grants_spells_delve`).
 pub fn teval_arbiter_of_virtue() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {

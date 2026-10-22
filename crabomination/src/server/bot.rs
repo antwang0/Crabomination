@@ -7456,6 +7456,9 @@ struct BoardFacts {
     /// A `GrantConvokeToSpells` static is on the board, so the convoke
     /// block's per-card grant test can find something.
     grants_convoke: bool,
+    /// "Spells you cast have delve" (Teval, Arbiter of Virtue): every hand
+    /// spell rides the delve block.
+    grants_delve: bool,
     /// Some permanent carries a prepared inset spell.
     prepared: bool,
     /// A `CreatureSpellsGainOffspring` static is on the board (Zinnia), so a
@@ -7494,6 +7497,7 @@ impl BoardFacts {
         let mut f = BoardFacts {
             repartee: false,
             grants_convoke: false,
+            grants_delve: false,
             prepared: false,
             grants_offspring: false,
             grants_conspire: false,
@@ -7534,6 +7538,7 @@ impl BoardFacts {
                         f.grants_convoke = true
                     }
                     SE::CreatureSpellsGainOffspring { .. } => f.grants_offspring = true,
+                    SE::SpellsYouCastHaveDelve => f.grants_delve = true,
                     SE::GrantConspireToSpells { .. } => f.grants_conspire = true,
                     SE::FirstInstantSorceryHasCasualty(_) => f.grants_casualty = true,
                     SE::FirstNonlegendaryArtifactSpellHasCasualty(_) => f.grants_artifact_casualty = true,
@@ -7637,8 +7642,9 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         if state.players[seat].next_spell_convoke_this_turn || state.players[seat].next_spell_improvise_this_turn {
             m |= spec::CONVOKE;
         }
-        // Gorex's filtered delve rides the delve block.
-        if def.graveyard_exile_cost.is_some() {
+        // Gorex's filtered delve rides the delve block, and so does every
+        // spell under Teval's grant.
+        if def.graveyard_exile_cost.is_some() || (facts.grants_delve && !def.is_land()) {
             m |= spec::DELVE;
         }
         if matches!(
@@ -8118,6 +8124,7 @@ pub(super) fn cast_candidates<'a>(
     for c in state.players[seat].hand.iter().filter(|c| {
         c.definition.keywords.has_kw(&crate::card::Keyword::Delve)
             || c.definition.graveyard_exile_cost.is_some()
+            || (facts.grants_delve && !c.definition.is_land())
     }) {
         let generic_pips: u32 = c
             .definition
