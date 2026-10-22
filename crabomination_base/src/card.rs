@@ -411,6 +411,8 @@ pub enum CreatureType {
     Child,
     // Marvel (Shi'ar Soldier).
     Shiar,
+    // Unfinity (The Most Dangerous Gamer — "Human Gamer Guest").
+    Gamer,
 }
 
 /// Land subtypes (basic land types + others).
