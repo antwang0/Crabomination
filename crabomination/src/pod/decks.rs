@@ -135997,3 +135997,57 @@ pub const LEONARDO_6_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const ANARA_30_COMMANDERS: &[CardFactory] = &[anara_wolvid_familiar, glacian_powerstone_engineer];
+
+/// **Anara, Wolvid Familiar and Glacian, Powerstone Engineer**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 11 Forests + 14 Islands = 98.
+/// Anara, Wolvid Familiar and Glacian, Powerstone Engineer (EDHREC, fetched 2026-10-21).
+pub const ANARA_30_MAIN: &[CardFactory] = &[
+    armillary_sphere, entrancing_lyre, letter_of_acceptance, mycosynth_wellspring, relic_amulet,
+    replicating_ring, scalding_cauldron, simic_cluestone, simic_locket, sol_ring,
+    spinning_wheel, travelers_amulet, tumble_magnet, vial_of_dragonfire, weapon_rack,
+    woodweavers_puzzleknot, blighted_cataract, command_tower, gingerbread_cabin, khalni_garden,
+    opal_palace, seraph_sanctuary, simic_guildgate, study_hall, thornwood_falls, thriving_grove,
+    transguild_promenade, woodland_stream, biomathematician, bookwurm, centaur_courser,
+    crashing_drawbridge, elvish_mystic, glowstone_recluse, golgari_brownscale, grazing_kelpie,
+    maraleaf_pixie, merfolk_skydiver, needlethorn_drake, nephalia_seakite, nessian_hornbeetle,
+    nyleas_forerunner, primal_plasma, quandrix_apprentice, quandrix_pledgemage,
+    ramunap_excavator, research_assistant, rootless_yew, sidisis_faithful, sludge_monster,
+    sphinx_of_the_second_sun, undergrowth_scavenger, veiling_oddity, vortex_runner,
+    ordeal_of_nylea, simic_ascendancy, the_three_seasons, trollhide, ethereal_ambush,
+    eureka_moment, frost_breath, hydroform, negate, ojutais_breath, square_up, voyages_end,
+    kiora_behemoth_beckoner, far_wanderings, fractal_summoning, golden_ratio, hunt_the_weak,
+    incubation_incongruity, reshape,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
+
+pub const ALENA_34_COMMANDERS: &[CardFactory] = &[alena_kessig_trapper, francisco_fowl_marauder];
+
+/// **Alena, Kessig Trapper and Francisco, Fowl Marauder**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 26 Mountains = 98.
+/// Alena, Kessig Trapper and Francisco, Fowl Marauder (EDHREC, fetched 2026-10-21).
+pub const ALENA_34_MAIN: &[CardFactory] = &[
+    arcane_signet, bespoke_battlegarb, bone_saw, bonesplitter, boots_of_speed, bronze_cudgels,
+    bronze_sword, charcoal_diamond, colossus_hammer, commanders_plate, copper_carapace,
+    darksteel_axe, fellwar_stone, fire_diamond, golem_skin_gauntlets, greataxe, honed_khopesh,
+    intelligence_bobblehead, lavaspur_boots, leather_armor, leonin_scimitar,
+    mirran_banesplitter, mox_amber, mox_opal, perception_bobblehead, rakdos_signet,
+    scavenged_blade, serum_powder, sol_ring, sol_talisman, talisman_of_indulgence,
+    thirsting_axe, thought_vessel, utility_knife, command_tower, dwarven_hold,
+    ravaged_highlands, smoldering_spires, teetering_peaks, akki_battle_squad, armory_veteran,
+    birgi_god_of_storytelling, captain_lannery_storm, combat_celebrant, fire_shrine_keeper,
+    goblin_gaveleer, rabbit_battery, simian_sling, simian_spirit_guide, aggravated_assault,
+    akki_war_paint, blacksmiths_talent, the_brute, volcanic_strength, ambitious_assault,
+    blazing_shoal, cabal_ritual, dark_ritual, desperate_ritual, flowstone_infusion,
+    great_train_heist, hearth_charm, pyretic_ritual, raze_the_effigy, siege_smash,
+    abandon_the_post, blinding_flare, destructive_tampering, feed_the_swarm, inspired_tinkering,
+    seize_the_spoils, strike_it_rich,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

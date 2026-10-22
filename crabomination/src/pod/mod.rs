@@ -29556,6 +29556,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LEONARDO_6_COMMANDERS,
             main: decks::LEONARDO_6_MAIN,
         },
+        // Seat 4851: Anara, Wolvid Familiar and Glacian, Powerstone Engineer's EDHREC average deck. `--pod-decks 4851`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Glacian, Powerstone Engineer (UG)",
+            commanders: decks::ANARA_30_COMMANDERS,
+            main: decks::ANARA_30_MAIN,
+        },
+        // Seat 4852: Alena, Kessig Trapper and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 4852`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Francisco, Fowl Marauder (BR)",
+            commanders: decks::ALENA_34_COMMANDERS,
+            main: decks::ALENA_34_MAIN,
+        },
     ]
 }
 
@@ -36367,6 +36379,8 @@ mod tests {
             ("Hogaak, Arisen Necropolis", &[0x1D06]),
             ("Quicksilver, Pietro Maximoff", &[0x1D07]),
             ("Leonardo, Worldly Warrior", &[0x1D08]),
+            ("Anara, Wolvid Familiar and Glacian, Powerstone Engineer", &[0x1D09]),
+            ("Alena, Kessig Trapper and Francisco, Fowl Marauder", &[0x1D0A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
