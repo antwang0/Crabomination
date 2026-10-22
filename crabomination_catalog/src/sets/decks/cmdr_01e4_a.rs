@@ -8760,8 +8760,8 @@ pub fn tezzerets_ambition() -> CardDefinition {
 }
 
 /// Tezzeret's Betrayal — {3}{U}{B} sorcery. Destroy target creature; you may
-/// search your library (the graveyard half is not offered) for Tezzeret,
-/// Master of Metal and put it into your hand.
+/// search your library and/or graveyard for Tezzeret, Master of Metal and put
+/// it into your hand.
 pub fn tezzerets_betrayal() -> CardDefinition {
     spell(
         "Tezzeret's Betrayal",
@@ -8769,11 +8769,7 @@ pub fn tezzerets_betrayal() -> CardDefinition {
         CardType::Sorcery,
         Effect::Seq(vec![
             Effect::Destroy { what: target_filtered(R::Creature) },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasName("Tezzeret, Master of Metal".into()),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
+            fetch_named_to_hand("Tezzeret, Master of Metal"),
         ]),
     )
 }

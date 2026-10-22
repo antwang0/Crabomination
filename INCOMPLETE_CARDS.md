@@ -2344,7 +2344,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Suncleanser | the opponent mode removes their counters but not the "can't get counters" lock | a player-scoped counter lock |
 | 🟡 Moonlace | only permanents are offered as targets (not spells) | a spell-color layer |
 | 🟡 Bound by Moonsilver | "can't transform" is not modelled | a transform lock |
-| 🟡 Tezzeret's Betrayal | searches only the library for Tezzeret (not the graveyard) | a library-and/or-graveyard search |
 | 🟡 Sacred Boon | its +0/+1 counters land as the damage is prevented, not at the beginning of the next end step | a delayed per-prevention payout |
 | 🟡 Farmstead | the upkeep "pay {W}{W}: gain 1" trigger rides the Aura (the Aura controller's upkeep), not the enchanted land | a granted-trigger static on `AttachedTo(This)` |
 | 🟡 Jester's Scepter | the exiled card paid as the cost is always one that names the target spell (paying with a non-matching card — legal, pointless — isn't offered); the controller can't look at the face-down cards in the client | a free pick of the exiled card as a cost |
@@ -2352,7 +2351,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Monitor Monitor | the {1} reroll is never asked: every seat takes the headless rule (a die in the bottom third, one die per turn) inside `roll_one_die` | a seat-routed ask outside an effect |
 | 🟡 Command Performance | {TK}{TK} is state only (no ticket costs exist); the sticker mode puts a name sticker (ability / P-T stickers aren't modelled) | ticket-cost stickers |
 | 🟡 Done for the Day | {TK} is state only, and the all-three sticker is a name sticker (as Command Performance) | ticket-cost stickers |
-| 🟡 The Most Dangerous Gamer | its type line drops Gamer ("Human Gamer Guest" — no `CreatureType::Gamer`) | the creature type |
 | 🟡 Snowblind | Y caps at the host's PRINTED toughness minus 1, not its current toughness (a pumped or shrunk host is read as printed) | a layer-7 read of the host's toughness that excludes this Aura's own -Y |
 
 ## Seated commanders with a printed gap (`01KabMxS` audit, 2026-10-22)

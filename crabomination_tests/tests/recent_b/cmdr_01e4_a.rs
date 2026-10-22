@@ -3917,3 +3917,14 @@ fn phyrexian_ironfoot_untaps_for_snow_mana() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(ironfoot).unwrap().tapped);
 }
+
+#[test]
+fn tezzerets_betrayal_finds_tezzeret_in_the_graveyard_too() {
+    let mut g = pod(2);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tezzeret = g.add_card_to_graveyard(0, catalog::tezzeret_master_of_metal());
+    let betrayal = g.add_card_to_hand(0, catalog::tezzerets_betrayal());
+    cast(&mut g, betrayal, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.players[0].hand.iter().any(|c| c.id == tezzeret), "Tezzeret came back from the graveyard");
+}
