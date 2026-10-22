@@ -2354,3 +2354,30 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Done for the Day | {TK} is state only, and the all-three sticker is a name sticker (as Command Performance) | ticket-cost stickers |
 | 🟡 The Most Dangerous Gamer | its type line drops Gamer ("Human Gamer Guest" — no `CreatureType::Gamer`) | the creature type |
 | 🟡 Snowblind | Y caps at the host's PRINTED toughness minus 1, not its current toughness (a pumped or shrunk host is read as printed) | a layer-7 read of the host's toughness that excludes this Aura's own -Y |
+
+## Seated commanders with a printed gap (`01KabMxS` audit, 2026-10-22)
+
+Every seated commander's doc was scanned for approximation markers and each claim checked against the body (stale
+docs fixed: Aang, Emrakul, Gut, Long Feng, Baral, Teval; fixed in code: Herigast's granted emerge, Alirios's untap
+lock, Basri's exert, Frodo's Ring-bearer must-be-blocked, Reno and Rude sacrificing itself). Still open:
+
+| Card | Missing | Needs |
+| --- | --- | --- |
+| 🟡 Absolute Virtue | protection from each opponent is hexproof only — their damage isn't prevented | player protection-from-a-player |
+| 🟡 Alpharael, Dreaming Acolyte | always discards two ("unless you discard an artifact card" dropped) | a discard-N-unless-one-of-type choice |
+| 🟡 Balthier and Fran | no extra combat when a Vehicle it crewed attacks | crew-source attribution |
+| 🟡 Edgar, King of Figaro | Two-Headed Coin (first flips each turn come up heads) | a coin-flip result override |
+| 🟡 Elenda, Saint of Dusk | no hexproof from instants | a `HexproofFrom` instants variant |
+| 🟡 Fblthp, the Lost | always draws one ("entered from or cast from your library: two") | an entered-from-library predicate |
+| 🟡 Gorm the Great | "must be blocked by two or more if able" is plain must-be-blocked | a minimum-blockers requirement |
+| 🟡 Heart of Kiran | no "remove a loyalty counter from a planeswalker: crew" | an alternative crew cost |
+| 🟡 Kang the Conqueror | power-up stays activatable during the extra turn | a turn-scoped power-up lock |
+| 🟡 Mm'menon, the Right Hand | artifacts' restricted {U} mana grant missing | a granted restricted mana ability |
+| 🟡 Olivia, Crimson Bride | the returned creature never gains "exile this when you control no legendary Vampire" | a granted state trigger |
+| 🟡 Storrev, Devkarin Lich | target may be a card put into the graveyard this combat | a per-combat graveyard-entry filter |
+| 🟡 Surrak, Elusive Hunter | "or a creature spell you control" becomes the target — spell half missing | a spell-targeted trigger scope |
+| 🟡 The Unagi of Kyoshi Island | Ward—Waterbend {4} is Ward {4} mana | a waterbend `WardCost` |
+| 🟡 Tomik, Distinguished Advokist | opponents may play lands from graveyards / target your graveyard lands | graveyard-land locks |
+| 🟡 Yosei, the Morning Star | taps all of the player's permanents, not up to five targets | an up-to-five target slot |
+| 🟡 Zidane, Tantalus Thief | no Treasure when an opponent gains control of your permanent | a control-change-from-you event |
+| 🟡 Feroz, Ulgrotha's Warden / Gogo / Minsc & Boo / The Lunar Whale / Arachne | Ban token's {6}; Gogo's "can't be copied"; the Minsc subtype; look at the top card; the hand look | cosmetic or minor |
