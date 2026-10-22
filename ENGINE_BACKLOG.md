@@ -194,6 +194,13 @@ the handoff.
 - **LANDED (`01KabMxS`, claimed 18:25) — `01E4rMUL`'s 19:17 claim of the same six is moot:** seats 4844-4846 (The
   Most Dangerous Gamer, Dee Kay, Spinnerette), closed by `decks::cmdr_01ka_a` (Soul Swindler, Squirrel Squatters,
   Spinnerette, Motion Sickness, Dee Kay, Done for the Day) + `unf::pick_a_beeble`; tests `recent_b/cmdr_01ka_a.rs`.
+- **LANDED (`01KabMxS`, third batch):** the command-zone **hop** (`HopFrom::CommandZone`) generalises the second batch:
+  kicker / multikicker / bestow / waterbend / convoke / delve, face-down morph / disguise and Adventures all cast a
+  commander from the command zone through the hand pipeline, tax included (CR 903.8; Josu Vess, Verix, Akroma Angel of
+  Fury, Beorn, Gollum …). Bot: a kicked command-zone candidate, the face-down fallback and the Adventure read the command
+  zone; an adventured commander stays in exile (CR 903.9a). Herigast's granted emerge (`GrantEmergeToSpells`) and a
+  cheapest-covering emerge sacrifice; Teval's granted delve reaches the bot; Alirios, Basri, Frodo, Reno and Rude fixed;
+  the rest of the seated commanders' gaps are in INCOMPLETE_CARDS.
 - **LANDED (`01KabMxS`, second batch):** convoke / improvise / delve on a **command-zone** cast (CR 903.8 + 702.51a /
   702.126 / 702.66a; `cast_from_command_zone_as` ignored them, so Kasla, Tasigur, Bennie Bracks, Winter, The Wandering
   Rescuer and Ironheart never used their keyword as a commander) and under a graveyard cast permission —
