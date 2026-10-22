@@ -4888,9 +4888,9 @@ pub fn elspeths_nightmare() -> CardDefinition {
     }
 }
 
-/// Alirios, Enraptured — {2}{U} 2/3 Legendary Human. Enters tapped; ETB make a
-/// 3/2 blue Reflection. (The "doesn't untap while you control a Reflection"
-/// drawback is approximated — it untaps normally.)
+/// Alirios, Enraptured — {2}{U} 2/3 Legendary Human. Enters tapped and doesn't
+/// untap during your untap step while you control a Reflection (CR 502.3); ETB
+/// make a 3/2 blue Reflection.
 pub fn alirios_enraptured() -> CardDefinition {
     CardDefinition {
         name: "Alirios, Enraptured",
@@ -4903,10 +4903,25 @@ pub fn alirios_enraptured() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        static_abilities: vec![crate::card::StaticAbility {
-            description: "Alirios enters tapped.",
-            effect: crate::effect::StaticEffect::EntersTapped { applies_to: Selector::This },
-        }],
+        static_abilities: vec![
+            crate::card::StaticAbility {
+                description: "Alirios enters tapped.",
+                effect: crate::effect::StaticEffect::EntersTapped { applies_to: Selector::This },
+            },
+            crate::card::StaticAbility {
+                description: "Alirios doesn't untap during your untap step if you control a Reflection.",
+                effect: crate::effect::StaticEffect::PreventUntapGlobal {
+                    applies_to: Selector::This,
+                    condition: Some(crate::effect::Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            crate::card::SelectionRequirement::HasCreatureType(CreatureType::Reflection)
+                                .and(crate::card::SelectionRequirement::ControlledByYou),
+                        ),
+                        n: Value::ONE,
+                    }),
+                },
+            },
+        ],
         triggered_abilities: vec![
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
