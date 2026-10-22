@@ -29568,6 +29568,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALENA_34_COMMANDERS,
             main: decks::ALENA_34_MAIN,
         },
+        // Seat 4853: Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 4853`.
+        PodDeck {
+            name: "Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator (UG)",
+            commanders: decks::ANARA_31_COMMANDERS,
+            main: decks::ANARA_31_MAIN,
+        },
     ]
 }
 
@@ -36381,6 +36387,7 @@ mod tests {
             ("Leonardo, Worldly Warrior", &[0x1D08]),
             ("Anara, Wolvid Familiar and Glacian, Powerstone Engineer", &[0x1D09]),
             ("Alena, Kessig Trapper and Francisco, Fowl Marauder", &[0x1D0A]),
+            ("Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator", &[0x1D0B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

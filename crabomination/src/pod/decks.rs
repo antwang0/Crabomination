@@ -136051,3 +136051,32 @@ pub const ALENA_34_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ANARA_31_COMMANDERS: &[CardFactory] = &[anara_wolvid_familiar, malcolm_keen_eyed_navigator];
+
+/// **Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator**'s EDHREC average deck, card for card:
+/// 98 nonbasic cards = 98.
+/// Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator (EDHREC, fetched 2026-10-22).
+pub const ANARA_31_MAIN: &[CardFactory] = &[
+    arcums_astrolabe, arcums_sleigh, arcums_weathervane, chromatic_lantern, replicating_ring,
+    sol_ring, sunstone, surveyors_scope, the_earth_crystal, command_tower, dark_depths,
+    faceless_haven, frostwalk_bastion, rimewood_falls, scrying_sheets, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, abominable_treefolk, ascendant_spirit,
+    avalanche_caller, avatar_of_growth, balduvian_conjurer, balduvian_frostwaker,
+    bristly_bill_spine_sower, frost_augur, frost_raptor, iceberg_cancrix, icehide_golem,
+    moritte_of_the_frost, nissa_vastwood_seer, ouroboroid, panglacial_wurm, phyrexian_ironfoot,
+    rimefeather_owl, sazh_katzroy, siren_lookout, spirit_of_the_aldergard, storm_elemental,
+    timestream_navigator, ulvenwald_hydra, vorinclex, zephyr_singer, boseiju_reaches_skyward,
+    khalni_heart_expedition, marit_lages_slumber, paradox_zone, primal_vigor, snowblind,
+    the_three_seasons, winters_rest, early_frost, graven_lore, snow_day, solidarity_of_heroes,
+    whiteout, winters_chill, yunas_whistle, garruk_primal_hunter, vivien_monsters_advocate,
+    beacon_of_tomorrows, blessing_of_frost, blizzard_brawl, capture_of_jingzhou, cultivate,
+    glacial_revelation, nissas_triumph, personal_tutor, reclaim_the_wastes, rush_of_ice,
+    spring_mind, titanias_command, verdant_confluence, will_of_the_sultai,
+];
