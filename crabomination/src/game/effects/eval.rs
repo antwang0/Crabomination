@@ -744,6 +744,11 @@ impl GameState {
                     self.find_card_anywhere(cid).map(|c| c.definition.power)
                 })
                 .fold(0, i32::saturating_add),
+            Value::BaseToughnessOf(s) => self
+                .resolve_selector(s, ctx)
+                .iter()
+                .filter_map(|e| e.as_card_id().and_then(|cid| self.find_card_anywhere(cid)).map(|c| c.definition.toughness))
+                .fold(0, i32::saturating_add),
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     // `as_card_id` (mirrors `PowerOf`): a dies-trigger subject

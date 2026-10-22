@@ -787,6 +787,10 @@ pub enum Value {
     /// (Guardian of the Gateless's "+1/+1 for each creature it's blocking").
     CreaturesBlockedBy(Box<Selector>),
     ToughnessOf(Box<Selector>),
+    /// The printed toughness of the selected permanents — no layer effects,
+    /// so a static that scales with its own host's toughness can read it
+    /// without reading itself (Snowblind's "toughness minus 1").
+    BaseToughnessOf(Box<Selector>),
     /// Marked damage on the first entity the selector resolves to (CR 120.3).
     /// Read from the live permanent, or from CR 603.10 leaves-battlefield LKI
     /// when the source has already died — so a dies-trigger can scale on "the

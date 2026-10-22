@@ -25547,6 +25547,9 @@ impl GameState {
                 }
                 let card = self.players[p].library.remove(0);
                 self.exiled_for_cost_mana_value = Some(card.definition.cost.cmc() as i32);
+                // `Selector::ExiledForCost` names it too ("if the exiled card
+                // is a snow land" — Storm Elemental).
+                self.exiled_for_cost_card = Some(card.id);
                 self.place_card_in_dest(card, p, &crate::effect::ZoneDest::Exile, events);
             }
         }
