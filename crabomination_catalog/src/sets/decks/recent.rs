@@ -784,8 +784,7 @@ pub fn diregraf_scavenger() -> CardDefinition {
 
 /// Gut, True Soul Zealot — {2}{R} 2/2 Legendary Goblin Shaman. Whenever you
 /// attack, you may sacrifice another creature or artifact; if you do, create a
-/// 4/1 black Skeleton with menace, tapped and attacking. (Choose-a-Background
-/// commander clause is cosmetic and omitted.)
+/// 4/1 black Skeleton with menace, tapped and attacking. Choose a Background.
 pub fn gut_true_soul_zealot() -> CardDefinition {
     use crate::card::TokenDefinition;
     use crate::mana::Color;

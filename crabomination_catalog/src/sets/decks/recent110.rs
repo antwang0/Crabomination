@@ -230,7 +230,7 @@ pub fn shriekhorn() -> CardDefinition {
 
 /// Emrakul, the Promised End — {13} 13/13 Legendary Eldrazi; costs {1} less
 /// per card type in your graveyard; flying, trample, protection from
-/// instants. The cast-trigger mind-control turn is unmodeled.
+/// instants. When cast, you control target opponent's next turn and they take an extra one after it.
 pub fn emrakul_the_promised_end() -> CardDefinition {
     CardDefinition {
         name: "Emrakul, the Promised End",

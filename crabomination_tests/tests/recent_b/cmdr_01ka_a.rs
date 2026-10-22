@@ -423,3 +423,33 @@ fn cr_502_3_alirios_stays_tapped_while_you_control_a_reflection() {
     g.do_untap();
     assert!(!g.battlefield_find(alirios).unwrap().tapped);
 }
+
+/// CR 701.43 — Basri's Cat ability exerts it: Basri doesn't untap during its
+/// controller's next untap step.
+#[test]
+fn cr_701_43_basri_is_exerted_by_its_cat_ability() {
+    let mut g = pod(2);
+    let basri = ready(&mut g, 0, catalog::basri_tomorrows_champion());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility { card_id: basri, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("make a Cat");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Cat"));
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(basri).unwrap().tapped, "exerted");
+    g.do_untap();
+    assert!(!g.battlefield_find(basri).unwrap().tapped);
+}
+
+/// Frodo Baggins must be blocked if able only while he's his controller's
+/// Ring-bearer (CR 701.54).
+#[test]
+fn frodo_must_be_blocked_only_as_ring_bearer() {
+    let mut g = pod(2);
+    let frodo = ready(&mut g, 0, catalog::frodo_baggins());
+    let must = |g: &GameState| g.computed_permanent(frodo).unwrap().keywords().contains(&Keyword::MustBeBlocked);
+    assert!(!must(&g));
+    g.players[0].ring_bearer = Some(frodo);
+    assert!(must(&g), "the Ring-bearer");
+}

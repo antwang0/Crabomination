@@ -637,8 +637,8 @@ pub fn gastal_raider() -> CardDefinition {
 }
 
 /// Basri, Tomorrow's Champion — {W} 2/1 Human Knight. `{W}, {T}: Create a 1/1
-/// white Cat creature token with lifelink.` (Exert is approximated as a plain
-/// tap.) Cycling {2}{W}; when you cycle it, Cats you control gain hexproof and
+/// white Cat creature token with lifelink.` — exerted, it doesn't untap during
+/// your next untap step (CR 701.43). Cycling {2}{W}; when you cycle it, Cats you control gain hexproof and
 /// indestructible until end of turn.
 pub fn basri_tomorrows_champion() -> CardDefinition {
     let cat = || TokenDefinition {
@@ -669,11 +669,10 @@ pub fn basri_tomorrows_champion() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[w()]),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(cat()),
-            },
+            effect: Effect::Seq(vec![
+                Effect::SkipNextUntap { what: Selector::This },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(cat()) },
+            ]),
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

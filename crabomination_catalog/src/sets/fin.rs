@@ -8814,7 +8814,8 @@ pub fn reno_and_rude() -> CardDefinition {
                 description: "sacrifice another creature or artifact".into(),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Artifact)
-                    .and(SelectionRequirement::ControlledByYou),
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
                 count: Value::ONE,
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::Target(0),

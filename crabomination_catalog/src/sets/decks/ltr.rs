@@ -1375,8 +1375,8 @@ pub fn rising_of_the_day() -> CardDefinition {
 }
 
 /// Frodo Baggins — {G}{W} 1/3 legendary Halfling Scout. Whenever Frodo or
-/// another legendary creature you control enters, the Ring tempts you.
-/// (Must-be-blocked-while-Ring-bearer rider approximated.)
+/// another legendary creature you control enters, the Ring tempts you. As
+/// long as Frodo is your Ring-bearer, it must be blocked if able.
 pub fn frodo_baggins() -> CardDefinition {
     CardDefinition {
         name: "Frodo Baggins",
@@ -1398,6 +1398,16 @@ pub fn frodo_baggins() -> CardDefinition {
                 }),
             effect: Effect::RingTempts {
                 who: PlayerRef::You,
+            },
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As long as Frodo is your Ring-bearer, it must be blocked if able.",
+            effect: crate::effect::StaticEffect::WhileCondition {
+                condition: Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::IsRingBearer },
+                inner: Box::new(crate::effect::StaticEffect::GrantKeyword {
+                    applies_to: Selector::This,
+                    keyword: crate::card::Keyword::MustBeBlocked,
+                }),
             },
         }],
         ..Default::default()

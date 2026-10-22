@@ -335,7 +335,7 @@ pub fn airbending_lesson() -> CardDefinition {
 }
 
 /// Aang, the Last Airbender — {3}{W} 3/2, Flying. When he enters, airbend up
-/// to one other target nonland permanent. (Lesson-cast trigger omitted.)
+/// to one other target nonland permanent; whenever you cast a Lesson, Aang gains lifelink until end of turn.
 pub fn aang_the_last_airbender() -> CardDefinition {
     CardDefinition {
         name: "Aang, the Last Airbender",

@@ -3391,7 +3391,7 @@ pub fn tolls_of_war() -> CardDefinition {
 
 /// Long Feng, Grand Secretariat — {1}{B/G}{B/G} 2/3 legendary Human Advisor.
 /// Whenever another creature you control dies, put a +1/+1 counter on target
-/// creature you control. (The "or a land" clause is approximated to creatures.)
+/// creature you control.
 pub fn long_feng_grand_secretariat() -> CardDefinition {
     CardDefinition {
         name: "Long Feng, Grand Secretariat",
