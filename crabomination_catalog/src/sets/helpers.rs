@@ -623,3 +623,28 @@ pub fn impulse_choose_one(n: i32, duration: crate::card::MayPlayDuration) -> Eff
         },
     ])
 }
+
+/// "You may search your library and/or graveyard for a [filter] card, reveal
+/// it, and put it into your hand. If you search your library this way,
+/// shuffle" — the graveyard copy when there is one (no search, so no
+/// shuffle), else a library search (the planeswalker-deck tutors: Elspeth's
+/// Devotee, Dovin's Dismissal, Niambi).
+pub fn search_library_and_or_graveyard(filter: SelectionRequirement) -> Effect {
+    let in_graveyard = || Selector::CardsInZone {
+        who: PlayerRef::You,
+        zone: crate::card::Zone::Graveyard,
+        filter: filter.clone(),
+    };
+    Effect::If {
+        cond: Predicate::SelectorExists(in_graveyard()),
+        then: Box::new(Effect::Move {
+            what: Selector::one_of(in_graveyard()),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        }),
+        else_: Box::new(Effect::Search {
+            who: PlayerRef::You,
+            filter: filter.clone(),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        }),
+    }
+}

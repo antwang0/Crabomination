@@ -6613,8 +6613,8 @@ pub fn elspeth_undaunted_hero() -> CardDefinition {
 }
 
 /// Elspeth's Devotee — {2}{W}{W} 3/3 Human Soldier. ETB: you may search your
-/// library for Elspeth, Undaunted Hero and put it into your hand. (The
-/// graveyard half is dropped — Search only walks the library.)
+/// library and/or graveyard for Elspeth, Undaunted Hero and put it into your
+/// hand.
 pub fn elspeths_devotee() -> CardDefinition {
     CardDefinition {
         name: "Elspeth's Devotee",
@@ -6626,17 +6626,14 @@ pub fn elspeths_devotee() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::HasName("Elspeth, Undaunted Hero".into()),
-            to: ZoneDest::Hand(PlayerRef::You),
-        })],
+        triggered_abilities: vec![etb(crate::sets::search_library_and_or_graveyard(SelectionRequirement::HasName("Elspeth, Undaunted Hero".into())))],
         ..Default::default()
     }
 }
 
 /// Ashiok's Forerunner — {3}{U}{B} 3/3 Human Wizard with Flash. ETB: you may
-/// search your library for Ashiok, Sculptor of Fears and put it into your hand.
+/// search your library and/or graveyard for Ashiok, Sculptor of Fears and put
+/// it into your hand.
 pub fn ashioks_forerunner() -> CardDefinition {
     CardDefinition {
         name: "Ashiok's Forerunner",
@@ -6649,11 +6646,7 @@ pub fn ashioks_forerunner() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::HasName("Ashiok, Sculptor of Fears".into()),
-            to: ZoneDest::Hand(PlayerRef::You),
-        })],
+        triggered_abilities: vec![etb(crate::sets::search_library_and_or_graveyard(SelectionRequirement::HasName("Ashiok, Sculptor of Fears".into())))],
         ..Default::default()
     }
 }

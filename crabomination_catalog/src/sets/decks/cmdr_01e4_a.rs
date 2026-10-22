@@ -6051,8 +6051,8 @@ pub fn chandra_pyrogenius() -> CardDefinition {
 }
 
 /// Liberating Combustion — {4}{R} sorcery. 6 damage to target creature; you
-/// may search your library (the graveyard half is not offered) for Chandra,
-/// Pyrogenius and put it into your hand.
+/// may search your library and/or graveyard for Chandra, Pyrogenius and put
+/// it into your hand.
 pub fn liberating_combustion() -> CardDefinition {
     spell(
         "Liberating Combustion",
@@ -6060,11 +6060,7 @@ pub fn liberating_combustion() -> CardDefinition {
         CardType::Sorcery,
         Effect::Seq(vec![
             Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(6) },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasName("Chandra, Pyrogenius".into()),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
+            fetch_named_to_hand("Chandra, Pyrogenius"),
         ]),
     )
 }
@@ -9264,16 +9260,10 @@ pub fn mephitic_vapors() -> CardDefinition {
     )
 }
 
-/// "You may search your library and/or graveyard for a card named `name`,
-/// reveal it, and put it into your hand" (Niambi, Teferi's Wavecaster): the
-/// graveyard copy when there is one (no shuffle), else a library search.
+/// The named-card form of [`crate::sets::search_library_and_or_graveyard`]
+/// (Niambi, Teferi's Wavecaster, Tezzeret's Betrayal, Liberating Combustion).
 fn fetch_named_to_hand(name: &'static str) -> Effect {
-    let in_graveyard = || Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::HasName(name.into()) };
-    Effect::If {
-        cond: Predicate::SelectorExists(in_graveyard()),
-        then: Box::new(Effect::Move { what: Selector::one_of(in_graveyard()), to: ZoneDest::Hand(PlayerRef::You) }),
-        else_: Box::new(Effect::Search { who: PlayerRef::You, filter: R::HasName(name.into()), to: ZoneDest::Hand(PlayerRef::You) }),
-    }
+    crate::sets::search_library_and_or_graveyard(R::HasName(name.into()))
 }
 
 fn you_control_a_teferi() -> Predicate {

@@ -1939,13 +1939,17 @@ fn clear_the_stage_shrink_and_return() {
 /// tutor for Domri, City Smasher.
 #[test]
 fn domris_nodorog_shape() {
-    use crabomination::effect::Effect;
-    let def = catalog::domris_nodorog();
-    assert!(def.keywords == vec![Keyword::Trample] && def.triggered_abilities.len() == 1, "trample + ETB tutor");
-    match &def.triggered_abilities[0].effect {
-        Effect::Search { filter, .. } => assert_eq!(*filter, crabomination::card::SelectionRequirement::HasName("Domri, City Smasher".into())),
-        other => panic!("expected Search, got {other:?}"),
-    }
+    // With no Domri in the graveyard, the library half searches for him.
+    let mut g = two_player_game();
+    let domri = g.add_card_to_library(
+        0,
+        crabomination::card::CardDefinition { name: "Domri, City Smasher", ..Default::default() },
+    );
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Search(Some(domri))]));
+    let nodorog = g.move_card_to_battlefield_for_test(0, catalog::domris_nodorog());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(nodorog).unwrap().definition.keywords.contains(&Keyword::Trample));
+    assert!(g.players[0].hand.iter().any(|c| c.id == domri), "searched the library for Domri");
 }
 
 /// Bolrac-Clan Crusher removes a +1/+1 counter to deal 2 to any target.

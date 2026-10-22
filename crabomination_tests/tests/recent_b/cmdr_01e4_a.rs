@@ -3928,3 +3928,44 @@ fn tezzerets_betrayal_finds_tezzeret_in_the_graveyard_too() {
     assert!(g.battlefield_find(victim).is_none());
     assert!(g.players[0].hand.iter().any(|c| c.id == tezzeret), "Tezzeret came back from the graveyard");
 }
+
+/// "Search your library and/or graveyard for a card named …" takes the copy
+/// in the graveyard — every one of these searched only the library (Elspeth's
+/// Devotee, Ashiok's Forerunner, Domri's Nodorog, Dovin's Dismissal,
+/// Liberating Combustion; `sets::search_library_and_or_graveyard`).
+#[test]
+fn library_and_or_graveyard_tutors_take_the_graveyard_copy() {
+    use crabomination::card::CardDefinition;
+    let named = |name: &'static str| CardDefinition { name, card_types: vec![CardType::Planeswalker], ..Default::default() };
+    let cases: Vec<(CardDefinition, CardDefinition, bool)> = vec![
+        (catalog::elspeths_devotee(), catalog::elspeth_undaunted_hero(), false),
+        (catalog::ashioks_forerunner(), catalog::ashiok_sculptor_of_fears(), false),
+        (catalog::domris_nodorog(), named("Domri, City Smasher"), false),
+        (catalog::niambi_faithful_healer(), catalog::teferi_timebender(), false),
+        (catalog::teferis_wavecaster(), catalog::teferi_timeless_voyager(), false),
+        (catalog::dovins_dismissal(), named("Dovin, Architect of Law"), true),
+        (catalog::tezzerets_betrayal(), catalog::tezzeret_master_of_metal(), true),
+        (catalog::liberating_combustion(), catalog::chandra_pyrogenius(), true),
+    ];
+    for (tutor, target, aimed) in cases {
+        let name = tutor.name;
+        let mut g = pod(2);
+        let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(fodder).unwrap().tapped = true;
+        let wanted = g.add_card_to_graveyard(0, target);
+        let id = g.add_card_to_hand(0, tutor);
+        cast(&mut g, id, aimed.then_some(Target::Permanent(fodder)));
+        assert!(g.players[0].hand.iter().any(|c| c.id == wanted), "{name} took it from the graveyard");
+    }
+}
+
+#[test]
+fn fang_druid_summoner_wants_a_creature_with_no_abilities() {
+    let mut g = pod(2);
+    let flier = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let vanilla = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let druid = g.add_card_to_hand(0, catalog::fang_druid_summoner());
+    cast(&mut g, druid, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == vanilla), "the vanilla Bears");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == flier), "not the Angel, which has abilities");
+}

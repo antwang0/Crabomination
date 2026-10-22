@@ -4527,15 +4527,11 @@ pub fn clear_the_stage() -> CardDefinition {
 
 /// Domri's Nodorog — {3}{R}{G} 5/2 Beast with trample. ETB you may search your
 /// library for a card named Domri, City Smasher, reveal it, and put it into
-/// your hand, then shuffle. (The graveyard half is elided.)
+/// your hand, then shuffle — or take it from your graveyard.
 pub fn domris_nodorog() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            etb(Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasName("Domri, City Smasher".into()),
-                to: ZoneDest::Hand(PlayerRef::You),
-            }),
+            etb(crate::sets::search_library_and_or_graveyard(R::HasName("Domri, City Smasher".into()))),
         ],
         ..body(
             "Domri's Nodorog",
@@ -4618,8 +4614,8 @@ pub fn dovins_acuity() -> CardDefinition {
 
 /// Dovin's Dismissal — {2}{W}{U} Instant. Put up to one target tapped creature
 /// on top of its owner's library. You may search your library for a card named
-/// Dovin, Architect of Law and put it into your hand, then shuffle. (The
-/// graveyard half is elided.)
+/// Dovin, Architect of Law and put it into your hand, then shuffle — or take
+/// it from your graveyard.
 pub fn dovins_dismissal() -> CardDefinition {
     CardDefinition {
         name: "Dovin's Dismissal",
@@ -4639,11 +4635,7 @@ pub fn dovins_dismissal() -> CardDefinition {
                     },
                 }),
             },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasName("Dovin, Architect of Law".into()),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
+            crate::sets::search_library_and_or_graveyard(R::HasName("Dovin, Architect of Law".into())),
         ]),
         ..Default::default()
     }

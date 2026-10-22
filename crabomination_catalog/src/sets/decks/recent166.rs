@@ -805,8 +805,8 @@ pub fn amonkhet_raceway() -> CardDefinition {
 }
 
 /// Fang-Druid Summoner — {3}{G} 2/4 Ape Druid. Reach. When it enters, search
-/// your library for a creature card and put it into your hand. (The printed "no
-/// abilities" restriction and the graveyard search half are dropped.)
+/// your library and/or graveyard for a creature card with no abilities and put
+/// it into your hand.
 pub fn fang_druid_summoner() -> CardDefinition {
     CardDefinition {
         name: "Fang-Druid Summoner",
@@ -819,11 +819,7 @@ pub fn fang_druid_summoner() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![etb(Effect::Search {
-            who: PlayerRef::You,
-            filter: R::Creature,
-            to: ZoneDest::Hand(PlayerRef::You),
-        })],
+        triggered_abilities: vec![etb(crate::sets::search_library_and_or_graveyard(R::Creature.and(R::HasNoAbilities)))],
         ..Default::default()
     }
 }
