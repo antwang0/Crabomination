@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 305 seats, four bug classes gated](#fixedopen-2026-10-23-commander-run-01uv3vwf--305-seats-four-bug-classes-gated) | 27 |
+| Bugs & robustness | [FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 705 seats, four bug classes gated, one bot crash](#fixedopen-2026-10-23-commander-run-01uv3vwf--705-seats-four-bug-classes-gated-one-bot-crash) | 36 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 14 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 21 seats, 61 cards, pod Attraction decks, snow by colour](#fixedopen-2026-10-21-commander-run-01kpxz3h--21-seats-61-cards-pod-attraction-decks-snow-by-colour) | 79 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
@@ -233,14 +233,19 @@ the handoff.
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
 
-## FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 305 seats, four bug classes gated
+## FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 705 seats, four bug classes gated, one bot crash
 
-- **Seats 4854-5158.** 4854 Owen Grady + Blue, Loyal Raptor (Blue was the one EDHREC top-600 commander missing; Cresting
+- **Seats 4854-5558.** 4854 Owen Grady + Blue, Loyal Raptor (Blue was the one EDHREC top-600 commander missing; Cresting
   Mosasaurus the deck's other gap). 4855-4858 the last four official precons not seated — an MTGJSON scan over all 198
   `Commander Deck` lists (`DeckList.json`, collector editions skipped; `decks/<fileName>.json` converted to the EDHREC
   page shape and fed to `seat_decks.py`): C14 Forged in Stone / Guided by Nature / Sworn to Darkness, SLD Odds and Ends.
-  4859-5158: the three hundred best-ranked **zero-gap** legal pair decks (batches of 100, each legal and smoked at
-  2-6 seats × 8 games: seeds 10103/10113/10114, 3,568 games, 0 panics, two token-engine board caps). ⚠ **`edhrec_scan_pairs.py` over the full 68-page
+  4859-5558: the seven hundred best-ranked **zero-gap** legal pair decks (batches of 100-200, each legal and smoked at
+  2-6 seats × 8 games: seeds 10103/10113/10114/10117/10118, 8,224 games; one panic, below; token-engine board caps).
+- **FIXED (bot crash):** the `GY_GRANT` cast-candidate gate opened on the seat's own turn only unless a board
+  permanent granted any-turn graveyard casts, but `graveyard_cast_type_available` answers Hogaak's
+  `CastSelfFromGraveyard` (and a `CastFromGraveyardMatching` emblem) on any turn — with Muldrotha out on an opponent's
+  turn the block found Hogaak and the debug-assert aborted a 6-seat pod (seed 1011802). `graveyard_specialties` raises
+  the bit for both; `server::bot::tests::graveyard_grant_gate_sees_a_self_graveyard_caster_off_turn`. ⚠ **`edhrec_scan_pairs.py` over the full 68-page
   `commanders/year.json` (2026-10-23) lists 1,308 pair decks with nothing missing, 1,287 of them all-legal** — NEXT's
   "seated to twelve gaps" was true of the gap tiers, not of the zero tier. Of those, 15 are not 100 cards (no basics to
   top up — `seat_decks.py` only fills with a basic) and the Clara Oswald pairs fail identity (her chosen colour, the
