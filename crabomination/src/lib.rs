@@ -21,6 +21,7 @@ pub mod catalog {
 
 mod card_registry;
 pub mod audit;
+pub mod card_ratings;
 pub mod color_identity;
 
 /// `CopyVec` — a `SmallVec` whose `Clone` is a memcpy; see the module.
@@ -35,6 +36,7 @@ pub mod demo;
 pub mod draft;
 pub mod recommend;
 pub mod format;
+pub mod fra_mode;
 pub mod fxhash;
 pub mod game;
 pub mod net;

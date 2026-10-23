@@ -159,6 +159,9 @@ pub struct CardBrief {
     pub is_instant_or_sorcery: bool,
     /// [`crate::draft::card_quality`].
     pub quality: i32,
+    /// [`crate::card_ratings::rated_score`] — the card's measured value in
+    /// builder units, read only under `SimConfig::rated_cards`.
+    pub rated: Option<i32>,
     /// [`crate::recommend::is_fixing_card`].
     pub is_fixing: bool,
     /// The colors this card's activated abilities can tap for —
@@ -204,6 +207,7 @@ impl CardBrief {
             is_creature,
             is_instant_or_sorcery,
             quality: crate::draft::card_quality(def),
+            rated: if is_land { None } else { crate::card_ratings::rated_score(def.name) },
             is_fixing: crate::recommend::is_fixing_card(def),
             produces: crate::recommend::land_produced_colors(def),
         }

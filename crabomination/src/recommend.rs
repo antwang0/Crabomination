@@ -86,6 +86,12 @@ pub struct SimConfig {
     /// changes every generated field including the ladder's sealed gate
     /// decks, so it stays control-selectable until measured.
     pub curve_aggro: bool,
+    /// Score cards by their measured value ([`crate::card_ratings`]) instead
+    /// of the static `base_score + quality`, in both the picks and the v3
+    /// shape ranker. Needs `builder_v2`. Off by default: the ratings cover
+    /// Reality Fracture only, and the training field and every gate deck
+    /// are built without them.
+    pub rated_cards: bool,
     /// Restrict the shape lattice to one colour identity: a shape is
     /// enumerated only when its main colours **and** its splash sit inside
     /// this set, so `{Red, White}` builds a Lorehold deck and nothing else
@@ -105,6 +111,7 @@ impl Default for SimConfig {
             builder_v2: true,
             builder_v3: false,
             curve_aggro: false,
+            rated_cards: false,
             build_temperature: 1.0,
             spell_count_range: (22, 24),
             land_count_range: (16, 18),
@@ -265,6 +272,9 @@ pub struct PoolScores<'a> {
     /// `SimConfig::curve_aggro`. Checked by the same `debug_assert` as
     /// `quality`, for the same reason.
     aggro: bool,
+    /// Whether `cards`' base scores are the measured ones —
+    /// `SimConfig::rated_cards`. Checked by the same `debug_assert`.
+    rated: bool,
     /// Descending-score orders over `picks`, one per fixing bonus a shape's
     /// colour count can imply, built on first ask. See [`Self::order`].
     orders: [std::cell::OnceCell<Vec<u32>>; 3],
@@ -279,13 +289,17 @@ pub struct PoolScores<'a> {
 }
 
 impl<'a> PoolScores<'a> {
-    pub fn new(picks: &'a [CardFactory], quality: bool, aggro: bool) -> Self {
+    pub fn new(picks: &'a [CardFactory], quality: bool, aggro: bool, rated: bool) -> Self {
         let pick_colors = colors_of_picks(picks);
         let cards = picks
             .iter()
             .map(|&f| {
                 let brief = crate::cube::card_brief(f);
                 let base = match (quality, aggro) {
+                    (true, aggro) if rated => {
+                        crate::draft::score_brief_rated(brief, &pick_colors)
+                            + if aggro { crate::draft::aggro_curve_delta(brief) } else { 0 }
+                    }
                     (true, true) => crate::draft::score_brief_aggro(brief, &pick_colors),
                     (true, false) => crate::draft::score_brief_quality(brief, &pick_colors),
                     // The legacy control scorer takes no curve term: it is
@@ -310,6 +324,7 @@ impl<'a> PoolScores<'a> {
             cards,
             quality,
             aggro,
+            rated,
             orders: [const { std::cell::OnceCell::new() }; 3],
             dup_group,
             groups,
@@ -637,10 +652,18 @@ pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> 
 /// only curve signal was the flat CMC bucket bonus). Behind
 /// `SimConfig::builder_v3` so the v2 ranker stays as the measurement
 /// control; raced by `selfplay_train --gate-builder-v3`.
-pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) -> i32 {
+pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize, rated: bool) -> i32 {
     let main_colors = colors_of_picks(main);
-    let mut score: i32 =
-        main.iter().map(|&f| crate::draft::score_card_quality(f, &main_colors)).sum();
+    let mut score: i32 = main
+        .iter()
+        .map(|&f| {
+            if rated {
+                crate::draft::score_brief_rated(crate::cube::card_brief(f), &main_colors)
+            } else {
+                crate::draft::score_card_quality(f, &main_colors)
+            }
+        })
+        .sum();
     let shortfall = target_spells.saturating_sub(main.len()) as i32;
     score -= shortfall * 8;
     let pips = sorted_pip_totals(&main_colors);
@@ -964,6 +987,10 @@ fn rank_shape<R: Rng>(
         "PoolScores was built under the other scorer; splash_cards reads its base scores",
     );
     debug_assert_eq!(
+        scores.rated, cfg.rated_cards,
+        "PoolScores was built under the other card ratings; splash_cards reads its base scores",
+    );
+    debug_assert_eq!(
         scores.aggro, cfg.curve_aggro,
         "PoolScores was built under the other curve term; splash_cards reads its base scores",
     );
@@ -982,7 +1009,7 @@ fn rank_shape<R: Rng>(
     }
     Some((ShapeBuild {
         static_score: if cfg.builder_v3 {
-            static_build_score_v3(&main, spells)
+            static_build_score_v3(&main, spells, cfg.rated_cards)
         } else {
             static_build_score(&main, spells)
         },
@@ -1049,7 +1076,7 @@ fn build_shape<R: Rng>(
 /// score, deduplicated by identical main-deck contents (a triple whose
 /// third color contributes nothing collapses into its pair).
 pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<CandidateBuild> {
-    enumerate_candidates_with(&PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro), cfg)
+    enumerate_candidates_with(&PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards), cfg)
 }
 
 /// [`enumerate_candidates`] against a prebuilt [`PoolScores`], for a caller
@@ -1151,7 +1178,7 @@ pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, 
     // Same shape lattice as user candidates (pairs, splashes, 3/4/5-color).
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
-    let scores = PoolScores::new(pulls, cfg.builder_v2, cfg.curve_aggro);
+    let scores = PoolScores::new(pulls, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards);
     let shapes = enumerate_shapes(&scores, cfg);
     build_random_deck_from(&shapes, &scores, cfg, rng)
 }
@@ -3164,7 +3191,7 @@ mod tests {
         assert!(cheap.len() >= 10 && dear.len() >= 10, "pool has both ends");
         let pool: Vec<CardFactory> = dear.iter().chain(cheap.iter()).copied().collect();
         let mean_cmc = |aggro: bool| -> f64 {
-            let scores = PoolScores::new(&pool, true, aggro);
+            let scores = PoolScores::new(&pool, true, aggro, false);
             let colors = colors_of_picks(&pool);
             let cols: Vec<Color> = Color::ALL.iter().copied().filter(|c| colors.get(*c) > 0).collect();
             let mut rng = StdRng::seed_from_u64(7);
@@ -3233,7 +3260,7 @@ mod tests {
         // Expensive first, so a score-only build reaches for them.
         let pool: Vec<CardFactory> = dear.iter().chain(cheap.iter()).copied().collect();
         let buckets = |aggro: bool| -> (usize, usize) {
-            let scores = PoolScores::new(&pool, true, aggro);
+            let scores = PoolScores::new(&pool, true, aggro, false);
             let colors = colors_of_picks(&pool);
             let cols: Vec<Color> =
                 Color::ALL.iter().copied().filter(|c| colors.get(*c) > 0).collect();
@@ -3270,7 +3297,7 @@ mod tests {
             main.iter().map(|&f| crate::draft::card_quality(crate::cube::card_def(f))).sum();
         assert!(quality > 0, "Serra Angel's flying body must count for something");
         assert_eq!(
-            static_build_score_v3(&main, main.len()),
+            static_build_score_v3(&main, main.len(), false),
             static_build_score(&main, main.len()) + quality - curve_penalty(&main),
             "v3 = legacy + per-card quality − curve penalty, colors {colors:?}"
         );

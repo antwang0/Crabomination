@@ -6040,3 +6040,75 @@ engine fixes since, and the champion was trained on neither. Per the
 pre-registration the lobby is NOT flipped — swapping `nets/champion.safetensors`
 for `nets_r81_s43/best.safetensors` is the user's call, and the honest
 caveat is that the search reading is one training seed's.
+
+## Round 82 — Reality Fracture: card values measured by play make a +12-point sealed builder; an FRA-trained value net (gate pending) (2026-10-23)
+
+**Why.** The user wants the model's help building FRA sealed decks, and asked
+whether its card rankings match Draftsim's. "The model" had no FRA opinion:
+277 of FRA's 280 names were off the vocabulary (the champion trained on SOS),
+so the net saw every FRA card through its generic object features, and the
+builder ranked cards by `base_score + quality`, a hand-written proxy.
+
+**Card ratings (`fra_card_eval`).** 4,000 FRA sealed pools, v3 builder, 30
+random pairings x 2 seat-swapped pairs = 240k games per pilot. Each card's
+value is a ridge coefficient: the match margin regressed on (copies in deck A
+− copies in deck B), λ by 5-fold CV. Rank agreement (Spearman):
+
+| engine rating | Draftsim | Draftsim, commons | 17lands GIH |
+|---|---|---|---|
+| builder static score | 0.06 | **−0.46** | −0.10 |
+| builder maindeck rate | 0.09 | −0.36 | −0.06 |
+| sim value (`dflt`) | 0.28 | 0.15 | 0.28 |
+
+Draftsim itself agrees with 17lands' early GIH data at 0.31, so the sim value
+predicts human results about as well as Draftsim does. The values' split-half
+reliability is 0.95; the `net67` and `dflt` values agree at 0.96, which is the
+off-vocab net adding nothing. The static score's failure is specific:
+- Colourless cards get +5, so the builder played colourless artifact
+  creatures in about 75 % of decks.
+- Noncreature spells get no quality, so it played removal rarely (Memory
+  Trap 3 %, Last Gasp 8 %).
+- It never played the common dual lands.
+
+**The rated builder — ADOPTED for FRA sealed construction.**
+`card_ratings::FRA_SIM_VALUE` (223 nonland cards in 30+ decks) is mapped
+onto the static score's scale: mean and spread matched, `6.31 + 1.24 x
+value`. Under `SimConfig::rated_cards` it replaces a rated card's
+colour-independent score in both the picks and the v3 shape ranker. The race
+(`fra_card_eval --ab`) builds both decks from the same pool and plays them
+seat-swapped. Pools are fresh seeds, not the seed-7 pools the values came
+from, and the interval is pool-level:
+
+| pilot | seed | rated vs v3 |
+|---|---|---|
+| `dflt` | 43 | **62.24 %** [61.57, 62.92], 2 000 pools x 16 games |
+| `dflt` | 97 | **62.49 %** [61.82, 63.15] |
+| `net67` | 43 | **60.61 %** [59.93, 61.28] |
+| `mcts-dflt-256` | 97 | **61.62 %** [58.41, 64.84], 400 pools x 2 |
+
+That is +12 points, against builder v3's +3. It holds under a pilot other
+than the one whose games produced the values, so it isn't the scored bot
+agreeing with itself. `rated_cards` stays **off** by default: only FRA cards
+are rated, and the training field and every gate deck keep their builder.
+It is used by `fra_card_eval --build POOL.txt`, the sealed helper. That mode
+prints the best of 64 rated builds of a player's pool and the pool ranked by
+value.
+- **Open:** re-measure the values under the rated builder (its decks select
+  differently).
+- **Open:** whether the colourless +5 also costs SOS builds.
+
+**Also this round:**
+- Five FRA prepare creatures were missing from the catalog, found by name
+  resolution. They are added, and SHIPPED's "280 / 280" is corrected.
+- `fra_mode` adds an FRA booster sheet with Scryfall rarities: 14-card
+  packs of 1 R/M (mythic 1 in 8), 3 U and 10 C. `CRAB_SEALED_SET=fra`
+  switches every `selfplay::sealed_pool` caller.
+- The FRA names are appended to `VOCAB_SNAPSHOT`, with a coverage test.
+- The FRA puzzle set (`bot_puzzles --set fra`) is up;
+  `.ladder/fra_puzzles/PUZZLES.md` has its scores.
+
+**The FRA value net (training; gate pending).** Pre-registration:
+`.ladder/run_r82_fra.sh`. Round 81's recipe verbatim on FRA sealed actors,
+four training seeds. The gate is FRA sealed: `net67` vs `dflt` per net
+against the champion on the same decks, plus one search cell. Readings below
+when it lands.

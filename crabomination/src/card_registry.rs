@@ -159,6 +159,12 @@ fn name_index() -> &'static HashMap<&'static str, CardFactory> {
     })
 }
 
+/// The catalog factory that produces the card named `name` (a whole name,
+/// or one half of a `//` name).
+pub(crate) fn factory_by_name(name: &str) -> Option<CardFactory> {
+    name_index().get(name).copied()
+}
+
 /// Look up a `CardDefinition` by name. Returns `None` if no catalog
 /// factory produces a card with that name. Used by snapshot
 /// deserialization to rebuild `CardInstance`s from saved game state.

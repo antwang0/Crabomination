@@ -80,6 +80,12 @@ pub const SEALED_PACKS: usize = 6;
 /// without touching the builder.
 pub fn sealed_pool_packs(seed: u64, packs: usize) -> Vec<CardFactory> {
     let mut rng = StdRng::seed_from_u64(seed);
+    // `CRAB_SEALED_SET=fra` opens Reality Fracture boosters instead
+    // (`fra_mode`); unset, the pool is SOS's as before.
+    if crate::fra_mode::SealedSet::current() == crate::fra_mode::SealedSet::Fra {
+        let rolls = crate::fra_mode::FraPacks::get();
+        return (0..packs.max(1)).flat_map(|_| rolls.roll(&mut rng)).collect();
+    }
     // Both the pool and its bucketing are process constants; a training actor
     // opens two pools a game and rebuilt them each time (PERF (-66)).
     let rolls = SosPacks::sos_default();
@@ -113,6 +119,27 @@ pub fn heuristic_sealed_build_v3(pool: &[CardFactory], seed: u64) -> Vec<CardFac
     let cfg = SimConfig { builder_v3: true, ..SimConfig::default() };
     let mut rng = StdRng::seed_from_u64(seed);
     build_random_deck(pool, &cfg, &mut rng).cards
+}
+
+/// [`heuristic_sealed_build_v3`] scoring cards by their measured value
+/// (`SimConfig::rated_cards`, [`crate::card_ratings`]) — the FRA builder
+/// `fra_card_eval --ab` races against the v3 sample it replaces.
+pub fn heuristic_sealed_build_rated(pool: &[CardFactory], seed: u64) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v3: true, rated_cards: true, ..SimConfig::default() };
+    let mut rng = StdRng::seed_from_u64(seed);
+    build_random_deck(pool, &cfg, &mut rng).cards
+}
+
+/// The best of `n` rated builds of `pool`, judged by the rated v3 shape
+/// score — [`best_build_v3`] with `SimConfig::rated_cards`. The sealed
+/// helper `fra_card_eval --build` prints this for a player's own pool.
+pub fn rated_sealed_build(pool: &[CardFactory], n: usize, seed: u64) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v3: true, rated_cards: true, ..SimConfig::default() };
+    let judge = |d: &[CardFactory]| {
+        let spells: Vec<CardFactory> = d.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
+        crate::recommend::static_build_score_v3(&spells, spells.len(), true)
+    };
+    build_candidates_cfg(pool, n, seed, &cfg).into_iter().max_by_key(|d| judge(d)).unwrap_or_default()
 }
 
 /// A random sealed opponent: a fresh 6-pack pool, built by the same
@@ -227,7 +254,7 @@ pub fn build_candidates_cfg(
     // (what `selfplay_train --use-deck-best` runs per side per game) that
     // is 32 x ~26 `build_shape` calls replaced by ~26 + 32. The pool's
     // `PoolScores` is invariant across both loops for the same reason.
-    let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro);
+    let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards);
     let shapes = crate::recommend::enumerate_shapes(&scores, cfg);
     let out: Vec<Vec<CardFactory>> = (0..n as u64)
         .map(|i| {
@@ -482,7 +509,7 @@ pub fn static_deck_score(deck: &[CardFactory]) -> i32 {
 /// silently invalidates the comparisons built on it.
 pub fn static_deck_score_v3(deck: &[CardFactory]) -> i32 {
     let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
-    crate::recommend::static_build_score_v3(&spells, spells.len())
+    crate::recommend::static_build_score_v3(&spells, spells.len(), false)
 }
 
 /// One finished self-play game's worth of labelled rows.

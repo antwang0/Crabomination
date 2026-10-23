@@ -92,6 +92,7 @@ impl Vocab {
             .iter()
             .map(|f| f().name)
             .chain(cube.iter().map(|f| f().name))
+            .chain(crate::fra_mode::FraPacks::get().all().map(|f| f().name))
             .filter(|n| !map.contains_key(n))
             .collect();
         for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
@@ -111,6 +112,7 @@ impl Vocab {
             .iter()
             .map(|f| f().name)
             .chain(cube.iter().map(|f| f().name))
+            .chain(crate::fra_mode::FraPacks::get().all().map(|f| f().name))
             .chain(["Plains", "Island", "Swamp", "Mountain", "Forest"])
         {
             if let Some(&i) = map.get(name) {
@@ -1660,6 +1662,30 @@ pub(super) mod tests {
             "these cube names have no frozen index: {:?}\n\
              Append them to `server/vocab_snapshot.rs` in that order, at the END of the array \
              — index k is the embedding row every trained net learned for that card.",
+            missing.iter().map(|(_, n)| *n).collect::<Vec<_>>(),
+        );
+    }
+
+    /// The Reality Fracture sheet (`fra_mode`, appended 2026-10-23) — the
+    /// same contract as the cube's: every FRA name owns a frozen index, so a
+    /// net trained on FRA sealed (`CRAB_SEALED_SET=fra`) keeps its rows.
+    #[test]
+    fn vocab_covers_the_fra_pool() {
+        use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
+        let frozen: std::collections::BTreeSet<&str> = VOCAB_SNAPSHOT.iter().copied().collect();
+        let v = Vocab::sos_sealed();
+        let mut missing: Vec<(u16, &str)> = crate::fra_mode::FraPacks::get()
+            .all()
+            .map(|f| f().name)
+            .filter(|n| !frozen.contains(n))
+            .map(|n| (v.index_of(n), n))
+            .collect();
+        missing.sort_unstable();
+        missing.dedup();
+        assert!(
+            missing.is_empty(),
+            "these FRA names have no frozen index: {:?}\n\
+             Append them to `server/vocab_snapshot.rs` in that order, at the END of the array.",
             missing.iter().map(|(_, n)| *n).collect::<Vec<_>>(),
         );
     }

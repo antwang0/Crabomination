@@ -434,6 +434,20 @@ pub(crate) fn aggro_curve_delta(brief: &crate::cube::CardBrief) -> i32 {
 
 /// [`score_brief_quality`] plus [`aggro_curve_delta`] — the sealed builder's
 /// scorer under `SimConfig::curve_aggro`.
+/// [`score_brief_quality`] with a rated card's colour-independent score
+/// (`base_score + quality`) replaced by its measured one
+/// ([`crate::card_ratings`]) — the scorer under `SimConfig::rated_cards`.
+/// An unrated card scores exactly as [`score_brief_quality`] does.
+pub(crate) fn score_brief_rated(
+    brief: &crate::cube::CardBrief,
+    seat_colors: &ColorCounts,
+) -> i32 {
+    match brief.rated {
+        Some(r) => score_brief_with_colors(brief, seat_colors) - brief.base_score + r,
+        None => score_brief_quality(brief, seat_colors),
+    }
+}
+
 pub(crate) fn score_brief_aggro(
     brief: &crate::cube::CardBrief,
     seat_colors: &ColorCounts,
