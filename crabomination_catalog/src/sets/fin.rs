@@ -5547,8 +5547,9 @@ pub fn freya_crescent() -> CardDefinition {
 }
 
 /// Balthier and Fran — {1}{R}{G} 4/3 Human Rabbit with reach. Vehicles you
-/// control get +1/+1 and have vigilance and reach. (The extra-combat-phase rider
-/// when a Vehicle it crewed attacks is omitted — no crew-source attribution.)
+/// control get +1/+1 and have vigilance and reach. Whenever a Vehicle it crewed
+/// this turn attacks, if it's the first combat phase, you may pay {1}{R}{G} for
+/// an additional combat phase after this one.
 pub fn balthier_and_fran() -> CardDefinition {
     CardDefinition {
         name: "Balthier and Fran",
@@ -5573,6 +5574,23 @@ pub fn balthier_and_fran() -> CardDefinition {
                 all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle).and(
+                        SelectionRequirement::CrewedThisTurnByMatching(Box::new(SelectionRequirement::IsSource)),
+                    ),
+                },
+                Predicate::IsFirstCombatPhaseThisTurn,
+            ])),
+            effect: Effect::MayPay {
+                description: "Pay {1}{R}{G} for an additional combat phase?".into(),
+                mana_cost: cost(&[generic(1), r(), g()]),
+                body: Box::new(Effect::AdditionalCombatPhase { count: Value::ONE }),
+                else_: None,
             },
         }],
         ..Default::default()

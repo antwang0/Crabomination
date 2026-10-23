@@ -520,3 +520,35 @@ fn zidane_makes_a_treasure_when_an_opponent_takes_your_permanent() {
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 2);
     assert_eq!(treasures(&g, 0), 1, "an opponent gained control of a permanent from you");
 }
+
+fn crew_and_attack(g: &mut GameState, crewer: CardId, vehicle: CardId) {
+    use crabomination::game::types::{Attack, AttackTarget};
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle, crew_creatures: vec![crewer] }).expect("crew");
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: vehicle, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(g);
+}
+
+/// Balthier and Fran — the attack trigger reads `crewed_by`: a Vehicle the pair
+/// crewed buys an additional combat phase for {1}{R}{G}; one a Bear crewed
+/// doesn't.
+#[test]
+fn balthier_and_fran_extra_combat_only_for_a_vehicle_they_crewed() {
+    let mut g = pod(2);
+    let pair = ready(&mut g, 0, catalog::balthier_and_fran());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let rambler = ready(&mut g, 0, catalog::broadcast_rambler());
+    flood(&mut g, 0);
+    let yes = || {
+        Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]))
+    };
+    g.decider = yes();
+    let mut h = g.clone();
+    h.decider = yes();
+    crew_and_attack(&mut g, pair, rambler);
+    assert_eq!(g.additional_combat_phases, 1, "crewed by Balthier and Fran");
+    crew_and_attack(&mut h, bear, rambler);
+    assert_eq!(h.additional_combat_phases, 0, "crewed by a Bear");
+}
