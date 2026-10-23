@@ -934,8 +934,10 @@ fn torrential_gearhulk_etb_casts_instant_from_graveyard_and_exiles_it() {
     );
 }
 
+/// Kitesail Larcenist's ETB turns the opponent's creature into a Treasure
+/// (it stays on the battlefield, no longer a creature) — it used to exile it.
 #[test]
-fn kitesail_larcenist_etb_exiles_opponent_nonland() {
+fn kitesail_larcenist_etb_treasures_an_opponents_creature() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::kitesail_larcenist());
@@ -950,8 +952,8 @@ fn kitesail_larcenist_etb_exiles_opponent_nonland() {
     })
     .expect("Kitesail Larcenist castable");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
-        "Opponent's creature should be exiled");
+    let cp = g.computed_permanent(opp_bear).expect("still on the battlefield");
+    assert!(!cp.card_types().contains(&crabomination::card::CardType::Creature), "a Treasure now");
 }
 
 #[test]
