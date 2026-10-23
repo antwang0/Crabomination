@@ -27,8 +27,7 @@ impl GameState {
         if self.no_search_this_turn || self.player_search_locked_by_opponent(me) {
             return Ok(());
         }
-        self.players[me].searched_library_this_turn = true;
-        events.push(GameEvent::PlayerSearchedLibrary { player: me });
+        self.note_library_searched(me, ctx, events);
         let limit = self.search_top_limit_for(me).unwrap_or(usize::MAX);
         let mut cands: Vec<(CardId, String, i32, u32)> = self.players[me]
             .library

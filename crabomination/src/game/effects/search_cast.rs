@@ -1,7 +1,7 @@
 //! Panglacial Wurm — "While you're searching your library, you may cast this
-//! card from your library." Offered by the generic library search
-//! (`Effect::Search` / `SearchPickedBy` / `SearchZones`) once the search is
-//! under way and before anything is found (2006-07-15 rulings: the cast Wurm
+//! card from your library." Offered by every library search
+//! ([`GameState::note_library_searched`]) once the search is under way and,
+//! where the resolver allows, before anything is found (2006-07-15 rulings: the cast Wurm
 //! can't be found, and several can be cast in one search). The spell is cast
 //! as the search resolves, paying its own cost.
 
@@ -12,6 +12,15 @@ use crate::game::GameState;
 use crate::game::types::{GameEvent, Target};
 
 impl GameState {
+    /// CR 701.19 — `p` is searching their library: the turn flag (Archive
+    /// Trap), the search event (Ob Nixilis) and Panglacial Wurm's offer, the
+    /// same at every search resolver.
+    pub(crate) fn note_library_searched(&mut self, p: usize, ctx: &EffectContext, events: &mut Vec<GameEvent>) {
+        self.players[p].searched_library_this_turn = true;
+        events.push(GameEvent::PlayerSearchedLibrary { player: p });
+        self.offer_casts_while_searching(p, ctx, events);
+    }
+
     /// Offer `p` each castable-while-searching card in their library. A seat
     /// that prompts isn't offered (the ask would need a suspend inside the
     /// search arm, ahead of its own stashed pick).

@@ -737,6 +737,27 @@ fn panglacial_wurm_is_cast_from_the_library_mid_search() {
     assert!(g.battlefield_find(forest).is_some(), "the search still found the Forest");
 }
 
+/// CR 701.19 — every search resolver offers Panglacial Wurm, not only the
+/// generic one: Gaea's Balance's per-type search (`SearchEachBasicLandType`).
+#[test]
+fn panglacial_wurm_is_offered_by_every_search_resolver() {
+    use crabomination::effect::{Effect, PlayerRef};
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let wurm = g.add_card_to_library(0, catalog::panglacial_wurm());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let search = Effect::SearchEachBasicLandType { who: PlayerRef::You, tapped: false };
+    g.resolve_effect(&search, &EffectContext::for_ability(src, 0, None)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_some(), "offered, cast and resolved");
+    assert!(g.battlefield_find(forest).is_some(), "the search still found the Forest");
+    assert!(g.players[0].searched_library_this_turn);
+}
+
 /// CR 614 — Elderscale Wurm holds a life total of 7 or more at 7 against
 /// damage, and raises a lower one to 7 as it enters.
 #[test]

@@ -5826,8 +5826,7 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
-                self.players[seat].searched_library_this_turn = true;
-                events.push(GameEvent::PlayerSearchedLibrary { player: seat });
+                self.note_library_searched(seat, ctx, events);
                 let Some(&found) = picked.first() else {
                     self.clear_answer_log();
                     self.shuffle_library(seat, events);
@@ -22822,8 +22821,7 @@ impl GameState {
                     if self.no_search_this_turn || self.player_search_locked_by_opponent(p) {
                         return Ok(());
                     }
-                    self.players[p].searched_library_this_turn = true;
-                    events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                    self.note_library_searched(p, ctx, events);
                     hijacked_by = self.search_hijacker(p);
                     let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
                     pick = self.players[p]
@@ -27826,10 +27824,8 @@ impl GameState {
                     }
                     // CR 701.23 — `p` searched their library this turn (Archive
                     // Trap) and the search itself is an event (Ob Nixilis).
-                    self.players[p].searched_library_this_turn = true;
-                    events.push(GameEvent::PlayerSearchedLibrary { player: p });
                     // Panglacial Wurm — cast before anything is found.
-                    self.offer_casts_while_searching(p, ctx, events);
+                    self.note_library_searched(p, ctx, events);
                 }
                 // CR 701.19a — the picker (when distinct) makes the pick;
                 // the searched library is still `p`'s.
@@ -27967,8 +27963,7 @@ impl GameState {
                 if self.no_search_this_turn || self.player_search_locked_by_opponent(p) {
                     return Ok(());
                 }
-                self.players[p].searched_library_this_turn = true;
-                events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                self.note_library_searched(p, ctx, events);
                 let dest = ZoneDest::Battlefield {
                     controller: crate::effect::PlayerRef::Seat(p),
                     tapped: *tapped,
@@ -28015,7 +28010,6 @@ impl GameState {
                 {
                     return Ok(());
                 }
-                self.players[p].searched_library_this_turn = true;
                 let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
                 // "Cards with the same name as that card" (Secret Salvage) —
                 // the target's name, as `SearchUpToN` reads it for Pack Hunt.
@@ -28050,7 +28044,7 @@ impl GameState {
                 };
                 // After the ask: a prompting seat's re-run would announce the
                 // search twice (River Song's Spoilers fired twice).
-                events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                self.note_library_searched(p, ctx, events);
                 for id in picked {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         if let Some(h) = hijacked_by {
@@ -28474,7 +28468,6 @@ impl GameState {
                 if self.no_search_this_turn || self.player_search_locked_by_opponent(p) {
                     return Ok(());
                 }
-                events.push(GameEvent::PlayerSearchedLibrary { player: p });
                 let hijacked_by = self.search_hijacker(p);
                 let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
@@ -28533,7 +28526,7 @@ impl GameState {
                         picked.push(id);
                     }
                 }
-                self.players[p].searched_library_this_turn = true;
+                self.note_library_searched(p, ctx, events);
                 // Opposition Agent: every find is exiled for the hijacker, so
                 // nothing is left to split.
                 if let Some(h) = hijacked_by {
@@ -32877,7 +32870,7 @@ impl GameState {
                     if deficit == 0 || !self.players[p].is_alive() {
                         continue;
                     }
-                    self.players[p].searched_library_this_turn = true;
+                    self.note_library_searched(p, ctx, events);
                     let ids: Vec<crate::card::CardId> = self.players[p]
                         .library
                         .iter()
@@ -36365,7 +36358,7 @@ impl GameState {
             Effect::SearchSplitWithOpponent { count, filter, mv_at_most_x, graveyard, denied, rest, denied_smallest } => {
                 let p = ctx.controller;
                 let cap = if *mv_at_most_x { ctx.x_value } else { u32::MAX };
-                self.players[p].searched_library_this_turn = true;
+                self.note_library_searched(p, ctx, events);
                 // Candidates: `filter` cards in the controller's library (+
                 // graveyard), MV ≤ cap, distinct names; take the biggest `count`.
                 let gy: &[CardInstance] = if *graveyard { &self.players[p].graveyard } else { &[] };

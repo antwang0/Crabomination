@@ -530,10 +530,11 @@ the handoff.
   triggers piled up unresolved (sweep seed 931016: Butcher Ghoul + Solemnity + M.O.D.O.K. capped at 8,192
   Bastion of Remembrance triggers); the return is `Effect::PersistUndyingReturn` on the stack now, and
   Hushbringer-style statics stop it. Doc: `Effect::MayPay` auto-taps (the pool-only note was stale).
-- **OPEN:** Panglacial Wurm is offered only by the generic search arm (`Effect::Search` / `SearchPickedBy` /
-  `SearchZones`) and never to a prompting seat; the other eight search resolvers each mark the search
-  themselves (`searched_library_this_turn = true` × 9) — one `note_library_searched` helper would make the
-  offer, Archive Trap's flag and the event agree everywhere (a bug class). ⚠ **Don't edit `crabomination_base` while an optimized build of the
+- **FIXED 2026-10-23 (bug class):** every library-search resolver now goes through
+  `GameState::note_library_searched` (flag + `PlayerSearchedLibrary` + Panglacial Wurm's offer); three of the nine
+  emitted no event (`SearchAnyNumber` only after its pick, `SearchSplitWithOpponent`, the per-player land catch-up)
+  and only the generic arm offered the Wurm. Test `panglacial_wurm_is_offered_by_every_search_resolver`. Still
+  open: a prompting seat is never offered the Wurm (the ask would need a suspend inside the search arm). ⚠ **Don't edit `crabomination_base` while an optimized build of the
   engine is compiling**: the base crate compiles first, the engine later reads the newer sources, and the build
   fails (E0599) half an hour in.
 
