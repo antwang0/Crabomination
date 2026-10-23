@@ -6,10 +6,10 @@
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EventKind, EventScope, EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement as R, Selector,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
-use crate::effect::{Effect, LookPick, ManaPayload, PlayerRef, ZoneDest, ZoneRef};
+use crate::effect::{Effect, LookPick, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
 use crate::mana::{b, cost, g, generic, r, Color, ManaCost};
 use std::sync::Arc;
 
@@ -210,21 +210,17 @@ pub fn hidetsugu_devouring_chaos() -> CardDefinition {
 // ── Etrata, the Silencer ─────────────────────────────────────────────────────
 
 /// Ravenloft Adventurer — {3}{B} 3/4 Human Rogue Assassin. ETB: take the
-/// initiative. An opponent's creature dying is exiled with a hit counter.
-/// Attacking, after you've completed a dungeon, the defending player loses 1
-/// life per card they own in exile with a hit counter.
+/// initiative. An opponent's creature that would die is exiled with a hit
+/// counter instead (CR 614). Attacking, after you've completed a dungeon, the
+/// defending player loses 1 life per card they own in exile with a hit counter.
 pub fn ravenloft_adventurer() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If a creature an opponent controls would die, instead exile it and put a hit counter on it.",
+            effect: StaticEffect::ExileDyingOpponentCreaturesWithCounter { counter: CounterType::Hit },
+        }],
         triggered_abilities: vec![
             etb(Effect::TakeInitiative { who: PlayerRef::You }),
-            on(
-                EventKind::CreatureDied,
-                EventScope::OpponentControl,
-                Effect::Seq(vec![
-                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
-                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Hit, amount: Value::ONE },
-                ]),
-            ),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                     .with_filter(Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE)),

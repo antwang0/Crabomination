@@ -127,19 +127,22 @@ fn hidetsugu_exiles_and_burns() {
     assert!(g.exile.iter().any(|c| c.definition.name == "Craw Wurm"));
 }
 
-/// Ravenloft Adventurer exiles an opponent's dead creature with a hit
-/// counter.
+/// Ravenloft Adventurer exiles an opponent's dying creature with a hit
+/// counter — a replacement (CR 614.1a), so the creature never dies: Doomed
+/// Traveler's dies trigger makes no Spirit.
 #[test]
 fn ravenloft_adventurer_marks_the_dead() {
     let mut g = pod(2);
     ready(&mut g, 0, catalog::ravenloft_adventurer());
-    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let traveler = ready(&mut g, 1, catalog::doomed_traveler());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    cast(&mut g, 0, bolt, &[Target::Permanent(bear)]).expect("bolt");
+    cast(&mut g, 0, bolt, &[Target::Permanent(traveler)]).expect("bolt");
     g.check_state_based_actions();
     drain_stack(&mut g);
-    let card = g.exile.iter().find(|c| c.id == bear).expect("exiled");
+    let card = g.exile.iter().find(|c| c.id == traveler).expect("exiled");
     assert_eq!(card.counter_count(CounterType::Hit), 1);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "it never died");
+    assert!(g.players[1].graveyard.is_empty());
 }
 
 /// J. Jonah Jameson's suspect gives menace, and a menacing attacker makes a
