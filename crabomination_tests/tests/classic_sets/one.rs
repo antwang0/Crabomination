@@ -3699,6 +3699,20 @@ fn drivnod_doubles_death_triggers() {
     assert_eq!(incubators, 2, "death trigger fired twice");
 }
 
+/// Drivnod doubles a creature's own death trigger through the state-based
+/// lethal-damage funnel too, not only the sacrifice / destroy one (CR 603.2d).
+#[test]
+fn drivnod_doubles_a_lethal_damage_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drivnod_carnage_dominus());
+    let croc = g.add_card_to_battlefield(0, catalog::injector_crocodile());
+    g.battlefield_find_mut(croc).unwrap().damage = 10;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let incubators = g.battlefield.iter().filter(|c| c.definition.name == "Incubator").count();
+    assert_eq!(incubators, 2, "death trigger fired twice");
+}
+
 /// Ichormoon Gauntlet grants planeswalkers [0]: Proliferate.
 #[test]
 fn ichormoon_gauntlet_grants_loyalty_zero() {

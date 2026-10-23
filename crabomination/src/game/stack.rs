@@ -8639,41 +8639,46 @@ impl GameState {
                         continue;
                     }
                 }
-                // CR 603.3d — a prompting seat names its own targets: outside
-                // a resolution the trigger goes through the queue that asks
-                // (Vindictive Lich's per-mode opponents after lethal damage).
-                if self.trigger_asks_targets(controller, &effect) {
-                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
-                        source,
-                        controller,
-                        effect,
-                        subject: Some(crate::game::effects::EntityRef::Permanent(id)),
-                        event_amount: died_ev_amount,
-                        mode: None,
-                        intervening_if: None,
-                        actor: None,
-                        from_mana_ability: false,
-                        x_value: 0,
-                        converged_value: 0,
-                        mana_spent: 0,
-                    });
-                    continue;
+                // Drivnod / Echoes of Eternity: the same extra fires the
+                // destroy funnel pays (CR 603.2d).
+                let fires = self.self_death_trigger_fires(controller, source, true);
+                for effect in std::iter::repeat_n(effect, fires) {
+                    // CR 603.3d — a prompting seat names its own targets: outside
+                    // a resolution the trigger goes through the queue that asks
+                    // (Vindictive Lich's per-mode opponents after lethal damage).
+                    if self.trigger_asks_targets(controller, &effect) {
+                        self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                            source,
+                            controller,
+                            effect,
+                            subject: Some(crate::game::effects::EntityRef::Permanent(id)),
+                            event_amount: died_ev_amount,
+                            mode: None,
+                            intervening_if: None,
+                            actor: None,
+                            from_mana_ability: false,
+                            x_value: 0,
+                            converged_value: 0,
+                            mana_spent: 0,
+                        });
+                        continue;
+                    }
+                    let (mode, auto_target) =
+                        self.trigger_mode_and_target(&effect, controller, Some(source));
+                    // CR 115.1c — slots past the first (Vindictive Lich), as the
+                    // other death funnel and `push_pending_trigger` fill them.
+                    let additional =
+                        self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
+                    self.push_stack(
+                        TriggerPush::new(source, controller, effect)
+                            .target(auto_target)
+                            .additional_targets(additional)
+                            .mode(mode)
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
+                            .event_amount(died_ev_amount)
+                            .build(),
+                    );
                 }
-                let (mode, auto_target) =
-                    self.trigger_mode_and_target(&effect, controller, Some(source));
-                // CR 115.1c — slots past the first (Vindictive Lich), as the
-                // other death funnel and `push_pending_trigger` fill them.
-                let additional =
-                    self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
-                self.push_stack(
-                    TriggerPush::new(source, controller, effect)
-                        .target(auto_target)
-                        .additional_targets(additional)
-                        .mode(mode)
-                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
-                        .event_amount(died_ev_amount)
-                        .build(),
-                );
             }
             // Persist / Undying (CR 702.79 / 702.93), shared with the destroy /
             // sacrifice funnels via `return_persist_undying`: a trigger.
@@ -10218,13 +10223,7 @@ impl GameState {
             // so it fires an additional time per Drivnod its controller runs.
             // Echoes of Eternity — a colorless permanent's trigger, read by
             // its death snapshot (CR 603.10a), fires an additional time too.
-            let fires = 1
-                + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
-                + if dying_creature_controller.is_some() {
-                    self.death_trigger_extra_fires(controller, source)
-                } else {
-                    0
-                };
+            let fires = self.self_death_trigger_fires(controller, source, dying_creature_controller.is_some());
             // `repeat_n` yields the original last, so the ordinary board — no
             // Drivnod, `fires == 1` — pays no clone at all (PERF `(-361)`).
             // The target is still picked per fire: the stack grows between

@@ -28052,6 +28052,14 @@ impl GameState {
     /// Extra fires for a death-caused trigger of `source`: one per Drivnod
     /// (`DoubleControllerDeathTriggers`) `controller` controls, plus one per
     /// The Masamune attached to `source` itself.
+    /// How many times a dying permanent's own collected death trigger fires —
+    /// `1` plus Katara-style ally doublers, plus Drivnod-style death doublers
+    /// for a creature's death. Both death funnels read this one sum.
+    pub(crate) fn self_death_trigger_fires(&self, controller: usize, source: CardId, creature: bool) -> usize {
+        1 + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+            + if creature { self.death_trigger_extra_fires(controller, source) } else { 0 }
+    }
+
     pub(crate) fn death_trigger_extra_fires(&self, controller: usize, source: CardId) -> usize {
         use crate::effect::StaticEffect as SE;
         self.battlefield
