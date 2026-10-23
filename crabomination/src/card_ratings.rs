@@ -27,6 +27,8 @@ const SCALE: f32 = 1.242;
 const OFFSET: f32 = 6.307;
 
 /// `(card name, win-rate points per copy)`, from the 2026-10-23 seed-7 run.
+// Measured values, not constants: 3.14 is a card's rating, not pi.
+#[allow(clippy::approx_constant)]
 pub const FRA_SIM_VALUE: &[(&str, f32)] = &[
     ("Academic Ascent", 0.95),
     ("Aerid Konstrari", 5.00),
