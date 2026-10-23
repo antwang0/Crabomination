@@ -1593,6 +1593,14 @@ pub struct PlayerData {
     /// -7 coin-flip emblem). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub extra_turns: u32,
+    /// Bit `i` marks the extra turn at bank depth `i` as power-up-locked
+    /// (Kang the Conqueror); the newest extra turn is taken first (CR 500.7).
+    #[serde(default)]
+    pub power_up_locked_extra: u32,
+    /// The turn this player began a power-up-locked extra turn: no power-up
+    /// ability can be activated during it, by anyone.
+    #[serde(default)]
+    pub power_up_locked_turn: Option<u32>,
     /// Turns this player has begun this game after the first, bumped by
     /// `advance_turn` as it hands them the turn (`Value::TurnsBegunBy`, which
     /// adds the game's first turn back for the starting seat).
@@ -2132,6 +2140,8 @@ impl Player {
             creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
+            power_up_locked_extra: 0,
+            power_up_locked_turn: None,
             turns_begun: 0,
             cannot_gain_life: false,
             wants_ui: false,

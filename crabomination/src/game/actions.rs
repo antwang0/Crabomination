@@ -22810,6 +22810,13 @@ impl GameState {
             return Err(GameError::AbilityAlreadyUsedThisTurn);
         }
 
+        // Kang the Conqueror — "during that turn, power-up abilities can't be
+        // activated", anyone's.
+        if ability.power_up
+            && self.players.iter().any(|pl| pl.power_up_locked_turn == Some(self.turn_number))
+        {
+            return Err(GameError::AbilityConditionNotMet);
+        }
         // CR 702.177 — Exhaust: an exhaust ability can be activated only once
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.

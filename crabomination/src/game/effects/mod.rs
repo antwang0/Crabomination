@@ -45166,6 +45166,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PowerUpLockedDuringExtraTurn { who } => {
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        let depth = self.players[p].extra_turns;
+                        if (1..=u32::BITS).contains(&depth) {
+                            self.players[p].power_up_locked_extra |= 1 << (depth - 1);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AdditionalCombatPhase { count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 self.additional_combat_phases =

@@ -2579,6 +2579,7 @@ impl Effect {
             Effect::PayLifeRevealExileFromHand { opp } => player_has_target(opp),
             Effect::RevealUntilCreatureBecomeCopy { who } => player_has_target(who),
             Effect::ReturnCommandersToCommandZone { who } => player_has_target(who),
+            Effect::PowerUpLockedDuringExtraTurn { who } => player_has_target(who),
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -3259,6 +3260,7 @@ impl Effect {
             | Effect::LookTopExileOneOfN { who, .. }
             | Effect::LookTopExileOneFaceDownMayPlay { who, .. }
             | Effect::TakeExtraTurn { who, .. }
+            | Effect::PowerUpLockedDuringExtraTurn { who }
             | Effect::RevealUntilCreatureBecomeCopy { who }
             | Effect::LoseGame { who }
             | Effect::RevealHand { who }

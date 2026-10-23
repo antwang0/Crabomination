@@ -13374,6 +13374,9 @@ pub enum Effect {
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
     /// -7 coin-flip emblem.
     TakeExtraTurn { who: PlayerRef, count: Value },
+    /// "During that turn, power-up abilities can't be activated" (Kang the
+    /// Conqueror): marks `who`'s newest banked extra turn (CR 500.7).
+    PowerUpLockedDuringExtraTurn { who: PlayerRef },
     /// CR 701.35 — "Put target creature on the bottom of its owner's library.
     /// That creature's controller reveals cards from the top of their library
     /// until they reveal a creature card, puts it onto the battlefield, and

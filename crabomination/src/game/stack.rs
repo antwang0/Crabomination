@@ -6150,6 +6150,17 @@ impl GameState {
         // pass and the game would never move on.
         let takes_extra = self.players[active].is_alive() && self.players[active].extra_turns > 0;
         let denied = takes_extra && self.extra_turn_denied_for(active);
+        // CR 500.7 — the newest extra turn is the one taken; its Kang lock
+        // bit is spent with it either way.
+        let locked = takes_extra && {
+            let pl = &mut self.players[active];
+            let bit = 1u32.checked_shl(pl.extra_turns - 1).unwrap_or(0);
+            let set = pl.power_up_locked_extra & bit != 0;
+            if set {
+                pl.power_up_locked_extra &= !bit;
+            }
+            set
+        };
         if denied {
             self.players[active].extra_turns -= 1;
         }
@@ -6157,6 +6168,9 @@ impl GameState {
             self.players[active].extra_turns -= 1;
             self.current_turn_is_extra = true;
             self.turn_number += 1;
+            if locked {
+                self.players[active].power_up_locked_turn = Some(self.turn_number);
+            }
         } else {
             self.current_turn_is_extra = false;
             // Advance to the next non-eliminated player's turn (TurnStarted
