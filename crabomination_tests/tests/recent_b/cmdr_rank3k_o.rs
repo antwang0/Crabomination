@@ -127,17 +127,23 @@ fn rimefire_torque_charges_and_copies() {
     assert_eq!(g.players[1].life, 14, "bolt and its copy");
 }
 
-/// CR 601.2f — Gathering Stone discounts its type and digs on entry.
+/// CR 601.2f — Gathering Stone discounts its type and digs on entry; taking
+/// the card is a "may" (declining both leaves it on top).
 #[test]
 fn gathering_stone_digs_its_type() {
-    let mut g = pod(2);
-    g.add_card_to_library(0, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(
-        CreatureType::Bear,
-    )]));
-    let stone = g.add_card_to_hand(0, catalog::gathering_stone());
-    cast(&mut g, stone, None);
-    assert_eq!(g.players[0].hand.len(), 1, "the Bear came to hand");
+    for take in [true, false] {
+        let mut g = pod(2);
+        let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::CreatureType(CreatureType::Bear),
+            DecisionAnswer::Bool(take),
+            DecisionAnswer::Bool(false),
+        ]));
+        let stone = g.add_card_to_hand(0, catalog::gathering_stone());
+        cast(&mut g, stone, None);
+        assert_eq!(g.players[0].hand.len(), usize::from(take), "the Bear came to hand: {take}");
+        assert_eq!(g.players[0].library.iter().any(|c| c.id == bear), !take);
+    }
 }
 
 /// CR 506.5 — Eiganjo Exemplar pumps a Samurai attacking alone.

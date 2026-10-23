@@ -161,3 +161,24 @@ fn fathom_fleet_swordjack_counts_artifacts() {
     assert_eq!(g.players[2].life, life - 2);
     assert_eq!(g.players[1].life, life, "not the other opponent");
 }
+
+/// Fathom Fleet Swordjack attacking a planeswalker damages the planeswalker,
+/// not its controller ("the player or planeswalker it's attacking").
+#[test]
+fn fathom_fleet_swordjack_hits_the_attacked_planeswalker() {
+    let mut g = pod(2);
+    let jack = ready(&mut g, 0, catalog::fathom_fleet_swordjack());
+    ready(&mut g, 0, catalog::sol_ring());
+    let jace = ready(&mut g, 1, catalog::jace_the_mind_sculptor());
+    g.battlefield_find_mut(jace).unwrap().counters.insert(CounterType::Loyalty, 3);
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: jack,
+        target: AttackTarget::Planeswalker(jace),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life);
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 2);
+}

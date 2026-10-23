@@ -459,11 +459,11 @@ pub fn the_misty_mountains_cold() -> CardDefinition {
                     ),
                     n: Value::Const(4),
                 },
-                then: Box::new(Effect::If {
-                    cond: Predicate::SelectorExists(Selector::This),
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::SacrificePermanent { what: Selector::This },
-                        Effect::CreateToken {
+                then: Box::new(Effect::Seq(vec![
+                    Effect::SacrificePermanent { what: Selector::This },
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
                             definition: token(
@@ -474,10 +474,10 @@ pub fn the_misty_mountains_cold() -> CardDefinition {
                                 vec![CreatureType::Dragon],
                                 vec![Keyword::Flying],
                             ),
-                        },
-                    ])),
-                    else_: Box::new(Effect::Noop),
-                }),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
                 else_: Box::new(Effect::Noop),
             },
         ])

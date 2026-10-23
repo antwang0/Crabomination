@@ -856,14 +856,14 @@ pub fn legolass_quick_reflexes() -> CardDefinition {
 }
 
 /// Nim Deathmantle — {2} Equipment, equip {4}. +2/+2, intimidate, a black
-/// Zombie; a nontoken creature of yours dying may pay {4} to come back
-/// wearing it.
+/// Zombie; a nontoken creature put into your graveyard (one you own,
+/// whoever controlled it) may pay {4} to come back wearing it.
 pub fn nim_deathmantle() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
-                filter: R::IsToken.negate(),
+                filter: R::IsToken.negate().and(R::OwnedByYou),
             }),
             effect: Effect::MayPay {
                 description: "Pay {4} to return it wearing Nim Deathmantle?".into(),

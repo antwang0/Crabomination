@@ -1966,7 +1966,7 @@ pub fn super_shredder() -> CardDefinition {
 }
 
 /// Shredder's Technique — {2}{B} sorcery, sneak {B}: destroy target creature
-/// or enchantment; an enchantment costs you 2 life.
+/// or enchantment; an enchantment destroyed this way costs you 2 life.
 pub fn shredders_technique() -> CardDefinition {
     CardDefinition {
         alternative_cost: Some(crate::effect::shortcut::sneak(cost(&[b()]))),
@@ -1975,12 +1975,12 @@ pub fn shredders_technique() -> CardDefinition {
             cost(&[generic(2), b()]),
             CardType::Sorcery,
             Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Creature.or(R::Enchantment)) },
                 Effect::If {
-                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Enchantment },
+                    cond: Predicate::SelectorExists(Selector::DestroyedThisResolution { filter: R::Enchantment }),
                     then: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(2) }),
                     else_: Box::new(Effect::Noop),
                 },
-                Effect::Destroy { what: target_filtered(R::Creature.or(R::Enchantment)) },
             ]),
         )
     }

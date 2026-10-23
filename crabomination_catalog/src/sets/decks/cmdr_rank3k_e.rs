@@ -719,8 +719,7 @@ pub fn syr_faren_the_hengehammer() -> CardDefinition {
 /// Hardy Outlander — {1}{G} legendary Background. Commander creatures you own
 /// have "Whenever this creature attacks a player, if no opponent has more life
 /// than that player, another target creature you control gets +X/+X until end
-/// of turn, X this creature's power." (Residual: "most life" is read among
-/// all players, so your own higher life total also blocks the trigger.)
+/// of turn, X this creature's power." Your own life total doesn't count.
 pub fn hardy_outlander() -> CardDefinition {
     let x = || Value::PowerOf(Box::new(Selector::This));
     CardDefinition {
@@ -733,7 +732,7 @@ pub fn hardy_outlander() -> CardDefinition {
                 ability: Box::new(TriggeredAbility {
                     event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
                         trigger_is(R::IsAttackingOpponentPlayer),
-                        Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer },
+                        Predicate::PlayerHasMostLifeAmongOpponents { who: PlayerRef::DefendingPlayer },
                     ])),
                     effect: Effect::PumpPT {
                         what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),

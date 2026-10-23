@@ -58,13 +58,28 @@ fn cr_500_8_shadow_of_the_second_sun_follows_the_enchanted_player() {
 }
 
 /// Jhoira's Timebug: its controller picks — a vanishing permanent of theirs
-/// gains a time counter or loses one.
+/// gains a time counter or loses one. Any permanent you control is a legal
+/// target; one with no time counter gains none (the printed "if").
 #[test]
 fn jhoiras_timebug_moves_a_time_counter_either_way() {
     let mut g = pod(2);
     let bug = g.add_card_to_battlefield(0, catalog::jhoiras_timebug());
     let clock = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(clock).unwrap().counters.insert(CounterType::Time, 2);
+    g.battlefield_find_mut(bug).unwrap().summoning_sick = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bug,
+        ability_index: 0,
+        target: Some(Target::Permanent(plain)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("a counterless permanent is a legal target");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(plain).unwrap().counter_count(CounterType::Time), 0);
     for (answer, want) in [(1, 3), (0, 2)] {
         g.battlefield_find_mut(bug).unwrap().tapped = false;
         g.battlefield_find_mut(bug).unwrap().summoning_sick = false;

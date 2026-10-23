@@ -97,28 +97,33 @@ pub fn rimefire_torque() -> CardDefinition {
 /// of the chosen type you cast cost {1} less. When it enters and at the
 /// beginning of your upkeep, look at the top card of your library: a card of
 /// the chosen type you may put into your hand; otherwise you may put it into
-/// your graveyard. (Residual: a matching card is always taken.)
+/// your graveyard.
 pub fn gathering_stone() -> CardDefinition {
     let top = || Selector::TopOfLibrary {
         who: PlayerRef::You,
         count: Value::ONE,
+    };
+    let mill = || Effect::MayDo {
+        description: "Put the top card of your library into your graveyard?".into(),
+        body: Box::new(Effect::Move {
+            what: top(),
+            to: ZoneDest::Graveyard,
+        }),
     };
     let look = || Effect::If {
         cond: Predicate::EntityMatches {
             what: top(),
             filter: R::IsSourceChosenCreatureType,
         },
-        then: Box::new(Effect::Move {
-            what: top(),
-            to: ZoneDest::Hand(PlayerRef::You),
-        }),
-        else_: Box::new(Effect::MayDo {
-            description: "Put the top card of your library into your graveyard?".into(),
+        then: Box::new(Effect::MayDoElse {
+            description: "Reveal the top card of your library and put it into your hand?".into(),
             body: Box::new(Effect::Move {
                 what: top(),
-                to: ZoneDest::Graveyard,
+                to: ZoneDest::Hand(PlayerRef::You),
             }),
+            else_: Box::new(mill()),
         }),
+        else_: Box::new(mill()),
     };
     CardDefinition {
         as_enters_effect: Some(Effect::NameCreatureType {

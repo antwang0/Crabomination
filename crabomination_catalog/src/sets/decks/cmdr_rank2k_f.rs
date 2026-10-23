@@ -266,11 +266,12 @@ pub fn evin_waterdeep_opportunist() -> CardDefinition {
 }
 
 /// Fathom Fleet Swordjack — {3}{R} 4/3 Orc Pirate; attacking, it deals damage
-/// equal to your artifacts to the player it attacks. Encore {5}{R}.
+/// equal to your artifacts to the player or planeswalker it attacks. Encore
+/// {5}{R}.
 pub fn fathom_fleet_swordjack() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_attack(Effect::DealDamage {
-            to: Selector::Player(PlayerRef::DefendingPlayer),
+            to: Selector::AttackedBySource,
             amount: Value::CountOf(Box::new(Selector::EachPermanent(yours(R::Artifact)))),
         })],
         activated_abilities: vec![crate::effect::shortcut::encore(cost(&[generic(5), r()]))],

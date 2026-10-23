@@ -402,10 +402,12 @@ fn april_and_the_bugle() {
 }
 
 /// Hardy Outlander's granted trigger pumps another creature off a commander
-/// attacking the life leader.
+/// attacking the life leader — among opponents: your own higher total doesn't
+/// switch it off.
 #[test]
 fn hardy_outlander_grants_the_commander_a_pump() {
     let mut g = pod(2);
+    g.players[0].life = 60;
     ready(&mut g, 0, catalog::hardy_outlander());
     let cmdr = ready(&mut g, 0, catalog::serra_angel());
     g.players[0].commanders.push(cmdr);

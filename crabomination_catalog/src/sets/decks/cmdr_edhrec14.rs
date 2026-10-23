@@ -433,9 +433,12 @@ pub fn heartwood_storyteller() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(cast_is_noncreature()),
-            effect: Effect::Draw {
-                who: Selector::Player(PlayerRef::OpponentOf(Box::new(PlayerRef::Triggerer))),
-                amount: Value::ONE,
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::OpponentOf(Box::new(PlayerRef::Triggerer)),
+                body: Box::new(Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                }),
             },
         }],
         ..creature("Heartwood Storyteller", cost(&[generic(1), g(), g()]), vec![CreatureType::Treefolk], 2, 3)

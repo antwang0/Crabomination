@@ -2,6 +2,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -77,8 +78,9 @@ fn plate_armor_equip_costs_less_per_other_equipment() {
     assert!(c.keywords().iter().any(|k| matches!(k, Keyword::Ward(_))));
 }
 
-/// Heartwood Storyteller (CR 102.2 at four seats): a noncreature spell draws
-/// each of its caster's opponents a card — the caster draws nothing.
+/// Heartwood Storyteller (CR 102.2 at four seats): a noncreature spell lets
+/// each of its caster's opponents draw a card — the caster draws nothing, and
+/// each opponent "may" (seat 2 declines).
 #[test]
 fn heartwood_storyteller_draws_each_of_the_casters_opponents() {
     let mut g = pod(4);
@@ -89,10 +91,15 @@ fn heartwood_storyteller_draws_each_of_the_casters_opponents() {
     let hands: Vec<usize> = (0..4).map(|s| g.players[s].hand.len()).collect();
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),
+    ]));
     cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
     assert_eq!(g.players[0].hand.len(), hands[0]);
     for (s, before) in hands.iter().enumerate().skip(1) {
-        assert_eq!(g.players[s].hand.len(), before + 1, "seat {s} draws");
+        assert_eq!(g.players[s].hand.len(), before + usize::from(s != 2), "seat {s}");
     }
 }
 

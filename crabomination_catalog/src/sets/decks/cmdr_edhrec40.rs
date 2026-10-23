@@ -38,14 +38,13 @@ pub fn shadow_of_the_second_sun() -> CardDefinition {
 }
 
 /// Jhoira's Timebug — {2} 1/2 artifact Insect. {T}: a permanent you control or
-/// a suspended card you own with a time counter loses one or gains another, or
-/// neither (the target filter asks for the time counter the effect reads).
+/// a suspended card you own; if it has a time counter it may lose one or gain
+/// another (any permanent you control is a legal target).
 pub fn jhoiras_timebug() -> CardDefinition {
     let target = || {
         target_filtered(
             R::OnBattlefield
                 .and(R::ControlledByYou)
-                .and(R::WithCounter(CounterType::Time))
                 .or(R::InExile.and(R::IsSuspended).and(R::OwnedByYou)),
         )
     };
@@ -67,7 +66,18 @@ pub fn jhoiras_timebug() -> CardDefinition {
                     ),
                     VoteOption::new(
                         "Put another time counter",
-                        Effect::AddCounter { what: target(), kind: CounterType::Time, amount: Value::ONE },
+                        Effect::If {
+                            cond: Predicate::EntityMatches {
+                                what: Selector::Target(0),
+                                filter: R::WithCounter(CounterType::Time),
+                            },
+                            then: Box::new(Effect::AddCounter {
+                                what: Selector::Target(0),
+                                kind: CounterType::Time,
+                                amount: Value::ONE,
+                            }),
+                            else_: Box::new(Effect::Noop),
+                        },
                     ),
                     VoteOption::new("Leave it", Effect::Noop),
                 ],

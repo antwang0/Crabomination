@@ -1292,6 +1292,13 @@ fn shredders_technique_taxes_enchantments() {
     cast(&mut g, st, &[perm(ench)]).expect("cast");
     assert!(g.battlefield_find(ench).is_none());
     assert_eq!(g.players[0].life, life - 2);
+    // "If an enchantment was destroyed this way": an indestructible god
+    // survives, so nothing is paid.
+    let god = ready(&mut g, 1, catalog::thassa_god_of_the_sea());
+    let st = g.add_card_to_hand(0, catalog::shredders_technique());
+    cast(&mut g, st, &[perm(god)]).expect("cast at the god");
+    assert!(g.battlefield_find(god).is_some());
+    assert_eq!(g.players[0].life, life - 2);
 }
 
 /// Snapback can be cast by exiling a blue card.

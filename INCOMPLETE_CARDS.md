@@ -2043,7 +2043,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Froghemoth | "their graveyard" accepts any opponent's graveyard | the target filter is `R::InOpponentGraveyard`; there is no "owned by the damaged player" atom |
 | 🟡 Briarbridge Patrol | "deals damage to one or more creatures" investigates once per creature damaged | `EventKind::DealsDamageToCreature` fires per damage event |
 | 🟡 Rhys, the Evermore | "remove any number of counters" removes all of them | `Effect::RemoveAllCounters`; there is no any-number counter choice |
-| 🟡 Nim Deathmantle | a nontoken creature you *control* dying triggers it, rather than one put into your graveyard (an owner's) | `CreatureDied` scoped `YourControl` |
 | 🟡 Lara Croft, Tomb Raider | "you may play a card from exile with a discovery counter on it this turn" lets every such card be played, not one | the attack trigger grants `GrantMayPlay` (pay its cost, this turn) over every discovery-counter card in exile; there is no one-of-many cap on a may-play grant set |
 | 🟡 Loki, God of Mischief | an ability of yours targeting only cards in graveyards or on the stack draws too | the trigger is `ChoseTargets` from a non-spell source; the targeted objects' kinds aren't read |
 | 🟡 Eradicator Valkyrie | "hexproof from planeswalkers" is not modelled | there is no hexproof-from-card-type keyword (`HexproofFromColor`/`…Monocolored`/`…Abilities` exist) |
@@ -2051,7 +2050,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Chiss-Goria, Forge Tyrant | the artifact spell cast from among the exiled cards doesn't gain affinity for artifacts | a may-play grant carries no cost-reduction rider (`MayPlayPermission` has `undaunted` only) |
 | 🟡 Wernog, Rider's Chaplain | an opponent who declines to investigate doesn't lose 1 life | modelled as a tempting offer (`Effect::TemptingOffer`), which has no "each who doesn't" arm |
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
-| 🟡 Shredder's Technique | an indestructible enchantment that survives still costs you 2 life | the life loss reads the target's type before the destroy; there is no "destroyed this way" predicate |
 | 🟡 Fell Beast's Shriek | splice onto instant or sorcery isn't offered; a creature with hexproof or protection from the caster can't be the chosen one | `Keyword::Splice` takes a `SpellSubtype` quality (Arcane), not "instant or sorcery"; `OpponentChoosesPermanentThen` keeps only picks that are legal targets for the caster |
 | 🟡 Swashbuckler Extraordinaire | each attacking creature of yours without double strike is offered one Treasure in turn; a non-attacking or opposing creature can't be chosen | modelled as `ForEach` + `MaySacrifice`; there is no "sacrifice any number, then up to that many targets" reflexive trigger |
 | 🟡 Pir, Imaginative Rascal | the extra counter lands only on creatures and artifacts you control, not enchantments, lands, planeswalkers or teammates' permanents | `StaticEffect::ExtraCounterAllKinds` is scoped to the controller's creatures and artifacts |
@@ -2063,7 +2061,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Mystic Reflection | a token model that left the battlefield before the entries copies nothing (a card model copies from its new zone, which is its printed self) | `Effect::NextEntriesEnterAsCopy` stores the model's id, not its last-known copiable values |
 | 🟡 Angel of Jubilation | also bars a Phyrexian pip's life in a non-cast payment (a ward "pay {U/P}"), which the printed "to cast spells or activate abilities" doesn't | `cost_life_payable` gates the shared Phyrexian payment ladder |
 | 🟡 Fatal Grudge | at three or more seats, after the first opponent sacrifices, the next ones match that permanent's card types rather than the cost's (only differs for a multi-type sacrifice, e.g. an artifact creature) | `SharesCardTypeWithFirstSacrificed` reads the resolution's first sacrifice once there is one; the cost's card is its fallback |
-| 🟡 Heartwood Storyteller | the opponents always draw ("may draw" isn't offered) | `Effect::Draw` over `OpponentOf(Triggerer)` |
 | 🟡 Offspring's Revenge | the token keeps haste past "until your next turn" | `CreateTokenCopyOf.extra_keywords` is permanent |
 | 🟡 Brazen Cannonade | the raid card stays playable through your next turn, not only until end of its combat | `MayPlayDuration::EndOfControllersNextTurn` |
 | 🟡 Teferi, Who Slows the Sunset | +1 takes up to three artifacts/creatures/lands in any mix, not one of each; the −7 emblem untaps your permanents at each opponent's upkeep rather than in their untap step | one `ApplyToTargets` slot set; emblem triggers fire at `StepBegins`, and no trigger fires in an untap step |
@@ -2073,7 +2070,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
 | 🟡 Iron Lad, Diverging Destiny | "you may look at the top card of your library any time" isn't modeled | no hidden-info permission for a seat |
 | 🟡 Rulik Mons, Warren Chief | a land on top always goes onto the battlefield (the "you may" isn't asked) | `Effect::If` over the top card |
-| 🟡 The Tarrasque | "as long as it was cast" misses casts from exile and the command zone | reads `WasCastFromHand`/`Library`/`Graveyard` |
 | 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
@@ -2089,13 +2085,11 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
 | 🟡 Loch Mare | "remove a counter" spends only its -1/-1 counters | `remove_counter_cost` names one kind |
 | 🟡 Scrap Welder | the returned artifact card is chosen as the ability resolves, not targeted | targets are fixed before the sacrifice that sets X |
-| 🟡 Fathom Fleet Swordjack | attacking a planeswalker, its trigger hits that planeswalker's controller | `PlayerRef::DefendingPlayer` |
 | 🟡 Angel of Condemnation | the exert is paid as the ability resolves (`SkipNextUntap`), not as a cost | no exert activation cost |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
 | 🟡 Scion of Halaster | the first-draw replacement is live while you control any commander of yours, a noncreature one included | `Predicate::ControlsOwnCommander` has no creature filter |
 | 🟡 Tilonalli's Summoner | whether its Elementals are exiled is settled by the city's blessing as they're made, not at the end step | `ExileAtNextEndStep` carries no condition |
 | 🟡 The Enigma Jewel | craft takes exactly four nonlands with activated abilities, never more | `craft_exile_cost` is a fixed count |
-| 🟡 Jhoira's Timebug | can target only a permanent with a time counter (or a suspended card), not any permanent you control | the target filter carries the effect's "if it has a time counter" |
 | 🟡 Elda, Conjurer of Spectacle | entering after a nonlegendary creature spell this turn, the next one still gets demonstrate | a once-per-turn cast trigger, not a count of this turn's nonlegendary creature spells |
 | 🟡 Kyodai, Soul of Kamigawa | the indestructible lasts while Kyodai is on the battlefield, not only while you control it | `Duration::WhileSourceOnBattlefield` has no control rider |
 | 🟡 Cosmic Rebirth | a mana value 3 or less card always goes onto the battlefield (the "you may" isn't asked) | `ZoneDest::IfCard` |
@@ -2125,7 +2119,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kenessos, Priest of Thassa | a declined sea creature stays on top (no "may put it on the bottom") | `RevealTopMayPutOntoBattlefield` |
 | 🟡 In Search of Greatness | the free cast takes mana value up to 1 + the greatest (not exactly), and the enchantment counts itself | `MayCastFromHandFreeMatching { max_mv }` over `GreatestManaValueAmongPermanents(You)` |
 | 🟡 Hooded Blightfang | only combat damage to a planeswalker destroys it | `EventKind::DealsCombatDamageToPlaneswalker`; `EventKind` has no bit for the noncombat kind |
-| 🟡 Akroma, Vision of Ixidor | protection is not counted | there is no "has any protection" requirement atom |
 | 🟡 You Look Upon the Tarrasque | "able to block that creature do so" binds the creatures on the battlefield as it resolves; one entering later isn't forced | `Effect::MustBlockTarget` stamps `must_block` per creature |
 | 🟡 The Rise of Sozin | chapter II exiles every card with the name rather than up to four, and from an opponent the engine picks rather than a target | `Effect::NameCardExileMatchingAllZones` |
 | 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
@@ -2140,13 +2133,11 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |
 | 🟡 Intimidation Bolt | "other creatures can't attack this turn" is fixed at resolution: a creature entering later can attack | `CantAttackThisTurn` over a resolved set |
-| 🟡 Giant Ox / Hotshot Mechanic | they also saddle Mounts with toughness / as though 2 greater (the printed cards only crew) | `SelfCrewsSaddlesWithToughness` / `CrewSaddlePowerBonus` cover both |
 | 🟡 Mighty Servant of Leuk-o | "the first time each turn" counts only two-creature crews: crewed by three, then by two, it still gains the draw | `once_per_turn` on a filtered `CrewsOrSaddles` |
 | 🟡 Ride Down | the creatures it blocked "this combat" are read as "this turn" | `Selector::CreaturesBlockedByThisTurn` |
 | 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
 | 🟡 Dino DNA | the copied card is chosen at resolution among those it exiled, not targeted | `ChooseOneAmong` over `R::ExiledWithSource` |
 | 🟡 Experimental Overload | the returned instant or sorcery is the engine's pick (the priciest) | `Selector::take_priciest` |
-| 🟡 The Misty Mountains Cold | "if you do" reads the Saga still being on the battlefield, not the sacrifice's outcome | `SelectorExists(This)` gate |
 | 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | 🟡 Werewolf Pack Leader | the activation sets base 5/3 and grants trample, but "and isn't a Human" is dropped — no lose-a-creature-type effect | `SetBasePT` + `GrantKeyword` |
@@ -2157,9 +2148,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Soul Exchange | the +2/+2 counter "if the exiled creature was a Thrull" is dropped — the cast's exile-a-creature cost isn't remembered | `AdditionalCastCost::ExilePermanent` |
 | 🟡 Gix's Command | "up to one creature" for the counters mode is the engine's pick among yours | `Selector::one_of` |
 | 🟡 Kassandra, Eagle Bearer | the draw reads any equipped creature, not one with a *legendary* Equipment | `R::IsEquipped` |
-| 🟡 Ravenloft Adventurer | the die-to-exile-with-a-hit-counter replacement is a dies trigger (the creature still "dies"), as Mari, the Killing Quill's | `CreatureDied` → `Move` + `AddCounter` |
 | 🟡 Ziatora's Envoy | the top card can't be played as a land, and a miss is drawn rather than put into hand | `CastTopFreeIfElseDraw` |
-| 🟡 Acererak the Archlich | "if you haven't completed Tomb of Annihilation" reads any completed dungeon | `Value::DungeonsCompleted` |
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
 | 🟡 Dread | like No Mercy, damage from your own creatures is not watched | `PlayerDamaged` scoped to opponents' sources |
 | 🟡 Mister Hyde, Monster Within | the removed counter is always a +1/+1 counter | `RemoveCountersFromAmongThen` names one kind |
@@ -2168,7 +2157,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Doc Samson, Super Psychiatrist | the plus-one rider covers your artifacts and creatures | `ExtraCounterAllKinds`' reach |
-| 🟡 Hardy Outlander | "most life" is read among all players, so your own higher life total also blocks the trigger | `HighestLife` |
 | 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |
 | 🟡 Reckless Crew | only unattached Equipment is offered, so an Equipment already on a creature stays put | `ForEach` + `Attach` over `R::Unattached` |
 | 🟡 Mishra's Research Desk | both exiled cards stay playable; "choose one of them" collapses | `ExileTopAndGrantMayPlay` |
@@ -2179,7 +2167,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Rona, Disciple of Gix | a land card exiled with Rona can be played too (the grant is "may play", not "may cast spells") | `GrantMayPlay { WhileSourceOnBattlefield }` |
 | 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
 | 🟡 Nivea, Beloved Battlemage | the Akroma token has no mana cost, so its mana value is 0 rather than 8 | `TokenDefinition` carries no cost |
-| 🟡 Gathering Stone | a top card of the chosen type is always taken (the "may" is the engine's yes) | `If` + `Move` to hand |
 | 🟡 Loki Laufeyson | an instant or sorcery above Loki's power spends the watch without a copy instead of leaving it armed | `OnYourNextInstantSorceryThisTurn` |
 | 🟡 Wanda's Vision | the free cast stays open until end of turn rather than only as the trigger resolves | `ExileTopUntilNonlandMayPlay { EndOfThisTurn }` |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |

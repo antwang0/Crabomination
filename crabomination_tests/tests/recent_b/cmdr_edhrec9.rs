@@ -474,3 +474,28 @@ fn desecrated_tomb_makes_bats() {
     assert!(g.battlefield_find(bear).is_some());
     assert_eq!(tokens_named(&g, "Bat"), 1);
 }
+
+/// Nim Deathmantle watches YOUR graveyard: a creature you own dies under an
+/// opponent's control and comes back to you wearing it; one you control but
+/// don't own goes to its owner's graveyard and doesn't trigger it.
+#[test]
+fn nim_deathmantle_reads_the_owner() {
+    let mut g = pod(2);
+    let nim = ready(&mut g, 0, catalog::nim_deathmantle());
+    let lent = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(lent).unwrap().owner = 0;
+    let borrowed = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(borrowed).unwrap().owner = 1;
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    for id in [lent, borrowed] {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, &[Target::Permanent(id)]).expect("bolt");
+        g.check_state_based_actions();
+        drain_stack(&mut g);
+    }
+    let back = g.battlefield_find(lent).expect("the owned one returns");
+    assert_eq!(back.controller, 0);
+    assert_eq!(g.battlefield_find(nim).unwrap().attached_to, Some(lent));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == borrowed));
+}
