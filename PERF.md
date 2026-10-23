@@ -3151,6 +3151,10 @@ pods             seed 10121, 300 games at each of 2..8 seats: 2,100 decided;
 sweeps           random seat groups over all 5,158 seats: seeds 10122-10125 (release-fast) 2,690 games,
                  10126-10130 (overflow + debug-assertions) 2,060 games — 0 panics, 0 assertions;
                  4 CR 104.4a draws, 1 token-engine board cap (Academy Manufactor + Farmer Cotton X=35)
+closing tip      aeca6b084 (after the Drivnod / soulbond fixes and 400 concurrent seats): --bench 196,176 /
+                 27.64 / 613.0 / 0 stalls — byte-identical, determinism ok, peak_rss_mib 51.1; pods seed
+                 10131 x 300 at 4 seats decided (45.31 turns/game); suite 28,864 / 0 / 8 (strict answer
+                 log, seat test excluded); workspace clippy 0
 ```
 
 ### 2026-10-23 (Commander run, `01Uv3VwF`) — guardrail; 105 seats, card fixes, two engine fields
