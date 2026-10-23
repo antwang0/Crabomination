@@ -283,11 +283,11 @@ fn main() {
         let deck = crabomination::selfplay::heuristic_sealed_build_v3(&pool, seed ^ (d as u64) << 20);
         let mut seen = vec![false; cards.len()];
         for f in &deck {
-            if let Some(&i) = index.get(&(*f as usize)) {
-                if !seen[i] {
-                    seen[i] = true;
-                    in_deck[i] += 1;
-                }
+            if let Some(&i) = index.get(&(*f as usize))
+                && !seen[i]
+            {
+                seen[i] = true;
+                in_deck[i] += 1;
             }
         }
         decks.push(deck);
@@ -322,7 +322,7 @@ fn main() {
     for _ in 0..rounds {
         let mut order: Vec<usize> = (0..n_decks).collect();
         order.shuffle(&mut rng);
-        matches.extend(order.chunks_exact(2).map(|p| (p[0], p[1], rng.random::<u64>())));
+        matches.extend(order.as_chunks::<2>().0.iter().map(|p| (p[0], p[1], rng.random::<u64>())));
     }
     let next = AtomicUsize::new(0);
     let done = AtomicUsize::new(0);
@@ -337,7 +337,7 @@ fn main() {
                     let t = simulate_match_pairs_piloted(&decks[a], &decks[b], pairs, [pilot, pilot], 50_000, sd);
                     results.lock().unwrap().push((a, b, t.wins_a, t.wins_b, t.undecided));
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;
-                    if n % 500 == 0 {
+                    if n.is_multiple_of(500) {
                         eprintln!("{n}/{} matches, {:.0}s", matches.len(), start.elapsed().as_secs_f64());
                     }
                 }
