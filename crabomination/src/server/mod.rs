@@ -144,6 +144,7 @@ mod graveyard_to_top;
 mod regrowth_sink;
 mod put_from_hand;
 mod land_ramp;
+mod loyalty_crew;
 mod untap_ramp;
 mod graveyard_cast;
 mod helper_cast;

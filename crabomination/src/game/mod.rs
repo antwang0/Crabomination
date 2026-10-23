@@ -219,6 +219,7 @@ mod token_batch;
 mod life_events;
 mod draw_batch;
 mod library_arrivals;
+mod crew_loyalty;
 mod exile_return;
 mod answer_log;
 pub(crate) mod spell_copy;
@@ -25030,11 +25031,28 @@ impl GameState {
             total_power = total_power
                 .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid)).max(0));
         }
-        if (total_power as u32) < crew_n {
+        // Heart of Kiran — CR 118.9 alternative cost: no crew, one loyalty
+        // counter off the controller's most-loyal planeswalker instead.
+        let loyalty_from = if crew_creatures.is_empty() && crew_n > 0 {
+            self.crew_loyalty_source(vehicle)
+        } else {
+            None
+        };
+        if loyalty_from.is_none() && (total_power as u32) < crew_n {
             return Err(GameError::SelectionRequirementViolated);
         }
-        // Tap the crew.
         let mut events = vec![];
+        if let Some(pw) = loyalty_from
+            && let Some(c) = self.battlefield.find_by_id_mut(pw)
+        {
+            c.remove_counters(crate::card::CounterType::Loyalty, 1);
+            events.push(GameEvent::CounterRemoved {
+                card_id: pw,
+                counter_type: crate::card::CounterType::Loyalty,
+                count: 1,
+            });
+        }
+        // Tap the crew.
         for &cid in crew_creatures {
             if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                 c.tapped = true;
@@ -36566,6 +36584,7 @@ fn static_effect_to_effects(
             | StaticEffect::FirstPowerUpEachYourTurnFree
             | StaticEffect::OtherPowerUpsCostLess { .. }
             | StaticEffect::PowerUpOnceMore
+            | StaticEffect::CrewByRemovingLoyaltyCounter
             | StaticEffect::AttachedDealsDoubleDamage
             | StaticEffect::NewDamageHealsOldDamage
             | StaticEffect::AttachedTakesDoubleCombatDamage

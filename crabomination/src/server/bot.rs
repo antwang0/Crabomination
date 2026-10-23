@@ -11257,6 +11257,9 @@ fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
         if cp.card_types().contains(&CardType::Creature) {
             continue;
         }
+        if let Some(action) = super::loyalty_crew::loyalty_crew(state, v.id) {
+            return Some(action);
+        }
         let mut chosen = Vec::new();
         let mut total = 0i32;
         for &(id, p) in crewers.iter().filter(|&&(id, _)| id != v.id) {
@@ -12188,6 +12191,9 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
             .is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
         {
             continue;
+        }
+        if let Some(action) = super::loyalty_crew::loyalty_crew(state, vehicle.id) {
+            return Some(action);
         }
         // Candidate crew members: the bot's untapped creatures, smallest first.
         let mut crew: Vec<(CardId, u32)> = state

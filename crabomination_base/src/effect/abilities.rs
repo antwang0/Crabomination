@@ -1903,6 +1903,10 @@ pub enum StaticEffect {
     /// CR 702.193 — "Each power-up ability of permanents you control can be
     /// activated an additional time" (Wonder Man, Hollywood Hero).
     PowerUpOnceMore,
+    /// "You may remove a loyalty counter from a planeswalker you control
+    /// rather than pay [this Vehicle]'s crew cost" (Heart of Kiran, CR 118.9):
+    /// a `GameAction::Crew` naming no creatures pays it.
+    CrewByRemovingLoyaltyCounter,
     /// CR 614.1a — "If another creature would deal combat damage to equipped
     /// creature, it deals double that damage to equipped creature instead"
     /// (Inquisitor's Flail's second line): the receiving side of
