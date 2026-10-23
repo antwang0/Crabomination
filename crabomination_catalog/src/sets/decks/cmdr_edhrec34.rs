@@ -124,25 +124,23 @@ pub fn reborn_hope() -> CardDefinition {
 /// graveyard: mana value 3 or less, it may go onto the battlefield; otherwise
 /// to your hand. You gain 3 life.
 pub fn cosmic_rebirth() -> CardDefinition {
+    let card = || target_filtered(R::Permanent.and(R::InYourGraveyard));
     spell(
         "Cosmic Rebirth",
         cost(&[generic(1), g(), w()]),
         CardType::Instant,
         Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::EntityMatches {
-                    what: target_filtered(R::Permanent.and(R::InYourGraveyard)),
-                    filter: R::ManaValueAtMost(3),
-                },
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ManaValueAtMost(3) },
                 then: Box::new(Effect::MayDoElse {
                     description: "Put it onto the battlefield (instead of into your hand)?".into(),
                     body: Box::new(Effect::Move {
-                        what: Selector::Target(0),
+                        what: card(),
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     }),
-                    else_: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+                    else_: Box::new(Effect::Move { what: card(), to: ZoneDest::Hand(PlayerRef::You) }),
                 }),
-                else_: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+                else_: Box::new(Effect::Move { what: card(), to: ZoneDest::Hand(PlayerRef::You) }),
             },
             gain(3),
         ]),

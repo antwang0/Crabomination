@@ -10189,7 +10189,6 @@ impl GameState {
         self.remove_from_battlefield_to_graveyard_raw(id);
         // CR 700.4 / 614.1a — as the state-based funnel: a death the removal
         // replaced away from the graveyard keeps only its leaves triggers.
-        let mut leave_triggers = leave_triggers;
         if self.death_was_replaced(id) {
             leave_triggers.retain(|t| !t.4);
         } else if let Some((p, t)) = tally {
