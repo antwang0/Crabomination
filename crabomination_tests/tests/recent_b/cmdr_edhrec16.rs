@@ -412,17 +412,24 @@ fn mire_boa_and_oketra() {
     declare(&mut g, 0, &[(ok, 1)]).expect("three others");
 }
 
-/// Akroma, Vision of Ixidor counts keywords at each combat.
+/// Akroma, Vision of Ixidor counts keywords at each combat — protection of
+/// any kind once, and "partner with" as partner (the card's rulings).
 #[test]
 fn akroma_vision_counts_keywords() {
     let mut g = pod(2);
     ready(&mut g, 0, catalog::akroma_vision_of_ixidor());
     let o = ready(&mut g, 0, catalog::oketra_the_true());
+    let knight = ready(&mut g, 0, catalog::white_knight());
+    let pir = ready(&mut g, 0, catalog::pir_imaginative_rascal());
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     // Double strike + indestructible.
     assert_eq!(g.computed_permanent(o).unwrap().power, 5);
+    // First strike + protection from black.
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 4);
+    // Partner with Toothy.
+    assert_eq!(g.computed_permanent(pir).unwrap().power, 2);
 }
 
 /// Angelic Overseer is protected while you control a Human.

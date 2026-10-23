@@ -37691,6 +37691,8 @@ fn blocker_matches_block_filter(
         R::HasKeyword(k) => computed.keywords().contains(k),
         R::HasToxic => computed.keywords().iter().any(|k| matches!(k, Keyword::Toxic(_))),
         R::HasModular => computed.keywords().iter().any(|k| matches!(k, Keyword::Modular(_))),
+        R::HasProtection => computed.keywords().iter().any(Keyword::is_protection),
+        R::HasPartner => computed.keywords().iter().any(Keyword::is_partner),
         R::HasMutate => blocker.definition.mutate.is_some(),
         // Jasmine Boreal of the Seven's "creatures with abilities": a granted
         // keyword counts, and so does losing them all.

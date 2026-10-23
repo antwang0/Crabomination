@@ -2036,7 +2036,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // keyword counter and the two removal lists are all instance fields
         // that effect resolution writes, so `requirement_matches_card` reads
         // them off `has_keyword` on every layer recompute. See its doc.
-        R::HasKeyword(_) | R::HasToxic | R::HasModular => true,
+        R::HasKeyword(_) | R::HasToxic | R::HasModular | R::HasProtection | R::HasPartner => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
@@ -2118,7 +2118,7 @@ fn requirement_leaf_bits(req: &SelectionRequirement) -> u8 {
         R::IsOutlaw => leaf::CARD_TYPE | leaf::CREATURE_TYPE,
         R::HasCreatureType(_) => leaf::CREATURE_TYPE,
         R::HasColor(_) | R::Colorless | R::Multicolored | R::Monocolored => leaf::COLOR,
-        R::HasKeyword(_) => leaf::KEYWORD,
+        R::HasKeyword(_) | R::HasProtection | R::HasPartner => leaf::KEYWORD,
         R::And(a, b) | R::Or(a, b) => requirement_leaf_bits(a) | requirement_leaf_bits(b),
         R::Not(inner) => requirement_leaf_bits(inner),
         _ => 0,
@@ -2203,6 +2203,8 @@ pub(crate) fn requirement_matches_card_typed(
         R::HasKeyword(k) => keywords.map_or_else(|| card.has_keyword(k), |kws| kws.contains(k)),
         R::HasToxic => card.has_toxic(),
         R::HasModular => card.has_modular(),
+        R::HasProtection => keywords.map_or_else(|| card.has_protection(), |kws| kws.iter().any(Keyword::is_protection)),
+        R::HasPartner => keywords.map_or_else(|| card.has_partner(), |kws| kws.iter().any(Keyword::is_partner)),
         R::HasMutate => def.mutate.is_some(),
         // CR 105.2 — colour is the mana cost's coloured pips (hybrid and
         // Phyrexian included) UNION the colour indicator, and empty under

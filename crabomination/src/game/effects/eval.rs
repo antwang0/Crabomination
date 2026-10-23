@@ -6474,6 +6474,14 @@ impl GameState {
                     R::HasKeyword(kw) => has_kw(kw),
                     R::HasToxic => has_kw_tag(&crate::card::Keyword::Toxic(0)),
                     R::HasModular => has_kw_tag(&crate::card::Keyword::Modular(0)),
+                    R::HasProtection => match computed() {
+                        Some(cp) => cp.keywords().iter().any(crate::card::Keyword::is_protection),
+                        None => card.has_protection(),
+                    },
+                    R::HasPartner => match computed() {
+                        Some(cp) => cp.keywords().iter().any(crate::card::Keyword::is_partner),
+                        None => card.has_partner(),
+                    },
                     R::HasMutate => card.definition.mutate.is_some(),
                     R::HasMorphAbility => card.definition.has_morph_ability(),
                     R::HasFreerunning => card.definition.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
@@ -7745,6 +7753,8 @@ impl GameState {
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasToxic => card.has_toxic(),
             R::HasModular => card.has_modular(),
+            R::HasProtection => card.has_protection(),
+            R::HasPartner => card.has_partner(),
             R::IsSuspended => card.is_suspended() && self.exile.iter().any(|c| c.id == card.id),
             R::HasMutate => card.definition.mutate.is_some(),
             R::HasMorphAbility => card.definition.has_morph_ability(),

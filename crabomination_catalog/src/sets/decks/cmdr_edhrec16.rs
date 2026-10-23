@@ -794,7 +794,7 @@ pub fn skeleton_key() -> CardDefinition {
 /// Akroma, Vision of Ixidor — {5}{W}{W} 6/6 Angel, flying, first strike,
 /// vigilance, trample, partner. At the beginning of each combat, each other
 /// creature you control gets +1/+1 until end of turn for each listed keyword
-/// it has (protection is not counted — INCOMPLETE_CARDS).
+/// it has (any protection counts once; partner is partner or "partner with").
 pub fn akroma_vision_of_ixidor() -> CardDefinition {
     let listed = [
         Keyword::Flying,
@@ -809,12 +809,13 @@ pub fn akroma_vision_of_ixidor() -> CardDefinition {
         Keyword::Reach,
         Keyword::Trample,
         Keyword::Vigilance,
-        Keyword::Partner,
     ];
     let per_keyword: Vec<Effect> = listed
         .into_iter()
-        .map(|k| Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasKeyword(k) },
+        .map(R::HasKeyword)
+        .chain([R::HasProtection, R::HasPartner])
+        .map(|filter| Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter },
             then: Box::new(Effect::PumpPT {
                 what: Selector::TriggerSource,
                 power: Value::ONE,

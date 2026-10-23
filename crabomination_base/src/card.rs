@@ -2993,6 +2993,12 @@ impl Keyword {
         self.answers_listed(&Keyword::ProtectionFromEverything)
     }
 
+    /// Partner or "partner with" (CR 702.124) — not the other partner
+    /// variants (Akroma, Vision of Ixidor's ruling).
+    pub fn is_partner(&self) -> bool {
+        matches!(self, Keyword::Partner | Keyword::PartnerWith(_))
+    }
+
     /// Any hexproof variant (CR 702.11).
     pub fn is_hexproof(&self) -> bool {
         self.answers_listed(&Keyword::Hexproof)
@@ -3209,6 +3215,12 @@ pub enum SelectionRequirement {
     /// Has Modular N for any N (CR 702.43) — "each creature you control with
     /// modular" (Arcbound Overseer).
     HasModular,
+    /// Has protection of any kind (CR 702.16) — Akroma, Vision of Ixidor's
+    /// "+1/+1 if it has … protection".
+    HasProtection,
+    /// Has partner or "partner with" (CR 702.124) — the same card's "and
+    /// partner".
+    HasPartner,
     /// CR 702.62b — a suspended card: has suspend and a time counter (only
     /// true in exile — Rose Tyler, Clockspinning).
     IsSuspended,
@@ -12164,6 +12176,25 @@ impl CardInstance {
     /// of the four keyword sources.
     pub fn has_modular(&self) -> bool {
         self.has_keyword_tag(&Keyword::Modular(0))
+    }
+
+    /// True if this object has protection of any kind (CR 702.16), from any
+    /// of the four keyword sources.
+    pub fn has_protection(&self) -> bool {
+        self.has_keyword_where(Keyword::is_protection)
+    }
+
+    /// True if this object has partner or "partner with" (CR 702.124).
+    pub fn has_partner(&self) -> bool {
+        self.has_keyword_where(Keyword::is_partner)
+    }
+
+    /// Any keyword `pred` accepts, from any of the four keyword sources.
+    fn has_keyword_where(&self, pred: fn(&Keyword) -> bool) -> bool {
+        let kept = |k: &Keyword| pred(k) && !self.removed_keywords_eot.has_kw(k) && !self.removed_keywords.has_kw(k);
+        self.definition.keywords.iter().any(&kept)
+            || self.granted_keywords_eot.iter().any(&kept)
+            || self.keyword_counters.iter().any(|(k, _)| kept(k))
     }
 
     /// True if this permanent can't be destroyed — either the
