@@ -30204,6 +30204,606 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JESKA_13_COMMANDERS,
             main: decks::JESKA_13_MAIN,
         },
+        // Seat 4959: The Fifth Doctor and Susan Foreman's EDHREC average deck. `--pod-decks 4959`.
+        PodDeck {
+            name: "The Fifth Doctor and Susan Foreman (WUG)",
+            commanders: decks::THE_FIFTH_DOCTOR_13_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_13_MAIN,
+        },
+        // Seat 4960: Sakashima of a Thousand Faces and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4960`.
+        PodDeck {
+            name: "Sakashima of a Thousand Faces and Tormod, the Desecrator (UB)",
+            commanders: decks::SAKASHIMA_OF_A_THOUSAND_FACES_6_COMMANDERS,
+            main: decks::SAKASHIMA_OF_A_THOUSAND_FACES_6_MAIN,
+        },
+        // Seat 4961: Kamahl, Heart of Krosa and Tymna the Weaver's EDHREC average deck. `--pod-decks 4961`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Tymna the Weaver (WBG)",
+            commanders: decks::KAMAHL_16_COMMANDERS,
+            main: decks::KAMAHL_16_MAIN,
+        },
+        // Seat 4962: Gale, Waterdeep Prodigy and Master Chef's EDHREC average deck. `--pod-decks 4962`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Master Chef (UG)",
+            commanders: decks::GALE_21_COMMANDERS,
+            main: decks::GALE_21_MAIN,
+        },
+        // Seat 4963: The War Doctor and K-9, Mark I's EDHREC average deck. `--pod-decks 4963`.
+        PodDeck {
+            name: "The War Doctor and K-9, Mark I (WUR)",
+            commanders: decks::THE_WAR_DOCTOR_13_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_13_MAIN,
+        },
+        // Seat 4964: Falthis, Shadowcat Familiar and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 4964`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Kediss, Emberclaw Familiar (BR)",
+            commanders: decks::FALTHIS_27_COMMANDERS,
+            main: decks::FALTHIS_27_MAIN,
+        },
+        // Seat 4965: Kraum, Ludevic's Opus and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4965`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Tevesh Szat, Doom of Fools (UBR)",
+            commanders: decks::KRAUM_9_COMMANDERS,
+            main: decks::KRAUM_9_MAIN,
+        },
+        // Seat 4966: Shadowheart, Dark Justiciar and Inspiring Leader's EDHREC average deck. `--pod-decks 4966`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Inspiring Leader (WB)",
+            commanders: decks::SHADOWHEART_18_COMMANDERS,
+            main: decks::SHADOWHEART_18_MAIN,
+        },
+        // Seat 4967: Esior, Wardwing Familiar and Tymna the Weaver's EDHREC average deck. `--pod-decks 4967`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Tymna the Weaver (WUB)",
+            commanders: decks::ESIOR_23_COMMANDERS,
+            main: decks::ESIOR_23_MAIN,
+        },
+        // Seat 4968: Ishai, Ojutai Dragonspeaker and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 4968`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Thrasios, Triton Hero (WUG)",
+            commanders: decks::ISHAI_16_COMMANDERS,
+            main: decks::ISHAI_16_MAIN,
+        },
+        // Seat 4969: Sidar Kondo of Jamuraa and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 4969`.
+        PodDeck {
+            name: "Sidar Kondo of Jamuraa and Tana, the Bloodsower (WRG)",
+            commanders: decks::SIDAR_KONDO_OF_JAMURAA_4_COMMANDERS,
+            main: decks::SIDAR_KONDO_OF_JAMURAA_4_MAIN,
+        },
+        // Seat 4970: Sidar Kondo of Jamuraa and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4970`.
+        PodDeck {
+            name: "Sidar Kondo of Jamuraa and Vial Smasher the Fierce (WBRG)",
+            commanders: decks::SIDAR_KONDO_OF_JAMURAA_5_COMMANDERS,
+            main: decks::SIDAR_KONDO_OF_JAMURAA_5_MAIN,
+        },
+        // Seat 4971: Lae'zel, Vlaakith's Champion and Noble Heritage's EDHREC average deck. `--pod-decks 4971`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Noble Heritage (W)",
+            commanders: decks::LAEZEL_15_COMMANDERS,
+            main: decks::LAEZEL_15_MAIN,
+        },
+        // Seat 4972: Zellix, Sanity Flayer and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 4972`.
+        PodDeck {
+            name: "Zellix, Sanity Flayer and Agent of the Iron Throne (UB)",
+            commanders: decks::ZELLIX_19_COMMANDERS,
+            main: decks::ZELLIX_19_MAIN,
+        },
+        // Seat 4973: Krark, the Thumbless and Kydele, Chosen of Kruphix's EDHREC average deck. `--pod-decks 4973`.
+        PodDeck {
+            name: "Krark, the Thumbless and Kydele, Chosen of Kruphix (URG)",
+            commanders: decks::KRARK_16_COMMANDERS,
+            main: decks::KRARK_16_MAIN,
+        },
+        // Seat 4974: Ardenn, Intrepid Archaeologist and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 4974`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Toggo, Goblin Weaponsmith (WR)",
+            commanders: decks::ARDENN_26_COMMANDERS,
+            main: decks::ARDENN_26_MAIN,
+        },
+        // Seat 4975: Ikra Shidiqi, the Usurper and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 4975`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Sakashima of a Thousand Faces (UBG)",
+            commanders: decks::IKRA_SHIDIQI_13_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_13_MAIN,
+        },
+        // Seat 4976: Ganax, Astral Hunter and Haunted One's EDHREC average deck. `--pod-decks 4976`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Haunted One (BR)",
+            commanders: decks::GANAX_11_COMMANDERS,
+            main: decks::GANAX_11_MAIN,
+        },
+        // Seat 4977: Ardenn, Intrepid Archaeologist and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 4977`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Vial Smasher the Fierce (WBR)",
+            commanders: decks::ARDENN_27_COMMANDERS,
+            main: decks::ARDENN_27_MAIN,
+        },
+        // Seat 4978: Malcolm, Keen-Eyed Navigator and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 4978`.
+        PodDeck {
+            name: "Malcolm, Keen-Eyed Navigator and Sakashima of a Thousand Faces (U)",
+            commanders: decks::MALCOLM_16_COMMANDERS,
+            main: decks::MALCOLM_16_MAIN,
+        },
+        // Seat 4979: Wilson, Refined Grizzly and Tavern Brawler's EDHREC average deck. `--pod-decks 4979`.
+        PodDeck {
+            name: "Wilson, Refined Grizzly and Tavern Brawler (RG)",
+            commanders: decks::WILSON_16_COMMANDERS,
+            main: decks::WILSON_16_MAIN,
+        },
+        // Seat 4980: Kraum, Ludevic's Opus and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4980`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Tormod, the Desecrator (UBR)",
+            commanders: decks::KRAUM_10_COMMANDERS,
+            main: decks::KRAUM_10_MAIN,
+        },
+        // Seat 4981: Bjorna, Nightfall Alchemist and Othelm, Sigardian Outcast's EDHREC average deck. `--pod-decks 4981`.
+        PodDeck {
+            name: "Bjorna, Nightfall Alchemist and Othelm, Sigardian Outcast (WURG)",
+            commanders: decks::BJORNA_3_COMMANDERS,
+            main: decks::BJORNA_3_MAIN,
+        },
+        // Seat 4982: Ravos, Soultender and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 4982`.
+        PodDeck {
+            name: "Ravos, Soultender and Reyhan, Last of the Abzan (WBG)",
+            commanders: decks::RAVOS_9_COMMANDERS,
+            main: decks::RAVOS_9_MAIN,
+        },
+        // Seat 4983: Wyll, Blade of Frontiers and Dungeon Delver's EDHREC average deck. `--pod-decks 4983`.
+        PodDeck {
+            name: "Wyll, Blade of Frontiers and Dungeon Delver (UR)",
+            commanders: decks::WYLL_18_COMMANDERS,
+            main: decks::WYLL_18_MAIN,
+        },
+        // Seat 4984: Bruse Tarl, Boorish Herder and Tymna the Weaver's EDHREC average deck. `--pod-decks 4984`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Tymna the Weaver (WBR)",
+            commanders: decks::BRUSE_TARL_23_COMMANDERS,
+            main: decks::BRUSE_TARL_23_MAIN,
+        },
+        // Seat 4985: Kydele, Chosen of Kruphix and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4985`.
+        PodDeck {
+            name: "Kydele, Chosen of Kruphix and Tevesh Szat, Doom of Fools (UBG)",
+            commanders: decks::KYDELE_11_COMMANDERS,
+            main: decks::KYDELE_11_MAIN,
+        },
+        // Seat 4986: Ganax, Astral Hunter and Dragon Cultist's EDHREC average deck. `--pod-decks 4986`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Dragon Cultist (R)",
+            commanders: decks::GANAX_12_COMMANDERS,
+            main: decks::GANAX_12_MAIN,
+        },
+        // Seat 4987: Ikra Shidiqi, the Usurper and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 4987`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Ludevic, Necro-Alchemist (UBRG)",
+            commanders: decks::IKRA_SHIDIQI_14_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_14_MAIN,
+        },
+        // Seat 4988: Ikra Shidiqi, the Usurper and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 4988`.
+        PodDeck {
+            name: "Ikra Shidiqi, the Usurper and Rograkh, Son of Rohgahh (BRG)",
+            commanders: decks::IKRA_SHIDIQI_15_COMMANDERS,
+            main: decks::IKRA_SHIDIQI_15_MAIN,
+        },
+        // Seat 4989: Abdel Adrian, Gorion's Ward and Street Urchin's EDHREC average deck. `--pod-decks 4989`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Street Urchin (WR)",
+            commanders: decks::ABDEL_ADRIAN_17_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_17_MAIN,
+        },
+        // Seat 4990: Ishai, Ojutai Dragonspeaker and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4990`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Tevesh Szat, Doom of Fools (WUB)",
+            commanders: decks::ISHAI_17_COMMANDERS,
+            main: decks::ISHAI_17_MAIN,
+        },
+        // Seat 4991: Alharu, Solemn Ritualist and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 4991`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Reyhan, Last of the Abzan (WBG)",
+            commanders: decks::ALHARU_32_COMMANDERS,
+            main: decks::ALHARU_32_MAIN,
+        },
+        // Seat 4992: Keskit, the Flesh Sculptor and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 4992`.
+        PodDeck {
+            name: "Keskit, the Flesh Sculptor and Toggo, Goblin Weaponsmith (BR)",
+            commanders: decks::KESKIT_12_COMMANDERS,
+            main: decks::KESKIT_12_MAIN,
+        },
+        // Seat 4993: Leonardo, the Balance and Splinter, the Mentor's EDHREC average deck. `--pod-decks 4993`.
+        PodDeck {
+            name: "Leonardo, the Balance and Splinter, the Mentor (WUBRG)",
+            commanders: decks::LEONARDO_7_COMMANDERS,
+            main: decks::LEONARDO_7_MAIN,
+        },
+        // Seat 4994: Ishai, Ojutai Dragonspeaker and Krark, the Thumbless's EDHREC average deck. `--pod-decks 4994`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Krark, the Thumbless (WUR)",
+            commanders: decks::ISHAI_18_COMMANDERS,
+            main: decks::ISHAI_18_MAIN,
+        },
+        // Seat 4995: Sengir, the Dark Baron and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 4995`.
+        PodDeck {
+            name: "Sengir, the Dark Baron and Tevesh Szat, Doom of Fools (B)",
+            commanders: decks::SENGIR_7_COMMANDERS,
+            main: decks::SENGIR_7_MAIN,
+        },
+        // Seat 4996: Falthis, Shadowcat Familiar and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 4996`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Tana, the Bloodsower (BRG)",
+            commanders: decks::FALTHIS_28_COMMANDERS,
+            main: decks::FALTHIS_28_MAIN,
+        },
+        // Seat 4997: Jeska, Thrice Reborn and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 4997`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Thrasios, Triton Hero (URG)",
+            commanders: decks::JESKA_14_COMMANDERS,
+            main: decks::JESKA_14_MAIN,
+        },
+        // Seat 4998: Thrasios, Triton Hero and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 4998`.
+        PodDeck {
+            name: "Thrasios, Triton Hero and Tormod, the Desecrator (UBG)",
+            commanders: decks::THRASIOS_4_COMMANDERS,
+            main: decks::THRASIOS_4_MAIN,
+        },
+        // Seat 4999: Ganax, Astral Hunter and Guild Artisan's EDHREC average deck. `--pod-decks 4999`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Guild Artisan (R)",
+            commanders: decks::GANAX_13_COMMANDERS,
+            main: decks::GANAX_13_MAIN,
+        },
+        // Seat 5000: Breeches, Brazen Plunderer and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 5000`.
+        PodDeck {
+            name: "Breeches, Brazen Plunderer and Francisco, Fowl Marauder (BR)",
+            commanders: decks::BREECHES_33_COMMANDERS,
+            main: decks::BREECHES_33_MAIN,
+        },
+        // Seat 5001: Bruse Tarl, Boorish Herder and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 5001`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Malcolm, Keen-Eyed Navigator (WUR)",
+            commanders: decks::BRUSE_TARL_24_COMMANDERS,
+            main: decks::BRUSE_TARL_24_MAIN,
+        },
+        // Seat 5002: Kraum, Ludevic's Opus and Ravos, Soultender's EDHREC average deck. `--pod-decks 5002`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Ravos, Soultender (WUBR)",
+            commanders: decks::KRAUM_11_COMMANDERS,
+            main: decks::KRAUM_11_MAIN,
+        },
+        // Seat 5003: Ganax, Astral Hunter and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 5003`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Agent of the Iron Throne (BR)",
+            commanders: decks::GANAX_14_COMMANDERS,
+            main: decks::GANAX_14_MAIN,
+        },
+        // Seat 5004: Dargo, the Shipwrecker and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 5004`.
+        PodDeck {
+            name: "Dargo, the Shipwrecker and Ikra Shidiqi, the Usurper (BRG)",
+            commanders: decks::DARGO_25_COMMANDERS,
+            main: decks::DARGO_25_MAIN,
+        },
+        // Seat 5005: Ganax, Astral Hunter and Far Traveler's EDHREC average deck. `--pod-decks 5005`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Far Traveler (WR)",
+            commanders: decks::GANAX_15_COMMANDERS,
+            main: decks::GANAX_15_MAIN,
+        },
+        // Seat 5006: Shadowheart, Dark Justiciar and Folk Hero's EDHREC average deck. `--pod-decks 5006`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Folk Hero (WB)",
+            commanders: decks::SHADOWHEART_19_COMMANDERS,
+            main: decks::SHADOWHEART_19_MAIN,
+        },
+        // Seat 5007: Akroma, Vision of Ixidor and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 5007`.
+        PodDeck {
+            name: "Akroma, Vision of Ixidor and Ikra Shidiqi, the Usurper (WBG)",
+            commanders: decks::AKROMA_27_COMMANDERS,
+            main: decks::AKROMA_27_MAIN,
+        },
+        // Seat 5008: Shadowheart, Dark Justiciar and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 5008`.
+        PodDeck {
+            name: "Shadowheart, Dark Justiciar and Agent of the Iron Throne (B)",
+            commanders: decks::SHADOWHEART_20_COMMANDERS,
+            main: decks::SHADOWHEART_20_MAIN,
+        },
+        // Seat 5009: Jeska, Thrice Reborn and Kediss, Emberclaw Familiar's EDHREC average deck. `--pod-decks 5009`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Kediss, Emberclaw Familiar (R)",
+            commanders: decks::JESKA_15_COMMANDERS,
+            main: decks::JESKA_15_MAIN,
+        },
+        // Seat 5010: Tymna the Weaver and Vial Smasher the Fierce's EDHREC average deck. `--pod-decks 5010`.
+        PodDeck {
+            name: "Tymna the Weaver and Vial Smasher the Fierce (WBR)",
+            commanders: decks::TYMNA_THE_WEAVER_COMMANDERS,
+            main: decks::TYMNA_THE_WEAVER_MAIN,
+        },
+        // Seat 5011: Bruse Tarl, Boorish Herder and Silas Renn, Seeker Adept's EDHREC average deck. `--pod-decks 5011`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Silas Renn, Seeker Adept (WUBR)",
+            commanders: decks::BRUSE_TARL_25_COMMANDERS,
+            main: decks::BRUSE_TARL_25_MAIN,
+        },
+        // Seat 5012: Durnan of the Yawning Portal and Sword Coast Sailor's EDHREC average deck. `--pod-decks 5012`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Sword Coast Sailor (UG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_16_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_16_MAIN,
+        },
+        // Seat 5013: The Second Doctor and Susan Foreman's EDHREC average deck. `--pod-decks 5013`.
+        PodDeck {
+            name: "The Second Doctor and Susan Foreman (WUG)",
+            commanders: decks::THE_SECOND_DOCTOR_12_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_12_MAIN,
+        },
+        // Seat 5014: Rasaad yn Bashir and Sword Coast Sailor's EDHREC average deck. `--pod-decks 5014`.
+        PodDeck {
+            name: "Rasaad yn Bashir and Sword Coast Sailor (WU)",
+            commanders: decks::RASAAD_YN_BASHIR_28_COMMANDERS,
+            main: decks::RASAAD_YN_BASHIR_28_MAIN,
+        },
+        // Seat 5015: Nadier, Agent of the Duskenel and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 5015`.
+        PodDeck {
+            name: "Nadier, Agent of the Duskenel and Tana, the Bloodsower (BRG)",
+            commanders: decks::NADIER_11_COMMANDERS,
+            main: decks::NADIER_11_MAIN,
+        },
+        // Seat 5016: Akiri, Line-Slinger and Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 5016`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Malcolm, Keen-Eyed Navigator (WUR)",
+            commanders: decks::AKIRI_20_COMMANDERS,
+            main: decks::AKIRI_20_MAIN,
+        },
+        // Seat 5017: Silas Renn, Seeker Adept and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 5017`.
+        PodDeck {
+            name: "Silas Renn, Seeker Adept and Toggo, Goblin Weaponsmith (UBR)",
+            commanders: decks::SILAS_RENN_3_COMMANDERS,
+            main: decks::SILAS_RENN_3_MAIN,
+        },
+        // Seat 5018: Silas Renn, Seeker Adept and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 5018`.
+        PodDeck {
+            name: "Silas Renn, Seeker Adept and Tana, the Bloodsower (UBRG)",
+            commanders: decks::SILAS_RENN_4_COMMANDERS,
+            main: decks::SILAS_RENN_4_MAIN,
+        },
+        // Seat 5019: Jaheira, Friend of the Forest and Guild Artisan's EDHREC average deck. `--pod-decks 5019`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Guild Artisan (RG)",
+            commanders: decks::JAHEIRA_14_COMMANDERS,
+            main: decks::JAHEIRA_14_MAIN,
+        },
+        // Seat 5020: Sakashima of a Thousand Faces and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 5020`.
+        PodDeck {
+            name: "Sakashima of a Thousand Faces and Tana, the Bloodsower (URG)",
+            commanders: decks::SAKASHIMA_OF_A_THOUSAND_FACES_7_COMMANDERS,
+            main: decks::SAKASHIMA_OF_A_THOUSAND_FACES_7_MAIN,
+        },
+        // Seat 5021: Bruse Tarl, Boorish Herder and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 5021`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Ishai, Ojutai Dragonspeaker (WUR)",
+            commanders: decks::BRUSE_TARL_26_COMMANDERS,
+            main: decks::BRUSE_TARL_26_MAIN,
+        },
+        // Seat 5022: Kraum, Ludevic's Opus and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 5022`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Thrasios, Triton Hero (URG)",
+            commanders: decks::KRAUM_12_COMMANDERS,
+            main: decks::KRAUM_12_MAIN,
+        },
+        // Seat 5023: Akiri, Line-Slinger and Armix, Filigree Thrasher's EDHREC average deck. `--pod-decks 5023`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Armix, Filigree Thrasher (WBR)",
+            commanders: decks::AKIRI_21_COMMANDERS,
+            main: decks::AKIRI_21_MAIN,
+        },
+        // Seat 5024: Ishai, Ojutai Dragonspeaker and Tymna the Weaver's EDHREC average deck. `--pod-decks 5024`.
+        PodDeck {
+            name: "Ishai, Ojutai Dragonspeaker and Tymna the Weaver (WUB)",
+            commanders: decks::ISHAI_19_COMMANDERS,
+            main: decks::ISHAI_19_MAIN,
+        },
+        // Seat 5025: Francisco, Fowl Marauder and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 5025`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Kraum, Ludevic's Opus (UBR)",
+            commanders: decks::FRANCISCO_26_COMMANDERS,
+            main: decks::FRANCISCO_26_MAIN,
+        },
+        // Seat 5026: Kraum, Ludevic's Opus and Ludevic, Necro-Alchemist's EDHREC average deck. `--pod-decks 5026`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus and Ludevic, Necro-Alchemist (UR)",
+            commanders: decks::KRAUM_13_COMMANDERS,
+            main: decks::KRAUM_13_MAIN,
+        },
+        // Seat 5027: Francisco, Fowl Marauder and Rograkh, Son of Rohgahh's EDHREC average deck. `--pod-decks 5027`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Rograkh, Son of Rohgahh (BR)",
+            commanders: decks::FRANCISCO_27_COMMANDERS,
+            main: decks::FRANCISCO_27_MAIN,
+        },
+        // Seat 5028: Eligeth, Crossroads Augur and Esior, Wardwing Familiar's EDHREC average deck. `--pod-decks 5028`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Esior, Wardwing Familiar (U)",
+            commanders: decks::ELIGETH_33_COMMANDERS,
+            main: decks::ELIGETH_33_MAIN,
+        },
+        // Seat 5029: Sidar Kondo of Jamuraa and Tormod, the Desecrator's EDHREC average deck. `--pod-decks 5029`.
+        PodDeck {
+            name: "Sidar Kondo of Jamuraa and Tormod, the Desecrator (WBG)",
+            commanders: decks::SIDAR_KONDO_OF_JAMURAA_6_COMMANDERS,
+            main: decks::SIDAR_KONDO_OF_JAMURAA_6_MAIN,
+        },
+        // Seat 5030: Akiri, Line-Slinger and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 5030`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Reyhan, Last of the Abzan (WBRG)",
+            commanders: decks::AKIRI_22_COMMANDERS,
+            main: decks::AKIRI_22_MAIN,
+        },
+        // Seat 5031: Falthis, Shadowcat Familiar and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 5031`.
+        PodDeck {
+            name: "Falthis, Shadowcat Familiar and Jeska, Thrice Reborn (BR)",
+            commanders: decks::FALTHIS_29_COMMANDERS,
+            main: decks::FALTHIS_29_MAIN,
+        },
+        // Seat 5032: Ardenn, Intrepid Archaeologist and Jeska, Thrice Reborn's EDHREC average deck. `--pod-decks 5032`.
+        PodDeck {
+            name: "Ardenn, Intrepid Archaeologist and Jeska, Thrice Reborn (WR)",
+            commanders: decks::ARDENN_28_COMMANDERS,
+            main: decks::ARDENN_28_MAIN,
+        },
+        // Seat 5033: Wilson, Refined Grizzly and Sword Coast Sailor's EDHREC average deck. `--pod-decks 5033`.
+        PodDeck {
+            name: "Wilson, Refined Grizzly and Sword Coast Sailor (UG)",
+            commanders: decks::WILSON_17_COMMANDERS,
+            main: decks::WILSON_17_MAIN,
+        },
+        // Seat 5034: Keleth, Sunmane Familiar and Reyhan, Last of the Abzan's EDHREC average deck. `--pod-decks 5034`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Reyhan, Last of the Abzan (WBG)",
+            commanders: decks::KELETH_24_COMMANDERS,
+            main: decks::KELETH_24_MAIN,
+        },
+        // Seat 5035: Brinelin, the Moon Kraken and Ikra Shidiqi, the Usurper's EDHREC average deck. `--pod-decks 5035`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Ikra Shidiqi, the Usurper (UBG)",
+            commanders: decks::BRINELIN_30_COMMANDERS,
+            main: decks::BRINELIN_30_MAIN,
+        },
+        // Seat 5036: Akiri, Line-Slinger and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 5036`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Toggo, Goblin Weaponsmith (WR)",
+            commanders: decks::AKIRI_23_COMMANDERS,
+            main: decks::AKIRI_23_MAIN,
+        },
+        // Seat 5037: Abdel Adrian, Gorion's Ward and Master Chef's EDHREC average deck. `--pod-decks 5037`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Master Chef (WG)",
+            commanders: decks::ABDEL_ADRIAN_18_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_18_MAIN,
+        },
+        // Seat 5038: Elmar, Ulvenwald Informant and Sophina, Spearsage Deserter's EDHREC average deck. `--pod-decks 5038`.
+        PodDeck {
+            name: "Elmar, Ulvenwald Informant and Sophina, Spearsage Deserter (WRG)",
+            commanders: decks::ELMAR_3_COMMANDERS,
+            main: decks::ELMAR_3_MAIN,
+        },
+        // Seat 5039: Tevesh Szat, Doom of Fools and Tymna the Weaver's EDHREC average deck. `--pod-decks 5039`.
+        PodDeck {
+            name: "Tevesh Szat, Doom of Fools and Tymna the Weaver (WB)",
+            commanders: decks::TEVESH_SZAT_2_COMMANDERS,
+            main: decks::TEVESH_SZAT_2_MAIN,
+        },
+        // Seat 5040: Jeska, Thrice Reborn and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 5040`.
+        PodDeck {
+            name: "Jeska, Thrice Reborn and Tana, the Bloodsower (RG)",
+            commanders: decks::JESKA_16_COMMANDERS,
+            main: decks::JESKA_16_MAIN,
+        },
+        // Seat 5041: Gale, Waterdeep Prodigy and Raised by Giants's EDHREC average deck. `--pod-decks 5041`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Raised by Giants (UG)",
+            commanders: decks::GALE_22_COMMANDERS,
+            main: decks::GALE_22_MAIN,
+        },
+        // Seat 5042: Francisco, Fowl Marauder and Ishai, Ojutai Dragonspeaker's EDHREC average deck. `--pod-decks 5042`.
+        PodDeck {
+            name: "Francisco, Fowl Marauder and Ishai, Ojutai Dragonspeaker (WUB)",
+            commanders: decks::FRANCISCO_28_COMMANDERS,
+            main: decks::FRANCISCO_28_MAIN,
+        },
+        // Seat 5043: Livio, Oathsworn Sentinel and Thrasios, Triton Hero's EDHREC average deck. `--pod-decks 5043`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Thrasios, Triton Hero (WUG)",
+            commanders: decks::LIVIO_12_COMMANDERS,
+            main: decks::LIVIO_12_MAIN,
+        },
+        // Seat 5044: Alena, Kessig Trapper and Kodama of the East Tree's EDHREC average deck. `--pod-decks 5044`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Kodama of the East Tree (RG)",
+            commanders: decks::ALENA_36_COMMANDERS,
+            main: decks::ALENA_36_MAIN,
+        },
+        // Seat 5045: Bruse Tarl, Boorish Herder and Tana, the Bloodsower's EDHREC average deck. `--pod-decks 5045`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Tana, the Bloodsower (WRG)",
+            commanders: decks::BRUSE_TARL_27_COMMANDERS,
+            main: decks::BRUSE_TARL_27_MAIN,
+        },
+        // Seat 5046: Vhal, Candlekeep Researcher and Clan Crafter's EDHREC average deck. `--pod-decks 5046`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Clan Crafter (U)",
+            commanders: decks::VHAL_21_COMMANDERS,
+            main: decks::VHAL_21_MAIN,
+        },
+        // Seat 5047: Ganax, Astral Hunter and Candlekeep Sage's EDHREC average deck. `--pod-decks 5047`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Candlekeep Sage (UR)",
+            commanders: decks::GANAX_16_COMMANDERS,
+            main: decks::GANAX_16_MAIN,
+        },
+        // Seat 5048: Sidar Kondo of Jamuraa and Tevesh Szat, Doom of Fools's EDHREC average deck. `--pod-decks 5048`.
+        PodDeck {
+            name: "Sidar Kondo of Jamuraa and Tevesh Szat, Doom of Fools (WBG)",
+            commanders: decks::SIDAR_KONDO_OF_JAMURAA_7_COMMANDERS,
+            main: decks::SIDAR_KONDO_OF_JAMURAA_7_MAIN,
+        },
+        // Seat 5049: Kamahl, Heart of Krosa and Kodama of the East Tree's EDHREC average deck. `--pod-decks 5049`.
+        PodDeck {
+            name: "Kamahl, Heart of Krosa and Kodama of the East Tree (G)",
+            commanders: decks::KAMAHL_17_COMMANDERS,
+            main: decks::KAMAHL_17_MAIN,
+        },
+        // Seat 5050: Durnan of the Yawning Portal and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 5050`.
+        PodDeck {
+            name: "Durnan of the Yawning Portal and Agent of the Shadow Thieves (BG)",
+            commanders: decks::DURNAN_OF_THE_YAWNING_PORTAL_17_COMMANDERS,
+            main: decks::DURNAN_OF_THE_YAWNING_PORTAL_17_MAIN,
+        },
+        // Seat 5051: Sivriss, Nightmare Speaker and Agent of the Iron Throne's EDHREC average deck. `--pod-decks 5051`.
+        PodDeck {
+            name: "Sivriss, Nightmare Speaker and Agent of the Iron Throne (B)",
+            commanders: decks::SIVRISS_17_COMMANDERS,
+            main: decks::SIVRISS_17_MAIN,
+        },
+        // Seat 5052: Sakashima of a Thousand Faces and Toggo, Goblin Weaponsmith's EDHREC average deck. `--pod-decks 5052`.
+        PodDeck {
+            name: "Sakashima of a Thousand Faces and Toggo, Goblin Weaponsmith (UR)",
+            commanders: decks::SAKASHIMA_OF_A_THOUSAND_FACES_8_COMMANDERS,
+            main: decks::SAKASHIMA_OF_A_THOUSAND_FACES_8_MAIN,
+        },
+        // Seat 5053: Bjorna, Nightfall Alchemist and Hargilde, Kindly Runechanter's EDHREC average deck. `--pod-decks 5053`.
+        PodDeck {
+            name: "Bjorna, Nightfall Alchemist and Hargilde, Kindly Runechanter (WUR)",
+            commanders: decks::BJORNA_4_COMMANDERS,
+            main: decks::BJORNA_4_MAIN,
+        },
+        // Seat 5054: Kediss, Emberclaw Familiar and Tymna the Weaver's EDHREC average deck. `--pod-decks 5054`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar and Tymna the Weaver (WBR)",
+            commanders: decks::KEDISS_18_COMMANDERS,
+            main: decks::KEDISS_18_MAIN,
+        },
+        // Seat 5055: The Fourteenth Doctor and Susan Foreman's EDHREC average deck. `--pod-decks 5055`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Susan Foreman (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_11_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_11_MAIN,
+        },
+        // Seat 5056: Gilanra, Caller of Wirewood and Kamahl, Heart of Krosa's EDHREC average deck. `--pod-decks 5056`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Kamahl, Heart of Krosa (G)",
+            commanders: decks::GILANRA_21_COMMANDERS,
+            main: decks::GILANRA_21_MAIN,
+        },
+        // Seat 5057: Gilanra, Caller of Wirewood and Kraum, Ludevic's Opus's EDHREC average deck. `--pod-decks 5057`.
+        PodDeck {
+            name: "Gilanra, Caller of Wirewood and Kraum, Ludevic's Opus (URG)",
+            commanders: decks::GILANRA_22_COMMANDERS,
+            main: decks::GILANRA_22_MAIN,
+        },
+        // Seat 5058: The Sixth Doctor and Sarah Jane Smith's EDHREC average deck. `--pod-decks 5058`.
+        PodDeck {
+            name: "The Sixth Doctor and Sarah Jane Smith (WUG)",
+            commanders: decks::THE_SIXTH_DOCTOR_12_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_12_MAIN,
+        },
     ]
 }
 
@@ -37123,6 +37723,106 @@ mod tests {
             ("Ishai, Ojutai Dragonspeaker and Kodama of the East Tree", &[0x1D72]),
             ("Shadowheart, Dark Justiciar and Noble Heritage", &[0x1D73]),
             ("Jeska, Thrice Reborn and Tevesh Szat, Doom of Fools", &[0x1D74]),
+            ("The Fifth Doctor and Susan Foreman", &[0x1D75]),
+            ("Sakashima of a Thousand Faces and Tormod, the Desecrator", &[0x1D76]),
+            ("Kamahl, Heart of Krosa and Tymna the Weaver", &[0x1D77]),
+            ("Gale, Waterdeep Prodigy and Master Chef", &[0x1D78]),
+            ("The War Doctor and K-9, Mark I", &[0x1D79]),
+            ("Falthis, Shadowcat Familiar and Kediss, Emberclaw Familiar", &[0x1D7A]),
+            ("Kraum, Ludevic's Opus and Tevesh Szat, Doom of Fools", &[0x1D7B]),
+            ("Shadowheart, Dark Justiciar and Inspiring Leader", &[0x1D7C]),
+            ("Esior, Wardwing Familiar and Tymna the Weaver", &[0x1D7D]),
+            ("Ishai, Ojutai Dragonspeaker and Thrasios, Triton Hero", &[0x1D7E]),
+            ("Sidar Kondo of Jamuraa and Tana, the Bloodsower", &[0x1D7F]),
+            ("Sidar Kondo of Jamuraa and Vial Smasher the Fierce", &[0x1D80]),
+            ("Lae'zel, Vlaakith's Champion and Noble Heritage", &[0x1D81]),
+            ("Zellix, Sanity Flayer and Agent of the Iron Throne", &[0x1D82]),
+            ("Krark, the Thumbless and Kydele, Chosen of Kruphix", &[0x1D83]),
+            ("Ardenn, Intrepid Archaeologist and Toggo, Goblin Weaponsmith", &[0x1D84]),
+            ("Ikra Shidiqi, the Usurper and Sakashima of a Thousand Faces", &[0x1D85]),
+            ("Ganax, Astral Hunter and Haunted One", &[0x1D86]),
+            ("Ardenn, Intrepid Archaeologist and Vial Smasher the Fierce", &[0x1D87]),
+            ("Malcolm, Keen-Eyed Navigator and Sakashima of a Thousand Faces", &[0x1D88]),
+            ("Wilson, Refined Grizzly and Tavern Brawler", &[0x1D89]),
+            ("Kraum, Ludevic's Opus and Tormod, the Desecrator", &[0x1D8A]),
+            ("Bjorna, Nightfall Alchemist and Othelm, Sigardian Outcast", &[0x1D8B]),
+            ("Ravos, Soultender and Reyhan, Last of the Abzan", &[0x1D8C]),
+            ("Wyll, Blade of Frontiers and Dungeon Delver", &[0x1D8D]),
+            ("Bruse Tarl, Boorish Herder and Tymna the Weaver", &[0x1D8E]),
+            ("Kydele, Chosen of Kruphix and Tevesh Szat, Doom of Fools", &[0x1D8F]),
+            ("Ganax, Astral Hunter and Dragon Cultist", &[0x1D90]),
+            ("Ikra Shidiqi, the Usurper and Ludevic, Necro-Alchemist", &[0x1D91]),
+            ("Ikra Shidiqi, the Usurper and Rograkh, Son of Rohgahh", &[0x1D92]),
+            ("Abdel Adrian, Gorion's Ward and Street Urchin", &[0x1D93]),
+            ("Ishai, Ojutai Dragonspeaker and Tevesh Szat, Doom of Fools", &[0x1D94]),
+            ("Alharu, Solemn Ritualist and Reyhan, Last of the Abzan", &[0x1D95]),
+            ("Keskit, the Flesh Sculptor and Toggo, Goblin Weaponsmith", &[0x1D96]),
+            ("Leonardo, the Balance and Splinter, the Mentor", &[0x1D97]),
+            ("Ishai, Ojutai Dragonspeaker and Krark, the Thumbless", &[0x1D98]),
+            ("Sengir, the Dark Baron and Tevesh Szat, Doom of Fools", &[0x1D99]),
+            ("Falthis, Shadowcat Familiar and Tana, the Bloodsower", &[0x1D9A]),
+            ("Jeska, Thrice Reborn and Thrasios, Triton Hero", &[0x1D9B]),
+            ("Thrasios, Triton Hero and Tormod, the Desecrator", &[0x1D9C]),
+            ("Ganax, Astral Hunter and Guild Artisan", &[0x1D9D]),
+            ("Breeches, Brazen Plunderer and Francisco, Fowl Marauder", &[0x1D9E]),
+            ("Bruse Tarl, Boorish Herder and Malcolm, Keen-Eyed Navigator", &[0x1D9F]),
+            ("Kraum, Ludevic's Opus and Ravos, Soultender", &[0x1DA0]),
+            ("Ganax, Astral Hunter and Agent of the Iron Throne", &[0x1DA1]),
+            ("Dargo, the Shipwrecker and Ikra Shidiqi, the Usurper", &[0x1DA2]),
+            ("Ganax, Astral Hunter and Far Traveler", &[0x1DA3]),
+            ("Shadowheart, Dark Justiciar and Folk Hero", &[0x1DA4]),
+            ("Akroma, Vision of Ixidor and Ikra Shidiqi, the Usurper", &[0x1DA5]),
+            ("Shadowheart, Dark Justiciar and Agent of the Iron Throne", &[0x1DA6]),
+            ("Jeska, Thrice Reborn and Kediss, Emberclaw Familiar", &[0x1DA7]),
+            ("Tymna the Weaver and Vial Smasher the Fierce", &[0x1DA8]),
+            ("Bruse Tarl, Boorish Herder and Silas Renn, Seeker Adept", &[0x1DA9]),
+            ("Durnan of the Yawning Portal and Sword Coast Sailor", &[0x1DAA]),
+            ("The Second Doctor and Susan Foreman", &[0x1DAB]),
+            ("Rasaad yn Bashir and Sword Coast Sailor", &[0x1DAC]),
+            ("Nadier, Agent of the Duskenel and Tana, the Bloodsower", &[0x1DAD]),
+            ("Akiri, Line-Slinger and Malcolm, Keen-Eyed Navigator", &[0x1DAE]),
+            ("Silas Renn, Seeker Adept and Toggo, Goblin Weaponsmith", &[0x1DAF]),
+            ("Silas Renn, Seeker Adept and Tana, the Bloodsower", &[0x1DB0]),
+            ("Jaheira, Friend of the Forest and Guild Artisan", &[0x1DB1]),
+            ("Sakashima of a Thousand Faces and Tana, the Bloodsower", &[0x1DB2]),
+            ("Bruse Tarl, Boorish Herder and Ishai, Ojutai Dragonspeaker", &[0x1DB3]),
+            ("Kraum, Ludevic's Opus and Thrasios, Triton Hero", &[0x1DB4]),
+            ("Akiri, Line-Slinger and Armix, Filigree Thrasher", &[0x1DB5]),
+            ("Ishai, Ojutai Dragonspeaker and Tymna the Weaver", &[0x1DB6]),
+            ("Francisco, Fowl Marauder and Kraum, Ludevic's Opus", &[0x1DB7]),
+            ("Kraum, Ludevic's Opus and Ludevic, Necro-Alchemist", &[0x1DB8]),
+            ("Francisco, Fowl Marauder and Rograkh, Son of Rohgahh", &[0x1DB9]),
+            ("Eligeth, Crossroads Augur and Esior, Wardwing Familiar", &[0x1DBA]),
+            ("Sidar Kondo of Jamuraa and Tormod, the Desecrator", &[0x1DBB]),
+            ("Akiri, Line-Slinger and Reyhan, Last of the Abzan", &[0x1DBC]),
+            ("Falthis, Shadowcat Familiar and Jeska, Thrice Reborn", &[0x1DBD]),
+            ("Ardenn, Intrepid Archaeologist and Jeska, Thrice Reborn", &[0x1DBE]),
+            ("Wilson, Refined Grizzly and Sword Coast Sailor", &[0x1DBF]),
+            ("Keleth, Sunmane Familiar and Reyhan, Last of the Abzan", &[0x1DC0]),
+            ("Brinelin, the Moon Kraken and Ikra Shidiqi, the Usurper", &[0x1DC1]),
+            ("Akiri, Line-Slinger and Toggo, Goblin Weaponsmith", &[0x1DC2]),
+            ("Abdel Adrian, Gorion's Ward and Master Chef", &[0x1DC3]),
+            ("Elmar, Ulvenwald Informant and Sophina, Spearsage Deserter", &[0x1DC4]),
+            ("Tevesh Szat, Doom of Fools and Tymna the Weaver", &[0x1DC5]),
+            ("Jeska, Thrice Reborn and Tana, the Bloodsower", &[0x1DC6]),
+            ("Gale, Waterdeep Prodigy and Raised by Giants", &[0x1DC7]),
+            ("Francisco, Fowl Marauder and Ishai, Ojutai Dragonspeaker", &[0x1DC8]),
+            ("Livio, Oathsworn Sentinel and Thrasios, Triton Hero", &[0x1DC9]),
+            ("Alena, Kessig Trapper and Kodama of the East Tree", &[0x1DCA]),
+            ("Bruse Tarl, Boorish Herder and Tana, the Bloodsower", &[0x1DCB]),
+            ("Vhal, Candlekeep Researcher and Clan Crafter", &[0x1DCC]),
+            ("Ganax, Astral Hunter and Candlekeep Sage", &[0x1DCD]),
+            ("Sidar Kondo of Jamuraa and Tevesh Szat, Doom of Fools", &[0x1DCE]),
+            ("Kamahl, Heart of Krosa and Kodama of the East Tree", &[0x1DCF]),
+            ("Durnan of the Yawning Portal and Agent of the Shadow Thieves", &[0x1DD0]),
+            ("Sivriss, Nightmare Speaker and Agent of the Iron Throne", &[0x1DD1]),
+            ("Sakashima of a Thousand Faces and Toggo, Goblin Weaponsmith", &[0x1DD2]),
+            ("Bjorna, Nightfall Alchemist and Hargilde, Kindly Runechanter", &[0x1DD3]),
+            ("Kediss, Emberclaw Familiar and Tymna the Weaver", &[0x1DD4]),
+            ("The Fourteenth Doctor and Susan Foreman", &[0x1DD5]),
+            ("Gilanra, Caller of Wirewood and Kamahl, Heart of Krosa", &[0x1DD6]),
+            ("Gilanra, Caller of Wirewood and Kraum, Ludevic's Opus", &[0x1DD7]),
+            ("The Sixth Doctor and Sarah Jane Smith", &[0x1DD8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
