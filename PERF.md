@@ -3136,6 +3136,23 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-23 late (Commander run, `01EtjJfo`) — guardrail; death-funnel fixes, five primitives
+
+Both death funnels now ask `death_was_replaced` after the removal (one graveyard scan per death) and the
+lethal-damage funnel multiplies by the ally / death doublers; `PlayerCold::completed_dungeons` is cold.
+`release-fast` bot_ladder at `1223ee692` (before the Drivnod / soulbond fixes; sweeps 10126-10130 at `b4c780841`), 4-core Xeon @ 2.80 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 peak_rss_mib 50.1
+2-player pools   seed 10120: cube 2,400 / sos 1,500 / sealed 3,600, 0 undecided
+pods             seed 10121, 300 games at each of 2..8 seats: 2,100 decided;
+                 turns/game 20.00 / 33.35 / 45.65 / 58.95 / 69.71 / 81.37 / 100.82
+sweeps           random seat groups over all 5,158 seats: seeds 10122-10125 (release-fast) 2,690 games,
+                 10126-10130 (overflow + debug-assertions) 2,060 games — 0 panics, 0 assertions;
+                 4 CR 104.4a draws, 1 token-engine board cap (Academy Manufactor + Farmer Cotton X=35)
+```
+
 ### 2026-10-23 (Commander run, `01Uv3VwF`) — guardrail; 105 seats, card fixes, two engine fields
 
 `PreventionShield::combat_only` (a `Copy` struct, one bool) and `ColdState::grants_while_source` (cold, read

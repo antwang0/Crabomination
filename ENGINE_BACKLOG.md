@@ -202,7 +202,7 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
-## FIXED/OPEN 2026-10-23 (Commander run, `01EtjJfo`) — a death-replacement bug class, 19 seated-deck 🟡 rows
+## FIXED/OPEN 2026-10-23 (Commander run, `01EtjJfo`) — a death-replacement bug class, 17 seated-deck 🟡 rows
 
 - **FIXED (bug class, CR 700.4 / 614.1a):** both death funnels (the SBA lethal sweep and
   `remove_to_graveyard_with_triggers`) collected the dying permanent's own dies triggers before the removal
@@ -214,6 +214,13 @@ the handoff.
   `core_rules::cr_rules::cr_700_4_a_replaced_death_fires_no_dies_trigger_of_its_own`. Fallout: Ancient
   Adamantoise had modelled its printed dies-trigger exile as `dies_to_exile` (fixed); the Rofellos pod
   table's seed 4242 moved 4050 -> 3966 actions (Kokusho / Judith under Sanctifier).
+- **FIXED (same two funnels, two more divergences):** the lethal-damage funnel pushed a dying creature's own
+  death trigger once where the destroy funnel applied Drivnod / Katara (`self_death_trigger_fires`, test
+  `one::drivnod_doubles_a_lethal_damage_death`); the destroy funnel dropped soulbond-granted dies triggers
+  (`push_soulbond_death_triggers`, Breathkeeper Seraph by Murder). Still divergent, unreached by a seated card:
+  the lethal funnel ignores a creature's own `PermanentDied` self-trigger (only artifacts print it).
+- **OPEN:** Gandalf the White's "leaving" half — the dispatcher's `TriggerCandidate` carries no leaver id, so a
+  leave doubler can't read what left. One token-engine board cap (TODO NEXT item 6).
 - **Primitives:** `StaticEffect::ExileDyingOpponentCreaturesWithCounter` (Ravenloft Adventurer, was a dies
   trigger); `Predicate::CompletedDungeon` + `PlayerCold::completed_dungeons` (Acererak);
   `SelectionRequirement::HasProtection` / `HasPartner` (Akroma, Vision of Ixidor); `StaticEffect::CrewPowerBonus`
@@ -221,10 +228,10 @@ the handoff.
   three crew-only Pilot tokens); `SelectionRequirement::EnteredByCast` (The Tarrasque from the command zone).
 - **Card-only:** Jhoira's Timebug, Hardy Outlander, Heartwood Storyteller, Fathom Fleet Swordjack, Shredder's
   Technique, The Misty Mountains Cold, Nim Deathmantle, Gathering Stone, Garruk's Harbinger, Rulik Mons,
-  Cosmic Rebirth. Rows picked by how many seated decks hold the card (a decks.rs token count over the 🟡
+  Cosmic Rebirth, Scion of Halaster. Rows picked by how many seated decks hold the card (a decks.rs token count over the 🟡
   names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
-  Pilgrim, Scion of Halaster, Livio.
+  Pilgrim, Livio.
 
 ## FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 305 seats, four bug classes gated
 
