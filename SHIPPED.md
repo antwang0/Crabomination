@@ -10,8 +10,13 @@ exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
 - **Reality Fracture complete** (FRA 280 / 280 non-basic, FRC 87 / 87 — the
-  last 42 in `sets::fra`; the rest shipped with the Commander decks that
-  needed them, `decks::cmdr_*`). Primitives:
+  last 47 in `sets::fra`; the rest shipped with the Commander decks that
+  needed them, `decks::cmdr_*`). ⚠ The 2026-10-20 "280 / 280" was five short:
+  the gap check matched the prepare creatures by their *spell* halves (Peer
+  Review, Omit Variables, Vicious Verse already existed on other creatures),
+  so Semester Foreseer, Void Extrapolator, Theorix Metamage, Stingerquill
+  Voxmancer and Whiplash Wordsmith were missing until 2026-10-23 — found when
+  `fra_card_eval` resolved Draftsim's FRA list by creature name. Primitives:
   `Value::NonlandCardsDiscardedThisEffectBy` (Garruk, Veiled Butcher's −3),
   `Effect::WishPairOpponentChooses` (Extrapolate the Impossible),
   `MayPlayDuration::WhileSourceOnBattlefieldWithThreshold` (Null Summoner).

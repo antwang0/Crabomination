@@ -20134,6 +20134,11 @@ static FIN2: &[Factory] = &[
     super::fin2::esper_origins,
 ];
 static FRA: &[Factory] = &[
+    super::fra::semester_foreseer,
+    super::fra::void_extrapolator,
+    super::fra::theorix_metamage,
+    super::fra::stingerquill_voxmancer,
+    super::fra::whiplash_wordsmith,
     super::fra::academic_ascent,
     super::fra::memory_trap,
     super::fra::refute_destiny,

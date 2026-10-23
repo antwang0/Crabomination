@@ -953,3 +953,155 @@ pub fn way_of_the_wildspeaker() -> CardDefinition {
         ..legendary_enchantment("Way of the Wildspeaker", cost(&[generic(4), g()]))
     }
 }
+
+// ── The five prepare creatures (missing until 2026-10-23) ─────────────────
+
+/// Omit Variables — {U/B} sorcery: mill three. The prepare spell of Void
+/// Extrapolator and Theorix Metamage (and of Paradox Shaper, decks).
+fn omit_variables() -> Arc<CardDefinition> {
+    Arc::new(spell(
+        "Omit Variables",
+        cost(&[hybrid(Color::Blue, Color::Black)]),
+        CardType::Sorcery,
+        Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+    ))
+}
+
+/// Vicious Verse — {B/R} sorcery: 1 damage to target opponent. The prepare
+/// spell of Stingerquill Voxmancer and Whiplash Wordsmith (and of Hallway
+/// Heckler, decks).
+fn vicious_verse() -> Arc<CardDefinition> {
+    Arc::new(spell(
+        "Vicious Verse",
+        cost(&[hybrid(Color::Black, Color::Red)]),
+        CardType::Sorcery,
+        Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::ONE },
+    ))
+}
+
+/// Threshold — "seven or more cards in your graveyard" as a self pump.
+fn threshold_pump(description: &'static str, power: i32, toughness: i32, keywords: Vec<Keyword>) -> StaticAbility {
+    StaticAbility {
+        description,
+        effect: StaticEffect::PumpSelfIf {
+            condition: Predicate::ThresholdActive { who: PlayerRef::You },
+            power,
+            toughness,
+            keywords,
+        },
+    }
+}
+
+/// Semester Foreseer // Peer Review — {3}{U} 3/4 Human Wizard, enters
+/// prepared; ETB: surveil 1. Peer Review ({2}{W/U} sorcery): a Cadet, then
+/// surveil 1.
+pub fn semester_foreseer() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE })],
+        prepare_spell: Some(Arc::new(spell(
+            "Peer Review",
+            cost(&[generic(2), hybrid(Color::White, Color::Blue)]),
+            CardType::Sorcery,
+            Effect::Seq(vec![make(cadet()), Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }]),
+        ))),
+        ..creature("Semester Foreseer", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 4)
+    }
+}
+
+/// Void Extrapolator // Omit Variables — {1}{B} 2/2 Aetherborn Warlock,
+/// enters prepared; threshold: +1/+1.
+pub fn void_extrapolator() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        static_abilities: vec![threshold_pump(
+            "Threshold — This creature gets +1/+1 as long as there are seven or more cards in your graveyard.",
+            1,
+            1,
+            vec![],
+        )],
+        prepare_spell: Some(omit_variables()),
+        ..creature("Void Extrapolator", cost(&[generic(1), b()]), vec![CreatureType::Aetherborn, CreatureType::Warlock], 2, 2)
+    }
+}
+
+/// Theorix Metamage // Omit Variables — {2}{U/B} 2/3 Shade Wizard, enters
+/// prepared; threshold: +1/+0 and flying.
+pub fn theorix_metamage() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        static_abilities: vec![threshold_pump(
+            "Threshold — This creature gets +1/+0 and has flying as long as there are seven or more cards in your graveyard.",
+            1,
+            0,
+            vec![Keyword::Flying],
+        )],
+        prepare_spell: Some(omit_variables()),
+        ..creature(
+            "Theorix Metamage",
+            cost(&[generic(2), hybrid(Color::Blue, Color::Black)]),
+            vec![CreatureType::Shade, CreatureType::Wizard],
+            2,
+            3,
+        )
+    }
+}
+
+/// Stingerquill Voxmancer // Vicious Verse — {B/R} 1/2 Goblin Sorcerer. At
+/// the beginning of your upkeep, if it isn't prepared, it becomes prepared
+/// (an intervening if, CR 603.4: the filter is read when the step begins).
+pub fn stingerquill_voxmancer() -> CardDefinition {
+    let mut upkeep = TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect: Effect::AddCounterCapped {
+            what: Selector::This,
+            kind: CounterType::Prepared,
+            amount: Value::ONE,
+            cap: Value::ONE,
+        },
+    };
+    upkeep.event = upkeep.event.with_filter(Predicate::EntityMatches {
+        what: Selector::This,
+        filter: R::WithCounter(CounterType::Prepared).negate(),
+    });
+    CardDefinition {
+        triggered_abilities: vec![upkeep],
+        prepare_spell: Some(vicious_verse()),
+        ..creature(
+            "Stingerquill Voxmancer",
+            cost(&[hybrid(Color::Black, Color::Red)]),
+            vec![CreatureType::Goblin, CreatureType::Sorcerer],
+            1,
+            2,
+        )
+    }
+}
+
+/// Whiplash Wordsmith // Vicious Verse — {3}{B/R} 3/3 Vampire Sorcerer,
+/// enters prepared; has flying and haste as long as an opponent was dealt
+/// noncombat damage this turn.
+pub fn whiplash_wordsmith() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Prepared, Value::ONE)),
+        static_abilities: vec![StaticAbility {
+            description: "As long as an opponent was dealt noncombat damage this turn, this creature has flying and haste.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::NoncombatDamageTakenThisTurn(PlayerRef::EachOpponent),
+                    Value::ONE,
+                ),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying, Keyword::Haste],
+            },
+        }],
+        prepare_spell: Some(vicious_verse()),
+        ..creature(
+            "Whiplash Wordsmith",
+            cost(&[generic(3), hybrid(Color::Black, Color::Red)]),
+            vec![CreatureType::Vampire, CreatureType::Sorcerer],
+            3,
+            3,
+        )
+    }
+}

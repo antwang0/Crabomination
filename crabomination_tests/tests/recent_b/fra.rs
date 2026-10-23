@@ -683,3 +683,96 @@ fn way_enchantments_grant_beast_abilities() {
     assert!(token(&g, 0, "Beast").is_some());
     assert_eq!(jace_loyalty(&g, 0), Some(3));
 }
+
+fn cast_prepared(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<(), GameError> {
+    g.perform_action(GameAction::CastPrepareSpell { creature_id: id, target, additional_targets: vec![], mode: None, x_value: None })?;
+    drain_stack(g);
+    Ok(())
+}
+
+fn flies(g: &GameState, id: CardId) -> bool {
+    g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying)
+}
+
+/// CR 722.3 — the four "enters prepared" creatures enter with the
+/// designation, and casting the copy unprepares them. Semester Foreseer's
+/// own ETB surveil and Peer Review's Cadet ride along.
+#[test]
+fn cr_722_3_fra_prepare_creatures_enter_prepared() {
+    let cases: [(Factory, Option<Target>); 4] = [
+        (catalog::semester_foreseer, None),
+        (catalog::void_extrapolator, None),
+        (catalog::theorix_metamage, None),
+        (catalog::whiplash_wordsmith, Some(Target::Player(1))),
+    ];
+    for (f, target) in cases {
+        let mut g = pod(2);
+        flood(&mut g, 0);
+        let id = g.add_card_to_hand(0, f());
+        cast(&mut g, id, None).unwrap();
+        let name = f().name;
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Prepared), 1, "{name} enters prepared");
+        cast_prepared(&mut g, id, target).unwrap();
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Prepared), 0, "{name} unprepared");
+    }
+    // Peer Review's half: a Cadet.
+    let mut g = pod(2);
+    flood(&mut g, 0);
+    let id = g.add_card_to_hand(0, catalog::semester_foreseer());
+    cast(&mut g, id, None).unwrap();
+    cast_prepared(&mut g, id, None).unwrap();
+    assert!(token(&g, 0, "Cadet").is_some(), "Peer Review makes a Cadet");
+}
+
+/// Threshold statics: Void Extrapolator +1/+1, Theorix Metamage +1/+0 and
+/// flying, at seven graveyard cards and not at six.
+#[test]
+fn void_extrapolator_and_theorix_metamage_grow_at_threshold() {
+    for (f, p, t, fly) in [(catalog::void_extrapolator as Factory, 3, 3, false), (catalog::theorix_metamage, 3, 3, true)] {
+        let mut g = pod(2);
+        let id = ready(&mut g, 0, f());
+        for _ in 0..6 {
+            g.add_card_to_graveyard(0, catalog::island());
+        }
+        assert!(!flies(&g, id));
+        let base = g.computed_permanent(id).unwrap().power;
+        g.add_card_to_graveyard(0, catalog::island());
+        let c = g.computed_permanent(id).unwrap();
+        assert_eq!((c.power, c.toughness), (p, t), "{} at threshold", f().name);
+        assert_eq!(c.power, base + 1);
+        assert_eq!(flies(&g, id), fly);
+    }
+}
+
+/// Stingerquill Voxmancer re-prepares at your upkeep (intervening if,
+/// CR 603.4), and Vicious Verse burns the opponent for 1.
+#[test]
+fn cr_603_4_stingerquill_voxmancer_prepares_each_upkeep() {
+    let mut g = pod(2);
+    let vox = ready(&mut g, 0, catalog::stingerquill_voxmancer());
+    assert_eq!(g.battlefield_find(vox).unwrap().counter_count(CounterType::Prepared), 0, "no ETB prepare");
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    to_step(&mut g, TurnStep::PreCombatMain);
+    assert_eq!(g.battlefield_find(vox).unwrap().counter_count(CounterType::Prepared), 1, "prepared at upkeep");
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    cast_prepared(&mut g, vox, Some(Target::Player(1))).unwrap();
+    assert_eq!(g.players[1].life, life - 1, "Vicious Verse deals 1");
+}
+
+/// Whiplash Wordsmith has flying and haste only once an opponent has been
+/// dealt noncombat damage this turn — its own Vicious Verse turns it on.
+#[test]
+fn whiplash_wordsmith_flies_after_noncombat_damage() {
+    let mut g = pod(2);
+    flood(&mut g, 0);
+    let id = g.add_card_to_hand(0, catalog::whiplash_wordsmith());
+    cast(&mut g, id, None).unwrap();
+    let kw = |g: &GameState| g.computed_permanent(id).unwrap().keywords().to_vec();
+    assert!(!kw(&g).contains(&Keyword::Flying) && !kw(&g).contains(&Keyword::Haste));
+    cast_prepared(&mut g, id, Some(Target::Player(1))).unwrap();
+    assert!(kw(&g).contains(&Keyword::Flying) && kw(&g).contains(&Keyword::Haste), "noncombat damage dealt");
+}
