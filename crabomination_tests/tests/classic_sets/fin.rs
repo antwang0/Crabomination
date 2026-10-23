@@ -4160,17 +4160,15 @@ fn buster_sword_pumps_and_draws() {
     assert!(g.battlefield_find(giant).is_some(), "a mana value 4 spell off 5 damage, free");
 }
 
-/// Absolute Virtue ships as an 8/8 flyer that can't be countered and grants its
-/// controller hexproof (its protection-from-opponents approximation).
+/// Absolute Virtue ships as an 8/8 flyer that can't be countered; its
+/// protection from each opponent is `recent_b/cmdr_seated_gaps.rs`'s.
 #[test]
-fn absolute_virtue_shape_and_controller_hexproof() {
+fn absolute_virtue_shape() {
     let mut g = two_player_game();
     let av = g.add_card_to_battlefield(0, catalog::absolute_virtue());
     let cp = g.computed_permanent(av).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 8));
     assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::CantBeCountered));
-    // The controller gains player hexproof from the static (its protection approx).
-    assert!(g.player_has_static_hexproof(0), "controller has static hexproof");
 }
 
 /// The Masamune grants first strike + must-be-blocked only while the equipped

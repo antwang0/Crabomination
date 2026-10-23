@@ -1276,9 +1276,12 @@ fn event_matches_spec_rest(
                 !state.same_team(*caster, source.controller)
                     && match state.battlefield_find(*target) {
                         Some(c) => c.controller == source.controller && state.computed_is_creature(c),
+                        // A spell has no battlefield layers: its card's types.
                         None => state.stack.iter().any(|si| {
                             matches!(si, crate::game::types::StackItem::Spell { card, caster, .. }
-                                if card.id == *target && *caster == source.controller && card.definition.is_creature())
+                                if card.id == *target
+                                    && *caster == source.controller
+                                    && card.definition.card_types.contains(&crate::card::CardType::Creature))
                         }),
                     }
             } else {
