@@ -3246,6 +3246,9 @@ pub enum SelectionRequirement {
     /// The library-top sibling: a permanent cast from the top of its owner's
     /// library on its way to the battlefield (Mikey & Don's extra counter).
     WasCastFromLibrary,
+    /// A permanent that entered the battlefield directly from a library
+    /// (`CardInstance::entered_from_library`) — Fblthp, the Lost.
+    EnteredFromLibrary,
     /// The graveyard sibling: a permanent cast from a graveyard on its way to
     /// the battlefield (Rocket-Powered Goblin Glider's mayhem attach).
     WasCastFromGraveyard,
@@ -11446,6 +11449,9 @@ pub struct CardInstance {
     /// so a library write of it is a reorder, not "put into a library" (Wan
     /// Shi Tong's ruling: scry and surveil don't count). See `CardPile::admit`.
     pub in_library: bool,
+    /// This permanent entered the battlefield straight from a library (not via
+    /// a cast) — stamped off `in_library` by `Battlefield::push` (Fblthp).
+    pub entered_from_library: bool,
 }
 
 impl std::ops::Deref for CardInstance {
@@ -11491,6 +11497,7 @@ impl From<CardData> for CardInstance {
             tapped_this_turn: false,
             tapped_again_this_turn: false,
             in_library: false,
+            entered_from_library: false,
         }
     }
 }

@@ -2378,6 +2378,7 @@ impl Battlefield {
     /// predicate ([`LANE_PREDICATES`]), and the two member-list lanes clear,
     /// their indices being what they hold (PERF `(-212)`, `(-213)`).
     pub fn push(&mut self, mut card: CardInstance) {
+        card.entered_from_library = card.in_library;
         card.in_library = false;
         self.note_write();
         self.lanes_after_push(&card);

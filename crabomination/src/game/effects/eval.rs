@@ -6485,6 +6485,7 @@ impl GameState {
                     }
                     R::WasCastFromHand => !card.is_token && card.cast_from_hand,
                     R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
+                    R::EnteredFromLibrary => card.entered_from_library,
                     R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
                     R::WasCastFromExile => !card.is_token && card.cast_from_exile,
                     R::IsPreparedSpell => self.is_prepared_spell(card),
@@ -7756,6 +7757,7 @@ impl GameState {
             }
             R::WasCastFromHand => !card.is_token && card.cast_from_hand,
             R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
+            R::EnteredFromLibrary => card.entered_from_library,
             R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
             R::WasCastFromExile => !card.is_token && card.cast_from_exile,
             R::IsPreparedSpell => self.is_prepared_spell(card),
