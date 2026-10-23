@@ -24304,6 +24304,18 @@ impl GameState {
                         .source
                         .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
                         .map(|a| a.target)
+                        // "Whenever a creature you control attacks, create …
+                        // attacking": the player that attacker attacks, not the
+                        // first opponent (N seats, CR 508.4 — Militia's Pride).
+                        .or_else(|| {
+                            let Some(EntityRef::Card(t) | EntityRef::Permanent(t)) = ctx.trigger_source else {
+                                return None;
+                            };
+                            self.attacking
+                                .iter()
+                                .find(|a| a.attacker == t)
+                                .and_then(|a| matches!(a.target, AttackTarget::Player(_)).then_some(a.target))
+                        })
                         .or_else(|| {
                             // CR 506.2 / 800.4a — a seat that has left the
                             // game is not a legal defending player.

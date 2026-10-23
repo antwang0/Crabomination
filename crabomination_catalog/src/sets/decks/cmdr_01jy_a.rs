@@ -1758,7 +1758,7 @@ pub fn militias_pride() -> CardDefinition {
                         vec![Color::White],
                     )),
                     cleanup: Default::default(),
-                    defender: Some(PlayerRef::DefendingPlayerOf(Box::new(Selector::TriggerSource))),
+                    defender: None,
                 }),
                 else_: None,
             },

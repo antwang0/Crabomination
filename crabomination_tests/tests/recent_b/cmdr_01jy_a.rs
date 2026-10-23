@@ -842,7 +842,8 @@ fn militias_pride_adds_an_attacking_soldier() {
 }
 
 /// Militia's Pride at three seats — CR 508.4: the Soldier joins the attack on
-/// the player the triggering creature attacks, not the first opponent.
+/// the player the triggering creature attacks, not the first opponent (the
+/// `CreateTokenAttacking` default, read off the trigger source).
 #[test]
 fn militias_pride_soldier_attacks_the_triggering_creatures_defender() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
