@@ -294,8 +294,8 @@ pub fn sauron_the_dark_lord() -> CardDefinition {
 
 /// High Perfect Morcant — {2}{B}{G} 4/4 Elf Noble. Whenever it or another
 /// Elf you control enters, each opponent blights 1 (CR 701.68). Tap three
-/// untapped Elves you control: proliferate, only as a sorcery. (The tap
-/// cost picks from Morcant's *other* Elves; Morcant itself isn't offered.)
+/// untapped Elves you control: proliferate, only as a sorcery. (No {T} in the
+/// cost, so Morcant may be one of the three — CR 602.5b.)
 pub fn high_perfect_morcant() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {

@@ -4227,11 +4227,10 @@ pub fn torrential_gearhulk() -> CardDefinition {
 
 // ── Kitesail Larcenist ─────────────────────────────────────────────────────
 
-/// Kitesail Larcenist — {2}{U}, 2/3 Human Pirate with Flying, ward {1}.
-/// Residual: Oracle turns up to one other target artifact or creature per
-/// player into a Treasure for as long as this stays on the battlefield; this
-/// exiles one opponent's nonland permanent for good (`BecomeTreasure` has no
-/// source-scoped duration for its granted mana ability yet).
+/// Kitesail Larcenist — {2}{U}, 2/3 Human Pirate with Flying, ward {1}. When
+/// it enters, for each player, choose up to one other target artifact or
+/// creature that player controls; for as long as it remains on the
+/// battlefield, they become Treasures and lose all other abilities.
 pub fn kitesail_larcenist() -> CardDefinition {
     CardDefinition {
         name: "Kitesail Larcenist",
@@ -4246,10 +4245,16 @@ pub fn kitesail_larcenist() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::generic(1))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
-                ),
+            // CR 601.2c — one slot per player (`ForEachPlayerTarget`).
+            effect: Effect::ForEachPlayerTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::OtherThanSource),
+                    effect: Box::new(Effect::BecomeTreasure { what: Selector::Target(0), while_source: true }),
+                }),
             },
         }],
         ..Default::default()

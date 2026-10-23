@@ -889,3 +889,30 @@ fn silver_scrutiny_has_flash_only_at_small_x() {
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
 }
 
+
+/// Kitesail Larcenist: one target per player becomes a Treasure — a
+/// non-creature artifact with only the sac-for-mana ability — for as long as
+/// the Larcenist stays (CR 611.2b); when it leaves, the Giant is back.
+#[test]
+fn kitesail_larcenist_treasures_last_while_it_stays() {
+    use crabomination::card::CardType;
+    let mut g = pod(3);
+    let lar = g.add_card_to_battlefield(0, catalog::kitesail_larcenist());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(lar, 0, None);
+    ctx.targets = vec![Target::Permanent(giant), Target::Permanent(bears)];
+    let effect = catalog::kitesail_larcenist().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&effect, &ctx).unwrap();
+    for id in [giant, bears] {
+        let cp = g.computed_permanent(id).unwrap();
+        assert!(cp.card_types().contains(&CardType::Artifact) && !cp.card_types().contains(&CardType::Creature));
+        assert_eq!(g.battlefield_find(id).unwrap().granted_activated_abilities.len(), 1, "Treasure's mana ability");
+    }
+    let mut evs = Vec::new();
+    g.destroy_permanent(lar, false, &mut evs);
+    g.check_state_based_actions();
+    let cp = g.computed_permanent(giant).unwrap();
+    assert!(cp.card_types().contains(&CardType::Creature), "a creature again");
+    assert!(g.battlefield_find(giant).unwrap().granted_activated_abilities.is_empty(), "the Treasure ability ended");
+}

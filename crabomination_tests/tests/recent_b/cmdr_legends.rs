@@ -192,6 +192,23 @@ fn morcant_makes_each_opponent_blight() {
     }
 }
 
+/// CR 602.5b — Morcant's "tap three untapped Elves" has no {T}, so Morcant
+/// itself (summoning sick too, CR 302.6) is one of the three.
+#[test]
+fn morcant_taps_itself_among_three_elves() {
+    let mut g = pod(2);
+    let m = g.add_card_to_battlefield(0, catalog::high_perfect_morcant());
+    let elves: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::llanowar_elves())).collect();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: m, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("three Elves, Morcant among them");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m).unwrap().tapped);
+    assert!(elves.iter().all(|e| g.battlefield_find(*e).unwrap().tapped));
+}
+
 /// Jodah: a legendary spell cast from hand exiles past a nonlegendary
 /// card to a legendary one of lesser mana value and casts it free (CR
 /// 702.85a's walk, narrowed); legendary creatures get +X/+X.

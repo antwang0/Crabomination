@@ -399,7 +399,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 
 | Card | Residual | Why |
 |---|---|---|
-| Eladamri, Korvecdal | the "{G}, {T}, tap two untapped creatures: reveal a card from hand or the library top; a creature goes onto the battlefield; only during your turn" ability is absent | no reveal-from-hand-or-top chooser; found by the activation-timing scan |
 | Heirloom Mirror | the definition is an invented "STX-flavor" card (a mana rock with a sac-draw) under the real card's name | the transform-at-three-ritual-counters DFC is unbuilt (CARD_BACKLOG) |
 | Nesting Dragon, Clown Extruder | the Dragon Egg / Clown Robot tokens lack Egg / Clown | neither is a `CreatureType`; adding one touches the observation vocabulary (`audit_token_types.py` allowlist) |
 | Angelic Intervention | "protection from colorless" | no colorless-protection chooser (the planeswalker branch shipped) |
@@ -443,7 +442,6 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 |---|---|---|
 | Zidane, Tantalus Thief | "whenever an opponent gains control of a permanent from you, create a Treasure" is absent | no control-change event from the loser's side (only `LostControlOfThis` on the permanent) |
 | Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
-| Kitesail Larcenist | exiles one opponent's nonland permanent for good instead of making up to one artifact/creature per player a Treasure while it stays | `BecomeTreasure`'s granted mana ability and layer effects have no "while the source remains" duration |
 | The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
 | Preacher | the caster picks the stolen creature (printed: an opponent's choice) | `GainControlWhileSourceTapped` resolves a caster target |
 | Croaking Counterpart | the Frog copy keeps its other creature types | `CreateTokenCopyOf` adds creature types but can't replace them |
@@ -493,7 +491,6 @@ on existing primitives. What each rounds off:
 | Card | Approximation | What it needs |
 |---|---|---|
 | Tiamat | "with different names" isn't enforced (`SearchUpToN`) — moot in a singleton deck | a distinct-names picker |
-| High Perfect Morcant | the "tap three Elves" cost is paid from its *other* Elves (`tap_n_filter`); Morcant itself isn't offered | a tap-N cost that may include the source |
 | Mythos of Illuna | the {R}{G} fight runs inside the spell, not as the token's own ETB trigger — no window to respond between entry and fight | a token copy carrying a granted triggered ability |
 | Torment of Hailfire | the victim's choice is a fixed heuristic (life while above 3, then discard, then sacrifice) | a per-round punisher prompt |
 | Najeela, the Blade-Blossom | an opponent's Warrior attacking asks the "you may" (its controller gets the token); the headless seat declines | nothing — a strategy choice, noted |
