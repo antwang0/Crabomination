@@ -4082,8 +4082,10 @@ pub enum EventKind {
     GainedControlOfThis,
     /// CR 800.4 — "When you lose control of this permanent" (Duplicity). The
     /// trigger is controlled by the seat that *lost* control, not by the
-    /// permanent's new controller.
-    LostControlOfThis,
+    /// permanent's new controller. `yours`: "whenever an opponent gains control
+    /// of a permanent from you" (Zidane) — any other permanent of the source's
+    /// controller, to an opponent; one mask bit for both.
+    LostControl { yours: bool },
     /// CR 701.44 — a permanent explored (Wildgrowth Walker, Tishana's
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.

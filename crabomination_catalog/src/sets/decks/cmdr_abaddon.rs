@@ -505,7 +505,7 @@ pub fn kharn_the_betrayer() -> CardDefinition {
             effect: StaticEffect::PreventDamageToSelfOpponentGainsControl,
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LostControlOfThis, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::LostControl { yours: false }, EventScope::SelfSource),
             effect: draw(Value::Const(2)),
         }],
         ..legend(

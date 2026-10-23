@@ -26979,7 +26979,7 @@ impl GameState {
                     // the permanent's controller by dispatch time.
                     let controller = match (&ta.event.kind, ev) {
                         (
-                            crate::effect::EventKind::LostControlOfThis,
+                            crate::effect::EventKind::LostControl { yours: false },
                             GameEvent::ControlChanged { from, .. },
                         ) => *from,
                         _ => card.controller,

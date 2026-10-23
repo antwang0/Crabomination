@@ -1472,7 +1472,7 @@ pub fn gusthas_scepter() -> CardDefinition {
                 event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
                 effect: bin(),
             },
-            TriggeredAbility { event: EventSpec::new(EventKind::LostControlOfThis, EventScope::SelfSource), effect: bin() },
+            TriggeredAbility { event: EventSpec::new(EventKind::LostControl { yours: false }, EventScope::SelfSource), effect: bin() },
         ],
         ..Default::default()
     }

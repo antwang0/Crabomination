@@ -740,7 +740,7 @@ _KIND_CLASS = {
     "EvidenceCollected": "evidence", "Discovered": "discover", "Encountered": "encounter",
     "CrewsOrSaddles": "crew", "DayNightChanged": "daynight", "ClassLevelReached": "level",
     "RingTempted": "ring", "BecomesPlotted": "plot", "DungeonCompleted": "dungeon",
-    "GainedControlOfThis": "control", "LostControlOfThis": "control", "VotingFinished": "vote",
+    "GainedControlOfThis": "control", "LostControl": "control", "VotingFinished": "vote",
     "CaseSolved": "case", "Regenerated": "regenerate", "CumulativeUpkeepUnpaid": "cumulative",
     "ChaosEnsues": "chaos", "PlaneswalkedAwayFrom": "planeswalk", "SetInMotion": "scheme",
     "VisitedAttraction": "attraction",

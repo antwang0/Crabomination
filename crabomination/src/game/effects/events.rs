@@ -163,7 +163,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::PermanentPhasedIn { .. } => bits!(K::PhasesIn),
         E::PermanentPhasedOut { .. } => bits!(K::PhasesOut),
         E::CumulativeUpkeepUnpaid { .. } => bits!(K::CumulativeUpkeepUnpaid),
-        E::ControlChanged { .. } => bits!(K::GainedControlOfThis, K::LostControlOfThis),
+        E::ControlChanged { .. } => bits!(K::GainedControlOfThis, K::LostControl { yours: false }),
         E::Explored { .. } => bits!(K::Explored),
         E::Connived { .. } => bits!(K::Connived),
         E::ExcessNoncombatDamage { .. } | E::ExcessCombatDamage { .. } => {
@@ -278,8 +278,12 @@ fn event_payload_matches(
         // CR 800.4 — the losing half. `from != to` is guaranteed by the
         // emitter; `dispatch_triggers_for_events` re-points the trigger's
         // controller at `from`, which is no longer the source's controller.
-        (EventKind::LostControlOfThis, GameEvent::ControlChanged { card_id, from, to }) => {
+        (EventKind::LostControl { yours: false }, GameEvent::ControlChanged { card_id, from, to }) => {
             source.is_none_or(|src| *card_id == src.id) && from != to
+        }
+        (EventKind::LostControl { yours: true }, GameEvent::ControlChanged { card_id, from, to }) => {
+            source.is_none_or(|src| *card_id != src.id && *from == src.controller)
+                && !state.same_team(*from, *to)
         }
         (EventKind::DayNightChanged, GameEvent::DayNightChanged { was_transition, .. }) => {
             *was_transition
@@ -496,8 +500,12 @@ fn reference_event_kind_matches(
         // CR 800.4 — the losing half. `from != to` is guaranteed by the
         // emitter; `dispatch_triggers_for_events` re-points the trigger's
         // controller at `from`, which is no longer the source's controller.
-        (EventKind::LostControlOfThis, GameEvent::ControlChanged { card_id, from, to }) => {
+        (EventKind::LostControl { yours: false }, GameEvent::ControlChanged { card_id, from, to }) => {
             source.is_none_or(|src| *card_id == src.id) && from != to
+        }
+        (EventKind::LostControl { yours: true }, GameEvent::ControlChanged { card_id, from, to }) => {
+            source.is_none_or(|src| *card_id != src.id && *from == src.controller)
+                && !state.same_team(*from, *to)
         }
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::Connived, GameEvent::Connived { .. }) => true,
@@ -2359,7 +2367,8 @@ mod tests {
             K::PhasesOut,
             K::CumulativeUpkeepUnpaid,
             K::GainedControlOfThis,
-            K::LostControlOfThis,
+            K::LostControl { yours: false },
+            K::LostControl { yours: true },
             K::Explored,
             K::Connived,
             K::Discovered,

@@ -1081,7 +1081,7 @@ pub fn duplicity() -> CardDefinition {
                 effect: bin_the_pile(),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LostControlOfThis, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::LostControl { yours: false }, EventScope::SelfSource),
                 effect: bin_the_pile(),
             },
         ],
