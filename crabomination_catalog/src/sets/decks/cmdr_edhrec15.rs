@@ -1231,18 +1231,23 @@ pub fn scuzzback_marauders() -> CardDefinition {
 }
 
 /// Rulik Mons, Warren Chief — {1}{R}{G}{G} 3/3 legendary Goblin, menace.
-/// Attacking: look at your top card; a land goes onto the battlefield tapped,
-/// otherwise create a 1/1 red Goblin.
+/// Attacking: look at your top card; a land may go onto the battlefield
+/// tapped, otherwise create a 1/1 red Goblin.
 pub fn rulik_mons_warren_chief() -> CardDefinition {
+    let goblin = || make(Value::ONE, token("Goblin", 1, 1, vec![Color::Red], vec![CreatureType::Goblin]));
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::If {
             cond: Predicate::EntityMatches { what: top_card(), filter: R::Land },
-            then: Box::new(Effect::Move {
-                what: top_card(),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            then: Box::new(Effect::MayDoElse {
+                description: "Put the land on top of your library onto the battlefield tapped?".into(),
+                body: Box::new(Effect::Move {
+                    what: top_card(),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+                else_: Box::new(goblin()),
             }),
-            else_: Box::new(make(Value::ONE, token("Goblin", 1, 1, vec![Color::Red], vec![CreatureType::Goblin]))),
+            else_: Box::new(goblin()),
         })],
         ..legend("Rulik Mons, Warren Chief", cost(&[generic(1), r(), g(), g()]), vec![CreatureType::Goblin], 3, 3)
     }

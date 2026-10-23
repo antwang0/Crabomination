@@ -73,21 +73,30 @@ fn cr_702_133_niv_mizzet_supreme_grants_jump_start_to_two_color_cards() {
     assert_eq!(g.players[1].life, 17);
 }
 
-/// Cosmic Rebirth: a mana value 3 or less permanent card returns to the
-/// battlefield, a bigger one to hand; 3 life either way.
+/// Cosmic Rebirth: a mana value 3 or less permanent card may return to the
+/// battlefield (declined, it goes to hand), a bigger one to hand; 3 life
+/// either way.
 #[test]
 fn cosmic_rebirth_reanimates_small_and_returns_big() {
     let mut g = pod(2);
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
     let life = g.players[0].life;
+    let declined = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let c = g.add_card_to_hand(0, catalog::cosmic_rebirth());
+    cast(&mut g, c, Some(Target::Permanent(declined))).expect("declined");
+    assert!(g.players[0].hand.iter().any(|c| c.id == declined), "declined: to hand");
     let a = g.add_card_to_hand(0, catalog::cosmic_rebirth());
     cast(&mut g, a, Some(Target::Permanent(bear))).expect("small");
     assert!(g.battlefield_find(bear).is_some());
     let b = g.add_card_to_hand(0, catalog::cosmic_rebirth());
     cast(&mut g, b, Some(Target::Permanent(wurm))).expect("big");
     assert!(g.players[0].hand.iter().any(|c| c.id == wurm));
-    assert_eq!(g.players[0].life, life + 6);
+    assert_eq!(g.players[0].life, life + 9);
 }
 
 /// Shanna draws X at your end step, X capped by the life you gained this

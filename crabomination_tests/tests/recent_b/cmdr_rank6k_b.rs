@@ -227,6 +227,24 @@ fn garruks_harbinger_digs_on_damage() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
 }
 
+/// Garruk's Harbinger digs off combat damage to a planeswalker too ("a
+/// player or planeswalker").
+#[test]
+fn garruks_harbinger_digs_off_a_planeswalker_hit() {
+    let mut g = pod(2);
+    let h = ready(&mut g, 0, catalog::garruks_harbinger());
+    let jace = ready(&mut g, 1, catalog::jace_the_mind_sculptor());
+    g.battlefield_find_mut(jace).unwrap().counters.insert(CounterType::Loyalty, 9);
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: h, target: AttackTarget::Planeswalker(jace) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    finish_combat(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
 /// CR 111.1 — Namora's power-up and Aquatic Incursion make Merfolk.
 #[test]
 fn namora_and_aquatic_incursion_make_merfolk() {

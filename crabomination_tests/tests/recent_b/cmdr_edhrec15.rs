@@ -2440,3 +2440,20 @@ fn the_tarrasque_was_cast_from_the_command_zone() {
     let put = g.add_card_to_battlefield(1, catalog::the_tarrasque());
     assert!(!g.computed_permanent(put).unwrap().keywords().contains(&Keyword::Haste));
 }
+
+/// Rulik Mons: a land on top "may" go onto the battlefield tapped; declining
+/// it makes the Goblin instead.
+#[test]
+fn rulik_mons_may_put_the_land() {
+    for take in [true, false] {
+        let mut g = pod(2);
+        let rulik = ready(&mut g, 0, catalog::rulik_mons_warren_chief());
+        let forest = g.add_card_to_library(0, catalog::forest());
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(take),
+        ]));
+        declare(&mut g, &[(rulik, 1)]).expect("attack");
+        assert_eq!(g.battlefield_find(forest).is_some(), take, "land: {take}");
+        assert_eq!(tokens_named(&g, "Goblin"), usize::from(!take), "goblin: {take}");
+    }
+}

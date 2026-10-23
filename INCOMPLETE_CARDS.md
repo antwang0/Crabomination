@@ -2069,7 +2069,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 King T'Challa // Black Panther, Hope Enduring | the {4}{W}{U} back face can't be cast from hand | modeled as a transforming DFC (CR 712.2 audit: a transforming back prints no cost) |
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
 | 🟡 Iron Lad, Diverging Destiny | "you may look at the top card of your library any time" isn't modeled | no hidden-info permission for a seat |
-| 🟡 Rulik Mons, Warren Chief | a land on top always goes onto the battlefield (the "you may" isn't asked) | `Effect::If` over the top card |
 | 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
@@ -2092,7 +2091,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Enigma Jewel | craft takes exactly four nonlands with activated abilities, never more | `craft_exile_cost` is a fixed count |
 | 🟡 Elda, Conjurer of Spectacle | entering after a nonlegendary creature spell this turn, the next one still gets demonstrate | a once-per-turn cast trigger, not a count of this turn's nonlegendary creature spells |
 | 🟡 Kyodai, Soul of Kamigawa | the indestructible lasts while Kyodai is on the battlefield, not only while you control it | `Duration::WhileSourceOnBattlefield` has no control rider |
-| 🟡 Cosmic Rebirth | a mana value 3 or less card always goes onto the battlefield (the "you may" isn't asked) | `ZoneDest::IfCard` |
 | 🟡 Fleeting Memories | an artifact that is a Clue only through Senator Peacock doesn't count as a Clue once sacrificed | `lki_clone` snapshots creature types, not artifact subtypes |
 | 🟡 Metamorphic Alteration | the copy starts when an enters trigger resolves (respondable), not as the Aura enters, and moving the Aura to another creature doesn't copy the new host | `BecomeCopyOfFor` with `WhileSourceAttached`; no static layer-1 copy for an attachment |
 | 🟡 The Capitoline Triad | the exiled cards are auto-picked (fewest, highest mana value first) even for a manual-mana player | `exile_other_total_mv` has no `ChooseCards` ask |
@@ -2180,7 +2178,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Castle Doom | the any-color mana also pays for abilities of artifacts, not only artifact spells | `SpendRestriction::ArtifactOnly` |
 | 🟡 Ms. Marvel, Kamala Khan | "base power equal to the cards in your hand" is set as the trigger resolves, not tracked as the hand changes | `SetBasePT { EndOfTurn }` |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
-| 🟡 Garruk's Harbinger | combat damage to a planeswalker doesn't trigger the dig, only damage to a player | `DealsCombatDamageToPlayer` |
 | 🟡 Doctor Jane Foster | with life gained this turn the returned card passes through your hand before the battlefield | `Move` to hand, then `LastMoved` to battlefield |
 | 🟡 Beorn's Hospitality | the Bear's power and toughness are fixed as the ability resolves rather than tracking your lands | `BecomeCreature { Permanent }` |
 | 🟡 Knight of Wundagore | "whenever you put a +1/+1 counter on another creature" reads as a counter landing on another creature you control, whoever put it | `CounterAdded` / `YourControl` |

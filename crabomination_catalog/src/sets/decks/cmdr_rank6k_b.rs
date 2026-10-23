@@ -299,26 +299,32 @@ pub fn goliath_mass_manipulator() -> CardDefinition {
 }
 
 /// Garruk's Harbinger — {1}{G}{G} 4/3 Beast; hexproof from black. Whenever it
-/// deals combat damage to a player, look at that many cards from the top; you
-/// may reveal a creature or Garruk planeswalker card and put it into your
-/// hand; the rest on the bottom in a random order. (Residual: combat damage
-/// to a planeswalker doesn't trigger it.)
+/// deals combat damage to a player or planeswalker, look at that many cards
+/// from the top; you may reveal a creature or Garruk planeswalker card and put
+/// it into your hand; the rest on the bottom in a random order.
 pub fn garruks_harbinger() -> CardDefinition {
+    let dig = || {
+        Effect::LookPickToHand(Box::new(LookPick {
+            who: PlayerRef::You,
+            count: Value::TriggerEventAmount,
+            pick_filter: Some(R::Creature.or(R::HasPlaneswalkerType(crate::card::PlaneswalkerSubtype::Garruk))),
+            optional: true,
+            rest_bottom_random: true,
+            ..Default::default()
+        }))
+    };
     CardDefinition {
         keywords: vec![Keyword::HexproofFromColor(Color::Black)],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::LookPickToHand(Box::new(LookPick {
-                who: PlayerRef::You,
-                count: Value::TriggerEventAmount,
-                pick_filter: Some(R::Creature.or(R::HasPlaneswalkerType(
-                    crate::card::PlaneswalkerSubtype::Garruk,
-                ))),
-                optional: true,
-                rest_bottom_random: true,
-                ..Default::default()
-            })),
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: dig(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::SelfSource),
+                effect: dig(),
+            },
+        ],
         ..creature(
             "Garruk's Harbinger",
             cost(&[generic(1), g(), g()]),
