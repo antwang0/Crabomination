@@ -112,8 +112,12 @@ impl GameState {
         if recipients.is_empty() {
             return;
         }
-        let kinds = self.counter_kinds_among(p, filter);
-        for (i, (kind, _)) in kinds.into_iter().enumerate() {
+        // "Each kind of counter on this" (Blue, Loyal Raptor) reads the source.
+        let kinds: Vec<CounterKind> = match (filter, ctx.source) {
+            (SelectionRequirement::IsSource, Some(src)) => self.counter_kinds_on(src),
+            _ => self.counter_kinds_among(p, filter).into_iter().map(|(k, _)| k).collect(),
+        };
+        for (i, kind) in kinds.into_iter().enumerate() {
             let kind = if or_plus_one && kind.preference() < 2 {
                 CounterKind::Plain(CounterType::PlusOnePlusOne)
             } else {
