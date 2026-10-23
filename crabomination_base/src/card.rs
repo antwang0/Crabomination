@@ -586,6 +586,8 @@ pub enum PlaneswalkerSubtype {
     Arzakon,
     // Grand Master of Flowers (Rashida Scalebane's deck).
     Bahamut,
+    // Minsc & Boo, Timeless Heroes.
+    Minsc,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

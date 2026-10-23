@@ -8194,7 +8194,7 @@ pub fn summon_knights_of_round() -> CardDefinition {
 
 /// The Lunar Whale — {3}{U} Legendary Vehicle 3/5, flying, crew 1. Whenever it
 /// attacks you may play the top card of your library for the rest of the turn.
-/// (The always-on "look at your top card" is cosmetic and omitted.)
+/// You may look at the top card of your library any time.
 pub fn the_lunar_whale() -> CardDefinition {
     CardDefinition {
         name: "The Lunar Whale",
@@ -8208,6 +8208,10 @@ pub fn the_lunar_whale() -> CardDefinition {
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Crew(1)],
+        static_abilities: vec![StaticAbility {
+            description: "You may look at the top card of your library any time.",
+            effect: StaticEffect::TopOfLibraryRevealed,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::GrantPlayFromTopThisTurn,

@@ -2116,8 +2116,6 @@ pub fn elemental_bond() -> CardDefinition {
 /// Heroes can be your commander. The −2's "when you do" is a reflexive
 /// trigger (CR 603.7) carrying the sacrificed power; whether it was a Hamster
 /// is read as the sacrifice happens.
-/// Omitted: the Minsc planeswalker subtype (`PlaneswalkerSubtype` has no
-/// `Minsc`).
 pub fn minsc_boo_timeless_heroes() -> CardDefinition {
     let boo = std::sync::Arc::new(TokenDefinition {
         name: "Boo".into(),
@@ -2146,6 +2144,7 @@ pub fn minsc_boo_timeless_heroes() -> CardDefinition {
         cost: cost(&[generic(2), r(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Minsc], ..Default::default() },
         base_loyalty: 3,
         can_be_commander: true,
         triggered_abilities: vec![
