@@ -1348,7 +1348,7 @@ pub fn ghalta_the_unstoppable() -> CardDefinition {
 /// as long as it was cast. Attacking: it fights target creature defending
 /// player controls.
 pub fn the_tarrasque() -> CardDefinition {
-    let was_cast = || R::WasCastFromHand.or(R::WasCastFromLibrary).or(R::WasCastFromGraveyard);
+    let was_cast = || R::EnteredByCast;
     CardDefinition {
         static_abilities: vec![
             static_ab(

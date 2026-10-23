@@ -2417,3 +2417,26 @@ fn invasion_of_ergamon_rummages_then_charges() {
     assert_eq!(pt(&g, charger), (3, 4));
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "fetched the Forest");
 }
+
+/// The Tarrasque cast from the command zone "was cast" (CR 601.2): it has
+/// haste; one put onto the battlefield by an effect doesn't.
+#[test]
+fn the_tarrasque_was_cast_from_the_command_zone() {
+    let mut g = pod(2);
+    let cmd = g.seat_commanders(0, vec![catalog::the_tarrasque()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("commander");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(cmd).unwrap().keywords().contains(&Keyword::Haste));
+    let put = g.add_card_to_battlefield(1, catalog::the_tarrasque());
+    assert!(!g.computed_permanent(put).unwrap().keywords().contains(&Keyword::Haste));
+}

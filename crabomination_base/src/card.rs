@@ -3273,6 +3273,11 @@ pub enum SelectionRequirement {
     /// The exile sibling: a permanent cast from exile on its way to the
     /// battlefield (Extraordinary Journey's "or was cast from exile").
     WasCastFromExile,
+    /// A permanent whose current battlefield entry was its own spell
+    /// resolving, cast from any zone — the command zone included
+    /// (`CardInstance::entered_by_cast`; The Tarrasque's "as long as it was
+    /// cast").
+    EnteredByCast,
     /// A spell cast as a creature's prepare spell (SOS prepare): its
     /// definition is the very `prepare_spell` a permanent carries, shared
     /// into the copy by `cast_prepare_spell` (Codie, Ravenous Codex).

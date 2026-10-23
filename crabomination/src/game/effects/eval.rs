@@ -6500,6 +6500,7 @@ impl GameState {
                     R::EnteredFromLibrary => card.entered_from_library,
                     R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
                     R::WasCastFromExile => !card.is_token && card.cast_from_exile,
+                    R::EnteredByCast => card.entered_by_cast,
                     R::IsPreparedSpell => self.is_prepared_spell(card),
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
@@ -7774,6 +7775,7 @@ impl GameState {
             R::EnteredFromLibrary => card.entered_from_library,
             R::WasCastFromGraveyard => !card.is_token && card.cast_from_graveyard,
             R::WasCastFromExile => !card.is_token && card.cast_from_exile,
+            R::EnteredByCast => card.entered_by_cast,
             R::IsPreparedSpell => self.is_prepared_spell(card),
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
