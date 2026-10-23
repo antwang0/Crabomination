@@ -763,6 +763,23 @@ fn minion_of_leshrac_bites_without_fodder() {
     assert!(g.battlefield_find(minion).unwrap().tapped, "dealt damage this way: tapped");
 }
 
+/// Minion of Leshrac — "if this creature deals damage to you this way, tap
+/// it": under Glacial Chasm's CR 615 shield the 5 is prevented and it stays
+/// untapped.
+#[test]
+fn minion_of_leshrac_stays_untapped_when_its_damage_is_prevented() {
+    let mut g = pod(2);
+    let minion = g.add_card_to_battlefield(0, catalog::minion_of_leshrac());
+    g.clear_sickness(minion);
+    g.add_card_to_battlefield(0, catalog::glacial_chasm());
+    let life = g.players[0].life;
+    g.active_player_idx = 1;
+    to_next_upkeep(&mut g);
+    assert_eq!(g.active_player_idx, 0);
+    assert!(g.players[0].life > life - 5, "the 5 is prevented (the Chasm's own upkeep is life)");
+    assert!(!g.battlefield_find(minion).unwrap().tapped, "no damage dealt this way");
+}
+
 /// Hateflayer's {Q} ability needs it tapped; it untaps and deals its power.
 #[test]
 fn hateflayer_untaps_to_fire() {
@@ -822,6 +839,26 @@ fn militias_pride_adds_an_attacking_soldier() {
     let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Kithkin" && c.tapped).count();
     assert_eq!(soldiers, 1);
     assert_eq!(g.attacking().len(), 2);
+}
+
+/// Militia's Pride at three seats — CR 508.4: the Soldier joins the attack on
+/// the player the triggering creature attacks, not the first opponent.
+#[test]
+fn militias_pride_soldier_attacks_the_triggering_creatures_defender() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::militias_pride());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(2) }]))
+        .expect("attack seat 2");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking().len(), 2);
+    assert!(g.attacking().iter().all(|a| a.target == AttackTarget::Player(2)), "{:?}", g.attacking());
 }
 
 /// Thoughtweft Imbuer pumps a lone attacker by the Kithkin you control.

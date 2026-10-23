@@ -470,8 +470,6 @@ Open 🟡 rows (each card plays; the clause named is approximated):
 | --- | --- |
 | 🟡 Covenant of Minds | "Put those cards into your graveyard" is a mill of three (a mill trigger sees it); the three are not revealed first. |
 | 🟡 Grand Master of Flowers | "Search your library and/or graveyard" takes a graveyard Monk first and searches the library only when there is none — no choice. |
-| 🟡 Minion of Leshrac | Taps after its 5 damage even when that damage was prevented ("if it deals damage this way"). |
-| 🟡 Militia's Pride | The Kithkin Soldier attacks the source's default defender (the controller's first opponent), not a defender its controller picks (CR 508.4). |
 | 🟡 Aegar, the Freezing Flame | "A spell you controlled" is read as an instant or sorcery you own (a resolved spell's controller is gone by the time the trigger checks); a spell of yours cast by an opponent, or one you stole, is misread. |
 | 🟡 Tombstone Stairwell | Its upkeep trigger has no intervening "if this enchantment is on the battlefield" re-check at resolution beyond the source still being there. |
 

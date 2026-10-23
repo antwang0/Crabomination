@@ -1409,7 +1409,12 @@ pub fn minion_of_leshrac() -> CardDefinition {
     let bite = || {
         Effect::Seq(vec![
             Effect::DealDamage { to: Selector::You, amount: Value::Const(5) },
-            Effect::Tap { what: Selector::This },
+            // "If this creature deals damage to you this way, tap it."
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::DamageDealtThisResolution, Value::ONE),
+                then: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
         ])
     };
     CardDefinition {
@@ -1731,7 +1736,8 @@ pub fn crossroads_watcher() -> CardDefinition {
 
 /// Militia's Pride — {1}{W} Kindred enchantment — Kithkin. Whenever a nontoken
 /// creature you control attacks, you may pay {W}; if you do, create a 1/1
-/// white Kithkin Soldier token tapped and attacking.
+/// white Kithkin Soldier token tapped and attacking — the player the triggering
+/// creature attacks (CR 508.4 leaves the choice to its controller).
 pub fn militias_pride() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Kindred, CardType::Enchantment],
@@ -1752,7 +1758,7 @@ pub fn militias_pride() -> CardDefinition {
                         vec![Color::White],
                     )),
                     cleanup: Default::default(),
-                    defender: None,
+                    defender: Some(PlayerRef::DefendingPlayerOf(Box::new(Selector::TriggerSource))),
                 }),
                 else_: None,
             },
