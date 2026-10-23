@@ -8552,25 +8552,8 @@ impl GameState {
                     }
                 }
             }
-            // CR 702.95 + 603.10a — a Soulbond-granted "when this creature
-            // dies" (Breathkeeper Seraph) fires off either paired creature;
-            // the pair is read before the death unpairs it. Gated on the
-            // dying creature's own link, so an unpaired death pays one load.
-            if !dies_suppressed
-                && let Some(partner) = self.battlefield.find_by_id(id).and_then(|c| c.soulbond_partner)
-            {
-                for holder in [id, partner] {
-                    let Some(bonus) =
-                        self.battlefield.find_by_id(holder).and_then(|c| c.definition.soulbond_bonus.as_ref())
-                    else {
-                        continue;
-                    };
-                    for ta in &bonus.triggered_abilities {
-                        if ta.event.kind == EventKind::CreatureDied {
-                            die_triggers.push((id, ta.effect.clone(), controller_idx, ta.event.filter.clone(), true));
-                        }
-                    }
-                }
+            if !dies_suppressed {
+                self.push_soulbond_death_triggers(id, controller_idx, &mut die_triggers);
             }
             // The died-creature tally (Essenceknit Scholar, the Zubera
             // cycle) is read off the dying creature now and applied once the
@@ -10006,6 +9989,25 @@ impl GameState {
         events
     }
 
+    /// CR 702.95 + 603.10a — a Soulbond-granted "when this creature dies"
+    /// (Breathkeeper Seraph) fires off either paired creature; the pair is
+    /// read before the death unpairs it. Both death funnels collect it here;
+    /// an unpaired death pays one load.
+    fn push_soulbond_death_triggers(&self, id: CardId, controller: usize, out: &mut Vec<DeathTrigger>) {
+        let Some(partner) = self.battlefield.find_by_id(id).and_then(|c| c.soulbond_partner) else { return };
+        for holder in [id, partner] {
+            let Some(bonus) = self.battlefield.find_by_id(holder).and_then(|c| c.definition.soulbond_bonus.as_ref())
+            else {
+                continue;
+            };
+            for ta in &bonus.triggered_abilities {
+                if ta.event.kind == EventKind::CreatureDied {
+                    out.push((id, ta.effect.clone(), controller, ta.event.filter.clone(), true));
+                }
+            }
+        }
+    }
+
     pub fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
         // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
         // self-source triggers off the leaving permanent. CreatureDied
@@ -10113,6 +10115,11 @@ impl GameState {
                     }
                 }
             }
+        }
+        if let Some(controller) = dying_creature_controller
+            && !dies_suppressed
+        {
+            self.push_soulbond_death_triggers(id, controller, &mut leave_triggers);
         }
         if dying_creature_controller.is_some() {
             self.apply_death_toughness_drain(id);

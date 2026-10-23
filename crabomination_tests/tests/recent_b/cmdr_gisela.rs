@@ -239,32 +239,35 @@ fn arden_angel_climbs_back_on_a_one() {
     assert!(g.battlefield_find(angel).is_some());
 }
 
-/// A paired creature that dies comes back at your next upkeep.
+/// A paired creature that dies comes back at your next upkeep — by lethal
+/// damage or by a destroy effect (both death funnels, CR 702.95).
 #[test]
 fn breathkeeper_seraph_brings_its_partner_back() {
-    let mut g = main_phase(2);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let seraph = g.add_card_to_hand(0, catalog::breathkeeper_seraph());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
-    cast(&mut g, seraph, None);
-    assert_eq!(g.battlefield_find(seraph).and_then(|c| c.soulbond_partner), Some(bear), "paired");
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    cast(&mut g, bolt, Some(Target::Permanent(bear)));
-    assert!(g.battlefield_find(bear).is_none());
-    // To the next turn's upkeep.
-    for seat in 0..2 {
-        for _ in 0..3 {
-            g.add_card_to_library(seat, catalog::plains());
+    for destroy in [false, true] {
+        let mut g = main_phase(2);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let seraph = g.add_card_to_hand(0, catalog::breathkeeper_seraph());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+        cast(&mut g, seraph, None);
+        assert_eq!(g.battlefield_find(seraph).and_then(|c| c.soulbond_partner), Some(bear), "paired");
+        let kill = g.add_card_to_hand(0, if destroy { catalog::murder() } else { catalog::lightning_bolt() });
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        cast(&mut g, kill, Some(Target::Permanent(bear)));
+        assert!(g.battlefield_find(bear).is_none());
+        // To the next turn's upkeep.
+        for seat in 0..2 {
+            for _ in 0..3 {
+                g.add_card_to_library(seat, catalog::plains());
+            }
         }
+        let mut guard = 0;
+        while !(g.active_player_idx == 0 && g.step == TurnStep::Draw) && guard < 40 {
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+            guard += 1;
+        }
+        assert!(g.battlefield_find(bear).is_some(), "back at your next upkeep (destroy: {destroy})");
     }
-    let mut guard = 0;
-    while !(g.active_player_idx == 0 && g.step == TurnStep::Draw) && guard < 40 {
-        let _ = g.advance_step(Vec::new());
-        drain_stack(&mut g);
-        guard += 1;
-    }
-    assert!(g.battlefield_find(bear).is_some(), "back at your next upkeep");
 }
 
 #[test]
