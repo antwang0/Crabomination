@@ -85,6 +85,23 @@ fn cr_903_scion_of_halaster_sculpts_the_first_draw() {
     assert_eq!(g.players[0].hand.len(), hand + 2);
 }
 
+/// Scion of Halaster grants its draw to commander CREATURES you own: a
+/// planeswalker commander on the battlefield leaves the first draw plain.
+#[test]
+fn cr_903_scion_of_halaster_ignores_a_noncreature_commander() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let cmd = g.seat_commanders(0, vec![catalog::jace_the_mind_sculptor()])[0];
+    g.add_card_to_battlefield(0, catalog::scion_of_halaster());
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let jace = g.players[0].command.remove(pos);
+    g.battlefield.push(jace);
+    let gy = g.players[0].graveyard.len();
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].graveyard.len(), gy, "a planeswalker commander: a plain draw");
+}
+
 /// CR 903.8 — Font of Magic discounts instants and sorceries by the times a
 /// commander was cast from the command zone.
 #[test]

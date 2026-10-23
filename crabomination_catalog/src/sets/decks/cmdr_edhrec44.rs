@@ -74,7 +74,7 @@ pub fn gale_waterdeep_prodigy() -> CardDefinition {
 /// Scion of Halaster — {1}{B} legendary Background. Your commander creatures
 /// have "the first time you would draw each turn, instead look at the top two,
 /// one into your graveyard and the other back, then draw" — read while you
-/// control a commander of yours.
+/// control a commander creature you own.
 pub fn scion_of_halaster() -> CardDefinition {
     CardDefinition {
         name: "Scion of Halaster",
@@ -87,7 +87,9 @@ pub fn scion_of_halaster() -> CardDefinition {
                           look at the top two cards of your library. Put one of them into your graveyard and the \
                           other back on top of your library. Then draw a card.\"",
             effect: StaticEffect::WhileCondition {
-                condition: Predicate::ControlsOwnCommander { who: PlayerRef::You },
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::IsCommander.and(R::Creature).and(R::OwnedByYou).and(R::ControlledByYou),
+                )),
                 inner: Box::new(StaticEffect::FirstDrawEachTurnMillsOneOfTwo),
             },
         }],
