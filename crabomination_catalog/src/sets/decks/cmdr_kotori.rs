@@ -402,7 +402,7 @@ pub fn prodigys_prototype() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
         static_abilities: vec![StaticAbility {
             description: "This token crews Vehicles as though its power were 2 greater.",
-            effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+            effect: StaticEffect::CrewPowerBonus { applies_to: Selector::This, amount: 2 },
         }],
         ..Default::default()
     };

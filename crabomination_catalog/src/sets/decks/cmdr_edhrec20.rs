@@ -294,7 +294,7 @@ pub fn giant_ox() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![static_ab(
             "This creature crews Vehicles using its toughness rather than its power.",
-            StaticEffect::SelfCrewsSaddlesWithToughness,
+            StaticEffect::SelfCrewsWithToughness,
         )],
         ..creature("Giant Ox", cost(&[generic(1), w()]), vec![CreatureType::Ox], 0, 6)
     }
@@ -307,7 +307,7 @@ pub fn hotshot_mechanic() -> CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         static_abilities: vec![static_ab(
             "This creature crews Vehicles as though its power were 2 greater.",
-            StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+            StaticEffect::CrewPowerBonus { applies_to: Selector::This, amount: 2 },
         )],
         ..creature("Hotshot Mechanic", cost(&[w()]), vec![CreatureType::Fox, CreatureType::Pilot], 2, 1)
     }
@@ -346,7 +346,7 @@ pub fn born_to_drive() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
         static_abilities: vec![static_ab(
             "This token crews Vehicles as though its power were 2 greater.",
-            StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+            StaticEffect::CrewPowerBonus { applies_to: Selector::This, amount: 2 },
         )],
         ..Default::default()
     };

@@ -4600,6 +4600,12 @@ pub enum StaticEffect {
     /// and put a `counter` counter on it" (Ravenloft Adventurer): tokens too,
     /// and no cast grant (Draugr Necromancer's castable sibling is nontoken).
     ExileDyingOpponentCreaturesWithCounter { counter: crate::card::CounterType },
+    /// CR 702.122b — `CrewSaddlePowerBonus`'s crew-only sibling: "crews
+    /// Vehicles as though its power were N greater" (Hotshot Mechanic).
+    CrewPowerBonus { applies_to: Selector, amount: i32 },
+    /// `SelfCrewsSaddlesWithToughness`'s crew-only sibling: "crews Vehicles
+    /// using its toughness rather than its power" (Giant Ox).
+    SelfCrewsWithToughness,
 }
 
 impl StaticEffect {

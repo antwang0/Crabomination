@@ -24908,14 +24908,17 @@ impl GameState {
     /// the engine still taps the creatures and stacks a redundant effect.
     /// CR 702.122b / 702.171c — sum of "crews/saddles as though its power were
     /// N greater" bonuses applying to `cid` (Cloudspire Captain, Deathless
-    /// Pilot). Folded into the crew / saddle power total, not real P/T.
-    pub fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
+    /// Pilot). Folded into the crew / saddle power total, not real P/T; a
+    /// crew-only bonus (Hotshot Mechanic) counts only when `saddle` is false.
+    pub fn crew_saddle_power_bonus(&self, cid: crate::card::CardId, saddle: bool) -> i32 {
         use crate::effect::StaticEffect;
         let Some(target) = self.battlefield.find_by_id(cid) else { return 0 };
         let mut bonus = 0;
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
-                if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount } = &sa.effect
+                if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount }
+                | StaticEffect::CrewPowerBonus { applies_to, amount } = &sa.effect
+                && (!saddle || matches!(sa.effect, StaticEffect::CrewSaddlePowerBonus { .. }))
                     && let Some(affected) = selector_to_affected(applies_to, src)
                     && crate::game::layers::affected_includes(&affected, src.id, target)
                 {
@@ -24927,16 +24930,18 @@ impl GameState {
     }
 
     /// CR 702.122 / 702.171 — Interface Ace: a crewing/saddling creature that
-    /// counts its toughness instead of its power (`SelfCrewsSaddlesWithToughness`).
-    pub(crate) fn crew_saddle_uses_toughness(&self, cid: crate::card::CardId) -> bool {
+    /// counts its toughness instead of its power (`SelfCrewsSaddlesWithToughness`;
+    /// Giant Ox's `SelfCrewsWithToughness` only when `saddle` is false).
+    pub(crate) fn crew_saddle_uses_toughness(&self, cid: crate::card::CardId, saddle: bool) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield
             .find_by_id(cid)
             .is_some_and(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::SelfCrewsSaddlesWithToughness))
+                c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    StaticEffect::SelfCrewsSaddlesWithToughness => true,
+                    StaticEffect::SelfCrewsWithToughness => !saddle,
+                    _ => false,
+                })
             })
     }
 
@@ -25046,9 +25051,9 @@ impl GameState {
             if tapped {
                 return Err(GameError::CardIsTapped(cid));
             }
-            let base = if self.crew_saddle_uses_toughness(cid) { cp.toughness } else { cp.power };
+            let base = if self.crew_saddle_uses_toughness(cid, false) { cp.toughness } else { cp.power };
             total_power = total_power
-                .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid)).max(0));
+                .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid, false)).max(0));
         }
         // Heart of Kiran — CR 118.9 alternative cost: no crew, one loyalty
         // counter off the controller's most-loyal planeswalker instead.
@@ -25149,9 +25154,9 @@ impl GameState {
             if tapped {
                 return Err(GameError::CardIsTapped(cid));
             }
-            let base = if self.crew_saddle_uses_toughness(cid) { cp.toughness } else { cp.power };
+            let base = if self.crew_saddle_uses_toughness(cid, true) { cp.toughness } else { cp.power };
             total_power = total_power
-                .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid)).max(0));
+                .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid, true)).max(0));
         }
         if (total_power as u32) < saddle_n {
             return Err(GameError::SelectionRequirementViolated);
@@ -35997,6 +36002,8 @@ fn static_effect_to_effects(
             | StaticEffect::CrewSaddlePowerBonus { .. }
             // SelfCrewsSaddlesWithToughness — read directly by `crew` / `saddle`.
             | StaticEffect::SelfCrewsSaddlesWithToughness
+            | StaticEffect::CrewPowerBonus { .. }
+            | StaticEffect::SelfCrewsWithToughness
             // GrantTriggeredAbility — surfaced by `statics_granted_triggers_for`
             // in both trigger dispatchers; no layer effect.
             | StaticEffect::GrantTriggeredAbility { .. }

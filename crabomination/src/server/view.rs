@@ -1466,7 +1466,8 @@ fn crew_saddle_power_bonus_in(cid: CardId, battlefield: &[CardInstance]) -> i32 
     let mut bonus = 0;
     for src in battlefield {
         for sa in &src.definition.static_abilities {
-            if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount } = &sa.effect
+            if let StaticEffect::CrewSaddlePowerBonus { applies_to, amount }
+            | StaticEffect::CrewPowerBonus { applies_to, amount } = &sa.effect
                 && let Some(affected) =
                     crate::game::selector_to_affected(applies_to, src)
                 && crate::game::layers::affected_includes(&affected, src.id, target)

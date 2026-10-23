@@ -26587,7 +26587,7 @@ pub fn shorikai_genesis_engine() -> CardDefinition {
                         },
                         static_abilities: vec![crate::card::StaticAbility {
                             description: "This token crews Vehicles as though its power were 2 greater.",
-                            effect: crate::effect::StaticEffect::CrewSaddlePowerBonus {
+                            effect: crate::effect::StaticEffect::CrewPowerBonus {
                                 applies_to: Selector::This,
                                 amount: 2,
                             },

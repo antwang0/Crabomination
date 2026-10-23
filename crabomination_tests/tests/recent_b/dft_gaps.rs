@@ -391,7 +391,7 @@ fn valors_flagship_cycles_into_pilots() {
     let pilots: Vec<_> =
         g.battlefield.iter().filter(|c| c.definition.name == "Pilot").map(|c| c.id).collect();
     assert_eq!(pilots.len(), 2, "X = 2");
-    assert_eq!(g.crew_saddle_power_bonus(pilots[0]), 2, "crews as a 3-power creature");
+    assert_eq!(g.crew_saddle_power_bonus(pilots[0], false), 2, "crews as a 3-power creature");
 }
 
 /// Ancient Vendetta strips every copy of the named card from an opponent's

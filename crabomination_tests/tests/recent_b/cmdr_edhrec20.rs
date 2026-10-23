@@ -251,6 +251,19 @@ fn mighty_servant_crewed_by_two_draws() {
     }
 }
 
+/// Giant Ox and Hotshot Mechanic only crew (CR 702.122b): neither saddles
+/// Caustic Bronco's saddle 3 by toughness or with the +2 (CR 702.171a).
+#[test]
+fn giant_ox_and_hotshot_mechanic_dont_saddle() {
+    for helper in [catalog::giant_ox as fn() -> _, catalog::hotshot_mechanic] {
+        let mut g = pod(2);
+        let bronco = ready(&mut g, 0, catalog::caustic_bronco());
+        let rider = ready(&mut g, 0, helper());
+        assert!(g.perform_action(GameAction::Saddle { mount: bronco, creatures: vec![rider] }).is_err());
+        assert!(!g.battlefield_find(bronco).unwrap().saddled);
+    }
+}
+
 /// Kitsune Ace: a Vehicle attacking gives it first strike (mode 0).
 #[test]
 fn kitsune_ace_first_strike_for_the_vehicle() {

@@ -1707,7 +1707,7 @@ mod recent170 {
         drain_stack(&mut g);
         assert!(g.battlefield_find(land).is_none(), "land sacrificed");
         let pilot = g.battlefield.iter().find(|c| c.definition.name == "Pilot").expect("made a Pilot");
-        assert_eq!(g.crew_saddle_power_bonus(pilot.id), 2, "Pilot crews as though +2 power");
+        assert_eq!(g.crew_saddle_power_bonus(pilot.id, false), 2, "Pilot crews as though +2 power");
     }
 
     /// Rangers' Aetherhive mints a Thopter whenever you activate an exhaust ability.
@@ -2041,7 +2041,7 @@ mod recent173 {
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
         assert!(cp.keywords().contains(&Keyword::Lifelink));
         let pilot = g.battlefield.iter().find(|c| c.definition.name == "Pilot").expect("Pilot minted");
-        assert_eq!(g.crew_saddle_power_bonus(pilot.id), 2, "boosted Pilot");
+        assert_eq!(g.crew_saddle_power_bonus(pilot.id, false), 2, "boosted Pilot");
     }
 
     /// Trade the Helm swaps control of two permanents.
