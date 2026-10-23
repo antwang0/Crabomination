@@ -5440,6 +5440,8 @@ pub fn decide_optional_trigger(
     // (`eval_modes` gates it off inside sims); a flat cost or a flat upside
     // does not — there is nothing to weigh.
     let (take, priced) = match kind {
+        // CR 704.5b — a "may draw" the library can't cover decks the seat.
+        K::MayBody if may_draw_would_deck(state, seat, source, description) => (false, false),
         K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description) {
             Some(yes) => (yes, false),
             None => (optional_trigger_beneficial(state, source, description), true),
@@ -5658,6 +5660,33 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     // body can't be introspected (most "you may" on your own permanents is
     // upside).
     body.map(|b| !effect_imposes_self_cost(b)).unwrap_or(true)
+}
+
+/// Would taking this "you may draw" deck `seat` (CR 704.5b)? The prompt's
+/// `MayDo` body when the source shows one — its own draws (`You`) against the
+/// library — else the engine's own "Draw a card?" ask (The Second Doctor's
+/// each-player draw) against an empty library.
+fn may_draw_would_deck(state: &GameState, seat: usize, source: CardId, description: &str) -> bool {
+    use crate::effect::{Selector, Value};
+    let library = state.players[seat].library.len();
+    if library == 0 && description.starts_with("Draw") {
+        return true;
+    }
+    fn draws(e: &Effect) -> usize {
+        match e {
+            Effect::Draw { who: Selector::You, amount: Value::Const(n) } => (*n).max(0) as usize,
+            Effect::Draw { who: Selector::You, .. } => 1,
+            Effect::Seq(v) => v.iter().map(draws).sum(),
+            _ => 0,
+        }
+    }
+    let Some(def) = optional_trigger_def(state, source) else { return false };
+    let body = find_maydo_body(&def.effect, description)
+        .or_else(|| def.triggered_abilities.iter().find_map(|t| find_maydo_body(&t.effect, description)));
+    body.is_some_and(|b| {
+        let n = draws(b);
+        n > 0 && library < n
+    })
 }
 
 /// Is `body` a targeted removal whose slot-0 target, as chosen for the
@@ -25704,6 +25733,19 @@ mod tests {
         g.add_card_to_graveyard(1, catalog::hogaak_arisen_necropolis());
         g.active_player_idx = 0;
         let _ = cast_candidates(&g, 1, &EvalWeights::default(), None);
+    }
+
+    /// CR 704.5b — a "you may draw" is declined on an empty library (bug fix:
+    /// The Second Doctor's each-player draw decked both survivors of a six-seat
+    /// pod at once, a CR 104.4a draw — sweep seed 1012108 game 4).
+    #[test]
+    fn a_may_draw_is_declined_on_an_empty_library() {
+        let mut g = two_player_game();
+        let src = g.add_card_to_battlefield(0, catalog::aphetto_runecaster());
+        g.players[0].library.clear();
+        assert!(may_draw_would_deck(&g, 0, src, "Draw a card?"));
+        g.add_card_to_library(0, catalog::forest());
+        assert!(!may_draw_would_deck(&g, 0, src, "Draw a card?"));
     }
 
     /// CR 702.27 — a buyback cast is a candidate when the extra cost is
