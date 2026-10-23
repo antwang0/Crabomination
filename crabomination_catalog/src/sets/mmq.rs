@@ -1132,7 +1132,7 @@ pub fn soul_channeling() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             life_cost: 2,
-            effect: Effect::Regenerate { what: Selector::AttachedToMe(Box::new(Selector::This)) },
+            effect: Effect::Regenerate { what: Selector::AttachedTo(Box::new(Selector::This)) },
             ..Default::default()
         }],
         ..creature_aura("Soul Channeling", cost(&[generic(2), b()]), EquipBonus::default())
@@ -1144,7 +1144,7 @@ pub fn stamina() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::Regenerate { what: Selector::AttachedToMe(Box::new(Selector::This)) },
+            effect: Effect::Regenerate { what: Selector::AttachedTo(Box::new(Selector::This)) },
             ..Default::default()
         }],
         ..creature_aura(

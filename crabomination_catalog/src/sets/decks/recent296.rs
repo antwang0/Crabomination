@@ -183,8 +183,9 @@ pub fn shadow_lance() -> CardDefinition {
             keywords: vec![Keyword::FirstStrike],
             activated_abilities: vec![ActivatedAbility {
                 mana_cost: cost(&[generic(1), b()]),
+                // Granted to the host, so `This` is the enchanted creature.
                 effect: Effect::PumpPT {
-                    what: Selector::AttachedToMe(Box::new(Selector::This)),
+                    what: Selector::This,
                     power: Value::Const(2),
                     toughness: Value::Const(2),
                     duration: Duration::EndOfTurn,

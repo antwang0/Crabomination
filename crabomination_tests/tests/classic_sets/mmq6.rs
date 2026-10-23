@@ -393,3 +393,19 @@ fn crooked_scales_does_not_re_flip_the_coin_it_already_lost() {
         "four to activate and three for the one repeat"
     );
 }
+
+/// Soul Channeling and Stamina regenerate the *enchanted* creature: their
+/// selector read the permanents attached to the Aura (none), so neither
+/// ability ever made a shield.
+#[test]
+fn soul_channeling_and_stamina_shield_their_host() {
+    for aura in [catalog::soul_channeling as fn() -> _, catalog::stamina] {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let a = g.add_card_to_hand(0, aura());
+        cast(&mut g, 0, a, Some(Target::Permanent(bear)));
+        activate(&mut g, 0, a, 0, None, vec![], None).expect("regenerate");
+        assert_eq!(g.battlefield_find(bear).unwrap().regeneration_shields, 1, "{}", aura().name);
+    }
+}

@@ -210,8 +210,8 @@ pub fn mark_of_eviction() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                // Return the creature first (This is still on the battlefield,
-                // so `AttachedToMe` resolves) then bounce this Aura itself.
+                // Granted to the host, so `This` is the creature: the Auras
+                // attached to it (this one among them) go first, then it.
                 effect: Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::AttachedToMe(Box::new(Selector::This)),

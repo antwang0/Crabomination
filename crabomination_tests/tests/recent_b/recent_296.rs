@@ -141,6 +141,16 @@ fn shadow_lance_grants_first_strike() {
     g.resolve_effect(&catalog::shadow_lance().effect, &ctx).unwrap();
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
+    // {1}{B}: enchanted creature gets +2/+2 — the granted ability pumps its host.
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    let idx = g.battlefield_find(bear).map(|c| c.definition.activated_abilities.len()).unwrap_or(0);
+    let res = (0..=idx).find_map(|i| {
+        g.perform_action(GameAction::ActivateAbility { card_id: bear, ability_index: i, target: None, additional_targets: vec![], x_value: None, mode: None }).ok()
+    });
+    assert!(res.is_some(), "the granted pump activates from the host");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 
 #[test]
