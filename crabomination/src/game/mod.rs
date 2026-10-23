@@ -11977,14 +11977,27 @@ impl GameState {
             .count() as i32
     }
 
-    /// Record a dying creature's definition for the turn, so
-    /// `Predicate::CreatureDiedThisTurnMatching` can ask what *kind* of
-    /// creature died (Undead Sprinter's non-Zombie gate). Called from both
-    /// death funnels while the permanent is still on the battlefield.
-    pub(crate) fn note_creature_death(&mut self, id: CardId) {
-        if let Some(c) = self.battlefield.find_by_id(id).cloned() {
-            self.deaths.creature_deaths_this_turn.push(c);
+    /// A dying creature's per-turn death record, read while it is still on
+    /// the battlefield: its last-known copy (what kind of creature died —
+    /// `Predicate::CreatureDiedThisTurnMatching`, Undead Sprinter) and whether
+    /// it is a Zubera. Applied by [`Self::apply_creature_death_tally`] once
+    /// the removal shows the death wasn't replaced (CR 700.4).
+    pub(crate) fn creature_death_tally(&self, id: CardId) -> Option<(CardInstance, bool)> {
+        let c = self.battlefield.find_by_id(id)?.clone();
+        let zubera = self.permanent_has_creature_type(id, crate::card::CreatureType::Zubera);
+        Some((c, zubera))
+    }
+
+    /// Bump `controller`'s died-creature tallies (Essenceknit Scholar, the
+    /// Zubera cycle) for a death [`Self::creature_death_tally`] recorded.
+    pub(crate) fn apply_creature_death_tally(&mut self, controller: usize, (c, zubera): (CardInstance, bool)) {
+        let p = &mut self.players[controller];
+        p.creatures_died_this_turn = p.creatures_died_this_turn.saturating_add(1);
+        if zubera {
+            p.zuberas_died_this_turn = p.zuberas_died_this_turn.saturating_add(1);
         }
+        self.creatures_died_this_resolution = self.creatures_died_this_resolution.saturating_add(1);
+        self.deaths.creature_deaths_this_turn.push(c);
     }
 
     /// Bookkeeping for a card leaving `p`'s graveyard: bumps the per-turn

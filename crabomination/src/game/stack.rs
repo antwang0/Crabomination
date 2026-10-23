@@ -11,7 +11,10 @@ type LegendGroups<'a> = SmallVec<[(usize, &'a str, SmallVec<[CardId; 2]>); 4]>;
 
 /// A collected death/leaves trigger to fire from a dying permanent:
 /// `(source, effect, controller, intervening/subject filter)`.
-type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
+/// A collected self-death trigger: source, effect, controller, intervening
+/// filter, and whether it is a death ("dies" / "put into a graveyard") rather
+/// than a leaves-the-battlefield trigger — the half a replaced death drops.
+type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool);
 
 /// `CRAB_SBA_CENSUS` — the state-based-action re-sweep census.
 ///
@@ -8451,7 +8454,7 @@ impl GameState {
                     // CR 113.10b — a creature that lost all abilities dies with
                     // no printed triggers to look back at (Hellcat's return).
                     let stripped = self.lost_all_abilities(c.id);
-                    let triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = c
+                    let triggers: Vec<DeathTrigger> = c
                         .definition
                         .triggered_abilities
                         .iter()
@@ -8479,7 +8482,10 @@ impl GameState {
                         // no filter; a filtered "this or another [type] you
                         // control dies" (YourControl) must not fire when the
                         // dying source itself fails the filter.
-                        .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
+                        .map(|t| {
+                            let dies = t.event.kind == EventKind::CreatureDied;
+                            (c.id, t.effect.clone(), c.controller, t.event.filter.clone(), dies)
+                        })
                         .collect();
                     let has_persist = self.has_death_return_keyword(c, &Keyword::Persist);
                     let has_undying = self.has_death_return_keyword(c, &Keyword::Undying);
@@ -8528,6 +8534,7 @@ impl GameState {
                                 ta.effect.clone(),
                                 controller_idx,
                                 ta.event.filter.clone(),
+                                true,
                             ));
                         }
                     }
@@ -8560,28 +8567,17 @@ impl GameState {
                     };
                     for ta in &bonus.triggered_abilities {
                         if ta.event.kind == EventKind::CreatureDied {
-                            die_triggers.push((id, ta.effect.clone(), controller_idx, ta.event.filter.clone()));
+                            die_triggers.push((id, ta.effect.clone(), controller_idx, ta.event.filter.clone(), true));
                         }
                     }
                 }
             }
-            // Bump the controller's per-turn died-creature tally for
-            // Witherbloom "if a creature died under your control this
-            // turn" payoffs (Essenceknit Scholar).
-            if controller_idx < self.players.len() {
-                self.players[controller_idx].creatures_died_this_turn =
-                    self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
-                self.creatures_died_this_resolution =
-                    self.creatures_died_this_resolution.saturating_add(1);
-                self.note_creature_death(id);
-                // Zubera cycle: count Zubera deaths separately (read off the
-                // still-present dying creature's subtypes).
-                if self.permanent_has_creature_type(id, crate::card::CreatureType::Zubera)
-                {
-                    self.players[controller_idx].zuberas_died_this_turn =
-                        self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
-                }
-            }
+            // The died-creature tally (Essenceknit Scholar, the Zubera
+            // cycle) is read off the dying creature now and applied once the
+            // removal shows it really died.
+            let tally = (controller_idx < self.players.len())
+                .then(|| self.creature_death_tally(id))
+                .flatten();
             // CR 603.10 — stash an LKI snapshot before the creature leaves
             // so a "deals damage / makes tokens equal to its power" dies
             // body reads its counter-boosted P/T (Goldvein Hydra). Removed
@@ -8596,6 +8592,15 @@ impl GameState {
                 .find_by_id(id)
                 .is_some_and(|c| c.definition.is_land());
             self.remove_from_battlefield_to_graveyard_raw(id);
+            // CR 700.4 / 614.1a — a death replaced away from the graveyard
+            // (Kalitas, Rayami, Ravenloft Adventurer, Rest in Peace) never
+            // happened: no tally, and only "leaves the battlefield" triggers.
+            let replaced = self.death_was_replaced(id);
+            if replaced {
+                die_triggers.retain(|t| !t.4);
+            } else if let Some(t) = tally {
+                self.apply_creature_death_tally(controller_idx, t);
+            }
             // CR 700 — emit the graveyard-arrival event (only when the card
             // actually landed there; Finality / RIP redirects don't count).
             // Emrakul-style "put into a graveyard from anywhere" triggers
@@ -8616,7 +8621,7 @@ impl GameState {
             let died_ev_amount =
                 self.event_amount_for(&GameEvent::CreatureDied { card_id: id });
             self.trigger_event_amount_scratch = died_ev_amount;
-            for (source, effect, controller, filter) in die_triggers {
+            for (source, effect, controller, filter, _) in die_triggers {
                 // CR 603.4/603.10a — a filtered self-death trigger ("this or
                 // another [type] you control dies") checks its intervening
                 // filter against the dying creature, bound as TriggerSource via
@@ -10064,7 +10069,10 @@ impl GameState {
                         EventKind::PermanentDied => !dies_suppressed,
                         _ => false,
                     })
-                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
+                    .map(|t| {
+                        let dies = t.event.kind != EventKind::PermanentLeavesBattlefield;
+                        (c.id, t.effect.clone(), c.controller, t.event.filter.clone(), dies)
+                    })
                     .collect();
                 let creature_controller = if is_creature { Some(c.controller) } else { None };
                 (triggers, creature_controller)
@@ -10086,7 +10094,7 @@ impl GameState {
                 let src = if bonus.triggers_on_equipment { eq.id } else { id };
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind == EventKind::CreatureDied {
-                        leave_triggers.push((src, ta.effect.clone(), controller, ta.event.filter.clone()));
+                        leave_triggers.push((src, ta.effect.clone(), controller, ta.event.filter.clone(), true));
                     }
                 }
             }
@@ -10113,21 +10121,9 @@ impl GameState {
         // standard destroy / damage-lethal route that bypasses the SBA
         // dies handler in `apply_state_based_actions`; we duplicate the
         // bump so all destroy paths agree.
-        if let Some(controller_idx) = dying_creature_controller
-            && controller_idx < self.players.len()
-            && !exiled_instead
-        {
-            self.players[controller_idx].creatures_died_this_turn =
-                self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
-            self.creatures_died_this_resolution =
-                self.creatures_died_this_resolution.saturating_add(1);
-            self.note_creature_death(id);
-            if self.permanent_has_creature_type(id, crate::card::CreatureType::Zubera)
-            {
-                self.players[controller_idx].zuberas_died_this_turn =
-                    self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
-            }
-        }
+        let tally = dying_creature_controller
+            .filter(|&p| p < self.players.len() && !exiled_instead)
+            .and_then(|p| self.creature_death_tally(id).map(|t| (p, t)));
         // Snapshot the card if it carries a SelfSource `PermanentSacrificed`
         // trigger so the dispatcher can fire it from last-known info after the
         // permanent has left (the sacrifice funnels push a `PermanentSacrificed`
@@ -10169,6 +10165,14 @@ impl GameState {
             .find_by_id(id)
             .map(|c| (c.owner, c.definition.card_types.contains(&crate::card::CardType::Land)));
         self.remove_from_battlefield_to_graveyard_raw(id);
+        // CR 700.4 / 614.1a — as the state-based funnel: a death the removal
+        // replaced away from the graveyard keeps only its leaves triggers.
+        let mut leave_triggers = leave_triggers;
+        if self.death_was_replaced(id) {
+            leave_triggers.retain(|t| !t.4);
+        } else if let Some((p, t)) = tally {
+            self.apply_creature_death_tally(p, t);
+        }
         let mut out = Vec::new();
         if let Some((owner, is_land)) = gy_info
             && self.players[owner].graveyard.iter().any(|c| c.id == id)
@@ -10183,7 +10187,7 @@ impl GameState {
         if !leave_triggers.is_empty() {
             self.trigger_event_amount_scratch = died_ev_amount;
         }
-        for (source, effect, controller, filter) in leave_triggers {
+        for (source, effect, controller, filter, _) in leave_triggers {
             // CR 603.4/603.10a — a filtered self-death trigger checks its
             // intervening filter against the dying creature (bound as
             // TriggerSource via the cached death snapshot) before firing.
