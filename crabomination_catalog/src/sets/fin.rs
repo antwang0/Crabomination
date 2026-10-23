@@ -635,8 +635,8 @@ pub fn tidus_blitzball_star() -> CardDefinition {
 
 /// Zidane, Tantalus Thief — {3}{R}{W} 3/3 Human Mutant Scout. ETB: gain control
 /// of target creature an opponent controls until end of turn; untap it and it
-/// gains lifelink and haste. (The "opponent gains control from you" Treasure
-/// rider is omitted.)
+/// gains lifelink and haste. Whenever an opponent gains control of a permanent
+/// from you, you create a Treasure.
 pub fn zidane_tantalus_thief() -> CardDefinition {
     CardDefinition {
         name: "Zidane, Tantalus Thief",
@@ -675,7 +675,10 @@ pub fn zidane_tantalus_thief() -> CardDefinition {
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
-        ]))],
+        ])), TriggeredAbility {
+            event: EventSpec::new(EventKind::LostControl { yours: true }, EventScope::AnyPlayer),
+            effect: mint_treasures(1),
+        }],
         ..Default::default()
     }
 }

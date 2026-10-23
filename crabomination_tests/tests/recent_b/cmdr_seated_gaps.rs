@@ -497,3 +497,26 @@ fn unagi_ward_is_paid_by_waterbending() {
     drain_stack(&mut bare);
     assert_eq!(bare.battlefield_find(unagi).unwrap().damage, 0, "unpaid: countered");
 }
+
+fn treasures(g: &GameState, seat: usize) -> usize {
+    g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Treasure").count()
+}
+
+/// Zidane, Tantalus Thief — CR 800.4-style control change: an opponent taking
+/// a permanent from Zidane's controller makes them a Treasure; Zidane's own ETB
+/// steal (control moving the other way) doesn't.
+#[test]
+fn zidane_makes_a_treasure_when_an_opponent_takes_your_permanent() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let zidane = g.add_card_to_hand(0, catalog::zidane_tantalus_thief());
+    cast_as(&mut g, 0, zidane, &[perm(theirs)]).expect("Zidane");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "the ETB steal");
+    assert_eq!(treasures(&g, 0), 0, "taking one isn't losing one");
+    let treason = g.add_card_to_hand(2, catalog::act_of_treason());
+    g.active_player_idx = 2;
+    cast_as(&mut g, 2, treason, &[perm(bear)]).expect("Act of Treason");
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 2);
+    assert_eq!(treasures(&g, 0), 1, "an opponent gained control of a permanent from you");
+}
