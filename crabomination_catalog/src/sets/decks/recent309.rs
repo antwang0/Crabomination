@@ -758,7 +758,7 @@ pub fn stop_cold() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Enchanted permanent doesn't untap during its controller's untap step.",
             effect: StaticEffect::PreventUntap {
-                applies_to: Selector::AttachedToMe(Box::new(Selector::This)),
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
             },
         }],
         ..Default::default()

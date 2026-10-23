@@ -2024,3 +2024,49 @@ fn no_board_selector_filters_on_a_target_slot() {
     bad.dedup();
     assert!(bad.is_empty(), "a board selector reads a target slot: {bad:?}");
 }
+
+/// CR 502.3 — the untap-step readers (`untap_prevented_by_static` and the
+/// untap step's own walk) know three `PreventUntap` shapes: `This`,
+/// `AttachedTo(This)` and `EachPermanent(..)`; any other selector silently
+/// never locks (Stop Cold carried `AttachedToMe`, "what is attached to me").
+#[test]
+fn every_prevent_untap_static_uses_a_shape_the_untap_step_reads() {
+    fn ok(sel: &serde_json::Value) -> bool {
+        match sel {
+            serde_json::Value::String(s) => s == "This",
+            serde_json::Value::Object(m) if m.len() == 1 => {
+                m.get("AttachedTo").is_some_and(|i| i == "This") || m.contains_key("EachPermanent")
+            }
+            _ => false,
+        }
+    }
+    fn walk(v: &serde_json::Value, hit: &mut bool) {
+        match v {
+            serde_json::Value::Object(m) => {
+                for (k, sub) in m {
+                    if matches!(k.as_str(), "PreventUntap" | "PreventUntapGlobal")
+                        && let Some(sel) = sub.get("applies_to")
+                        && !ok(sel)
+                    {
+                        *hit = true;
+                    }
+                    walk(sub, hit);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|x| walk(x, hit)),
+            _ => {}
+        }
+    }
+    let mut bad = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        let mut hit = false;
+        walk(&serde_json::to_value(&def).expect("CardDefinition serializes"), &mut hit);
+        if hit {
+            bad.push(def.name);
+        }
+    }
+    bad.sort_unstable();
+    bad.dedup();
+    assert!(bad.is_empty(), "a PreventUntap selector the untap step can't read: {bad:?}");
+}
