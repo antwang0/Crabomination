@@ -77,6 +77,8 @@ web/dist/
 .ladder/deckwork/cards.json
 .ladder/deckwork/**/games_*.txt
 .ladder/deckwork/smoke_games.txt
+# The FRA benchmark puzzle set (positions, solutions, traps) is a spec, not scratch.
+!.ladder/fra_puzzles/
 
 # Training checkpoints. Each net directory is tens of megabytes of
 # weights plus a stats stream; they are run artifacts, reproducible from

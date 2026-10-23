@@ -93,3 +93,7 @@ test = false
 name = "dump_cards"
 test = false
 
+[[bin]]
+name = "fra_card_eval"
+test = false
+
