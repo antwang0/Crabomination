@@ -465,3 +465,35 @@ fn heart_of_kiran_crews_with_a_loyalty_counter() {
     }
     assert!(crewed, "the bot crews Heart of Kiran off Ajani");
 }
+
+/// The Unagi of Kyoshi Island — CR 701.67 Ward—Waterbend {4}: the caster pays
+/// two of it with mana and taps two creatures for the rest; with neither the
+/// spell is countered.
+#[test]
+fn unagi_ward_is_paid_by_waterbending() {
+    let mut g = pod(2);
+    let unagi = g.add_card_to_battlefield(1, catalog::the_unagi_of_kyoshi_island());
+    let bears = [ready(&mut g, 0, catalog::grizzly_bears()), ready(&mut g, 0, catalog::grizzly_bears())];
+    let mut bare = g.clone();
+    for &b in &bears {
+        bare.battlefield_find_mut(b).unwrap().tapped = true;
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(perm(unagi)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt the Unagi");
+    drain_stack(&mut g);
+    assert!(bears.iter().all(|&b| g.battlefield_find(b).unwrap().tapped), "two waterbent");
+    assert_eq!(g.battlefield_find(unagi).unwrap().damage, 3, "ward paid");
+    let bolt = bare.add_card_to_hand(0, catalog::lightning_bolt());
+    bare.players[0].mana_pool.add(Color::Red, 1);
+    bare.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(perm(unagi)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt the Unagi");
+    drain_stack(&mut bare);
+    assert_eq!(bare.battlefield_find(unagi).unwrap().damage, 0, "unpaid: countered");
+}

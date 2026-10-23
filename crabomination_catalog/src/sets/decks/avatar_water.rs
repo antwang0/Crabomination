@@ -670,8 +670,8 @@ pub fn waterbender_ascension() -> CardDefinition {
     }
 }
 
-/// The Unagi of Kyoshi Island — {3}{U}{U} 5/5 Legendary Serpent. Flash. Ward {4}
-/// (the printed Ward—Waterbend is approximated as Ward {4} mana). Whenever an
+/// The Unagi of Kyoshi Island — {3}{U}{U} 5/5 Legendary Serpent. Flash.
+/// Ward—Waterbend {4}. Whenever an
 /// opponent draws their second card each turn, you draw two cards.
 pub fn the_unagi_of_kyoshi_island() -> CardDefinition {
     CardDefinition {
@@ -685,7 +685,7 @@ pub fn the_unagi_of_kyoshi_island() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::Flash, Keyword::Ward(WardCost::generic(4))],
+        keywords: vec![Keyword::Flash, Keyword::Ward(WardCost::Waterbend(4))],
         triggered_abilities: vec![TriggeredAbility {
             // CR 121.2 — the drawing opponent's own second card, on any turn.
             event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::OpponentControl),
