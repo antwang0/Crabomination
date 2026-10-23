@@ -4596,6 +4596,10 @@ pub enum StaticEffect {
     /// +1/+1 placement onto a creature an opponent of this static's
     /// controller controls (entering-with counters included).
     OpponentsCreaturesCantHavePlusOneCounters,
+    /// CR 614 — "If a creature an opponent controls would die, instead exile it
+    /// and put a `counter` counter on it" (Ravenloft Adventurer): tokens too,
+    /// and no cast grant (Draugr Necromancer's castable sibling is nontoken).
+    ExileDyingOpponentCreaturesWithCounter { counter: crate::card::CounterType },
 }
 
 impl StaticEffect {

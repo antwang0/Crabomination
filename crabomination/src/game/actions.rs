@@ -1358,6 +1358,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             SE::ExileDyingOpponentCreatures { .. }
             | SE::ExileDyingNontokenCreaturesWithCounter { .. }
             | SE::ExileDyingOpponentCreaturesWithCounterCastable { .. }
+            | SE::ExileDyingOpponentCreaturesWithCounter { .. }
             | SE::ExileDyingOpponentCreaturesGrowingThis
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }

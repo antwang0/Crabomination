@@ -9425,17 +9425,27 @@ impl GameState {
                 && valentin_redirect.is_none()
                 && slime_redirect.is_none()
                 && card.definition.is_creature()
-                && !card.is_token
             {
+                let opposed = |src: &crate::card::CardInstance| {
+                    src.controller != card.controller && !self.same_team(src.controller, card.controller)
+                };
                 self.battlefield.iter().find_map(|src| {
                     src.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                        crate::effect::StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter } => {
+                        crate::effect::StaticEffect::ExileDyingNontokenCreaturesWithCounter { counter }
+                            if !card.is_token =>
+                        {
                             Some((counter, None))
                         }
                         crate::effect::StaticEffect::ExileDyingOpponentCreaturesWithCounterCastable { counter }
-                            if src.controller != card.controller && !self.same_team(src.controller, card.controller) =>
+                            if !card.is_token && opposed(src) =>
                         {
                             Some((counter, Some(src.controller)))
+                        }
+                        // Ravenloft Adventurer — tokens included, no cast grant.
+                        crate::effect::StaticEffect::ExileDyingOpponentCreaturesWithCounter { counter }
+                            if opposed(src) =>
+                        {
+                            Some((counter, None))
                         }
                         _ => None,
                     })
