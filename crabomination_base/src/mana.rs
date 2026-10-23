@@ -965,6 +965,14 @@ pub enum SpendRestriction {
     /// Candlekeep Researcher). Reads `SpellKind::from_hand`; abilities and
     /// casts from any other zone may spend it.
     NotSpellsFromHand,
+    /// "Spend this mana only to cast a spell from anywhere other than your
+    /// hand" (Mm'menon, the Right Hand): `NotSpellsFromHand` without abilities.
+    SpellsNotFromHand,
+    /// "Spend this mana only to cast artifact or creature spells" (Geosurge).
+    ArtifactOrCreatureSpells,
+    /// "…only to cast creature spells with mana value 4 or greater or creature
+    /// spells with {X} in their mana costs" (Helga, Skittish Seer).
+    CreatureSpellMv4OrX,
 }
 
 impl SpendRestriction {
@@ -979,6 +987,9 @@ impl SpendRestriction {
             SpendRestriction::KickedSpellsOnly => "only kicked spells",
             SpendRestriction::PowerUpOnly => "only power-up abilities",
             SpendRestriction::NotSpellsFromHand => "not spells cast from hand",
+            SpendRestriction::SpellsNotFromHand => "only spells cast from outside your hand",
+            SpendRestriction::ArtifactOrCreatureSpells => "only artifact or creature spells",
+            SpendRestriction::CreatureSpellMv4OrX => "only creature spells with MV 4+ or {X}",
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
@@ -1099,6 +1110,13 @@ impl SpendRestriction {
             SpendRestriction::KickedSpellsOnly => kind.kicked,
             SpendRestriction::PowerUpOnly => kind.power_up,
             SpendRestriction::NotSpellsFromHand => !kind.from_hand,
+            SpendRestriction::SpellsNotFromHand => !kind.from_hand && !kind.activating_ability,
+            SpendRestriction::ArtifactOrCreatureSpells => {
+                !kind.activating_ability && (kind.artifact || kind.creature)
+            }
+            SpendRestriction::CreatureSpellMv4OrX => {
+                !kind.activating_ability && kind.creature && (kind.mana_value >= 4 || kind.has_x)
+            }
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
