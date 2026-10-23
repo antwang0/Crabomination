@@ -1,0 +1,9 @@
+corpus: 16 puzzles (of 16 candidates)
+dflt: 9/16 (56.2 %)
+    failed: fp1_tetsuko_pump_after_blocks, fp2_yuriko_attack_alone, fp5_ingris_haste_cadets, fp12_fblthp_empty_library, fp13_ferocity_exile_assignment, fp14_stingcaster_flashback_burn, fp16_sanctum_lurker_ping
+net67: 10/16 (62.5 %)
+    failed: fp1_tetsuko_pump_after_blocks, fp2_yuriko_attack_alone, fp5_ingris_haste_cadets, fp12_fblthp_empty_library, fp13_ferocity_exile_assignment, fp14_stingcaster_flashback_burn
+mcts-dflt-256: 8/16 (50.0 %)
+    failed: fp1_tetsuko_pump_after_blocks, fp2_yuriko_attack_alone, fp4_ghalta_toughness_damage, fp5_ingris_haste_cadets, fp7_germinate_after_lifegain, fp8_overwrite_into_warlord, fp13_ferocity_exile_assignment, fp14_stingcaster_flashback_burn
+mcts-net67-256: 8/16 (50.0 %)
+    failed: fp1_tetsuko_pump_after_blocks, fp2_yuriko_attack_alone, fp4_ghalta_toughness_damage, fp5_ingris_haste_cadets, fp7_germinate_after_lifegain, fp8_overwrite_into_warlord, fp13_ferocity_exile_assignment, fp14_stingcaster_flashback_burn

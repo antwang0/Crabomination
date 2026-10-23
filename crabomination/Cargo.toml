@@ -90,6 +90,10 @@ name = "bot_ladder"
 test = false
 
 [[bin]]
+name = "bot_puzzles"
+test = false
+
+[[bin]]
 name = "dump_cards"
 test = false
 

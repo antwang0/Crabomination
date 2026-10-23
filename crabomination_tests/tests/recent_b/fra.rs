@@ -776,3 +776,29 @@ fn whiplash_wordsmith_flies_after_noncombat_damage() {
     cast_prepared(&mut g, id, Some(Target::Player(1))).unwrap();
     assert!(kw(&g).contains(&Keyword::Flying) && kw(&g).contains(&Keyword::Haste), "noncombat damage dealt");
 }
+
+/// CR 614.6 — Essence Burn's "exile it instead" means the host never died,
+/// so Ferocity of the Hunt's "when enchanted creature dies, return it" must
+/// not fire. It did: the Aura's look-back trigger lane didn't filter replaced
+/// deaths, and returned the exiled creature (found by the FRA puzzle FP13).
+#[test]
+fn cr_614_6_essence_burn_exile_stops_ferocity_of_the_hunt() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::ferocity_of_the_hunt());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    flood(&mut g, 0);
+    let burn = g.add_card_to_hand(0, catalog::essence_burn());
+    cast(&mut g, burn, Some(Target::Permanent(bear))).unwrap();
+    assert!(g.battlefield_find(bear).is_none(), "the host stays gone");
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled instead of dying");
+    // The control: an unreplaced death still returns it.
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::ferocity_of_the_hunt());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    flood(&mut g, 0);
+    let gasp = g.add_card_to_hand(0, catalog::last_gasp());
+    cast(&mut g, gasp, Some(Target::Permanent(bear))).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Grizzly Bears"), "Ferocity returns a real death");
+}

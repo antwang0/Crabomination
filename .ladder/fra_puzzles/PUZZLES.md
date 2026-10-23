@@ -175,15 +175,18 @@ would be wrong. Two FP13 facts are confirmed:
 
 ### FP10 `chandra_stun_the_threat` — horizon: stun counters
 
-- **Hero:** 6 life; Chandra, Chill of Compliance with 3 loyalty; 3
+- **Hero:** 6 life; Chandra, Chill of Compliance with **1** loyalty; 3
   Islands. No creatures.
-- **Opponent:** one untapped vanilla 8/8 with trample.
+- **Opponent:** an untapped vanilla 8/8 with trample, and a vanilla 1/1.
 - **Goal:** survive the opponent's next turn.
-- **Solution:** −X with X ≥ 1. The creature is tapped, and its stun
-  counter is removed instead of it untapping, so it can't attack.
-- **Traps:** either +1. A minimal-X note: −1 keeps Chandra at 2, −3
-  kills her, and both pass. Stun counters are feature 50, so this checks
-  that the net prices them.
+- **Solution:** −1: tap the 8/8 with a stun counter. The counter is
+  removed instead of the 8/8 untapping, so it can't attack. Chandra dies
+  to the activation, and the 1/1 deals 1.
+- **Traps:** either +1.
+- **Revision (2026-10-23):** the first version had Chandra at 3 loyalty
+  and no 1/1. The `pass` control *survived* it, because the default
+  opponent spent the 8/8 on Chandra. Now the opponent can kill Chandra
+  with the 1/1 and still swing lethal.
 
 ### FP11 `kiora_activate_first` — "if you've activated a loyalty ability this turn"
 
@@ -197,16 +200,18 @@ would be wrong. Two FP13 facts are confirmed:
 
 ### FP12 `fblthp_empty_library` — alternate win
 
-- **Hero:** Fblthp, Impossibly Lost (1/1); a Jace token with 1 loyalty;
-  **exactly 3 cards in the library**.
+- **Hero:** Fblthp, Impossibly Lost (1/1); an Island and a Swamp;
+  **exactly 4 cards in the library**. Hand: Theorix Charm ({U}{B}).
 - **Opponent:** 20 life; no creatures.
-- **Solution:** Jace −1 surveils the top card *into the graveyard*, leaving
-  2. Fblthp attacks and deals combat damage, you draw two, the library is
-  empty, and you win.
-- **Traps:** surveilling to the top (bots keep good cards) leaves 1 card
-  after the draw. The token dies at 0 loyalty, which reads as a loss.
-  Opponent life is irrelevant. The library size is the whole puzzle and
-  is likely invisible to any eval that doesn't feature it.
+- **Solution:** Theorix Charm, mode "mill three cards, then draw a card",
+  empties the library. Fblthp attacks and deals combat damage, you draw two
+  from an empty library, and win.
+- **Traps:** milling your own library reads as a loss, and the other two
+  modes are a counterspell with nothing to counter and a −2/−2.
+- **Revision (2026-10-23):** the first version surveiled with a Jace
+  token. A surveil is a decision answer, which the solver deliberately
+  doesn't search (`legal_actions`), so it certified unsolvable. A mode is
+  an action.
 
 ### FP13 `ferocity_exile_assignment` — removal assignment around a return
 
@@ -283,7 +288,49 @@ E5 and E6 are expected failures. They mark where the features stop, so
 a later net with description tokens (`TableNet` step 3) has a before and
 after.
 
+## Results, 2026-10-23
+
+`bot_puzzles --set fra --certify` (depth 3) keeps **7 of 16**. The
+other 9 are solved by the default heuristic. `--all` scores all 16, and
+the `pass` control (never chooses) fails all 16, so every trap is real.
+
+| pilot | solved | misses |
+|---|---|---|
+| `pass` (control) | 0/16 | all |
+| `dflt` | 9/16 | FP1, FP2, FP5, FP12, FP13, FP14, FP16 |
+| `net67` (champion leaf) | 10/16 | FP1, FP2, FP5, FP12, FP13, FP14 |
+| `mcts-dflt-256` | 8/16 | FP1, FP2, FP4, FP5, FP7, FP8, FP13, FP14 |
+| `mcts-net67-256` | 8/16 | FP1, FP2, FP4, FP5, FP7, FP8, FP13, FP14 |
+
+Findings:
+- **The search loses three sequencing puzzles the plain bot solves:**
+  Ghalta precombat, Germinate after the lifegain, and Overwrite into
+  Warlord. It solves Fblthp's mill and the Lurker's ping, which the plain
+  bot misses.
+- **No pilot passes FP1** (the trick blind spot), **FP2** (attack alone),
+  **FP5** (activating Ingris before combat), **FP13** (the exile
+  assignment) or **FP14** (flashback).
+- **FP13 found an engine bug.** Essence Burn's exile replacement didn't
+  stop Ferocity of the Hunt's return: the orphaned Aura's look-back
+  trigger lane never asked `death_was_replaced`. It is fixed, with test
+  `recent_b::fra::cr_614_6_essence_burn_exile_stops_ferocity_of_the_hunt`.
+
+**Solver extensions this set needed:**
+- `legal_actions` now offers modes, flashback casts, prepared-spell
+  casts, and printed and granted loyalty abilities (−X at every payable X).
+- Targets are brute-forced over none, each player and each permanent.
+- Mana abilities are excluded: a cast pays its own cost, and an untapped
+  land made every window "substantive", which spent the depth on passes.
+
 ## To run these
+
+    cargo build --profile release-fast -p crabomination --bin bot_puzzles
+    target/release-fast/bot_puzzles --set fra --certify --show-lines
+    target/release-fast/bot_puzzles --set fra --all pass dflt net67 mcts-dflt-256 mcts-net67-256
+    CRAB_NET=<weights> target/release-fast/bot_puzzles --set fra --all net67
+
+(The plan below is what this section replaced.)
+
 
 1. Restore the runner from `dc7143057` (`server/puzzle.rs`,
    `server/puzzle_corpus.rs`, `bin/bot_puzzles.rs`) onto the current

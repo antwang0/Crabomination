@@ -27192,6 +27192,18 @@ impl GameState {
                     {
                         continue;
                     }
+                    // CR 614.6 — a host whose death was replaced (Essence
+                    // Burn's "exile it instead") never died, so the orphaned
+                    // Aura's "when enchanted creature dies" (Ferocity of the
+                    // Hunt) must not fire. The battlefield walk filters this
+                    // with the same check; this look-back lane didn't, and
+                    // returned the exiled host to the battlefield.
+                    if lki_enchanted
+                        && let GameEvent::CreatureDied { card_id } | GameEvent::PermanentDied { card_id, .. } = ev
+                        && self.death_was_replaced(*card_id)
+                    {
+                        continue;
+                    }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, snap) {
                         candidates.push(TriggerCandidate {
                             from_mana_ability: false,
