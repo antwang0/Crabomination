@@ -4898,8 +4898,10 @@ pub fn ancient_adamantoise() -> CardDefinition {
                 effect: StaticEffect::RedirectDamageToSelf,
             },
         ],
-        dies_to_exile: true,
-        triggered_abilities: vec![crate::effect::shortcut::on_dies(crate::effect::shortcut::mint_tapped_treasures(10))],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::Move { what: Selector::This, to: crate::effect::ZoneDest::Exile },
+            crate::effect::shortcut::mint_tapped_treasures(10),
+        ]))],
         ..Default::default()
     }
 }

@@ -39172,10 +39172,15 @@ mod tests {
         // covers a cost is spent before the auto-tapper taps a source —
         // `cdbd98019`; bisected to that hunk alone): 0xC0FFEE and 43 unmoved;
         // 4242 seat 3 → seat 0, 58→82 turns, 2771→4050 actions.
+        // Re-blessed 2026-10-23 (CR 700.4: a death replaced away from the
+        // graveyard fires no dies triggers — Sanctifier en-Vec / Dauthi
+        // Voidwalker exile Kokusho and Judith, whose own death triggers used
+        // to fire anyway; bisected to `70983b332` alone): 0xC0FFEE and 43
+        // unmoved; 4242 same winner and turns, 4050→3966 actions.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2490),
             (43, Some(0), 74, 3800),
-            (4242, Some(0), 82, 4050),
+            (4242, Some(0), 82, 3966),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

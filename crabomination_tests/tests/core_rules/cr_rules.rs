@@ -2301,6 +2301,41 @@ fn cr_700_4_persist_does_not_return_from_exile_redirect() {
     assert!(g.battlefield_find(persister).is_none(), "did not persist back");
 }
 
+/// CR 700.4 / 614.1a — a death replaced away from the graveyard never
+/// happened, so the dying creature's OWN "when this dies" trigger doesn't
+/// fire and the died-creature tally doesn't move — for every exile-instead
+/// replacer, through both death funnels (lethal damage is the state-based
+/// one, a destroy effect the other). Doomed Traveler under Kalitas made a
+/// Spirit before the fix.
+#[test]
+fn cr_700_4_a_replaced_death_fires_no_dies_trigger_of_its_own() {
+    let replacers: [fn() -> crabomination::card::CardDefinition; 3] =
+        [catalog::rest_in_peace, catalog::kalitas_traitor_of_ghet, catalog::ravenloft_adventurer];
+    for replacer in replacers {
+        for by_damage in [true, false] {
+            let mut g = two_player_game();
+            let name = replacer().name;
+            g.add_card_to_battlefield(0, replacer());
+            let traveler = g.add_card_to_battlefield(1, catalog::doomed_traveler());
+            if by_damage {
+                let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+                g.players[0].mana_pool.add(Color::Red, 1);
+                cast_at(&mut g, bolt, Target::Permanent(traveler));
+            } else {
+                let ctx = EffectContext::for_spell(0, None, 0, 0);
+                g.resolve_effect(&Effect::Destroy { what: crabomination::card::Selector::EachPermanent(
+                    crabomination::card::SelectionRequirement::HasCreatureType(
+                        crabomination::card::CreatureType::Soldier)) }, &ctx).unwrap();
+            }
+            g.check_state_based_actions();
+            drain_stack(&mut g);
+            assert!(g.exile.iter().any(|c| c.id == traveler), "{name}: exiled instead");
+            assert!(!g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "{name} / damage {by_damage}: no Spirit");
+            assert_eq!(g.players[1].creatures_died_this_turn, 0, "{name}: no death tallied");
+        }
+    }
+}
+
 // ── CR 704.5e — a spell copy off the stack ceases to exist ──────────────────
 
 /// Memory Lapse on a spell COPY doesn't shuffle a phantom card into the
