@@ -414,17 +414,13 @@ pub fn graceful_restoration() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
             Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::Move {
                     what: target_filtered(R::Creature.from_your_graveyard()),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
                 },
             ]),
             Effect::ApplyToTargets {

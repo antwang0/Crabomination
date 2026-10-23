@@ -265,17 +265,13 @@ pub fn thunderbolts_conspiracy() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![on_villain_dies(Effect::Seq(vec![
             Effect::ClearLastMoved,
+            Effect::SpellEntersWithCounters { what: Selector::TriggerSource, kind: CounterType::Finality, amount: Value::ONE },
             Effect::Move {
                 what: Selector::TriggerSource,
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
                     tapped: false,
                 },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::Finality,
-                amount: Value::ONE,
             },
             Effect::AddCreatureTypes {
                 what: Selector::LastMoved,

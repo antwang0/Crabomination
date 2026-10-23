@@ -704,11 +704,11 @@ pub fn shuris_fabricator() -> CardDefinition {
             tap_cost: true,
             sorcery_speed: true,
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::Finality, amount: Value::ONE },
                 Effect::Move {
                     what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
-                Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
             ]),
             ..Default::default()
         }],

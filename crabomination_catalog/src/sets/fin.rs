@@ -2352,6 +2352,7 @@ pub fn evil_reawakened() -> CardDefinition {
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
+            Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
@@ -2360,11 +2361,6 @@ pub fn evil_reawakened() -> CardDefinition {
                     controller: PlayerRef::You,
                     tapped: false,
                 },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
             },
         ]),
         ..Default::default()
@@ -5770,17 +5766,13 @@ pub fn relentless_x_atm092() -> CardDefinition {
             mana_cost: cost(&[generic(8)]),
             from_graveyard: true,
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::This, kind: CounterType::Finality, amount: Value::ONE },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: true,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::Finality,
-                    amount: Value::ONE,
                 },
             ]),
             ..Default::default()
@@ -9423,6 +9415,7 @@ pub fn the_darkness_crystal() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(4), b(), b()]),
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
                 Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::ExiledWithSource),
@@ -9431,11 +9424,6 @@ pub fn the_darkness_crystal() -> CardDefinition {
                         controller: PlayerRef::You,
                         tapped: true,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(2),
                 },
             ]),
             ..Default::default()

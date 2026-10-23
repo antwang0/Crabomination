@@ -253,6 +253,7 @@ pub fn rakdos_joins_up() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
+                    Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
                     Effect::Move {
                         what: target_filtered(
                             R::Creature.and(R::PermanentCard).and(R::InYourGraveyard),
@@ -261,11 +262,6 @@ pub fn rakdos_joins_up() -> CardDefinition {
                             controller: PlayerRef::You,
                             tapped: false,
                         },
-                    },
-                    Effect::AddCounter {
-                        what: Selector::LastMoved,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(2),
                     },
                 ]),
             },

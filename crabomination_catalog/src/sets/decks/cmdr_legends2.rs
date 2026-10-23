@@ -1074,6 +1074,15 @@ pub fn shilgengar_sire_of_famine() -> CardDefinition {
                 ]),
                 sac_other_filter: Some((R::HasArtifactSubtype(ArtifactSubtype::Blood).and(R::IsToken), 6)),
                 effect: Effect::Seq(vec![
+                    Effect::SpellEntersWithCounters {
+                        what: Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: R::Creature,
+                        },
+                        kind: CounterType::Finality,
+                        amount: Value::ONE,
+                    },
                     Effect::Move {
                         what: Selector::CardsInZone {
                             who: PlayerRef::You,
@@ -1082,7 +1091,6 @@ pub fn shilgengar_sire_of_famine() -> CardDefinition {
                         },
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     },
-                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
                     Effect::AddCreatureTypes {
                         what: Selector::LastMoved,
                         creature_types: vec![CreatureType::Vampire],

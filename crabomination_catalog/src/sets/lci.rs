@@ -6181,17 +6181,13 @@ pub fn queens_bay_paladin() -> CardDefinition {
         filter: SelectionRequirement::InYourGraveyard
             .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire)),
         effect: Box::new(Effect::Seq(vec![
+            Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::Finality, amount: Value::Const(1) },
             Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
                 },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::Finality,
-                amount: Value::Const(1),
             },
             Effect::LoseLife {
                 who: Selector::You,
@@ -6240,17 +6236,13 @@ pub fn uchbenbak_the_great_mistake() -> CardDefinition {
                 count: 8,
             }),
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::This, kind: CounterType::Finality, amount: Value::Const(1) },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::Finality,
-                    amount: Value::Const(1),
                 },
             ]),
             ..Default::default()

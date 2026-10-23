@@ -170,14 +170,10 @@ pub fn from_the_catacombs() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Escape(cost(&[generic(3), b(), b()]), 5)],
         effect: Effect::Seq(vec![
+            Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::Corpse, amount: Value::ONE },
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::InGraveyard)),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::Corpse,
-                amount: Value::ONE,
             },
             Effect::TakeInitiative { who: PlayerRef::You },
             Effect::ExileIfLeavesBattlefield { what: Selector::LastMoved },

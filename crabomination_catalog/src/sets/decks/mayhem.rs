@@ -95,6 +95,7 @@ pub fn prison_break() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Mayhem(cost(&[generic(3), b()]))],
         effect: Effect::Seq(vec![
+            Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(1) },
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
@@ -103,11 +104,6 @@ pub fn prison_break() -> CardDefinition {
                     controller: PlayerRef::You,
                     tapped: false,
                 },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
             },
         ]),
         ..Default::default()

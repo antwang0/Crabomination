@@ -212,14 +212,10 @@ pub fn razorlash_transmogrant() -> CardDefinition {
                 4,
             )),
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
                 },
             ]),
             ..Default::default()

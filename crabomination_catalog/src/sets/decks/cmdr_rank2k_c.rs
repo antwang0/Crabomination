@@ -269,11 +269,11 @@ pub fn generous_revival() -> CardDefinition {
             cost(&[generic(2), w()]),
             CardType::Sorcery,
             Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::Move {
                     what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3))),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
-                Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
             ]),
         )
     }

@@ -93,17 +93,13 @@ pub fn lilysplash_mentor() -> CardDefinition {
                         R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
                     ),
                 },
+                Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
                 },
             ]),
             ..Default::default()

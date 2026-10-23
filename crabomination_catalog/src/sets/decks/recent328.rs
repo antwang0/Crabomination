@@ -85,6 +85,7 @@ pub fn season_of_the_burrow() -> CardDefinition {
                     },
                 ]),
                 Effect::Seq(vec![
+                    Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::Indestructible, amount: Value::ONE },
                     Effect::Move {
                         what: Selector::TargetFiltered {
                             slot: 0,
@@ -93,11 +94,6 @@ pub fn season_of_the_burrow() -> CardDefinition {
                                 .and(R::ManaValueAtMost(3)),
                         },
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    },
-                    Effect::AddCounter {
-                        what: Selector::LastMoved,
-                        kind: CounterType::Indestructible,
-                        amount: Value::ONE,
                     },
                 ]),
             ],

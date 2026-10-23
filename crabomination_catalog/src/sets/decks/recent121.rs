@@ -268,17 +268,13 @@ pub fn balustrade_wurm() -> CardDefinition {
                 who: PlayerRef::You,
             }),
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::This, kind: CounterType::Finality, amount: Value::ONE },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::Finality,
-                    amount: Value::ONE,
                 },
             ]),
             ..Default::default()

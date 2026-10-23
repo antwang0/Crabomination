@@ -29,17 +29,13 @@ pub fn valkyries_call() -> CardDefinition {
                 },
             ),
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::TriggerSource, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::Move {
                     what: Selector::TriggerSource,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
                 },
                 Effect::AddKeywordCounter {
                     what: Selector::LastMoved,
@@ -79,17 +75,13 @@ pub fn infernal_vessel() -> CardDefinition {
                 },
             ),
             effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::OwnerOfMoved,
                         tapped: false,
                     },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(2),
                 },
                 Effect::AddCreatureTypes {
                     what: Selector::LastMoved,

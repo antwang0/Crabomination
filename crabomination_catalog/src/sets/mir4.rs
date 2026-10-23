@@ -328,14 +328,10 @@ pub fn sand_golem() -> CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         triggered_abilities: vec![on_forced_discard(Effect::AtNextEndStep {
             body: Box::new(Effect::Seq(vec![
+                Effect::SpellEntersWithCounters { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                },
-                Effect::AddCounter {
-                    what: Selector::LastMoved,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
                 },
             ])),
         })],

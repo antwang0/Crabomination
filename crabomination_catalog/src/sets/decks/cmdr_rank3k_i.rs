@@ -189,17 +189,13 @@ pub fn spaceshift() -> CardDefinition {
                 what: target_filtered(R::Artifact.or(R::Creature)),
             },
             Effect::ClearLastMoved,
+            Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
             Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     tapped: false,
                 },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
             },
         ]),
     )

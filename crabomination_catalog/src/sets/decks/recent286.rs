@@ -280,17 +280,13 @@ pub fn scavengers_talent() -> CardDefinition {
                     filter: R::ControlledByYou.and(R::Land.negate()),
                     count: Value::Const(3),
                     then: Box::new(Effect::Seq(vec![
+                        Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::Finality, amount: Value::ONE },
                         Effect::Move {
                             what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                             to: ZoneDest::Battlefield {
                                 controller: PlayerRef::You,
                                 tapped: false,
                             },
-                        },
-                        Effect::AddCounter {
-                            what: Selector::LastMoved,
-                            kind: CounterType::Finality,
-                            amount: Value::ONE,
                         },
                     ])),
                     else_: None,

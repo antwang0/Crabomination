@@ -136,11 +136,11 @@ pub fn battle_of_hoover_dam() -> CardDefinition {
     let ncr = TriggeredAbility {
         event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
         effect: Effect::Seq(vec![
+            Effect::SpellEntersWithCounters { what: Selector::Target(0), kind: CounterType::Finality, amount: Value::ONE },
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).from_your_graveyard()),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
-            Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
         ]),
     };
     let legion = TriggeredAbility {
