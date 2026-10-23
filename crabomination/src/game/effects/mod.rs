@@ -43580,8 +43580,17 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::BecomeTreasure { what } => {
+            Effect::BecomeTreasure { what, while_source } => {
                 let source = ctx.source.unwrap_or(CardId(0));
+                // A source-scoped one ends at once if its source is already gone.
+                if *while_source && self.battlefield_find(source).is_none() {
+                    return Ok(());
+                }
+                let duration = if *while_source {
+                    EffectDuration::WhileSourceOnBattlefield
+                } else {
+                    EffectDuration::Indefinite
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     for (layer, m) in [
@@ -43604,20 +43613,24 @@ impl GameState {
                             affected: AffectedPermanents::just(cid),
                             layer,
                             sublayer: None,
-                            duration: EffectDuration::Indefinite,
+                            duration: duration.clone(),
                             modification: m,
                         });
                     }
+                    let treasure = crate::effect::ActivatedAbility {
+                        tap_cost: true,
+                        sac_cost: true,
+                        effect: Effect::AddMana {
+                            who: crate::effect::PlayerRef::You,
+                            pool: crate::effect::ManaPayload::AnyOneColor(crate::effect::Value::ONE),
+                        },
+                        ..Default::default()
+                    };
                     if let Some(c) = self.battlefield_find_mut(cid) {
-                        c.granted_activated_abilities.push(crate::effect::ActivatedAbility {
-                            tap_cost: true,
-                            sac_cost: true,
-                            effect: Effect::AddMana {
-                                who: crate::effect::PlayerRef::You,
-                                pool: crate::effect::ManaPayload::AnyOneColor(crate::effect::Value::ONE),
-                            },
-                            ..Default::default()
-                        });
+                        c.granted_activated_abilities.push(treasure.clone());
+                        if *while_source {
+                            self.grants_while_source.push((cid, source, treasure));
+                        }
                     }
                 }
                 Ok(())

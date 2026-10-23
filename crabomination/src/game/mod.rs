@@ -1726,6 +1726,12 @@ pub struct ColdState {
     /// the Exigent Doom's land). Cold: only that grant writes it.
     #[serde(default)]
     pub(crate) grants_until_cast: Vec<(CardId, CardId, crate::effect::ActivatedAbility)>,
+    /// Activated-ability grants that last while their source stays on the
+    /// battlefield, as (permanent, source, the ability) — Kitesail
+    /// Larcenist's Treasure ability. Swept with the layer effects of the same
+    /// duration. Cold: only that grant writes it.
+    #[serde(default)]
+    pub(crate) grants_while_source: Vec<(CardId, CardId, crate::effect::ActivatedAbility)>,
     /// Mystic Reflection's pending copy (CR 707.2 / 614.12): the model, the
     /// turn it was set, and once applied the SBA pass that closes the batch.
     #[serde(default)]

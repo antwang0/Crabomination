@@ -6300,6 +6300,7 @@ pub fn vraska_betrayals_sting() -> CardDefinition {
                 loyalty_cost: -2,
                 effect: Effect::BecomeTreasure {
                     what: target_filtered(SelectionRequirement::Creature),
+                    while_source: false,
                 },
                 ..Default::default()
             },

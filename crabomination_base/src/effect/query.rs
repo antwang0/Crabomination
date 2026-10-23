@@ -2285,7 +2285,7 @@ impl Effect {
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::LoyaltyTwoMoreTimesThisTurn { what }
-            | Effect::BecomeTreasure { what }
+            | Effect::BecomeTreasure { what, .. }
             | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
             Effect::AddCounterOfEachKindAmong { onto: what, .. }
             | Effect::AddCounterOfEachKindOn { what }
@@ -3131,7 +3131,7 @@ impl Effect {
             | Effect::SetLoyalty { what, .. }
             | Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::LoyaltyTwoMoreTimesThisTurn { what }
-            | Effect::BecomeTreasure { what }
+            | Effect::BecomeTreasure { what, .. }
             | Effect::AddCounterOfPresentKind { what }
             | Effect::AddCounterOfEachKindAmong { onto: what, .. }
             | Effect::AddCounterOfEachKindOn { what }
@@ -5981,7 +5981,7 @@ impl Effect {
                 | Effect::SetLoyalty { what, .. }
                 | Effect::GrantLoyaltyTwiceThisTurn { what }
                 | Effect::LoyaltyTwoMoreTimesThisTurn { what }
-                | Effect::BecomeTreasure { what }
+                | Effect::BecomeTreasure { what, .. }
                 | Effect::AddCounterOfPresentKind { what }
                 | Effect::AddCounterOfEachKindAmong { onto: what, .. }
                 | Effect::AddCounterOfEachKindOn { what }

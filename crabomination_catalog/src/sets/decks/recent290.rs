@@ -94,6 +94,7 @@ pub fn vraska_the_silencer() -> CardDefinition {
                     },
                     Effect::BecomeTreasure {
                         what: Selector::LastMoved,
+                        while_source: false,
                     },
                 ])),
                 else_: None,

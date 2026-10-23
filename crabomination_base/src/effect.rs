@@ -9842,7 +9842,13 @@ pub enum Effect {
     /// with '{T}, Sacrifice: add one mana of any color' and loses all other
     /// card types and abilities" (layer 4 type swap + layer 6 ability wipe +
     /// a granted sac-for-mana ability, all while it stays on the battlefield).
-    BecomeTreasure { what: Selector },
+    /// `while_source`: only for as long as the source stays on the
+    /// battlefield (Kitesail Larcenist).
+    BecomeTreasure {
+        what: Selector,
+        #[serde(default)]
+        while_source: bool,
+    },
     /// CR 122.1b — Add a keyword counter to `what`. The host gains the
     /// named keyword while at least one counter of this kind is present
     /// (applied as a layer-6 grant in `compute_battlefield`). Removed

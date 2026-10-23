@@ -7867,6 +7867,23 @@ impl GameState {
             });
         }
 
+        // The activated-ability grants of the same clause (Kitesail Larcenist).
+        if !self.grants_while_source.is_empty()
+            && self.grants_while_source.iter().any(|(_, s, _)| self.battlefield_find(*s).is_none())
+        {
+            let (ended, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut self.grants_while_source)
+                .into_iter()
+                .partition(|(_, s, _)| self.battlefield_find(*s).is_none());
+            self.grants_while_source = kept;
+            for (perm, _, ability) in ended {
+                if let Some(c) = self.battlefield_find_mut(perm)
+                    && let Some(i) = c.granted_activated_abilities.iter().position(|a| *a == ability)
+                {
+                    c.granted_activated_abilities.remove(i);
+                }
+            }
+        }
+
         // The continuous-effect side of the same clause: an effect installed
         // `WhileSourceAttached` lapses once its source stops being attached.
         if self
