@@ -200,7 +200,8 @@ pub fn covenant_of_minds() -> CardDefinition {
                     distinct_powers: false,
                 }),
                 otherwise: Box::new(Effect::Seq(vec![
-                    Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                    // CR 701.13 — "put into your graveyard" isn't a mill.
+                    Effect::RevealTopMatchingToGraveyard { who: PlayerRef::You, count: Value::Const(3), filter: R::Any },
                     draw(5),
                 ])),
             }),
@@ -1107,7 +1108,10 @@ pub fn tombstone_stairwell() -> CardDefinition {
         keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1), b()])))],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::AnyPlayer),
+                // CR 603.4 — "if Tombstone Stairwell is on the battlefield",
+                // re-checked as the trigger resolves.
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::AnyPlayer)
+                    .with_filter(Predicate::SourceOnBattlefield),
                 effect: Effect::EachPlayerDoes {
                     who: PlayerRef::EachPlayer,
                     body: Box::new(Effect::CreateToken {

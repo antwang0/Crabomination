@@ -1,6 +1,6 @@
 //! `Effect::PreventAllButOneFromChosenSource` — "the next time a [filter]
-//! source of your choice would deal damage to you this turn, prevent all but
-//! 1 of that damage" (Forcefield, CR 615.7).
+//! source of your choice would deal combat damage to you this turn, prevent
+//! all but 1 of that damage" (Forcefield, CR 615.7).
 
 use crate::card::SelectionRequirement;
 use crate::game::effects::EffectContext;
@@ -19,6 +19,7 @@ impl GameState {
             source: Some(chosen),
             one_event: true,
             all_but: 1,
+            combat_only: true,
             ..Default::default()
         });
         Ok(())

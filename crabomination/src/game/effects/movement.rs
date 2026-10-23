@@ -566,7 +566,20 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> u32 {
         let statics = prevent_static_scan(self);
-        self.apply_prevention_shields_with(ent, amount, source, events, statics)
+        self.apply_prevention_shields_with(ent, amount, source, events, statics, false)
+    }
+
+    /// [`apply_prevention_shields`](Self::apply_prevention_shields) for a
+    /// combat damage event: `combat_only` shields (Forcefield) apply too.
+    pub fn apply_combat_prevention_shields(
+        &mut self,
+        ent: EntityRef,
+        amount: u32,
+        source: Option<crate::card::CardId>,
+        events: &mut Vec<GameEvent>,
+    ) -> u32 {
+        let statics = prevent_static_scan(self);
+        self.apply_prevention_shields_with(ent, amount, source, events, statics, true)
     }
 
     /// CR 615.12 — can damage from `source` not be prevented right now: the
@@ -637,6 +650,7 @@ impl GameState {
         source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
         statics: u32,
+        combat: bool,
     ) -> u32 {
         use crate::game::types::PreventionTarget;
         debug_assert!(
@@ -668,6 +682,7 @@ impl GameState {
                 source,
                 events,
                 statics,
+                combat,
             );
         }
         // CR 615 — damage from a spell or ability that TARGETS the recipient
@@ -1288,6 +1303,7 @@ impl GameState {
                     && (s.source.is_none() || s.source == source)
                     && (!src_known || s.source_color.is_none_or(|c| src_colors.contains(&c)))
                     && s.not_from_controller.is_none_or(|p| src_ctrl.is_some_and(|c| c != p))
+                    && (combat || !s.combat_only)
             })
         {
             if remaining == 0 {

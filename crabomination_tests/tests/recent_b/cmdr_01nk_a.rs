@@ -557,6 +557,29 @@ fn evolving_door_climbs_one_color() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Creeping Trailblazer"), "the two-colour creature, cast");
 }
 
+/// Evolving Door reads the sacrificed creature's last-known computed colours
+/// (CR 608.2h): Grizzly Bears made colourless finds a mono-coloured creature.
+#[test]
+fn evolving_door_reads_computed_colors() {
+    let mut g = pod(2);
+    let door = g.add_card_to_battlefield(0, catalog::evolving_door());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let grey = Effect::BecomeColor {
+        what: Selector::Target(0),
+        colors: vec![],
+        duration: crabomination::effect::Duration::EndOfTurn,
+        additive: false,
+    };
+    g.resolve_effect(&grey, &EffectContext::for_ability(door, 0, Some(Target::Permanent(bears)))).unwrap();
+    g.add_card_to_library(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::creeping_trailblazer());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility { card_id: door, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Hill Giant"), "the one-colour creature, cast");
+}
+
 /// Stormfront Riders returning itself (the only creature you control) still
 /// sees its own return and makes a Soldier.
 #[test]
@@ -606,7 +629,7 @@ fn fraying_line_exiles_unroped_creatures_when_unpaid() {
 }
 
 /// CR 615.7 — Forcefield lets 1 of a chosen unblocked attacker's combat
-/// damage through.
+/// damage through, and only its combat damage.
 #[test]
 fn cr_615_7_forcefield_prevents_all_but_one() {
     use crabomination::game::types::{Attack, AttackTarget};
@@ -628,6 +651,11 @@ fn cr_615_7_forcefield_prevents_all_but_one() {
         filter: crabomination::card::SelectionRequirement::Creature.and(crabomination::card::SelectionRequirement::IsUnblocked),
     };
     g.resolve_effect(&shield, &EffectContext::for_ability(ff, 1, None)).unwrap();
+    // "Would deal combat damage": the giant's noncombat damage passes and
+    // leaves the shield standing.
+    let mut evs = Vec::new();
+    let noncombat = g.apply_prevention_shields(crabomination::game::effects::EntityRef::Player(1), 3, Some(giant), &mut evs);
+    assert_eq!(noncombat, 3, "noncombat damage isn't soaked");
     let life = g.players[1].life;
     while g.step != TurnStep::EndCombat {
         g.perform_action(GameAction::PassPriority).expect("pass");

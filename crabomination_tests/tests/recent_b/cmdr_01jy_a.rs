@@ -667,6 +667,28 @@ fn tombstone_stairwell_raises_and_razes_tombspawn() {
     assert_eq!(tombspawn(&g, 0) + tombspawn(&g, 2), 0, "destroyed at the end step");
 }
 
+/// CR 603.4 — Tombstone Stairwell's upkeep trigger is intervening-if: gone
+/// before it resolves, it makes no Tombspawn.
+#[test]
+fn cr_603_4_tombstone_stairwell_rechecks_on_resolution() {
+    let mut g = pod(3);
+    let stairwell = g.add_card_to_battlefield(1, catalog::tombstone_stairwell());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.active_player_idx = 2;
+    let turn = g.turn_number;
+    while !(g.step == TurnStep::Upkeep && g.turn_number > turn) {
+        let _ = g.advance_step(Vec::new());
+        if !(g.step == TurnStep::Upkeep && g.turn_number > turn) {
+            drain_stack(&mut g);
+        }
+    }
+    assert!(!g.stack.is_empty(), "the upkeep trigger is waiting");
+    let mut evs = Vec::new();
+    g.destroy_permanent(stairwell, false, &mut evs);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Tombspawn"));
+}
+
 fn cast_kicked(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<(), GameError> {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpellKicked { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })?;

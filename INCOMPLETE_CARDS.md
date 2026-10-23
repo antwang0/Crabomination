@@ -468,10 +468,9 @@ Open 🟡 rows (each card plays; the clause named is approximated):
 
 | Card | Gap |
 | --- | --- |
-| 🟡 Covenant of Minds | "Put those cards into your graveyard" is a mill of three (a mill trigger sees it); the three are not revealed first. |
+| 🟡 Covenant of Minds | The top three are not revealed before the opponent chooses (they go to the graveyard unrevealed — not milled — on a decline). |
 | 🟡 Grand Master of Flowers | "Search your library and/or graveyard" takes a graveyard Monk first and searches the library only when there is none — no choice. |
 | 🟡 Aegar, the Freezing Flame | "A spell you controlled" is read as an instant or sorcery you own (a resolved spell's controller is gone by the time the trigger checks); a spell of yours cast by an opponent, or one you stole, is misread. |
-| 🟡 Tombstone Stairwell | Its upkeep trigger has no intervening "if this enchantment is on the battlefield" re-check at resolution beyond the source still being there. |
 
 ## Commander additions of session `01NkAE5B` (2026-10-20) — the approximations named
 
@@ -482,10 +481,8 @@ Open 🟡 rows (each card plays; the clause named is approximated):
 | 🟡 Cheering Fanatic | "Choose a card name" offers only the nonland cards in its controller's hand (the names its discount can pay off for them); an arbitrary name — an opponent's card — can't be chosen. |
 | 🟡 Animate Artifact | "As long as enchanted artifact isn't a creature" reads the host's **printed** card; an artifact animated by another effect (a crewed Vehicle) still gets MV/MV (the CR 613.8 dependency is not modeled). |
 | 🟡 Nephalia Academy | The "may reveal" is always taken, and no reveal event is emitted. |
-| 🟡 Evolving Door | Counts the sacrificed creature's **printed** colours (`sacrificed_colors`), not its last-known computed ones. |
 | 🟡 Sphere of Annihilation | Exiles the creatures, planeswalkers and graveyard cards one at a time, then itself — not simultaneously. |
 | 🟡 Turtles Forever | No prompt: the searcher takes the up-to-four highest-MV distinct-name legends and the opponent hands over the two smallest — a fixed heuristic on both sides, not a choice. |
-| 🟡 Forcefield | The shield catches the chosen creature's next damage to you this turn of any kind, not only unblocked combat damage. |
 | 🟡 The Book of Vile Darkness | Eye of Vecna and Hand of Vecna are exiled as the ability resolves (gated on both being there), not paid as part of the cost. |
 
 ## Commander additions of session `015BCEt5` (2026-09-26) — the approximations named

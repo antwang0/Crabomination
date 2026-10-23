@@ -975,8 +975,7 @@ pub fn fraying_line() -> CardDefinition {
 
 /// Forcefield — {3} artifact. {1}: the next time an unblocked creature of
 /// your choice would deal combat damage to you this turn, prevent all but 1
-/// of that damage. (The shield reads any damage from the chosen creature
-/// this turn — in practice its combat damage.)
+/// of that damage.
 pub fn forcefield() -> CardDefinition {
     CardDefinition {
         name: "Forcefield",

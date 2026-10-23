@@ -2795,6 +2795,10 @@ pub struct PreventionShield {
     /// unbudgeted shield that lets this much through. 0 = prevent it all.
     #[serde(default)]
     pub all_but: u32,
+    /// "The next time it would deal combat damage" (Forcefield): soaks only
+    /// combat damage (CR 510.2).
+    #[serde(default)]
+    pub combat_only: bool,
 }
 
 /// CR 615.7 — a turn-long shield around one chosen damage *source*

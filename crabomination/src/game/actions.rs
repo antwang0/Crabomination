@@ -12837,7 +12837,8 @@ impl GameState {
                                     c.definition.cost.cmc(),
                                     self.computed_has_card_type(c, crate::card::CardType::Artifact),
                                     c.definition.is_vehicle(),
-                                    c.definition.printed_colors(),
+                                    // Last-known computed colours (Evolving Door).
+                                    self.card_colors_anywhere(c.id),
                                 )
                             })
                             .collect()
@@ -25477,7 +25478,7 @@ impl GameState {
                 self.sacrificed_mana_value = Some(mv);
                 self.sacrificed_was_artifact = Some(snap.definition.is_artifact());
                 self.sacrificed_was_vehicle = Some(snap.definition.is_vehicle());
-                self.sacrificed_colors = Some(snap.definition.printed_colors());
+                self.sacrificed_colors = Some(self.card_colors_anywhere(other_cid));
                 self.sacrificed_was_outlaw =
                     Some(crate::game::effects::card_is_outlaw(&snap));
                 // `Selector::SacrificedCard` reads the cost's victim.

@@ -5224,7 +5224,7 @@ impl GameState {
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
                     // (post-prevention) amount dealt (CR 702.15a).
-                    let dealt = self.apply_prevention_shields(
+                    let dealt = self.apply_combat_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
                         scaled,
                         Some(atk.id),
@@ -5441,7 +5441,7 @@ impl GameState {
                         let Some(scaled) = scaled else {
                             continue;
                         };
-                        let dmg = self.apply_prevention_shields(
+                        let dmg = self.apply_combat_prevention_shields(
                             crate::game::effects::EntityRef::Permanent(atk.id),
                             scaled,
                             Some(bid),
@@ -6170,7 +6170,7 @@ impl GameState {
                         return 0;
                     }
                 }
-                self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
+                self.apply_combat_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {
                 if !self.prevention_off()
@@ -6181,12 +6181,12 @@ impl GameState {
                 {
                     return 0;
                 }
-                let dealt = self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events);
+                let dealt = self.apply_combat_prevention_shields(EntityRef::Permanent(pw), amount, source, events);
                 // CR 122.1c — a shield counter prevents it (and goes).
                 if dealt > 0 && self.consume_shield_counter(pw) { 0 } else { dealt }
             }
             AttackTarget::Battle(b) => {
-                let dealt = self.apply_prevention_shields(EntityRef::Permanent(b), amount, source, events);
+                let dealt = self.apply_combat_prevention_shields(EntityRef::Permanent(b), amount, source, events);
                 if dealt > 0 && self.consume_shield_counter(b) { 0 } else { dealt }
             }
         }
