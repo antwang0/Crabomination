@@ -226,6 +226,49 @@ pub fn owen_grady_raptor_trainer() -> CardDefinition {
     }
 }
 
+/// Blue, Loyal Raptor — {2}{G}{U} legendary 5/4 Dinosaur, partner with Owen
+/// Grady, Raptor Trainer. For each kind of counter on Blue, each other
+/// Dinosaur you control enters with a counter of that kind on it (CR 614.12;
+/// keyword counters are kinds, CR 122.1b).
+pub fn blue_loyal_raptor() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::PartnerWith("Owen Grady, Raptor Trainer".into())],
+        triggered_abilities: vec![partner_with_search("Owen Grady, Raptor Trainer")],
+        static_abilities: vec![StaticAbility {
+            description: "For each kind of counter on Blue, Loyal Raptor, each other Dinosaur you control enters with a counter of that kind on it.",
+            effect: StaticEffect::MatchingEntersWith {
+                filter: dinosaur(),
+                effect: Box::new(Effect::AddCounterOfEachKindAmong {
+                    onto: Selector::Target(0),
+                    who: PlayerRef::You,
+                    filter: R::IsSource,
+                    or_plus_one: false,
+                }),
+            },
+        }],
+        ..creature("Blue, Loyal Raptor", cost(&[generic(2), g(), u()]), vec![CreatureType::Dinosaur], 5, 4)
+    }
+}
+
+/// Cresting Mosasaurus — {6}{U}{U} 4/8 Dinosaur, emerge {6}{U}. When it
+/// enters, if you cast it (CR 603.4), return each non-Dinosaur creature to
+/// its owner's hand.
+pub fn cresting_mosasaurus() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::effect::shortcut::emerge(cost(&[generic(6), u()]))),
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(crate::card::EventKind::EntersBattlefield, crate::card::EventScope::SelfSource)
+                .with_filter(Predicate::SourceWasCast),
+            effect: Effect::Move {
+                what: Selector::EachPermanent(R::Creature.and(dinosaur().negate())),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..creature("Cresting Mosasaurus", cost(&[generic(6), u(), u()]), vec![CreatureType::Dinosaur], 4, 8)
+    }
+}
+
 /// Dino DNA — {1} artifact. Imprint — {1}, {T}: exile target creature card
 /// from a graveyard (sorcery speed). {6}: a token copy of a creature card
 /// exiled with it, except a 6/6 green Dinosaur with trample (sorcery speed).

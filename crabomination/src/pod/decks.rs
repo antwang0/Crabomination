@@ -136080,3 +136080,31 @@ pub const ANARA_31_MAIN: &[CardFactory] = &[
     glacial_revelation, nissas_triumph, personal_tutor, reclaim_the_wastes, rush_of_ice,
     spring_mind, titanias_command, verdant_confluence, will_of_the_sultai,
 ];
+
+pub const OWEN_GRADY_2_COMMANDERS: &[CardFactory] = &[owen_grady_raptor_trainer, blue_loyal_raptor];
+
+/// **Owen Grady, Raptor Trainer and Blue, Loyal Raptor**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 8 Forests + 4 Islands + 5 Mountains = 98.
+/// Owen Grady, Raptor Trainer and Blue, Loyal Raptor (EDHREC, fetched 2026-10-23).
+pub const OWEN_GRADY_2_MAIN: &[CardFactory] = &[
+    agents_toolkit, arcane_signet, dino_dna, sol_ring, the_great_henge, the_ozolith,
+    the_skullspore_nexus, urzas_incubator, breeding_pool, cavern_of_souls, cinder_glade,
+    command_tower, dreamroot_cascade, exotic_orchard, frontier_bivouac, hinterland_harbor,
+    ketria_triome, nesting_grounds, path_of_ancestry, rejuvenating_springs, reliquary_tower,
+    rockfall_vale, rootbound_crag, steam_vents, stomping_ground, tyrite_sanctum,
+    unclaimed_territory, apex_altisaur, bonehoard_dracosaur, cresting_mosasaurus,
+    curious_altisaur, earthshaker_dreadmaw, etali_primal_conqueror, etali_primal_storm,
+    ghalta_primal_hunger, ghalta_stampede_tyrant, hulking_raptor, hunting_velociraptor,
+    itzquinth_firstborn_of_gishath, marauding_raptor, nezahal_primal_tide, otepec_huntmaster,
+    palanis_hatcher, polyraptor, quartzwood_crasher, ravenous_tyrannosaurus, regal_behemoth,
+    regisaur_alpha, runic_armasaur, scion_of_calamity, scytheclaw_raptor, slippery_bogbonder,
+    sunfrill_imitator, thrashing_brontodon, topiary_stomper, trumpeting_carnosaur,
+    wayward_swordtooth, wrathful_raptors, garruks_uprising, kindred_discovery, poetic_ingenuity,
+    reflections_of_littjara, rhythm_of_the_wild, temur_ascendancy, welcome_to, beast_within,
+    chaos_warp, counterspell, gift_of_the_viper, heightened_reflexes, heroic_intervention,
+    negate, return_of_the_wildspeaker, blasphemous_act, cultivate, farseek, kodamas_reach,
+    natures_lore, rampant_growth, savage_order, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain,
+];

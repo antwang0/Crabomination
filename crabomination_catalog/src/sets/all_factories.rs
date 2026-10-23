@@ -3777,6 +3777,8 @@ static DECKS: &[Factory] = &[
     super::decks::jace_memory_adept,
     super::decks::experimental_overload,
     super::decks::owen_grady_raptor_trainer,
+    super::decks::blue_loyal_raptor,
+    super::decks::cresting_mosasaurus,
     super::decks::dino_dna,
     super::decks::monster_manual,
     super::decks::tranquil_frillback,

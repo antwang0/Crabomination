@@ -29574,6 +29574,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANARA_31_COMMANDERS,
             main: decks::ANARA_31_MAIN,
         },
+        // Seat 4854: Owen Grady, Raptor Trainer and Blue, Loyal Raptor's EDHREC average deck. `--pod-decks 4854`.
+        PodDeck {
+            name: "Owen Grady, Raptor Trainer and Blue, Loyal Raptor (URG)",
+            commanders: decks::OWEN_GRADY_2_COMMANDERS,
+            main: decks::OWEN_GRADY_2_MAIN,
+        },
     ]
 }
 
@@ -36388,6 +36394,7 @@ mod tests {
             ("Anara, Wolvid Familiar and Glacian, Powerstone Engineer", &[0x1D09]),
             ("Alena, Kessig Trapper and Francisco, Fowl Marauder", &[0x1D0A]),
             ("Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator", &[0x1D0B]),
+            ("Owen Grady, Raptor Trainer and Blue, Loyal Raptor", &[0x1D0C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

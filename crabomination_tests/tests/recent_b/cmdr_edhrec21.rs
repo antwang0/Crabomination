@@ -179,6 +179,45 @@ fn owen_grady_puts_keyword_counters_on_dinosaurs() {
     assert!(activate(&mut g, owen2, 0, Some(Target::Permanent(bear)), Some(0)).is_err(), "Dinosaurs only");
 }
 
+/// CR 614.12 / 122.1b — Blue, Loyal Raptor: each other Dinosaur enters with
+/// one counter of each kind on Blue (a keyword counter is a kind); a
+/// non-Dinosaur gets none.
+#[test]
+fn blue_loyal_raptor_hands_its_counter_kinds_to_dinosaurs() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let owen = ready(&mut g, 0, catalog::owen_grady_raptor_trainer());
+    let blue = ready(&mut g, 0, catalog::blue_loyal_raptor());
+    activate(&mut g, owen, 0, Some(Target::Permanent(blue)), Some(1)).expect("trample");
+    g.battlefield_find_mut(blue).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let dino = g.add_card_to_hand(0, catalog::tranquil_frillback());
+    cast(&mut g, dino, &[]).expect("cast");
+    let d = g.battlefield_find(dino).expect("entered");
+    assert_eq!(d.counter_count(CounterType::PlusOnePlusOne), 1, "one of the kind, not two");
+    assert!(has(&g, dino, Keyword::Trample));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, &[]).expect("cast");
+    assert!(g.battlefield_find(bear).unwrap().counters.is_empty());
+}
+
+/// Cresting Mosasaurus: cast, it bounces every non-Dinosaur creature (each to
+/// its owner's hand); put onto the battlefield uncast, it doesn't (CR 603.4).
+#[test]
+fn cresting_mosasaurus_bounces_non_dinosaurs_only_when_cast() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let dino = ready(&mut g, 0, catalog::tranquil_frillback());
+    let mosa = g.add_card_to_hand(0, catalog::cresting_mosasaurus());
+    cast(&mut g, mosa, &[]).expect("cast");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the Bears went home");
+    assert!(g.battlefield_find(dino).is_some() && g.battlefield_find(mosa).is_some());
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::cresting_mosasaurus());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "not cast: no bounce");
+}
+
 /// Dino DNA exiles a creature card from any graveyard, then mints a 6/6 green
 /// trampling Dinosaur copy of it.
 #[test]
