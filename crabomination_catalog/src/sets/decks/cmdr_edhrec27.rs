@@ -345,7 +345,10 @@ pub fn acererak_the_archlich() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                    .with_filter(Predicate::Not(Box::new(Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE)))),
+                    .with_filter(Predicate::Not(Box::new(Predicate::CompletedDungeon {
+                        who: PlayerRef::You,
+                        name: "Tomb of Annihilation".into(),
+                    }))),
                 effect: Effect::Seq(vec![
                     Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))) },
                     Effect::Venture,

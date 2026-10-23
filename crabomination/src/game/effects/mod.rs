@@ -14032,8 +14032,9 @@ impl GameState {
                 // CR 309.5b/309.6 — the dungeon leaves the game and the
                 // venture marker comes off with it.
                 let p = ctx.controller;
-                if self.players[p].dungeon.take().is_some() {
+                if let Some((name, _)) = self.players[p].dungeon.take() {
                     self.players[p].dungeons_completed += 1;
+                    self.players[p].completed_dungeons.push(name);
                     events.push(GameEvent::DungeonCompleted { player: p });
                 }
                 Ok(())

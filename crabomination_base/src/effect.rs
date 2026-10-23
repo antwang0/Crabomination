@@ -3277,6 +3277,10 @@ pub enum Predicate {
     /// "If a Food entered the battlefield under `who`'s control this turn"
     /// (Motivated Pony). Reads `Player.foods_entered_this_turn`.
     FoodEnteredThisTurn { who: PlayerRef },
+    /// CR 309.7 — `who` has completed the dungeon named `name` this game
+    /// (Acererak the Archlich's "if you haven't completed Tomb of
+    /// Annihilation"). Reads `PlayerCold::completed_dungeons`.
+    CompletedDungeon { who: PlayerRef, name: String },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

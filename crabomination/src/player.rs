@@ -196,6 +196,9 @@ pub struct PlayerCold {
     pub attraction_junkyard: CowBox<Vec<CardInstance>>,
 
     pub name: String,
+    /// CR 309.7 — the dungeons this player has completed, by name, in order.
+    #[serde(default)]
+    pub completed_dungeons: Vec<String>,
     /// CardIds of cards this player has designated as Commanders
     /// (Phase J). Populated by `GameState::seat_commanders`. Read by
     /// the Phase M 21-commander-damage SBA via

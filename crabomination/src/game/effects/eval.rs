@@ -3110,6 +3110,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.monarch_at_turn_start == Some(p)),
+            Predicate::CompletedDungeon { who, name } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].completed_dungeons.iter().any(|d| d == name)),
             Predicate::HasInitiative { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

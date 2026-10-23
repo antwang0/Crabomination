@@ -157,8 +157,9 @@ fn jjj_suspects_and_profits() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
 }
 
-/// Acererak bounces itself and ventures until a dungeon is done; attacking,
-/// an opponent without creatures hands you a Zombie.
+/// Acererak bounces itself and ventures until Tomb of Annihilation — that
+/// dungeon, not any (CR 309.7) — is done; attacking, an opponent without
+/// creatures hands you a Zombie.
 #[test]
 fn acererak_bounces_and_punishes() {
     let mut g = pod(2);
@@ -166,7 +167,13 @@ fn acererak_bounces_and_punishes() {
     cast(&mut g, 0, id, &[]).expect("cast");
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "back to hand");
     g.players[0].dungeons_completed = 1;
-    let ace = ready(&mut g, 0, catalog::acererak_the_archlich());
-    attack(&mut g, &[ace]);
+    g.players[0].completed_dungeons.push("Lost Mine of Phandelver".into());
+    cast(&mut g, 0, id, &[]).expect("recast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "another dungeon doesn't keep it");
+    g.players[0].completed_dungeons.push("Tomb of Annihilation".into());
+    cast(&mut g, 0, id, &[]).expect("third cast");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "the Tomb does");
+    g.clear_sickness(id);
+    attack(&mut g, &[id]);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
 }
