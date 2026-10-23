@@ -2070,3 +2070,49 @@ fn every_prevent_untap_static_uses_a_shape_the_untap_step_reads() {
     bad.dedup();
     assert!(bad.is_empty(), "a PreventUntap selector the untap step can't read: {bad:?}");
 }
+
+/// CR 303.4 / 301.5 — nothing is attached to an Aura or an Equipment, so its
+/// own abilities naming "the permanents attached to this" select nothing
+/// (Soul Channeling's regeneration, Stop Cold's untap lock). Abilities it
+/// *grants* (`equipped_bonus`, the `Grant*` statics) run on the host, where
+/// that selector is right.
+#[test]
+fn no_aura_or_equipment_selects_what_is_attached_to_itself() {
+    fn walk(v: &serde_json::Value, hit: &mut bool) {
+        match v {
+            serde_json::Value::Object(m) => {
+                for (k, sub) in m {
+                    if matches!(
+                        k.as_str(),
+                        "equipped_bonus" | "GrantActivatedAbility" | "GrantTriggeredAbility" | "GrantStaticAbility"
+                    ) {
+                        continue;
+                    }
+                    if k == "AttachedToMe" && sub == "This" {
+                        *hit = true;
+                    }
+                    walk(sub, hit);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|x| walk(x, hit)),
+            _ => {}
+        }
+    }
+    let mut bad = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        let attachable = def.subtypes.enchantment_subtypes.contains(&crabomination::card::EnchantmentSubtype::Aura)
+            || def.subtypes.artifact_subtypes.contains(&crabomination::card::ArtifactSubtype::Equipment);
+        if !attachable {
+            continue;
+        }
+        let mut hit = false;
+        walk(&serde_json::to_value(&def).expect("CardDefinition serializes"), &mut hit);
+        if hit {
+            bad.push(def.name);
+        }
+    }
+    bad.sort_unstable();
+    bad.dedup();
+    assert!(bad.is_empty(), "an Aura / Equipment selects what is attached to itself: {bad:?}");
+}
