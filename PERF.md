@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-23 (Commander run, `01Uv3VwF`) — guardrail; 105 seats, card fixes, two engine fields
+
+`PreventionShield::combat_only` (a `Copy` struct, one bool) and `ColdState::grants_while_source` (cold, read
+only behind `is_empty()` in the SBA pass); everything else is card data. `release-fast` bot_ladder, 4-core
+Xeon @ 2.80 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 thread_determinism ok (3 vs 1); peak_rss_mib 49.4
+2-player pools   seed 10111: cube 2,400 / sos 1,500 / sealed 3,600, 0 undecided
+pods             seed 10112, 200 games at each of 2..8 seats: 1,400 decided;
+                 turns/game 18.95 / 31.81 / 45.58 / 57.62 / 68.69 / 83.47 / 97.03
+```
+
 ### 2026-10-20 late (Commander run, `01E4rMUL`) — guardrail; 240 cards, 115 seats, four rule fixes
 
 The CR 109.5 fix (`SelfHasKeywordWhilePredicate` read "you" as seat 0) touches a static-gather arm the

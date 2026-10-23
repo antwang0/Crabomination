@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 105 seats, four bug classes gated](#fixedopen-2026-10-23-commander-run-01uv3vwf--105-seats-four-bug-classes-gated) | 27 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 14 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 21 seats, 61 cards, pod Attraction decks, snow by colour](#fixedopen-2026-10-21-commander-run-01kpxz3h--21-seats-61-cards-pod-attraction-decks-snow-by-colour) | 79 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01Jywzky`) — 30 seats, 99 cards, the single-commander list](#fixedopen-2026-10-21-commander-run-01jywzky--30-seats-99-cards-the-single-commander-list) | 30 |
@@ -136,6 +137,12 @@ the handoff.
 8b. **Gates (`01KabMxS`, 2026-10-22, after the command-zone hop, Hogaak, Herigast and the seated-commander audit):** suite **28,799 / 0 / 6** (strict answer log, pod-seat test excluded); workspace clippy **0** (its three fresh warnings were fixed here and upstream at once); legality green; `--bench` **196,176 / 27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread_determinism ok; release pods seed 9480 × 200 at 2..8 seats (19.57 / 32.04 / 47.09 / 58.42 / 69.12 / 80.58 / 96.54 turns) **1,400 decided, 0 panics, 0 stalls**, plus ~6,000 targeted pods over the helper-keyword, kicker, morph, Adventure, Attraction and Herigast/Teval seats (seeds 9450-9469: two CR 104.4a all-lose draws). Next: INCOMPLETE_CARDS "Seated commanders with a printed gap" (Olivia, Elenda, Heart of Kiran, Surrak …); PERF's loop-hazard ChooseCards-in-probe candidate; the bot never builds an optional waterbend.
 8c. **Gates (`01T285XJ`, 2026-10-23, after the ten seated-commander gap closers + Tomik):** suite **28,815 / 0 / 6** (strict answer log, pod-seat test excluded); workspace clippy **0** (client excluded — no apt deps here; its two keyword-label matches gained the new arms by hand); `--bench` (release-fast) **196,176 / 27.64 / 613.0 / 0 stalls — byte-identical**, determinism ok; cube/sos/sealed × 300 (seed 9501) 7,500 decided; pods seed 9501 × 200 at 2..8 seats (19.65 / 33.20 / 45.60 / 56.84 / 68.70 / 83.31 / 96.72 turns) **1,400 decided**, 600 targeted over the nine closers' seats (607, 751, 1132, 1680, 1831, 1851, 1870, 1892, 2007), `random_pods.sh` 4×400×5 + 6×150×4: **0 panics, 0 caps**, one CR 104.4a all-lose draw (seed 9691). The previous two gate lines: ENGINE_BACKLOG "Commander NEXT gate lines, 2026-10-22". **Next:** INCOMPLETE_CARDS "Seated commanders with a printed gap" — Zidane needs an EventKind and **`EventKind` is at its 128-variant `u128` mask cap** (widen or fold a payload first); Fblthp needs an entered-from-library record (78 `library.remove` sites — record in `place_card_in_dest`'s caller, not each site); Heart of Kiran's loyalty crew; Mm'menon's not-from-hand mana restriction.
 
+## Commander NEXT lines 3 and 8 as `01Uv3VwF` found them (moved verbatim from TODO.md, 2026-10-23)
+
+3. **State (2026-10-22): 4,853 seats** — 4483-4529, 4560-4569, 4586-4593 by `01DDeUtc` part two: 65 ONE-gap pair decks closed by 59 cards (`decks::cmdr_01dd_k`/`_l`, tests `recent_b/cmdr_01dd_b.rs`) and 12 primitives (ENGINE_BACKLOG "part two"); 4530-4559, 4570-4585, 4594-4629 bar 4592-4593, 4636-4641, 4659-4671, 4676-4680, 4683-4689, 4701-4705, 4723, 4728, 4732-4733, 4740-4820, 4831-4832, 4849-4853 (bar other sessions') by `01E4rMUL` (186 ONE- to NINE-gap pair decks and four singles, 527 cards in `cmdr_01e4_a`, tests `recent_b/cmdr_01e4_a.rs`; ENGINE_BACKLOG `01E4rMUL`); 4413-4482 by `01FnAVVR` (Blim, Dromar, The Celestial Toymaker, 67 pair decks — `cmdr_01fn_*`); 4400-4412 by `01DDeUtc`. ⚠ Before writing a card, `grep -rF '"Name"' crabomination_catalog/src`: two sessions wrote the same closer twice today. **Next seed 9315.** `cmdr_01nk_a` (a third session) seated 4630-4635, 4642-4658, 4672-4675, 4681-4682. **`01Jywzky` (2026-10-21) seated 30 more — 21 pair decks and nine SINGLE-commander averages (Brigid, Clachan's Heart rank 393; Thanos; Mairsil; Jace, Vryn's Prodigy; Hallar; Kiora; Gideon the Oathless; Rashida) — `cmdr_01jy_a`, 99 cards; ENGINE_BACKLOG `01Jywzky`. 4,755 seats; next seed 9424.** **`01R3xh4r` (2026-10-21) seated 21 — 4776-4783, 4790-4796, 4811-4814, 4818, 4825 (`cmdr_01r3_a`, 42 cards, thirteen primitives; ENGINE_BACKLOG `01R3xh4r`, which carries its gates: suite 28,700 / 0 / 6, clippy 0, `--bench` byte-identical, release pods seeds 9425-9436 all decided).** **`01KPxZ3H` (2026-10-21) seated twelve SINGLE-commander averages — 4821-4824, 4826-4830, 4833-4834 (Squall, Captain Rex Nebula, Tetzin, Satsuki, Loot, Suki, Sokka, Brawn, The Wasp, Wasp Shrinking Savior, Zevlor) and pair 4835 (Keleth + Thrasios, closed by Oko) — `cmdr_01kp_a`, 38 cards; ENGINE_BACKLOG `01KPxZ3H`.**
+
+8. **Gates (`01RUPxX9`, 2026-10-23 second run, after the last seated-commander gap closers):** suite **28,829 / 1 / 6** mid-run (the one failure was the then-new Minion test, since fixed; pod-seat test excluded); `--bench` (release-fast) **196,176 / 27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok; cube/sos/sealed × 300 (seed 9801) 7,500 decided; pods seed 9801 × 200 at 2..8 seats (19.24 / 32.78 / 45.02 / 57.34 / 69.44 / 82.05 / 96.17 turns) **1,400 decided, every `undecided_by` zero**; 300 targeted pods over the changed commanders' seats (299, 312, 712, 1073, 1267, 1387, 1596, 2143, 2183, 2213, 2581, 4402) decided. The `01T285XJ` gate line: ENGINE_BACKLOG "Commander NEXT gate lines". **Done this run:** every INCOMPLETE "Seated commanders with a printed gap" row bar the minor Feroz / Gogo / Arachne one — primitives `SpendRestriction::{SpellsNotFromHand, ArtifactOrCreatureSpells, CreatureSpellMv4OrX}`, `Effect::PowerUpLockedDuringExtraTurn`, `CardInstance.entered_from_library` + `R::EnteredFromLibrary`, `StaticEffect::CrewByRemovingLoyaltyCounter` (+ `server::loyalty_crew`), `WardCost::Waterbend`, `EventKind::LostControl { yours }` (**folded from `LostControlOfThis` — `EventKind` is still at its 128 cap**); bug class: `CreateTokenAttacking`'s default defender reads the triggering attacker at N seats. **Next:** the 🟡 rows of INCOMPLETE "Commander additions of session `01Jywzky`/`01NkAE5B`" (Forcefield, Aegar, Covenant of Minds …); board caps (item 6).
+
 ## The Commander NEXT's session lines as `019Y6J4R` found them (moved verbatim from TODO.md, 2026-10-17)
 
 3. **State (2026-10-17 late night): 3901 seats** (`yl8zjb` added 3607-3728 and three more; `3chree` 135 of 3729-3901, off 161 closer cards; `019Y6J4R` the others). `01ANcpHx` scanned all 6,799 EDHREC commanders; later runs work its gaps (`cmdr_oct15_*`, `cmdr_oct16_*`, `cmdr_oct17_a`..`_i`). Cache `/tmp/crab_commander` — rebuild in a fresh container: 70 pages of `commanders/year.json` into `edhrec_commanders.json`, then the unseated average decks 8-wide (~3 min). Factory rows at the END of `DECKS` / per-file blocks in `all_factories.rs`.
@@ -194,6 +201,35 @@ the handoff.
   give the creature an ability), Old Fat Spider (no prevent-damage-dealt-by with a while-source
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
+
+## FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 105 seats, four bug classes gated
+
+- **Seats 4854-4958.** 4854 Owen Grady + Blue, Loyal Raptor (Blue was the one EDHREC top-600 commander missing; Cresting
+  Mosasaurus the deck's other gap). 4855-4858 the last four official precons not seated — an MTGJSON scan over all 198
+  `Commander Deck` lists (`DeckList.json`, collector editions skipped; `decks/<fileName>.json` converted to the EDHREC
+  page shape and fed to `seat_decks.py`): C14 Forged in Stone / Guided by Nature / Sworn to Darkness, SLD Odds and Ends.
+  4859-4958: the hundred best-ranked **zero-gap** legal pair decks. ⚠ **`edhrec_scan_pairs.py` over the full 68-page
+  `commanders/year.json` (2026-10-23) lists 1,308 pair decks with nothing missing, 1,287 of them all-legal** — NEXT's
+  "seated to twelve gaps" was true of the gap tiers, not of the zero tier. Of those, 15 are not 100 cards (no basics to
+  top up — `seat_decks.py` only fills with a basic) and the Clara Oswald pairs fail identity (her chosen colour, the
+  Piper class). The list (rank, slug, size) was `zero_pairs.txt`; rebuild it with the scan and `--max 0`.
+- **FIXED (CR 122.6 / 614.1c, class):** 27 cards moved a card onto the battlefield and then put the counter on
+  `LastMoved`; they now stamp `SpellEntersWithCounters` first. Six still place after entry (INCOMPLETE "Returns …
+  with a counter"). ⚠ A stamped card whose move is replaced keeps `pending_etb_counters` (no clear on other zone
+  changes) — rare, not seen in sweeps.
+- **FIXED (CR 701.19, class):** `GameState::note_library_searched` — every search resolver's flag / event /
+  Panglacial Wurm offer.
+- **FIXED + GATED (CR 502.3):** `structural_audit::every_prevent_untap_static_uses_a_shape_the_untap_step_reads`
+  (Stop Cold); `no_aura_or_equipment_selects_what_is_attached_to_itself` (Soul Channeling, Stamina; Shadow Lance's
+  granted pump pumped the Auras on its host).
+- **FIXED:** Kitesail Larcenist per printed text (`BecomeTreasure { while_source }`, `ColdState::grants_while_source`);
+  Forcefield's shield combat-only (`PreventionShield::combat_only`, `apply_combat_prevention_shields`); Tombstone
+  Stairwell intervening-if; a cost sacrifice stamps computed colours (Evolving Door); Covenant of Minds no longer
+  mills; `AddCounterOfEachKindAmong` with `IsSource` reads the source.
+- **Sweeps (audit build):** seeds 10101 (4/6/8, 2,630 games), 10102 (3/5/7, 3,286) and 10103 (seats 4854-4958 at
+  2-6, 1,232): **0 panics**; 6 undecided — four CR 104.4a/b draws (Descent into Avernus ×3, Divine Intervention) and
+  two exponential-token board caps (Aziza copying Moogles' Valor, 6-seat seed 1014798; Rabble Rousing + Ghalta and
+  Mavren, 3-seat seed 1010339 game 5).
 
 ## FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders
 
