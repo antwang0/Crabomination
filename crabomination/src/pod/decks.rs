@@ -136108,3 +136108,111 @@ pub const OWEN_GRADY_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
     island, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const NAHIRI_2_COMMANDERS: &[CardFactory] = &[nahiri_the_lithomancer];
+
+/// **Nahiri, the Lithomancer** — the official **Forged in Stone** precon (C14, MTGJSON), card for card:
+/// 67 nonbasic cards + 32 Plains = 99.
+/// Nahiri, the Lithomancer (official list; MTGJSON, fetched 2026-10-23).
+pub const NAHIRI_2_MAIN: &[CardFactory] = &[
+    containment_priest, whitemane_lion, grand_abolisher, kor_sanctifiers, mentor_of_the_meek,
+    flickerwisp, hallowed_spiritkeeper, kemba_kha_regent, silverblade_paladin,
+    skyhunter_skirmisher, angelic_field_marshal, celestial_crusader, jazal_goldmane,
+    geist_honored_monk, requiem_angel, adarkar_valkyrie, sun_titan, sunblast_angel,
+    twilight_shepherd, angel_of_the_dire_hour, serra_avatar, gift_of_estates,
+    spectral_procession, fell_the_mighty, nomads_assembly, deploy_to_the_front, martial_coup,
+    decree_of_justice, brave_the_elements, condemn, afterlife, midnight_haunting, oblation,
+    wing_shards, benevolent_offering, comeuppance, return_to_dust, white_suns_zenith,
+    masterwork_of_ingenuity, skullclamp, sol_ring, marble_diamond, mask_of_memory,
+    pearl_medallion, swiftfoot_boots, commanders_sphere, loxodon_warhammer, strata_scythe,
+    sword_of_vengeance, assault_suit, bonehoard, moonsilver_spear, argentum_armor,
+    loreseekers_stone, armistice, mobilization, sacred_mesa, marshals_anthem, cathars_crusade,
+    true_conviction, arcane_lighthouse, drifting_meadow, emeria_the_sky_ruin, ghost_quarter,
+    karoo_land, secluded_steppe, temple_of_the_false_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const FREYALISE_2_COMMANDERS: &[CardFactory] = &[freyalise_llanowars_fury];
+
+/// **Freyalise, Llanowar's Fury** — the official **Guided by Nature** precon (C14, MTGJSON), card for card:
+/// 74 nonbasic cards + 25 Forests = 99.
+/// Freyalise, Llanowar's Fury (official list; MTGJSON, fetched 2026-10-23).
+pub const FREYALISE_2_MAIN: &[CardFactory] = &[
+    elvish_mystic, elvish_skysweeper, essence_warden, joraga_warcaller, llanowar_elves,
+    sylvan_safekeeper, elvish_visionary, priest_of_titania, sylvan_ranger, thornweald_archer,
+    wellwisher, farhaven_elf, imperious_perfect, reclamation_sage, timberwatch_elf,
+    titanias_chosen, wood_elves, elvish_archdruid, ezuri_renegade_leader, drove_of_elves,
+    immaculate_magistrate, wrens_run_packmaster, lys_alana_huntmaster, masked_admirers,
+    wolfbriar_elemental, creeperhulk, silklash_spider, titania_protector_of_argoth,
+    grave_sifter, primordial_sage, rampaging_baloths, soul_of_the_harvest, thunderfoot_baloth,
+    siege_behemoth, tornado_elemental, terastodon, lifeblood_hydra, hunting_triad, whirlwind,
+    overwhelming_stampede, overrun, grim_flowering, collective_unconscious, desert_twister,
+    wave_of_vitriol, praetors_counsel, sylvan_offering, harrow, fresh_meat, skullclamp,
+    sol_ring, emerald_medallion, moss_diamond, swiftfoot_boots, commanders_sphere, assault_suit,
+    seers_sundial, predator_flagship, loreseekers_stone, beastmaster_ascension,
+    song_of_the_dryads, wolfcallers_howl, crystal_vein, evolving_wilds, gargoyle_castle,
+    ghost_quarter, haunted_fengraf, havenwood_battleground, jungle_basin, myriad_landscape,
+    oran_rief_the_vastwood, slippery_karst, terramorphic_expanse, tranquil_thicket,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];
+
+pub const OB_NIXILIS_OF_THE_BLACK_OATH_COMMANDERS: &[CardFactory] = &[ob_nixilis_of_the_black_oath];
+
+/// **Ob Nixilis of the Black Oath** — the official **Sworn to Darkness** precon (C14, MTGJSON), card for card:
+/// 67 nonbasic cards + 32 Swamps = 99.
+/// Ob Nixilis of the Black Oath (official list; MTGJSON, fetched 2026-10-23).
+pub const OB_NIXILIS_OF_THE_BLACK_OATH_MAIN: &[CardFactory] = &[
+    skirsdag_high_priest, nantuko_shade, vampire_hexmage, burnished_hart, flesh_carver,
+    crypt_ghast, disciple_of_bolas, evernight_shade, abyssal_persecutor, nekrataal,
+    magus_of_the_coffers, raving_dead, shriekmaw, bloodgift_demon, demon_of_wailing_agonies,
+    drana_kalastria_bloodchief, ghoulcaller_gisa, gray_merchant_of_asphodel, morkrut_banshee,
+    grave_titan, phyrexian_gargantua, pontiff_of_blight, reaper_from_the_abyss,
+    butcher_of_malakir, overseer_of_the_damned, pestilence_demon, lilianas_reaver,
+    xathrid_demon, sign_in_blood, read_the_bones, victimize, syphon_mind, dread_return,
+    mutilate, infernal_offering, aether_snap, promise_of_power, necromantic_selection,
+    profane_command, dregs_of_sorrow, black_suns_zenith, spoils_of_blood, tragic_slip,
+    malicious_affliction, sudden_spoiling, tendrils_of_corruption, annihilate, skeletal_scrying,
+    wake_the_dead, sol_ring, charcoal_diamond, jet_medallion, mind_stone, swiftfoot_boots,
+    unstable_obelisk, worn_powerstone, lashwrithe, commanders_sphere, bad_moon,
+    arcane_lighthouse, barren_moor, bojuka_bog, crypt_of_agadeem, everglades, ghost_quarter,
+    myriad_landscape, polluted_mire,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const YENNETT_2_COMMANDERS: &[CardFactory] = &[yennett_cryptic_sovereign];
+
+/// **Yennett, Cryptic Sovereign** — the official **Odds and Ends** precon (SLD, MTGJSON), card for card:
+/// 87 nonbasic cards + 4 Plains + 4 Islands + 4 Swamps = 99.
+/// Yennett, Cryptic Sovereign (official list; MTGJSON, fetched 2026-10-23).
+pub const YENNETT_2_MAIN: &[CardFactory] = &[
+    void_winnower, esper_sentinel, reconnaissance, swords_to_plowshares, weathered_wayfarer,
+    misleading_signpost, breach_the_multiverse, virtue_of_persistence, shadrix_silverquill,
+    senseis_divining_top, sol_ring, aboleth_spawn, adarkar_wastes, aeon_engine,
+    aerial_extortionist, aminatou_the_fateshifter, approach_of_the_second_sun, arcane_sanctum,
+    arcane_signet, brainstorm, breena_the_demagogue, caves_of_koilos, chaos_wand, claim_jumper,
+    coalition_relic, command_beacon, command_tower, commanders_sphere, contaminated_landscape,
+    dazzling_sphinx, doom_whisperer, drowned_catacomb, enigma_sphinx, ethersworn_sphinx,
+    evolving_wilds, exchange_of_words, exotic_orchard, extinction_event, fabled_passage,
+    fatespinner, fractured_identity, glacial_fortress, imprisoned_in_the_moon,
+    inniaz_the_gale_force, isolated_chapel, jeskai_infiltrator, leadership_vacuum,
+    loran_of_the_third_path, marvo_deep_operative, master_of_predicaments, mirage_mirror,
+    myriad_landscape, mystic_gate, nadir_kraken, oubliette, path_of_ancestry,
+    planeswalkers_mischief, ponder, prairie_stream, profane_transfusion, promise_of_loyalty,
+    psychic_battle, rapid_hybridization, reliquary_tower, shared_fate, silent_clearing,
+    skyclave_apparition, skyclave_relic, smugglers_share, soothsaying, space_beleren,
+    sunken_hollow, swift_reconfiguration, talisman_of_progress, temple_of_deceit,
+    temple_of_enlightenment, temple_of_silence, terramorphic_expanse, thief_of_sanity,
+    time_stop, toxrill_the_corrosive, underground_river, vega_the_watcher, vensers_journal,
+    vesuvan_drifter, wayfarers_bauble, yavimaya_cradle_of_growth,
+    // Basics
+    plains, plains, plains, plains, island, island, island, island, swamp, swamp, swamp, swamp,
+];

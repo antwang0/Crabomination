@@ -29580,6 +29580,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OWEN_GRADY_2_COMMANDERS,
             main: decks::OWEN_GRADY_2_MAIN,
         },
+        // Seat 4855: Nahiri, the Lithomancer — the official Forged in Stone precon (C14). `--pod-decks 4855`.
+        PodDeck {
+            name: "Nahiri, the Lithomancer (W)",
+            commanders: decks::NAHIRI_2_COMMANDERS,
+            main: decks::NAHIRI_2_MAIN,
+        },
+        // Seat 4856: Freyalise, Llanowar's Fury — the official Guided by Nature precon (C14). `--pod-decks 4856`.
+        PodDeck {
+            name: "Freyalise, Llanowar's Fury (G)",
+            commanders: decks::FREYALISE_2_COMMANDERS,
+            main: decks::FREYALISE_2_MAIN,
+        },
+        // Seat 4857: Ob Nixilis of the Black Oath — the official Sworn to Darkness precon (C14). `--pod-decks 4857`.
+        PodDeck {
+            name: "Ob Nixilis of the Black Oath (B)",
+            commanders: decks::OB_NIXILIS_OF_THE_BLACK_OATH_COMMANDERS,
+            main: decks::OB_NIXILIS_OF_THE_BLACK_OATH_MAIN,
+        },
+        // Seat 4858: Yennett, Cryptic Sovereign — the official Odds and Ends precon (SLD). `--pod-decks 4858`.
+        PodDeck {
+            name: "Yennett, Cryptic Sovereign (WUB)",
+            commanders: decks::YENNETT_2_COMMANDERS,
+            main: decks::YENNETT_2_MAIN,
+        },
     ]
 }
 
@@ -36395,6 +36419,10 @@ mod tests {
             ("Alena, Kessig Trapper and Francisco, Fowl Marauder", &[0x1D0A]),
             ("Anara, Wolvid Familiar and Malcolm, Keen-Eyed Navigator", &[0x1D0B]),
             ("Owen Grady, Raptor Trainer and Blue, Loyal Raptor", &[0x1D0C]),
+            ("Nahiri, the Lithomancer", &[0x1D0D]),
+            ("Freyalise, Llanowar's Fury", &[0x1D0E]),
+            ("Ob Nixilis of the Black Oath", &[0x1D0F]),
+            ("Yennett, Cryptic Sovereign", &[0x1D10]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
