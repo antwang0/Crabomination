@@ -301,6 +301,9 @@ the `pass` control (never chooses) fails all 16, so every trap is real.
 | `net67` (champion leaf) | 10/16 | FP1, FP2, FP5, FP12, FP13, FP14 |
 | `mcts-dflt-256` | 8/16 | FP1, FP2, FP4, FP5, FP7, FP8, FP13, FP14 |
 | `mcts-net67-256` | 8/16 | FP1, FP2, FP4, FP5, FP7, FP8, FP13, FP14 |
+| `net67`, FRA net r82 s43 | 10/16 | FP1, FP2, FP5, FP12, FP13, FP14 |
+| `net67`, FRA net r82 s97 | **11/16** | FP1, FP2, FP5, FP12, FP13 |
+| `mcts-net67-256`, either FRA net | 8/16 | as on the champion |
 
 Findings:
 - **The search loses three sequencing puzzles the plain bot solves:**

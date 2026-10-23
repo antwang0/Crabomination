@@ -6107,8 +6107,37 @@ value.
 - The FRA puzzle set (`bot_puzzles --set fra`) is up;
   `.ladder/fra_puzzles/PUZZLES.md` has its scores.
 
-**The FRA value net (training; gate pending).** Pre-registration:
-`.ladder/run_r82_fra.sh`. Round 81's recipe verbatim on FRA sealed actors,
-four training seeds. The gate is FRA sealed: `net67` vs `dflt` per net
-against the champion on the same decks, plus one search cell. Readings below
-when it lands.
+**The FRA value net — scored gate CLEARED (+4.40); the search cells
+are running.** Pre-registration: `.ladder/run_r82_fra.sh`. Round 81's recipe
+verbatim on FRA sealed actors, four training seeds. Holdout AUC by seed:
+0.8153 (s43), 0.8243 (s97), 0.7919 (s151), 0.7774 (s199). That is the
+FRA regime's own holdout, not comparable with SOS. s43 and s97 took ~57 min
+each, because the builder races shared the CPU; s151 and s199 took ~37 min.
+The gate is FRA sealed: `net67` vs `dflt`, 1 000 games x 12 decks, ladder
+seeds 43 / 97.
+
+| net | seed 43 | seed 97 | mean | − champion |
+|---|---|---|---|---|
+| champion (SOS) | 48.2 | 48.5 | 48.35 | — |
+| FRA s43 | 51.8 | 52.8 | 52.30 | +3.95 |
+| FRA s97 | 53.4 | 54.7 | 54.05 | +5.70 |
+| FRA s151 | 51.7 | 53.9 | 52.80 | +4.45 |
+| FRA s199 | 50.8 | 52.9 | 51.85 | +3.50 |
+
+Pooled fresh − champion is **+4.40 [+2.89, +5.91]** (t, 4 seeds), far over
+the +0.5 bar. Two readings:
+- **The champion is a net *loss* on FRA**: 48.35 against plain `dflt`. Its
+  SOS-trained leaf misprices an off-vocab board.
+- **Every FRA net is a net *gain*.** Playing the set taught the net what
+  the generic features alone could not.
+
+Per the pre-registration, the FRA nets are **proposed for FRA play**.
+`nets/champion.safetensors` stays the SOS net and is not swapped; whether
+to ship `nets_r82_fra_s97/best.safetensors` as an FRA net is the user's
+call.
+
+On the puzzles, the s97 net under `net67` solves 11/16 (it adds FP14,
+flashback); the champion solves 10/16. Search scores 8/16 with either net.
+The search cells (s97 and the champion as the leaf of `mcts-net67-256` vs
+`mcts-dflt-256`, 500 x 12, seeds 43 / 97) started 2026-10-23 10:27, at
+about 1h45m a cell. Their readings go here when they land.
