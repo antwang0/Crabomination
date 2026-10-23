@@ -28,7 +28,6 @@
 //! - Delayed Blast Fireball: "cast from exile" is read as "not cast from hand".
 //! - World War Hulk I: casts a red or green creature from hand for free as the
 //!   chapter resolves, instead of discounting the next such spell this turn.
-//! - Heartwood Crafter: its {C} isn't barred from hand-cast spells.
 //! - Open the Omenpaths: the mana pays creature spells only (not
 //!   enchantments), and the two colors may coincide.
 //! - Tinder Wall: the damage targets any blocked creature.
@@ -59,7 +58,7 @@ use crate::card::{
     StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, WardCost, Zone,
 };
 use crate::effect::shortcut::{
-    add_colorless, add_mana, blitz, cascade, dash, each_opponent, each_opponent_creature, etb,
+    add_mana, blitz, cascade, dash, each_opponent, each_opponent_creature, etb,
     mint_treasures, myriad, on_attack, target_any, target_filtered,
 };
 use crate::effect::{
@@ -1281,11 +1280,6 @@ fn c_first_creature_costs_two_less() -> StaticAbility {
 ///
 /// Modeled on Studious First-Year (`prepare_spell` + `enters_with_counters:
 /// Prepared`).
-///
-/// Approximation: the Crafter's {C} is unrestricted. The engine's
-/// `SpellKind` does not record the zone a spell is cast from, so there is no
-/// `SpendRestriction` for "can't be spent to cast spells from your hand";
-/// the mana can therefore also pay for hand casts.
 pub fn heartwood_crafter() -> CardDefinition {
     let heartwood = TokenDefinition {
         name: "Heartwood".into(),
@@ -1308,7 +1302,13 @@ pub fn heartwood_crafter() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: add_colorless(1),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Restricted(
+                    Box::new(crate::effect::ManaPayload::Colorless(Value::ONE)),
+                    crate::mana::SpendRestriction::NotSpellsFromHand,
+                ),
+            },
             ..Default::default()
         }],
         prepare_spell: Some(std::sync::Arc::new(soul_tether)),

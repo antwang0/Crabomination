@@ -282,3 +282,126 @@ fn tomik_locks_lands_and_graveyard_lands_for_opponents() {
     g.add_card_to_battlefield(1, catalog::crucible_of_worlds());
     assert!(!g.player_may_play_land_from_graveyard(1, buried), "no land plays from graveyards");
 }
+
+fn activate(g: &mut GameState, seat: usize, id: CardId, index: usize) -> Result<(), String> {
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+fn to_next_turn(g: &mut GameState) {
+    let started = g.turn_number;
+    while g.turn_number == started {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+}
+
+fn cast_plain(g: &mut GameState, id: CardId) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Kang the Conqueror — CR 500.7 + 702.193: during the extra turn its power-up
+/// grants, no power-up can be activated; the following turns are unlocked.
+#[test]
+fn kangs_extra_turn_locks_power_up() {
+    let mut g = pod(2);
+    let kang = ready(&mut g, 0, catalog::kang_the_conqueror());
+    let chem = ready(&mut g, 0, catalog::bold_biochemist());
+    for seat in 0..2 {
+        for _ in 0..8 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    flood(&mut g, 0);
+    activate(&mut g, 0, kang, 0).expect("power-up");
+    assert_eq!(g.players[0].extra_turns, 1);
+    to_next_turn(&mut g);
+    assert_eq!(g.active_player_idx, 0, "the extra turn");
+    g.step = TurnStep::PreCombatMain;
+    flood(&mut g, 0);
+    assert!(activate(&mut g.clone(), 0, chem, 0).is_err(), "locked during that turn");
+    to_next_turn(&mut g);
+    assert_eq!(g.active_player_idx, 1);
+    to_next_turn(&mut g);
+    assert_eq!(g.active_player_idx, 0);
+    g.step = TurnStep::PreCombatMain;
+    flood(&mut g, 0);
+    activate(&mut g, 0, chem, 0).expect("a later turn is unlocked");
+}
+
+/// Mm'menon, the Right Hand — CR 106.6: its artifacts' granted {U} can't pay
+/// for a spell cast from hand, but pays for one cast from the library top.
+#[test]
+fn mmmenon_artifact_mana_pays_only_spells_from_outside_the_hand() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mmmenon_the_right_hand());
+    let thopter = ready(&mut g, 0, catalog::ornithopter());
+    activate(&mut g, 0, thopter, 0).expect("granted {T}: Add {U}");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
+    let in_hand = g.add_card_to_hand(0, catalog::sol_ring());
+    assert!(cast_plain(&mut g, in_hand).is_err(), "not from hand");
+    let on_top = g.add_card_to_library(0, catalog::sol_ring());
+    cast_plain(&mut g, on_top).expect("from the library top");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 0);
+}
+
+// ── Spend limits closed with Mm'menon's (INCOMPLETE_CARDS) ──
+
+/// Geosurge — CR 106.6: its seven {R} cast creature spells, not instants.
+#[test]
+fn geosurge_mana_pays_artifact_or_creature_spells_only() {
+    let mut g = pod(2);
+    g.players[0].mana_pool.add(Color::Red, 4);
+    let surge = g.add_card_to_hand(0, catalog::geosurge());
+    cast_plain(&mut g, surge).expect("Geosurge");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 7);
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    g.priority.player_with_priority = 0;
+    let no = g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(no.is_err(), "not an instant");
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    cast_plain(&mut g, dragon).expect("a creature spell");
+}
+
+/// Helga, Skittish Seer — CR 106.6: her mana casts a creature spell with mana
+/// value 4 or greater, not a smaller one.
+#[test]
+fn helga_mana_pays_only_big_creature_spells() {
+    let mut g = pod(2);
+    let helga = ready(&mut g, 0, catalog::helga_skittish_seer());
+    g.battlefield_find_mut(helga).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 3);
+    activate(&mut g, 0, helga, 0).expect("tap for four");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 4);
+    let sable = g.add_card_to_hand(0, catalog::bronze_sable());
+    assert!(cast_plain(&mut g, sable).is_err(), "mana value 2");
+    let su_chi = g.add_card_to_hand(0, catalog::su_chi());
+    cast_plain(&mut g, su_chi).expect("mana value 4");
+}
+
+/// Heartwood Crafter — CR 106.6: "this mana can't be spent to cast spells
+/// from your hand".
+#[test]
+fn heartwood_crafter_mana_skips_spells_from_hand() {
+    let mut g = pod(2);
+    let crafter = ready(&mut g, 0, catalog::heartwood_crafter());
+    activate(&mut g, 0, crafter, 0).expect("tap for {C}");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    assert!(cast_plain(&mut g, ring).is_err());
+}

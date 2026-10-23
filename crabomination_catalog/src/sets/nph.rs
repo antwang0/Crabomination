@@ -981,7 +981,10 @@ pub fn geosurge() -> CardDefinition {
         cost(&[r(), r(), r(), r()]),
         Effect::AddMana {
             who: PlayerRef::You,
-            pool: ManaPayload::Colors(vec![Color::Red; 7]),
+            pool: ManaPayload::Restricted(
+                Box::new(ManaPayload::Colors(vec![Color::Red; 7])),
+                crate::mana::SpendRestriction::ArtifactOrCreatureSpells,
+            ),
         },
     )
 }

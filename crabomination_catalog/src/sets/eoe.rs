@@ -7022,8 +7022,8 @@ pub fn starport_security() -> CardDefinition {
 
 /// Mm'menon, the Right Hand — {3}{U}{U} 3/4 Legendary Jellyfish Advisor. Flying.
 /// You may look at the top card of your library any time, and cast artifact
-/// spells from the top of your library. (The artifact-restricted mana grant is
-/// dropped.)
+/// spells from the top of your library. Artifacts you control have "{T}: Add
+/// {U}. Spend this mana only to cast a spell from anywhere other than your hand."
 pub fn mmmenon_the_right_hand() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
@@ -7047,6 +7047,26 @@ pub fn mmmenon_the_right_hand() -> CardDefinition {
                 description: "You may cast artifact spells from the top of your library.",
                 effect: StaticEffect::PlayFromLibraryTop {
                     filter: SelectionRequirement::Artifact,
+                },
+            },
+            StaticAbility {
+                description: "Artifacts you control have \"{T}: Add {U}. Spend this mana only to cast a spell from anywhere other than your hand.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: crate::effect::ManaPayload::Restricted(
+                                Box::new(crate::effect::ManaPayload::Colors(vec![crate::mana::Color::Blue])),
+                                crate::mana::SpendRestriction::SpellsNotFromHand,
+                            ),
+                        },
+                        ..Default::default()
+                    },
+                    condition: None,
                 },
             },
         ],

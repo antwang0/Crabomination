@@ -2001,7 +2001,6 @@ library-exile event.
 | Rayne, Academy Chancellor | only a PERMANENT of yours being targeted by an opponent draws; "you … become the target" doesn't | `YourPermanentTargetedByOpponent` binds permanents; a player-target twin scope is missing |
 | Witchbane Orb | "When this artifact enters, destroy all Curses attached to you" is absent (the hexproof ships) | no "attached to you" requirement; the only card that needs one |
 | Psychic Purge | "when a spell or ability an opponent controls causes you to discard this, that player loses 5 life" is absent | `GameEvent::OpponentCausedYouToDiscard` doesn't carry the causing seat, and no `PlayerRef` names it |
-| Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |
 | The Raven's Warning | III "you may put a card you own from outside the game on top of your library" does nothing | no wish-to-library-top effect (`WishToLibrary` shuffles in); a Commander game has no sideboard, so the gap only shows in sideboarded play |
 | 🟡 Cryptic Spires | the two colors are circled as the deck is built | no deck-building choice: `ManaPayload::CircledColors` reads the controller's commander identity — exact for a one- or two-color identity, its first two colors (WUBRG order) in a 3+ color deck, white and blue with no commander |
 | 🟡 Dawnhand Dissident | the blight player picks the creature; the caster picks which three counters to remove | both picks are automatic: blight goes on a creature that survives it (weakest first), the counter drain takes -1/-1 counters first, weakest creature first (as Ward—Blight's payer already does) |
@@ -2081,7 +2080,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Fifteenth Doctor | improvise goes to your first spell each turn if it's nonartifact, not to your first nonartifact spell (an artifact cast first turns it off) | no "first nonartifact spell this turn" predicate |
 | 🟡 The Muckslinger Gang | "creature spells you control and creature cards you own in any zone other than the battlefield or the stack get +3/+3" is not modelled — only the battlefield half (other creatures not attacking or blocking get +3/+3) | an off-battlefield P/T static read by every hand/graveyard/stack power check; no free board-presence lane to gate it |
 | 🟡 Kamahl's Will | the land mode animates every land you control, untargeted, rather than "any number of target lands" | an any-number target mode ahead of a single-target mode would claim twenty optional slots before it |
-| 🟡 Kang the Conqueror | "During that turn, power-up abilities can't be activated" is not modelled — the extra turn allows other power-ups | no turn-scoped power-up lock |
 | 🟡 Kid Loki | hexproof goes to each creature you control that gained any counter this turn and has a +1/+1 counter — not only one you put a +1/+1 counter on | the per-turn counter record does not keep who placed which kind |
 | 🟡 Treasure Keeper | the dies walk exiles the cards it passes (cascade's walk) rather than revealing them | no reveal-until-cast-free effect without the exile |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
@@ -2355,15 +2353,13 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 Every seated commander's doc was scanned for approximation markers and each claim checked against the body (stale
 docs fixed: Aang, Emrakul, Gut, Long Feng, Baral, Teval; fixed in code: Herigast's granted emerge, Alirios's untap
 lock, Basri's exert, Frodo's Ring-bearer must-be-blocked, Reno and Rude sacrificing itself; 2026-10-23: Absolute Virtue, Alpharael, Edgar,
-Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei — `recent_b/cmdr_seated_gaps.rs`). Still open:
+Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei; 2026-10-23 second: Kang, Mm'menon — `recent_b/cmdr_seated_gaps.rs`). Still open:
 
 | Card | Missing | Needs |
 | --- | --- | --- |
 | 🟡 Balthier and Fran | no extra combat when a Vehicle it crewed attacks | crew-source attribution |
 | 🟡 Fblthp, the Lost | always draws one ("entered from or cast from your library: two") | an entered-from-library predicate |
 | 🟡 Heart of Kiran | no "remove a loyalty counter from a planeswalker: crew" | an alternative crew cost |
-| 🟡 Kang the Conqueror | power-up stays activatable during the extra turn | a turn-scoped power-up lock |
-| 🟡 Mm'menon, the Right Hand | artifacts' restricted {U} mana grant missing | a granted restricted mana ability |
 | 🟡 The Unagi of Kyoshi Island | Ward—Waterbend {4} is Ward {4} mana | a waterbend `WardCost` |
 | 🟡 Zidane, Tantalus Thief | no Treasure when an opponent gains control of your permanent | a control-change-from-you event |
 | 🟡 Feroz, Ulgrotha's Warden / Gogo / Minsc & Boo / The Lunar Whale / Arachne | Ban token's {6}; Gogo's "can't be copied"; the Minsc subtype; look at the top card; the hand look | cosmetic or minor |

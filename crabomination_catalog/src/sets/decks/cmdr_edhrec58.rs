@@ -148,8 +148,8 @@ pub fn danitha_sword_of_hope() -> CardDefinition {
 
 /// Kang the Conqueror — {2}{U}{U} legendary 4/5 Human Villain, flying.
 /// Power-up — {5}{U}{U}{U}: a +1/+1 counter on Kang; take an extra turn after
-/// this one (CR 702.193). 🟡 "During that turn, power-up abilities can't be
-/// activated" is not modelled (INCOMPLETE_CARDS).
+/// this one (CR 702.193); during that turn, power-up abilities can't be
+/// activated.
 pub fn kang_the_conqueror() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
@@ -159,6 +159,7 @@ pub fn kang_the_conqueror() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
                 Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+                Effect::PowerUpLockedDuringExtraTurn { who: PlayerRef::You },
             ]),
             ..Default::default()
         }],

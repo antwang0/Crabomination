@@ -275,7 +275,10 @@ pub fn helga_skittish_seer() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::PowerOf(Box::new(Selector::This))),
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::PowerOf(Box::new(Selector::This)))),
+                    crate::mana::SpendRestriction::CreatureSpellMv4OrX,
+                ),
             },
             ..Default::default()
         }],

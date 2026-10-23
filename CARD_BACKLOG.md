@@ -2946,7 +2946,7 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
   `Value::SacrificedManaValue` is stamped for non-creature sac-cost permanents,
   not just creatures), Starport Security (tap-another; conditional discount
   dropped), Mm'menon the Right Hand (cast artifacts from library top; restricted
-  mana grant dropped),
+  mana grant ✅ `SpendRestriction::SpellsNotFromHand`),
   Mental Modulation (`SelfCostReducedDuringYourTurn`) and Anticausal Vestige
   (LTB cheat-into-play via `ManaValueAtMostYourCount`) now ship. Orbital Plunge's
   "if excess damage" now reads real excess (`Predicate::ExcessDamageDealtThisResolution`,
