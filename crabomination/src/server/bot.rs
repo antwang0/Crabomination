@@ -7739,6 +7739,21 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
         if def.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard) {
             m |= spec::GY_GRANT;
         }
+        // "You may cast this card from your graveyard" (Hogaak) answers on any
+        // turn in `graveyard_cast_type_available`, past the board gate's
+        // your-turn test.
+        if def.static_abilities.iter().any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CastSelfFromGraveyard)) {
+            m |= spec::GY_GRANT;
+        }
+    }
+    // Wrenn and Realmbreaker's emblem: `CastFromGraveyardMatching` on any
+    // turn, which the board facts (permanents only) never see.
+    if !state.players[seat].graveyard.is_empty()
+        && state.players[seat].emblems.iter().any(|em| {
+            em.statics.iter().any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CastFromGraveyardMatching { .. }))
+        })
+    {
+        m |= spec::GY_GRANT;
     }
     m
 }
@@ -25676,6 +25691,19 @@ mod tests {
             matches!(a, GameAction::CastSpellAlternative { card_id, .. } if card_id == wurm)
         });
         assert!(!offered, "no sneak outside declare blockers");
+    }
+
+    /// Hogaak's own "cast this from your graveyard" answers on any turn, so
+    /// the `GY_GRANT` gate opens for it off-turn too (bug fix: with Muldrotha
+    /// out, the candidate block found Hogaak on an opponent's turn while the
+    /// gate had skipped it and debug pods panicked — sweep seed 10117).
+    #[test]
+    fn graveyard_grant_gate_sees_a_self_graveyard_caster_off_turn() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(1, catalog::muldrotha_the_gravetide());
+        g.add_card_to_graveyard(1, catalog::hogaak_arisen_necropolis());
+        g.active_player_idx = 0;
+        let _ = cast_candidates(&g, 1, &EvalWeights::default(), None);
     }
 
     /// CR 702.27 — a buyback cast is a candidate when the extra cost is
