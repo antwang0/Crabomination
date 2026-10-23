@@ -2597,14 +2597,21 @@ pub fn god_eternal_oketra() -> CardDefinition {
     }
 }
 
-/// Fblthp, the Lost — {1}{U} 1/1 Homunculus. ETB draw a card. When it becomes
-/// the target of a spell, shuffle it into its owner's library. (The "entered
-/// from library → draw two" rider is approximated as one.)
+/// Fblthp, the Lost — {1}{U} 1/1 Homunculus. ETB draw a card, two if it entered
+/// from or was cast from your library. When it becomes the target of a spell,
+/// shuffle it into its owner's library.
 pub fn fblthp_the_lost() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![
-            etb(draw(1)),
+            etb(Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::EnteredFromLibrary.or(R::WasCastFromLibrary),
+                },
+                then: Box::new(draw(2)),
+                else_: Box::new(draw(1)),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
                     .caused_by(crate::card::SelectionRequirement::IsSpellOnStack),

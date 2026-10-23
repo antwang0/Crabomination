@@ -405,3 +405,26 @@ fn heartwood_crafter_mana_skips_spells_from_hand() {
     let ring = g.add_card_to_hand(0, catalog::sol_ring());
     assert!(cast_plain(&mut g, ring).is_err());
 }
+
+/// Fblthp, the Lost — "if it entered from your library … draw two cards
+/// instead": put onto the battlefield off the top by Collected Company it
+/// draws two; cast from hand it draws one.
+#[test]
+fn fblthp_draws_two_when_it_enters_from_the_library() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::fblthp_the_lost());
+    for _ in 0..15 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let coco = g.add_card_to_hand(0, catalog::collected_company());
+    cast_as(&mut g, 0, coco, &[]).expect("Collected Company");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Fblthp, the Lost"));
+    assert_eq!(g.players[0].hand.len(), 2, "entered from the library: two");
+    let mut h = pod(2);
+    for _ in 0..5 {
+        h.add_card_to_library(0, catalog::island());
+    }
+    let fblthp = h.add_card_to_hand(0, catalog::fblthp_the_lost());
+    cast_as(&mut h, 0, fblthp, &[]).expect("Fblthp");
+    assert_eq!(h.players[0].hand.len(), 1, "cast from hand: one");
+}
