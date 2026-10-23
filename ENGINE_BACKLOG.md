@@ -202,6 +202,30 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
+## FIXED/OPEN 2026-10-23 (Commander run, `01EtjJfo`) — a death-replacement bug class, 19 seated-deck 🟡 rows
+
+- **FIXED (bug class, CR 700.4 / 614.1a):** both death funnels (the SBA lethal sweep and
+  `remove_to_graveyard_with_triggers`) collected the dying permanent's own dies triggers before the removal
+  resolved where it went; only the destroy funnel pre-checked the Rest in Peace family. Under Kalitas,
+  Rayami, Draugr Necromancer, Valentin, Sanctifier en-Vec, Dauthi Voidwalker, a finality counter, … the
+  creature still fired its own "when this dies" and bumped the died tallies. Both now ask
+  `death_was_replaced` after the removal (`DeathTrigger`'s fifth field marks the death half;
+  `creature_death_tally` / `apply_creature_death_tally`). Gate:
+  `core_rules::cr_rules::cr_700_4_a_replaced_death_fires_no_dies_trigger_of_its_own`. Fallout: Ancient
+  Adamantoise had modelled its printed dies-trigger exile as `dies_to_exile` (fixed); the Rofellos pod
+  table's seed 4242 moved 4050 -> 3966 actions (Kokusho / Judith under Sanctifier).
+- **Primitives:** `StaticEffect::ExileDyingOpponentCreaturesWithCounter` (Ravenloft Adventurer, was a dies
+  trigger); `Predicate::CompletedDungeon` + `PlayerCold::completed_dungeons` (Acererak);
+  `SelectionRequirement::HasProtection` / `HasPartner` (Akroma, Vision of Ixidor); `StaticEffect::CrewPowerBonus`
+  / `SelfCrewsWithToughness` and a `saddle` flag on the two crew/saddle readers (Giant Ox, Hotshot Mechanic,
+  three crew-only Pilot tokens); `SelectionRequirement::EnteredByCast` (The Tarrasque from the command zone).
+- **Card-only:** Jhoira's Timebug, Hardy Outlander, Heartwood Storyteller, Fathom Fleet Swordjack, Shredder's
+  Technique, The Misty Mountains Cold, Nim Deathmantle, Gathering Stone, Garruk's Harbinger, Rulik Mons,
+  Cosmic Rebirth. Rows picked by how many seated decks hold the card (a decks.rs token count over the 🟡
+  names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
+  Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
+  Pilgrim, Scion of Halaster, Livio.
+
 ## FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 305 seats, four bug classes gated
 
 - **Seats 4854-5158.** 4854 Owen Grady + Blue, Loyal Raptor (Blue was the one EDHREC top-600 commander missing; Cresting
