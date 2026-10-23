@@ -45386,8 +45386,9 @@ pub fn containment_construct() -> CardDefinition {
     }
 }
 
-/// Heart of Kiran — {2} Legendary Vehicle 4/4, flying, vigilance, crew 3.
-/// (The loyalty-counter alternative crew cost is dropped.)
+/// Heart of Kiran — {2} Legendary Vehicle 4/4, flying, vigilance, crew 3. You
+/// may remove a loyalty counter from a planeswalker you control rather than pay
+/// its crew cost.
 pub fn heart_of_kiran() -> CardDefinition {
     use crate::card::ArtifactSubtype;
     CardDefinition {
@@ -45402,6 +45403,10 @@ pub fn heart_of_kiran() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Crew(3), Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "You may remove a loyalty counter from a planeswalker you control rather than pay this Vehicle's crew cost.",
+            effect: crate::effect::StaticEffect::CrewByRemovingLoyaltyCounter,
+        }],
         ..Default::default()
     }
 }

@@ -428,3 +428,40 @@ fn fblthp_draws_two_when_it_enters_from_the_library() {
     cast_as(&mut h, 0, fblthp, &[]).expect("Fblthp");
     assert_eq!(h.players[0].hand.len(), 1, "cast from hand: one");
 }
+
+/// Heart of Kiran — CR 118.9: a loyalty counter from a planeswalker you control
+/// pays the crew cost in place of tapping creatures; with no planeswalker an
+/// empty crew is refused. The bot crews it that way with loyalty to spare.
+#[test]
+fn heart_of_kiran_crews_with_a_loyalty_counter() {
+    use crabomination::card::{CardType, CounterType};
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let heart = ready(&mut g, 0, catalog::heart_of_kiran());
+    let crew = GameAction::Crew { vehicle: heart, crew_creatures: vec![] };
+    assert!(g.clone().perform_action(crew.clone()).is_err(), "no planeswalker, no crew");
+    let ajani = ready(&mut g, 0, catalog::ajani_goldmane());
+    g.battlefield_find_mut(ajani).unwrap().counters.clear();
+    g.battlefield_find_mut(ajani).unwrap().add_counters(CounterType::Loyalty, 3);
+    let mut h = g.clone();
+    h.perform_action(crew).expect("loyalty crew");
+    assert_eq!(h.battlefield_find(ajani).unwrap().counter_count(CounterType::Loyalty), 2);
+    assert!(h.computed_permanent(heart).unwrap().card_types().contains(&CardType::Creature));
+    let mut bot = HeuristicBot::new();
+    let mut crewed = false;
+    for _ in 0..8 {
+        match bot.next_action(&g, 0) {
+            Some(a @ GameAction::Crew { .. }) => {
+                assert!(matches!(&a, GameAction::Crew { crew_creatures, .. } if crew_creatures.is_empty()));
+                crewed = true;
+                break;
+            }
+            Some(GameAction::PassPriority) | None => break,
+            Some(a) => {
+                g.perform_action(a).expect("bot action");
+                drain_stack(&mut g);
+            }
+        }
+    }
+    assert!(crewed, "the bot crews Heart of Kiran off Ajani");
+}

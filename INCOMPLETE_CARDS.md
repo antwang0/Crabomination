@@ -2353,12 +2353,11 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 Every seated commander's doc was scanned for approximation markers and each claim checked against the body (stale
 docs fixed: Aang, Emrakul, Gut, Long Feng, Baral, Teval; fixed in code: Herigast's granted emerge, Alirios's untap
 lock, Basri's exert, Frodo's Ring-bearer must-be-blocked, Reno and Rude sacrificing itself; 2026-10-23: Absolute Virtue, Alpharael, Edgar,
-Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei; 2026-10-23 second: Kang, Mm'menon, Fblthp — `recent_b/cmdr_seated_gaps.rs`). Still open:
+Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei; 2026-10-23 second: Kang, Mm'menon, Fblthp, Heart of Kiran — `recent_b/cmdr_seated_gaps.rs`). Still open:
 
 | Card | Missing | Needs |
 | --- | --- | --- |
 | 🟡 Balthier and Fran | no extra combat when a Vehicle it crewed attacks | crew-source attribution |
-| 🟡 Heart of Kiran | no "remove a loyalty counter from a planeswalker: crew" | an alternative crew cost |
 | 🟡 The Unagi of Kyoshi Island | Ward—Waterbend {4} is Ward {4} mana | a waterbend `WardCost` |
 | 🟡 Zidane, Tantalus Thief | no Treasure when an opponent gains control of your permanent | a control-change-from-you event |
 | 🟡 Feroz, Ulgrotha's Warden / Gogo / Minsc & Boo / The Lunar Whale / Arachne | Ban token's {6}; Gogo's "can't be copied"; the Minsc subtype; look at the top card; the hand look | cosmetic or minor |
