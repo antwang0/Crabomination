@@ -1265,6 +1265,9 @@ pub enum WardCost {
     /// Aura is attached to, specifically (Curse Artifact). Unpayable once the
     /// Aura has come unattached.
     SacrificeAttachedHost,
+    /// "Ward—Waterbend {N}" (The Unagi of Kyoshi Island, CR 701.67): {N} where
+    /// each artifact or creature the payer taps pays {1}.
+    Waterbend(u32),
 }
 
 impl WardCost {
@@ -1323,6 +1326,7 @@ impl WardCost {
             W::ManaOrMana(a, b) => format!("Ward—{} or {}", a.summary(), b.summary()),
             W::ManaOrDiscard(c, n) => format!("Ward—discard {n} or {}", c.summary()),
             W::SacrificeAttachedHost => "Ward—sacrifice the enchanted permanent".to_string(),
+            W::Waterbend(n) => format!("Ward—Waterbend {{{n}}}"),
         }
     }
 }

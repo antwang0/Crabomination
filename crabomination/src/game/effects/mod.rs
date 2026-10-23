@@ -8,6 +8,7 @@
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
 mod distinct_mv_return;
+mod waterbend_ward;
 mod mill_until;
 mod all_but_one;
 mod any_player_sacrifice;
@@ -48583,6 +48584,7 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::Waterbend(n) => self.pay_waterbend(payer, *n, events),
                     // Curse Artifact — sacrifice the permanent this Aura is on.
                     WardCost::SacrificeAttachedHost => {
                         let host = ctx

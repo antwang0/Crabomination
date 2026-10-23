@@ -18527,6 +18527,15 @@ fn ward_tax_payable(
         WardCost::ManaAndLife(mc, n) => mana_ok(mc) && life_ok(*n),
         WardCost::ManaOrMana(a, b) => mana_ok(a) || mana_ok(b),
         WardCost::ManaOrDiscard(c, n) => mana_ok(c) || state.players[seat].hand.len() >= *n as usize,
+        // Tapped helpers cover what the mana doesn't; the engine finds the split.
+        WardCost::Waterbend(n) => {
+            let helpers = state
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && !c.tapped && (c.definition.is_creature() || c.definition.is_artifact()))
+                .count() as u32;
+            helpers >= *n || mana_ok(&crate::mana::cost(&[crate::mana::generic(n - helpers)]))
+        }
         WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => {
             state.players[seat].hand.len() >= *n as usize
         }
@@ -18567,6 +18576,7 @@ fn ward_tax_burden(tax: &crate::card::WardCost) -> i32 {
         WardCost::ManaAndLife(mc, n) => mc.cmc() as i32 + (*n as i32 + 1) / 2,
         WardCost::ManaOrMana(a, b) => a.cmc().min(b.cmc()) as i32,
         WardCost::ManaOrDiscard(c, n) => (c.cmc() as i32).min(2 * *n as i32),
+        WardCost::Waterbend(n) => *n as i32,
         WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => 2 * *n as i32,
         WardCost::DiscardHand => 3,
         WardCost::RevealMatching(_) => 0,
