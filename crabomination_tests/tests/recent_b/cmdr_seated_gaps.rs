@@ -266,3 +266,19 @@ fn storrev_skips_cards_put_into_the_graveyard_this_combat() {
     assert!(!g.evaluate_requirement_static(&combat, &perm(early), 0, None), "died before combat");
     assert!(g.evaluate_requirement_static(&combat, &perm(late), 0, None), "died this combat");
 }
+
+/// Tomik, Distinguished Advokist — its controller's opponents can't target any
+/// land on the battlefield (another opponent's too) or a land card in a
+/// graveyard, and can't play land cards from graveyards (Crucible of Worlds).
+#[test]
+fn tomik_locks_lands_and_graveyard_lands_for_opponents() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::tomik_distinguished_advokist());
+    let theirs = g.add_card_to_battlefield(2, catalog::forest());
+    let buried = g.add_card_to_graveyard(1, catalog::forest());
+    assert!(g.check_target_legality(&perm(theirs), 1).is_err(), "another opponent's land");
+    assert!(g.check_target_legality(&perm(buried), 1).is_err(), "a land card in a graveyard");
+    assert!(g.check_target_legality(&perm(theirs), 0).is_ok(), "Tomik's controller may");
+    g.add_card_to_battlefield(1, catalog::crucible_of_worlds());
+    assert!(!g.player_may_play_land_from_graveyard(1, buried), "no land plays from graveyards");
+}

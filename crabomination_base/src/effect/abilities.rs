@@ -1175,10 +1175,10 @@ pub enum StaticEffect {
     /// `Hexproof` on opponents' *permanents* (any type) *and* on opponent
     /// players when checking target legality.
     IgnoreOpponentsHexproof,
-    /// Tomik, Distinguished Advokist — "Lands you control can't be the targets
-    /// of spells or abilities your opponents control." Read at the targeting
-    /// gate. (The printed rider covering land cards in graveyards and the
-    /// play-from-graveyard lock are omitted — battlefield lands only.)
+    /// Tomik, Distinguished Advokist — "Lands on the battlefield and land cards
+    /// in graveyards can't be the targets of spells or abilities your
+    /// opponents control. Your opponents can't play land cards from
+    /// graveyards." Read by `GameState::tomik_locks`.
     LandsUntargetableByOpponents,
     /// Ashiok, Dream Render — "Spells and abilities your opponents control can't
     /// cause their controller to search their library." While any player

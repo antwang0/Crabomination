@@ -4400,6 +4400,9 @@ impl crate::game::GameState {
     /// carrying its own may-play permission (Kethis).
     pub fn player_may_play_land_from_graveyard(&self, player: usize, card_id: CardId) -> bool {
         use crate::effect::StaticEffect;
+        if self.tomik_locks(player) {
+            return false;
+        }
         if self.player_may_play_lands_from_graveyard(player) || self.graveyard_land_play_grant(player, Some(card_id)).is_some() {
             return true;
         }
@@ -5486,6 +5489,10 @@ impl GameState {
         card_id: CardId,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // Tomik — "your opponents can't play land cards from graveyards".
+        if self.tomik_locks(p) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         // Coram, the Undertaker — a land milled into any graveyard this turn,
         // when Crucible's own-graveyard route doesn't cover it.
         if !(self.player_may_play_land_from_graveyard(p, card_id)
@@ -16817,6 +16824,12 @@ impl GameState {
             {
                 return Err(GameError::InvalidTarget);
             }
+            // Tomik — nor land cards in graveyards.
+            if self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == *cid && c.definition.is_land()))
+                && self.tomik_locks(caster)
+            {
+                return Err(GameError::InvalidTarget);
+            }
             return Ok(());
         };
         // Read layer-computed keywords (CR 613) so granted *and* stripped
@@ -16877,12 +16890,9 @@ impl GameState {
         {
             return Err(GameError::InvalidTarget);
         }
-        // Tomik — a player's lands can't be targeted by an opponent's spells
-        // or abilities.
-        if card.definition.is_land()
-            && !self.same_team(controller, caster)
-            && self.player_lands_untargetable_by_opponents(controller)
-        {
+        // Tomik — no land on the battlefield can be targeted by its
+        // controller's opponents.
+        if card.definition.is_land() && self.tomik_locks(caster) {
             return Err(GameError::InvalidTarget);
         }
         // Artifact Ward — "can't be the target of abilities from [filter]
@@ -16930,12 +16940,14 @@ impl GameState {
         })
     }
 
-    /// True while `player` controls a `LandsUntargetableByOpponents` source
-    /// (Tomik, Distinguished Advokist).
-    pub(crate) fn player_lands_untargetable_by_opponents(&self, player: usize) -> bool {
+    /// True while an opponent of `player` controls a
+    /// `LandsUntargetableByOpponents` source (Tomik, Distinguished Advokist):
+    /// `player` can't target lands or graveyard land cards, nor play land
+    /// cards from graveyards.
+    pub(crate) fn tomik_locks(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
-            c.controller == player
+            !self.same_team(c.controller, player)
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::LandsUntargetableByOpponents)
                 })

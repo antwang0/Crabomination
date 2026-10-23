@@ -4056,14 +4056,14 @@ pub fn sarkhan_the_masterless() -> CardDefinition {
 }
 
 /// Tomik, Distinguished Advokist — {W}{W} 2/3 Human Advisor with flying. Your
-/// opponents can't target your lands with spells or abilities. (The graveyard
-/// land-card riders are omitted — battlefield lands only.)
+/// opponents can't target lands on the battlefield or land cards in
+/// graveyards, and can't play land cards from graveyards.
 pub fn tomik_distinguished_advokist() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "Lands you control can't be the targets of spells or abilities your opponents control.",
+            description: "Lands and graveyard land cards can't be your opponents' targets; they can't play lands from graveyards.",
             effect: StaticEffect::LandsUntargetableByOpponents,
         }],
         ..vanilla(
