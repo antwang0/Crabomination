@@ -3544,7 +3544,7 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   `KnownCard.{has_waterbend,waterbend_amount}` surface it to the client.
   Follow-ups: bot helper-use heuristic (bot can already cast via mana); the
   client right-click "Cast (waterbend)" affordance + helper picker; `Ward—
-  Waterbend` (The Unagi — approximated as Ward {N}); `Exhaust—Waterbend`
+  Waterbend` ✅ (`WardCost::Waterbend`); `Exhaust—Waterbend`
   (Invasion Submersible); Secret of Bloodbending's "control a player"; Foggy
   Swamp Visions' exile-gy-creatures-as-token-copies.
 - **Blight as an activated/additional cost.** `Effect::Blight` is a resolution
