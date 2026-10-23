@@ -1300,6 +1300,7 @@ fn is_hard_to_target(k: &crate::card::Keyword) -> bool {
             | HexproofFromItsColors
             | HexproofExceptColors(_)
             | HexproofFromAbilities
+            | HexproofFromInstants
             | Shroud
             | Protection(_)
             | ProtectionFromColoredSpells

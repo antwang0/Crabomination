@@ -2597,7 +2597,7 @@ impl Effect {
             | Effect::CreateTokenCopiesHasteSac { who, count, source, .. } => {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)
             }
-            Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
+            Effect::GrantTriggeredAbility { what, .. } | Effect::GrantStateTrigger { what, .. } => sel_has_target(what),
             Effect::WatchCombatDamageUntilYourNextTurn { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
             // The copy retargets itself; the chain rider declares no slot.
@@ -3492,6 +3492,7 @@ impl Effect {
             | Effect::LoseProtectiveKeywords { what, .. }
             | Effect::SkipNextUntap { what }
             | Effect::GrantTriggeredAbility { what, .. }
+            | Effect::GrantStateTrigger { what, .. }
             | Effect::WatchCombatDamageUntilYourNextTurn { what, .. }
             | Effect::GainActivatedAbility { what, .. }
             | Effect::AddCardTypeIndefinitely { what, .. }
@@ -3755,7 +3756,9 @@ impl Effect {
                 // player's hand and its controller draws for them.
                 | Effect::ManifestFromHand { .. }
                 // Vendilion Clique: you pick their best nonland card to bottom.
-                | Effect::BottomChosenFromHandAndDraw { .. } => true,
+                | Effect::BottomChosenFromHandAndDraw { .. }
+                // Yosei, the Morning Star: the bot locked its own untap step.
+                | Effect::SkipPlayerUntapStep { .. } => true,
                 Effect::ApplyToTargets { effect, .. } => hostile(effect),
                 Effect::TargetPlayerThen { then, .. } => hostile(then),
                 Effect::MayDo { body, .. }
@@ -5968,6 +5971,7 @@ impl Effect {
             | Effect::LoseProtectiveKeywords { what, .. }
                 | Effect::SkipNextUntap { what }
                 | Effect::GrantTriggeredAbility { what, .. }
+                | Effect::GrantStateTrigger { what, .. }
                 | Effect::WatchCombatDamageUntilYourNextTurn { what, .. }
                 | Effect::GainActivatedAbility { what, .. }
                 | Effect::AddCardTypeIndefinitely { what, .. }

@@ -7681,8 +7681,8 @@ pub fn haliya_guided_by_light() -> CardDefinition {
 }
 
 /// Alpharael, Dreaming Acolyte — {1}{U}{B} 2/3 Legendary Human Cleric. ETB:
-/// draw two, then discard two. During your turn, Alpharael has deathtouch. (The
-/// "unless you discard an artifact" reduction is dropped.)
+/// draw two, then discard two unless you discard an artifact card. During your
+/// turn, Alpharael has deathtouch.
 pub fn alpharael_dreaming_acolyte() -> CardDefinition {
     CardDefinition {
         name: "Alpharael, Dreaming Acolyte",
@@ -7700,10 +7700,10 @@ pub fn alpharael_dreaming_acolyte() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(2),
             },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: SelectionRequirement::HasCardType(CardType::Artifact),
             },
         ]))],
         static_abilities: vec![StaticAbility {

@@ -802,6 +802,7 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
                 | MustAttackChosenPlayer
                 | MustBlock
                 | MustBeBlocked
+                | MustBeBlockedByAtLeast(_)
                 | AllMustBlock
                 | CantBeBlockedUnlessAllBlock
                 | CantBeBlockedByMoreThanOne

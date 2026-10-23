@@ -4892,6 +4892,14 @@ impl GameState {
     }
 
     /// The caster (controller) of the spell with id `cid` if it's on the stack.
+    /// CR 506 — `cid` reached a graveyard at or after the mark the latest
+    /// combat's beginning left on its turn tally.
+    pub(crate) fn put_into_graveyard_this_combat(&self, cid: CardId) -> bool {
+        self.players.iter().any(|p| {
+            p.graveyard_ids_this_turn.iter().position(|id| *id == cid).is_some_and(|i| i >= p.graveyard_ids_at_combat as usize)
+        })
+    }
+
     pub(crate) fn stack_spell_caster(&self, cid: CardId) -> Option<usize> {
         self.stack.iter().find_map(|si| match si {
             StackItem::Spell { card, caster, .. } if card.id == cid => Some(*caster),
@@ -6673,6 +6681,7 @@ impl GameState {
                     R::PutIntoGraveyardThisTurn => {
                         self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(cid))
                     }
+                    R::PutIntoGraveyardThisCombat => self.put_into_graveyard_this_combat(*cid),
                     R::PutIntoGraveyardFromLibraryThisTurn => {
                         self.players.iter().any(|p| p.milled_ids_this_turn.contains(cid))
                     }
@@ -7678,6 +7687,7 @@ impl GameState {
             R::PutIntoGraveyardThisTurn => {
                 self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(&card.id))
             }
+            R::PutIntoGraveyardThisCombat => self.put_into_graveyard_this_combat(card.id),
             R::PutIntoGraveyardFromLibraryThisTurn => {
                 self.players.iter().any(|p| p.milled_ids_this_turn.contains(&card.id))
             }

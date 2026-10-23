@@ -19282,6 +19282,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantStateTrigger { what, trigger } => {
+                // Baked like a permanent `GrantTriggeredAbility`: reverted as
+                // the card leaves (CR 400.7). One state trigger per object.
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.bake_grant().state_trigger = Some((**trigger).clone());
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantKeyword { what, keyword, duration } => {
                 // Three carriers by duration (`grant_keyword_for`): the
                 // per-instance `granted_keywords_eot` bag (cleared at Cleanup

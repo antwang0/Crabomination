@@ -854,6 +854,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::HexproofFromColor(_) => "Can't be targeted by that color's spells or abilities opponents control.",
         K::HexproofExceptColors(_) => "Can't be targeted by opponents' spells or abilities unless they include one of the listed colors.",
         K::HexproofFromAbilities => "Can't be the target of activated or triggered abilities opponents control.",
+        K::HexproofFromInstants => "Can't be the target of instant spells opponents control.",
         K::HexproofFromArtifactsCreaturesEnchantments => {
             "Can't be the target of artifact, creature, or enchantment spells or abilities opponents control."
         }
@@ -933,6 +934,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::MustBlock => "Blocks each combat if able.",
         K::AllMustBlock => "All creatures able to block this creature do so (Lure).",
         K::MustBeBlocked => "Must be blocked if able.",
+        K::MustBeBlockedByAtLeast(_) => "Must be blocked by several creatures if able.",
         K::CantBeCopied => "Can't be copied.",
         K::DealsNoCombatDamage => "Assigns no combat damage.",
         K::DealsNoDamage => "Damage it would deal is prevented.",
@@ -1228,6 +1230,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::DealsNoDamage => "Deals no damage".into(),
         K::AssignsCombatDamageByToughness => "Assigns combat damage by toughness".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
+        K::MustBeBlockedByAtLeast(n) => format!("Must be blocked by {n} or more creatures if able"),
         K::AllMustBlock => "All creatures able to block this do so".into(),
         K::Skulk => "Skulk".into(),
         K::Fear => "Fear".into(),
@@ -1434,6 +1437,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Replicate(c) => format!("Replicate {}", c.summary()),
         K::ReplicateEnergy(n) => format!("Replicate—Pay {}", "{E}".repeat(*n as usize)),
         K::HexproofFromAbilities => "Hexproof from abilities".into(),
+        K::HexproofFromInstants => "Hexproof from instants".into(),
         K::HexproofFromArtifactsCreaturesEnchantments => "Hexproof from artifacts, creatures, and enchantments".into(),
         K::Mayhem(c) => format!("Mayhem {}", c.summary()),
         K::Harmonize(c) => format!("Harmonize {}", c.summary()),

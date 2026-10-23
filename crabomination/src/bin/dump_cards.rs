@@ -64,6 +64,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::HexproofFromMonocolored | Keyword::HexproofFromMulticolored => "Hexproof from",
         Keyword::HexproofExceptColors(_) => "Hexproof except",
         Keyword::HexproofFromAbilities => "Hexproof from abilities",
+        Keyword::HexproofFromInstants => "Hexproof from instants",
         Keyword::HexproofFromArtifactsCreaturesEnchantments => "Hexproof from artifacts, creatures, and enchantments",
         Keyword::Shroud => "Shroud",
         Keyword::Flash => "Flash",
@@ -218,7 +219,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CanBlockAdditional(_)
         | Keyword::CanBlockAnyNumber
         | Keyword::CantAttack | Keyword::CantBeAttacked | Keyword::CantActivateAbilities
-        | Keyword::MustBeBlocked | Keyword::AllMustBlock
+        | Keyword::MustBeBlocked | Keyword::MustBeBlockedByAtLeast(_) | Keyword::AllMustBlock
         | Keyword::MustAttack | Keyword::MustBlock | Keyword::MustAttackOrBlock
         | Keyword::MustAttackIfAnotherAttacks
         | Keyword::MustAttackChosenPlayer

@@ -937,6 +937,7 @@ fn event_matches_spec_rest(
         // of a spell or ability" rail (Horobi, Death's Wail) — it fires for
         // any creature targeted, with the `with_filter` predicate refining.
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
+        && spec.scope != EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
         && spec.scope != EventScope::OpponentCreatureTargetedByYou
         && spec.scope != EventScope::AnyPlayer
@@ -1265,6 +1266,21 @@ fn event_matches_spec_rest(
                 let target_ctrl = state.battlefield_find(*target).map(|c| c.controller);
                 target_ctrl == Some(source.controller)
                     && !state.same_team(*caster, source.controller)
+            } else {
+                false
+            }
+        }
+        EventScope::YourCreatureOrCreatureSpellTargetedByOpponent => {
+            // CR 115.1 — a spell on the stack is targeted by its card's id.
+            if let GameEvent::BecameTarget { target, caster, .. } = event {
+                !state.same_team(*caster, source.controller)
+                    && match state.battlefield_find(*target) {
+                        Some(c) => c.controller == source.controller && state.computed_is_creature(c),
+                        None => state.stack.iter().any(|si| {
+                            matches!(si, crate::game::types::StackItem::Spell { card, caster, .. }
+                                if card.id == *target && *caster == source.controller && card.definition.is_creature())
+                        }),
+                    }
             } else {
                 false
             }
@@ -1859,6 +1875,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::FromYourGraveyardSourceDamagedOpponent
         | EventScope::YourPermanentTargetedByOpponent
+        | EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
         | EventScope::YourCreatureTargeted
         | EventScope::OpponentCreatureTargetedByYou
         | EventScope::EnchantedBySource

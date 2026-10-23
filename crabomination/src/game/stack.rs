@@ -1013,6 +1013,13 @@ impl GameState {
             }
             TurnStep::BeginCombat => {
                 self.combat_phases_this_turn = self.combat_phases_this_turn.saturating_add(1);
+                // Read first: the write unshares a CoW seat.
+                for p in 0..self.players.len() {
+                    let n = self.players[p].graveyard_ids_this_turn.len() as u32;
+                    if self.players[p].graveyard_ids_at_combat != n {
+                        self.players[p].graveyard_ids_at_combat = n;
+                    }
+                }
                 self.fire_step_triggers(TurnStep::BeginCombat);
                 self.give_priority_to_active();
             }
@@ -1300,6 +1307,7 @@ impl GameState {
             | EventScope::FromYourGraveyardAnyPlayer
             | EventScope::FromYourGraveyardSourceDamagedOpponent => false,
             EventScope::YourPermanentTargetedByOpponent
+            | EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
             | EventScope::YourCreatureTargeted
             | EventScope::OpponentCreatureTargetedByYou
             | EventScope::EnchantedBySource
@@ -5394,6 +5402,7 @@ impl GameState {
             pl.silenced_this_turn = pl.silenced_until_their_turn;
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
+            pl.flipped_coin_this_turn = false;
             pl.shroud_this_turn = false;
             pl.all_damage_prevented_this_turn = false;
             if !pl.protection_colors_eot.is_empty() {
@@ -5407,6 +5416,7 @@ impl GameState {
             pl.spell_tax_this_turn = 0;
             pl.kicked_spells_cast_this_turn = 0;
             pl.graveyard_ids_this_turn.clear();
+            pl.graveyard_ids_at_combat = 0;
             if !pl.milled_ids_this_turn.is_empty() {
                 pl.milled_ids_this_turn.clear();
             }

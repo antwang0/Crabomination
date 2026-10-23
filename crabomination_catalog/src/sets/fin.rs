@@ -1246,7 +1246,8 @@ pub fn barret_avalanche_leader() -> CardDefinition {
 }
 
 /// Edgar, King of Figaro — {4}{U}{U} 4/5 Human Artificer Noble. ETB: draw a card
-/// for each artifact you control. (The two-headed-coin rider is omitted.)
+/// for each artifact you control. Two-Headed Coin — the first time you flip one
+/// or more coins each turn, they come up heads and you win.
 pub fn edgar_king_of_figaro() -> CardDefinition {
     CardDefinition {
         name: "Edgar, King of Figaro",
@@ -1274,6 +1275,10 @@ pub fn edgar_king_of_figaro() -> CardDefinition {
                 filter: SelectionRequirement::Any,
             },
         })],
+        static_abilities: vec![StaticAbility {
+            description: "Two-Headed Coin — the first coin you flip each turn comes up heads.",
+            effect: StaticEffect::FirstCoinFlipEachTurnHeads,
+        }],
         ..Default::default()
     }
 }
@@ -7713,9 +7718,9 @@ pub fn buster_sword() -> CardDefinition {
 }
 
 /// Absolute Virtue — {6}{W}{U} 8/8 Legendary Avatar Warrior. Can't be countered,
-/// flying, and you have protection from each of your opponents.
-/// (Protection is modeled as controller hexproof — the "can't be targeted by
-/// opponents" half; the damage-prevention half is approximated.)
+/// flying, and you have protection from each of your opponents (CR 702.16:
+/// their spells and abilities can't target you, their sources' damage to you
+/// is prevented).
 pub fn absolute_virtue() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -7732,7 +7737,7 @@ pub fn absolute_virtue() -> CardDefinition {
         keywords: vec![Keyword::CantBeCountered, Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "You have protection from each of your opponents.",
-            effect: StaticEffect::ControllerHasHexproof,
+            effect: StaticEffect::ControllerProtectionFromMatching { filter: SelectionRequirement::ControlledByOpponent },
         }],
         ..Default::default()
     }

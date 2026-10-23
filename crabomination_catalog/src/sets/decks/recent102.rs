@@ -13,8 +13,8 @@ use crate::effect::{Effect, PlayerRef, Selector};
 use crate::mana::{b, cost, g, generic, r, u};
 
 /// Surrak, Elusive Hunter — {2}{G} 4/3 legend. Can't be countered, trample.
-/// Whenever a creature you control becomes the target of an opponent's spell or
-/// ability, draw a card. (The "creature spell you control" half is dropped.)
+/// Whenever a creature you control or a creature spell you control becomes the
+/// target of an opponent's spell or ability, draw a card.
 pub fn surrak_elusive_hunter() -> CardDefinition {
     CardDefinition {
         name: "Surrak, Elusive Hunter",
@@ -29,14 +29,7 @@ pub fn surrak_elusive_hunter() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::CantBeCountered, Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::BecameTarget,
-                EventScope::YourPermanentTargetedByOpponent,
-            )
-            .with_filter(Predicate::EntityMatches {
-                what: Selector::TriggerSource,
-                filter: R::Creature,
-            }),
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureOrCreatureSpellTargetedByOpponent),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

@@ -15727,6 +15727,39 @@ fn enforce_block_requirements(
         }
     }
 
+    // CR 509.1c — "must be blocked by N or more if able" (Gorm the Great):
+    // top it up to N with the cheapest idle able bodies when N is reachable.
+    if state.board_keyword_matching(|k| matches!(k, Keyword::MustBeBlockedByAtLeast(_))) {
+        for atk in state.attacking().iter() {
+            if state.defender_for(atk.target) != Some(seat) || !state.block_requirement_binds(atk.attacker) {
+                continue;
+            }
+            let Some(n) = state.must_be_blocked_by_at_least(atk.attacker) else { continue };
+            let on = state.blocker_count_of(atk.attacker) + blocks.iter().filter(|(_, aid)| *aid == atk.attacker).count();
+            if on >= n {
+                continue;
+            }
+            let mut idle: Vec<&crate::card::CardInstance> = state
+                .battlefield
+                .iter()
+                .filter(|b| {
+                    b.controller == seat
+                        && !state.is_blocking(b.id)
+                        && !blocks.iter().any(|(bid, _)| *bid == b.id)
+                        && state.block_requirement_able(b, atk.attacker)
+                        && state.blocker_can_block_attacker(b.id, atk.attacker)
+                })
+                .collect();
+            if on + idle.len() < n {
+                continue;
+            }
+            idle.sort_by_key(|b| (b.power(), b.id));
+            for b in idle.into_iter().take(n - on) {
+                pin(blocks, b.id, atk.attacker);
+            }
+        }
+    }
+
     // The two keyword requirements below walk the board, so gate them on
     // whether the board can carry the keyword at all. `board_keyword_in_scope`
     // is authoritative on `false` and it is `false` on an ordinary board, so

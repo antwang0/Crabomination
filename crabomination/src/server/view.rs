@@ -3064,7 +3064,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         | Effect::NameCreatureTypeAmong { .. } => {
             "Name creature type"
         }
-        Effect::GrantTriggeredAbility { .. } => "Grant ability",
+        Effect::GrantTriggeredAbility { .. } | Effect::GrantStateTrigger { .. } => "Grant ability",
         Effect::LoseAllAbilities { .. } => "Remove abilities",
         Effect::DiscardAnyNumber { .. } => "Discard any number",
         Effect::SacrificeGreatestMV { .. } => "Sacrifice (highest MV)",

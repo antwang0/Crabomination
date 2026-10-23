@@ -10432,6 +10432,9 @@ impl GameState {
                         Keyword::HexproofFromItsColors => cp.as_ref().is_some_and(|cp| {
                             cp.colors.iter().any(|c| spell_colors.contains(c))
                         }),
+                        Keyword::HexproofFromInstants => {
+                            card.definition.card_types.contains(&crate::card::CardType::Instant)
+                        }
                         Keyword::HexproofFromArtifactsCreaturesEnchantments => {
                             card.definition.card_types.iter().any(|t| {
                                 matches!(
@@ -11239,13 +11242,16 @@ impl GameState {
                 return Err(e);
             }
         }
-        // CR 702.16b — a player's protection from a color (Seht's Tiger):
+        // CR 702.16b — a player's protection from a color (Seht's Tiger) or
+        // a "you have protection from [quality]" static (Absolute Virtue):
         // the card is out of every zone here, so the legality check above
-        // could not read its colors.
+        // could not read it.
         let colors = card.definition.printed_colors();
+        let statics = self.battlefield.has_prevent_static();
         if target.iter().chain(additional_targets.iter()).any(|t| {
             matches!(t, Target::Player(tp)
-                if colors.iter().any(|c| self.players[*tp].protection_colors_eot.contains(c)))
+                if colors.iter().any(|c| self.players[*tp].protection_colors_eot.contains(c))
+                    || (statics && self.player_protected_from_card(*tp, &card)))
         }) {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
@@ -17412,6 +17418,20 @@ impl GameState {
                         self.find_card_anywhere(src)
                             .is_some_and(|card| self.evaluate_requirement_on_card(filter, card, player))
                     }
+                }
+                _ => false,
+            })
+        })
+    }
+
+    /// [`player_protected_from_source`](Self::player_protected_from_source)
+    /// for a card in no zone — a spell mid-cast, controlled by its holder.
+    pub(crate) fn player_protected_from_card(&self, player: usize, card: &crate::card::CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().filter(|c| c.controller == player).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::ControllerProtectionFromMatching { filter } => {
+                    self.evaluate_requirement_on_card(filter, card, player)
                 }
                 _ => false,
             })

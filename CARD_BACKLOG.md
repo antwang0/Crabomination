@@ -3478,9 +3478,6 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   and the Aura backs that grant a *targeted* triggered ability (Distracting Geist
   // Clever Distraction's "attacks → tap target", Gutter Skulker's attacking-alone
   unblockable static).
-- **Olivia, Crimson Bride** — the reanimated creature's "when you don't control a
-  legendary Vampire, exile this" rider is omitted (needs a granted
-  count-gated delayed exile).
 - **Henrika Domnathi** — begin-combat "choose one that hasn't been chosen
   before" needs per-source mode-history tracking across turns.
 - **Gisa, Glorious Resurrector** ✅ shipped — the redirect now stamps

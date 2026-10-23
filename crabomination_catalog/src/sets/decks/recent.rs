@@ -2230,9 +2230,9 @@ pub fn parish_blade_trainee() -> CardDefinition {
 }
 
 /// Olivia, Crimson Bride — {4}{B}{R} 3/4 Legendary Vampire Noble. Flying,
-/// haste. Whenever Olivia attacks, return target creature card from a graveyard
-/// to the battlefield tapped and attacking. (The legendary-Vampire exile rider
-/// is omitted.)
+/// haste. Whenever Olivia attacks, return target creature card from your
+/// graveyard to the battlefield tapped and attacking. It gains "When you don't
+/// control a legendary Vampire, exile this creature." (CR 603.8)
 pub fn olivia_crimson_bride() -> CardDefinition {
     use crate::effect::shortcut::on_attack;
     CardDefinition {
@@ -2257,6 +2257,17 @@ pub fn olivia_crimson_bride() -> CardDefinition {
                     controller: PlayerRef::You,
                     tapped: true,
                 },
+            },
+            Effect::GrantStateTrigger {
+                what: Selector::LastMoved,
+                trigger: Box::new(crate::card::StateTriggeredAbility {
+                    condition: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasSupertype(Supertype::Legendary)
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire)),
+                    }))),
+                    effect: Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+                }),
             },
             Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None,
                 what: Selector::LastMoved,

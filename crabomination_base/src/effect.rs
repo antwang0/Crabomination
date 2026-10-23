@@ -4520,6 +4520,10 @@ pub enum EventScope {
     /// checks the targeted permanent's controller == trigger controller and
     /// the caster is an opponent.
     YourPermanentTargetedByOpponent,
+    /// A creature **you control** or a creature **spell** you control becomes
+    /// the target of a spell or ability an **opponent** controls (Surrak,
+    /// Elusive Hunter). Used with `EventKind::BecameTarget`.
+    YourCreatureOrCreatureSpellTargetedByOpponent,
     /// A creature the source's controller controls (including the source)
     /// becomes the target of any spell or ability, friendly or hostile.
     /// Used with `EventKind::BecameTarget` — Nadu, Winged Wisdom.
@@ -9516,6 +9520,10 @@ pub enum Effect {
         trigger: Box<crate::card::TriggeredAbility>,
         duration: Duration,
     },
+    /// CR 603.8 / 113.10 — each permanent `what` picks gains the state
+    /// trigger, baked onto it until it leaves (Olivia, Crimson Bride's
+    /// "When you don't control a legendary Vampire, exile this creature").
+    GrantStateTrigger { what: Selector, trigger: Box<crate::card::StateTriggeredAbility> },
     /// "Target creature loses all abilities until end of turn." Installs a
     /// `Modification::RemoveAllAbilities` continuous effect against each
     /// resolved permanent at layer 6. While in scope, the layer system

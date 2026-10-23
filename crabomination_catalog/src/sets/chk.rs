@@ -2048,9 +2048,8 @@ pub fn akki_coalflinger() -> CardDefinition {
 }
 
 /// Yosei, the Morning Star — {4}{W}{W} Legendary Dragon Spirit 5/5. Flying;
-/// when it dies, target player skips their next untap step and you tap the
-/// permanents they control. (Printed "tap up to five"; modeled as tapping all
-/// of that player's permanents, which the skipped untap then keeps locked.)
+/// when it dies, target player skips their next untap step; tap up to five
+/// target permanents that player controls (CR 601.2c — slot 0 is the player).
 pub fn yosei_the_morning_star() -> CardDefinition {
     use crate::effect::Selector as Sel;
     CardDefinition {
@@ -2062,15 +2061,16 @@ pub fn yosei_the_morning_star() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
-            Effect::SkipPlayerUntapStep {
-                player: PlayerRef::Target(0),
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::SlotGroups(vec![
+            Effect::TargetPlayerThen {
+                filter: SelectionRequirement::Player,
+                then: Box::new(Effect::SkipPlayerUntapStep { player: PlayerRef::Target(0) }),
             },
-            Effect::Tap {
-                what: Sel::ControlledBy {
-                    who: PlayerRef::Target(0),
-                    filter: SelectionRequirement::Permanent,
-                },
+            Effect::ApplyToTargets {
+                max_targets: 5,
+                min_targets: 0,
+                filter: SelectionRequirement::Permanent.and(SelectionRequirement::SameControllerAsTargetSlot(0)),
+                effect: Box::new(Effect::Tap { what: Sel::Target(0) }),
             },
         ]))],
         ..Default::default()

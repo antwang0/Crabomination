@@ -2956,8 +2956,8 @@ pub fn silent_submersible() -> CardDefinition {
 
 /// Storrev, Devkarin Lich — {1}{B}{B}{G} 5/4 Zombie Elf Wizard with trample.
 /// Whenever it deals combat damage to a player or planeswalker, return a creature or
-/// planeswalker card from your graveyard to your hand. (The "wasn't put there
-/// this combat" rider is approximated.)
+/// planeswalker card from your graveyard that wasn't put there this combat to
+/// your hand.
 pub fn storrev_devkarin_lich() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -2967,7 +2967,11 @@ pub fn storrev_devkarin_lich() -> CardDefinition {
             .map(|kind| TriggeredAbility {
                 event: EventSpec::new(kind, EventScope::SelfSource),
                 effect: Effect::Move {
-                    what: target_filtered((R::Creature.or(R::Planeswalker)).and(R::InYourGraveyard)),
+                    what: target_filtered(
+                        (R::Creature.or(R::Planeswalker))
+                            .and(R::InYourGraveyard)
+                            .and(R::Not(Box::new(R::PutIntoGraveyardThisCombat))),
+                    ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             })

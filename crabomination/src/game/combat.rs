@@ -3411,6 +3411,38 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — "must be blocked by N or more creatures if able" (Gorm
+        // the Great): short of N while enough idle able bodies remain to reach
+        // N is rejected; when N can't be reached the requirement can't be met.
+        if self.board_keyword_matching(|k| matches!(k, Keyword::MustBeBlockedByAtLeast(_))) {
+            for atk in self.attacking.iter() {
+                let Some(n) = self.must_be_blocked_by_at_least(atk.attacker) else { continue };
+                if !self.block_requirement_binds(atk.attacker) {
+                    continue;
+                }
+                let Some(defender_idx) = self.defender_for(atk.target) else { continue };
+                let on = self.blocker_count_of(atk.attacker)
+                    + assignments.iter().filter(|(_, aid)| *aid == atk.attacker).count();
+                if on >= n {
+                    continue;
+                }
+                let idle = self
+                    .battlefield
+                    .iter()
+                    .filter(|b| {
+                        self.same_team(b.controller, defender_idx)
+                            && !self.is_blocking(b.id)
+                            && !assignments.iter().any(|(bid, _)| *bid == b.id)
+                            && self.block_requirement_able(b, atk.attacker)
+                            && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
+                    })
+                    .count();
+                if on + idle >= n && !self.block_cap_shuts_out(&assignments) {
+                    return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
+                }
+            }
+        }
+
         // CR 509.1c — "must be blocked by a [filter] if able" (Ace's Baseball
         // Bat). Met by one matching blocker on it; rejected while it has none
         // and an idle matching creature could block it.
@@ -7031,6 +7063,19 @@ impl GameState {
                 _ => None,
             })
         })
+    }
+
+    /// CR 509.1c — the largest N of `attacker`'s computed
+    /// `MustBeBlockedByAtLeast(N)` (Gorm the Great), if any.
+    pub(crate) fn must_be_blocked_by_at_least(&self, attacker: CardId) -> Option<usize> {
+        let cp = self.computed_permanent(attacker)?;
+        cp.keywords()
+            .iter()
+            .filter_map(|k| match k {
+                Keyword::MustBeBlockedByAtLeast(n) => Some(*n as usize),
+                _ => None,
+            })
+            .max()
     }
 
     pub(crate) fn block_requirement_binds(&self, attacker: CardId) -> bool {

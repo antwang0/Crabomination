@@ -1466,6 +1466,11 @@ pub enum StaticEffect {
     /// multiple sources stack) by `coin_flip_advantage_now`, which feeds the
     /// `Effect::FlipCoin` resolver on top of `Player.coin_flip_advantage`.
     CoinFlipAdvantage { target: PlayerStaticTarget },
+    /// CR 705 — "The first time you flip one or more coins each turn, those
+    /// coins come up heads and you win those flips" (Edgar, King of Figaro's
+    /// Two-Headed Coin). Read by `flip_one_coin` for its controller; each
+    /// coin is its own flip, so a simultaneous batch heads only its first.
+    FirstCoinFlipEachTurnHeads,
     /// Damping-Sphere-style "lands that tap for more than one mana enter
     /// producing only {C}". Detected at `play_land` time: if any active
     /// `LandsTapColorlessOnly` static is in play, the entering land's

@@ -12764,6 +12764,21 @@ impl GameState {
     /// style advantage (replay + treat as heads if any replay is heads).
     /// Returns true for heads.
     pub(crate) fn flip_one_coin(&mut self, player: usize) -> bool {
+        let first = self.players.get(player).is_some_and(|p| !p.flipped_coin_this_turn);
+        if let Some(p) = self.players.get_mut(player) {
+            p.flipped_coin_this_turn = true;
+        }
+        if first
+            && self.battlefield.iter().any(|c| {
+                c.controller == player
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::FirstCoinFlipEachTurnHeads))
+            })
+        {
+            return true;
+        }
         let advantage = self.players.get(player).map(|p| p.coin_flip_advantage).unwrap_or(0)
             + self.coin_flip_advantage_now(player);
         let mut heads = false;
@@ -35899,6 +35914,7 @@ fn static_effect_to_effects(
             // CoinFlipAdvantage (Krark's Thumb) — consulted dynamically by
             // the FlipCoin resolver via coin_flip_advantage_now; no layer effect.
             | StaticEffect::CoinFlipAdvantage { .. }
+            | StaticEffect::FirstCoinFlipEachTurnHeads
             // PreventUntap — consulted by `do_untap` (CR 502.3); no layer
             // effect since it gates a turn-based action rather than a
             // characteristic.

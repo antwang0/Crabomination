@@ -1755,6 +1755,14 @@ pub struct PlayerData {
     /// the value directly via the Thumb card body).
     #[serde(default)]
     pub coin_flip_advantage: u32,
+    /// This player flipped a coin this turn (Edgar, King of Figaro's
+    /// Two-Headed Coin reads it). Cleared at each turn's start.
+    #[serde(default)]
+    pub flipped_coin_this_turn: bool,
+    /// `graveyard_ids_this_turn.len()` as the last combat began: the ids at or
+    /// past it reached the graveyard this combat (Storrev, Devkarin Lich).
+    #[serde(default)]
+    pub graveyard_ids_at_combat: u32,
 }
 
 /// A seat: a copy-on-write handle around [`PlayerData`].
@@ -2132,6 +2140,8 @@ impl Player {
             hostile_player_targets: false,
             manual_mana: false,
             coin_flip_advantage: 0,
+            flipped_coin_this_turn: false,
+            graveyard_ids_at_combat: 0,
         })
     }
 }

@@ -81,6 +81,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         HexproofFromColor(_) => "HexC",
         HexproofExceptColors(_) => "HexX",
         HexproofFromAbilities => "HexA",
+        HexproofFromInstants => "HexI",
         HexproofFromArtifactsCreaturesEnchantments => "HexACE",
         HexproofFromMonocolored => "HexM",
         Shroud => "Shr",
@@ -182,6 +183,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Can block only creatures with flying" (Wanderlight Spirit).
         CanBlockOnlyFlying => "FlyBlk",
         MustBeBlocked => "Lure",
+        MustBeBlockedByAtLeast(_) => "Lure+",
         // "Attacks each combat if able" (Impending Doom, The Akroan War II) —
         // a board-relevant combat compulsion.
         MustAttack => "Atk!",

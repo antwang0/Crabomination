@@ -2001,6 +2001,9 @@ pub enum Keyword {
     /// be the target of activated or triggered abilities opponents control
     /// (still targetable by spells). Volatile Stormdrake.
     HexproofFromAbilities,
+    /// CR 702.11d — "hexproof from instants" (Elenda, Saint of Dusk): an
+    /// opponent's instant spell can't target it.
+    HexproofFromInstants,
     Shroud,
     CantBeCountered,
     /// CR 117.x — "If X is N or more, this spell can't be countered."
@@ -2610,6 +2613,10 @@ pub enum Keyword {
     /// engine models the single-requirement case; multi-Lure
     /// maximization (CR 509.1c's "as many as possible") is approximated.
     MustBeBlocked,
+    /// CR 509.1c — "must be blocked by N or more creatures if able" (Gorm the
+    /// Great, beside its `MustBeBlocked`): with N able blockers, fewer than N
+    /// on it is illegal; with fewer able, the requirement can't be met.
+    MustBeBlockedByAtLeast(u8),
     /// CR 509.1c — "All creatures able to block this creature do so" (true
     /// Lure). Stronger than `MustBeBlocked` (≥1 blocker): every idle
     /// defender creature that *can* legally block this attacker must be
@@ -2964,7 +2971,8 @@ impl Keyword {
                 | K::HexproofFromMulticolored
                 | K::HexproofFromItsColors
                 | K::HexproofExceptColors(_)
-                | K::HexproofFromAbilities => 3,
+                | K::HexproofFromAbilities
+                | K::HexproofFromInstants => 3,
                 _ => 0,
             }
         }
@@ -3721,6 +3729,10 @@ pub enum SelectionRequirement {
     /// The card reached a graveyard from *anywhere* this turn (Reenact the
     /// Crime). Backed by `Player.graveyard_ids_this_turn`.
     PutIntoGraveyardThisTurn,
+    /// The card reached a graveyard since this turn's latest combat began
+    /// (Storrev, Devkarin Lich's "that wasn't put there this combat").
+    /// Backed by `Player.graveyard_ids_at_combat`.
+    PutIntoGraveyardThisCombat,
     /// The card was milled this turn — put into a graveyard from a library
     /// (Captain N'ghathrod's "put there from their library this turn").
     /// Backed by `Player.milled_ids_this_turn`; surveil isn't counted.

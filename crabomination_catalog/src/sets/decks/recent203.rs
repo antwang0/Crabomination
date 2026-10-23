@@ -160,8 +160,7 @@ pub fn violent_urge() -> CardDefinition {
 
 /// Elenda, Saint of Dusk — {2}{W}{B} 4/4 Legendary Vampire Knight, Lifelink. Gets
 /// +1/+1 and menace while your life is above your starting total, and an
-/// additional +5/+5 while it's at least 10 above. (Hexproof from instants is
-/// approximated away — no from-instants hexproof keyword yet.)
+/// additional +5/+5 while it's at least 10 above. Hexproof from instants.
 pub fn elenda_saint_of_dusk() -> CardDefinition {
     CardDefinition {
         name: "Elenda, Saint of Dusk",
@@ -174,7 +173,7 @@ pub fn elenda_saint_of_dusk() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![Keyword::Lifelink, Keyword::HexproofFromInstants],
         static_abilities: vec![
             StaticAbility {
                 description: "+1/+1 and menace while above your starting life.",

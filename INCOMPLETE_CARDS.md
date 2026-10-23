@@ -204,9 +204,8 @@ Fix the primitive → fix the whole cluster.
 (divide as you choose), and `Effect::DealDamageDividedEvenly` + per-extra-target
 cast tax (Fireball). Return to Dust ✅ (real instant, main-phase-gated 2nd
 target), Rag Dealer ✅ (single-graveyard lock), Skullsnatcher ✅ (that player's
-graveyard), Pull from the Grave / Rabid Attack ✅ (were stale rows). Remaining:
-Yosei (taps all of that player's permanents instead of "up to five target" —
-needs a player-slot-dependent permanent multi-slot).
+graveyard), Pull from the Grave / Rabid Attack ✅ (were stale rows), Yosei ✅
+(`SlotGroups` + `SameControllerAsTargetSlot(0)`, 2026-10-23).
 
 ### 2. "Choose two of four" modal selection — ✅ closed 2026-09-28
 Spells choose their modes as they are cast (`ChooseModesCast`, CR 700.2a): 23
@@ -395,7 +394,6 @@ NEXT item 13 lists them); residuals the scans surfaced but did not close:
 | Card | Residual | Why |
 |---|---|---|
 | Chevill, Bane of Monsters | "a permanent an opponent controls" dies is read as any permanent with a bounty counter | bounty counters only go on opponents' permanents, so it differs only after a control change |
-| Elenda, Saint of Dusk | "hexproof from instants" is dropped | a `HexproofFrom` variant over a card type |
 
 ## Oracle-vs-definition scans (2026-09-28, session `01BA6uAJ`) — what the fixes left
 
@@ -550,7 +548,7 @@ plain missing fan-out:
 |---|---|
 | ~~Malcolm, Keen-Eyed Navigator~~ ✅ **FIXED** | The batched trigger now carries `EventSpec::once_per_batch` and the engine's batch key carries the damaged subject (CR 603.2c), so it fires once per damaged opponent: two Pirates into one seat make one Treasure, one Pirate into each of two seats makes two. Printed is one trigger carrying a count rather than one per seat; nothing counts a trigger and the Treasures match. |
 | Kaya, Spirits' Justice | the −2's "for each other player, exile up to one target creature that player controls" can't take `ForEachOpponentTarget`: slot 0 is a fixed own-creature target and `ApplyToTargets` rebinds every supplied target to slot 0. |
-| Absolute Virtue | "you have protection from each of your opponents" is modelled as `ControllerHasHexproof` — the can't-be-targeted half only, not the damage or aura halves. |
+| ~~Absolute Virtue~~ ✅ | `ControllerProtectionFromMatching { ControlledByOpponent }` (2026-10-23): targeting and damage. A Curse an opponent already attached isn't shed (704.5m reads only seat protection). |
 | Damping Engine | the whole "controls more permanents than each other player" lock, plus its sacrifice-to-ignore rider. |
 | ~~Lavinia, Azorius Renegade~~ ✅ | Stale row (checked 2026-09-28, `01MgDzfC`): `cast_lock::ABOVE_LANDS` compares the spell against the **caster's own** land count (`game/mod.rs`), which is the per-opponent threshold. |
 | Spikeshell Harrier | the speed-comparison clause is dropped (the bounce half is complete). |
@@ -2086,7 +2084,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kang the Conqueror | "During that turn, power-up abilities can't be activated" is not modelled — the extra turn allows other power-ups | no turn-scoped power-up lock |
 | 🟡 Kid Loki | hexproof goes to each creature you control that gained any counter this turn and has a +1/+1 counter — not only one you put a +1/+1 counter on | the per-turn counter record does not keep who placed which kind |
 | 🟡 Treasure Keeper | the dies walk exiles the cards it passes (cascade's walk) rather than revealing them | no reveal-until-cast-free effect without the exile |
-| 🟡 Gorm the Great | "must be blocked by two or more creatures if able" is only "must be blocked if able" | no minimum-blockers requirement |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
 | 🟡 Loch Mare | "remove a counter" spends only its -1/-1 counters | `remove_counter_cost` names one kind |
@@ -2357,25 +2354,17 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 
 Every seated commander's doc was scanned for approximation markers and each claim checked against the body (stale
 docs fixed: Aang, Emrakul, Gut, Long Feng, Baral, Teval; fixed in code: Herigast's granted emerge, Alirios's untap
-lock, Basri's exert, Frodo's Ring-bearer must-be-blocked, Reno and Rude sacrificing itself). Still open:
+lock, Basri's exert, Frodo's Ring-bearer must-be-blocked, Reno and Rude sacrificing itself; 2026-10-23: Absolute Virtue, Alpharael, Edgar,
+Elenda, Gorm, Olivia, Storrev, Surrak, Yosei — `recent_b/cmdr_seated_gaps.rs`). Still open:
 
 | Card | Missing | Needs |
 | --- | --- | --- |
-| 🟡 Absolute Virtue | protection from each opponent is hexproof only — their damage isn't prevented | player protection-from-a-player |
-| 🟡 Alpharael, Dreaming Acolyte | always discards two ("unless you discard an artifact card" dropped) | a discard-N-unless-one-of-type choice |
 | 🟡 Balthier and Fran | no extra combat when a Vehicle it crewed attacks | crew-source attribution |
-| 🟡 Edgar, King of Figaro | Two-Headed Coin (first flips each turn come up heads) | a coin-flip result override |
-| 🟡 Elenda, Saint of Dusk | no hexproof from instants | a `HexproofFrom` instants variant |
 | 🟡 Fblthp, the Lost | always draws one ("entered from or cast from your library: two") | an entered-from-library predicate |
-| 🟡 Gorm the Great | "must be blocked by two or more if able" is plain must-be-blocked | a minimum-blockers requirement |
 | 🟡 Heart of Kiran | no "remove a loyalty counter from a planeswalker: crew" | an alternative crew cost |
 | 🟡 Kang the Conqueror | power-up stays activatable during the extra turn | a turn-scoped power-up lock |
 | 🟡 Mm'menon, the Right Hand | artifacts' restricted {U} mana grant missing | a granted restricted mana ability |
-| 🟡 Olivia, Crimson Bride | the returned creature never gains "exile this when you control no legendary Vampire" | a granted state trigger |
-| 🟡 Storrev, Devkarin Lich | target may be a card put into the graveyard this combat | a per-combat graveyard-entry filter |
-| 🟡 Surrak, Elusive Hunter | "or a creature spell you control" becomes the target — spell half missing | a spell-targeted trigger scope |
 | 🟡 The Unagi of Kyoshi Island | Ward—Waterbend {4} is Ward {4} mana | a waterbend `WardCost` |
 | 🟡 Tomik, Distinguished Advokist | opponents may play lands from graveyards / target your graveyard lands | graveyard-land locks |
-| 🟡 Yosei, the Morning Star | taps all of the player's permanents, not up to five targets | an up-to-five target slot |
 | 🟡 Zidane, Tantalus Thief | no Treasure when an opponent gains control of your permanent | a control-change-from-you event |
 | 🟡 Feroz, Ulgrotha's Warden / Gogo / Minsc & Boo / The Lunar Whale / Arachne | Ban token's {6}; Gogo's "can't be copied"; the Minsc subtype; look at the top card; the hand look | cosmetic or minor |
