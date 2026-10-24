@@ -285,7 +285,7 @@ decks hold the card).
 - **Sweeps (overflow build):** 12401 (4/6/8, 3,228 games), 12421 (3/5/7, 4,094), 12431 (4/6/8, 3,280), 12441 (`--a dflt`
   over seats 5559-6054, 448): one abort (fixed above); undecided are Descent into Avernus / Divine Intervention draws, one
   Syr Konrad + Gaea's Blessing loop and four token-engine board caps.
-- **Open:** Esoteric Duplicator misses a Treasure sacrificed for **mana** (no LKI outlives a mana ability); Aegar's
+- **Open:** Aegar's
   "a spell you controlled" (owner stands in); Beorn's Hospitality's tracking P/T (a 7b grant over `BecomeCreature`).
   An audit of gated statics (`WhileCondition` & co.) whose reader matches the raw effect found only the improvise one.
 
