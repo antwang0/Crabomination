@@ -5651,7 +5651,10 @@ pub fn decide_optional_trigger(
     let (take, priced) = match kind {
         // CR 704.5b — a "may draw" the library can't cover decks the seat.
         K::MayBody if may_draw_would_deck(state, seat, source, description) => (false, false),
-        K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description).or(shed) {
+        K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description)
+            .or_else(|| super::keyword_shield::shelter_exile_answer(state, seat, source, description))
+            .or(shed)
+        {
             Some(yes) => (yes, false),
             None => (optional_trigger_beneficial(state, source, description), true),
         },
@@ -10474,7 +10477,7 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     if ability_reach_amount(&ab.effect).is_some() {
         m |= sink::AB_REACH;
     }
-    if effect_reanimates_from_graveyard(&ab.effect) {
+    if effect_reanimates_from_graveyard(&ab.effect) || super::keyword_shield::exile_mass_return(&ab.effect).is_some() {
         m |= sink::AB_REANIMATE;
     }
     if super::transform_sink::ability_transforms_self(&ab.effect) {
@@ -12374,6 +12377,22 @@ fn effect_reanimates_from_graveyard(eff: &Effect) -> bool {
 fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameAction> {
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if super::keyword_shield::exile_mass_return(&ab.effect).is_some() {
+                if super::keyword_shield::exile_mass_return_pays(state, seat, &ab.effect) {
+                    let action = GameAction::ActivateAbility {
+                        card_id: card.id,
+                        ability_index: idx,
+                        target: None,
+                        additional_targets: Vec::new(),
+                        x_value: None,
+                        mode: None,
+                    };
+                    if state.would_accept(action.clone()) {
+                        return Some(action);
+                    }
+                }
+                continue;
+            }
             if !effect_reanimates_from_graveyard(&ab.effect) {
                 continue;
             }
