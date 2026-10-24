@@ -259,7 +259,10 @@ No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they
   other two, Lórien Revealed and Troll of Khazad-dûm, are in the catalog under ASCII names; renaming touches the vocab).
 - **Sweeps (overflow, release asserts off):** 10150 (4/6, 5,046 games), 10151 (3/5/8, 7,972), 10152 (`--a dflt`, 4 seats,
   1,514): 0 panics; undecided are CR 104.4a/b draws (Guile + Zellix + Altar of the Brood, Descent into Avernus, Divine
-  Intervention, simultaneous losses) and one 8-seat Scute Swarm board cap.
+  Intervention, simultaneous losses) and one 8-seat Scute Swarm board cap. Later: 10156 (`--a dflt`, 6/8, 1,766), 10157
+  (`--a gang`, 4/5, 2,725), 10159 (3/4/6/8, 5,298), 10160 (10 seats, 240): 0 panics; one action cap (Another Round X=11
+  re-blinking a big board — slow, finite), board caps from token doublers (Second Harvest, Parallel Lives, Hare
+  Apparent + Thrumming Stone), CR 104.4b draws incl. Polyraptor + Marauding Raptor.
 - **FIXED (the gated audits had rotted: `scripts/audit_gates.py` read 20 red at the session start, 0 now):** Tobias
   (nontoken deaths), Guardians of Koilos (owner's hand), Maralen / Monk Class / Rona ("cast", not "play"), Slave of
   Bolas (permanent steal), Feral Encounter (two slots), ten "any target" damage abilities (`R::Any` took lands),
