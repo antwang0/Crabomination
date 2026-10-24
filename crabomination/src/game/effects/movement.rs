@@ -74,6 +74,8 @@ pub(crate) mod prevent_static {
     pub const NAMED_SHIELD: u32 = 1 << 15;
     /// `PreventAllSpellDamage` (Energy Storm).
     pub const ALL_SPELL: u32 = 1 << 16;
+    /// `ReduceCreatureCombatDamageToYouAndYoursByCounters` (Cover of Winter).
+    pub const COMBAT_FROM_CREATURES: u32 = 1 << 17;
 }
 
 /// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -115,6 +117,9 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 SE::PreventAllButOneDamageToYouAndYourHeroes => prevent_static::ALL_BUT_ONE,
                 SE::PreventDamageToYouAndYoursFromNamed => prevent_static::NAMED_SHIELD,
                 SE::PreventAllSpellDamage => prevent_static::ALL_SPELL,
+                SE::ReduceCreatureCombatDamageToYouAndYoursByCounters { .. } => {
+                    prevent_static::COMBAT_FROM_CREATURES
+                }
                 _ => 0,
             };
         }
@@ -892,6 +897,47 @@ impl GameState {
                     to_player: Some(p),
                     to_card: None,
                 });
+                amount -= soaked;
+                if amount == 0 {
+                    return 0;
+                }
+            }
+        }
+        // CR 615 — Cover of Winter: X of a creature's combat damage to the
+        // static's controller or a creature they control, X its counters.
+        if combat
+            && statics & prevent_static::COMBAT_FROM_CREATURES != 0
+            && amount > 0
+            && let Some(src) = source
+            && self.battlefield_find(src).is_some_and(|c| self.computed_is_creature(c))
+            && let Some(owner) = match ent {
+                EntityRef::Player(p) => Some(p),
+                EntityRef::Permanent(cid) => {
+                    self.battlefield_find(cid).filter(|c| self.computed_is_creature(c)).map(|c| c.controller)
+                }
+                EntityRef::Card(_) => None,
+            }
+        {
+            let shaved: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == owner)
+                .flat_map(|c| {
+                    c.definition.static_abilities.iter().filter_map(move |sa| match sa.effect {
+                        crate::effect::StaticEffect::ReduceCreatureCombatDamageToYouAndYoursByCounters {
+                            counter,
+                        } => Some(c.counter_count(counter)),
+                        _ => None,
+                    })
+                })
+                .sum();
+            let soaked = shaved.min(amount);
+            if soaked > 0 {
+                let (to_player, to_card) = match ent {
+                    EntityRef::Player(p) => (Some(p), None),
+                    EntityRef::Permanent(id) | EntityRef::Card(id) => (None, Some(id)),
+                };
+                events.push(GameEvent::DamagePrevented { amount: soaked, to_player, to_card });
                 amount -= soaked;
                 if amount == 0 {
                     return 0;

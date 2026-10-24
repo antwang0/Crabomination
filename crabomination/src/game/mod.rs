@@ -36793,8 +36793,9 @@ fn static_effect_to_effects(
             // CR 615 — read by the combat-damage-to-player path (Thunderstaff).
             | StaticEffect::ReduceCombatDamageToControllerWhileUntapped(_)
             | StaticEffect::AbsorbUnblockedCombatDamageWhileUntapped
-            // Consulted in `apply_prevention_shields` (Sphere of Purity).
+            // Consulted in `apply_prevention_shields` (Sphere of Purity, Cover of Winter).
             | StaticEffect::ReduceDamageToControllerFromSource { .. }
+            | StaticEffect::ReduceCreatureCombatDamageToYouAndYoursByCounters { .. }
             // CR 702.16 — consulted there and at the player-target gate.
             | StaticEffect::ControllerProtectionFromMatching { .. }
             // Phyrexian Unlife — consulted at the loss SBA + damage funnels.

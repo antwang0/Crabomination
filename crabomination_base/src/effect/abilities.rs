@@ -1098,6 +1098,11 @@ pub enum StaticEffect {
     /// damage to you, prevent N of that damage" (Thunderstaff). Shaves N off
     /// each damaging creature's combat damage to the source's controller.
     ReduceCombatDamageToControllerWhileUntapped(u32),
+    /// CR 615 — "If a creature would deal combat damage to you and/or one or
+    /// more creatures you control, prevent X of that damage, where X is the
+    /// number of `counter` counters on this" (Cover of Winter). Shaved per
+    /// combat damage event in the prevention funnel.
+    ReduceCreatureCombatDamageToYouAndYoursByCounters { counter: crate::card::CounterType },
     /// CR 614.9 — "As long as this creature is untapped, all combat damage
     /// that would be dealt to you by unblocked creatures is dealt to this
     /// creature instead" (Weathered Bodyguards, Veteran Bodyguard). Read by

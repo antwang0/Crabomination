@@ -993,6 +993,7 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
                 | S::PreventAllSpellDamage
                 | S::PreventAllButOneDamageToYouAndYourHeroes
                 | S::PreventDamageToYouAndYoursFromNamed
+                | S::ReduceCreatureCombatDamageToYouAndYoursByCounters { .. }
         )
     })
 }
