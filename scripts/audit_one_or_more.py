@@ -35,6 +35,15 @@ BATCH = re.compile(
 )
 # One event per batch already, or a repeat that changes nothing.
 ALLOWLIST = {
+    # Reviewed 2026-10-24. One event per batch already: the library-arrival
+    # tally (`library_arrivals.rs`) and `OpponentOfYoursAttacked` (per attacked
+    # opponent); `MatchingCreaturesDealingCombatDamageBatchThisTurn` is a batch;
+    # per-creature firing is the same outcome for a per-creature grant / "that
+    # many" / exiling each card; Starscream's name lands on its back face.
+    "Dutiful Knowledge Seeker", "Wan Shi Tong, All-Knowing", "Squall, Gunblade Duelist",
+    "Aphelia, Viper Whisperer", "Jace, Cunning Castaway", "The Raven's Warning",
+    "Basri Ket", "Frenzied Gorespawn", "Garruk, Curse Breaker", "Toluz, Clever Conductor",
+    "Starscream, Seeker Leader",
     # `YouAttack` / `YouAttackedPlayer` fire once per declaration / defender.
     "Demonic Covenant", "Duelist's Heritage", "Firkraag, Cunning Instigator",
     "Glass-Cast Heart", "Mavren Fein, Dusk Apostle", "Roar of Resistance",
