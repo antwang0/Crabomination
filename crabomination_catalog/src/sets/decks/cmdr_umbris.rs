@@ -930,11 +930,10 @@ pub fn elder_brain() -> CardDefinition {
 
 /// Mind Flayer — {3}{U}{U} Creature — Horror 3/3. "Dominate Monster — When
 /// this creature enters, gain control of target creature for as long as you
-/// control this creature." (Control lasts while Mind Flayer remains on the
-/// battlefield — the Sower of Temptation duration.)
+/// control this creature."
 pub fn mind_flayer() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+        triggered_abilities: vec![etb(Effect::GainControlWhileYouControlSource {
             what: target_filtered(R::Creature),
         })],
         ..creature("Mind Flayer", cost(&[generic(3), u(), u()]), 3, 3, vec![CreatureType::Horror], vec![])

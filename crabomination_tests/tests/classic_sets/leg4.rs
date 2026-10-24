@@ -225,6 +225,21 @@ fn rubinia_soulsinger_holds_the_creature_while_tapped() {
     g.battlefield_find_mut(rubinia).unwrap().tapped = false;
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(prize).unwrap().controller, 1, "untapping gives it back");
+    // "For as long as you control Rubinia and Rubinia remains tapped": a
+    // still-tapped Rubinia taken by the opponent ends it too (CR 611.2b).
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(rubinia).unwrap().tapped = false;
+    activate(&mut g, 0, rubinia, 0, Some(Target::Permanent(other)));
+    assert_eq!(g.battlefield_find(other).unwrap().controller, 0);
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::ExactObjects(vec![rubinia]),
+        to: None,
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&steal, &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(rubinia).unwrap().tapped);
+    assert_eq!(g.battlefield_find(other).unwrap().controller, 1, "taken while tapped");
 }
 
 /// Tetsuo only kills tapped or blocking creatures.

@@ -224,7 +224,7 @@ pub fn the_wretched() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
-            effect: Effect::GainControlWhileSourceRemains {
+            effect: Effect::GainControlWhileYouControlSource {
                 what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
             },
         }],

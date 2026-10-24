@@ -398,7 +398,7 @@ pub fn rubinia_soulsinger() -> CardDefinition {
         keywords: vec![Keyword::MayChooseNotToUntap],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::GainControlWhileSourceTapped { what: target_filtered(R::Creature) },
+            effect: Effect::GainControlWhileYouControlSourceTapped { what: target_filtered(R::Creature) },
             ..Default::default()
         }],
         ..legend(
@@ -417,7 +417,7 @@ pub fn willow_satyr() -> CardDefinition {
         keywords: vec![Keyword::MayChooseNotToUntap],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::GainControlWhileSourceTapped {
+            effect: Effect::GainControlWhileYouControlSourceTapped {
                 what: target_filtered(R::Creature.and(R::HasSupertype(Supertype::Legendary))),
             },
             ..Default::default()

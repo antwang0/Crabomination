@@ -6018,7 +6018,7 @@ pub fn seasinger() -> CardDefinition {
         }),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::GainControlWhileSourceTapped {
+            effect: Effect::GainControlWhileYouControlSourceTapped {
                 what: target_filtered(R::Creature.and(R::ControllerControlsLandType(LandType::Island))),
             },
             ..Default::default()

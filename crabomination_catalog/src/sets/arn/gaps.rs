@@ -753,7 +753,7 @@ pub fn aladdin() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r(), r()]),
             tap_cost: true,
-            effect: Effect::GainControlWhileSourceRemains {
+            effect: Effect::GainControlWhileYouControlSource {
                 what: target_filtered(R::Artifact),
             },
             ..Default::default()

@@ -427,9 +427,16 @@ pub fn possession_engine() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Crew(3)],
-        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
-            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainControlWhileYouControlSource {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
+            Effect::GrantKeywords {
+                what: Selector::Target(0),
+                keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+                duration: crate::effect::Duration::WhileYouControlSource,
+            },
+        ]))],
         ..Default::default()
     }
 }

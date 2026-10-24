@@ -121,7 +121,7 @@ pub fn helm_of_possession() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::GainControlWhileSourceTapped {
+            effect: Effect::GainControlWhileYouControlSourceTapped {
                 what: target_filtered(R::Creature),
             },
             ..Default::default()

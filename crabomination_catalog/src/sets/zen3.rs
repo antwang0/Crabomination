@@ -216,7 +216,7 @@ pub fn roil_elemental() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![landfall(Effect::MayDo {
             description: "Gain control of target creature".into(),
-            body: Box::new(Effect::GainControlWhileSourceRemains {
+            body: Box::new(Effect::GainControlWhileYouControlSource {
                 what: target_filtered(R::Creature),
             }),
         })],

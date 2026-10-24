@@ -2453,6 +2453,9 @@ mod recent175 {
         g.fire_self_etb_triggers(engine, 0);
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "now under my control");
+        let cp = g.computed_permanent(victim).unwrap();
+        assert!(cp.keywords().contains(&Keyword::CantAttack) && cp.keywords().contains(&Keyword::CantBlock),
+            "it can't attack or block for as long as you control the Vehicle");
         // Sacrifice the engine → control reverts.
         g.remove_to_graveyard_with_triggers(engine);
         g.check_state_based_actions();

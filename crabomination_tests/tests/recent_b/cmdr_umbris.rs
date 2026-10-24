@@ -473,13 +473,23 @@ fn cmdr_umbris_elder_brain_swaps_the_hand() {
     assert_eq!(exiled.may_play_until.map(|p| p.player), Some(0), "you may play it");
 }
 
-/// Mind Flayer steals a creature.
+/// Mind Flayer steals a creature for as long as you control the Flayer: an
+/// opponent taking the Flayer takes the steal back (CR 611.2b).
 #[test]
 fn cmdr_umbris_mind_flayer_steals() {
     let mut g = game(2);
     let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     enter(&mut g, catalog::mind_flayer());
     assert_eq!(g.battlefield_find(bears).unwrap().controller, 0);
+    let flayer = g.battlefield.iter().find(|c| c.definition.name == "Mind Flayer").unwrap().id;
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::ExactObjects(vec![flayer]),
+        to: None,
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&steal, &crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 1, "the steal ended with the control");
 }
 
 /// Toxrill slimes the other side each end step, shrinking and killing.

@@ -312,7 +312,7 @@ pub fn hivis_of_the_scale() -> CardDefinition {
         keywords: vec![Keyword::MayChooseNotToUntap],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::GainControlWhileSourceTapped {
+            effect: Effect::GainControlWhileYouControlSourceTapped {
                 what: target_filtered(R::HasCreatureType(CreatureType::Dragon)),
             },
             ..Default::default()
