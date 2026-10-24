@@ -264,6 +264,8 @@ display names — a display-name count reads 0 for every row).
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes
 
+**CLAIMED (`01GE2zTS`, 2026-10-24, second half):** Irencrag Feat, Wanda's Vision, Spider-Verse, Slight Malfunction (INCOMPLETE 🟡 rows).
+
 No seats (the zero tier was a concurrent session's; this run worked INCOMPLETE's 🟡 rows ranked by how many seated
 decks hold the card).
 - **FIXED (engine classes):** counter strips / adds on a player read poison only (CR 122.6), so both target pickers now ask
