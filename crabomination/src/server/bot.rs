@@ -10485,6 +10485,7 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
         Effect::Fight { attacker: Selector::This, .. } => m |= sink::AB_DESTROY,
         Effect::DealDamage { .. } => m |= sink::AB_DAMAGE,
         Effect::Draw { who: Selector::You, .. } => m |= sink::AB_DRAW,
+        _ if card_ability_kind(&ab.effect).is_some() => m |= sink::AB_DRAW,
         Effect::PumpPT { what: Selector::EachPermanent(_), .. } => m |= sink::AB_TEAM_PUMP,
         Effect::AddCounter { what: Selector::This, .. } => m |= sink::AB_SELF_COUNTER,
         Effect::Attach { .. } => m |= sink::AB_ATTACH,
@@ -11814,14 +11815,53 @@ fn pick_team_pump(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Gam
 /// target; doesn't sacrifice the source) when the bot is card-starved (≤2 cards in hand) and can afford
 /// it. Fired last, as a mana sink, so it never pre-empts casting spells or
 /// playing lands. Dry-run-gated through `would_accept`.
+/// What an activated ability turns into a card in hand, past a bare draw: a
+/// loot (`Seq[Draw you, …]` — The Locust God) or a tutor ("search your
+/// library for … put it into your hand" — Sliver Overlord). Both were never
+/// activated in a 4-seat `--card-census` (seed 10162).
+#[derive(Clone, Copy, PartialEq)]
+enum CardAbility {
+    Loot,
+    Tutor,
+}
+
+fn card_ability_kind(eff: &Effect) -> Option<CardAbility> {
+    use crate::effect::{PlayerRef, Selector, ZoneDest};
+    match eff {
+        Effect::Seq(v) if matches!(v.first(), Some(Effect::Draw { who: Selector::You, .. })) => Some(CardAbility::Loot),
+        Effect::Search { who: PlayerRef::You, to: ZoneDest::Hand(PlayerRef::You), .. } => Some(CardAbility::Tutor),
+        _ => None,
+    }
+}
+
 fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::effect::Selector;
-    if state.players[seat].hand.len() > 2 {
+    let hand = state.players[seat].hand.len();
+    if hand > 4 {
         return None;
     }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            let Effect::Draw { who: Selector::You, .. } = &ab.effect else { continue };
+            // A plain draw or a loot only when card-starved; a tutor finds the
+            // card the deck wants, so it goes with a modest hand too.
+            let ok = match &ab.effect {
+                Effect::Draw { who: Selector::You, .. } => hand <= 2,
+                e => match card_ability_kind(e) {
+                    Some(CardAbility::Loot) => hand <= 2,
+                    // Only with something to find.
+                    Some(CardAbility::Tutor) => match e {
+                        Effect::Search { filter, .. } => state.players[seat]
+                            .library
+                            .iter()
+                            .any(|c| state.evaluate_requirement_on_card(filter, c, seat)),
+                        _ => false,
+                    },
+                    None => false,
+                },
+            };
+            if !ok {
+                continue;
+            }
             if sink_sacrifice_cost(ab, w) {
                 continue; // don't spend a permanent just to draw
             }
@@ -31507,6 +31547,33 @@ mod stack_response_tests {
         assert!(matches!(pick_graveyard_recursion(&g, 0),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
             "bot activates the graveyard self-return");
+    }
+
+    /// The draw sink also activates a loot (The Locust God) and a tutor
+    /// (Sliver Overlord) — the latter only with a match in the library.
+    #[test]
+    fn bot_activates_loot_and_tutor_abilities() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let overlord = g.add_card_to_battlefield(0, catalog::sliver_overlord());
+        g.players[0].mana_pool.add_colorless(3);
+        assert!(pick_card_draw_ability(&g, 0, &EvalWeights::default()).is_none(), "no Sliver to find");
+        g.add_card_to_library(0, catalog::muscle_sliver());
+        let a = pick_card_draw_ability(&g, 0, &EvalWeights::default()).expect("tutor");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == overlord));
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let god = g.add_card_to_battlefield(0, catalog::the_locust_god());
+        g.add_card_to_library(0, catalog::island());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let a = pick_card_draw_ability(&g, 0, &EvalWeights::default()).expect("loot");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == god));
     }
 
     /// The Scarab God's "exile target creature card from a graveyard, create a
