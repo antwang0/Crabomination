@@ -8371,6 +8371,16 @@ impl GameState {
                         }
                         subject = BatchSubject::AnyPlayer;
                     }
+                    // "…deals damage to one or more creatures" (Briarbridge
+                    // Patrol): one fire per dealer, however many blockers.
+                    if matches!(subject, BatchSubject::Permanent(_))
+                        && matches!(
+                            kinds[kind_i],
+                            EventKind::DealsDamageToCreature | EventKind::DealsCombatDamageToCreature
+                        )
+                    {
+                        subject = BatchSubject::Dealer(source);
+                    }
                     let key = (trig_source, i, subject);
                     if self.combat_trigger_fired_this_step.contains(&key) {
                         self.add_to_batched_damage(trig_source, i, &default_target, damage_amount);

@@ -143,6 +143,32 @@ fn briarbridge_patrol_cashes_three_clues() {
     assert!(g.battlefield_find(bear).is_some());
 }
 
+/// CR 603.2c — "deals damage to one or more creatures": double-blocked, the
+/// Patrol damages two creatures in one combat damage step and investigates once.
+#[test]
+fn briarbridge_patrol_investigates_once_for_two_blockers() {
+    let mut g = pod(2);
+    let pat = ready(&mut g, 0, catalog::briarbridge_patrol());
+    let blockers = [ready(&mut g, 1, catalog::grizzly_bears()), ready(&mut g, 1, catalog::grizzly_bears())];
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: pat,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(blockers.iter().map(|&b| (b, pat)).collect())).expect("double block");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(blockers.iter().all(|&b| g.battlefield_find(b).is_none_or(|c| c.damage > 0)), "both blockers were dealt damage");
+    assert_eq!(tokens_named(&g, "Clue"), 1);
+}
+
 /// Haze Frog: other creatures' combat damage is prevented; its own isn't
 /// touched by the filter.
 #[test]

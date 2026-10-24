@@ -1202,7 +1202,7 @@ pub fn briarbridge_patrol() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource).once_per_batch(),
                 effect: crate::effect::shortcut::investigate(1),
             },
             TriggeredAbility {
