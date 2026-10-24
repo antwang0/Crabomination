@@ -1734,8 +1734,11 @@ pub enum StaticEffect {
     /// the Constrictor, a noncreature planeswalker instead of an artifact.
     ExtraCounterOnCreaturePlaneswalkerOrYou,
     /// `ExtraCounterAllKinds` over "a permanent you control", with no player
-    /// clause (Pir, Imaginative Rascal; Doc Samson).
+    /// clause (Pir, Imaginative Rascal).
     ExtraCounterOnPermanents,
+    /// `ExtraCounterOnPermanents` for counters its controller puts — "if you
+    /// would put" (Doc Samson); another player's placement isn't scaled.
+    ExtraCounterOnPermanentsYouPut,
     /// CR 614 — "If you would get one or more {E}, you get that many plus
     /// `amount` instead." An energy-only gain bonus (Izzet Generatorium), unlike
     /// `ExtraCounterAllKinds` which boosts every counter kind.

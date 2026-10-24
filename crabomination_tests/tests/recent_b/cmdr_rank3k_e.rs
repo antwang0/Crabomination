@@ -279,6 +279,10 @@ fn doc_samson_pair() {
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::Charge), 2);
     g.resolve_effect(&Effect::AddEnergy(crabomination::card::Value::ONE), &ctx).expect("energy");
     assert_eq!(g.players[0].energy, 1);
+    // CR 614.16 — "if YOU would put": an opponent's counter isn't scaled.
+    let theirs = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&add, &theirs).expect("their charge");
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::Charge), 3);
 }
 
 /// Dyfed makes two tapped Powerstones; Geology Enthusiast adds one each end

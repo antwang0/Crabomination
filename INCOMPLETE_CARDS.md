@@ -2146,7 +2146,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Duke, Rebel Sentry | the cost removes a +1/+1 counter, the only kind he enters with | `remove_counter_cost` |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
-| 🟡 Doc Samson, Super Psychiatrist | counters another player puts on your permanents get the plus one too ("if you would put") | `ExtraCounterOnPermanents` reads no placer |
 | 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |
 | 🟡 Reckless Crew | only unattached Equipment is offered, so an Equipment already on a creature stays put | `ForEach` + `Attach` over `R::Unattached` |
 | 🟡 Mishra's Research Desk | both exiled cards stay playable; "choose one of them" collapses | `ExileTopAndGrantMayPlay` |

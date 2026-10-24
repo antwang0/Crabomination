@@ -8675,13 +8675,20 @@ impl GameState {
     }
 
     /// Number of "a permanent you control" adders `seat` controls (Pir, Doc
-    /// Samson): creatures and noncreatures alike, never the player.
+    /// Samson): creatures and noncreatures alike, never the player. Doc
+    /// Samson's counts only when `seat` is the placer.
     fn extra_permanent_adders_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        let placed_by_seat = COUNTER_PLACER.with(|c| c.get()).unwrap_or(seat) == seat;
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
             .flat_map(|c| c.definition.static_abilities.iter())
-            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExtraCounterOnPermanents))
+            .filter(|sa| match sa.effect {
+                StaticEffect::ExtraCounterOnPermanents => true,
+                StaticEffect::ExtraCounterOnPermanentsYouPut => placed_by_seat,
+                _ => false,
+            })
             .count() as u32
     }
 
@@ -35804,6 +35811,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraCounterAllKinds
             | StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou
             | StaticEffect::ExtraCounterOnPermanents
+            | StaticEffect::ExtraCounterOnPermanentsYouPut
             // Energy-gain bonus — read at AddEnergy time via
             // `GameState::energy_gain_bonus_for`; no layer effect.
             | StaticEffect::EnergyGainBonus { .. }
