@@ -1564,6 +1564,30 @@ fn esoteric_duplicator_copies_a_sacrificed_artifact() {
     assert!(copy.is_token);
 }
 
+/// Esoteric Duplicator copies a sacrificed artifact TOKEN too: the token has
+/// stopped existing by the end step, so the copy comes from its last-known
+/// object (CR 608.2h). (A Treasure sacrificed for mana is still missed —
+/// INCOMPLETE_CARDS.)
+#[test]
+fn esoteric_duplicator_copies_a_sacrificed_clue() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 3);
+    let dup = ready(&mut g, 0, catalog::esoteric_duplicator());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&crabomination::effect::shortcut::investigate(1), &ctx).expect("investigate");
+    g.dispatch_triggers_for_events(&evs);
+    let clue = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Clue").map(|c| c.id).expect("a Clue");
+    let _ = dup;
+    flood(&mut g);
+    yes(&mut g, 1);
+    activate(&mut g, clue, 0).expect("crack the Clue");
+    assert_eq!(named(&g, "Clue"), 0);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Clue"), 1, "a token copy of the sacrificed Clue");
+}
+
 /// Ugin's Nexus: destroyed, it is exiled instead and its controller banks an
 /// extra turn (CR 614.6).
 #[test]

@@ -5983,6 +5983,19 @@ impl GameState {
             Some(last) => turn < last,
             None => true,
         });
+        // A captured token's last-known object outlives no delayed trigger
+        // that names it.
+        if !self.captured_token_lki.is_empty() {
+            let named: Vec<CardId> = self
+                .delayed_triggers
+                .iter()
+                .filter_map(|dt| match dt.target {
+                    Some(crate::game::types::Target::Permanent(c)) => Some(c),
+                    _ => None,
+                })
+                .collect();
+            self.captured_token_lki.retain(|c| named.contains(&c.id));
+        }
         self.delayed_triggers.retain(|dt| {
             dt.expires_after_turn.is_some()
                 || !matches!(

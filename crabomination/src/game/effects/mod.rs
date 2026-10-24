@@ -24589,6 +24589,8 @@ impl GameState {
                     // A token sacrificed as a cost is gone by now: its
                     // last-known object (CR 608.2h).
                     .or_else(|| self.scratch.sacrificed_token_lki.as_deref().filter(|c| c.id == src_id))
+                    // …or one a delayed trigger kept (Esoteric Duplicator).
+                    .or_else(|| self.captured_token_lki.iter().find(|c| c.id == src_id))
                     // CR 707.2 / 123.1 — its copiable values: no baked grant,
                     // no sticker.
                     .map(|c| c.copiable_definition().boxed_clone());
@@ -35929,7 +35931,23 @@ impl GameState {
                             then: body.clone(),
                             else_: Box::new(Effect::Noop),
                         },
-                        None => (**body).clone(),
+                        None => {
+                            // A token already gone (a sacrificed Treasure):
+                            // keep its last-known object for the copy.
+                            let lki = self
+                                .died_card_snapshots
+                                .get(&cid)
+                                .or_else(|| self.leaves_bf_lki.get(&cid))
+                                .or_else(|| self.scratch.sacrificed_token_lki.as_deref().filter(|c| c.id == cid))
+                                .filter(|c| c.is_token)
+                                .cloned();
+                            if let Some(lki) = lki
+                                && !self.captured_token_lki.iter().any(|c| c.id == cid)
+                            {
+                                self.captured_token_lki.push(lki);
+                            }
+                            (**body).clone()
+                        }
                     },
                     _ => (**body).clone(),
                 };

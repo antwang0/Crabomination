@@ -1730,6 +1730,13 @@ pub struct ColdState {
     /// Cold: only that effect writes it.
     #[serde(default)]
     pub(crate) group_plays_left: Vec<(CardId, u32)>,
+    /// CR 608.2h — the last-known object of a token a delayed trigger
+    /// captured after it left the battlefield (Esoteric Duplicator's
+    /// "a token that's a copy of that artifact" at the next end step): a
+    /// token stops existing, so its copiable values live here until no
+    /// delayed trigger names it. Cold: only that capture writes it.
+    #[serde(default)]
+    pub(crate) captured_token_lki: Vec<CardInstance>,
     /// CR 702.26 — phased-out permanents that can't phase in until the
     /// player's `turns_begun` reaches the count, as (permanent, player,
     /// count): `Effect::PhaseOutUntilYourNextTurnEnds`. Cold: only that
