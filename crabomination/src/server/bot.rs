@@ -32067,6 +32067,8 @@ mod stack_response_tests {
             ..Default::default()
         };
         let id = g.add_card_to_battlefield(0, upside);
+        // Something to draw: on an empty library the draw decks (CR 704.5b).
+        g.add_card_to_library(0, catalog::forest());
         let d = Decision::OptionalTrigger {
             source: id,
             description: "you may".to_string(),
