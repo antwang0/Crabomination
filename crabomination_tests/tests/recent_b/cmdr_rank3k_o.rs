@@ -178,9 +178,25 @@ fn wandas_vision_cascades_on_the_second_spell() {
     for n in 0..2 {
         let opt = g.add_card_to_hand(0, catalog::lightning_bolt());
         cast(&mut g, opt, Some(Target::Player(1)));
-        let exiled = g.exile.iter().any(|c| c.definition.name == "Grizzly Bears");
-        assert_eq!(exiled, n == 1);
+        // Exiled — and cast for free as it resolves — only off the second.
+        let left_library = !g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears");
+        assert_eq!(left_library, n == 1);
     }
+}
+
+/// Wanda's Vision's free cast happens as the trigger resolves (CR 608.2g):
+/// taken, the exiled Bears is on the battlefield before anything else.
+#[test]
+fn wandas_vision_casts_the_exiled_card_as_it_resolves() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::wandas_vision());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        let opt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        cast(&mut g, opt, Some(Target::Player(1)));
+    }
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
 }
 
 /// CR 119.3 — Sengir grows on deaths and drinks a departed player's life.

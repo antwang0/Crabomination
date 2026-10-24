@@ -3,7 +3,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement as R, StaticAbility,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
@@ -238,8 +238,7 @@ pub fn loki_laufeyson() -> CardDefinition {
 
 /// Wanda's Vision — {3}{R}{R} enchantment. Whenever you cast your second spell
 /// each turn, exile cards from the top of your library until you exile a
-/// nonland card; you may cast it without paying its mana cost. (Residual: the
-/// free cast stays open until end of turn rather than only as it resolves.)
+/// nonland card; you may cast it without paying its mana cost.
 pub fn wandas_vision() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -249,13 +248,19 @@ pub fn wandas_vision() -> CardDefinition {
                     count: Value::Const(2),
                 },
             ),
-            effect: Effect::ExileTopUntilNonlandMayPlay {
-                who: PlayerRef::You,
-                duration: MayPlayDuration::EndOfThisTurn,
-                free: true,
-                hand_unless_mv_below: None,
-                grant_to_exiling_player: false,
-            },
+            // The free cast is during the resolution (CR 608.2g), not a
+            // turn-long permission.
+            effect: Effect::Seq(vec![
+                Effect::ExileTopUntilNonland { who: PlayerRef::You },
+                Effect::CastWithoutPayingImmediate {
+                    what: Selector::one_of(Selector::ExiledThisResolution { filter: R::Nonland }),
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                },
+            ]),
         }],
         ..spell(
             "Wanda's Vision",

@@ -2106,7 +2106,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Sheltering Ancient | every counter of an upkeep goes on the opponents' smallest creature (the engine's pick) | `CumulativeUpkeepCost::PutCounterOnOpponentCreature` auto-pays |
 | 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |
 | 🟡 Disciple of Perdition | at exactly 13 life both modes always happen (the "may choose both" is taken) | `Effect::If` on `PlayerLifeExactly` picks the pair over the one-mode `ChooseMode` |
-| 🟡 Irencrag Feat | the "only one more spell" lock lands when the next spell's cast trigger resolves, so an instant cast in response slips through | `OnYourNextSpellCastThisTurn` + `SilencePlayersThisTurn` |
+| ~~Irencrag Feat~~ ✅ | stale row (checked 2026-10-24): `Effect::CapSpellsThisTurn` sets `spell_cap_this_turn` as the spell resolves; `irencrag_feat_allows_one_more_spell` | — |
 | ~~Ochre Jelly~~ ✅ | fixed 2026-10-24: the count is a `WithX` snapshot at death, and `DelayUntilWithCapture` now carries it to the end-step copy | — |
 | 🟡 In Search of Greatness | the free cast takes mana value up to 1 + the greatest (not exactly), and the enchantment counts itself | `MayCastFromHandFreeMatching { max_mv }` over `GreatestManaValueAmongPermanents(You)` |
 | ~~Hooded Blightfang~~ ✅ | fixed 2026-10-24: `DealsDamage` (combat or not) gated on a planeswalker in slot 0; the noncombat funnel now fires it for planeswalker / battle hits | — |
@@ -2158,7 +2158,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
 | 🟡 Nivea, Beloved Battlemage | the Akroma token has no mana cost, so its mana value is 0 rather than 8 | `TokenDefinition` carries no cost |
 | 🟡 Loki Laufeyson | an instant or sorcery above Loki's power spends the watch without a copy instead of leaving it armed | `OnYourNextInstantSorceryThisTurn` |
-| 🟡 Wanda's Vision | the free cast stays open until end of turn rather than only as the trigger resolves | `ExileTopUntilNonlandMayPlay { EndOfThisTurn }` |
+| ~~Wanda's Vision~~ ✅ | fixed 2026-10-24: `ExileTopUntilNonland` + `CastWithoutPayingImmediate` during the resolution | — |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
 | 🟡 Impossible Man | the copy takes the copied permanent's name rather than keeping "Impossible Man" | `BecomeCopyOfFor { EndOfTurn }` |
 | 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |
