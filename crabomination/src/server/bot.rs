@@ -4558,6 +4558,38 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     // bar held them for a threat that never came — a counter pitched at
     // end of turn answered nothing at all.
     let bar = if state.players[seat].hand.len() >= 6 { 5 } else { 10 };
+    // Pods: an untargeted spell on top scored only its mana value, so a
+    // Wrath of God into three of our creatures sat under the bar and no
+    // counter ever answered a sweeper. Resolve it in a clone (only when a
+    // counter is in hand) and add what it takes of our nonland board.
+    let threat = if threat < bar * w.unit
+        && !state.players[seat].commanders.is_empty()
+        && matches!(state.stack.last(), Some(StackItem::Spell { card, target: None, .. }) if card.id == spell_id)
+        && state.players[seat].hand.iter().any(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_counters_spells(&c.definition.effect)
+        }) {
+        let ours: Vec<crate::card::CardId> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && !c.definition.is_land())
+            .map(|c| c.id)
+            .collect();
+        let mut sim = state.clone();
+        match sim.resolve_top_of_stack() {
+            Ok(_) => {
+                threat
+                    + ours
+                        .iter()
+                        .filter(|id| sim.battlefield_find(**id).is_none_or(|c| c.controller != seat))
+                        .map(|id| permanent_value(state, *id, w))
+                        .sum::<i32>()
+            }
+            Err(_) => threat,
+        }
+    } else {
+        threat
+    };
     if threat < bar * w.unit {
         return None;
     }
@@ -30268,6 +30300,36 @@ mod stack_response_tests {
                 assert_eq!(target, Some(Target::Permanent(wurm)), "targets the 7-drop");
             }
             other => panic!("expected a counterspell cast, got {other:?}"),
+        }
+    }
+
+    /// A pod bot counters a Wrath of God aimed at its board: the untargeted
+    /// sweeper is priced by what it takes (three Serra Angels), not by its
+    /// four mana. The duel path keeps its mana-value bar.
+    #[test]
+    fn pod_bot_counters_a_sweeper_into_its_board() {
+        for pod in [true, false] {
+            let mut g = if pod { crate::game::multi_player_game(3) } else { two_player_game() };
+            if pod {
+                g.seat_commanders(1, vec![crate::catalog::llanowar_elves()]);
+            }
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            for _ in 0..3 {
+                g.add_card_to_battlefield(1, catalog::serra_angel());
+            }
+            let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+            g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+            g.players[0].mana_pool.add_colorless(2);
+            g.perform_action(GameAction::CastSpell { card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: None })
+                .unwrap();
+            let offer = g.add_card_to_hand(1, catalog::an_offer_you_cant_refuse());
+            g.add_card_to_battlefield(1, catalog::island());
+            g.priority.player_with_priority = 1;
+            let action = HeuristicBot::new().next_action(&g, 1);
+            let countered = matches!(action, Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. })
+                if card_id == offer && t == wrath);
+            assert_eq!(countered, pod, "pod {pod}: {action:?}");
         }
     }
 
