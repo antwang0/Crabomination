@@ -10448,6 +10448,7 @@ mod sink {
     pub const AB_ENERGY: u32 = 1 << 22;
     pub const AB_TRANSFORM: u32 = 1 << 23;
     pub const AB_X_COUNTERS: u32 = 1 << 24;
+    pub const AB_PROLIFERATE: u32 = 1 << 25;
 }
 
 /// Run one gated fallback generator, returning its action when it has one.
@@ -10598,6 +10599,9 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
     }
     if ab.remove_counter_x.is_some() || ab.remove_counter_among_x.is_some() || ab.energy_x_cost {
         m |= sink::AB_X_COUNTERS;
+    }
+    if super::proliferate_sink::only_proliferates(ab) {
+        m |= sink::AB_PROLIFERATE;
     }
     m
 }
@@ -11362,6 +11366,7 @@ fn main_phase_action_with(
     // Spend "{X}, remove X counters" abilities (Marath) on their best mode
     // and size. Dry-run-scored against passing.
     gated_pick!(state, sinks, sink::AB_X_COUNTERS, super::x_counter_sink::pick_x_counter_ability(state, seat, w));
+    gated_pick!(state, sinks, sink::AB_PROLIFERATE, super::proliferate_sink::pick_proliferate(state, seat));
 
     // Pods: pay life for a card banked until the end step (Necropotence).
     if let Some(action) = super::life_draw::pick_life_draw(state, seat) {

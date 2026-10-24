@@ -134,6 +134,7 @@ mod life_swap;
 mod transform_sink;
 mod spell_discount;
 mod x_counter_sink;
+mod proliferate_sink;
 mod x_self_harm;
 mod modal_activation;
 mod generic_sink;
