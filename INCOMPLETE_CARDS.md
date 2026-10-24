@@ -2143,7 +2143,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Vaevictis Asmadi, the Dire | its per-player target is mandatory in print; `ForEachPlayerTarget` lets a seat leave one out | `ForEachPlayerTarget`'s "up to" |
 | 🟡 Soul Exchange | the +2/+2 counter "if the exiled creature was a Thrull" is dropped — the cast's exile-a-creature cost isn't remembered | `AdditionalCastCost::ExilePermanent` |
 | 🟡 Gix's Command | "up to one creature" for the counters mode is the engine's pick among yours | `Selector::one_of` |
-| 🟡 Kassandra, Eagle Bearer | the draw reads any equipped creature, not one with a *legendary* Equipment | `R::IsEquipped` |
 | 🟡 Ziatora's Envoy | the top card can't be played as a land, and a miss is drawn rather than put into hand | `CastTopFreeIfElseDraw` |
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
 | 🟡 Dread | like No Mercy, damage from your own creatures is not watched | `PlayerDamaged` scoped to opponents' sources |

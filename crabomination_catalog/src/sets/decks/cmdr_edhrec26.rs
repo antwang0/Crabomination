@@ -338,8 +338,8 @@ pub fn baird_argivian_recruiter() -> CardDefinition {
 
 /// Kassandra, Eagle Bearer — {1}{R}{W} 2/2 legendary Human Assassin Warrior,
 /// haste. ETB: The Spear of Leonidas from your graveyard, hand or library
-/// onto the battlefield. An equipped creature of yours hitting a player draws
-/// a card.
+/// onto the battlefield. A creature of yours with a legendary Equipment
+/// attached hitting a player draws a card.
 pub fn kassandra_eagle_bearer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Haste],
@@ -352,7 +352,7 @@ pub fn kassandra_eagle_bearer() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                    .dealt_by(R::IsEquipped),
+                    .dealt_by(R::EquippedByMatching(Box::new(R::HasSupertype(Supertype::Legendary)))),
                 effect: draw(1),
             },
         ],

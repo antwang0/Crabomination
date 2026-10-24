@@ -3766,6 +3766,10 @@ pub enum SelectionRequirement {
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
+    /// An Equipment matching the filter is attached (Kassandra, Eagle
+    /// Bearer's "with a legendary Equipment attached to it"). Battlefield-only;
+    /// the filter is read from the evaluating controller's view.
+    EquippedByMatching(Box<SelectionRequirement>),
     /// CR 701.60 — true while the candidate creature is suspected (has the
     /// `suspected` flag). Powers "Sacrifice a suspected creature" costs
     /// (Rune-Brand Juggler) and suspected-creature payoffs.

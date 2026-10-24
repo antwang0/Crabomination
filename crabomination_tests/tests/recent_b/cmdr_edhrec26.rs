@@ -210,6 +210,29 @@ fn kassandra_and_eivor() {
     assert_eq!((g.players[1].life, g.players[2].life), (19, 19));
 }
 
+/// Kassandra draws only off a creature with a LEGENDARY Equipment attached:
+/// the Spear counts, Bonesplitter doesn't.
+#[test]
+fn kassandra_wants_a_legendary_equipment() {
+    for legendary in [true, false] {
+        let mut g = pod(2);
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        ready(&mut g, 0, catalog::kassandra_eagle_bearer());
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        let eq = ready(&mut g, 0, if legendary { catalog::the_spear_of_leonidas() } else { catalog::bonesplitter() });
+        g.battlefield_find_mut(eq).unwrap().attached_to = Some(bear);
+        let hand = g.players[0].hand.len();
+        attack(&mut g, &[bear]);
+        g.step = TurnStep::CombatDamage;
+        let ev = g.resolve_combat().expect("damage");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + usize::from(legendary), "legendary: {legendary}");
+    }
+}
+
 /// Shadow of Mortality costs X less for life lost below the start.
 #[test]
 fn shadow_of_mortality_discount() {

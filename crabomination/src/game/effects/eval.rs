@@ -6720,6 +6720,7 @@ impl GameState {
                     }
                     // CR 301.5 — "equipped" = an Equipment is attached.
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
+                    R::EquippedByMatching(filter) => self.equipped_by_matching(*cid, filter, controller),
                     // CR 701.60 — suspected.
                     R::IsSuspected => card.suspected,
                     R::IsRenowned => card.renowned,
@@ -8393,6 +8394,7 @@ impl GameState {
             // CR 301.5 — same reasoning for "equipped" (Rakdos Riteknife's
             // tap-an-equipped-creature cost).
             R::IsEquipped => self.attached_equipment_count(card.id) > 0,
+            R::EquippedByMatching(filter) => self.equipped_by_matching(card.id, filter, controller),
             // Counters live on the instance, so they read in any zone (a
             // library/graveyard card simply has none) — Eluge's flood-counter
             // land scope resolves through this path.
@@ -8423,7 +8425,7 @@ impl GameState {
             | R::SpellWithSingleTarget
             | R::SpellWithAnyTarget
             | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::DealtDamageThisTurnAsSource | R::IsBestowed
-            | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
+            | R::EquippedByAtLeast(_) | R::EquippedByMatching(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::DamagedThisTurnByMatching(_)
             | R::CrewedThisTurnByMatching(_)
