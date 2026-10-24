@@ -29,6 +29,20 @@ fn removes_target(state: &GameState, e: &Effect, ctx: &EffectContext) -> bool {
     }
 }
 
+/// "Prevent all combat damage … dealt by target attacking creature" (Maze of
+/// Ith, Kor Haven): the attacker is neutralized rather than removed. Both
+/// lands went unactivated in a 48-deck `--card-census` (seed 10169).
+fn neutralizes_target(e: &Effect) -> bool {
+    let targeted = |w: &Selector| matches!(w, Selector::Target(_) | Selector::TargetFiltered { .. });
+    match e {
+        Effect::PreventAllCombatDamageInvolving { target } | Effect::PreventCombatDamageByTargetThisTurn { target } => {
+            targeted(target)
+        }
+        Effect::Seq(v) => v.iter().any(neutralizes_target),
+        _ => false,
+    }
+}
+
 /// The first accepted removal activation on the most valuable creature
 /// attacking `seat` that is worth a card.
 pub(super) fn pick_defensive_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
@@ -45,7 +59,11 @@ pub(super) fn pick_defensive_ability(state: &GameState, seat: usize, w: &EvalWei
                 .activated_abilities
                 .iter()
                 .enumerate()
-                .filter(move |(_, ab)| removes_target(state, &ab.effect, &ctx) && !ab.from_hand && !ab.from_graveyard)
+                .filter(move |(_, ab)| {
+                    (removes_target(state, &ab.effect, &ctx) || neutralizes_target(&ab.effect))
+                        && !ab.from_hand
+                        && !ab.from_graveyard
+                })
                 .map(move |(i, _)| (c.id, i))
         })
         .collect();
@@ -103,6 +121,27 @@ mod tests {
             pick_defensive_ability(&g, 0, &w),
             Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == snare && t == wurm
+        ));
+    }
+
+    /// Maze of Ith neutralizes a big attacker on its controller in a pod.
+    #[test]
+    fn maze_of_ith_neutralizes_a_worthwhile_attacker() {
+        let mut g = crate::game::multi_player_game(3);
+        let cmd = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.players[0].commanders.push(cmd);
+        let maze = g.add_card_to_battlefield(0, crate::catalog::maze_of_ith());
+        let wurm = g.add_card_to_battlefield(1, crate::catalog::craw_wurm());
+        g.clear_sickness(wurm);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.declare_attackers(vec![Attack { attacker: wurm, target: AttackTarget::Player(0) }]).expect("attack");
+        g.priority.player_with_priority = 0;
+        assert!(matches!(
+            pick_defensive_ability(&g, 0, &EvalWeights::default()),
+            Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+                if card_id == maze && t == wurm
         ));
     }
 
