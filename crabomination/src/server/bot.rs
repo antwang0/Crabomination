@@ -3488,13 +3488,21 @@ impl Bot for HeuristicBot {
 /// be stacked forever without one copy resolving. A seat whose own ability
 /// from this source is on top lets it resolve first; it gets priority back
 /// after, and can activate again then.
+/// The seat's own triggers above it count as "on top" too: a sacrifice cost's
+/// triggers land over the activation (Peregrin Took's "sacrifice three Foods"
+/// under Nuka-Cola Vending Machine renewed its Foods and stacked 150 draws to
+/// the board cap, seed 1017396).
 fn stacks_onto_own_activation(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    use crate::game::types::StackItem;
     let GameAction::ActivateAbility { card_id, .. } = action else { return false };
-    matches!(
-        state.stack.last(),
-        Some(crate::game::types::StackItem::Trigger { source, controller, .. })
-            if *source == *card_id && *controller == seat
-    )
+    for item in state.stack.iter().rev() {
+        match item {
+            StackItem::Trigger { source, controller, .. } if *source == *card_id && *controller == seat => return true,
+            StackItem::Trigger { controller, activated: false, .. } if *controller == seat => continue,
+            _ => return false,
+        }
+    }
+    false
 }
 
 impl HeuristicBot {

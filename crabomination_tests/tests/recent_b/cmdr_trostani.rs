@@ -437,6 +437,37 @@ fn bot_lets_its_own_aetherflux_shot_resolve_first() {
     assert!(g.is_game_over(), "two 50-point shots end a three-seat game");
 }
 
+/// CR 117.3c — the triggers a sacrifice cost puts above an activation are the
+/// activator's to resolve first too: Peregrin Took's "sacrifice three Foods:
+/// draw" under Nuka-Cola Vending Machine renews its Foods, and a bot that kept
+/// activating over the Treasure triggers never let a draw resolve (150 draws
+/// stacked to the board cap, pod seed 1017396).
+#[test]
+fn bot_lets_a_sacrifice_costs_triggers_and_its_draw_resolve_first() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(3);
+    for s in 0..3 {
+        g.players[s].wants_ui = true;
+        for _ in 0..30 {
+            g.add_card_to_library(s, catalog::grizzly_bears());
+        }
+    }
+    g.add_card_to_battlefield(0, catalog::peregrin_took());
+    g.add_card_to_battlefield(0, catalog::nuka_cola_vending_machine());
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+    }
+    let mut bots = [HeuristicBot::new(), HeuristicBot::new(), HeuristicBot::new()];
+    for _ in 0..200 {
+        for (seat, bot) in bots.iter_mut().enumerate() {
+            if let Some(a) = bot.next_action(&g, seat) {
+                let _ = g.perform_action(a);
+            }
+            assert!(g.stack.len() <= 4, "activations stacked: {}", g.stack.len());
+        }
+    }
+}
+
 /// Storm Herd at 50,000 life mints one past the simulator's board bound, not
 /// 50,000: a bot probe of it used to take 22 s for one decision.
 #[test]
