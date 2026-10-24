@@ -6022,8 +6022,9 @@ pub fn riveteers_ascendancy() -> CardDefinition {
         name: "Riveteers Ascendancy",
         cost: cost(&[b(), r(), g()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl).once_per_turn(),
+        // "Do this only once each turn": spent when the return is taken.
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
             effect: Effect::MayDo {
                 description: "Return a creature card with lesser mana value tapped?".into(),
                 body: Box::new(Effect::Move {
@@ -6031,7 +6032,7 @@ pub fn riveteers_ascendancy() -> CardDefinition {
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                 }),
             },
-        }],
+        })],
         ..Default::default()
     }
 }

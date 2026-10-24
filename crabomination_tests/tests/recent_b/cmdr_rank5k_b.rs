@@ -241,6 +241,34 @@ fn spider_verse_exempts_spiders_from_the_legend_rule() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Okoye, Dora Milaje Leader").count(), 1);
 }
 
+/// Spider-Verse's "Do this only once each turn" is spent on a copy taken, not
+/// on a trigger: a declined copy leaves the turn's use for the next spell cast
+/// from outside the hand.
+#[test]
+fn spider_verse_declined_copy_keeps_the_turns_use() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::spider_verse());
+    for copy in [false, true] {
+        let id = g.add_card_to_exile(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(copy)]));
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let cast_it = Effect::CastWithoutPayingImmediate {
+            what: Selector::ExactObjects(vec![id]),
+            source_zone: crabomination::card::Zone::Exile,
+            exile_after: false,
+            copy: false,
+            reduce_generic: 0,
+            pay_own_cost: false,
+        };
+        let evs = g.resolve_effect(&cast_it, &ctx).expect("cast from exile");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 3, "two cast, one copy off the second");
+}
+
 /// Wingnut's alliance grants one of its three keywords when another creature enters.
 #[test]
 fn wingnut_alliance_grants_a_keyword() {

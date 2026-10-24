@@ -735,12 +735,10 @@ pub fn spider_verse() -> CardDefinition {
                 CreatureType::Spider,
             )),
         }],
-        // "Do this only once each turn" as a once-per-turn trigger: a declined
-        // copy still spends the turn's use (INCOMPLETE_CARDS).
-        triggered_abilities: vec![TriggeredAbility {
+        // "Do this only once each turn": spent when the copy is taken.
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::SpellNotCastFromHand })
-                .once_per_turn(),
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::SpellNotCastFromHand }),
             effect: Effect::MayDo {
                 description: "Copy that spell?".into(),
                 body: Box::new(Effect::CopySpellWithRiders {
@@ -751,7 +749,7 @@ pub fn spider_verse() -> CardDefinition {
                     may_choose_new_targets: true,
                 }),
             },
-        }],
+        })],
         ..Default::default()
     }
 }
