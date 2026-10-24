@@ -2672,7 +2672,8 @@ impl Effect {
             | Effect::PreventOpposingDamageThisTurnReflecting { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
-            Effect::PreventAllDamageBetweenThisTurn { from, to } => {
+            Effect::PreventAllDamageBetweenThisTurn { from, to }
+            | Effect::RedirectAllDamageBetweenThisTurn { from, to, .. } => {
                 sel_has_target(from) || sel_has_target(to)
             }
             Effect::TapOrUntap { what } => sel_has_target(what),
@@ -5519,7 +5520,8 @@ impl Effect {
                 | Effect::PreventCombatDamageToTargetThisTurn { target }
                 | Effect::PreventCombatDamageByTargetThisTurn { target }
             | Effect::PreventAllDamageByTargetThisTurn { target } => sel_find(target, slot),
-                Effect::PreventAllDamageBetweenThisTurn { from, to } => {
+                Effect::PreventAllDamageBetweenThisTurn { from, to }
+                | Effect::RedirectAllDamageBetweenThisTurn { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::TapOrUntap { what } => sel_find(what, slot),

@@ -3200,6 +3200,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         | Effect::PreventAllDamageFromChosenColorThisTurn { .. }
         | Effect::PreventAllDamageByTargetThisTurn { .. }
         | Effect::PreventAllDamageBetweenThisTurn { .. }
+        | Effect::RedirectAllDamageBetweenThisTurn { .. }
         | Effect::PreventAllCombatDamageByMatchingThisTurn { .. }
         | Effect::PreventAllDamageByMatchingThisTurn { .. }
         | Effect::PreventCombatDamageToMatchingThisTurn { .. } => "Prevent all damage",

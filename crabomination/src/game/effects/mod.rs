@@ -42109,8 +42109,20 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventAllDamageBetweenThisTurn { from, to } => {
-                // CR 615 — a fog scoped to one (source, recipient) pair.
+            Effect::PreventAllDamageBetweenThisTurn { from, to }
+            | Effect::RedirectAllDamageBetweenThisTurn { from, to, .. } => {
+                // CR 615 — a fog scoped to one (source, recipient) pair; CR
+                // 614.9 — or a redirection of what it soaks.
+                let (mut dst, mut dst_player) = (None, None);
+                if let Effect::RedirectAllDamageBetweenThisTurn { redirect_to, .. } = effect {
+                    for e in self.resolve_selector(redirect_to, ctx) {
+                        match e {
+                            EntityRef::Permanent(c) => dst = dst.or(Some(c)),
+                            EntityRef::Player(p) => dst_player = dst_player.or(Some(p)),
+                            _ => {}
+                        }
+                    }
+                }
                 let sources: Vec<_> = self
                     .resolve_selector(from, ctx)
                     .into_iter()
@@ -42124,6 +42136,8 @@ impl GameState {
                         self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                             target: t,
                             source: Some(*src),
+                            redirect_to: dst,
+                            redirect_to_player: dst_player,
                             ..Default::default()
                         });
                     }

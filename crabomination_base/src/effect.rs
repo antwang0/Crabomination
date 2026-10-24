@@ -14139,6 +14139,10 @@ pub enum Effect {
     /// A source-restricted fog (Stonewise Fortifier's "prevent all damage that
     /// would be dealt to this creature by target creature this turn").
     PreventAllDamageBetweenThisTurn { from: Selector, to: Selector },
+    /// CR 614.9 — "all damage that would be dealt to `to` this turn by `from`
+    /// is dealt to `redirect_to` instead" (Shimian Night Stalker; Mirror
+    /// Strike's "to its controller").
+    RedirectAllDamageBetweenThisTurn { from: Selector, to: Selector, redirect_to: Selector },
 
     /// "You may tap or untap `what`" — the controller picks which per resolved
     /// permanent (Thassa's Ire, Puppeteer). Tapped permanents untap and
