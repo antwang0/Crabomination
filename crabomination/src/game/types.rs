@@ -1808,6 +1808,10 @@ pub enum AbilityCostChoice {
     /// (Captain America, First Avenger's Throw). Answered as a battlefield
     /// `Target`.
     UnattachEquipment,
+    /// `discard_cost` — "Discard a [filter] card:" (Solitary Cell's legendary
+    /// card, Fauna Shaman's creature card). Answered as `Cards`; a seat that
+    /// isn't asked still discards the cheapest matches.
+    Discard,
 }
 
 impl ResumeContext {

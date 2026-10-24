@@ -22094,6 +22094,7 @@ impl GameState {
         let chosen_exile_permanent = take_opt_scratch!(self.pending_ability_exile_permanent);
         let chosen_unattach = take_opt_scratch!(self.pending_ability_unattach);
         let chosen_exiled_with = take_opt_scratch!(self.pending_ability_exiled_with);
+        let chosen_discard = take_opt_scratch!(self.pending_ability_discard);
         // CR 601.2g float-spend choice (None until answered; consumed up front
         // so a failure can't leak it onto a later activation).
         let spend_float = self.pending_cast_spend_float.take();
@@ -24015,6 +24016,54 @@ impl GameState {
                     .collect();
                 if picks.len() < count {
                     return Err(GameError::SelectionRequirementViolated);
+                }
+                // CR 601.2h — the activator chooses which cards pay the cost.
+                // A hand-paying seat with more matches than the cost needs is
+                // asked (the replay brings the pick back here); everyone
+                // else, and a random discard, keeps the cheapest-first pick.
+                if !ability.discard_cost_random && !ability.discard_cost_distinct_names {
+                    if let Some(chosen) = chosen_discard.as_ref() {
+                        let valid = chosen.len() == count
+                            && chosen.iter().all(|id| picks.iter().any(|(c, _)| c == id))
+                            && chosen.iter().enumerate().all(|(i, id)| !chosen[..i].contains(id));
+                        if !valid {
+                            return Err(GameError::SelectionRequirementViolated);
+                        }
+                        picks.retain(|(c, _)| chosen.contains(c));
+                    } else if picks.len() > count && self.players[p].manual_mana {
+                        let source_name = self
+                            .battlefield_find(card_id)
+                            .map(|c| c.definition.name.to_string())
+                            .unwrap_or_default();
+                        let noun = if count == 1 { "a card" } else { "cards" };
+                        let candidates: Vec<(CardId, String)> = picks
+                            .iter()
+                            .filter_map(|(id, _)| {
+                                self.players[p].hand.iter().find(|c| c.id == *id).map(|c| (*id, c.definition.name.to_string()))
+                            })
+                            .collect();
+                        self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                            decision: crate::decision::Decision::ChooseCards {
+                                source: card_id,
+                                prompt: format!("{source_name}: discard {noun} to pay the cost"),
+                                candidates,
+                                min: count as u32,
+                                max: count as u32,
+                                eligible: None,
+                                value: PickValue::Cost,
+                            },
+                            resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                                activator: p,
+                                card_id,
+                                ability_index,
+                                target,
+                                additional_targets: additional_targets.clone(),
+                                x_value,
+                                kind: crate::game::types::AbilityCostChoice::Discard,
+                            },
+                        }));
+                        return Ok(());
+                    }
                 }
                 if ability.discard_cost_random {
                     use rand::seq::SliceRandom;

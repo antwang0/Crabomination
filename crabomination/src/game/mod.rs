@@ -2836,6 +2836,10 @@ pub struct ResolutionScratch {
     /// card exiled with this into its owner's graveyard" (Shelob).
     #[serde(skip, default)]
     pub(crate) pending_ability_exiled_with: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for a `discard_cost`
+    /// ("Discard a legendary card:" — Solitary Cell) the activator chose.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_discard: Option<Vec<CardId>>,
     /// One-shot validated answer for a resolution-time choice whose suspend
     /// re-queues the originating effect as its continuation (`ChooseN`,
     /// `Escalate`, `MayDo`, `DealDamageDivided`, `ChooseAmount` payers, and
@@ -30727,6 +30731,14 @@ impl GameState {
                         // `activate_ability` re-checks it is still attached.
                         self.scratch.pending_ability_unattach = Some(id);
                     }
+                    K::Discard => {
+                        let DecisionAnswer::Cards(ids) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        // `activate_ability` re-checks the count, that each
+                        // card is still in hand and that it matches the filter.
+                        self.scratch.pending_ability_discard = Some(ids);
+                    }
                     K::ExiledWithToGraveyard => {
                         let DecisionAnswer::Cards(ids) = answer else {
                             return Err(GameError::DecisionAnswerMismatch);
@@ -30829,6 +30841,9 @@ impl GameState {
         }
         if self.scratch.pending_ability_exiled_with.is_some() {
             self.scratch.pending_ability_exiled_with = None;
+        }
+        if self.scratch.pending_ability_discard.is_some() {
+            self.scratch.pending_ability_discard = None;
         }
         if self.scratch.pending_ability_exile_permanent.is_some() {
             self.scratch.pending_ability_exile_permanent = None;

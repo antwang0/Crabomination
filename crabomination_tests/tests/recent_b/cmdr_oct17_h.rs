@@ -434,3 +434,39 @@ fn i_am_iron_man_adds_the_artifact_type() {
     assert_eq!((cp.power, cp.toughness), (4, 4));
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
 }
+
+/// Solitary Cell: "{1}, {T}, Discard a legendary card: Draw a card." A
+/// hand-paying seat holding two legendary cards picks which one pays the
+/// cost (CR 601.2h); the engine used to discard the cheapest without asking
+/// (2026-10-24 client report).
+#[test]
+fn solitary_cell_asks_which_legendary_card_to_discard() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = pod(2);
+    g.players[0].manual_mana = true;
+    let cell = ready(&mut g, 0, catalog::solitary_cell());
+    let cheap = g.add_card_to_hand(0, catalog::liliana_the_faultless());
+    let dear = g.add_card_to_hand(0, catalog::thalia_the_survivor());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cell,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the activation asks for the discard");
+    let pd = g.pending_decision.as_ref().expect("a discard choice is posed");
+    assert!(
+        matches!(&pd.decision, Decision::ChooseCards { candidates, min: 1, max: 1, .. } if candidates.len() == 2),
+        "both legendary cards are offered, the Bears are not: {:?}",
+        pd.decision
+    );
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![dear]))).expect("the pick pays the cost");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dear), "Thalia was discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == cheap), "Liliana stays in hand");
+}
