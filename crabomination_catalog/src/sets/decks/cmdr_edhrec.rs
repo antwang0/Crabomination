@@ -4555,7 +4555,7 @@ pub fn emberwilde_captain() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::BecomeMonarch { who: PlayerRef::You }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent)
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedDirectlyByOpponent)
                     .with_filter(Predicate::IsMonarch { who: PlayerRef::You })
                     .once_per_batch(),
                 effect: Effect::DealDamage { to: Selector::Player(attacker()), amount: Value::HandSizeOf(attacker()) },

@@ -2647,6 +2647,14 @@ fn emberwilde_captain_punishes_attacks_on_the_monarch() {
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 1;
     let life = g.players[1].life;
+    // CR 506.3 — "attacks you": an attack on your planeswalker isn't one.
+    let mut walker_only = g.clone();
+    let jace = walker_only.add_card_to_battlefield(0, catalog::jace_the_mind_sculptor());
+    walker_only
+        .perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Planeswalker(jace) }]))
+        .expect("attack the walker");
+    drain_stack(&mut walker_only);
+    assert_eq!(walker_only.players[1].life, life, "the planeswalker isn't you");
     g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
         .expect("attack");
     drain_stack(&mut g);

@@ -76,12 +76,9 @@ pub fn slumbering_dragon() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![lock(Keyword::CantAttack), lock(Keyword::CantBlock)],
         triggered_abilities: vec![
+            // "Attacks you or a planeswalker you control": this scope fires for both.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
-                effect: grow(),
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerPlaneswalkerAttackedByOpponent),
                 effect: grow(),
             },
         ],
