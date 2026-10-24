@@ -874,6 +874,26 @@ pub struct EvalWeights {
     /// declined, even against a defender at 5 — the one-cycle sim credits
     /// no pressure.
     pub attack_trades: bool,
+    /// The seat flag `Player::tap_timing`: a modal trigger's automatic mode
+    /// pick (the engine's, at push time) skips a plain "tap target creature"
+    /// mode whose tap can't matter, and an "untap target creature" mode with
+    /// nothing of ours tapped. Divining Duelist always took its first mode:
+    /// 404 of 580 casts in 3,600 FRA sealed games tapped an opposing creature
+    /// in our own postcombat main, where it untaps before it can block or
+    /// attack (a play-test report, 2026-10-24). Neutral on the ladder (it
+    /// fires in few decks): vs `dflt` FRA sealed 50.0 / 49.6 / 49.9 / 50.0
+    /// (seeds 43 / 97 / 151 / 199). In `fra-fixes`.
+    pub tap_timing: bool,
+    /// The greedy attack leaves home a creature that would deal no combat
+    /// damage (`attacker_damage_value` <= 0: Loot's negative power and
+    /// toughness damage counted) unless something of ours triggers on
+    /// attacking. Living Library, a 0/4, attacked in 3,902 of 6,712 declare
+    /// steps in 3,600 FRA sealed games — a blocker tapped for nothing (a
+    /// play-test report, 2026-10-24). Vs `dflt` FRA sealed 50.9 / 50.3
+    /// (seeds 43 / 97). With `tap_timing`: `fra-fixes` over `fra-fixes-pre`
+    /// 51.3 FRA / 50.0 cube; the client pilot (`mcts-net67-taps` vs
+    /// `mcts-net67-256`, 100 x 12) 48.9 / 49.8 / 51.5. In `fra-fixes`.
+    pub no_empty_attacks: bool,
     /// A pump instant that carries a harmless rider — a keyword, untap or
     /// counter on the pumped creature, or card flow for the caster (Empower
     /// Jace, a draw, scry / surveil, an impulse) — is a combat trick to the
@@ -1473,6 +1493,8 @@ impl EvalWeights {
             duel_sinks: false,
             lethal_over_walkers: false,
             attack_trades: false,
+            tap_timing: false,
+            no_empty_attacks: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1600,6 +1622,8 @@ impl EvalWeights {
             duel_sinks: false,
             lethal_over_walkers: false,
             attack_trades: false,
+            tap_timing: false,
+            no_empty_attacks: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1710,6 +1734,8 @@ impl EvalWeights {
             duel_sinks: false,
             lethal_over_walkers: false,
             attack_trades: false,
+            tap_timing: false,
+            no_empty_attacks: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2857,6 +2883,8 @@ impl EvalWeights {
             duel_sinks: false,
             lethal_over_walkers: false,
             attack_trades: false,
+            tap_timing: false,
+            no_empty_attacks: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2993,6 +3021,8 @@ impl EvalWeights {
             duel_sinks: false,
             lethal_over_walkers: false,
             attack_trades: false,
+            tap_timing: false,
+            no_empty_attacks: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3179,6 +3209,8 @@ impl EvalWeights {
             trick_riders: true,
             burn_for_lethal: true,
             attack_trades: true,
+            tap_timing: true,
+            no_empty_attacks: true,
             ..self
         }
     }
@@ -3220,6 +3252,8 @@ impl EvalWeights {
             duel_sinks: false,
             lethal_over_walkers: false,
             attack_trades: false,
+            tap_timing: false,
+            no_empty_attacks: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3451,6 +3485,7 @@ impl Bot for HeuristicBot {
             player.converge_rarest = self.weights.converge_rarest;
             player.hostile_player_targets = self.weights.hostile_player_targets;
             player.duel_sinks = self.weights.duel_sinks;
+            player.tap_timing = self.weights.tap_timing;
         }
     }
 
@@ -13266,7 +13301,7 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // computed P/T) run once per candidate attacker — share one gather, the
     // same way `pick_blocks` does. Matters most inside the attack/block sims,
     // which call this on a freshly cloned (and therefore unfrozen) state.
-    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0, false, false));
+    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0, false, false, false));
     super::pod_attack::trim_life_taxed_attacks(state, seat, attacks)
 }
 
@@ -13277,7 +13312,15 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
 /// the test entry so the recorded greedy shapes stay pinned.
 pub fn pick_attacks_w(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
     state.with_frozen_layers(|state| {
-        pick_attacks_inner(state, seat, w.attack_blocker_guard, w.leader_target, w.lethal_over_walkers, w.attack_trades)
+        pick_attacks_inner(
+            state,
+            seat,
+            w.attack_blocker_guard,
+            w.leader_target,
+            w.lethal_over_walkers,
+            w.attack_trades,
+            w.no_empty_attacks,
+        )
     })
 }
 
@@ -13343,6 +13386,15 @@ fn attack_is_safe_guarded(
     }
     let max_power = eligible.iter().map(|b| b.power()).max().unwrap_or(0);
     c.power() > max_power
+}
+
+/// Does anything `seat` controls trigger on attacking ("whenever this / a
+/// creature you control attacks", "whenever you attack")?
+fn seat_has_attack_trigger(state: &GameState, seat: usize) -> bool {
+    use crate::effect::EventKind;
+    state.battlefield.iter().filter(|c| c.controller == seat).any(|c| {
+        c.definition.triggered_abilities.iter().any(|t| matches!(t.event.kind, EventKind::Attacks | EventKind::YouAttack))
+    })
 }
 
 /// One-on-one blocks of `c` by each of `blockers` that can legally block it:
@@ -13540,6 +13592,7 @@ fn pick_attacks_inner(
     leader_target: u8,
     lethal_over_walkers: bool,
     trades: bool,
+    no_empty: bool,
 ) -> Vec<Attack> {
     use crate::card::Keyword;
     let target_player = attack_target_player(state, seat, leader_target);
@@ -13837,6 +13890,12 @@ fn pick_attacks_inner(
         })
         .map(|c| c.id)
         .collect();
+    // `no_empty_attacks`: a creature that deals no combat damage only taps a
+    // blocker, unless an attack trigger of ours pays for the swing. Before
+    // the forced-attacker repair, which puts back any the rules oblige.
+    if no_empty && !seat_has_attack_trigger(state, seat) {
+        attackers.retain(|&id| state.battlefield_find(id).is_none_or(|c| attacker_damage_value_on(state, c) > 0));
+    }
     // CR 508.1d — before the cap, because a creature the rules oblige to
     // attack makes the whole declaration illegal by its absence.
     restore_forced_attackers(state, seat, &attack_power_caps, &mut attackers);
@@ -24026,6 +24085,58 @@ mod tests {
             }
             _ => panic!("expected an activate-ability action"),
         }
+    }
+
+    /// `no_empty_attacks`: Living Library (0/4) stays home on an open board
+    /// while the Bears swing; flagless, both went.
+    #[test]
+    fn no_empty_attacks_keeps_a_zero_power_creature_home() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let library = g.add_card_to_battlefield(0, catalog::living_library());
+        g.clear_sickness(library);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let flagless = pick_attacks_w(&g, 0, &EvalWeights::default());
+        assert!(flagless.iter().any(|a| a.attacker == library), "flagless: the 0/4 swings, got {flagless:?}");
+        let on = pick_attacks_w(&g, 0, &EvalWeights { no_empty_attacks: true, ..EvalWeights::default() });
+        assert!(on.iter().any(|a| a.attacker == bear), "the Bears still swing, got {on:?}");
+        assert!(!on.iter().any(|a| a.attacker == library), "the 0/4 stays home, got {on:?}");
+    }
+
+    /// `Player::tap_timing`: Divining Duelist's automatic mode skips "tap
+    /// target creature" in our postcombat main (the Bears untap before they
+    /// matter) and loots instead; precombat, with an attacker ready, it taps.
+    #[test]
+    fn tap_timing_skips_a_tap_that_untaps_before_it_matters() {
+        let run = |timing: bool, step: TurnStep| {
+            let mut g = two_player_game();
+            for seat in 0..2 {
+                for _ in 0..5 {
+                    g.add_card_to_library(seat, catalog::island());
+                }
+            }
+            g.players[0].tap_timing = timing;
+            g.active_player_idx = 0;
+            g.step = step;
+            g.priority.player_with_priority = 0;
+            let ours = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(ours);
+            let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            let duelist = g.add_card_to_hand(0, catalog::divining_duelist());
+            g.add_card_to_hand(0, catalog::island());
+            g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+            g.players[0].mana_pool.add_colorless(2);
+            g.perform_action(GameAction::CastSpell { card_id: duelist, target: None, additional_targets: vec![], mode: None, x_value: None })
+                .expect("cast");
+            crate::game::drain_stack(&mut g);
+            g.battlefield_find(theirs).unwrap().tapped
+        };
+        assert!(run(false, TurnStep::PostCombatMain), "flagless: mode 0 taps after combat");
+        assert!(!run(true, TurnStep::PostCombatMain), "after combat the tap is skipped");
+        assert!(run(true, TurnStep::PreCombatMain), "before combat, with an attacker ready, it taps");
     }
 
     /// `attack_trades`: a 2/2 swings into an untapped 2/2 (the worst block is

@@ -1382,6 +1382,7 @@ impl Bot for MctsBot {
     fn push_seat_flags(&self, player: &mut crate::player::Player) {
         player.hostile_player_targets = self.cfg.weights.hostile_player_targets;
         player.duel_sinks = self.cfg.weights.duel_sinks;
+        player.tap_timing = self.cfg.weights.tap_timing;
     }
 
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {

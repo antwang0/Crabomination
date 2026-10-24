@@ -2142,6 +2142,11 @@ fn play_one_game_traced(
             Pilot::Mcts(cfg) => cfg.weights.duel_sinks,
             _ => false,
         };
+        g.players[seat].tap_timing = match pilot {
+            Pilot::Scored(w) => w.tap_timing,
+            Pilot::Mcts(cfg) => cfg.weights.tap_timing,
+            _ => false,
+        };
     }
     let mut seeded = shuffle_rng;
     for seat in 0..2 {

@@ -1756,6 +1756,12 @@ pub struct PlayerData {
     /// stay Commander-only (they lose duels). Pushed from
     /// `EvalWeights::duel_sinks`; off is the ladder control.
     pub duel_sinks: bool,
+    /// A modal trigger's automatic mode pick skips a plain "tap target
+    /// creature" mode when the tap can't matter (our turn after combat, or
+    /// before it with nothing able to attack) and an "untap target creature"
+    /// mode with nothing of ours tapped. Pushed from
+    /// `EvalWeights::tap_timing`; off is the ladder control.
+    pub tap_timing: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -2159,6 +2165,7 @@ impl Player {
             converge_rarest: false,
             hostile_player_targets: false,
             duel_sinks: false,
+            tap_timing: false,
             manual_mana: false,
             coin_flip_advantage: 0,
             flipped_coin_this_turn: false,

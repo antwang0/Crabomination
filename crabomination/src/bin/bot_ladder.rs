@@ -388,11 +388,25 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "lethal-walkers" => Some(Pilot::Scored(EvalWeights { lethal_over_walkers: true, ..EvalWeights::default() })),
         "attack-trades" => Some(Pilot::Scored(EvalWeights { attack_trades: true, ..EvalWeights::default() })),
         "fra-trades" => Some(Pilot::Scored(EvalWeights { attack_trades: true, ..EvalWeights::fra_fixes_on() })),
+        "tap-timing" => Some(Pilot::Scored(EvalWeights { tap_timing: true, ..EvalWeights::default() })),
+        "no-empty-attacks" => Some(Pilot::Scored(EvalWeights { no_empty_attacks: true, ..EvalWeights::default() })),
+        // `fra-fixes` without the two 2026-10-24 evening flags: their control.
+        "fra-fixes-pre" => Some(Pilot::Scored(EvalWeights {
+            tap_timing: false,
+            no_empty_attacks: false,
+            ..EvalWeights::fra_fixes_on()
+        })),
         // The client's pilot (`mcts-net67-256`) with the trade rule.
         "mcts-net67-trades" => Some(Pilot::Mcts(MctsConfig {
             iterations: 256,
             horizon_turns: 3,
             weights: EvalWeights { attack_trades: true, ..EvalWeights::net_on_default() },
+            ..MctsConfig::default()
+        })),
+        "mcts-net67-taps" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights { tap_timing: true, no_empty_attacks: true, ..EvalWeights::net_on_default() },
             ..MctsConfig::default()
         })),
         "fra-fixes-nosinks" => Some(Pilot::Scored(EvalWeights { duel_sinks: false, ..EvalWeights::fra_fixes_on() })),

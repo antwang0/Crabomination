@@ -286,6 +286,9 @@ impl GameState {
         if !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
             return idx;
         }
+        let targeted = |w: &crate::effect::Selector| {
+            matches!(w, crate::effect::Selector::Target(_) | crate::effect::Selector::TargetFiltered { .. })
+        };
         let fruitless = |m: &Effect| match m {
             Effect::PutFromHandOntoBattlefield { who: crate::effect::PlayerRef::You, filter, .. } => {
                 !self.players[controller].hand.iter().any(|c| self.evaluate_requirement_on_card(filter, c, controller))
@@ -295,6 +298,14 @@ impl GameState {
             Effect::Move { what, .. } | Effect::UnlockRoomDoor { what } if !m.requires_target() => {
                 let ctx = crate::game::effects::EffectContext::for_trigger(source, controller, None, 0);
                 self.resolve_selector(what, &ctx).is_empty()
+            }
+            // `Player::tap_timing`: a plain tap or untap of one target
+            // creature (Divining Duelist's first two modes).
+            Effect::Tap { what } if self.players[controller].tap_timing && targeted(what) => {
+                !self.plain_tap_can_matter(controller)
+            }
+            Effect::Untap { what, .. } if self.players[controller].tap_timing && targeted(what) => {
+                !self.battlefield.iter().any(|c| c.controller == controller && c.tapped && self.computed_is_creature(c))
             }
             _ => false,
         };
@@ -306,6 +317,28 @@ impl GameState {
                 && (!m.requires_target() || self.auto_target_for_effect_avoiding(m, controller, Some(source)).is_some())
         };
         modes.iter().position(can).unwrap_or(idx)
+    }
+
+    /// Can tapping an opposing creature now change a combat before its
+    /// controller untaps it? On an opponent's turn, yes: before their attack
+    /// it can't attack, after it it can't block ours. On our own turn only
+    /// before blockers are declared, and only with a creature that can be
+    /// attacking by then.
+    fn plain_tap_can_matter(&self, controller: usize) -> bool {
+        use crate::game::types::TurnStep as S;
+        if self.active_player_idx != controller {
+            return true;
+        }
+        match self.step {
+            S::DeclareAttackers => self.battlefield.iter().any(|c| c.controller == controller && self.attack_for(c.id).is_some()),
+            S::Untap | S::Upkeep | S::Draw | S::PreCombatMain | S::BeginCombat => self.battlefield.iter().any(|c| {
+                c.controller == controller
+                    && !c.tapped
+                    && self.computed_is_creature(c)
+                    && (!c.summoning_sick || c.has_keyword(&crate::card::Keyword::Haste))
+            }),
+            _ => false,
+        }
     }
 
     /// "Choose up to one" (an empty `Noop` mode beside the real ones): a
