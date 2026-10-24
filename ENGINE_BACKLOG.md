@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes](#fixedopen-2026-10-24-commander-run-01ge2zts--16-shipped-card-defects-in-seated-decks-three-engine-classes) | 31 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 1,200 seats, four bug classes gated, two bot fixes](#fixedopen-2026-10-23-commander-run-01uv3vwf--1200-seats-four-bug-classes-gated-two-bot-fixes) | 39 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 14 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KPxZ3H`) — 21 seats, 61 cards, pod Attraction decks, snow by colour](#fixedopen-2026-10-21-commander-run-01kpxz3h--21-seats-61-cards-pod-attraction-decks-snow-by-colour) | 79 |
@@ -234,6 +235,33 @@ the handoff.
   names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
+
+## FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes
+
+No seats (the zero tier was a concurrent session's; this run worked INCOMPLETE's 🟡 rows ranked by how many seated
+decks hold the card).
+- **FIXED (engine classes):** counter strips / adds on a player read poison only (CR 122.6), so both target pickers now ask
+  `counter_player_skip` before naming a player (Etched Slith aimed at the opponent's face, Price of Betrayal too); the
+  noncombat funnel's planeswalker / battle branches fired no dealer `DealsDamage` (CR 120.3); a multi-target fan-out
+  stopped at the first player the picker offered (Jeska's −X). Improvise grants read through their gate
+  (`active_static`, as convoke did) — The Fifteenth Doctor's never applied. `DelayUntilWithCapture` bakes the X it was
+  scheduled under (CR 603.7c) and keeps a gone token's LKI (`ColdState::captured_token_lki`, CR 608.2h).
+- **Primitives:** `TemptingOffer::declined`; `Predicate::CastSpellThisTurnWithout`;
+  `StaticEffect::DoubleControllerLeaveTriggers` (+ `TriggerCandidate::triggered_by_leave`, `leave_subject`);
+  `StaticEffect::CastSelfFromGraveyardWithCost`; `AddCounterOfPresentKind` on a player.
+- **Cards fixed:** Etched Slith, Wernog, Animation Module, Critical Hit (natural 20 only), Hooded Blightfang, Jeska,
+  The Fifteenth Doctor, Gandalf the White, Ochre Jelly, King T'Challa + five more Marvel modal DFCs that also transform
+  (Tony Stark, Monica Rambeau, Norman Osborn, Jennifer Walters, Eddie Brock — backs castable from hand), Teferi Temporal
+  Pilgrim's −12, Esoteric Duplicator (Clue/Food), Quilled Greatwurm's graveyard cast, Court of Locthwain. Stale rows
+  closed: Magmatic Galleon, Jackdaw Savior.
+- **FIXED (bot crash, audit build):** `pick_loyalty_ability`'s threat sum overflowed on two `i32::MAX`-power creatures
+  (5-seat sweep seed 1246780); two permanent-value sums fold saturating too.
+- **Sweeps (overflow build):** 12401 (4/6/8, 3,228 games), 12421 (3/5/7, 4,094), 12431 (4/6/8, 3,280), 12441 (`--a dflt`
+  over seats 5559-6054, 448): one abort (fixed above); undecided are Descent into Avernus / Divine Intervention draws, one
+  Syr Konrad + Gaea's Blessing loop and four token-engine board caps.
+- **Open:** Esoteric Duplicator misses a Treasure sacrificed for **mana** (no LKI outlives a mana ability); Aegar's
+  "a spell you controlled" (owner stands in); Beorn's Hospitality's tracking P/T (a 7b grant over `BecomeCreature`).
+  An audit of gated statics (`WhileCondition` & co.) whose reader matches the raw effect found only the improvise one.
 
 ## FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 1,200 seats, four bug classes gated, two bot fixes
 
