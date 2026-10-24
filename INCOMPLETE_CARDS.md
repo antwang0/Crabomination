@@ -727,7 +727,7 @@ modelled at all, so there is no filter to correct.
 | Card | Residual |
 | --- | --- |
 | Elrond, Moon-Reader | ✅ fixed 2026-10-11: a `{T}` creature mana ability draws off `TappedForMana`, any other off `AbilityActivated { mana: true }` (`ActivationTrait::ManaWithoutTap`, emitted only for `{T}`-less mana abilities, so no hot-path cost); one shared once-a-turn. |
-| Jeska, Thrice Reborn / Tasha, the Witch Queen | 🟡 a multi-target loyalty ability's extra slots — Jeska's −X "each of up to three targets", Tasha's +1 "for each opponent … up to one target": `GameAction::ActivateLoyaltyAbility` carries one target, so slots past the first are `auto_extra_targets_for`'s pick, which fills permanents and then at most one player (2026-10-24; a second player or Tasha's graveyard cards past the first are not filled). |
+| Jeska, Thrice Reborn | 🟡 a multi-target loyalty ability's extra slots — Jeska's −X "each of up to three targets": `GameAction::ActivateLoyaltyAbility` carries one target, so slots past the first are `auto_extra_targets_for`'s pick (permanents, then at most one player) and a prompting seat cannot name them. (Tasha's +1 fills one card from **each** opponent's graveyard — `tasha_pages_one_card_from_each_opponents_graveyard`, 2026-10-24.) |
 
 Three approximations the fixes left standing, each documented at its variant:
 

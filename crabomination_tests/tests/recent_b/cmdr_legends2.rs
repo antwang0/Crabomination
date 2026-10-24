@@ -535,7 +535,6 @@ fn elminster_scry_discount_and_faerie_dragons() {
 
 /// Tasha's +1 exiles an opponent's instant or sorcery with a page counter;
 /// her −3 casts it free — a spell she doesn't own, so a 3/3 Demon follows.
-/// (The other opponents' slots are the loyalty auto-fill — INCOMPLETE_CARDS.)
 #[test]
 fn tasha_pages_opposing_spells_and_casts_them() {
     use crabomination::card::CounterType;
@@ -556,6 +555,25 @@ fn tasha_pages_opposing_spells_and_casts_them() {
     assert_eq!(g.battlefield.len(), before + 1, "a spell she doesn't own: one Demon");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Demon"));
     let _ = hand;
+}
+
+/// CR 601.2c — Tasha's +1 targets up to one instant or sorcery in *each*
+/// opponent's graveyard: the declared slot is one seat's, the auto-fill takes
+/// the other opponent's, and her own graveyard is never a target.
+#[test]
+fn tasha_pages_one_card_from_each_opponents_graveyard() {
+    use crabomination::card::CounterType;
+    let mut g = pod(3);
+    let tasha = g.add_card_to_battlefield(0, catalog::tasha_the_witch_queen());
+    let a = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let b = g.add_card_to_graveyard(2, catalog::lightning_bolt());
+    let mine = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    activate_loyalty(&mut g, tasha, 0, Some(Target::Permanent(a)), None);
+    for id in [a, b] {
+        let c = g.exile.iter().find(|c| c.id == id).expect("each opponent's Bolt exiled");
+        assert_eq!(c.counter_count(CounterType::Page), 1);
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mine), "not her own");
 }
 
 /// Jon Irenicus's end step hands a creature to an opponent: two +1/+1
