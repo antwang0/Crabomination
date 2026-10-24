@@ -10646,8 +10646,10 @@ impl GameState {
     pub(crate) fn spell_granted_improvise(&self, p: usize, card: &CardInstance) -> bool {
         self.battlefield.iter().any(|c| {
             c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    crate::effect::StaticEffect::GrantImproviseToSpells { filter } => {
+                // Through a gate, as convoke's twin reads it (The Fifteenth
+                // Doctor's "the first nonartifact spell you cast each turn").
+                && c.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::GrantImproviseToSpells { filter }) => {
                         crate::game::layers::requirement_matches_card(filter, card, p)
                     }
                     _ => false,

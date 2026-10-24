@@ -3566,6 +3566,9 @@ impl GameState {
                     })
                 })
             }
+            Predicate::CastSpellThisTurnWithout { who, types } => self.resolve_players(who, ctx).into_iter().any(|p| {
+                self.players[p].spell_casts_this_turn.iter().any(|c| !types.iter().any(|t| c.card_types.contains(t)))
+            }),
             Predicate::CastSpellWithManaValueAtLeastThisTurn { who, at_least } => self
                 .resolve_players(who, ctx)
                 .into_iter()

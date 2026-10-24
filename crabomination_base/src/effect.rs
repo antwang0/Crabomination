@@ -2485,6 +2485,13 @@ pub enum Predicate {
         colors: Vec<Color>,
         types: Vec<crate::card::CardType>,
     },
+    /// "[who] cast a spell with none of `types` this turn" — a nonartifact
+    /// spell (The Fifteenth Doctor's "the first nonartifact spell you cast
+    /// each turn"). Reads `Player.spell_casts_this_turn`.
+    CastSpellThisTurnWithout {
+        who: PlayerRef,
+        types: Vec<crate::card::CardType>,
+    },
     /// "[who] cast a spell with mana value `at_least` or greater this turn"
     /// (Rhino, Barreling Brute). Reads `Player.spell_casts_this_turn`.
     CastSpellWithManaValueAtLeastThisTurn { who: PlayerRef, at_least: u32 },
