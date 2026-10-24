@@ -329,7 +329,7 @@ pub fn graceful_antelope() -> CardDefinition {
             effect: Effect::BecomeBasicLand {
                 what: target_filtered(R::Land),
                 land_type: LandType::Plains,
-                duration: Duration::Permanent,
+                duration: Duration::WhileSourceOnBattlefield,
             },
         }],
         ..creature("Graceful Antelope", cost(&[generic(2), w(), w()]), vec![CreatureType::Antelope], 1, 4)

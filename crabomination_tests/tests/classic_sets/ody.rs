@@ -1648,6 +1648,22 @@ fn graceful_antelope_has_plainswalk() {
             .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Plains))
     );
+    // "Until this creature leaves the battlefield": the Forest is a Plains
+    // only while the Antelope stays.
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let hit = catalog::graceful_antelope().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(antelope, 0, Some(Target::Permanent(land)), 0);
+    g.resolve_effect(&hit, &ctx).unwrap();
+    let plains = |g: &GameState| {
+        g.computed_permanent(land).unwrap().subtypes().land_types.contains(&crabomination::card::LandType::Plains)
+    };
+    assert!(plains(&g));
+    g.remove_to_graveyard_with_triggers(antelope);
+    g.check_state_based_actions();
+    assert!(!plains(&g), "reverts when the Antelope leaves");
 }
 
 // ── Wave 11 ─────────────────────────────────────────────────────────────────
