@@ -693,6 +693,29 @@ fn cr_118_3_yasharn_blocks_life_and_sacrifice_costs() {
     );
 }
 
+/// Yasharn (CR 118.3) covers a SPELL's sacrifice costs too: Village Rites'
+/// "sacrifice a creature" can't be paid, and Elder Deep-Fiend can't emerge.
+#[test]
+fn cr_118_3_yasharn_blocks_spell_sacrifice_costs() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::yasharn_implacable_earth());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let rites = g.add_card_to_hand(0, catalog::village_rites());
+    assert!(cast(&mut g, rites, &[]).is_err(), "an additional sacrifice cost");
+    let fiend = g.add_card_to_hand(0, catalog::elder_deep_fiend());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let emerge = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fiend,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        pitch_card: None,
+    });
+    assert!(emerge.is_err() || g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "no emerge sacrifice");
+}
+
 /// Arctic Treeline, Stirge, Dragonlair Spider, The Vision, Your Temple Is
 /// Under Attack, Fascination and Aether Membrane — printed shapes.
 #[test]

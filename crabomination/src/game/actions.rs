@@ -8087,6 +8087,7 @@ impl GameState {
             c.id == sacrifice
                 && c.controller == p
                 && self.computed_is_creature(c)
+                && self.sacrificeable_for_cost(c)
                 && self.effective_power_on(c).max(0) as u32 >= n
         });
         if !sac_ok {
@@ -8716,6 +8717,7 @@ impl GameState {
             let ok = self.battlefield.iter().any(|c| {
                 c.id == sac
                     && c.controller == p
+                    && self.sacrificeable_for_cost(c)
                     && (self.computed_has_card_type(c, crate::card::CardType::Artifact)
                         || self.computed_has_card_type(c, crate::card::CardType::Enchantment)
                         || c.is_token)
@@ -16025,6 +16027,8 @@ impl GameState {
                     .filter(|c| {
                         c.controller == p
                             && self.computed_is_creature(c)
+                            // CR 118.3 — Yasharn / Angel of Jubilation.
+                            && self.sacrificeable_for_cost(c)
                             && self.evaluate_requirement_static(
                                 filter,
                                 &Target::Permanent(c.id),
@@ -16068,6 +16072,8 @@ impl GameState {
                     .filter(|c| {
                         c.controller == p
                             && self.computed_is_creature(c)
+                            // CR 118.3 — Yasharn / Angel of Jubilation.
+                            && self.sacrificeable_for_cost(c)
                             && self.evaluate_requirement_static(
                                 filter,
                                 &Target::Permanent(c.id),
