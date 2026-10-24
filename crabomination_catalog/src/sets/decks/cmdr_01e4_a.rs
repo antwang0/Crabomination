@@ -558,7 +558,8 @@ pub fn corpse_hauler() -> CardDefinition {
             mana_cost: cost(&[generic(2), b()]),
             sac_cost: true,
             effect: Effect::Move {
-                what: target_filtered(R::Creature.from_your_graveyard()),
+                // "Another": the Hauler is in the graveyard by then (sacrificed as the cost).
+                what: target_filtered(R::Creature.and(R::OtherThanSource).from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()

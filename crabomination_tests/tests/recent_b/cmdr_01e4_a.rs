@@ -3978,3 +3978,26 @@ fn fang_druid_summoner_wants_a_creature_with_no_abilities() {
     assert!(g.players[0].hand.iter().any(|c| c.id == vanilla), "the vanilla Bears");
     assert!(!g.players[0].hand.iter().any(|c| c.id == flier), "not the Angel, which has abilities");
 }
+
+/// Corpse Hauler returns ANOTHER creature card. Targets are chosen before
+/// the sacrifice is paid (CR 601.2c before 601.2h), so it can't name itself;
+/// the filter also says "another" for any path that reads it later.
+#[test]
+fn corpse_hauler_returns_another_creature_card() {
+    let mut g = pod(2);
+    let hauler = g.add_card_to_battlefield(0, catalog::corpse_hauler());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState, t: CardId| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: hauler, ability_index: 0, target: Some(Target::Permanent(t)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(act(&mut g, hauler).is_err(), "not itself");
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    act(&mut g, bear).expect("another creature card");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == hauler));
+}
