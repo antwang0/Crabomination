@@ -499,3 +499,26 @@ fn nim_deathmantle_reads_the_owner() {
     assert_eq!(g.battlefield_find(nim).unwrap().attached_to, Some(lent));
     assert!(g.players[1].graveyard.iter().any(|c| c.id == borrowed));
 }
+
+/// Froghemoth exiles from the graveyard of the player it damaged ("their
+/// graveyard"), never another opponent's (three seats).
+#[test]
+fn froghemoth_eats_only_the_damaged_players_graveyard() {
+    let mut g = pod(3);
+    let frog = ready(&mut g, 0, catalog::froghemoth());
+    let mine = [g.add_card_to_graveyard(1, catalog::grizzly_bears()), g.add_card_to_graveyard(1, catalog::island())];
+    let other = [g.add_card_to_graveyard(2, catalog::grizzly_bears()), g.add_card_to_graveyard(2, catalog::island())];
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: frog,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(mine.iter().all(|id| g.exile.iter().any(|c| c.id == *id)), "the damaged player's cards");
+    assert!(other.iter().all(|id| g.players[2].graveyard.iter().any(|c| c.id == *id)), "not the other opponent's");
+}

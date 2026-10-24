@@ -909,7 +909,7 @@ pub fn froghemoth() -> CardDefinition {
                         body: Box::new(Effect::ApplyToTargets {
                             max_targets: 20,
                             min_targets: 0,
-                            filter: R::InOpponentGraveyard,
+                            filter: R::InOpponentGraveyard.and(R::OwnedByDefendingPlayer),
                             effect: Box::new(Effect::Seq(vec![
                                 Effect::If {
                                     cond: Predicate::EntityMatchesAny { what: Selector::Target(0), filter: R::Creature },
