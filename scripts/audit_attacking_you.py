@@ -56,6 +56,9 @@ ALLOWLIST = {
     "collective_restraint": TAX,
     "mirror_match": "`Effect::CopyAttackersAsBlockers` filters the attacks on the caster and their planeswalkers itself",
     "defensive_formation": "`StaticEffect::ControllerAssignsAttackersCombatDamage` is read per attack by the damage step",
+    "alluring_siren": "`MustAttackPlayerThisTurn { defender: You }` names the seat",
+    "jace_reality_sculptor": "`CreatureAttacksYouUntilYourNextTurn` fires on `defender_for(target) == controller` (you or your planeswalker)",
+    "tamiyo_meets_the_story_circle": "`CreatureAttacksYouUntilYourNextTurn` fires on `defender_for(target) == controller` (you or your planeswalker)",
 }
 
 

@@ -76,6 +76,13 @@ OTHER_TOKENS = (
 # wrong question. Keyed on the factory ident, which no body can shadow; a
 # stale entry fails `--gate` the same way a new finding does.
 SOURCE_ALLOWLIST = {
+    "farrels_mantle": (
+        "'another' is other than the enchanted attacker, not the Aura; `IsAttacking.negate()` "
+        "approximates it (a negated `IsHostOfSource` reads true source-blind)"
+    ),
+    "splinter_aging_champion": (
+        "'you and another target player' — the other player is `OpponentPlayer`, which can't be you"
+    ),
     "fiendish_panda": (
         "the filter already excludes it: the Panda is a Bear Demon and the "
         "clause is 'another target **non-Bear** creature card'"
