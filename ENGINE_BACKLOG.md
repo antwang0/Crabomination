@@ -260,6 +260,16 @@ No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they
 - **Sweeps (overflow, release asserts off):** 10150 (4/6, 5,046 games), 10151 (3/5/8, 7,972), 10152 (`--a dflt`, 4 seats,
   1,514): 0 panics; undecided are CR 104.4a/b draws (Guile + Zellix + Altar of the Brood, Descent into Avernus, Divine
   Intervention, simultaneous losses) and one 8-seat Scute Swarm board cap.
+- **FIXED (the gated audits had rotted: `scripts/audit_gates.py` read 20 red at the session start, 0 now):** Tobias
+  (nontoken deaths), Guardians of Koilos (owner's hand), Maralen / Monk Class / Rona ("cast", not "play"), Slave of
+  Bolas (permanent steal), Feral Encounter (two slots), ten "any target" damage abilities (`R::Any` took lands),
+  Flitterwing Nuisance / Akiri / Attuma / Owlbear Cub (player vs planeswalker), Myr Reservoir (graveyard zone),
+  Emberwilde Captain / Slumbering Dragon (attack scopes), Shimian Night Stalker / Mirror Strike
+  (`Effect::RedirectAllDamageBetweenThisTurn`). The rest were audit false positives, each allowlisted with its reason.
+  **Run `cargo build -p crabomination --bin dump_cards && python3 scripts/audit_gates.py` after card work** — nothing
+  else runs them. Also this session: ten "as long as you control" steals (`GainControlWhileYouControlSourceTapped` for
+  the "and remains tapped" five), Tidebinder Mage / Ty Lee locks, Graceful Antelope, Teferi Time Raveler's invented
+  static, Hand of Emrakul's alt cost.
 - **Open:** Pir's "your team" (no team pods); The Phasing of Zhalfir's lock ends with the Saga, not its control
   (`PhaseOut { until_source_leaves }` has no control clause). Neko-Te's lock is one untap (`SkipNextUntap`; its trigger is granted to the creature, so `TapAndLockWhileSourcePresent` would key on the wrong source). Quicksmith Spy/Rebel: the grant is gated on controlling the chosen artifact, so it comes back if control returns.
 
