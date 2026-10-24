@@ -321,6 +321,14 @@ No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they
   else runs them. Also this session: ten "as long as you control" steals (`GainControlWhileYouControlSourceTapped` for
   the "and remains tapped" five), Tidebinder Mage / Ty Lee locks, Graceful Antelope, Teferi Time Raveler's invented
   static, Hand of Emrakul's alt cost.
+- **FIXED (bot, `--card-census` 4-seat, 13 groups x 30-120 games):** pod bots now counter an untargeted sweeper by
+  what it takes of their board (a clone resolves it when a counter is in hand — Wrath of God into three Angels sat
+  under the 10-unit bar; Commander games only); `effect_counters_spells` reads `ApplyToTargets` (Mindbreak Trap) and
+  `If` (Lofty / Stubborn Denial); `effect_retargets_spell` reads `ChangeSpellTarget` (Imp's Mischief) and an
+  all-retarget `RollDie` (Wyll's Reversal); the reanimate sink reads exile-and-token-copy (The Scarab God); the draw
+  sink activates loots (The Locust God) and tutors with a library match (Sliver Overlord), never life-paid. Golden:
+  the 4-seat pod digest moved once (`61997ac44`, the tutor/loot sink). Still uncast, situational: Muddle the
+  Mixture, Bolt Bend, Black Market.
 - **Open:** Pir's "your team" (no team pods); The Phasing of Zhalfir's lock ends with the Saga, not its control
   (`PhaseOut { until_source_leaves }` has no control clause). Neko-Te's lock is one untap (`SkipNextUntap`; its trigger is granted to the creature, so `TapAndLockWhileSourcePresent` would key on the wrong source). Quicksmith Spy/Rebel: the grant is gated on controlling the chosen artifact, so it comes back if control returns.
 
