@@ -28686,11 +28686,40 @@ impl GameState {
     /// (`submit_decision`) re-enters this function with the remaining
     /// queue once the user picks.
     pub fn drain_trigger_queue(&mut self, queue: Vec<PendingTriggerPush>) {
+        self.drain_trigger_queue_from(queue, false);
+    }
+
+    /// The modes of `pending`'s top-level modal, when its hand-paying
+    /// controller picks one at push time (see
+    /// `ResumeContext::TriggerModePick`): a mode targets, and two or more
+    /// modes can be chosen (CR 603.3c — a mode with no legal target can't).
+    fn trigger_mode_to_ask(&self, pending: &PendingTriggerPush) -> Option<Vec<Effect>> {
+        let Effect::ChooseMode(modes) = &pending.effect else { return None };
+        let c = pending.controller;
+        if !self.players.get(c).is_some_and(|p| p.manual_mana)
+            || !self.seat_prompts(c)
+            || pending.mode == Some(crate::game::types::MODE_PICK_DEFERRED)
+            || !modes.iter().any(|m| m.requires_target())
+        {
+            return None;
+        }
+        let choosable = modes
+            .iter()
+            .filter(|m| !m.requires_target() || self.auto_target_for_effect_avoiding(m, c, Some(pending.source)).is_some())
+            .count();
+        (choosable >= 2).then(|| modes.clone())
+    }
+
+    /// [`drain_trigger_queue`](Self::drain_trigger_queue), with the first
+    /// trigger's mode already chosen when `first_mode_settled` (the
+    /// `TriggerModePick` resume).
+    pub(crate) fn drain_trigger_queue_from(&mut self, queue: Vec<PendingTriggerPush>, first_mode_settled: bool) {
         // Nothing follows the walk below, so an empty queue has no work at
         // all — and that is the dispatch batch on ~97.5 % of dispatches.
         if queue.is_empty() {
             return;
         }
+        let mut mode_settled = first_mode_settled;
         // Don't stack up multiple pending decisions — if the engine
         // already suspended on something else we can't surface a target
         // picker, so the whole batch falls back to auto-targeting (the
@@ -28713,6 +28742,23 @@ impl GameState {
             self.trigger_event_amount_scratch = pending.event_amount;
             self.settle_trigger_time_x(&mut pending);
             self.settle_random_mode(&mut pending);
+            // CR 700.2a — a hand-paying controller picks a targeted modal's
+            // mode before its target (Fateshaper Aspirant's ETB took the
+            // automatic first legal mode).
+            if !std::mem::replace(&mut mode_settled, false)
+                && !force_auto
+                && let Some(modes) = self.trigger_mode_to_ask(&pending)
+            {
+                self.pending_decision = Some(Box::new(PendingDecision {
+                    decision: Decision::ChooseMode {
+                        source: pending.source,
+                        num_modes: modes.len(),
+                        mode_texts: crate::game::mode_texts(&modes),
+                    },
+                    resume: ResumeContext::TriggerModePick { pending, remaining: iter.collect() },
+                }));
+                return;
+            }
             // A player subject names the seat; otherwise the event's actor does
             // (the caster, for "becomes the target of a spell an opponent
             // controls" — Scalelord Reckoner's "that player"). Without the
@@ -30400,6 +30446,22 @@ impl GameState {
                 if let Some(all) = self.continue_trigger_ordering(ordered, rest) {
                     self.push_ordered_trigger_candidates(all);
                 }
+                vec![]
+            }
+            ResumeContext::TriggerModePick { mut pending, remaining } => {
+                let DecisionAnswer::Mode(i) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // CR 603.3c — a mode with no legal target can't be chosen: an
+                // answer naming one falls to the first that can.
+                if let Effect::ChooseMode(modes) = &pending.effect {
+                    let i = i.min(modes.len().saturating_sub(1));
+                    pending.mode = Some(self.legal_trigger_mode(modes, i, pending.source, pending.controller));
+                }
+                let mut queue = Vec::with_capacity(remaining.len() + 1);
+                queue.push(pending);
+                queue.extend(remaining);
+                self.drain_trigger_queue_from(queue, true);
                 vec![]
             }
             ResumeContext::TriggerTargetPick { pending, remaining, chooser, mut picked } => {

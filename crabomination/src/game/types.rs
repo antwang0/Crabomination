@@ -1575,6 +1575,7 @@ impl PendingDecision {
             }
             ResumeContext::Mulligan { player, .. } => *player,
             ResumeContext::TriggerTargetPick { pending, chooser, .. } => chooser.unwrap_or(pending.controller),
+            ResumeContext::TriggerModePick { pending, .. } => pending.controller,
             // The ordering run is a single controller's triggers.
             ResumeContext::TriggerOrder { run, .. } => {
                 run.first().map(|c| c.controller).unwrap_or(0)
@@ -1952,6 +1953,15 @@ pub enum ResumeContext {
     /// `pending` with the chosen target, then continue draining
     /// `remaining` (which may suspend again on the next targeted
     /// trigger).
+    /// CR 700.2a / 603.3c — a hand-paying seat (`Player::manual_mana`) picks
+    /// the mode of its modal trigger whose modes target, before the target:
+    /// target slots are bound at push time, so the pick can't defer to
+    /// resolution the way a targetless modal's does. On answer, `pending`
+    /// takes the mode and the queue drains on from it (asking its target).
+    TriggerModePick {
+        pending: PendingTriggerPush,
+        remaining: Vec<PendingTriggerPush>,
+    },
     TriggerTargetPick {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,

@@ -248,6 +248,40 @@ fn fateshaper_aspirant_returns_a_legend() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "non-legendary stays");
 }
 
+/// CR 700.2a — a hand-paying player picks Fateshaper Aspirant's ETB mode
+/// before its target: both modes target, so the pick used to be the
+/// automatic first legal mode and never reached the player (a play-test
+/// report). Mode 1 then asks for the creature.
+#[test]
+fn fateshaper_aspirant_asks_a_player_for_the_mode_then_the_target() {
+    use crabomination::decision::Decision;
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    g.add_card_to_graveyard(0, catalog::isamaru_hound_of_konda());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let a = g.add_card_to_hand(0, catalog::fateshaper_aspirant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: a, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("the mode is asked");
+    assert!(matches!(pd.decision, Decision::ChooseMode { num_modes: 2, .. }), "{:?}", pd.decision);
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Mode(1))).expect("mode");
+    let pd = g.pending_decision.as_ref().expect("then the target");
+    assert!(
+        matches!(&pd.decision, Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Permanent(bear))),
+        "{:?}",
+        pd.decision
+    );
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(bear)))).expect("target");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(b.has_keyword(&Keyword::Indestructible));
+}
+
 /// Snowslope Hunter: sacrifice an artifact to impulse the top card; a second
 /// activation the same turn is refused.
 #[test]
