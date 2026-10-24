@@ -258,8 +258,8 @@ pub fn critical_hit() -> CardDefinition {
 }
 
 /// Slight Malfunction — {1}{R} sorcery. Choose one — destroy target
-/// artifact; or roll a d6 and deal 1 damage to each of up to that many
-/// creatures (opponents' creatures, not targeted).
+/// artifact; or roll a d6 and, when you do, deal 1 damage to each of up to
+/// that many target creatures (CR 603.12 reflexive trigger).
 pub fn slight_malfunction() -> CardDefinition {
     CardDefinition {
         name: "Slight Malfunction",
@@ -272,12 +272,16 @@ pub fn slight_malfunction() -> CardDefinition {
                 vec![(
                     1,
                     6,
-                    Effect::DealDamage {
-                        to: Selector::take(
-                            Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
-                            Value::LastDieRoll,
-                        ),
-                        amount: Value::ONE,
+                    Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::CapTargetsAt {
+                            amount: Value::LastDieRoll,
+                            body: Box::new(Effect::ApplyToTargets {
+                                max_targets: 6,
+                                min_targets: 0,
+                                filter: R::Creature,
+                                effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE }),
+                            }),
+                        }),
                     },
                 )],
             ),

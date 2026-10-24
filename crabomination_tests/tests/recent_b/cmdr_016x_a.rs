@@ -2269,3 +2269,24 @@ fn line_cutter_rolls_to_visit() {
     cast(&mut g, lc, None).expect("line cutter");
     assert_eq!(g.battlefield_find(gob).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Slight Malfunction's die mode — "When you do, … 1 damage to each of up to
+/// X target creatures" (CR 603.12): a 3 aims at three creatures, chosen as
+/// the reflexive trigger goes on the stack — never a hexproof one (CR 702.11)
+/// — and a fourth is untouched.
+#[test]
+fn slight_malfunction_targets_up_to_the_result() {
+    let mut g = pod(2);
+    let bogle = ready(&mut g, 1, catalog::slippery_bogle());
+    let foes: Vec<CardId> = (0..4).map(|_| ready(&mut g, 1, catalog::llanowar_elves())).collect();
+    let sm = g.add_card_to_hand(0, catalog::slight_malfunction());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(3)]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: sm, target: None, additional_targets: vec![], mode: Some(1), x_value: None })
+        .expect("the die mode");
+    drain_stack(&mut g);
+    let dead = foes.iter().filter(|id| g.battlefield_find(**id).is_none()).count();
+    assert_eq!(dead, 3, "three of the four 1/1s");
+    assert!(g.battlefield_find(bogle).is_some(), "hexproof: never a target");
+}

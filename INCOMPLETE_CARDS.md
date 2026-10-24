@@ -2274,7 +2274,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Frostwalk Bastion | its {1}{S} animation makes a 2/3 Construct creature land but not an *artifact* | `Effect::BecomeCreature` |
 | 🟡 Winter's Chill | X isn't capped at your snow lands, and the "pay only {1}: prevent its combat damage" middle option is dropped — each target's controller pays {2} or it's destroyed at end of combat | `CapTargetsAtX` + `UnlessPlayerPays` |
 | 🟡 Rimewind Cryomancer | "target activated ability" is a permanent with an ability on the stack and no triggered one there | `HasAbilityOnStack ∧ ¬HasTriggeredAbilityOnStack` |
-| 🟡 Slight Malfunction | the d6 mode's "up to X target creatures" isn't targeted: it hits the first X creatures your opponents control | `Selector::take(…, LastDieRoll)` |
+| ~~Slight Malfunction~~ ✅ | fixed 2026-10-24: the die arm is a reflexive trigger over `CapTargetsAt { LastDieRoll, ApplyToTargets }` — targeted, up to the result | — |
 | ~~Critical Hit~~ ✅ | fixed 2026-10-24: triggers on `RolledNaturalMax` gated on a natural face of 20 (`LastRollFaceCount(20)`), so a modified 20 doesn't return it | — |
 | 🟡 Resolute Veggiesaur | when one roll of several dice spans your third die, every die of that roll reads the turn's count after the roll, so it can trigger more than once | `Value::DiceRolledThisTurn` |
 | 🟡 Xenosquirrels | the counter-for-a-shift choice is the headless pick for every seat (it only ever raises a die into a better arm or onto a named threshold; never lowers) | `StaticEffect::RemoveCounterToShiftDie` |

@@ -264,7 +264,7 @@ display names — a display-name count reads 0 for every row).
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes
 
-**CLAIMED (`01GE2zTS`, 2026-10-24, second half):** Irencrag Feat, Wanda's Vision, Spider-Verse, Slight Malfunction (INCOMPLETE 🟡 rows).
+**LANDED (`01GE2zTS`, second half):** Irencrag Feat (stale row), Wanda's Vision, Spider-Verse + Riveteers Ascendancy (`once_each_turn_on_take`), Slight Malfunction; Yasharn's ban on emerge / offering / casualty / bargain; Wretched Bonemass's keywords; ten Myojins' from-hand gate; five more Marvel modal-transform backs.
 
 No seats (the zero tier was a concurrent session's; this run worked INCOMPLETE's 🟡 rows ranked by how many seated
 decks hold the card).
