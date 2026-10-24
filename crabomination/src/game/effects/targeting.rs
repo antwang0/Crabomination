@@ -280,7 +280,7 @@ impl GameState {
         let gathers = prefer_friendly
             && accepts_player
             && eff.any_nested(&|e| matches!(e, Effect::AttachAnyNumberTo { .. }));
-        if accepts_player && !gathers {
+        if accepts_player && !gathers && !strips_counters(eff) {
             let player_primary = Target::Player(primary_player);
             if is_legal(&player_primary) { return Some(player_primary); }
             if prefer_friendly {
@@ -490,8 +490,11 @@ impl GameState {
             // utility creature with a 3/3 and a five-drop beside it. The
             // friendly branch above has always picked its best target;
             // only the hostile side was arbitrary.
+            // A counter strip wants a permanent that carries counters.
+            let strips = primary_candidates.len() > 1 && strips_counters(eff);
+            let bare = |cid: CardId| strips && self.battlefield.find_by_id(cid).is_some_and(|c| c.counter_sum() == 0);
             primary_candidates
-                .sort_by_cached_key(|c| (legend_copy(c.0), hostile_ward(c.0), std::cmp::Reverse(c.1)));
+                .sort_by_cached_key(|c| (legend_copy(c.0), hostile_ward(c.0), bare(c.0), std::cmp::Reverse(c.1)));
         }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
@@ -986,6 +989,9 @@ impl GameState {
         let opp = self
             .first_opponent_of(controller)
             .unwrap_or((controller + 1) % self.players.len());
+        // Asked lazily: most effects meet no player or counter question.
+        let strips = std::cell::OnceCell::new();
+        let strips = || *strips.get_or_init(|| strips_counters(eff));
         // Cap at 16 slots — no real card uses more than 4, but cap defensively.
         while slot < 16 {
             // "Destroy X target …": no slot past a known X.
@@ -1102,7 +1108,13 @@ impl GameState {
                             || additional.iter().skip(usize::from(first.saturating_sub(1))).any(|a| a == t)
                     })
                 };
-                if is_legal(&player_first) && !taken(&player_first) {
+                // A counter strip takes a player's poison only (CR 122.6):
+                // the caster's own when it has some, never an opponent's.
+                let strip_skip = |t: &Target| {
+                    matches!(t, Target::Player(p) if (*p != controller || self.players[*p].poison_counters == 0)
+                        && strips())
+                };
+                if is_legal(&player_first) && !taken(&player_first) && !strip_skip(&player_first) {
                     found = Some(player_first);
                 } else if let Some(t) = hostile
                     .then(|| {
@@ -1112,13 +1124,14 @@ impl GameState {
                         self.opponents_of(controller)
                             .into_iter()
                             .map(Target::Player)
-                            .find(|t| *t != player_first && is_legal(t) && !taken(t))
+                            .find(|t| *t != player_first && is_legal(t) && !taken(t) && !strip_skip(t))
                     })
                     .flatten()
                 {
                     found = Some(t);
                 } else if is_legal(&player_second)
                     && !taken(&player_second)
+                    && !strip_skip(&player_second)
                     && (second == controller || !gift())
                     // A hostile slot never falls back onto the caster's own
                     // face: the battlefield walk below ranks the other side
@@ -1228,7 +1241,7 @@ impl GameState {
                     // (PERF (-78)'s test 1). `min()` keeps the first of equal
                     // keys and the key ends in the id, so ties cannot happen;
                     // `<` reproduces it either way.
-                    let mut best: Option<(u8, bool, i32, CardId)> = None;
+                    let mut best: Option<(u8, bool, bool, i32, CardId)> = None;
                     for c in self.battlefield.iter() {
                         if already_picked.contains(&c.id)
                             || (per_opponent && picked_controllers.contains(&c.controller))
@@ -1244,7 +1257,9 @@ impl GameState {
                         let fan = prefer_friendly
                             && c.controller == controller
                             && copies_to_the_team(c);
-                        let key = (rank(c.id, c.controller), !fan, -power, c.id);
+                        // A counter strip wants a permanent carrying counters.
+                        let bare = c.counter_sum() == 0 && strips();
+                        let key = (rank(c.id, c.controller), !fan, bare, -power, c.id);
                         if best.is_none_or(|b| key < b) {
                             best = Some(key);
                         }
@@ -1443,4 +1458,10 @@ impl GameState {
             || self.players.iter().any(|p| !p.commanders.is_empty()))
             && eff.player_slot_is_hostile(slot, mode)
     }
+}
+
+/// A counter strip ("remove a counter from target permanent or opponent" —
+/// Etched Slith, Price of Betrayal): on a player it takes poison only.
+fn strips_counters(eff: &Effect) -> bool {
+    eff.any_nested(&|e| matches!(e, Effect::RemoveCountersUpTo { .. } | Effect::RemoveAnyCounter { .. }))
 }
