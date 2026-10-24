@@ -13394,6 +13394,7 @@ pub fn bannerhide_krushok() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Reinforce(2, cost(&[generic(1), g()]))],
+        activated_abilities: vec![crate::effect::shortcut::scavenge(cost(&[generic(5), g(), g()]))],
         ..Default::default()
     }
 }
@@ -22516,6 +22517,7 @@ pub fn monastery_mentor() -> CardDefinition {
                             creature_types: vec![CreatureType::Monk],
                             ..Default::default()
                         },
+                        keywords: vec![Keyword::Prowess],
                         triggered_abilities: vec![prowess_trigger()],
                         ..Default::default()
                     }),
@@ -37439,6 +37441,7 @@ pub fn bushy_bodyguard() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        keywords: vec![Keyword::Offspring(cost(&[generic(2)]))],
         triggered_abilities: vec![etb(Effect::Forage {
             then: Box::new(Effect::AddCounter {
                 what: Selector::This,

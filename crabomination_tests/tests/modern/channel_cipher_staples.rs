@@ -363,6 +363,17 @@ fn reinforce_bannerhide_krushok_puts_two_counters() {
     assert_eq!((t.power(), t.toughness()), (4, 4), "2/2 + two +1/+1 counters");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Krushok discarded as cost");
     assert!(g.battlefield_find(id).is_none(), "Krushok not on the battlefield");
+    // CR 702.97 — and Scavenge {5}{G}{G} from the graveyard: four more counters.
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: vec![], x_value: None, mode: None,
+    }).expect("scavenge");
+    drain_stack(&mut g);
+    let t = g.battlefield_find(target).expect("here");
+    assert_eq!((t.power(), t.toughness()), (8, 8), "plus Krushok's power in counters");
+    assert!(g.exile.iter().any(|c| c.id == id));
 }
 
 /// The reinforceable_hand affordance surfaces a Reinforce card only when the

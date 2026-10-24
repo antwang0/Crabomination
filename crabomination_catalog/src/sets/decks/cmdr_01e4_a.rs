@@ -8255,7 +8255,7 @@ pub fn start_finish() -> CardDefinition {
             "Start // Finish",
             cost(&[generic(2), w()]),
             CardType::Instant,
-            make(2, token("Warrior", 1, 1, vec![Color::White], vec![CreatureType::Warrior])),
+            make(2, TokenDefinition { keywords: vec![Keyword::Vigilance], ..token("Warrior", 1, 1, vec![Color::White], vec![CreatureType::Warrior]) }),
         )
     }
 }

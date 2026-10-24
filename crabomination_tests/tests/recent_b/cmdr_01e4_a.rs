@@ -3351,6 +3351,8 @@ fn start_then_finish() {
     let card = g.add_card_to_hand(0, catalog::start_finish());
     cast(&mut g, card, None);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Warrior").count(), 2);
+    let warrior = g.battlefield.iter().find(|c| c.definition.name == "Warrior").unwrap().id;
+    assert!(g.permanent_has_keyword(warrior, &Keyword::Vigilance), "1/1 Warriors with vigilance");
     let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
     flood(&mut g, 0);
     g.perform_action(GameAction::CastAftermath { card_id: card, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None })
