@@ -170678,3 +170678,32 @@ pub const ZELLIX_29_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const ISU_THE_ABOMINABLE_COMMANDERS: &[CardFactory] = &[isu_the_abominable];
+
+/// **Isu the Abominable**'s EDHREC average deck, card for card:
+/// 99 nonbasic cards = 99.
+/// Isu the Abominable (EDHREC, fetched 2026-10-24).
+pub const ISU_THE_ABOMINABLE_MAIN: &[CardFactory] = &[
+    arcane_signet, arcums_astrolabe, coldsteel_heart, hyldas_crown_of_winter, icebind_pillar,
+    replicating_ring, sol_ring, sunstone, arctic_flats, arctic_treeline, boreal_shelf,
+    command_tower, dark_depths, faceless_haven, frostwalk_bastion, glacial_floodplain,
+    mouth_of_ronom, rimewood_falls, scrying_sheets, shimmerdrift_vale, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    snow_covered_plains, snow_covered_plains, sparas_headquarters, thespians_stage,
+    abominable_treefolk, adarkar_valkyrie, ascendant_spirit, avalanche_caller,
+    azusa_lost_but_seeking, berg_strider, blizzard_strix, boreal_druid, boreal_outrider,
+    centaur_omenreader, conifer_wurm, diamond_faerie, frost_augur, frostpeak_yeti,
+    ice_fang_coatl, iceberg_cancrix, icebreaker_kraken, icehide_golem, moritte_of_the_frost,
+    ohran_frostfang, ohran_viper, pilfering_hawk, rime_tender, rimefeather_owl,
+    rimewind_cryomancer, sculptor_of_winter, spirit_of_the_aldergard, squall_drifter,
+    cover_of_winter, exploration, gelid_shackles, glacial_plating, glittering_frost,
+    marit_lages_slumber, on_thin_ice, snow_devil, the_three_seasons, winters_rest, beast_within,
+    counterspell, graven_lore, growth_spiral, path_to_exile, succumb_to_the_cold,
+    swords_to_plowshares, winters_chill, blessing_of_frost, blizzard_brawl, cultivate, farseek,
+    glacial_revelation, into_the_north, rampant_growth, search_for_glory,
+];

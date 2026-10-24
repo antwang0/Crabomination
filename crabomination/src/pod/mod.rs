@@ -36918,6 +36918,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZELLIX_29_COMMANDERS,
             main: decks::ZELLIX_29_MAIN,
         },
+        // Seat 6078: Isu the Abominable's EDHREC average deck. `--pod-decks 6078`.
+        PodDeck {
+            name: "Isu the Abominable (WUG)",
+            commanders: decks::ISU_THE_ABOMINABLE_COMMANDERS,
+            main: decks::ISU_THE_ABOMINABLE_MAIN,
+        },
     ]
 }
 
@@ -44956,6 +44962,7 @@ mod tests {
             ("The War Doctor and Ace, Fearless Rebel", &[0x21D1]),
             ("Wilson, Refined Grizzly and Guild Artisan", &[0x21D2]),
             ("Zellix, Sanity Flayer and Raised by Giants", &[0x21D3]),
+            ("Isu the Abominable", &[0x21D4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
