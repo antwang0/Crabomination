@@ -6671,7 +6671,9 @@ impl Effect {
             | Effect::UntapChosenPerCardInGraveyard { who, .. }
             | Effect::MayExileFromGraveyardElse { who, .. }
             | Effect::TradeSecrets { who, .. }
-            | Effect::ExileUntilDuplicateName { who, .. } => *who = PlayerRef::Seat(seat),
+            | Effect::ExileUntilDuplicateName { who, .. }
+            | Effect::Populate { who }
+            | Effect::SacrificeAndRemember { who, .. } => *who = PlayerRef::Seat(seat),
             _ => {}
         }
         out
