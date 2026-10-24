@@ -1674,7 +1674,8 @@ fn iroh_tea_master_donates_at_combat_for_a_grown_ally() {
     assert_eq!(ally.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1, "one per given permanent");
 }
 
-/// Ty Lee, Chi Blocker taps a creature and stops its next untap.
+/// Ty Lee, Chi Blocker taps a creature, which doesn't untap for as long as
+/// you control Ty Lee — two untap steps, not one.
 #[test]
 fn ty_lee_taps_and_locks() {
     let mut g = two_player_game();
@@ -1683,11 +1684,10 @@ fn ty_lee_taps_and_locks() {
     g.fire_self_etb_triggers(ty, 0);
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
-    assert!(g.battlefield_find(foe).unwrap().skip_next_untap, "untap lock set");
-    // It stays tapped through its controller's untap step.
     g.active_player_idx = 1;
     g.do_untap();
-    assert!(g.battlefield_find(foe).unwrap().tapped, "skips its next untap");
+    g.do_untap();
+    assert!(g.battlefield_find(foe).unwrap().tapped, "still locked while Ty Lee is ours");
 }
 
 /// The Boulder earthbends X = your power-4+ creatures when it attacks.

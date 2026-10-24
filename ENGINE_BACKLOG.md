@@ -249,7 +249,8 @@ No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they
   either shape.
 - **FIXED (primitive, CR 611.2b):** `Duration::WhileYouControlSource` → `EffectDuration::WhileSourceControlledBy { player }`,
   swept in the SBA pass only while one exists. Aegis Angel, Tale of Tinúviel, Extraction Specialist, Thancred Waters, There
-  and Back Again (each ended only when the source left).
+  and Back Again (each ended only when the source left); Tidebinder Mage and Ty Lee locked one untap, now
+  `TapAndLockWhileSourcePresent { while_you_control }`; Quicksmith Spy/Rebel's grants gate on control.
 - **FIXED (bot):** Livio's aegis exile — `keyword_shield` answers an opponent's targeted removal with an "its controller may
   exile it" ability and says yes while a hostile stack item aims at one of the seat's permanents; the battlefield reanimate
   sink activates an untargeted return-all-from-exile that brings back at least as many of the seat's cards as anyone's.
@@ -260,7 +261,7 @@ No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they
   1,514): 0 panics; undecided are CR 104.4a/b draws (Guile + Zellix + Altar of the Brood, Descent into Avernus, Divine
   Intervention, simultaneous losses) and one 8-seat Scute Swarm board cap.
 - **Open:** Pir's "your team" (no team pods); The Phasing of Zhalfir's lock ends with the Saga, not its control
-  (`PhaseOut { until_source_leaves }` has no control clause). Quicksmith Spy/Rebel: the grant is gated on controlling the chosen artifact, so it comes back if control returns.
+  (`PhaseOut { until_source_leaves }` has no control clause). Neko-Te's lock is one untap (`SkipNextUntap`; its trigger is granted to the creature, so `TapAndLockWhileSourcePresent` would key on the wrong source). Quicksmith Spy/Rebel: the grant is gated on controlling the chosen artifact, so it comes back if control returns.
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall
 

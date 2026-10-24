@@ -2966,14 +2966,8 @@ pub fn ty_lee_chi_blocker() -> CardDefinition {
             max_targets: 1,
             min_targets: 0,
             filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::Seq(vec![
-                Effect::Tap {
-                    what: Selector::Target(0),
-                },
-                Effect::SkipNextUntap {
-                    what: Selector::Target(0),
-                },
-            ])),
+            // "Doesn't untap … for as long as you control Ty Lee."
+            effect: Box::new(Effect::TapAndLockWhileSourcePresent { what: Selector::Target(0), while_you_control: true }),
         })],
         ..Default::default()
     }
