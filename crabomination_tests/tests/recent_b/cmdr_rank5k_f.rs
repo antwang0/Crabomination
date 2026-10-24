@@ -124,3 +124,28 @@ fn cr_106_6_vhal_mana_skips_spells_from_hand() {
     assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
 }
 
+
+/// Knight of Wundagore grows when ITS controller puts a +1/+1 counter on
+/// another creature — an opponent's included — not when an opponent puts one
+/// on a creature of ours.
+#[test]
+fn knight_of_wundagore_reads_who_put_the_counter() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    let knight = ready(&mut g, 0, catalog::knight_of_wundagore());
+    let ours = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let put = |on: CardId| Effect::AddCounter {
+        what: Selector::ExactObjects(vec![on]),
+        kind: CounterType::PlusOnePlusOne,
+        amount: crabomination::card::Value::ONE,
+    };
+    let evs = g.resolve_effect(&put(ours), &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(knight).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "opponent's counter");
+    let evs = g.resolve_effect(&put(theirs), &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(knight).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "ours on theirs");
+}

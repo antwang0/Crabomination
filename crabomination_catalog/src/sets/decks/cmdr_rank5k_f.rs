@@ -267,15 +267,13 @@ pub fn lizard_connorss_curse() -> CardDefinition {
 // ── Mister Hyde, Monster Within ──────────────────────────────────────────────
 
 /// Knight of Wundagore — {1}{G} 2/1 trample Cat Knight Villain. Once each
-/// turn, whenever a +1/+1 counter is put on another creature you control, a
+/// turn, whenever you put a +1/+1 counter on another creature (anyone's), a
 /// +1/+1 counter on it.
 pub fn knight_of_wundagore() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
-        // "Whenever you put a +1/+1 counter on another creature": read as a
-        // counter landing on another creature you control (INCOMPLETE_CARDS).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::YourControl)
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::YouPutCounters)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::OtherThanSource),
