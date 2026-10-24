@@ -1861,26 +1861,37 @@ fn rilsa_rael_initiative_and_deathtouch() {
 }
 
 /// Court of Locthwain: the monarch exiles an opponent's top card and may cast
-/// it free that turn.
+/// a spell from among the exiled cards free as the trigger resolves (CR
+/// 608.2g); a card it doesn't cast keeps its "play it while it stays exiled"
+/// permission past that turn.
 #[test]
 fn court_of_locthwain_steals_a_free_spell() {
     let mut g = pod(2);
     g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    stock_libraries(&mut g, 6);
     let court = g.add_card_to_hand(0, catalog::court_of_locthwain());
     flood(&mut g);
     cast(&mut g, court);
-    assert_eq!(g.monarch, Some(0));
+    g.players[0].mana_pool = Default::default();
     g.step = TurnStep::Upkeep;
+    // Not the monarch: the first exiled card waits.
+    g.monarch = Some(1);
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    let bear = g.exile.iter().find(|c| c.definition.name == "Grizzly Bears").expect("exiled").id;
-    g.players[0].mana_pool = Default::default();
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
-        .expect("free cast from exile");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(court)).count(), 1);
+    // The monarch: a second card is exiled and one of the two is cast free.
+    g.monarch = Some(0);
+    g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+    let left: Vec<CardId> = g.exile.iter().filter(|c| c.exiled_with == Some(court)).map(|c| c.id).collect();
+    assert_eq!(left.len(), 1, "one of the two was cast");
+    let playable = |g: &GameState| g.exile.iter().any(|c| c.id == left[0] && c.may_play_until.is_some_and(|p| p.player == 0));
+    // Past that turn (no free cast next upkeep: another seat is the monarch).
+    g.monarch = Some(1);
+    advance_to_turn_of(&mut g, 1);
+    advance_to_turn_of(&mut g, 0);
+    assert!(playable(&g), "the other keeps its play-while-exiled permission");
 }
 
 /// Court of Vantress: as the monarch, a token copy of another artifact.

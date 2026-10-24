@@ -2891,9 +2891,8 @@ pub fn rilsa_rael_kingpin() -> CardDefinition {
 
 /// Court of Locthwain — {2}{B}{B} Enchantment. Entering, you become the
 /// monarch. At your upkeep, exile the top card of target opponent's library;
-/// you may play it while it stays exiled, spending mana as any type. As the
-/// monarch, until end of turn you may cast a spell from among the cards
-/// exiled with it free.
+/// you may play it while it stays exiled, spending mana as any type. Then as
+/// the monarch you may cast a spell from among the cards exiled with it free.
 pub fn court_of_locthwain() -> CardDefinition {
     use crate::card::MayPlayDuration;
     CardDefinition {
@@ -2922,17 +2921,9 @@ pub fn court_of_locthwain() -> CardDefinition {
                 },
                 Effect::If {
                     cond: Predicate::IsMonarch { who: PlayerRef::You },
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::GrantMayPlay {
-                            what: Selector::CardExiledWithSource,
-                            duration: MayPlayDuration::EndOfThisTurn,
-                            to_owner: false,
-                            exile_after: false,
-                            pay_own_cost: false,
-                            any_color: false,
-                        },
-                        Effect::OneCastAmongGranted { what: Selector::CardExiledWithSource },
-                    ])),
+                    // Cast during the resolution (CR 608.2g), leaving every
+                    // other exiled card's lasting permission alone.
+                    then: Box::new(Effect::MayCastExiledWithSource { filter: R::Not(Box::new(R::Land)) }),
                     else_: Box::new(Effect::Noop),
                 },
             ])),
