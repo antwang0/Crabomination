@@ -395,6 +395,18 @@ pub fn seasoned_buttoneer() -> CardDefinition {
     )
 }
 
+/// Ride Guide — {4}{W} 4/4 Human Employee. ETB: open an Attraction.
+pub fn ride_guide() -> CardDefinition {
+    etb_opener(
+        "Ride Guide",
+        cost(&[generic(4), w()]),
+        vec![CreatureType::Human, CreatureType::Employee],
+        4,
+        4,
+        vec![],
+    )
+}
+
 /// Rad Rascal — {3}{R} 3/3 Devil. ETB: open an Attraction.
 pub fn rad_rascal() -> CardDefinition {
     etb_opener(

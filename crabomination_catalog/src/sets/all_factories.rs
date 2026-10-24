@@ -31671,6 +31671,7 @@ static UNF: &[Factory] = &[
     super::unf::petting_zookeeper,
     super::unf::seasoned_buttoneer,
     super::unf::rad_rascal,
+    super::unf::ride_guide,
     super::unf::quick_fixer,
     super::unf::coming_attraction,
     super::unf::the_most_dangerous_gamer,
