@@ -248,8 +248,9 @@ pub fn critical_hit() -> CardDefinition {
             duration: Duration::EndOfTurn,
         },
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Performed(KeywordAct::DieResult), EventScope::FromYourGraveyard)
-                .with_filter(Predicate::DieResultAtLeast(20)),
+            // A natural 20 is the face, not the result (a d20 at its max face).
+            event: EventSpec::new(EventKind::RolledNaturalMax, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::ValueAtLeast(Value::LastRollFaceCount(20), Value::ONE)),
             effect: Effect::Move { what: Selector::This, to: crate::effect::ZoneDest::Hand(PlayerRef::You) },
         }],
         ..Default::default()

@@ -2283,7 +2283,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Winter's Chill | X isn't capped at your snow lands, and the "pay only {1}: prevent its combat damage" middle option is dropped — each target's controller pays {2} or it's destroyed at end of combat | `CapTargetsAtX` + `UnlessPlayerPays` |
 | 🟡 Rimewind Cryomancer | "target activated ability" is a permanent with an ability on the stack and no triggered one there | `HasAbilityOnStack ∧ ¬HasTriggeredAbilityOnStack` |
 | 🟡 Slight Malfunction | the d6 mode's "up to X target creatures" isn't targeted: it hits the first X creatures your opponents control | `Selector::take(…, LastDieRoll)` |
-| 🟡 Critical Hit | any die result of 20 or more returns it (a modified d20 too), not only a natural 20 | `DieResult` + `DieResultAtLeast(20)` |
+| ~~Critical Hit~~ ✅ | fixed 2026-10-24: triggers on `RolledNaturalMax` gated on a natural face of 20 (`LastRollFaceCount(20)`), so a modified 20 doesn't return it | — |
 | 🟡 Resolute Veggiesaur | when one roll of several dice spans your third die, every die of that roll reads the turn's count after the roll, so it can trigger more than once | `Value::DiceRolledThisTurn` |
 | 🟡 Xenosquirrels | the counter-for-a-shift choice is the headless pick for every seat (it only ever raises a die into a better arm or onto a named threshold; never lowers) | `StaticEffect::RemoveCounterToShiftDie` |
 | 🟡 Bamboozling Beeble | the ignored die is chosen by rule, not asked: an opponent's best face, a friendly roll's worst | `Effect::NextRollExtraDieThisTurn` |

@@ -2112,6 +2112,33 @@ fn critical_hit_returns_on_a_natural_twenty() {
     assert!(g.players[0].hand.iter().any(|c| c.id == ch));
 }
 
+/// Critical Hit — "A natural 20 is a roll that displays 20 on the die" (CR
+/// 706.2): a 19 raised to 20 by a modifier doesn't return it.
+#[test]
+fn critical_hit_ignores_a_modified_twenty() {
+    use crabomination::effect::{Effect, Value};
+    let mut g = pod(2);
+    let ch = g.add_card_to_graveyard(0, catalog::critical_hit());
+    let src = ready(&mut g, 0, catalog::grizzly_bears());
+    let roll = |modifier| Effect::RollDie {
+        sides: 20,
+        count: Value::ONE,
+        modifier: Value::Const(modifier),
+        reroll_at_most: 0,
+        ignore_lowest: 0,
+        results: vec![],
+        on_doubles: None,
+    };
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(19)]));
+    g.stack.push(TriggerPush::new(src, 0, roll(1)).build());
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ch), "19 + 1 is not a natural 20");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(20)]));
+    g.stack.push(TriggerPush::new(src, 0, roll(-1)).build());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ch), "a natural 20, whatever the modifier");
+}
+
 /// Priority Boarding exiles a top card cheaper than the result to play.
 #[test]
 fn priority_boarding_impulses_under_the_roll() {
