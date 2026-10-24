@@ -32,7 +32,8 @@ PLAYER_SIDE = re.compile(r"IsAttackingOpponentPlayer|on_attack_player|YouAttacke
 ONE_OR_MORE = re.compile(r"whenever one or more [^.]{0,60}? deal combat damage to (?:a player|an opponent|one or more players)", re.I)
 # Forth Eorlingas!: its own delayed effect, and becoming the monarch twice is
 # becoming it once.
-BATCH_ALLOW = {"Killian's Confidence", "Forth Eorlingas!"}
+BATCH_ALLOW = {"Killian's Confidence", "Forth Eorlingas!",
+               "Jacob Frye"}  # its quoted name lands on Evie Frye's PartnerWith; its own body is `yours_hit`
 TEXT = re.compile(r"combat damage to a player or (?:a )?planeswalker|combat damage to an opponent or (?:a )?planeswalker", re.I)
 
 
@@ -75,7 +76,8 @@ def main():
     src.update(bodies([n for n in batchers if n not in src]))
     rows += sorted(f"{n}\t(one or more: no batch)" for n in batchers
                    if n in src and "once_per_batch" not in src[n] and "your_creatures_hit" not in src[n]
-                   and "_connect(" not in src[n])
+                   and "_connect(" not in src[n] and "yours_hit(" not in src[n]
+                   and "DealingCombatDamageBatch" not in src[n])
     print("\n".join(rows))
     print(f"# {len(rows)} rows ({len(hits)} damage, {len(attackers)} attack, {len(batchers)} one-or-more cards)",
           file=sys.stderr)
