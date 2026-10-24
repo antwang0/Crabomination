@@ -2038,7 +2038,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Chandra, Acolyte of Flame | −2 grants the card flashback for the turn instead of casting it while the ability resolves | `Effect::GrantFlashbackThisTurn` stands in for a paid cast-now from the graveyard |
 | 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |
 | 🟡 Liliana of the Dark Realms | the −3's "+X/+X or −X/−X" sign follows the target's controller (+X on yours, −X on another's), not a free choice | a loyalty activation carries no mode (`GameAction::ActivateLoyaltyAbility`); the collapse is the dominant line |
-| 🟡 Teferi, Temporal Pilgrim | the −12 skips "target opponent chooses a permanent they control and returns it to its owner's hand" before the shuffle | the shuffle half is `Move` of their nonland permanents; the chosen-then-bounced permanent needs an opponent's pick bound beside a player target |
+| ~~Teferi, Temporal Pilgrim~~ ✅ | fixed 2026-10-24: the −12 runs `EachPlayerDoes { Target(0) }` over a `MoveChosen` to hand before the shuffle — the opponent's pick, not a target | — |
 | 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
 | 🟡 Briarbridge Patrol | "deals damage to one or more creatures" investigates once per creature damaged | `EventKind::DealsDamageToCreature` fires per damage event |
 | 🟡 Rhys, the Evermore | "remove any number of counters" removes all of them | `Effect::RemoveAllCounters`; there is no any-number counter choice |

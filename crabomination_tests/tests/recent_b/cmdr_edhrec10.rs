@@ -378,6 +378,23 @@ fn teferi_temporal_pilgrim_grows_on_draws() {
     assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::Loyalty), 5);
 }
 
+/// Teferi, Temporal Pilgrim's −12: the target opponent chooses a permanent
+/// they control to return to hand (their choice, not a target — CR 115.10),
+/// then every other nonland permanent of theirs is shuffled away.
+#[test]
+fn teferi_temporal_pilgrim_ultimate_saves_one_permanent() {
+    let mut g = pod(2);
+    let t = walker(&mut g, catalog::teferi_temporal_pilgrim(), 12);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let land = ready(&mut g, 1, catalog::forest());
+    walk(&mut g, t, 2, Some(Target::Player(1))).expect("-12");
+    let in_hand = |id| g.players[1].hand.iter().any(|c| c.id == id);
+    assert_eq!([angel, bear].iter().filter(|id| in_hand(**id)).count(), 1, "one permanent back to hand");
+    assert!(g.battlefield_find(angel).is_none() && g.battlefield_find(bear).is_none(), "the rest shuffled");
+    assert!(g.battlefield_find(land).is_some() || in_hand(land), "lands are not shuffled");
+}
+
 /// Treefolk Umbra: the host deals combat damage by toughness (0/4 Wall of
 /// Omens + 0/2 hits for 6 — but walls can't attack, so a 2/2 Bears hits for 4).
 #[test]

@@ -536,9 +536,9 @@ pub fn basri_ket() -> CardDefinition {
 
 /// Teferi, Temporal Pilgrim — {3}{U}{U}, loyalty 4. Each card you draw adds a
 /// loyalty counter. 0: draw. −2: a 2/2 vigilance Spirit that grows as you
-/// draw. −12: target opponent shuffles each nonland permanent they control
-/// into its owner's library. Residual: the −12's "chooses a permanent they
-/// control and returns it to its owner's hand" first is not modelled.
+/// draw. −12: target opponent chooses a permanent they control and returns
+/// it to its owner's hand, then shuffles each nonland permanent they control
+/// into its owner's library.
 pub fn teferi_temporal_pilgrim() -> CardDefinition {
     let on_draw = |effect: Effect| TriggeredAbility { event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl), effect };
     let spirit = TokenDefinition {
@@ -566,10 +566,23 @@ pub fn teferi_temporal_pilgrim() -> CardDefinition {
                 loyalty(-2, make(PlayerRef::You, Value::ONE, spirit)),
                 loyalty(-12, Effect::TargetPlayerThen {
                     filter: R::OpponentPlayer,
-                    then: Box::new(Effect::Move {
-                        what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Permanent.and(R::Not(Box::new(R::Land))) },
-                        to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Shuffled },
-                    }),
+                    then: Box::new(Effect::Seq(vec![
+                        // Their choice, not a target (CR 115.10).
+                        Effect::EachPlayerDoes {
+                            who: PlayerRef::Target(0),
+                            body: Box::new(Effect::MoveChosen {
+                                from: Selector::ControlledBy { who: PlayerRef::You, filter: R::Permanent },
+                                filter: None,
+                                count: Value::ONE,
+                                up_to: false,
+                                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                            }),
+                        },
+                        Effect::Move {
+                            what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Permanent.and(R::Not(Box::new(R::Land))) },
+                            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Shuffled },
+                        },
+                    ])),
                 }),
             ],
         )
