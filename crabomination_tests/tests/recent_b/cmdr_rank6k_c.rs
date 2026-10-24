@@ -252,6 +252,9 @@ fn beorns_hospitality_landfalls() {
     assert_eq!(plus(&g, bear), 1);
     activate(&mut g, bh, 0, None);
     assert_eq!(pt(&g, bh), (1, 1));
+    // The gained "P/T equal to the lands you control" keeps counting.
+    ready(&mut g, 0, catalog::forest());
+    assert_eq!(pt(&g, bh), (2, 2));
 }
 
 /// CR 702.27 — Wurmcalling makes an X/X and buys itself back.

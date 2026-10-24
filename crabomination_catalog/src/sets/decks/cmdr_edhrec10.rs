@@ -415,6 +415,14 @@ pub fn liliana_of_the_dark_realms() -> CardDefinition {
         toughness: if sign { swamps() } else { Value::Diff(Box::new(Value::Const(0)), Box::new(swamps())) },
         duration: Duration::EndOfTurn,
     };
+    let sign = |plus_first: bool| Effect::PlayerChoosesOne {
+        who: PlayerRef::You,
+        options: if plus_first {
+            vec![VoteOption::new("+X/+X", pump(true)), VoteOption::new("-X/-X", pump(false))]
+        } else {
+            vec![VoteOption::new("-X/-X", pump(false)), VoteOption::new("+X/+X", pump(true))]
+        },
+    };
     walker(
         "Liliana of the Dark Realms",
         cost(&[generic(2), b(), b()]),
@@ -426,10 +434,12 @@ pub fn liliana_of_the_dark_realms() -> CardDefinition {
                 filter: R::HasLandType(LandType::Swamp),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
+            // The sign is chosen as the ability resolves (ruling); headless,
+            // +X on your creature and −X on another's.
             loyalty(-3, Effect::If {
                 cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ControlledByYou },
-                then: Box::new(pump(true)),
-                else_: Box::new(pump(false)),
+                then: Box::new(sign(true)),
+                else_: Box::new(sign(false)),
             }),
             loyalty(-6, emblem("Liliana of the Dark Realms", vec![], vec![land_grant(
                 "Swamps you control have '{T}: Add {B}{B}{B}{B}.'",

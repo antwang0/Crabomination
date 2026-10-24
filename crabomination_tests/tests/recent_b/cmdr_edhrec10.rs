@@ -296,7 +296,7 @@ fn walker(g: &mut GameState, def: crabomination::card::CardDefinition, loyalty: 
 fn liliana_of_the_dark_realms_counts_swamps() {
     let mut g = pod(2);
     g.add_card_to_library(0, catalog::swamp());
-    let lili = walker(&mut g, catalog::liliana_of_the_dark_realms(), 12);
+    let lili = walker(&mut g, catalog::liliana_of_the_dark_realms(), 15);
     walk(&mut g, lili, 0, None).expect("+1");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Swamp"));
     let swamp = ready(&mut g, 0, catalog::swamp());
@@ -310,6 +310,12 @@ fn liliana_of_the_dark_realms_counts_swamps() {
     reset(&mut g);
     walk(&mut g, lili, 1, Some(perm(theirs))).expect("-3 on theirs");
     assert!(g.battlefield_find(theirs).is_none(), "-2/-2 kills a 2/2");
+    // Ruling: the sign is chosen as the ability resolves, not by whose
+    // creature it is — the controller may shrink their own.
+    reset(&mut g);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(1)]));
+    walk(&mut g, lili, 1, Some(perm(mine))).expect("-3 shrinking mine");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 2, "+2 then -2 this turn");
     reset(&mut g);
     walk(&mut g, lili, 2, None).expect("-6");
     g.priority.player_with_priority = 0;

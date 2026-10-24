@@ -413,14 +413,18 @@ pub fn beorns_hospitality() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5), g(), g()]),
-            effect: Effect::BecomeCreature {
-                what: Selector::This,
-                power: lands(),
-                toughness: lands(),
-                creature_types: vec![CreatureType::Bear],
-                keywords: vec![],
-                duration: Duration::Permanent,
-            },
+            // The gained P/T ability keeps counting (`SetBasePtLive`).
+            effect: Effect::Seq(vec![
+                Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    creature_types: vec![CreatureType::Bear],
+                    keywords: vec![],
+                    duration: Duration::Permanent,
+                },
+                Effect::SetBasePtLive { what: Selector::This, power: lands(), toughness: lands(), duration: Duration::Permanent },
+            ]),
             ..Default::default()
         }],
         ..spell(
