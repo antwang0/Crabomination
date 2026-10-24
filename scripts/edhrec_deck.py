@@ -80,7 +80,10 @@ def report(page, fns):
     print(", ".join(main + [slug(b) for b, k in basics.items() for _ in range(k)]))
 
 
-def rust(page, fns, const, name, theme):
+BASIC_OF = {"W": "Plains", "U": "Island", "B": "Swamp", "R": "Mountain", "G": "Forest"}
+
+
+def rust(page, fns, const, name, theme, identity=""):
     """A pod seat's `CONST_COMMANDERS` / `CONST_MAIN` for `pod/decks.rs`."""
     import textwrap
     printed = by_printed_name()
@@ -103,6 +106,12 @@ def rust(page, fns, const, name, theme):
         top = max(basics, key=basics.get)
         basics[top] += short
         theme += f" EDHREC's average is {short} short; {short} more {top} fill it."
+    elif short > 0 and identity:
+        # No basic to copy (a cEDH list): the identity's basics in WUBRG turn.
+        kinds = [BASIC_OF[c] for c in identity if c in BASIC_OF] or ["Wastes"]
+        for i in range(short):
+            basics[kinds[i % len(kinds)]] = basics.get(kinds[i % len(kinds)], 0) + 1
+        theme += f" EDHREC's average is {short} short and has no basics; the identity's basics fill it."
     plural = lambda n, k: f"{k} {n}" + ("" if k == 1 or n.endswith("s") else "s")
     wrap = lambda t: textwrap.fill(t, 96, initial_indent="    ", subsequent_indent="    ")
     doc = textwrap.fill(f"{name} {theme}", 92, initial_indent="/// ", subsequent_indent="/// ")

@@ -65,7 +65,7 @@ def main():
         label = f"{title} ({identity(cmd_names)})"
         buf = io.StringIO()
         with redirect_stdout(buf):
-            e.rust(page, fns, const, title, f"(EDHREC, fetched {datetime.date.today()}).")
+            e.rust(page, fns, const, title, f"(EDHREC, fetched {datetime.date.today()}).", identity(cmd_names).replace("C", ""))
         decks_rs += buf.getvalue()
         seat += 1
         seed += 1
