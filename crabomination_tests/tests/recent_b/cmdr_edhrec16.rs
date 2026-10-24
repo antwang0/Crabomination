@@ -332,6 +332,24 @@ fn cr_614_1a_kenessos_scries_one_more() {
     );
 }
 
+/// Kenessos's look: a sea creature may enter; anything left on top may go
+/// to the bottom (the printed second "may").
+#[test]
+fn kenessos_puts_a_sea_creature_in_or_a_miss_on_the_bottom() {
+    let mut g = pod(2);
+    let kraken = g.add_card_to_library(0, catalog::kraken_hatchling());
+    let miss = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let k = ready(&mut g, 0, catalog::kenessos_priest_of_thassa());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, k, 0, None).expect("look");
+    assert!(g.battlefield_find(kraken).is_some(), "the Kraken enters");
+    g.battlefield_find_mut(k).unwrap().tapped = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, k, 0, None).expect("look again");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(miss), "the miss went to the bottom");
+}
+
 /// Joint Exploration kicked drops a land from hand.
 #[test]
 fn joint_exploration_kicked_drops_a_land() {

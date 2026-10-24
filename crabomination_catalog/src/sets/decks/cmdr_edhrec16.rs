@@ -563,13 +563,20 @@ pub fn rob_the_archives() -> CardDefinition {
 
 /// Kenessos, Priest of Thassa — {1}{U} 1/3 Merfolk Cleric. Scry one more. {3}{G/U}:
 /// look at the top card; a Kraken, Leviathan, Octopus or Serpent creature card
-/// may go onto the battlefield (a declined card stays on top — the "may put it
-/// on the bottom" half is INCOMPLETE_CARDS).
+/// may go onto the battlefield; a card not put there may go on the bottom.
 pub fn kenessos_priest_of_thassa() -> CardDefinition {
     let sea = R::HasCreatureType(CreatureType::Kraken)
         .or(R::HasCreatureType(CreatureType::Leviathan))
         .or(R::HasCreatureType(CreatureType::Octopus))
         .or(R::HasCreatureType(CreatureType::Serpent));
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    let bottom = || Effect::MayDo {
+        description: "Put the top card of your library on the bottom?".into(),
+        body: Box::new(Effect::Move {
+            what: top(),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
+        }),
+    };
     CardDefinition {
         static_abilities: vec![static_ab(
             "If you would scry a number of cards, scry that many cards plus one instead.",
@@ -577,11 +584,17 @@ pub fn kenessos_priest_of_thassa() -> CardDefinition {
         )],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), hybrid(Color::Green, Color::Blue)]),
-            effect: Effect::RevealTopMayPutOntoBattlefield {
-                who: PlayerRef::You,
-                filter: R::Creature.and(sea),
-                counter: None,
-                extra_types: vec![],
+            effect: Effect::If {
+                cond: Predicate::EntityMatches { what: top(), filter: R::Creature.and(sea) },
+                then: Box::new(Effect::MayDoElse {
+                    description: "Put it onto the battlefield?".into(),
+                    body: Box::new(Effect::Move {
+                        what: top(),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                    else_: Box::new(bottom()),
+                }),
+                else_: Box::new(bottom()),
             },
             ..Default::default()
         }],
