@@ -1810,7 +1810,8 @@ pub fn essence_reliquary() -> CardDefinition {
 }
 
 /// Etched Slith — {1}{B} 1/1 Artifact Phyrexian Slith. Menace. Whenever it
-/// deals combat damage to a player, put a +1/+1 counter on it.
+/// deals combat damage to a player, put a +1/+1 counter on it. When you do,
+/// you may remove a counter from another target permanent or opponent.
 pub fn etched_slith() -> CardDefinition {
     CardDefinition {
         name: "Etched Slith",
@@ -1825,11 +1826,18 @@ pub fn etched_slith() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            },
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::MayDo {
+                        description: "Remove a counter from another target permanent or opponent?".into(),
+                        body: Box::new(Effect::RemoveCountersUpTo {
+                            what: target_filtered(R::Permanent.and(R::OtherThanSource).or(R::OpponentPlayer)),
+                            amount: Value::ONE,
+                        }),
+                    }),
+                },
+            ]),
         }],
         ..Default::default()
     }

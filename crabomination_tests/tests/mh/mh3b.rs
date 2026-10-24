@@ -428,11 +428,15 @@ fn essence_reliquary_bounces_own() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "to owner's hand");
 }
 
-/// Etched Slith grows when it deals combat damage to a player.
+/// Etched Slith grows when it deals combat damage to a player; "when you do"
+/// (CR 603.12 reflexive trigger) it removes a counter from another permanent.
 #[test]
 fn etched_slith_grows_on_combat_damage() {
     let mut g = two_player_game();
     let slith = g.add_card_to_battlefield(0, catalog::etched_slith());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.clear_sickness(slith);
     advance_to(&mut g, crabomination::game::TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: slith, target: AttackTarget::Player(1) }])).expect("attack");
@@ -440,6 +444,7 @@ fn etched_slith_grows_on_combat_damage() {
     advance_to(&mut g, crabomination::game::TurnStep::CombatDamage);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(slith).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "one counter removed");
 }
 
 /// The view surfaces CR 700.9 "modified" so the client can badge modified

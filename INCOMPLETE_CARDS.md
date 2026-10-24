@@ -564,7 +564,7 @@ off by name rather than fixes, both filed here:
 | Card | Residual |
 | --- | --- |
 | ~~Quartzwood Crasher~~ ✅ | Stale row (checked 2026-09-28, `01MgDzfC`): the trigger is `once_per_batch_summing_damage()` — X is the batch's summed damage to that player. |
-| Magmatic Galleon | 🟡 "Whenever one or more creatures your opponents control are dealt **excess** noncombat damage, create a Treasure token" is not modelled at all — only the ETB 5 damage ships. Needs excess-damage tracking (CR 120.3c), which no primitive carries. |
+| ~~Magmatic Galleon~~ ✅ | Stale row (checked 2026-10-24): the Treasure trigger is `DealtExcessDamage { noncombat_only: true }` scoped to opponents' creatures, `once_per_batch()` (`586474bda`); tested in `recent_b/cmdr_edhrec18.rs`. |
 
 ## Cultural Exchange's two player slots (2026-09-20)
 
@@ -767,9 +767,9 @@ and two of them are real approximations rather than false positives:
 
 | Card | Residual |
 | --- | --- |
-| Jackdaw Savior | 🟡 "another" is other than the creature that **died**, not other than the Savior. The two coincide only when the Savior itself dies; no `SelectionRequirement` names the trigger source, so the restriction is dropped. |
+| ~~Jackdaw Savior~~ ✅ | Not a gap (checked 2026-10-24): the target needs mana value **less than** the dying creature's (`R::ManaValueLessThanEventAmount`), so the creature that died can never be it — "another" is implied by the MV filter. |
 | Blade of Shared Souls | 🟡 "another" is other than the creature the Equipment is **attached to**, which is not the source either. Same gap, same missing ref. |
-| Etched Slith | 🟡 the whole "when you do, remove a counter from another target permanent or opponent" clause is unmodelled — only the +1/+1 counter ships. |
+| ~~Etched Slith~~ ✅ | Fixed 2026-10-24: the "when you do" is a `ReflexiveTrigger` over a `MayDo` `RemoveCountersUpTo` targeting another permanent or an opponent. |
 | Fiendish Panda | ✅ not a gap: the printed filter is "another target **non-Bear** creature card" and the Panda is a Bear Demon, so the type line already excludes it. |
 | Atzocan Archer / Nessian Wilds Ravager | 🟡 "may have it fight **another** target creature" is narrowed to "a creature you don't control" **on purpose**. The "may" is answered by `optional_trigger_beneficial`, which takes a body with no self-cost; the picker's last-resort rank then hands a mandatory defender slot the bot's *own* creature on a board with no opposing one. A narrowing never allows an illegal play, which is what this class is about. |
 
