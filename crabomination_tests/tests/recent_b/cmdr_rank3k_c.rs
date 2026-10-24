@@ -574,6 +574,22 @@ fn leatherhead_trades_her_counter() {
     assert!(g.battlefield_find(ring).is_none());
 }
 
+/// CR 614.1c / 122.6 — Leatherhead's hexproof counter is a replacement on
+/// her entry, not a trigger: she has it the moment she lands, however she
+/// arrives, with nothing on the stack for it.
+#[test]
+fn leatherhead_enters_already_hexproof() {
+    let mut g = pod(2);
+    let gator = g.add_card_to_graveyard(0, catalog::leatherhead_swamp_stalker());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let to = crabomination::effect::ZoneDest::Battlefield { controller: crabomination::effect::PlayerRef::You, tapped: false };
+    let evs = g.resolve_effect(&Effect::Move { what: Selector::ExactObjects(vec![gator]), to }, &ctx).expect("reanimate");
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.stack.is_empty(), "no entry trigger to respond to");
+    assert_eq!(g.battlefield_find(gator).unwrap().keyword_counters.get(&Keyword::Hexproof).copied(), Some(1));
+    assert!(g.computed_permanent(gator).unwrap().keywords().contains(&Keyword::Hexproof));
+}
+
 /// The Duke moves his counter and hexproof to another creature.
 #[test]
 fn the_duke_passes_his_counter() {

@@ -2024,7 +2024,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Scuttlemutt | "the color or colors of your choice" names one color | `BecomeChosenColor` asks for a single color |
 | 🟡 Scrounging Bandar | "any number of +1/+1 counters" offers its counters of every kind | `MoveAnyNumberOfCounters` has no kind filter; the card only ever gets +1/+1 counters of its own |
 | 🟡 Shelob, Child of Ungoliant; Supper for Spiders | the copy / the returned cards enter as the creature and become Food artifacts right after (CR 707.9b / 614.1c want them to enter as Food) | `CreateTokenCopyOf` and `Move` have no type-replacing entry rider; `Effect::BecomeFoodArtifact` rewrites them on the battlefield |
-| ~~Myojin of Cryptic Dreams~~ ✅ | checked 2026-10-24: an entry trigger, but gated on the cast from hand, and the keyword counter lands before priority — `myojins_count_only_a_cast_from_hand` | — |
+| ~~Myojin of Cryptic Dreams~~ ✅ | fixed 2026-10-24: enters with the counter (`SelfEntersWithKeywordCounter{if_cast_from_hand}`, also Grim Betrayal), no trigger window — `myojins_count_only_a_cast_from_hand` | — |
 | 🟡 Goldberry, River-Daughter | "move one or more counters" moves all of hers; "a counter of each kind" skips keyword counters | `MoveAllCounters` (one of the legal choices) stands in for the pick; `MoveOneOfEachAbsentKind` walks the counter bag only |
 | ~~Court of Locthwain~~ ✅ | fixed 2026-10-24: the monarch's free cast is `MayCastExiledWithSource` during the resolution, so no exiled card's lasting permission is replaced | — |
 | 🟡 Elemental Teachings | the four lands and the opponent's two are picked by `SearchSplitWithOpponent`'s heuristic (library order; the first two denied), not asked of either seat | the split has no decision of its own; Ecological Appreciation shares it |
@@ -2142,7 +2142,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
 | 🟡 Dread | like No Mercy, damage from your own creatures is not watched | `PlayerDamaged` scoped to opponents' sources |
 | 🟡 Mister Hyde, Monster Within | the removed counter is always a +1/+1 counter | `RemoveCountersFromAmongThen` names one kind |
-| 🟡 Leatherhead, Swamp Stalker | the hexproof counter arrives on an entry trigger, not as it enters | `etb` + `AddCounter` |
+| ~~Leatherhead, Swamp Stalker~~ ✅ | fixed 2026-10-24: `StaticEffect::SelfEntersWithKeywordCounter` puts the hexproof counter on as she enters (CR 614.1c) — `leatherhead_enters_already_hexproof` | — |
 | 🟡 The Duke, Rebel Sentry | the cost removes a +1/+1 counter, the only kind he enters with | `remove_counter_cost` |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |

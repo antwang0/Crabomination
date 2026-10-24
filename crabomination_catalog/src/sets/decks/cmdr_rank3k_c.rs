@@ -867,8 +867,11 @@ pub fn baru_fist_of_krosa() -> CardDefinition {
 pub fn leatherhead_swamp_stalker() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Leatherhead enters with a hexproof counter on her.",
+            effect: crate::effect::StaticEffect::SelfEntersWithKeywordCounter { keyword: Keyword::Hexproof, if_cast_from_hand: false },
+        }],
         triggered_abilities: vec![
-            etb(Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Hexproof, amount: Value::ONE }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
                     .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {

@@ -342,13 +342,11 @@ pub fn invoke_the_ancients() -> CardDefinition {
 /// from anywhere this turn.
 pub fn myojin_of_grim_betrayal() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                .with_filter(Predicate::CastFromHand),
-            effect: Effect::AddKeywordCounter {
-                what: Selector::This,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Myojin of Grim Betrayal enters with an indestructible counter on it if you cast it from your hand.",
+            effect: crate::effect::StaticEffect::SelfEntersWithKeywordCounter {
                 keyword: Keyword::Indestructible,
-                amount: Value::ONE,
+                if_cast_from_hand: true,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
