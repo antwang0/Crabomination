@@ -19129,6 +19129,14 @@ static DECKS: &[Factory] = &[
     super::decks::snow_devil,
     super::decks::glacial_plating,
     super::decks::cover_of_winter,
+    super::decks::barging_sergeant,
+    super::decks::bladeback_sliver,
+    super::decks::hellkite_whelp,
+    super::decks::voldaren_duelist,
+    super::decks::prophetic_ravings,
+    super::decks::volatile_claws,
+    super::decks::precision_bolt,
+    super::decks::vandalize,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

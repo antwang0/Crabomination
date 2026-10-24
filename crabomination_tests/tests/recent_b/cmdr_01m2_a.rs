@@ -151,3 +151,99 @@ fn cover_of_winter_shaves_creature_combat_damage() {
     g.dispatch_triggers_for_events(&ev);
     assert_eq!(g.players[0].life, life - 1, "2 power, 1 prevented");
 }
+
+fn flood(g: &mut GameState, seat: usize) {
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[seat].mana_pool.add(c, 3);
+    }
+    g.players[seat].mana_pool.add_colorless(6);
+}
+
+/// Bladeback Sliver: hellbent — only an empty hand gives Slivers the ping.
+#[test]
+fn bladeback_sliver_pings_only_when_hellbent() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let sliver = ready(&mut g, 0, catalog::bladeback_sliver());
+    g.add_card_to_hand(0, catalog::island());
+    let ping = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sliver,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(ping(&mut g).is_err(), "a card in hand");
+    g.players[0].hand.clear();
+    let life = g.players[1].life;
+    ping(&mut g).expect("hellbent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}
+
+/// CR 506.2 — Hellkite Whelp's attack ping hits a creature of the player it
+/// attacks, not another opponent's (three seats).
+#[test]
+fn hellkite_whelp_pings_the_defending_players_creature() {
+    let mut g = pod(3);
+    let whelp = ready(&mut g, 0, catalog::hellkite_whelp());
+    let theirs = ready(&mut g, 2, catalog::llanowar_elves());
+    let other = ready(&mut g, 1, catalog::llanowar_elves());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: whelp, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "the defending player's 1/1");
+    assert!(g.battlefield_find(other).is_some());
+}
+
+/// Prophetic Ravings gives its host haste and a {T}, discard: draw loot.
+#[test]
+fn prophetic_ravings_grants_haste_and_a_loot() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ravings = g.add_card_to_battlefield(0, catalog::prophetic_ravings());
+    g.battlefield_find_mut(ravings).unwrap().attached_to = Some(bear);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, bear).expect("summoning sick, but hasty");
+    assert_eq!(g.players[0].hand.len(), 1, "discarded one, drew one");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Volatile Claws: +2/+0 and every creature type until end of turn.
+#[test]
+fn volatile_claws_pumps_and_grants_every_type() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let claws = g.add_card_to_hand(0, catalog::volatile_claws());
+    flood(&mut g, 0);
+    cast(&mut g, claws).expect("cast");
+    assert_eq!(pt(&g, bear), (4, 2));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Changeling));
+}
+
+/// Vandalize — "choose one or both": an artifact and a land in one cast.
+#[test]
+fn vandalize_destroys_an_artifact_and_a_land() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let v = g.add_card_to_hand(0, catalog::vandalize());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: v,
+        spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![Target::Permanent(land)],
+        x_value: None,
+    })
+    .expect("both modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none() && g.battlefield_find(land).is_none());
+}
