@@ -1566,8 +1566,7 @@ fn esoteric_duplicator_copies_a_sacrificed_artifact() {
 
 /// Esoteric Duplicator copies a sacrificed artifact TOKEN too: the token has
 /// stopped existing by the end step, so the copy comes from its last-known
-/// object (CR 608.2h). (A Treasure sacrificed for mana is still missed —
-/// INCOMPLETE_CARDS.)
+/// object (CR 608.2h).
 #[test]
 fn esoteric_duplicator_copies_a_sacrificed_clue() {
     let mut g = pod(2);
@@ -1586,6 +1585,26 @@ fn esoteric_duplicator_copies_a_sacrificed_clue() {
     g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
     assert_eq!(named(&g, "Clue"), 1, "a token copy of the sacrificed Clue");
+}
+
+/// CR 605.3b / 608.2h — a Treasure sacrificed for mana: the mana ability
+/// resolves at once, but the Duplicator's trigger still copies the token's
+/// last-known object at the end step.
+#[test]
+fn esoteric_duplicator_copies_a_treasure_sacrificed_for_mana() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 3);
+    ready(&mut g, 0, catalog::esoteric_duplicator());
+    let t = g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+    flood(&mut g);
+    // The Treasure's colour ask takes one answer, the {2} the next.
+    yes(&mut g, 2);
+    activate(&mut g, t, 0).expect("crack the Treasure");
+    assert_eq!(named(&g, "Treasure"), 0);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Treasure"), 1, "a token copy of the sacrificed Treasure");
 }
 
 /// Ugin's Nexus: destroyed, it is exiled instead and its controller banks an

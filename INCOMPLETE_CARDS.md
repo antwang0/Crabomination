@@ -2019,7 +2019,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 |---|---|---|
 | 🟡 Trystan's Command | the "return one or two target permanent cards from your graveyard" mode picks the cards as it resolves (`MoveChosen`, up to two) instead of targeting them | a mode of `ChooseModesCast` holds one target slot; a mode with "one or two" targets of its own needs per-mode slot counts |
 | 🟡 Galadriel's Dismissal | kicked, the cast targets only the player (the creature target the printed text still names is not chosen) | modelled as `If SpellWasKicked { TargetPlayerThen } else { target creature }`; a kicker-only extra slot beside a required one needs per-branch slot counts |
-| 🟡 Esoteric Duplicator | a token sacrificed for **mana** (a Treasure) is not copied at the end step; one sacrificed for a stack ability (a Clue, a Food) is, since 2026-10-24 | a mana ability resolves at once, so no last-known object outlives it to the trigger's resolution; `ColdState::captured_token_lki` holds one only when `leaves_bf_lki` / `died_card_snapshots` still do |
 | 🟡 Exchange of Words | the text-box exchange outlasts the enchantment (it ends only as either creature leaves) | `ExchangeTextBoxes` bakes the swap into the two instances; a "for as long as this remains" duration needs a reversible layer-3 effect |
 | 🟡 Mikey & Don, Party Planners | "if you cast a creature spell this way" also counts a Mutant, Ninja or Turtle creature cast off the library top through another permission (Vizier of the Menagerie) | the extra counter keys on `R::WasCastFromLibrary`; an uncapped `PlayFromLibraryTop` cast records no granting source |
 | 🟡 Scuttlemutt | "the color or colors of your choice" names one color | `BecomeChosenColor` asks for a single color |
@@ -2037,7 +2036,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bramble Familiar // Fetch Quest | the milled card put onto the battlefield is the engine's pick (the priciest creature, enchantment or land), not asked of its controller | `Selector::best_of` over `MatchingAmong { LastMoved }`; the post-mill choice has no decision of its own |
 | 🟡 Chandra, Acolyte of Flame | −2 grants the card flashback for the turn instead of casting it while the ability resolves | `Effect::GrantFlashbackThisTurn` stands in for a paid cast-now from the graveyard |
 | 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |
-| 🟡 Liliana of the Dark Realms | the −3's "+X/+X or −X/−X" sign follows the target's controller (+X on yours, −X on another's), not a free choice | a loyalty activation carries no mode (`GameAction::ActivateLoyaltyAbility`); the collapse is the dominant line |
 | ~~Teferi, Temporal Pilgrim~~ ✅ | fixed 2026-10-24: the −12 runs `EachPlayerDoes { Target(0) }` over a `MoveChosen` to hand before the shuffle — the opponent's pick, not a target | — |
 | 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
 | 🟡 Briarbridge Patrol | "deals damage to one or more creatures" investigates once per creature damaged | `EventKind::DealsDamageToCreature` fires per damage event |
@@ -2175,7 +2173,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ms. Marvel, Kamala Khan | "base power equal to the cards in your hand" is set as the trigger resolves, not tracked as the hand changes | `SetBasePT { EndOfTurn }` |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
 | 🟡 Doctor Jane Foster | with life gained this turn the returned card passes through your hand before the battlefield | `Move` to hand, then `LastMoved` to battlefield |
-| 🟡 Beorn's Hospitality | the Bear's power and toughness are fixed as the ability resolves rather than tracking your lands | `BecomeCreature { Permanent }` |
 | 🟡 Knight of Wundagore | "whenever you put a +1/+1 counter on another creature" reads as a counter landing on another creature you control, whoever put it | `CounterAdded` / `YourControl` |
 | 🟡 Black Widow, Super Spy | the +1/+1 counter and the cast aren't exclusive: the counter is offered and the exiled card stays castable either way | `ExileTopUntilNonlandMayPlay` + `MayDo` |
 | 🟡 Petty Larceny | the two cards are exiled face up rather than face down | `ExileTopAndGrantMayPlay { WhileExiled }` |
@@ -2206,7 +2203,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Azor, the Lawbringer | the {X}{W}{U}{U} attack payment is from floating mana only | `MayPayXPlus` |
 | 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |
 | 🟡 Safe Passage | "creatures you control" are the ones you control as it resolves; a creature that enters later this turn is unshielded | two `PreventAllDamageThisTurn` |
-| 🟡 Dwalin, Weaponmaster | a hone counter pumps only through an Equipment that prints an `equipped_bonus` | `AddCounter { Hone }` + the equip-bonus gather |
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |
 | 🟡 Whtz, the Bibliophile | the "{3} less with 200 or more cards in your starting deck" discount isn't modelled (no starting-deck size is kept; every seated deck has 100) | `ActivatedAbility` |
 | 🟡 Aragorn, Company Leader | "one of each of those kinds" is one trigger per kind put, so two kinds at once may land on two different creatures | `AddCounterOfTriggerKind` on `YouPutCounters` |
