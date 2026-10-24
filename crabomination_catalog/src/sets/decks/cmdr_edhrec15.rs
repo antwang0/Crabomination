@@ -2256,10 +2256,14 @@ pub fn rona_sheoldreds_faithful() -> CardDefinition {
 pub fn owlbear_cub() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::ValueAtLeast(
-                Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByDefendingPlayer))),
-                Value::Const(8),
-            )),
+            // "Attacks a PLAYER who controls eight or more lands" (CR 506.2).
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer },
+                Predicate::ValueAtLeast(
+                    Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByDefendingPlayer))),
+                    Value::Const(8),
+                ),
+            ])),
             effect: Effect::LookTopMayDeployAttacking {
                 count: Value::Const(8),
                 filter: R::Creature,

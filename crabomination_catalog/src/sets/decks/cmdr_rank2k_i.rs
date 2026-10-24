@@ -60,7 +60,11 @@ pub fn attuma_atlantean_warlord() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: merfolk })
+                // "Attack a PLAYER" (CR 506.2): not a planeswalker.
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: merfolk.and(R::IsAttackingOpponentPlayer),
+                })
                 .once_per_batch_per_defender(),
             effect: draw(Value::ONE),
         }],

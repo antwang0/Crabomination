@@ -7004,7 +7004,11 @@ pub fn akiri_fearless_voyager() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
-                .with_filter(Predicate::AttackedWithCreatureMatching { who: PlayerRef::You, filter: R::IsEquipped }),
+                .with_filter(Predicate::AttackedWithCreatureMatching {
+                    who: PlayerRef::You,
+                    // "Attack a PLAYER with … equipped creatures" (CR 506.2).
+                    filter: R::IsEquipped.and(R::IsAttackingOpponentPlayer),
+                }),
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
         }],
         activated_abilities: vec![ActivatedAbility {

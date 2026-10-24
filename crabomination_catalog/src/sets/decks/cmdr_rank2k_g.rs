@@ -260,13 +260,19 @@ pub fn flitterwing_nuisance() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
             remove_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
-            effect: Effect::GrantTriggeredAbilityThisTurnToMatching {
-                filter: yours(R::Creature),
-                trigger: Box::new(TriggeredAbility {
-                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                    effect: draw(1),
-                }),
-            },
+            // "… combat damage to a player or planeswalker" (CR 510.2): both kinds.
+            effect: Effect::Seq(
+                [EventKind::DealsCombatDamageToPlayer, EventKind::DealsCombatDamageToPlaneswalker]
+                    .into_iter()
+                    .map(|kind| Effect::GrantTriggeredAbilityThisTurnToMatching {
+                        filter: yours(R::Creature),
+                        trigger: Box::new(TriggeredAbility {
+                            event: EventSpec::new(kind, EventScope::SelfSource),
+                            effect: draw(1),
+                        }),
+                    })
+                    .collect(),
+            ),
             ..Default::default()
         }],
         ..creature("Flitterwing Nuisance", cost(&[u()]), vec![CreatureType::Faerie, CreatureType::Rogue], 2, 2)

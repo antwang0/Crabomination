@@ -58,6 +58,15 @@ fn attuma_draws_per_attacked_player() {
     assert_eq!(g.computed_permanent(a).unwrap().power, 3);
     let hand = g.players[0].hand.len();
     g.step = TurnStep::DeclareAttackers;
+    // CR 506.2 — "attack a player": a Merfolk on seat 2's planeswalker
+    // draws nothing.
+    let mut walker = g.clone();
+    let jace = walker.add_card_to_battlefield(2, catalog::jace_the_mind_sculptor());
+    walker
+        .perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: b, target: AttackTarget::Planeswalker(jace) }]))
+        .expect("attack the walker");
+    drain_stack(&mut walker);
+    assert_eq!(walker.players[0].hand.len(), hand);
     g.perform_action(GameAction::DeclareAttackers(vec![
         Attack { attacker: a, target: AttackTarget::Player(1) },
         Attack { attacker: b, target: AttackTarget::Player(2) },
