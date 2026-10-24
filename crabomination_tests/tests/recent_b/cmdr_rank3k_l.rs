@@ -203,3 +203,17 @@ fn the_antiquities_war_animates_artifacts() {
     resolve_at(&mut g, &ch3, saga, None, 0);
     assert_eq!(pt(&g, ring), (5, 5));
 }
+
+/// CR 305.1 — Rona lets you CAST spells from among her exiled cards: a land
+/// her {4}, {T} exiles can't be played.
+#[test]
+fn rona_cant_play_an_exiled_land() {
+    let mut g = pod(2);
+    let island = g.add_card_to_library(0, catalog::island());
+    let rona = ready(&mut g, 0, catalog::rona_disciple_of_gix());
+    let dig = catalog::rona_disciple_of_gix().activated_abilities[0].effect.clone();
+    resolve_at(&mut g, &dig, rona, None, 0);
+    assert!(g.exile.iter().any(|c| c.id == island));
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::PlayLand(island)).is_err(), "cast, not play");
+}

@@ -3835,6 +3835,8 @@ pub fn maralen_fae_ascendant() -> CardDefinition {
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },
+                // "You may CAST a spell": an exiled land isn't playable.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
                 Effect::OneCastPerTurnAmongGranted { what: Selector::ExiledThisResolution { filter: R::Any } },
                 Effect::CapGrantedCastsAtCast {
                     what: Selector::ExiledThisResolution { filter: R::Any },

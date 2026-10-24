@@ -213,20 +213,25 @@ pub fn rona_disciple_of_gix() -> CardDefinition {
                     pay_own_cost: true,
                     any_color: false,
                 },
+                // "You may cast SPELLS from among cards exiled with Rona."
+                Effect::RestrictMayPlayToCasting { what: Selector::LastMoved },
             ])),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                duration: while_rona(),
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: while_rona(),
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
+            ]),
             ..Default::default()
         }],
         ..legend(

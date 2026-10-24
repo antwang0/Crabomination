@@ -248,15 +248,19 @@ pub fn monk_class() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
                     .with_filter(Predicate::SourceClassLevelAtLeast(3)),
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    duration: MayPlayDuration::WhileExiledAfterAnotherSpell,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: true,
-                    uncast_penalty: None,
-                },
+                // "You may CAST this card": a land exiled this way stays put.
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        duration: MayPlayDuration::WhileExiledAfterAnotherSpell,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    },
+                    Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
+                ]),
             },
         ],
         activated_abilities: vec![level_up(cost(&[w(), u()]), 1), level_up(cost(&[generic(1), w(), u()]), 2)],
