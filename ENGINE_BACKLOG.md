@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 25 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang](#fixedopen-2026-10-24-commander-run-01m2ffkh--25-seats-a-stale-layer-memo-a-sacrifice-cost-draw-loop-a-trigger-stack-hang) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot](#fixedopen-2026-10-24-commander-run-01s1rwz4--the-counter-placer-class-as-long-as-you-control-livios-bot) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall](#fixedopen-2026-10-24-commander-run-01rsnzao--shipped-card-defects-by-seated-deck-count-one-stall) | 22 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes](#fixedopen-2026-10-24-commander-run-01ge2zts--16-shipped-card-defects-in-seated-decks-three-engine-classes) | 31 |
@@ -237,6 +238,48 @@ the handoff.
   names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
+
+## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 25 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
+
+- **FIXED (class, the layer gather memo):** `gather_key` did not witness the turn registries layer leaves read
+  (`requirement_live_leaves`): `dispatch_triggers_for_events_slow` reads `computed_is_creature` before it notes
+  `p1p1_put_this_turn`, so a two-creature counter spread (The Earth Crystal) stamped the memo without Beast, Erudite
+  Aerialist's "you put a +1/+1 counter on it this turn" flying and served it stale — the audit build aborted (6-seat sweep
+  10153, seed 1021186); release served the wrong keywords. The key folds the lengths of `p1p1_put_this_turn`,
+  `permanents_gained_counter_this_turn`, `turned_face_up_this_turn` and `fought_this_turn` (each only grows within a turn).
+  `recent_b::cmdr_019y_d::beast_flies_after_a_two_creature_counter_spread`.
+- **FIXED (bot, CR 117.3c):** `stacks_onto_own_activation` read only the stack's top; Peregrin Took's "sacrifice three Foods:
+  draw" under Nuka-Cola Vending Machine put three Treasure triggers over each activation and renewed its Foods (Peregrin's
+  extra Food), so the seat stacked ~150 draws to the board cap (seeds 1017396, 1016026). The walk skips the seat's own
+  non-activated triggers. `recent_b::cmdr_trostani::bot_lets_a_sacrifice_costs_triggers_and_its_draw_resolve_first`.
+- **FIXED (CR 603.2c):** Briarbridge Patrol's "deals damage to one or more creatures" investigated once per blocker — a
+  `once_per_batch` to-creature damage trigger keys its combat batch by the dealer (`combat.rs`; the only such card).
+- **Stale 🟡:** Tasha, the Witch Queen's +1 already fills one card from each opponent's graveyard; test pins it, row narrowed
+  to Jeska.
+- **Seats 6055-6077:** 23 zero-gap pairs EDHREC added since the `01Uv3VwF` scan (`edhrec_scan_pairs.py --legal --max 0`
+  over a fresh 68-page `commanders/year.json`): Rograkh + Silas Renn (rank 290), Dargo + Tymna, Ishai + Rograkh, … Vhal +
+  Sword Coast Sailor dropped (Ley Weaver off-identity). `seat_decks.py` now tops up a short list that has no basics with
+  its identity's basics (Dargo + Tymna was 96 nonbasics). Singles: every unseated ≤ 6-gap commander is still not legal.
+- **OPEN (board cap, not a bug):** Myrel, Shield of Argive doubling Soldiers each attack against Authority of the Consuls'
+  life gain (4-seat, `--pod-decks 2269,4383,1503,4564 --seed 1020504`): exponential tokens reach the 1,024 bound before a
+  lethal swing.
+- **Sweep 10153** (overflow + debug-assertions, every seat × 4/6, 2,523 games): the three above, one CR 104.4a draw
+  (Descent into Avernus), the Myrel cap.
+- **FIXED (simulator bound):** `MAX_STACK_ITEMS` 8x → 4x `MAX_BATTLEFIELD`. A fetch putting three lands under ~1,470 Scute
+  Swarms stacked 4,405 landfall triggers at ~0.17 s a pass — one five-seat game ran past 14 minutes (sweep 10159,
+  `--pod-decks 5826,1830,4785,2122,434 --seed 1017885`); now a board cap.
+- **Seat 6078: Isu the Abominable** (rank 937, the first Commander-legal unseated single): its 7 missing snow cards in
+  `decks::cmdr_01m2_a` — Isu (`PlayFromLibraryTop { IsSnow }`, the pay-{G}/{W}/{U} counter as a colour mode, then one `MayPay`), Diamond
+  Faerie, Frostpeak Yeti, Squall Drifter, Snow Devil, Glacial Plating, Cover of Winter (new
+  `StaticEffect::ReduceCreatureCombatDamageToYouAndYoursByCounters`, prevent-static lane; per-event shave is 🟡).
+- **Seat 6079: Scarlet Witch, Wanda Maximoff** (8 gaps, all existing primitives): Barging Sergeant, Bladeback Sliver,
+  Hellkite Whelp, Voldaren Duelist, Prophetic Ravings, Volatile Claws, Precision Bolt, Vandalize. The other legal 8-gap
+  singles each hold one card needing a primitive: Major Teroh (Drought's "sacrifice a Swamp per black pip"), Living
+  Lightning (Lightning Storm's any-player ability on a spell on the stack), Stockman (Acidic Dagger, Arcum's Whistle,
+  Balduvian Shaman's text change).
+- **Sweep 10159** (3/5/8, 4,002 games, binary at `0257fa4f5`): the Scute Swarm hang, one CR 104.4a draw, two token board
+  caps — Esika's Chariot (the Mondrak class in NEXT) and Uugguu + ten Adrix and Nev copies (2^10 token doubling, 979
+  Roaming Thrones; a true exponential).
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot
 

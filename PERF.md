@@ -3136,6 +3136,25 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-24 night (Commander run, `01M2Ffkh`) — guardrail; gather key +1 mix, a stack walk in the bot's activation guard
+
+New on hot-ish paths: one more `mix` of four turn-registry lengths per `gather_key`, and `stacks_onto_own_activation`
+walks past the seat's own non-activated triggers instead of reading the top only. `release-fast` bot_ladder, 4-core
+Xeon @ 2.10 GHz (a different box from the row below — no throughput comparison):
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok;
+                 thread_determinism ok (3 vs 1); peak_rss_mib 56.3
+2-player pools   seed 10158 x 300: cube 2,400 / sos 1,500 / sealed 3,600 decided, 0 undecided
+pods             seed 10157, 200 games at each of 2..8 seats: 1,400 decided;
+                 turns/game 18.89 / 32.84 / 44.58 / 58.88 / 68.67 / 81.90 / 96.46
+new seats        6055-6077 in six 4-seat groups x 40 (seed 10156): 240 decided
+sweep            overflow + debug-assertions 10153 (4/6, 2,523 games): 1 abort (stale gather memo, fixed),
+                 2 Peregrin Took board caps (fixed), 1 Myrel board cap, 1 CR 104.4a draw;
+                 10159 (3/5/8, 4,002 games): 1 Scute Swarm trigger-stack hang (MAX_STACK_ITEMS 8x -> 4x),
+                 2 token board caps, 1 CR 104.4a draw
+```
+
 ### 2026-10-24 late (Commander run, `01S1RwZ4`) — guardrail; counter-placer gates, one guarded SBA sweep
 
 New on hot-ish paths: a `COUNTER_PLACER` TLS read per "you would put" adder (counter placements only) and an
