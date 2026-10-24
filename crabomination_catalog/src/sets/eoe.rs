@@ -5944,10 +5944,11 @@ pub fn virulent_silencer() -> CardDefinition {
 }
 
 /// Steelswarm Operator — {1}{U} 1/1 Artifact Creature — Robot Soldier. Flying;
-/// two artifact-restricted mana abilities. (Both modeled as `ArtifactOnly`.)
+/// {T}: {U} for an artifact spell; {T}: {U}{U} for abilities of artifacts.
 pub fn steelswarm_operator() -> CardDefinition {
     use crate::effect::ManaPayload;
-    let restricted = |n: i32| ActivatedAbility {
+    use crate::mana::SpendRestriction;
+    let restricted = |n: i32, only: SpendRestriction| ActivatedAbility {
         tap_cost: true,
         effect: Effect::AddMana {
             who: PlayerRef::You,
@@ -5956,7 +5957,7 @@ pub fn steelswarm_operator() -> CardDefinition {
                     crate::mana::Color::Blue;
                     n as usize
                 ])),
-                crate::mana::SpendRestriction::ArtifactOnly,
+                only,
             ),
         },
         ..Default::default()
@@ -5972,7 +5973,10 @@ pub fn steelswarm_operator() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        activated_abilities: vec![restricted(1), restricted(2)],
+        activated_abilities: vec![
+            restricted(1, SpendRestriction::ArtifactSpellsOnly),
+            restricted(2, SpendRestriction::ArtifactAbilitiesOnly),
+        ],
         ..Default::default()
     }
 }

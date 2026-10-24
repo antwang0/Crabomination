@@ -480,7 +480,7 @@ pub fn mishras_workshop() -> CardDefinition {
                 who: PlayerRef::You,
                 pool: ManaPayload::Restricted(
                     Box::new(ManaPayload::Colorless(Value::Const(3))),
-                    SpendRestriction::ArtifactOnly,
+                    SpendRestriction::ArtifactSpellsOnly,
                 ),
             },
             ..Default::default()

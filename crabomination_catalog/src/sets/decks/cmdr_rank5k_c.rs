@@ -643,14 +643,13 @@ pub fn castle_doom() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             crate::sets::tap_add_colorless(),
-            // `ArtifactOnly` also admits artifact abilities (INCOMPLETE_CARDS).
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::ONE)),
-                        SpendRestriction::ArtifactOnly,
+                        SpendRestriction::ArtifactSpellsOnly,
                     ),
                 },
                 ..Default::default()

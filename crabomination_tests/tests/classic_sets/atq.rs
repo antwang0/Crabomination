@@ -225,6 +225,29 @@ fn mishras_workshop_mana_only_pays_for_artifacts() {
         x_value: None,
     })
     .expect("artifacts are fine");
+    // "Artifact SPELLS" — not an artifact's activated ability.
+    g.battlefield_find_mut(shop).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    let tome = g.add_card_to_battlefield(0, catalog::jalum_tome());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shop,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap the Workshop again");
+    let tap_tome = GameAction::ActivateAbility {
+        card_id: tome,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    assert!(g.perform_action(tap_tome).is_err(), "workshop mana can't pay an artifact's ability");
 }
 
 #[test]

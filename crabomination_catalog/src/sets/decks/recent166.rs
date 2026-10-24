@@ -564,7 +564,7 @@ pub fn guidelight_optimizer() -> CardDefinition {
                 who: PlayerRef::You,
                 pool: ManaPayload::Restricted(
                     Box::new(ManaPayload::OfColor(Color::Blue, Value::ONE)),
-                    SpendRestriction::ArtifactOnly,
+                    SpendRestriction::ArtifactSpellsOrAbilities,
                 ),
             },
             ..Default::default()
