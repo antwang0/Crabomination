@@ -856,6 +856,24 @@ pub struct EvalWeights {
     /// 25,469 such attackers in 3,000 FRA sealed games, 20 % held, 1,696 of
     /// them with life to spare (2026-10-24 aggro census, `.ladder/fra_aggro`).
     pub free_attacks: bool,
+    /// The greedy attack's suicide filter judges each blocker that can
+    /// block the attacker: it holds the attacker only when one of them
+    /// kills it and survives (first strike and deathtouch on either side
+    /// counted). A block that kills it but dies too is a trade, and the
+    /// attacker goes. The flagless filter compared the attacker's power with
+    /// the biggest blocker's *power*, so a 2/2 into a 2/2 or a 3/1 stayed
+    /// home, while a 3/2 into a 2/5 swung and died for nothing. Matters
+    /// most under search: the MCTS attack menu is greedy and its
+    /// holdbacks, so an attacker greedy leaves home is never priced at all
+    /// (a play-test report, 2026-10-24). Measured 2026-10-24 (paired, 500
+    /// games x 12 decks): vs `dflt` FRA sealed 50.6 / 51.0 (seeds 43 / 97),
+    /// cube 50.5, SOS sealed 50.7; over `fra-fixes` 50.4; the client pilot
+    /// (`mcts-net67-trades` vs `mcts-net67-256`, 100 x 12) 50.5 / 49.3 /
+    /// 50.1. In `fra-fixes`. What it does not reach: a trade the scored
+    /// attack's sim prices as a material loss (a 4/2 for a 2/2) is still
+    /// declined, even against a defender at 5 — the one-cycle sim credits
+    /// no pressure.
+    pub attack_trades: bool,
     /// A pump instant that carries a harmless rider — a keyword, untap or
     /// counter on the pumped creature, or card flow for the caster (Empower
     /// Jace, a draw, scry / surveil, an impulse) — is a combat trick to the
@@ -1454,6 +1472,7 @@ impl EvalWeights {
             debuff_removal_anytime: false,
             duel_sinks: false,
             lethal_over_walkers: false,
+            attack_trades: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1580,6 +1599,7 @@ impl EvalWeights {
             debuff_removal_anytime: false,
             duel_sinks: false,
             lethal_over_walkers: false,
+            attack_trades: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1689,6 +1709,7 @@ impl EvalWeights {
             debuff_removal_anytime: false,
             duel_sinks: false,
             lethal_over_walkers: false,
+            attack_trades: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2835,6 +2856,7 @@ impl EvalWeights {
             debuff_removal_anytime: false,
             duel_sinks: false,
             lethal_over_walkers: false,
+            attack_trades: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2970,6 +2992,7 @@ impl EvalWeights {
             debuff_removal_anytime: false,
             duel_sinks: false,
             lethal_over_walkers: false,
+            attack_trades: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3155,6 +3178,7 @@ impl EvalWeights {
             free_attacks: true,
             trick_riders: true,
             burn_for_lethal: true,
+            attack_trades: true,
             ..self
         }
     }
@@ -3195,6 +3219,7 @@ impl EvalWeights {
             debuff_removal_anytime: false,
             duel_sinks: false,
             lethal_over_walkers: false,
+            attack_trades: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -13137,7 +13162,7 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // computed P/T) run once per candidate attacker — share one gather, the
     // same way `pick_blocks` does. Matters most inside the attack/block sims,
     // which call this on a freshly cloned (and therefore unfrozen) state.
-    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0, false));
+    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0, false, false));
     super::pod_attack::trim_life_taxed_attacks(state, seat, attacks)
 }
 
@@ -13148,7 +13173,7 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
 /// the test entry so the recorded greedy shapes stay pinned.
 pub fn pick_attacks_w(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
     state.with_frozen_layers(|state| {
-        pick_attacks_inner(state, seat, w.attack_blocker_guard, w.leader_target, w.lethal_over_walkers)
+        pick_attacks_inner(state, seat, w.attack_blocker_guard, w.leader_target, w.lethal_over_walkers, w.attack_trades)
     })
 }
 
@@ -13197,28 +13222,12 @@ fn attack_is_safe_guarded(
     if c.has_keyword(&Keyword::Menace) && eligible.len() < 2 {
         return true;
     }
-    let strikes_first = c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike);
     let deathtouch = c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1;
     if deathtouch {
         // CR 702.2: whatever blocks it dies — at worst an even trade.
         return true;
     }
-    let mut killer = false;
-    let mut every_killer_dies = true;
-    for b in &eligible {
-        let b_strikes_first = b.has_keyword(&Keyword::FirstStrike) || b.has_keyword(&Keyword::DoubleStrike);
-        let c_kills_b = c.power() >= b.toughness();
-        let b_kills_c = (b.has_keyword(&Keyword::Deathtouch) && b.power() >= 1) || b.power() >= c.toughness();
-        // First strike: `c` kills `b` before `b` deals damage, unless `b`
-        // strikes first too.
-        let b_kills_c = b_kills_c && !(strikes_first && c_kills_b && !b_strikes_first);
-        if b_kills_c {
-            killer = true;
-            if !c_kills_b {
-                every_killer_dies = false;
-            }
-        }
-    }
+    let (killer, every_killer_dies) = block_outcomes(state, c, &eligible);
     if !killer {
         return true;
     }
@@ -13230,6 +13239,36 @@ fn attack_is_safe_guarded(
     }
     let max_power = eligible.iter().map(|b| b.power()).max().unwrap_or(0);
     c.power() > max_power
+}
+
+/// One-on-one blocks of `c` by each of `blockers` that can legally block it:
+/// (some block kills `c`, every block that kills `c` also dies). First strike
+/// on either side and deathtouch are counted; gang blocks are not.
+fn block_outcomes(
+    state: &GameState,
+    c: &crate::card::CardInstance,
+    blockers: &[&crate::card::CardInstance],
+) -> (bool, bool) {
+    use crate::card::Keyword;
+    let strikes_first = c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike);
+    let deathtouch = c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1;
+    let mut killer = false;
+    let mut every_killer_dies = true;
+    for b in blockers.iter().filter(|b| state.blocker_can_block_attacker(b.id, c.id)) {
+        let b_strikes_first = b.has_keyword(&Keyword::FirstStrike) || b.has_keyword(&Keyword::DoubleStrike);
+        let c_kills_b = deathtouch || c.power() >= b.toughness();
+        let b_kills_c = (b.has_keyword(&Keyword::Deathtouch) && b.power() >= 1) || b.power() >= c.toughness();
+        // First strike: `c` kills `b` before `b` deals damage, unless `b`
+        // strikes first too.
+        let b_kills_c = b_kills_c && !(strikes_first && c_kills_b && !b_strikes_first);
+        if b_kills_c {
+            killer = true;
+            if !c_kills_b {
+                every_killer_dies = false;
+            }
+        }
+    }
+    (killer, every_killer_dies)
 }
 
 /// Turns for `clock` damage a turn to finish `life`, without the overflow the
@@ -13396,6 +13435,7 @@ fn pick_attacks_inner(
     guard: bool,
     leader_target: u8,
     lethal_over_walkers: bool,
+    trades: bool,
 ) -> Vec<Attack> {
     use crate::card::Keyword;
     let target_player = attack_target_player(state, seat, leader_target);
@@ -13655,6 +13695,13 @@ fn pick_attacks_inner(
                 if c.power() > max_blocker_toughness {
                     return true;
                 }
+            }
+            // `attack_trades`: per blocker — held only when a block kills
+            // it for free; a finality counter turns a trade into a loss.
+            if trades {
+                let (killer, every_killer_dies) = block_outcomes(state, c, &opp_blockers);
+                let finality = c.counter_count(crate::card::CounterType::Finality) > 0;
+                return !killer || (every_killer_dies && !finality);
             }
             // Hold back if a deathtouch blocker exists
             // and we don't outsize the biggest blocker.
@@ -23875,6 +23922,33 @@ mod tests {
             }
             _ => panic!("expected an activate-ability action"),
         }
+    }
+
+    /// `attack_trades`: a 2/2 swings into an untapped 2/2 (the worst block is
+    /// a trade) and stays home against a 3/3 (a block kills it for free).
+    /// The flagless filter held it in both.
+    #[test]
+    fn attack_trades_sends_a_creature_whose_worst_block_is_a_trade() {
+        use crate::card::CounterType;
+        let build = |their_counters: u32| {
+            let mut g = two_player_game();
+            g.active_player_idx = 0;
+            g.step = TurnStep::DeclareAttackers;
+            g.priority.player_with_priority = 0;
+            let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(bear);
+            let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            if their_counters > 0 {
+                g.battlefield_find_mut(theirs).unwrap().counters.insert(CounterType::PlusOnePlusOne, their_counters);
+            }
+            (g, bear)
+        };
+        let on = EvalWeights { attack_trades: true, ..EvalWeights::default() };
+        let (g, bear) = build(0);
+        assert!(pick_attacks_w(&g, 0, &EvalWeights::default()).is_empty(), "flagless: the trade is refused");
+        assert!(pick_attacks_w(&g, 0, &on).iter().any(|a| a.attacker == bear), "the 2/2 trades with the 2/2");
+        let (g, _) = build(1);
+        assert!(pick_attacks_w(&g, 0, &on).is_empty(), "a 3/3 blocks the 2/2 for free");
     }
 
     /// An untapped 6/4 attacks a defender at 4 whose creatures are all
