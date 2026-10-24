@@ -463,20 +463,25 @@ pub fn consuming_blob() -> CardDefinition {
 }
 
 /// Ochre Jelly — {X}{G} 0/0 Ooze, trample, enters with X +1/+1 counters.
-/// Split: when it dies with two or more +1/+1 counters, a token copy of it
-/// enters with half that many, rounded down (made as it dies, not at the
-/// next end step — INCOMPLETE_CARDS).
+/// Split: when it dies with two or more +1/+1 counters, at the beginning of
+/// the next end step a token copy of it enters with half that many, rounded
+/// down.
 pub fn ochre_jelly() -> CardDefinition {
     let counters = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne };
     CardDefinition {
         keywords: vec![Keyword::Trample],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        // The count is fixed as it dies (`WithX`); the copy comes at the next
+        // end step, of the card it was (CR 603.7c).
         triggered_abilities: vec![on_dies(Effect::If {
             cond: Predicate::ValueAtLeast(counters(), Value::Const(2)),
-            then: Box::new(Effect::CreateTokenCopyOf {
+            then: Box::new(Effect::WithX { x: counters(), body: Box::new(Effect::DelayUntilWithCapture {
+                kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                capture: Selector::This,
+                body: Box::new(Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                source: Selector::This,
+                source: Selector::Target(0),
                 extra_creature_types: vec![],
                 extra_card_types: vec![],
                 override_pt: None,
@@ -486,9 +491,10 @@ pub fn ochre_jelly() -> CardDefinition {
                 legendary: false,
                 extra_keywords: vec![],
                 no_mana_cost: false,
-                enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::HalvedRoundDown(Box::new(counters())))),
+                enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::HalvedRoundDown(Box::new(Value::XFromCost)))),
                 remove_keywords: vec![],
             }),
+            }) }),
             else_: Box::new(Effect::Noop),
         })],
         ..creature("Ochre Jelly", cost(&[x(), g()]), vec![CreatureType::Ooze], 0, 0)

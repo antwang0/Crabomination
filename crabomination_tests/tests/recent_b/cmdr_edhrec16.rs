@@ -279,7 +279,8 @@ fn consuming_blob_spawns_matching_oozes() {
     assert_eq!((cp.power, cp.toughness), (2, 3));
 }
 
-/// Ochre Jelly splits on death into a copy with half the counters.
+/// Ochre Jelly splits on death into a copy with half the counters — at the
+/// beginning of the next end step (CR 603.7c), with the count it died with.
 #[test]
 fn ochre_jelly_splits() {
     let mut g = pod(2);
@@ -291,6 +292,10 @@ fn ochre_jelly_splits() {
     assert_eq!(g.battlefield_find(j).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
     g.battlefield_find_mut(j).unwrap().damage = 10;
     g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Ochre Jelly"), "not yet");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
     let t = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Ochre Jelly").expect("split");
     assert_eq!(t.counter_count(CounterType::PlusOnePlusOne), 2);

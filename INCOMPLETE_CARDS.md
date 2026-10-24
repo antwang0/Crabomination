@@ -2111,7 +2111,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |
 | 🟡 Disciple of Perdition | at exactly 13 life both modes always happen (the "may choose both" is taken) | `Effect::If` on `PlayerLifeExactly` picks the pair over the one-mode `ChooseMode` |
 | 🟡 Irencrag Feat | the "only one more spell" lock lands when the next spell's cast trigger resolves, so an instant cast in response slips through | `OnYourNextSpellCastThisTurn` + `SilencePlayersThisTurn` |
-| 🟡 Ochre Jelly | the split copy is made as it dies, not at the beginning of the next end step | a captured counter count can't ride `DelayUntilWithCapture` |
+| ~~Ochre Jelly~~ ✅ | fixed 2026-10-24: the count is a `WithX` snapshot at death, and `DelayUntilWithCapture` now carries it to the end-step copy | — |
 | 🟡 In Search of Greatness | the free cast takes mana value up to 1 + the greatest (not exactly), and the enchantment counts itself | `MayCastFromHandFreeMatching { max_mv }` over `GreatestManaValueAmongPermanents(You)` |
 | ~~Hooded Blightfang~~ ✅ | fixed 2026-10-24: `DealsDamage` (combat or not) gated on a planeswalker in slot 0; the noncombat funnel now fires it for planeswalker / battle hits | — |
 | 🟡 You Look Upon the Tarrasque | "able to block that creature do so" binds the creatures on the battlefield as it resolves; one entering later isn't forced | `Effect::MustBlockTarget` stamps `must_block` per creature |
