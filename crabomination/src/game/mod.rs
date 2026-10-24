@@ -14686,6 +14686,7 @@ impl GameState {
         // to remove. With the union it is -0.012 % there and -0.513 % on `cube`.
         let mut sa_cards: SmallVec<[(&CardInstance, u64); 16]> = SmallVec::new();
         let mut any_attached = false;
+        let mut any_bare_hone = false;
         let mut any_suspected = false;
         // Which of the thirty-eight per-static passes below can fire at all,
         // plus the ten definition facts the loop used to ask field by field.
@@ -14705,7 +14706,13 @@ impl GameState {
         for card in self.battlefield.iter() {
             let bits = card.gather_scan_bits();
             any_suspected |= card.suspected;
-            any_attached |= card.attached_to.is_some();
+            if card.attached_to.is_some() {
+                any_attached = true;
+                // A hone counter on an Equipment that prints no bonus.
+                any_bare_hone |= card.definition.equipped_bonus.is_none()
+                    && !card.counters.is_empty()
+                    && card.counter_count(crate::card::CounterType::Hone) > 0;
+            }
             def_mask |= bits;
             if bits & gather_spec::HAS_STATICS != 0 {
                 let bits = bits & gather_spec::STATIC_ALL;
@@ -14956,6 +14963,29 @@ impl GameState {
         // attached to, for as long as the Equipment stays on the battlefield.
         // The stale-link SBA in `stack.rs` clears `attached_to` when the
         // equipped creature leaves, so a dangling link can't leak a bonus.
+        // "Each hone counter on an Equipment grants +1/+0 to equipped
+        // creature" — the counter's own effect, so an Equipment that prints no
+        // bonus confers it too (Dwalin, Weaponmaster's ruling).
+        for card in if any_bare_hone { &self.battlefield[..] } else { &[] } {
+            let Some(target) = card.attached_to else { continue };
+            let hone = card.counter_count(crate::card::CounterType::Hone);
+            if hone == 0
+                || card.definition.equipped_bonus.is_some()
+                || !card.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Equipment)
+                || self.battlefield.find_by_id(target).is_none()
+            {
+                continue;
+            }
+            all_effects.push(ContinuousEffect {
+                timestamp: card.object_timestamp(),
+                source: card.id,
+                affected: AffectedPermanents::just(target),
+                layer: Layer::L7PowerTough,
+                sublayer: Some(PtSublayer::Modify),
+                duration: EffectDuration::Indefinite,
+                modification: Modification::ModifyPowerToughness(i32::try_from(hone).unwrap_or(i32::MAX), 0),
+            });
+        }
         for card in if any_equipped_bonus { &self.battlefield[..] } else { &[] } {
             let Some(bonus) = &card.definition.equipped_bonus else { continue };
             let Some(target) = card.attached_to else { continue };

@@ -2638,6 +2638,15 @@ fn dwalin_hone_counters_pump_the_bearer() {
     cast(&mut g, dwalin);
     assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::Hone), 1);
     assert_eq!(pt(&g, bear), (6, 2), "2 + 3 Blade + 1 hone");
+    // Ruling: the pump is the hone counter's own, so an Equipment that
+    // grants no bonus of its own still confers it.
+    let mut bare = catalog::forebears_blade();
+    bare.equipped_bonus = None;
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let plain = g.add_card_to_battlefield(0, bare);
+    g.battlefield_find_mut(plain).unwrap().attached_to = Some(elf);
+    g.battlefield_find_mut(plain).unwrap().add_counters(CounterType::Hone, 2);
+    assert_eq!(pt(&g, elf), (3, 1), "1 + 2 hone");
 }
 
 /// Thorin: with an enduring story (three legendaries), your artifacts and
