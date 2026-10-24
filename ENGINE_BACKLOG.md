@@ -202,7 +202,7 @@ the handoff.
   duration), Boiling Rock Rioter (a paid cast from among cards exiled with it), Sphinx Ambassador,
   Precursor Golem, Extraordinary Journey, Vazi, Cherished Hatchling.
 
-## FIXED/OPEN 2026-10-23 (Commander run, `01EtjJfo`) — a death-replacement bug class, 17 seated-deck 🟡 rows
+## FIXED/OPEN 2026-10-23 (Commander run, `01EtjJfo`) — a death-replacement bug class, 20 seated-deck 🟡 rows
 
 - **FIXED (bug class, CR 700.4 / 614.1a):** both death funnels (the SBA lethal sweep and
   `remove_to_graveyard_with_triggers`) collected the dying permanent's own dies triggers before the removal
@@ -228,7 +228,9 @@ the handoff.
   three crew-only Pilot tokens); `SelectionRequirement::EnteredByCast` (The Tarrasque from the command zone).
 - **Card-only:** Jhoira's Timebug, Hardy Outlander, Heartwood Storyteller, Fathom Fleet Swordjack, Shredder's
   Technique, The Misty Mountains Cold, Nim Deathmantle, Gathering Stone, Garruk's Harbinger, Rulik Mons,
-  Cosmic Rebirth, Scion of Halaster. Rows picked by how many seated decks hold the card (a decks.rs token count over the 🟡
+  Cosmic Rebirth, Scion of Halaster; after the closing gates Kenessos (the bottom "may"), Kassandra
+  (`SelectionRequirement::EquippedByMatching` — a legendary Equipment) and Froghemoth (the damaged player's
+  graveyard only). Rows picked by how many seated decks hold the card (a decks.rs token count over the 🟡
   names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
