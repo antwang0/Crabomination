@@ -36738,6 +36738,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerIsStartingPlayer
             | StaticEffect::MatchingEntersWithExtraCounters { .. }
             | StaticEffect::MatchingEntersWithKeywordCounter { .. }
+            | StaticEffect::SelfEntersWithKeywordCounter { .. }
             | StaticEffect::MatchingEntersWithCountersPer { .. }
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast

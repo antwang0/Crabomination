@@ -3194,6 +3194,11 @@ pub enum StaticEffect {
     /// placed as it enters (CR 122.6), by `apply_etb_keyword_counters` at the
     /// three entry sites, not by a trigger after it.
     MatchingEntersWithKeywordCounter { filter: SelectionRequirement, keyword: crate::card::Keyword },
+    /// "This enters with a `keyword` counter on it [if you cast it from your
+    /// hand]" (Leatherhead, Swamp Stalker; Myojin of Cryptic Dreams): read off
+    /// the entering card itself by `apply_etb_keyword_counters` — a CR 614.1c
+    /// replacement, so the counter is there before any ETB trigger.
+    SelfEntersWithKeywordCounter { keyword: crate::card::Keyword, #[serde(default)] if_cast_from_hand: bool },
     /// "Each permanent you control matching `filter` enters with `amount`
     /// additional `kind` counters on it" (Muzzio's Preparations — the filter
     /// carries `NamedBySource`, resolved against the source's chosen name).

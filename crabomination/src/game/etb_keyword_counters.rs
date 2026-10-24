@@ -20,6 +20,28 @@ impl GameState {
         {
             self.board_instance_keywords = true;
         }
+        // The entering card's own "enters with a [keyword] counter".
+        let own: Vec<Keyword> = self.battlefield.find_by_id(entering).map_or_else(Vec::new, |c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .filter_map(|sa| match &sa.effect {
+                    StaticEffect::SelfEntersWithKeywordCounter { keyword, if_cast_from_hand }
+                        if !*if_cast_from_hand || (c.cast_from_hand && c.entered_by_cast) =>
+                    {
+                        Some(keyword.clone())
+                    }
+                    _ => None,
+                })
+                .collect()
+        });
+        if !own.is_empty() && !self.counters_locked() {
+            let ctx = EffectContext::for_ability(entering, controller, None);
+            for keyword in own {
+                let add = Effect::AddKeywordCounter { what: Selector::ExactObjects(vec![entering]), keyword, amount: Value::ONE };
+                let _ = self.run_effect(&add, &ctx, events);
+            }
+        }
         if !self.battlefield.has_etb_counter_static() || self.counters_locked() {
             return;
         }
