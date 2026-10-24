@@ -2458,7 +2458,7 @@ pub fn venom_lethal_protector() -> CardDefinition {
         }],
         ..legend(
             "Venom, Lethal Protector",
-            crate::mana::ManaCost::default(),
+            cost(&[generic(3), b(), r(), g()]),
             vec![CreatureType::Symbiote, CreatureType::Hero, CreatureType::Villain],
             5,
             5,

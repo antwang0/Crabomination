@@ -370,6 +370,7 @@ pub fn thor_odinson() -> CardDefinition {
 pub fn monica_rambeau() -> CardDefinition {
     let photon = CardDefinition {
         name: "Photon, Living Light",
+        cost: cost(&[generic(2), r(), w(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Elemental, CreatureType::Hero], ..Default::default() },

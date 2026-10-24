@@ -384,7 +384,7 @@ pub fn jennifer_walters() -> CardDefinition {
             },
         }],
         color_indicator: vec![Color::Green, Color::White],
-        ..legend("The Sensational She-Hulk", ManaCost::default(), vec![CreatureType::Gamma, CreatureType::Hero], 6, 6)
+        ..legend("The Sensational She-Hulk", cost(&[generic(3), g(), w(), w()]), vec![CreatureType::Gamma, CreatureType::Hero], 6, 6)
     };
     CardDefinition {
         static_abilities: vec![lock()],

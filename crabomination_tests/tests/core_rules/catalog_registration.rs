@@ -3829,7 +3829,8 @@ const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
 /// prints a castable back face AND a transform ability. Each row is checked
 /// against the printing, not exempted.
 const MODAL_DFCS_THAT_TRANSFORM: &[&str] =
-    &["Magik, Illyana Rasputin", "Gwen Stacy", "Bruce Banner", "Peter Parker", "Miles Morales", "King T'Challa"];
+    &["Magik, Illyana Rasputin", "Gwen Stacy", "Bruce Banner", "Peter Parker", "Miles Morales", "King T'Challa",
+      "Tony Stark", "Monica Rambeau", "Norman Osborn", "Jennifer Walters", "Eddie Brock"];
 
 /// CR 712.1 — the catalog's transforming DFCs (`is_transforming_dfc`: an
 /// ability on either face turns the card over) and its modal DFCs must not

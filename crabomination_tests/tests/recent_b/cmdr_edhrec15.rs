@@ -145,23 +145,38 @@ fn king_tchalla_draws_on_a_second_draw_and_transforms() {
     assert!(g.battlefield_find(king).is_some(), "damage to it is prevented");
 }
 
-/// King T'Challa is a modal DFC whose front also transforms (CR 712.1b): the
-/// {4}{W}{U} Black Panther face is cast straight from hand.
+/// The Marvel modal DFCs whose front also transforms (CR 712.1b): each back
+/// face is cast straight from hand for its printed cost.
 #[test]
-fn black_panther_is_cast_from_hand_by_its_back_face() {
-    let mut g = pod(2);
-    let king = g.add_card_to_hand(0, catalog::king_tchalla());
-    flood(&mut g, 0);
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: king,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("cast the back face");
-    drain_stack(&mut g);
-    assert_eq!(g.computed_permanent(king).unwrap().def.name, "Black Panther, Hope Enduring");
+fn modal_transform_backs_are_cast_from_hand() {
+    let cards: [(fn() -> crabomination::card::CardDefinition, &str); 11] = [
+        (catalog::king_tchalla, "Black Panther, Hope Enduring"),
+        (catalog::tony_stark, "The Invincible Iron Man"),
+        (catalog::monica_rambeau, "Photon, Living Light"),
+        (catalog::norman_osborn, "Green Goblin"),
+        (catalog::jennifer_walters, "The Sensational She-Hulk"),
+        (catalog::eddie_brock, "Venom, Lethal Protector"),
+        (catalog::magik_illyana_rasputin, "Darkchild, Demon Uncaged"),
+        (catalog::gwen_stacy, "Ghost-Spider"),
+        (catalog::bruce_banner, "The Incredible Hulk"),
+        (catalog::peter_parker, "Amazing Spider-Man"),
+        (catalog::miles_morales, "Ultimate Spider-Man"),
+    ];
+    for (f, back) in cards {
+        let mut g = pod(2);
+        let id = g.add_card_to_hand(0, f());
+        flood(&mut g, 0);
+        g.perform_action(GameAction::CastSpellBack {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .unwrap_or_else(|e| panic!("{back}: {e:?}"));
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(id).map(|c| c.def.name), Some(back));
+    }
 }
 
 /// Black Cat, Cunning Thief: two of the opponent's top nine go face down into

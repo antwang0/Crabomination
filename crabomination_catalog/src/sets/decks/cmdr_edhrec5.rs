@@ -602,7 +602,7 @@ fn green_goblin() -> CardDefinition {
         ],
         // CR 712.8 — a transforming back face has no mana cost.
         color_indicator: vec![Color::Blue, Color::Black, Color::Red],
-        ..villain("Green Goblin", ManaCost::default(), vec![CreatureType::Goblin, CreatureType::Human], 3, 3)
+        ..villain("Green Goblin", cost(&[generic(1), u(), b(), r()]), vec![CreatureType::Goblin, CreatureType::Human], 3, 3)
     }
 }
 

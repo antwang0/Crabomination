@@ -2547,10 +2547,10 @@ pub fn the_invincible_iron_man() -> CardDefinition {
                 }),
             },
         }],
-        // CR 712.8 — a transforming back face has no mana cost; its colours
-        // are its indicator's.
+        // A modal back face that the front also transforms into (CR 712.1b):
+        // cast from hand for its own cost.
         color_indicator: vec![Color::Blue, Color::Red],
-        ..legend("The Invincible Iron Man", crate::mana::ManaCost::default(), vec![CreatureType::Human, CreatureType::Hero], 5, 5)
+        ..legend("The Invincible Iron Man", cost(&[generic(4), u(), r()]), vec![CreatureType::Human, CreatureType::Hero], 5, 5)
     }
 }
 
