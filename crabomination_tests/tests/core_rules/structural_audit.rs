@@ -928,7 +928,7 @@ fn a_card_with_no_mana_cost_cannot_be_cast_from_hand() {
 /// with a `who` that is *not* a seat, and the pinned copy must read
 /// `Seat(3)` — a rewrite that silently did nothing would fail. The arm list is
 /// read out of the source so this table cannot fall behind the code, which is
-/// the half that matters: a sixteenth arm added to the match without a row
+/// the half that matters: a new arm added to the match without a row
 /// here fails on the set comparison.
 /// `scripts/audit_seat_from_selector.py` asks the other question — which
 /// asking arms are still *outside* the list.
@@ -957,6 +957,8 @@ fn every_listed_arm_pins_the_seat_its_ask_was_routed_to() {
         ("MayExileFromGraveyardElse", Effect::MayExileFromGraveyardElse { who: any.clone(), otherwise: body() }),
         ("TradeSecrets", Effect::TradeSecrets { who: any.clone() }),
         ("ExileUntilDuplicateName", Effect::ExileUntilDuplicateName { who: any.clone() }),
+        ("Populate", Effect::Populate { who: any.clone() }),
+        ("SacrificeAndRemember", Effect::SacrificeAndRemember { who: any.clone(), filter: R::Any }),
     ];
 
     for (name, eff) in &table {
