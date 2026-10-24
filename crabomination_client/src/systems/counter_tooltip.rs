@@ -1204,6 +1204,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::LifeSourcePower => {
                 "Ward—Pay life equal to its power".into()
             }
+            crabomination::card::WardCost::Waterbend(n) => format!("Ward—Waterbend {{{n}}}"),
         },
         // Protection rolls up the color name in lowercase to match
         // printed Oracle ("protection from white", not "from White").
