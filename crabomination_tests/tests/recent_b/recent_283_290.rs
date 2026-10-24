@@ -652,6 +652,13 @@ mod recent286 {
             3,
             "1 existing + doubled 1 (=2) = 3",
         );
+        // CR 614.16 — "if YOU would put": an opponent's counter isn't doubled,
+        // and a counter we put on an opponent's creature is.
+        let theirs = g.add_card_to_battlefield(1, crabomination::catalog::grizzly_bears());
+        g.resolve_effect(&add, &EffectContext::for_spell(1, Some(Target::Permanent(bear)), 0, 0)).unwrap();
+        assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+        g.resolve_effect(&add, &EffectContext::for_spell(0, Some(Target::Permanent(theirs)), 0, 0)).unwrap();
+        assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     }
 
     /// Barbarian Class L1 rolls an extra die and ignores the lowest (CR 706.6);

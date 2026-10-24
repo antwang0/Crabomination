@@ -775,7 +775,7 @@ pub fn innkeepers_talent() -> CardDefinition {
                 description: "If you would put counters on a permanent or player, put twice as many instead.",
                 effect: StaticEffect::WhileClassLevelAtLeast {
                     n: 3,
-                    inner: Box::new(StaticEffect::DoubleCounters),
+                    inner: Box::new(StaticEffect::CountersByPlacerDoubled),
                 },
             },
         ],
