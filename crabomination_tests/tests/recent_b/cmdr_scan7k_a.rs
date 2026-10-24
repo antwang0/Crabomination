@@ -4649,8 +4649,11 @@ fn tobias_and_inga_count_the_dead() {
     let hand = g.players[0].hand.len();
     kill(&mut g, inga);
     assert_eq!(g.players[0].hand.len(), hand, "two deaths: no draw");
+    // A token creature that died doesn't count ("nontoken creature").
+    let spirit = g.add_token_to_battlefield(0, &crabomination_base::tokens::eldrazi_spawn_token());
+    kill(&mut g, spirit);
     kill(&mut g, tb);
-    assert_eq!(named_count(&g, 0, "Zombie"), 3, "bear, Inga, Tobias");
+    assert_eq!(named_count(&g, 0, "Zombie"), 3, "bear, Inga, Tobias — not the Spawn");
 }
 
 /// Sphinx of False Conclusions leaves a token copy of itself when it dies.

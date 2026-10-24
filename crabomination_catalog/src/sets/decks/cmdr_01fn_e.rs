@@ -443,7 +443,7 @@ pub fn guardians_of_koilos() -> CardDefinition {
                         .and(R::OtherThanSource)
                         .and(R::historic()),
                 ),
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             }),
         })],
         ..creature("Guardians of Koilos", cost(&[generic(5)]), vec![CreatureType::Construct], 4, 4)

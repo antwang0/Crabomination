@@ -3200,7 +3200,7 @@ pub fn tobias_doomed_conqueror() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::CreaturesDiedThisTurn(PlayerRef::You),
+            count: Value::CreatureDeathsThisTurnMatching { filter: R::IsToken.negate().and(R::ControlledByYou) },
             definition: Arc::new(zombie),
         })],
         ..creature("Tobias, Doomed Conqueror", cost(&[generic(2), w(), u()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 2)

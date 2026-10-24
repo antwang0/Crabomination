@@ -376,3 +376,25 @@ fn packs_disdain_scales_with_the_chosen_type() {
     let cp = g.computed_permanent(dragon).expect("5/5 survives -3/-3");
     assert_eq!((cp.power, cp.toughness), (2, 2), "three Elves");
 }
+
+/// Guardians of Koilos returns the historic permanent to its OWNER's hand:
+/// a borrowed artifact goes home.
+#[test]
+fn guardians_of_koilos_returns_to_the_owners_hand() {
+    let mut g = main_phase(2);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::ExactObjects(vec![ring]),
+        to: None,
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&steal, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let guardians = g.add_card_to_battlefield(0, catalog::guardians_of_koilos());
+    let etb = catalog::guardians_of_koilos().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(guardians, 0, Some(Target::Permanent(ring)), 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.players[1].hand.iter().any(|c| c.id == ring), "its owner's hand");
+}
