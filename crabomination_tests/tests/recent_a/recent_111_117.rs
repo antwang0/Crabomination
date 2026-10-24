@@ -47,7 +47,8 @@ mod recent111 {
         assert!(g.computed_permanent(speaker).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
     }
 
-    /// Tidebinder Mage taps a red/green creature and locks its next untap.
+    /// Tidebinder Mage taps a red/green creature, and it doesn't untap for as
+    /// long as the Mage's controller controls the Mage (not just once).
     #[test]
     fn tidebinder_mage_taps_and_locks() {
         let mut g = two_player_game();
@@ -57,7 +58,7 @@ mod recent111 {
         drain_stack(&mut g);
         let c = g.battlefield_find(dragon).unwrap();
         assert!(c.tapped, "tapped by the ETB");
-        assert!(c.skip_next_untap, "untap-locked");
+        assert_eq!(c.untap_locked_while_present, Some(mage), "locked while the Mage stays yours");
     }
 
     /// Master of Waves mints Elementals equal to blue devotion, pumped by its

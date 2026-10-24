@@ -107,22 +107,19 @@ pub fn tidebinder_mage() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: Selector::TargetFiltered {
-                        slot: 0,
-                        filter: SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByOpponent)
-                            .and(
-                                SelectionRequirement::HasColor(Color::Red)
-                                    .or(SelectionRequirement::HasColor(Color::Green)),
-                            ),
-                    },
+            // "Doesn't untap … for as long as you control this creature."
+            effect: Effect::TapAndLockWhileSourcePresent {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent)
+                        .and(
+                            SelectionRequirement::HasColor(Color::Red)
+                                .or(SelectionRequirement::HasColor(Color::Green)),
+                        ),
                 },
-                Effect::SkipNextUntap {
-                    what: Selector::Target(0),
-                },
-            ]),
+                while_you_control: true,
+            },
         }],
         ..Default::default()
     }
