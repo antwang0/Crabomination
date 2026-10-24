@@ -188,6 +188,11 @@ ALLOW = {
     ("intet_the_dreamer", "PermanentLeavesBattlefield"): "ends 'for as long as you control Intet' on its departure",
     ("the_day_of_the_doctor", "PermanentLeavesBattlefield"): "ends 'for as long as this Saga remains on the battlefield'",
     ("share_the_spoils", "StepBegins(Upkeep)"): "grants each player's per-turn play from among the exiled cards",
+    ("ian_malcolm_chaotician", "StepBegins(Upkeep)"): "grants 'during each player's turn' plays from the exiled cards",
+    ("tinybones_bauble_burglar", "StepBegins(Upkeep)"): "grants 'during your turn' plays of the stashed cards",
+    ("battle_angels_of_tyr", "Attacks"): "myriad is an attack trigger (CR 702.116a)",
+    ("elrond_moon_reader", "TappedForMana"): "a mana ability is an activated ability of the creature",
+    ("the_book_of_vile_darkness", "StepBegins(BeginCombat)"): "Vecna has the exiled Hand of Vecna's triggered abilities",
 }
 
 
