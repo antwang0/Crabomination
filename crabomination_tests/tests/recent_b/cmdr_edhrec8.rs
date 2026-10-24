@@ -224,6 +224,24 @@ fn animation_module_adds_a_present_kind() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
+/// Animation Module — "target permanent or player" (CR 122.1): an opponent's
+/// poison counter, or your own energy, gets one more; the auto-pick takes a
+/// player only when it carries a counter worth adding to.
+#[test]
+fn animation_module_adds_a_players_counter() {
+    let mut g = pod(2);
+    let m = ready(&mut g, 0, catalog::animation_module());
+    g.players[1].poison_counters = 3;
+    activate(&mut g, m, 0, Some(Target::Player(1))).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 4);
+    g.players[0].energy = 2;
+    let fx = &g.battlefield_find(m).unwrap().definition.activated_abilities[0].effect.clone();
+    assert_eq!(g.auto_target_for_effect(fx, 0), Some(Target::Player(1)), "the poisoned opponent");
+    g.players[1].poison_counters = 0;
+    assert_eq!(g.auto_target_for_effect(fx, 0), Some(Target::Player(0)), "your own energy");
+}
+
 /// Evereth: sacrificing a Treasure grows it and grants lifelink.
 #[test]
 fn evereth_feeds_on_treasure() {

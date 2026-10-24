@@ -378,7 +378,7 @@ pub fn plagon_lord_of_the_beach() -> CardDefinition {
 
 /// Animation Module — {1} Artifact. +1/+1 counters on a permanent of yours
 /// may buy a Servo for {1}; {3}, {T}: another counter of a kind a target
-/// permanent already has.
+/// permanent or player already has.
 pub fn animation_module() -> CardDefinition {
     let servo = TokenDefinition {
         name: "Servo".into(),
@@ -404,7 +404,7 @@ pub fn animation_module() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
-            effect: Effect::AddCounterOfPresentKind { what: target_filtered(R::Permanent) },
+            effect: Effect::AddCounterOfPresentKind { what: target_filtered(R::Permanent.or(R::Player)) },
             ..Default::default()
         }],
         ..Default::default()
