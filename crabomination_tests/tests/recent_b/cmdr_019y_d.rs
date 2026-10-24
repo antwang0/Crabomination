@@ -124,6 +124,26 @@ fn beast_flies_after_a_counter() {
     assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Flying));
 }
 
+/// Bug fix (pod seed 1021186): counters on two creatures at once — the layer
+/// memo was stamped while the first `CounterAdded` was noted, before Beast's
+/// "you put a +1/+1 counter on it this turn" entry, and served Beast without
+/// flying for the rest of the batch.
+#[test]
+fn beast_flies_after_a_two_creature_counter_spread() {
+    let mut g = pod(2);
+    let beast = ready(&mut g, 0, catalog::beast_erudite_aerialist());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Flying));
+    let add = Effect::AddCounter {
+        what: Selector::ExactObjects(vec![beast, bear]),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    let evs = g.resolve_effect(&add, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Flying));
+}
+
 /// Hired Hexblade draws only when Treasure mana paid for it.
 #[test]
 fn hired_hexblade_draws_off_treasure_mana() {
