@@ -498,13 +498,13 @@ pub fn captain_america_unbowed() -> CardDefinition {
 
 /// Doc Samson, Super Psychiatrist — {4}{G} legendary 3/6. Counters you'd put on
 /// a permanent you control are that many plus one of each kind. {T}: add X mana
-/// of any one color, X its power. (Residual: the plus-one rider covers your
-/// artifacts and creatures, `ExtraCounterAllKinds`' reach.)
+/// of any one color, X its power. (Residual: counters another player puts on
+/// your permanents get the plus one too.)
 pub fn doc_samson_super_psychiatrist() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If you would put one or more counters on a permanent you control, put that many plus one of each of those kinds instead.",
-            effect: StaticEffect::ExtraCounterAllKinds,
+            effect: StaticEffect::ExtraCounterOnPermanents,
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

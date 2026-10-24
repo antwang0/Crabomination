@@ -2843,8 +2843,7 @@ pub fn ayara_widow_of_the_realm() -> CardDefinition {
 
 /// Pir, Imaginative Rascal — {2}{G} 1/1 legendary Human. Partner with Toothy,
 /// Imaginary Friend. If one or more counters would be put on a permanent your
-/// team controls, that many plus one are put on it instead (creatures and
-/// artifacts only — INCOMPLETE_CARDS).
+/// team controls, that many plus one are put on it instead.
 pub fn pir_imaginative_rascal() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::PartnerWith("Toothy, Imaginary Friend".into())],
@@ -2852,7 +2851,7 @@ pub fn pir_imaginative_rascal() -> CardDefinition {
         static_abilities: vec![static_ab(
             "If one or more counters would be put on a permanent your team controls, that many plus one of each of \
              those kinds of counters are put on that permanent instead.",
-            StaticEffect::ExtraCounterAllKinds,
+            StaticEffect::ExtraCounterOnPermanents,
         )],
         ..legend("Pir, Imaginative Rascal", cost(&[generic(2), g()]), vec![CreatureType::Human], 1, 1)
     }

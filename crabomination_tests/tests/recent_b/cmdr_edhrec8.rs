@@ -354,3 +354,25 @@ fn sen_triplets_plays_from_the_opponents_hand() {
     assert_eq!(g.battlefield_find(bear).map(|c| (c.controller, c.owner)), Some((0, 1)));
     assert_eq!(g.battlefield_find(land).map(|c| c.controller), Some(0));
 }
+
+/// Chandra, Acolyte of Flame's −2 casts the graveyard spell as it resolves
+/// (paying its cost) and exiles it after — it isn't left castable later.
+#[test]
+fn chandra_acolyte_of_flame_recasts_from_the_graveyard_now() {
+    let mut g = pod(2);
+    let chandra = ready(&mut g, 0, catalog::chandra_acolyte_of_flame());
+    g.battlefield_find_mut(chandra).unwrap().counters.insert(CounterType::Loyalty, 4);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: chandra,
+        ability_index: 2,
+        target: Some(Target::Permanent(bolt)),
+        x_value: None,
+    })
+    .expect("-2");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "cast, then exiled");
+    assert_eq!(g.players[1].life, 17);
+}

@@ -119,7 +119,8 @@ fn beast_flies_after_a_counter() {
         kind: CounterType::PlusOnePlusOne,
         amount: Value::ONE,
     };
-    g.resolve_effect(&add, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    let evs = g.resolve_effect(&add, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
     assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Flying));
 }
 

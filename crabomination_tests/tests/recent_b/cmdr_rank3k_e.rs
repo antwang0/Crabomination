@@ -265,6 +265,20 @@ fn doc_samson_pair() {
     assert_eq!(plus(&g, bear), 2, "one plus Doc Samson's one");
     assert_eq!(g.players[0].life, 22);
     assert_eq!(named(&g, 0, "Forest"), 1);
+    // CR 614.16 — "a permanent you control" reaches a land, but not the
+    // counters a player gets ({E}).
+    use crabomination::effect::{Effect, Selector};
+    let land = ready(&mut g, 0, catalog::forest());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let add = Effect::AddCounter {
+        what: Selector::ExactObjects(vec![land]),
+        kind: CounterType::Charge,
+        amount: crabomination::card::Value::ONE,
+    };
+    g.resolve_effect(&add, &ctx).expect("charge");
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::Charge), 2);
+    g.resolve_effect(&Effect::AddEnergy(crabomination::card::Value::ONE), &ctx).expect("energy");
+    assert_eq!(g.players[0].energy, 1);
 }
 
 /// Dyfed makes two tapped Powerstones; Geology Enthusiast adds one each end

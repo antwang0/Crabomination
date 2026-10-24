@@ -84,6 +84,17 @@ fn kid_loki_hides_freshly_countered_creatures() {
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(loki).unwrap().counter_count(CounterType::PlusOnePlusOne), before + 1);
+    // "That YOU'VE put" — an opponent's +1/+1 counter on your creature
+    // grants nothing.
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let add = crabomination::effect::Effect::AddCounter {
+        what: crabomination::effect::Selector::ExactObjects(vec![elf]),
+        kind: CounterType::PlusOnePlusOne,
+        amount: crabomination::card::Value::ONE,
+    };
+    let evs = g.resolve_effect(&add, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(!g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::Hexproof));
 }
 
 /// Thopter Mechanic leaves a Thopter; Pym Particles makes a creature

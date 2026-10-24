@@ -2034,7 +2034,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Lae'zel's Acrobatics | the d20 is rolled before the creatures are exiled, not after | `RollDie`'s arms each exile the group themselves; there is no captured exiled group to roll over |
 | ~~Animation Module~~ ✅ | fixed 2026-10-24: `AddCounterOfPresentKind` takes a player target (an opponent's poison, your experience / energy) | — |
 | 🟡 Bramble Familiar // Fetch Quest | the milled card put onto the battlefield is the engine's pick (the priciest creature, enchantment or land), not asked of its controller | `Selector::best_of` over `MatchingAmong { LastMoved }`; the post-mill choice has no decision of its own |
-| 🟡 Chandra, Acolyte of Flame | −2 grants the card flashback for the turn instead of casting it while the ability resolves | `Effect::GrantFlashbackThisTurn` stands in for a paid cast-now from the graveyard |
 | 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |
 | ~~Teferi, Temporal Pilgrim~~ ✅ | fixed 2026-10-24: the −12 runs `EachPlayerDoes { Target(0) }` over a `MoveChosen` to hand before the shuffle — the opponent's pick, not a target | — |
 | 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
@@ -2049,7 +2048,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
 | 🟡 Fell Beast's Shriek | splice onto instant or sorcery isn't offered; a creature with hexproof or protection from the caster can't be the chosen one | `Keyword::Splice` takes a `SpellSubtype` quality (Arcane), not "instant or sorcery"; `OpponentChoosesPermanentThen` keeps only picks that are legal targets for the caster |
 | 🟡 Swashbuckler Extraordinaire | each attacking creature of yours without double strike is offered one Treasure in turn; a non-attacking or opposing creature can't be chosen | modelled as `ForEach` + `MaySacrifice`; there is no "sacrifice any number, then up to that many targets" reflexive trigger |
-| 🟡 Pir, Imaginative Rascal | the extra counter lands only on creatures and artifacts you control, not enchantments, lands, planeswalkers or teammates' permanents | `StaticEffect::ExtraCounterAllKinds` is scoped to the controller's creatures and artifacts |
+| 🟡 Pir, Imaginative Rascal | a teammate's permanents get no extra counter ("your team" is read as you) | `StaticEffect::ExtraCounterOnPermanents` |
 | 🟡 Nine Lives | damage that can't be prevented still becomes an incarnation counter instead of being dealt | `ReplaceDamageToYouWithCountersOnSource` is a replacement (CR 614), not a prevention (CR 615) |
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
@@ -2075,7 +2074,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~The Fifteenth Doctor~~ ✅ | fixed 2026-10-24: gated on `CastSpellThisTurnWithout { types: [Artifact] }`; the improvise grant also never applied through its gate before this (`spell_granted_improvise` now peels) | — |
 | 🟡 The Muckslinger Gang | "creature spells you control and creature cards you own in any zone other than the battlefield or the stack get +3/+3" is not modelled — only the battlefield half (other creatures not attacking or blocking get +3/+3) | an off-battlefield P/T static read by every hand/graveyard/stack power check; no free board-presence lane to gate it |
 | 🟡 Kamahl's Will | the land mode animates every land you control, untargeted, rather than "any number of target lands" | an any-number target mode ahead of a single-target mode would claim twenty optional slots before it |
-| 🟡 Kid Loki | hexproof goes to each creature you control that gained any counter this turn and has a +1/+1 counter — not only one you put a +1/+1 counter on | the per-turn counter record does not keep who placed which kind |
 | 🟡 Treasure Keeper | the dies walk exiles the cards it passes (cascade's walk) rather than revealing them | no reveal-until-cast-free effect without the exile |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
@@ -2148,7 +2146,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Duke, Rebel Sentry | the cost removes a +1/+1 counter, the only kind he enters with | `remove_counter_cost` |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
-| 🟡 Doc Samson, Super Psychiatrist | the plus-one rider covers your artifacts and creatures | `ExtraCounterAllKinds`' reach |
+| 🟡 Doc Samson, Super Psychiatrist | counters another player puts on your permanents get the plus one too ("if you would put") | `ExtraCounterOnPermanents` reads no placer |
 | 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |
 | 🟡 Reckless Crew | only unattached Equipment is offered, so an Equipment already on a creature stays put | `ForEach` + `Attach` over `R::Unattached` |
 | 🟡 Mishra's Research Desk | both exiled cards stay playable; "choose one of them" collapses | `ExileTopAndGrantMayPlay` |

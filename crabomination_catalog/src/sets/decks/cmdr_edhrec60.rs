@@ -52,10 +52,7 @@ fn each_opponent_discards() -> Effect {
 
 /// Kid Loki — {U} legendary 1/1 God Hero Villain. Each creature you control
 /// that you've put a +1/+1 counter on this turn has hexproof. Whenever you
-/// draw your second card each turn, put a +1/+1 counter on Kid Loki. 🟡 The
-/// hexproof reads "gained a counter this turn and has a +1/+1 counter" — an
-/// opponent's counter or another kind this turn also qualifies
-/// (INCOMPLETE_CARDS).
+/// draw your second card each turn, put a +1/+1 counter on Kid Loki.
 pub fn kid_loki() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -63,10 +60,7 @@ pub fn kid_loki() -> CardDefinition {
                           hexproof.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Selector::EachPermanent(
-                    R::Creature
-                        .and(R::ControlledByYou)
-                        .and(R::GainedCounterThisTurn)
-                        .and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                    R::Creature.and(R::ControlledByYou).and(R::YouPutPlusOneCounterOnThisTurn),
                 ),
                 keyword: Keyword::Hexproof,
             },

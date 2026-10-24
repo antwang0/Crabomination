@@ -81,7 +81,7 @@ pub fn uldaros_theorix() -> CardDefinition {
 }
 
 /// Beast, Erudite Aerialist — {3}{G/U} legendary 3/3. Has flying while it got
-/// a +1/+1 counter this turn (Kid Loki's `GainedCounterThisTurn` pairing);
+/// a +1/+1 counter on him this turn (`YouPutPlusOneCounterOnThisTurn`);
 /// combat damage to a player draws a card.
 pub fn beast_erudite_aerialist() -> CardDefinition {
     CardDefinition {
@@ -90,7 +90,7 @@ pub fn beast_erudite_aerialist() -> CardDefinition {
             description: "As long as you've put one or more +1/+1 counters on Beast this turn, he has flying.",
             effect: StaticEffect::SelfHasKeywordWhile {
                 keyword: Keyword::Flying,
-                condition: R::GainedCounterThisTurn.and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                condition: R::YouPutPlusOneCounterOnThisTurn,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

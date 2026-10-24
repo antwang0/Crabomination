@@ -447,13 +447,17 @@ pub fn chandra_acolyte_of_flame() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::GrantFlashbackThisTurn {
+                // Cast as the ability resolves, its costs paid; exiled after.
+                effect: Effect::CastImmediatePayingExtra {
                     what: target_filtered(
                         R::HasCardType(CardType::Instant)
                             .or(R::HasCardType(CardType::Sorcery))
                             .and(R::ManaValueAtMost(3))
                             .from_your_graveyard(),
                     ),
+                    source_zone: Zone::Graveyard,
+                    extra: ManaCost::default(),
+                    exile_after: true,
                 },
                 ..Default::default()
             },
