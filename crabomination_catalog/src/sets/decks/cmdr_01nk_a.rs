@@ -1331,7 +1331,7 @@ pub fn end_blaze_epiphany() -> CardDefinition {
                 slot: 0,
                 filter: Some(R::Creature),
             },
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+            Effect::DealDamage { to: Selector::TargetFiltered { slot: 0, filter: R::Creature }, amount: Value::XFromCost },
         ]),
         ..Default::default()
     }

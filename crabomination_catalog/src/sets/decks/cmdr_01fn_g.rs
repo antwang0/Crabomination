@@ -136,7 +136,7 @@ pub fn roar_of_the_crowd() -> CardDefinition {
         CardType::Sorcery,
         Effect::ChooseCreatureTypeThen {
             who: PlayerRef::You,
-            then: Box::new(Effect::DealDamage { to: target_filtered(R::Any), amount: chosen_type_count() }),
+            then: Box::new(Effect::DealDamage { to: target_filtered(R::any_target()), amount: chosen_type_count() }),
         },
     )
 }

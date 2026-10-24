@@ -413,7 +413,7 @@ pub fn karn_living_legacy() -> CardDefinition {
                             applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
                             ability: ActivatedAbility {
                                 tap_cost: true,
-                                effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::ONE },
+                                effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::ONE },
                                 ..Default::default()
                             },
                             condition: None,

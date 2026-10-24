@@ -257,7 +257,7 @@ pub fn geistflame_reservoir() -> CardDefinition {
                 mana_cost: cost(&[generic(1), r()]),
                 tap_cost: true,
                 remove_counter_x: Some(CounterType::Charge),
-                effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::XFromCost },
+                effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::XFromCost },
                 ..Default::default()
             },
             ActivatedAbility {

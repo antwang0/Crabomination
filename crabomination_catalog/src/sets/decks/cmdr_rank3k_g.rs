@@ -171,7 +171,7 @@ pub fn auntie_blyte_bad_influence() -> CardDefinition {
             tap_cost: true,
             remove_counter_x: Some(CounterType::PlusOnePlusOne),
             effect: Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: target_filtered(R::any_target()),
                 amount: Value::XFromCost,
             },
             ..Default::default()

@@ -211,3 +211,25 @@ fn tax_collector_taxes_or_detains() {
     let detained = g.battlefield_find(giant).unwrap().detained_by.is_some();
     assert!(taxed || detained, "one mode applied");
 }
+
+/// CR 115.4 — "any target" is a creature, player, planeswalker or battle:
+/// Syr Carah can't ping a Forest. (Nine damage abilities read `Any` here;
+/// `scripts/audit_any_target.py --gate` holds the class.)
+#[test]
+fn syr_carah_cant_target_a_land() {
+    use crabomination::game::types::{GameAction, Target};
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let carah = g.add_card_to_battlefield(0, catalog::syr_carah_the_bold());
+    g.clear_sickness(carah);
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let ping = |g: &mut GameState, t: Target| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: carah, ability_index: 0, target: Some(t), additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(ping(&mut g, Target::Permanent(forest)).is_err());
+    ping(&mut g, Target::Player(1)).expect("a player is a target");
+}

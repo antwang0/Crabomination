@@ -275,7 +275,7 @@ pub fn barrage_of_expendables() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::ONE },
+            effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::ONE },
             ..Default::default()
         }],
         ..spell("Barrage of Expendables", cost(&[r()]), CardType::Enchantment, Effect::Noop)

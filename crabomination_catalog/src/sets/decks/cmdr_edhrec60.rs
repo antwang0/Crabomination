@@ -273,7 +273,7 @@ pub fn fireminds_research() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), r()]),
                 remove_counter_cost: Some((CounterType::Charge, 5)),
-                effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(5) },
+                effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::Const(5) },
                 ..Default::default()
             },
         ],

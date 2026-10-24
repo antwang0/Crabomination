@@ -194,7 +194,7 @@ pub fn syr_carah_the_bold() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::ONE },
+            effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::ONE },
             ..Default::default()
         }],
         ..legend("Syr Carah, the Bold", cost(&[generic(3), r(), r()]), vec![CreatureType::Human, CreatureType::Knight], 3, 3)

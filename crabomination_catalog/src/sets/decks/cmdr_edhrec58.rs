@@ -50,7 +50,7 @@ pub fn jaya_ballard_task_mage() -> CardDefinition {
             shaper(
                 cost(&[generic(1), r()]),
                 Effect::Seq(vec![
-                    Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+                    Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::Const(3) },
                     Effect::GrantDamageDeniesRegenerationThisTurn { what: Selector::Target(0) },
                 ]),
             ),

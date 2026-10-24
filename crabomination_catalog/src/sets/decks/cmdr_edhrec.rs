@@ -3956,7 +3956,7 @@ pub fn hobgoblin_bandit_lord() -> CardDefinition {
             mana_cost: cost(&[r()]),
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: target_filtered(R::Any),
+                to: target_filtered(R::any_target()),
                 amount: Value::OtherCreaturesOfTypeEnteredThisTurn(CreatureType::Goblin),
             },
             ..Default::default()
