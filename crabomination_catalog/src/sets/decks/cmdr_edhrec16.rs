@@ -711,8 +711,7 @@ pub fn aphelia_viper_whisperer() -> CardDefinition {
 
 /// Hooded Blightfang — {2}{B} 1/4 Snake, deathtouch. Whenever a deathtouch
 /// creature you control attacks, each opponent loses 1 life and you gain 1.
-/// Whenever one deals combat damage to a planeswalker, destroy it (noncombat
-/// damage is the INCOMPLETE half).
+/// Whenever one deals damage to a planeswalker, destroy that planeswalker.
 pub fn hooded_blightfang() -> CardDefinition {
     let deathtouch = || Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasKeyword(Keyword::Deathtouch) };
     CardDefinition {
@@ -727,8 +726,11 @@ pub fn hooded_blightfang() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlaneswalker, EventScope::YourControl)
-                    .with_filter(deathtouch()),
+                // Combat or not (CR 120.3): the damaged object is slot 0.
+                event: EventSpec::new(EventKind::DealsDamage, EventScope::YourControl).with_filter(Predicate::All(vec![
+                    deathtouch(),
+                    Predicate::EntityMatches { what: Selector::Target(0), filter: R::Planeswalker },
+                ])),
                 effect: Effect::Destroy { what: Selector::Target(0) },
             },
         ],

@@ -382,6 +382,41 @@ fn aphelia_halves_a_life_total() {
     assert_eq!(g.players[1].life, 9);
 }
 
+/// Hooded Blightfang — "Whenever a creature you control with deathtouch deals
+/// damage to a planeswalker, destroy that planeswalker." Noncombat damage
+/// counts (CR 120.3); damage to a creature does nothing extra.
+#[test]
+fn hooded_blightfang_destroys_a_planeswalker_burned_outside_combat() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = pod(2);
+    let fang = ready(&mut g, 0, catalog::hooded_blightfang());
+    let jace = ready(&mut g, 1, catalog::jace_beleren());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let ping = |t| {
+        TriggerPush::new(fang, 0, Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE })
+            .target(Some(Target::Permanent(t)))
+            .build()
+    };
+    g.stack.push(ping(bear));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(jace).is_some(), "a creature hit destroys no planeswalker");
+    g.stack.push(ping(jace));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(jace).is_none(), "the 1 noncombat damage triggers the destroy");
+    // In combat the dealer survives and the planeswalker it hit is destroyed.
+    let jace = ready(&mut g, 1, catalog::jace_beleren());
+    g.battlefield_find_mut(jace).unwrap().counters.insert(CounterType::Loyalty, 5);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: fang, target: AttackTarget::Planeswalker(jace) }]))
+        .expect("attack Jace");
+    drain_stack(&mut g);
+    combat_damage(&mut g);
+    assert!(g.battlefield_find(jace).is_none(), "destroyed by the combat hit");
+    assert!(g.battlefield_find(fang).is_some(), "the dealer is not \"that planeswalker\"");
+}
+
 /// CR 603.2c — two Snakes connecting are one batch: half the life once.
 #[test]
 fn cr_603_2c_aphelia_halves_once_a_batch() {
