@@ -4806,8 +4806,14 @@ fn pick_retarget_shield(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
 /// The effect chooses new targets for a target spell (Redirect's shape).
 fn effect_retargets_spell(eff: &Effect) -> bool {
     match eff {
-        Effect::ChooseNewTargetsForSpell { .. } => true,
+        // Imp's Mischief's "change the target" too (never cast in a 120-game
+        // census before this arm).
+        Effect::ChooseNewTargetsForSpell { .. } | Effect::ChangeSpellTarget { .. } => true,
         Effect::Seq(v) => v.first().is_some_and(effect_retargets_spell),
+        // A die whose every result retargets (Wyll's Reversal).
+        Effect::RollDie { results, .. } => {
+            !results.is_empty() && results.iter().all(|(_, _, e)| effect_retargets_spell(e))
+        }
         _ => false,
     }
 }
@@ -30339,6 +30345,26 @@ mod stack_response_tests {
                 if card_id == offer && t == wrath);
             assert_eq!(countered, pod, "pod {pod}: {action:?}");
         }
+    }
+
+    /// Imp's Mischief redirects a Murder aimed at the bot's Serra Angel (its
+    /// "change the target" is a retarget the shield picker reads).
+    #[test]
+    fn bot_answers_removal_with_imps_mischief() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let murder = g.add_card_to_hand(0, catalog::murder());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 3);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: murder, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None })
+            .unwrap();
+        let imps = g.add_card_to_hand(1, catalog::imps_mischief());
+        g.players[1].mana_pool.add(crate::mana::Color::Black, 2);
+        g.priority.player_with_priority = 1;
+        let action = HeuristicBot::new().next_action(&g, 1);
+        assert!(matches!(action, Some(GameAction::CastSpell { card_id, .. }) if card_id == imps), "{action:?}");
     }
 
     #[test]
