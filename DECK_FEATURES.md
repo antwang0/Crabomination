@@ -34,7 +34,7 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-Commander run `01M2Ffkh` (2026-10-24 night): 25 seats — 6055-6077, the zero-gap pairs EDHREC added since `01Uv3VwF`'s scan (no new cards), 6078 Isu the Abominable and 6079 Scarlet Witch, Wanda Maximoff (`decks::cmdr_01m2_a`, 15 cards; tests `recent_b/cmdr_01m2_a.rs`); residual: Cover of Winter's per-event shave (INCOMPLETE_CARDS).
+Commander run `01M2Ffkh` (2026-10-24 night): 26 seats — 6055-6077, the zero-gap pairs EDHREC added since `01Uv3VwF`'s scan (no new cards), 6078 Isu the Abominable, 6079 Scarlet Witch, Wanda Maximoff and 6080 Stegron the Dinosaur Man (`decks::cmdr_01m2_a`, 24 cards; tests `recent_b/cmdr_01m2_a.rs`); residual: Cover of Winter's per-event shave (INCOMPLETE_CARDS).
 
 Commander run `01Jywzky` (2026-10-21, concurrent with `01E4rMUL` / `01NkAE5B`): 30 seats (`decks::cmdr_01jy_a`, 99 cards; tests `recent_b/cmdr_01jy_a.rs`) — 21 two-/three-gap partner-pair decks and nine single-commander averages (Brigid, Clachan's Heart; Thanos; Mairsil; Jace, Vryn's Prodigy; Hallar; Kiora of Salt and Sand; Gideon the Oathless; Rashida Scalebane). Residuals are INCOMPLETE_CARDS rows (Covenant of Minds, Grand Master of Flowers, Minion of Leshrac, Militia's Pride, Tombstone Stairwell). Still blocked: ENGINE_BACKLOG `01Jywzky` OPEN.
 
