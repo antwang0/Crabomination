@@ -36924,6 +36924,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ISU_THE_ABOMINABLE_COMMANDERS,
             main: decks::ISU_THE_ABOMINABLE_MAIN,
         },
+        // Seat 6079: Scarlet Witch, Wanda Maximoff's EDHREC average deck. `--pod-decks 6079`.
+        PodDeck {
+            name: "Scarlet Witch, Wanda Maximoff (R)",
+            commanders: decks::SCARLET_WITCH_2_COMMANDERS,
+            main: decks::SCARLET_WITCH_2_MAIN,
+        },
     ]
 }
 
@@ -44963,6 +44969,7 @@ mod tests {
             ("Wilson, Refined Grizzly and Guild Artisan", &[0x21D2]),
             ("Zellix, Sanity Flayer and Raised by Giants", &[0x21D3]),
             ("Isu the Abominable", &[0x21D4]),
+            ("Scarlet Witch, Wanda Maximoff", &[0x21D5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -170707,3 +170707,29 @@ pub const ISU_THE_ABOMINABLE_MAIN: &[CardFactory] = &[
     swords_to_plowshares, winters_chill, blessing_of_frost, blizzard_brawl, cultivate, farseek,
     glacial_revelation, into_the_north, rampant_growth, search_for_glory,
 ];
+
+pub const SCARLET_WITCH_2_COMMANDERS: &[CardFactory] = &[scarlet_witch_wanda_maximoff];
+
+/// **Scarlet Witch, Wanda Maximoff**'s EDHREC average deck, card for card:
+/// 63 nonbasic cards + 36 Mountains = 99.
+/// Scarlet Witch, Wanda Maximoff (EDHREC, fetched 2026-10-24).
+pub const SCARLET_WITCH_2_MAIN: &[CardFactory] = &[
+    commanders_sphere, hierophants_chalice, prophetic_prism, prowlers_helm, stormrider_rig,
+    vial_of_dragonfire, aether_hub, snow_covered_mountain, spire_of_industry, thriving_bluff,
+    zoetic_cavern, barging_sergeant, bladeback_sliver, boggart_brute, cleaving_sliver,
+    diamond_mare, fanatical_firebrand, generator_servant, goblin_banneret, goblin_instigator,
+    goblin_motivator, guttersnipe, hellkite_whelp, hoarding_dragon, hulk_bruce_banner,
+    insolent_neonate, pathmaker_initiate, pyreheart_wolf, quicksilver_pietro_maximoff,
+    quicksmith_genius, speedway_fanatic, the_immortal_weapons, tunneling_geopede,
+    voldaren_duelist, wiccan_young_avenger, aria_of_flame, break_through_the_line,
+    giant_spectacle, prophetic_ravings, retreat_to_valakut, brute_strength, chandras_pyrohelix,
+    expedite, lightning_axe, magma_jet, otherworldly_outburst, shatter, smashing_spree,
+    sure_strike, volatile_claws, act_on_impulse, cosmotronic_wave, lava_axe, magmatic_chasm,
+    precision_bolt, pyrotechnics, ragefire, renegade_tactics, repulsor_rays, shenanigans,
+    tormenting_voice, tremor, vandalize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
