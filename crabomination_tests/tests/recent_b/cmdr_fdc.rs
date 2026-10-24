@@ -3960,6 +3960,34 @@ fn feline_ferocity_cards() {
     assert_eq!(count_named(&g, 0, "Forest"), 3);
 }
 
+/// Regression (pod seed 1015916): "up to X" at an X far past the library
+/// asks no more picks than the library holds — a prompting seat answered
+/// an empty search millions of times under a doubled Mossborn Hydra.
+#[test]
+fn traverse_the_outlands_stops_at_the_library() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.battlefield_find_mut(giant).unwrap().add_counters(CounterType::PlusOnePlusOne, 1_000_000);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.players[0].wants_ui = true;
+    let t = g.add_card_to_hand(0, catalog::traverse_the_outlands());
+    cast(&mut g, t, &[]);
+    let mut asks = 0;
+    while let Some(pd) = g.pending_decision.as_ref() {
+        let pick = match &pd.decision {
+            crabomination::decision::Decision::SearchLibrary { candidates, .. } => candidates.first().map(|c| c.0),
+            _ => panic!("unexpected {:?}", pd.decision),
+        };
+        g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Search(pick))).expect("answer");
+        asks += 1;
+        assert!(asks <= 3, "asked past the library");
+    }
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Forest"), 2);
+}
+
 /// Stalking Leonin — once, exile an attacker the chosen opponent controls.
 #[test]
 fn stalking_leonin_exiles_the_chosen_attacker() {

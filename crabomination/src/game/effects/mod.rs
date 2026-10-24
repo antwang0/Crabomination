@@ -27699,7 +27699,11 @@ impl GameState {
             }
 
             Effect::SearchUpToN { who, filter, to, count } => {
-                let n = self.evaluate_value(count, ctx).max(0);
+                // No more picks than the library has cards: Traverse the
+                // Outlands at a doubled Mossborn Hydra's power asked an empty
+                // library millions of times (pod seed 1015916).
+                let library = self.resolve_player(who, ctx).map_or(0, |p| self.players[p].library.len());
+                let n = self.evaluate_value(count, ctx).max(0).min(i32::try_from(library).unwrap_or(i32::MAX));
                 // Pack Hunt — "cards with the same name as target creature".
                 let target_name = ctx.targets.iter().find_map(|t| match t {
                     crate::game::Target::Permanent(id) => {
