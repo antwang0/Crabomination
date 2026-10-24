@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-24 late (Commander run, `01S1RwZ4`) — guardrail; counter-placer gates, one guarded SBA sweep
+
+New on hot-ish paths: a `COUNTER_PLACER` TLS read per "you would put" adder (counter placements only) and an
+`any()` over `continuous_effects` per SBA pass for `WhileSourceControlledBy` (the same guard the three sibling
+duration sweeps use). `release-fast` bot_ladder, 4-core Xeon @ 2.80 GHz:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok; peak_rss_mib 52.9
+paired A/B       bench_ab.py 16 pairs vs 2591683fa (the session's base): +2.98 % median / +1.80 % mean, sd 5.68 — noise
+2-player pools   seeds 10153 + 10154: cube 4,798 + 2 CR 104.4 draws / sos 3,000 / sealed 7,200, 0 stalls
+pods             seed 10155, 200 games at each of 2..8 seats: 1,400 decided;
+                 turns/game 19.93 / 32.59 / 46.03 / 57.61 / 69.77 / 80.98 / 98.48
+sweeps           overflow: 10150 (4/6) + 10151 (3/5/8) + 10152 (--a dflt, 4) = 14,532 games, 0 panics;
+                 undecided: CR 104.4 draws and one 8-seat Scute Swarm board cap
+```
+
 ### 2026-10-24 (Commander run, `01RsnzAo`) — guardrail; card fixes, a hone-counter gather pass, three spend restrictions
 
 The gather's battlefield walk now also asks, per ATTACHED card only, whether it is a bonus-less Equipment with a hone
