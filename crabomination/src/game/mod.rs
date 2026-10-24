@@ -14431,14 +14431,18 @@ impl GameState {
                 | u64::from(self.current_turn_is_extra) << 40
                 | 1 << 41,
         );
-        // Counter history a layer leaf reads ("as long as you've put a +1/+1
-        // counter on Beast this turn"): both registries only grow within a
-        // turn, so their lengths witness every entry. Beast's flying was
-        // served stale after The Earth Crystal's counters (seed 1021186).
+        // The turn registries layer leaves read (`requirement_live_leaves`:
+        // "you put a +1/+1 counter on Beast this turn", "gained a counter",
+        // "turned face up", "fought"): each only grows within a turn, so its
+        // length witnesses every entry. Beast's flying was served stale after
+        // The Earth Crystal's counters (seed 1021186).
+        let t = &self.turn;
         lists = mix(
             lists,
-            self.turn.p1p1_put_this_turn.len() as u64
-                | (self.turn.permanents_gained_counter_this_turn.len() as u64) << 32,
+            t.p1p1_put_this_turn.len() as u64
+                | (t.permanents_gained_counter_this_turn.len() as u64) << 16
+                | (t.turned_face_up_this_turn.len() as u64) << 32
+                | (t.fought_this_turn.len() as u64) << 48,
         );
         GatherKey {
             scalars: [
