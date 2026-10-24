@@ -8386,8 +8386,10 @@ impl GameState {
                     .count() as u32
             })
             .sum();
-        // Plus any "until end of turn" bonus (Prairie Dog's {4}{W}).
-        statics + self.players.get(seat).map_or(0, |p| p.extra_plus_one_counters_this_turn)
+        // Plus any "until end of turn" bonus (Prairie Dog's {4}{W}) — "if YOU
+        // would put", so only for `seat`'s own placements.
+        let turn = if placed_by(seat) { self.players.get(seat).map_or(0, |p| p.extra_plus_one_counters_this_turn) } else { 0 };
+        statics + turn
     }
 
     /// CR 614.16 counter-placement replacement chain for a `base`-count
@@ -8454,12 +8456,16 @@ impl GameState {
         let (mut doubles, mut halves) = (0u32, 0u32);
         for c in self.battlefield.iter() {
             for sa in &c.definition.static_abilities {
-                if matches!(self.active_static(&sa.effect, c), Some(StaticEffect::CountersByPlacerDoubledOpponentsHalved)) {
-                    if c.controller == placer {
-                        doubles += 1;
-                    } else if !self.same_team(c.controller, placer) {
-                        halves += 1;
+                match self.active_static(&sa.effect, c) {
+                    Some(StaticEffect::CountersByPlacerDoubledOpponentsHalved) => {
+                        if c.controller == placer {
+                            doubles += 1;
+                        } else if !self.same_team(c.controller, placer) {
+                            halves += 1;
+                        }
                     }
+                    Some(StaticEffect::CountersByPlacerDoubled) if c.controller == placer => doubles += 1,
+                    _ => {}
                 }
             }
         }
@@ -8656,6 +8662,8 @@ impl GameState {
     /// `ExtraCounterOnCreaturePlaneswalkerOrYou`. Additive, before doubling.
     pub fn extra_any_kind_adders_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
+        // Lae'zel's "if YOU would put" counts only `seat`'s own placements.
+        let own = placed_by(seat);
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
@@ -8663,11 +8671,10 @@ impl GameState {
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| {
-                        matches!(
-                            sa.effect,
-                            StaticEffect::ExtraCounterAllKinds | StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou
-                        )
+                    .filter(|sa| match sa.effect {
+                        StaticEffect::ExtraCounterAllKinds => true,
+                        StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou => own,
+                        _ => false,
                     })
                     .count() as u32
             })
@@ -8679,7 +8686,7 @@ impl GameState {
     /// Samson's counts only when `seat` is the placer.
     fn extra_permanent_adders_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
-        let placed_by_seat = COUNTER_PLACER.with(|c| c.get()).unwrap_or(seat) == seat;
+        let placed_by_seat = placed_by(seat);
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat)
@@ -8713,7 +8720,7 @@ impl GameState {
             .flat_map(|c| c.definition.static_abilities.iter())
             .filter(|sa| match sa.effect {
                 StaticEffect::ExtraCounterAllKinds => artifact,
-                StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou => walker,
+                StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou => walker && placed_by(seat),
                 _ => false,
             })
             .count() as u32
@@ -35805,6 +35812,7 @@ fn static_effect_to_effects(
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters
             | StaticEffect::CountersByPlacerDoubledOpponentsHalved
+            | StaticEffect::CountersByPlacerDoubled
             | StaticEffect::DoubleCountersMatching { .. }
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
@@ -38066,6 +38074,12 @@ thread_local! {
     /// placer. A thread-local rather than a `GameState` field: it lives for one
     /// synchronous effect call, and a field crossed `game_state_stays_small`.
     static COUNTER_PLACER: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+
+/// Whether `seat` is putting the counters being scaled: the named placer,
+/// else the recipient's controller (`seat`, by every caller's contract).
+fn placed_by(seat: usize) -> bool {
+    COUNTER_PLACER.with(|c| c.get()).unwrap_or(seat) == seat
 }
 
 /// Names `seat` as the counter placer until dropped, restoring the previous

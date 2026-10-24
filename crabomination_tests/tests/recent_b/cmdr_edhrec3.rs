@@ -1565,6 +1565,10 @@ fn laezel_adds_one_counter_of_each_kind() {
     assert_eq!(n(&g, jace, CounterType::Loyalty), loyalty + 2);
     run(&mut g, Effect::AddExperience(Value::ONE));
     assert_eq!(g.players[0].experience, 2, "you get one more too");
+    // "If YOU would put": an opponent's counter on our Bear isn't scaled.
+    let add = Effect::AddCounter { what: Selector::ExactObjects(vec![bear]), kind: CounterType::PlusOnePlusOne, amount: Value::ONE };
+    g.resolve_effect(&add, &EffectContext::for_spell(1, None, 0, 0)).expect("theirs");
+    assert_eq!(n(&g, bear, CounterType::PlusOnePlusOne), 3);
 }
 
 /// Resolve `effect` as seat 0's.

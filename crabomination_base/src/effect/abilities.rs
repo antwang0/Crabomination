@@ -1689,6 +1689,9 @@ pub enum StaticEffect {
     /// effect's controller where an effect places them, else the receiving
     /// permanent's controller or player), read in the CR 614.16 chain.
     CountersByPlacerDoubledOpponentsHalved,
+    /// The doubling half alone — "if you would put one or more counters on a
+    /// permanent or player, put twice that many" (Innkeeper's Talent).
+    CountersByPlacerDoubled,
     /// The filtered sibling — "if one or more counters would be put on
     /// [filter] you control, twice that many … instead" (Loading Zone's
     /// "creature, Spacecraft, or Planet"). Read against the receiving
