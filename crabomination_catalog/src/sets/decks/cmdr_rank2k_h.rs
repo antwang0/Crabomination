@@ -163,12 +163,12 @@ pub fn extraction_specialist() -> CardDefinition {
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::CantAttack,
-                duration: Duration::WhileSourceOnBattlefield,
+                duration: Duration::WhileYouControlSource,
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::CantBlock,
-                duration: Duration::WhileSourceOnBattlefield,
+                duration: Duration::WhileYouControlSource,
             },
         ]))],
         ..creature(

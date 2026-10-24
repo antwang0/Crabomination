@@ -164,7 +164,7 @@ pub fn tale_of_tinuviel() -> CardDefinition {
                 Effect::GrantKeyword {
                     what: target_filtered(mine()),
                     keyword: Keyword::Indestructible,
-                    duration: Duration::WhileSourceOnBattlefield,
+                    duration: Duration::WhileYouControlSource,
                 },
             ),
             (

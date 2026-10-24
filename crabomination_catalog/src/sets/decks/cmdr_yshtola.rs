@@ -772,7 +772,7 @@ pub fn thancred_waters() -> CardDefinition {
             etb(Effect::GrantKeyword {
                 what: target_filtered(R::Permanent.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou).and(R::OtherThanSource)),
                 keyword: Keyword::Indestructible,
-                duration: Duration::WhileSourceOnBattlefield,
+                duration: Duration::WhileYouControlSource,
             }),
             on_cast_noncreature(Effect::GrantKeyword {
                 what: Selector::This,

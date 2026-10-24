@@ -341,7 +341,7 @@ pub fn aegis_angel() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::GrantKeyword {
             what: target_filtered(R::Permanent.and(R::OtherThanSource)),
             keyword: Keyword::Indestructible,
-            duration: Duration::WhileSourceOnBattlefield,
+            duration: Duration::WhileYouControlSource,
         })],
         ..creature("Aegis Angel", cost(&[generic(4), w(), w()]), vec![CreatureType::Angel], 5, 5)
     }

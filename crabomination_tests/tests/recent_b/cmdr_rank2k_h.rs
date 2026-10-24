@@ -142,6 +142,19 @@ fn extraction_specialist_returns_a_pacified_two_drop() {
     let cp = g.computed_permanent(bear).expect("returned");
     let kws = cp.keywords();
     assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
+    // CR 611.2b — "for as long as you control Extraction Specialist": it
+    // ends when an opponent takes the Specialist, which stays on the field.
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::ExactObjects(vec![spec]),
+        to: None,
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&steal, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(spec).unwrap().controller, 1);
+    let cp = g.computed_permanent(bear).unwrap();
+    let kws = cp.keywords();
+    assert!(!kws.contains(&Keyword::CantAttack) && !kws.contains(&Keyword::CantBlock));
 }
 
 /// Induced Amnesia swaps a hand for fresh cards, then gives it back when it

@@ -2678,7 +2678,7 @@ pub fn there_and_back_again() -> CardDefinition {
                         body: Box::new(Effect::GrantKeyword {
                             what: target_filtered(R::Creature),
                             keyword: Keyword::CantBlock,
-                            duration: Duration::WhileSourceOnBattlefield,
+                            duration: Duration::WhileYouControlSource,
                         }),
                     },
                     tempt(),
