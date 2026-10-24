@@ -5591,6 +5591,7 @@ impl GameState {
             R::IsAttackingYouOrYourPlaneswalker => Some(self.creature_is_attacking_seat_or_its_planeswalker(cid, controller)),
             R::IsAttackingAnOpponent => Some(self.creature_is_attacking_an_opponent_of(cid, controller)),
             R::IsAttackingOpponentPlayer => Some(self.creature_is_attacking_opponent_player(cid, controller)),
+            R::IsAttackingBattle => Some(self.creature_is_attacking_a_battle(cid)),
             R::IsAttackingChosenPlayerOfSource => Some(self.attacking_chosen_player_of(cid, source)),
             R::IsAttackingSameAsSource => Some(self.attacking_same_as_source(cid, source)),
             R::ControlledByChosenPlayerOfSource => Some(self.controlled_by_chosen_player_of(cid, source)),
@@ -6668,6 +6669,7 @@ impl GameState {
                         self.creature_is_attacking_an_opponent_of(card.id, controller)
                     }
                     R::IsAttackingOpponentPlayer => self.creature_is_attacking_opponent_player(card.id, controller),
+                    R::IsAttackingBattle => self.creature_is_attacking_a_battle(card.id),
                     R::IsAttackingChosenPlayerOfSource => self.attacking_chosen_player_of(card.id, source),
                     R::IsAttackingSameAsSource => self.attacking_same_as_source(card.id, source),
                     R::ControlledByChosenPlayerOfSource => self.controlled_by_chosen_player_of(card.id, source),
@@ -8356,6 +8358,7 @@ impl GameState {
             R::IsAttackingYouOrYourPlaneswalker => self.creature_is_attacking_seat_or_its_planeswalker(card.id, controller),
             R::IsAttackingAnOpponent => self.creature_is_attacking_an_opponent_of(card.id, controller),
             R::IsAttackingOpponentPlayer => self.creature_is_attacking_opponent_player(card.id, controller),
+            R::IsAttackingBattle => self.creature_is_attacking_a_battle(card.id),
             R::IsAttackingChosenPlayerOfSource | R::IsAttackingSameAsSource | R::IsAttackingTriggerPlayer | R::ControlledByChosenPlayerOfSource => false,
             // A battlefield instance carries this flag directly (Rowdy Research's
             // "{1} less for each creature that attacked this turn" affinity).

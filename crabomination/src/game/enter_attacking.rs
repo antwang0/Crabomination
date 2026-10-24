@@ -219,6 +219,11 @@ impl GameState {
 
     /// Attacking an opponent of `seat` directly (not a planeswalker or
     /// battle of theirs).
+    /// Attacking a battle (CR 310.5, 506.3).
+    pub(crate) fn creature_is_attacking_a_battle(&self, id: CardId) -> bool {
+        self.attacking.iter().any(|a| a.attacker == id && matches!(a.target, AttackTarget::Battle(_)))
+    }
+
     pub(crate) fn creature_is_attacking_opponent_player(&self, id: CardId, seat: usize) -> bool {
         self.attacking
             .iter()

@@ -3633,6 +3633,9 @@ pub enum SelectionRequirement {
     /// Attacking an opponent of the evaluating player — the player, not a
     /// planeswalker or battle ("whenever Kaalia attacks an opponent").
     IsAttackingOpponentPlayer,
+    /// Attacking a battle — "whenever this creature attacks a battle"
+    /// (War-Trained Slasher).
+    IsAttackingBattle,
     /// An attacking creature whose defender is the player stamped on the
     /// evaluating source's `chosen_player` — "creatures attacking the last
     /// chosen player" (Triarch Stalker). False without a source.
