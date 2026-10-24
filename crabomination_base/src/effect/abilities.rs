@@ -2132,6 +2132,11 @@ pub enum StaticEffect {
     /// entering permanents count, read from this static's controller's view
     /// (`Any` for Yarok; Panharmonicon's artifact-or-creature).
     DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement },
+    /// "If a [leaving] permanent leaving the battlefield causes a triggered
+    /// ability of a permanent you control to trigger, that ability triggers
+    /// an additional time" — Gandalf the White's leaving half. `leaving` is
+    /// read against the left object's last known information (CR 603.10a).
+    DoubleControllerLeaveTriggers { leaving: crate::card::SelectionRequirement },
     /// Aboleth Spawn's Probing Telepathy — "Whenever a creature entering
     /// under an opponent's control causes a triggered ability of that creature
     /// to trigger, you may copy that ability. You may choose new targets for

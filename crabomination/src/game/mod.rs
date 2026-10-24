@@ -276,6 +276,21 @@ pub mod types;
 
 /// An amount of life as an `i32` delta, saturating at `i32::MAX`: a tripled
 /// damage past it cast `as i32` wrapped negative, so a loss read as a gain.
+/// The permanent a leaves-the-battlefield event names (death, sacrifice,
+/// exile, bounce), for the leave-trigger doublers.
+pub(crate) fn leave_subject(ev: &GameEvent) -> Option<CardId> {
+    match ev {
+        GameEvent::CreatureDied { card_id }
+        | GameEvent::PermanentDied { card_id, .. }
+        | GameEvent::CreatureSacrificed { card_id, .. }
+        | GameEvent::PermanentSacrificed { card_id, .. }
+        | GameEvent::CreatureLeftWithoutDying { card_id, .. }
+        | GameEvent::PermanentLeftBattlefield { card_id, .. }
+        | GameEvent::PlaneswalkerDied { card_id } => Some(*card_id),
+        _ => None,
+    }
+}
+
 pub(crate) fn life_amount<T: TryInto<i32>>(x: T) -> i32 {
     x.try_into().unwrap_or(i32::MAX)
 }
@@ -27050,6 +27065,7 @@ impl GameState {
                         filter: ta.event.filter.clone(),
                         subject,
                         event_amount,
+                        triggered_by_leave: crate::game::leave_subject(ev),
                         triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         triggered_by_death: matches!(
                             ev,
@@ -27245,6 +27261,7 @@ impl GameState {
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                             event_amount: self.event_amount_in(ev, events),
+                            triggered_by_leave: crate::game::leave_subject(ev),
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -27282,6 +27299,7 @@ impl GameState {
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_in(ev, events),
+                                triggered_by_leave: crate::game::leave_subject(ev),
                                 triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
@@ -27331,6 +27349,7 @@ impl GameState {
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_in(ev, events),
+                                triggered_by_leave: crate::game::leave_subject(ev),
                                 triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
@@ -27452,6 +27471,7 @@ impl GameState {
                             filter: ta.event.filter.clone(),
                             subject,
                             event_amount: self.event_amount_in(ev, events),
+                            triggered_by_leave: crate::game::leave_subject(ev),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                             triggered_by_death: matches!(
                                 ev,
@@ -27522,6 +27542,7 @@ impl GameState {
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_in(ev, events),
+                                triggered_by_leave: crate::game::leave_subject(ev),
                                 triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                                 triggered_by_death: matches!(
                                     ev,
@@ -27601,6 +27622,7 @@ impl GameState {
                             filter: ta.event.filter.clone(),
                             subject,
                             event_amount: self.event_amount_in(ev, events),
+                            triggered_by_leave: crate::game::leave_subject(ev),
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -27656,6 +27678,7 @@ impl GameState {
                                         &ta.event.kind,
                                     ),
                                     event_amount: self.event_amount_in(ev, events),
+                                    triggered_by_leave: crate::game::leave_subject(ev),
                                     triggered_by_etb: false,
                                     triggered_by_death: false,
                                     triggered_by_attack: false,
@@ -27701,6 +27724,7 @@ impl GameState {
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_in(ev, events),
+                                triggered_by_leave: crate::game::leave_subject(ev),
                                 triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -27806,6 +27830,7 @@ impl GameState {
                             filter: None,
                             subject: None,
                             event_amount: 0,
+                            triggered_by_leave: crate::game::leave_subject(ev),
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -27862,6 +27887,7 @@ impl GameState {
                                     filter: None,
                                     subject: None,
                                     event_amount: 0,
+                                    triggered_by_leave: crate::game::leave_subject(ev),
                                     triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
@@ -27892,6 +27918,7 @@ impl GameState {
                                     filter: None,
                                     subject: None,
                                     event_amount: 0,
+                                    triggered_by_leave: crate::game::leave_subject(ev),
                                     triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
@@ -28065,6 +28092,39 @@ impl GameState {
     pub(crate) fn self_death_trigger_fires(&self, controller: usize, source: CardId, creature: bool) -> usize {
         1 + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
             + if creature { self.death_trigger_extra_fires(controller, source) } else { 0 }
+            + self.leave_trigger_extra_fires(controller, source)
+    }
+
+    /// Gandalf the White — extra fires for a trigger of `controller`'s that
+    /// `left` leaving the battlefield caused: one per
+    /// `DoubleControllerLeaveTriggers` they control whose filter the left
+    /// object's last known information (CR 603.10a) matches.
+    pub(crate) fn leave_trigger_extra_fires(&self, controller: usize, left: CardId) -> usize {
+        use crate::effect::StaticEffect as SE;
+        let mut filters = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter_map(|sa| match &sa.effect {
+                SE::DoubleControllerLeaveTriggers { leaving } => Some(leaving),
+                _ => None,
+            })
+            .peekable();
+        if filters.peek().is_none() {
+            return 0;
+        }
+        let Some(lki) = self
+            .died_card_snapshots
+            .get(&left)
+            .or_else(|| self.leaves_bf_lki.get(&left))
+            .or_else(|| self.find_card_anywhere(left))
+        else {
+            return 0;
+        };
+        filters
+            .filter(|f| crate::game::layers::requirement_matches_card(f, lki, controller))
+            .count()
     }
 
     pub(crate) fn death_trigger_extra_fires(&self, controller: usize, source: CardId) -> usize {
@@ -28207,6 +28267,7 @@ impl GameState {
                 event_amount,
                 triggered_by_etb,
                 triggered_by_death,
+                triggered_by_leave,
                 triggered_by_attack,
                 triggered_by_land_entry,
                 triggered_by_face_up,
@@ -28332,7 +28393,7 @@ impl GameState {
                     self.death_trigger_extra_fires(controller, source)
                 } else {
                     0
-                };
+                } + triggered_by_leave.map_or(0, |left| self.leave_trigger_extra_fires(controller, left));
                 // Isshin / Windcrag Siege (Mardu): an attack-caused trigger of a
                 // permanent you control fires an additional time per doubler.
                 let attack_extra = if triggered_by_attack {
@@ -35832,6 +35893,7 @@ fn static_effect_to_effects(
             // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
             | StaticEffect::DoubleControllerEtbTriggers { .. }
+            | StaticEffect::DoubleControllerLeaveTriggers { .. }
             // Aboleth Spawn — read at the ETB-trigger push sites via
             // `entering_trigger_copiers`; no layer effect.
             | StaticEffect::CopyOpponentsEnteringCreatureTriggers

@@ -1677,6 +1677,10 @@ pub struct TriggerCandidate {
     /// "a creature dying causes … triggers an additional time" doubler.
     #[serde(default)]
     pub triggered_by_death: bool,
+    /// The permanent whose leaving the battlefield caused this trigger —
+    /// Gandalf the White's leave doubler reads its last known information.
+    #[serde(default)]
+    pub triggered_by_leave: Option<CardId>,
     /// True if the originating event was a creature attacking — Isshin /
     /// Windcrag Siege (Mardu) "a creature attacking causes … triggers an
     /// additional time" doubler.

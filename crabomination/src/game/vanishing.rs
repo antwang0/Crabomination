@@ -32,6 +32,7 @@ impl GameState {
                 filter: None,
                 subject: None,
                 event_amount: 0,
+                triggered_by_leave: crate::game::leave_subject(ev),
                 triggered_by_etb: false,
                 triggered_by_death: false,
                 triggered_by_attack: false,

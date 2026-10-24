@@ -44,6 +44,7 @@ impl GameState {
                         filter: ta.event.filter.clone(),
                         subject,
                         event_amount: self.event_amount_in(ev, events),
+                        triggered_by_leave: crate::game::leave_subject(ev),
                         triggered_by_etb: false,
                         triggered_by_death: false,
                         triggered_by_attack: false,

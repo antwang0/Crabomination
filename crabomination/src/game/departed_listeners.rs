@@ -173,6 +173,7 @@ impl GameState {
                         filter: ta.event.filter.clone(),
                         subject,
                         event_amount,
+                        triggered_by_leave: crate::game::leave_subject(ev),
                         triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         triggered_by_death: matches!(ev, GameEvent::CreatureDied { .. }),
                         triggered_by_attack: false,
