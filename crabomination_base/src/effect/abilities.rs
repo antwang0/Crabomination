@@ -4516,6 +4516,11 @@ pub enum StaticEffect {
     /// Necropolis): the card's own permission, read off the graveyard card by
     /// `graveyard_cast_type_available` — any turn, no budget, no rider.
     CastSelfFromGraveyard,
+    /// "You may cast this card from your graveyard by [cost] in addition to
+    /// paying its other costs" (Quilled Greatwurm's "removing six counters
+    /// from among creatures you control"): `CastSelfFromGraveyard` whose
+    /// graveyard cast also pays `cost`.
+    CastSelfFromGraveyardWithCost(crate::card::AdditionalCastCost),
     /// "If a card that has a cycling ability would be put into your graveyard
     /// from anywhere and it wasn't cycled, exile it instead" (Abandoned
     /// Sarcophagus). A death-redirect-lane static; the cycle path marks

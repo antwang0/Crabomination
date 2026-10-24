@@ -7771,7 +7771,12 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
         // "You may cast this card from your graveyard" (Hogaak) answers on any
         // turn in `graveyard_cast_type_available`, past the board gate's
         // your-turn test.
-        if def.static_abilities.iter().any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CastSelfFromGraveyard)) {
+        if def.static_abilities.iter().any(|sa| {
+            matches!(
+                sa.effect,
+                crate::effect::StaticEffect::CastSelfFromGraveyard | crate::effect::StaticEffect::CastSelfFromGraveyardWithCost(_)
+            )
+        }) {
             m |= spec::GY_GRANT;
         }
     }

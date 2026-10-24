@@ -35781,6 +35781,7 @@ fn static_effect_to_effects(
             | StaticEffect::CyclingFreeWhileHandAtLeast(_)
             | StaticEffect::CastFromGraveyardMatching { .. }
             | StaticEffect::CastSelfFromGraveyard
+            | StaticEffect::CastSelfFromGraveyardWithCost(_)
             | StaticEffect::ExileOwnCyclingCardsUnlessCycled
             | StaticEffect::LandsProduceColorInstead(_)
             | StaticEffect::YourBasicLandsProduceChosenColorInstead

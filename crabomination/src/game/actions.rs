@@ -7313,7 +7313,9 @@ impl GameState {
         use crate::effect::StaticEffect;
         let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
         // "You may cast this card from your graveyard" — the card's own (Hogaak).
-        if card.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::CastSelfFromGraveyard)) {
+        if card.definition.static_abilities.iter().any(|sa| {
+            matches!(sa.effect, StaticEffect::CastSelfFromGraveyard | StaticEffect::CastSelfFromGraveyardWithCost(_))
+        }) {
             return Some(None);
         }
         // Abandoned Sarcophagus — any turn, no budget, for matching cards;
@@ -11616,6 +11618,14 @@ impl GameState {
             && self.library_top_counter_grant(p, &card)
         {
             additional_costs.push(crate::card::AdditionalCastCost::RemoveCountersFromCreatures { count: 1 });
+        }
+        // Quilled Greatwurm — its own graveyard cast pays the printed extra.
+        if self.casting_hop == Some((card.id, crate::game::HopFrom::Graveyard)) {
+            for sa in &card.definition.static_abilities {
+                if let crate::effect::StaticEffect::CastSelfFromGraveyardWithCost(c) = &sa.effect {
+                    additional_costs.push(c.clone());
+                }
+            }
         }
         // CR 601.2b — Tegwyll's Scouring cast at instant speed taps its fliers.
         if let Some(fc) = self.flash_additional_cost_for(p, &card) {
