@@ -7842,7 +7842,7 @@ pub fn myr_reservoir() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::Move {
-                    what: target_filtered(myr().and(R::OwnedByYou)),
+                    what: target_filtered(myr().from_your_graveyard()),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()

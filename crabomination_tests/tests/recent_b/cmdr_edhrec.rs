@@ -3948,6 +3948,9 @@ fn urtet_myr_kit() {
     g.battlefield_find_mut(reservoir).unwrap().tapped = false;
     g.players[0].mana_pool.add_colorless(3);
     g.priority.player_with_priority = 0;
+    // "From your graveyard": a Myr on the battlefield isn't a legal target.
+    assert!(g.perform_action(GameAction::ActivateAbility { card_id: reservoir, ability_index: 1, target: Some(Target::Permanent(propagator)), additional_targets: vec![], x_value: None, mode: None })
+        .is_err(), "not a Myr on the battlefield");
     g.perform_action(GameAction::ActivateAbility { card_id: reservoir, ability_index: 1, target: Some(Target::Permanent(perilous)), additional_targets: vec![], x_value: None, mode: None })
         .expect("buy back");
     drain_stack(&mut g);
