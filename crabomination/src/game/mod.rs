@@ -29165,6 +29165,13 @@ impl GameState {
                     }
                     chosen.push(t);
                 }
+                // "Each of up to three targets" (Jeska's −X) may name a player
+                // beside the permanents; the picker offers its player first
+                // whatever the avoid set, so it is taken once and the walk ends.
+                Some(t @ Target::Player(_)) if !friendly_only && primary.as_ref() != Some(&t) && !chosen.contains(&t) => {
+                    chosen.push(t);
+                    break;
+                }
                 _ => break,
             }
         }

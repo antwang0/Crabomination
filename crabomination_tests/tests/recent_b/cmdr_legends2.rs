@@ -436,6 +436,20 @@ fn jeska_minus_x_pays_x_and_deals_x() {
     assert_eq!(g.battlefield_find(jeska).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 1);
 }
 
+/// CR 115.1 — Jeska's "each of up to three targets" may name a player beside
+/// the creature: the auto-fill past the declared target hits a face too.
+#[test]
+fn jeska_minus_x_fills_a_player_slot() {
+    let mut g = pod(3);
+    let jeska = g.add_card_to_battlefield(0, catalog::jeska_thrice_reborn());
+    g.battlefield_find_mut(jeska).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    let life: i32 = (1..3).map(|p| g.players[p].life).sum();
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate_loyalty(&mut g, jeska, 1, Some(Target::Permanent(b)), Some(2));
+    assert!(g.battlefield_find(b).is_none());
+    assert_eq!((1..3).map(|p| g.players[p].life).sum::<i32>(), life - 2, "an opponent took the X too");
+}
+
 /// Tevesh Szat's +1 draws a third card when the sacrificed permanent was a
 /// commander (any player's, CR 903.3); the −10 takes every commander, on the
 /// battlefield and in each command zone.
