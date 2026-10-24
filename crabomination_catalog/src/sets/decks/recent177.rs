@@ -42,10 +42,16 @@ pub fn exemplar_of_light() -> CardDefinition {
                 },
             },
             TriggeredAbility {
+                // "Whenever YOU put … on this creature": the placer's scope,
+                // narrowed to this permanent.
                 event: EventSpec::new(
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                    EventScope::SelfSource,
+                    EventScope::YouPutCounters,
                 )
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: crate::card::SelectionRequirement::OtherThanSource.negate(),
+                })
                 .once_per_turn(),
                 effect: Effect::Draw {
                     who: Selector::You,

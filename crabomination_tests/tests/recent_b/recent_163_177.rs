@@ -2770,6 +2770,26 @@ mod recent177 {
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew from the counter trigger");
     }
 
+    /// "Whenever YOU put one or more +1/+1 counters on this creature": an
+    /// opponent's counter on it draws nothing.
+    #[test]
+    fn exemplar_of_light_ignores_an_opponents_counter() {
+        use crabomination::effect::{Effect, Selector};
+        let mut g = two_player_game();
+        let ex = g.add_card_to_battlefield(0, catalog::exemplar_of_light());
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        let hand = g.players[0].hand.len();
+        let put = Effect::AddCounter {
+            what: Selector::ExactObjects(vec![ex]),
+            kind: crabomination::card::CounterType::PlusOnePlusOne,
+            amount: crabomination::card::Value::ONE,
+        };
+        let evs = g.resolve_effect(&put, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand);
+    }
+
     /// Ashroot Animist's attack trigger gives another creature you control trample
     /// and +power/+power (power 4 → +4/+4).
     #[test]

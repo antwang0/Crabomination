@@ -352,7 +352,7 @@ pub fn omarthis_ghostfire_initiate() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::YourControl)
+                event: EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::YouPutCounters)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Creature.and(colorless_obj()).and(R::OtherThanSource),
