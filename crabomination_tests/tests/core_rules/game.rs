@@ -4791,19 +4791,36 @@ fn teferi_static_does_not_restrict_controllers_own_casts() {
 
 #[test]
 fn teferi_static_grants_controller_sorceries_as_flash() {
-    // Teferi's *static* ("you may cast sorcery spells as though they had
-    // flash") lets its controller cast a sorcery outside their main phase —
-    // no loyalty activation needed. Regression: the cast-timing check used to
-    // consult only `ControllerSpellsHaveFlash`, leaving this static a no-op.
+    // A *static* "you may cast sorcery spells as though they had flash"
+    // (Hypersonic Dragon) lets its controller cast a sorcery outside their
+    // main phase. Regression: the cast-timing check used to consult only
+    // `ControllerSpellsHaveFlash`, leaving this static a no-op. (Teferi, Time
+    // Raveler carried this static too, which it doesn't print: its +1 is the
+    // until-your-next-turn grant tested below.)
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    g.add_card_to_battlefield(0, catalog::hypersonic_dragon());
     let sorcery = g.add_card_to_hand(0, catalog::wrath_of_god());
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::White, 2);
     g.step = TurnStep::DeclareAttackers; // sorcery-illegal window
     g.perform_action(GameAction::CastSpell {
         card_id: sorcery, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Teferi's static should let its controller cast a sorcery at flash speed");
+    }).expect("the static should let its controller cast a sorcery at flash speed");
+}
+
+/// Teferi, Time Raveler prints no sorceries-as-flash static: without the +1,
+/// a sorcery still waits for its controller's main phase.
+#[test]
+fn teferi_without_its_plus_one_keeps_sorcery_timing() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    let sorcery = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::DeclareAttackers;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: sorcery, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err());
 }
 
 #[test]

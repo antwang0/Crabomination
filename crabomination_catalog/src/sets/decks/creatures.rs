@@ -794,12 +794,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
                 description: "Each opponent can cast spells only any time they could cast a sorcery.",
                 effect: StaticEffect::OpponentsSorceryTimingOnly,
             },
-            // +1's "you may cast sorcery spells as though they had flash"
-            // collapsed into a permanent static while Teferi is in play.
-            StaticAbility {
-                description: "You may cast sorcery spells as though they had flash.",
-                effect: StaticEffect::ControllerSorceriesAsFlash,
-            },
         ],
         base_loyalty: 4,
         loyalty_abilities: vec![
