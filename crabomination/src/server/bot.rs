@@ -5253,6 +5253,9 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         // "Exile any number of target spells" (Mindbreak Trap — never cast in
         // a 4-seat census before this arm).
         Effect::ApplyToTargets { effect, .. } => effect_counters_spells(effect),
+        // A condition picks the tax (Lofty Denial, Stubborn Denial — both
+        // uncast in a 120-game census): either branch counters.
+        Effect::If { then, else_, .. } => effect_counters_spells(then) || effect_counters_spells(else_),
         _ => false,
     }
 }
@@ -30456,6 +30459,14 @@ mod stack_response_tests {
                 if card_id == offer && t == wrath);
             assert_eq!(countered, pod, "pod {pod}: {action:?}");
         }
+    }
+
+    /// Stubborn Denial's counter sits behind a ferocious `If`; it still reads
+    /// as a counterspell.
+    #[test]
+    fn a_conditional_counter_is_a_counterspell() {
+        assert!(effect_counters_spells(&catalog::stubborn_denial().effect));
+        assert!(effect_counters_spells(&catalog::lofty_denial().effect));
     }
 
     /// Imp's Mischief redirects a Murder aimed at the bot's Serra Angel (its
