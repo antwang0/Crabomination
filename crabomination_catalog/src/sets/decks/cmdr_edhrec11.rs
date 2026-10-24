@@ -1350,8 +1350,8 @@ pub fn knight_captain_of_eos() -> CardDefinition {
 // ── Ratadrabik of Urborg ─────────────────────────────────────────────────────
 
 /// Gandalf the White — {3}{W}{W} 4/5 flash Avatar Wizard. Legendary and
-/// artifact spells have flash; a legendary permanent or artifact entering
-/// doubles your permanents' triggers.
+/// artifact spells have flash; a legendary permanent or artifact entering or
+/// leaving doubles your permanents' triggers.
 pub fn gandalf_the_white() -> CardDefinition {
     let legend_or_artifact = || R::HasSupertype(Supertype::Legendary).or(R::Artifact);
     CardDefinition {
@@ -1364,6 +1364,10 @@ pub fn gandalf_the_white() -> CardDefinition {
             static_ab(
                 "If a legendary permanent or an artifact entering the battlefield causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
                 StaticEffect::DoubleControllerEtbTriggers { entering: legend_or_artifact() },
+            ),
+            static_ab(
+                "If a legendary permanent or an artifact leaving the battlefield causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+                StaticEffect::DoubleControllerLeaveTriggers { leaving: legend_or_artifact() },
             ),
         ],
         ..legend("Gandalf the White", cost(&[generic(3), w(), w()]), vec![CreatureType::Avatar, CreatureType::Wizard], 4, 5)

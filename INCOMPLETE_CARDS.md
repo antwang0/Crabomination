@@ -2054,7 +2054,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Pir, Imaginative Rascal | the extra counter lands only on creatures and artifacts you control, not enchantments, lands, planeswalkers or teammates' permanents | `StaticEffect::ExtraCounterAllKinds` is scoped to the controller's creatures and artifacts |
 | 🟡 Nine Lives | damage that can't be prevented still becomes an incarnation counter instead of being dealt | `ReplaceDamageToYouWithCountersOnSource` is a replacement (CR 614), not a prevention (CR 615) |
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
-| 🟡 Gandalf the White | only an *entering* legendary permanent or artifact doubles triggers; a leaving one doesn't | `DoubleControllerEtbTriggers` has no leave-the-battlefield half |
+| ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
 | 🟡 Jade Monolith | redirects the next damage from any source, not one of your choice | `RedirectNextDamageTo` has no source filter |
 | 🟡 Lochmere Serpent | "exile five target cards" takes up to five | `ApplyToTargets { min_targets: 0 }` |
 | 🟡 Mystic Reflection | a token model that left the battlefield before the entries copies nothing (a card model copies from its new zone, which is its printed self) | `Effect::NextEntriesEnterAsCopy` stores the model's id, not its last-known copiable values |

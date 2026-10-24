@@ -305,3 +305,24 @@ fn shared_summons_fetches_different_names() {
     names.sort();
     assert_eq!(names, ["Grizzly Bears", "Hill Giant"]);
 }
+
+/// Gandalf the White — "If a legendary permanent or an artifact entering or
+/// leaving the battlefield causes a triggered ability of a permanent you
+/// control to trigger, that ability triggers an additional time." The
+/// leaving half reads the left object's last known information (CR 603.10a).
+#[test]
+fn gandalf_the_white_doubles_triggers_a_leaving_legend_causes() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::gandalf_the_white());
+    g.add_card_to_battlefield(0, catalog::zulaport_cutthroat());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hound = g.add_card_to_battlefield(0, catalog::isamaru_hound_of_konda());
+    let life = g.players[1].life;
+    for (victim, lost) in [(bear, 1), (hound, 2)] {
+        let before = g.players[1].life;
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, &[Target::Permanent(victim)]).expect("bolt");
+        assert_eq!(before - g.players[1].life, lost, "a nonlegendary death once, a legend's twice");
+    }
+    assert_eq!(life - g.players[1].life, 3);
+}
