@@ -11862,6 +11862,10 @@ fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Op
             if !ok {
                 continue;
             }
+            // A loot or tutor paid in life could be sunk into until it kills.
+            if !matches!(ab.effect, Effect::Draw { .. }) && (ab.life_cost > 0 || ab.life_cost_value.is_some()) {
+                continue;
+            }
             if sink_sacrifice_cost(ab, w) {
                 continue; // don't spend a permanent just to draw
             }
