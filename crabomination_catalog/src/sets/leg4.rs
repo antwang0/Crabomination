@@ -612,15 +612,17 @@ pub fn akron_legionnaire() -> CardDefinition {
     }
 }
 
-/// Shimian Night Stalker — soaks one attacker's damage onto itself.
+/// Shimian Night Stalker — {B}, {T}: one target attacker's damage to you this
+/// turn is dealt to it instead.
 pub fn shimian_night_stalker() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[b()]),
-            effect: Effect::PreventAllDamageThisTurn {
-                target: you(),
-                redirect_to: Some(Selector::This),
+            effect: Effect::RedirectAllDamageBetweenThisTurn {
+                from: target_filtered(R::Creature.and(R::IsAttacking)),
+                to: you(),
+                redirect_to: Selector::This,
             },
             ..Default::default()
         }],

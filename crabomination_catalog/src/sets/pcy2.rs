@@ -355,9 +355,10 @@ pub fn mirror_strike() -> CardDefinition {
         name: "Mirror Strike",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::PreventAllDamageBetweenThisTurn {
+        effect: Effect::RedirectAllDamageBetweenThisTurn {
             from: target_filtered(R::Creature.and(R::IsUnblocked)),
             to: Selector::Player(PlayerRef::You),
+            redirect_to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
         },
         ..Default::default()
     }

@@ -570,3 +570,22 @@ fn takklemaggot_and_venarian_gold_trigger_at_the_hosts_controllers_upkeep() {
     assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::Sleep), 1,
         "one sleep counter removed at the host controller's upkeep");
 }
+
+/// CR 614.9 — Shimian Night Stalker takes one target attacker's damage to you
+/// this turn; another source still reaches you.
+#[test]
+fn shimian_night_stalker_soaks_one_attackers_damage() {
+    let mut g = main_phase();
+    let stalker = g.add_card_to_battlefield(0, catalog::shimian_night_stalker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let soak = catalog::shimian_night_stalker().activated_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(stalker, 0, Some(Target::Permanent(bear)));
+    g.resolve_effect(&soak, &ctx).unwrap();
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 2, Some(bear), &mut ev);
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.battlefield_find(stalker).unwrap().damage, 2, "redirected to the Stalker");
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 2, Some(other), &mut ev);
+    assert_eq!(g.players[0].life, 18, "only the targeted attacker");
+}

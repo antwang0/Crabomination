@@ -454,3 +454,17 @@ fn noxious_field_pings_everything() {
     assert_eq!(g.players[0].life, 19);
     assert_eq!(g.players[1].life, 19);
 }
+
+/// CR 614.9 — Mirror Strike: the unblocked creature's damage to you this turn
+/// is dealt to its controller instead.
+#[test]
+fn mirror_strike_sends_the_damage_home() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let strike = catalog::mirror_strike().effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&strike, &ctx).unwrap();
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 2, Some(bear), &mut ev);
+    assert_eq!((g.players[0].life, g.players[1].life), (20, 18));
+}
