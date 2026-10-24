@@ -141,6 +141,9 @@ fn ms_marvel_draws_on_a_targeted_ally() {
         (1 + 3, 7),
         "base power = hand size (1), +3 Giant Growth"
     );
+    // The gained ability keeps reading the hand.
+    g.add_card_to_hand(0, catalog::island());
+    assert_eq!(pt(&g, mm), (2 + 3, 7));
 }
 
 /// CR 701.21a — She-Hulk eats a land for a card and a counter.

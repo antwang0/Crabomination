@@ -75,7 +75,8 @@ pub fn ms_marvel_kamala_khan() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::ONE,
                 },
-                Effect::SetBasePT {
+                // Tracks the hand as it changes (`SetBasePtLive`).
+                Effect::SetBasePtLive {
                     what: Selector::This,
                     power: Value::HandSizeOf(PlayerRef::You),
                     toughness: Value::Const(4),
