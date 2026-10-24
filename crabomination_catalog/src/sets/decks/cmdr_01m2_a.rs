@@ -51,16 +51,16 @@ fn cumulative_snow() -> Keyword {
 /// Isu the Abominable — {3}{U}{U} legendary snow 5/5 Yeti. Look at the top
 /// card of your library any time; play snow lands and cast snow spells from
 /// it. Another snow permanent of yours entering lets you pay {G}, {W} or {U}
-/// for a +1/+1 counter (asked colour by colour, one payment at most).
+/// for a +1/+1 counter (the colour is a mode, then the may-pay).
 pub fn isu_the_abominable() -> CardDefinition {
     let counter = || Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE };
-    let pay = |pip, else_: Option<Box<Effect>>| Effect::MayPay {
+    let pay = |pip| Effect::MayPay {
         description: "Pay for a +1/+1 counter on Isu?".into(),
         mana_cost: cost(&[pip]),
         body: Box::new(counter()),
-        else_,
+        else_: None,
     };
-    let trigger = pay(g(), Some(Box::new(pay(w(), Some(Box::new(pay(u(), None)))))));
+    let trigger = Effect::ChooseMode(vec![pay(g()), pay(w()), pay(u())]);
     CardDefinition {
         supertypes: vec![Supertype::Legendary, Supertype::Snow],
         static_abilities: vec![

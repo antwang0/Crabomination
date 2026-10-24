@@ -47,14 +47,15 @@ fn pt(g: &GameState, id: CardId) -> (i32, i32) {
 }
 
 /// Isu plays a snow land and casts a snow spell off the top of the library
-/// (never a non-snow one), and a snow arrival buys a +1/+1 counter for {G}.
+/// (never a non-snow one), and a snow arrival buys a +1/+1 counter for the
+/// chosen colour.
 #[test]
 fn isu_plays_snow_off_the_top_and_grows() {
     let mut g = pod(2);
     let isu = ready(&mut g, 0, catalog::isu_the_abominable());
     let land = g.add_card_to_library(0, catalog::snow_covered_forest());
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0), DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::PlayLand(land)).expect("a snow land off the top");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_some());
@@ -66,10 +67,10 @@ fn isu_plays_snow_off_the_top_and_grows() {
     g.players[0].library.retain(|c| c.id != bears);
     let yeti = g.add_card_to_library(0, catalog::frostpeak_yeti());
     g.players[0].mana_pool.add(Color::Blue, 4);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(false), DecisionAnswer::Bool(false)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2), DecisionAnswer::Bool(false)]));
     cast(&mut g, yeti).expect("a snow spell off the top");
     assert!(g.battlefield_find(yeti).is_some());
-    assert_eq!(g.battlefield_find(isu).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "declined all three");
+    assert_eq!(g.battlefield_find(isu).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "declined");
 }
 
 /// Diamond Faerie's {1}{S} pumps snow creatures only, paid from snow lands.
