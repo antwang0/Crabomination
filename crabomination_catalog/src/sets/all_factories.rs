@@ -19121,6 +19121,14 @@ static DECKS: &[Factory] = &[
     super::decks::dee_kay_finder_of_the_lost,
     super::decks::done_for_the_day,
     super::decks::hogaak_arisen_necropolis,
+    // cmdr_01m2_a (session 01M2Ffkh)
+    super::decks::isu_the_abominable,
+    super::decks::diamond_faerie,
+    super::decks::frostpeak_yeti,
+    super::decks::squall_drifter,
+    super::decks::snow_devil,
+    super::decks::glacial_plating,
+    super::decks::cover_of_winter,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
