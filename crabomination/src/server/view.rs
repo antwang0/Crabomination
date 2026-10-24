@@ -2574,10 +2574,13 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
         }
     }
     // Discard-as-cost (Fauna Shaman, Survival of the Fittest) — `discard_cost`.
+    // The filter is over cards in hand, not permanents: Hallway Heckler's
+    // `R::Any` read "Discard a permanent".
     if let Some((req, n)) = ability.discard_cost.as_ref() {
-        let noun = requirement_noun(req);
+        let noun = discard_noun(req);
         if *n == 1 {
-            parts.push(format!("Discard a {noun}"));
+            let article = if noun.starts_with(['a', 'e', 'i', 'o', 'u']) { "an" } else { "a" };
+            parts.push(format!("Discard {article} {noun}"));
         } else {
             parts.push(format!("Discard {n} {noun}s"));
         }
@@ -2741,6 +2744,21 @@ fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
         // ControlledByYou → "creature").
         R::And(a, _) | R::Or(a, _) => requirement_noun(a),
         _ => "permanent",
+    }
+}
+
+/// The card a discard cost asks for: "card", "creature card", "legendary
+/// card". A filter with no short type reading is just "card".
+fn discard_noun(req: &crate::card::SelectionRequirement) -> String {
+    use crate::card::{SelectionRequirement as R, Supertype};
+    match req {
+        R::Nonland => "nonland card".into(),
+        R::HasSupertype(Supertype::Legendary) => "legendary card".into(),
+        R::HasName(name) => format!("card named {name}"),
+        _ => match requirement_noun(req) {
+            "permanent" => "card".into(),
+            noun => format!("{noun} card"),
+        },
     }
 }
 
@@ -4705,7 +4723,12 @@ mod tests {
             discard_cost: Some((R::Creature, 1)),
             ..Default::default()
         };
-        assert!(ability_cost_label(&shaman).contains("Discard a creature"), "discard cost shown");
+        assert!(ability_cost_label(&shaman).contains("Discard a creature card"), "discard cost shown");
+        // Hallway Heckler: {T}, Discard a card — any card, not a "permanent".
+        let heckler = ActivatedAbility { tap_cost: true, discard_cost: Some((R::Any, 1)), ..Default::default() };
+        assert_eq!(ability_cost_label(&heckler), "{T}, Discard a card");
+        let two_artifacts = ActivatedAbility { discard_cost: Some((R::Artifact, 2)), ..Default::default() };
+        assert_eq!(ability_cost_label(&two_artifacts), "Discard 2 artifact cards");
         // Walking Ballista: Remove a +1/+1 counter.
         let ballista = ActivatedAbility {
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
