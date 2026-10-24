@@ -344,7 +344,7 @@ pub fn king_tchalla() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: draw(1),
         }],
-        // A modal DFC whose front also transforms (CR 712.1b): the back is
+        // A modal DFC whose front also transforms (CR 712.11b): the back is
         // cast from hand for {4}{W}{U}, or the front turns over.
         ..legend("Black Panther, Hope Enduring", cost(&[generic(4), w(), u()]), vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero], 3, 3)
     };

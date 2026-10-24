@@ -145,7 +145,7 @@ fn king_tchalla_draws_on_a_second_draw_and_transforms() {
     assert!(g.battlefield_find(king).is_some(), "damage to it is prevented");
 }
 
-/// The Marvel modal DFCs whose front also transforms (CR 712.1b): each back
+/// The Marvel modal DFCs whose front also transforms (CR 712.11b): each back
 /// face is cast straight from hand for its printed cost.
 #[test]
 fn modal_transform_backs_are_cast_from_hand() {

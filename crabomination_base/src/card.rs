@@ -7844,7 +7844,7 @@ pub(crate) mod debug_flag {
 
 impl CardDefinition {
     /// CR 712.1 — a *transforming* double-faced card, told apart from a
-    /// modal one (CR 712.1b) by the face that turns it over: some ability
+    /// modal one (CR 712.1, 712.11b) by the face that turns it over: some ability
     /// on either face transforms or returns it transformed (Search for
     /// Azcanta's upkeep trigger, the Ojer gods' death trigger, the
     /// Temple's "transform this land"). Only a modal DFC's back face may be

@@ -196,6 +196,21 @@ fn cr_702_167c_wretched_bonemass_is_the_crafted_power() {
     assert_eq!((cp.power, cp.toughness), (6, 6));
 }
 
+/// Wretched Bonemass has each listed keyword an exiled card used to craft it
+/// has: a Serra Angel lends flying and vigilance, nothing lends trample.
+#[test]
+fn wretched_bonemass_has_its_crafted_cards_keywords() {
+    let mut g = pod(2);
+    let altar = ready(&mut g, 0, catalog::altar_of_the_wretched());
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    activate(&mut g, altar, 0, None).expect("craft");
+    let cp = g.computed_permanent(altar).expect("the Bonemass");
+    assert_eq!(cp.def.name, "Wretched Bonemass");
+    let kws = cp.keywords();
+    assert!(kws.contains(&Keyword::Flying) && kws.contains(&Keyword::Vigilance));
+    assert!(!kws.contains(&Keyword::Trample));
+}
+
 /// Death-Priest of Myrkul pumps Zombies and buys a Skeleton after a death.
 #[test]
 fn death_priest_of_myrkul() {

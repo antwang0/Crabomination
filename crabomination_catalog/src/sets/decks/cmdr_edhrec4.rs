@@ -2547,7 +2547,7 @@ pub fn the_invincible_iron_man() -> CardDefinition {
                 }),
             },
         }],
-        // A modal back face that the front also transforms into (CR 712.1b):
+        // A modal back face that the front also transforms into (CR 712.11b):
         // cast from hand for its own cost.
         color_indicator: vec![Color::Blue, Color::Red],
         ..legend("The Invincible Iron Man", cost(&[generic(4), u(), r()]), vec![CreatureType::Human, CreatureType::Hero], 5, 5)

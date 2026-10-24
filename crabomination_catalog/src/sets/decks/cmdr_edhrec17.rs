@@ -238,12 +238,32 @@ pub fn explore_the_underdark() -> CardDefinition {
 
 /// Altar of the Wretched // Wretched Bonemass — {2}{B} artifact. When it
 /// enters, you may sacrifice a nontoken creature to draw and then mill X (its
-/// power). Craft with one or more creatures {2}{B}{B} (the Bonemass doesn't
-/// copy keywords — INCOMPLETE_CARDS).
+/// power). Craft with one or more creatures {2}{B}{B}.
 /// {2}{B}: return it from your graveyard to your hand. Bonemass: P/T each the
-/// total power of the cards used to craft it.
+/// total power of the cards used to craft it, and each of the twelve listed
+/// keywords any of them has (protection, a parametrized keyword, is not read).
 pub fn altar_of_the_wretched() -> CardDefinition {
+    use crate::card::Keyword as K;
+    let copied = [
+        K::Flying, K::FirstStrike, K::DoubleStrike, K::Deathtouch, K::Haste, K::Hexproof, K::Indestructible,
+        K::Lifelink, K::Menace, K::Reach, K::Trample, K::Vigilance,
+    ];
+    let has_while_crafted_with = |k: K| crate::card::StaticAbility {
+        description: "This creature has [keyword] as long as an exiled card used to craft it has [keyword].",
+        effect: StaticEffect::SelfHasKeywordWhilePredicate {
+            keyword: k.clone(),
+            condition: Predicate::ValueAtLeast(
+                Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::EachPlayer,
+                    zone: crate::card::Zone::Exile,
+                    filter: R::ExiledWithSource.and(R::HasKeyword(k)),
+                })),
+                Value::ONE,
+            ),
+        },
+    };
     let bonemass = CardDefinition {
+        static_abilities: copied.into_iter().map(has_while_crafted_with).collect(),
         name: "Wretched Bonemass",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

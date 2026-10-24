@@ -2062,7 +2062,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Teferi, Who Slows the Sunset | +1 takes up to three artifacts/creatures/lands in any mix, not one of each; the −7 emblem untaps your permanents at each opponent's upkeep rather than in their untap step | one `ApplyToTargets` slot set; emblem triggers fire at `StepBegins`, and no trigger fires in an untap step |
 | 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |
 | 🟡 Battletide Alchemist | the "you may prevent" is always taken for its controller's side and never for an opponent | `ReduceDamageToYourTeamByCount` has no per-event prompt |
-| ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.1b) — the back face carries its {4}{W}{U} and is cast from hand | — |
+| ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.11b) — the back face carries its {4}{W}{U} and is cast from hand | — |
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
 | 🟡 Iron Lad, Diverging Destiny | "you may look at the top card of your library any time" isn't modeled | no hidden-info permission for a seat |
 | 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |
@@ -2095,7 +2095,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
 | 🟡 Suppressor Skyguard | the shield lasts the turn, not just that combat | `PreventAllCombatDamageToPlayerThisTurn` has no per-combat duration |
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |
-| 🟡 Yasharn, Implacable Earth | spell additional sacrifice costs (casualty, emerge, bargain, `sacrifice_permanents` alternatives) still accept nonland permanents | the ban rides `cost_life_payable` (every life gate) and `can_be_sacrificed_for_cost` (activation sacrifices only) |
+| ~~Yasharn, Implacable Earth~~ ✅ | fixed 2026-10-24: emerge, offering, casualty and bargain sacrifices ask `sacrificeable_for_cost` like the additional-cost and alternative-cost paths | — |
 | 🟡 Karn, Living Legacy | the emblem's ability is granted to each artifact as "{T}: 1 damage": a summoning-sick artifact creature can't use it, and the artifact (not the emblem) is the source | emblems carry no activated abilities; `GrantActivatedAbility` in the emblem's statics is the lane |
 | 🟡 Sakashima's Protege | the copy choice is the engine's pick among permanents that entered this turn | `EntersAsCopy` auto-picks |
 | 🟡 Gilanra, Caller of Wirewood | any `MarksCast` mana (not only Gilanra's) funding a mana value 6+ spell draws | `SpendRestriction::MarksCast` doesn't record its source |
@@ -2115,7 +2115,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
 | 🟡 Press the Enemy | the spell / permanent choice is offered as two modes | one slot cannot hold either a spell or a permanent |
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
-| 🟡 Altar of the Wretched // Wretched Bonemass | the Bonemass doesn't gain the exiled cards' flying/first strike/… keywords | no "has each keyword among exiled cards" static |
+| ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
 | 🟡 Hand of Vecna | the pump goes only to the equipped creature; the "or a creature you control named Vecna" choice is missing | the trigger targets `AttachedTo` only |
 | 🟡 Game of Chaos | whoever wins a flip decides to flip again by the auto policy (`AnyPlayerMayAccept`); the stakes cap at 2^16 | `Effect::GameOfChaosRound` |
 | 🟡 Azra Oddsmaker | "choose a creature" is a target among your own creatures, picked as the trigger goes on the stack (before the discard) | `TargetPlayerThen { filter: mine() }` around `MayDiscard` |
