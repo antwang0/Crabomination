@@ -20099,6 +20099,7 @@ impl GameState {
                 EffectDuration::WhileSourceOnBattlefield
                     | EffectDuration::WhileSourceTapped
                     | EffectDuration::WhileSourceAttached
+                    | EffectDuration::WhileSourceControlledBy { .. }
             )
         };
         if self.continuous_effects.iter().any(|e| e.source == id && tied(&e.duration)) {
@@ -20137,6 +20138,7 @@ impl GameState {
                 player: controller,
                 installed_turn: self.turn_number,
             },
+            crate::effect::Duration::WhileYouControlSource => EffectDuration::WhileSourceControlledBy { player: controller },
             other => crate::game::effects::map_effect_duration(other),
         }
     }

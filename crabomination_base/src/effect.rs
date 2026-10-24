@@ -3325,6 +3325,9 @@ pub enum Duration {
     /// pass and so needs no sweep at all: this is for an effect a resolution
     /// installs.
     WhileSourceOnBattlefield,
+    /// CR 611.2b — "for as long as you control [this]": also ends when
+    /// another player gains control of the source (Aegis Angel).
+    WhileYouControlSource,
     /// CR 611.2b — "until the end of your next turn" (Treasure Nabber): lasts
     /// through the controller's next turn — the one after this if it's
     /// already theirs — and ends in that turn's cleanup step.

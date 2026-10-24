@@ -7884,6 +7884,25 @@ impl GameState {
             });
         }
 
+        // CR 611.2b — "for as long as you control" ends with the control too.
+        if self
+            .continuous_effects
+            .iter()
+            .any(|e| matches!(e.duration, crate::game::layers::EffectDuration::WhileSourceControlledBy { .. }))
+        {
+            let held = |g: &Self, e: &crate::game::layers::ContinuousEffect| match e.duration {
+                crate::game::layers::EffectDuration::WhileSourceControlledBy { player } => {
+                    g.battlefield_find(e.source).is_some_and(|c| c.controller == player)
+                }
+                _ => true,
+            };
+            let keep: Vec<bool> = self.continuous_effects.iter().map(|e| held(self, e)).collect();
+            if keep.iter().any(|k| !k) {
+                let mut it = keep.into_iter();
+                self.continuous_effects.retain(|_| it.next().unwrap_or(true));
+            }
+        }
+
         // The activated-ability grants of the same clause (Kitesail Larcenist).
         if !self.grants_while_source.is_empty()
             && self.grants_while_source.iter().any(|(_, s, _)| self.battlefield_find(*s).is_none())

@@ -73,6 +73,9 @@ pub enum EffectDuration {
     WhileSourceAttached,
     /// Indefinite (e.g. counters, "for as long as" effects).
     Indefinite,
+    /// CR 611.2b — "for as long as you control [the source]": ends when the
+    /// source leaves the battlefield or `player` stops controlling it.
+    WhileSourceControlledBy { player: usize },
     /// CR 611.2c — lasts while each affected permanent has a `kind` counter;
     /// swept beside `WhileSourceTapped`.
     WhileHasCounter(crate::card::CounterType),

@@ -362,7 +362,8 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::UntilEndOfYourNextTurn => EffectDuration::UntilEndOfTurn,
         crate::effect::Duration::WhileSourceTapped => EffectDuration::WhileSourceTapped,
         crate::effect::Duration::WhileSourceAttached => EffectDuration::WhileSourceAttached,
-        crate::effect::Duration::WhileSourceOnBattlefield => {
+        // Without the controller, the source's presence is what can be read.
+        crate::effect::Duration::WhileSourceOnBattlefield | crate::effect::Duration::WhileYouControlSource => {
             EffectDuration::WhileSourceOnBattlefield
         }
         crate::effect::Duration::Permanent | crate::effect::Duration::UntilSourceCast => EffectDuration::Indefinite,
