@@ -1162,6 +1162,7 @@ pub fn tempt_with_discovery() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Land,

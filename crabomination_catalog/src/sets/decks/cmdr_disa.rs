@@ -498,6 +498,7 @@ pub fn tempt_with_mayhem() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::CopySpellMayChooseTargets {
                 what: target_filtered(
                     R::IsSpellOnStack.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),

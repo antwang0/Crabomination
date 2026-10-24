@@ -291,7 +291,7 @@ impl Effect {
             Effect::CopySpell { .. }
             | Effect::CopySpellMayChooseTargets { .. }
             | Effect::CopySpellWithRiders { .. } => true,
-            Effect::TemptingOffer { body } => body.copies_target_spell(),
+            Effect::TemptingOffer { body, .. } => body.copies_target_spell(),
             // Increasing Vengeance copies once or twice by where it was cast.
             Effect::If { then, else_, .. } => then.copies_target_spell() && else_.copies_target_spell(),
             // Wild Ricochet retargets the spell before it copies it.
@@ -443,6 +443,12 @@ impl Effect {
                 f(on_most);
                 f(on_none);
             }
+            Effect::TemptingOffer { body, declined } => {
+                f(body);
+                if let Some(d) = declined {
+                    f(d);
+                }
+            }
             Effect::If { then, else_, .. }
             | Effect::IfRevealFromHand { then, else_, .. }
             | Effect::LookTopMayBottomAllElse { then, else_, .. } => {
@@ -463,7 +469,6 @@ impl Effect {
             | Effect::MayPayGenericUpTo { body, .. }
             | Effect::MayPayRepeatedly { body, .. }
             | Effect::Reflexive { body, .. }
-            | Effect::TemptingOffer { body, .. }
             | Effect::ForEachOpponent { body, .. }
             | Effect::JoinForces { body, .. }
             | Effect::ReplaceYourNextDrawThisTurn { body, .. }
@@ -1406,7 +1411,7 @@ impl Effect {
             Effect::KindleTheCarnage => false,
             Effect::ChooseTwoColorsForSource | Effect::GainLifePerChosenColorOfCast => false,
             Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => false,
-            Effect::TemptingOffer { body } => body.requires_target(),
+            Effect::TemptingOffer { body, .. } => body.requires_target(),
             Effect::ForEachOpponent { body } => body.requires_target(),
             Effect::JoinForces { body, .. } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; the
@@ -3537,7 +3542,7 @@ impl Effect {
                 sel_filter(from).or_else(|| sel_filter(to))
             }
             Effect::Tribute { otherwise, .. } => otherwise.primary_target_filter(),
-            Effect::TemptingOffer { body } => body.primary_target_filter(),
+            Effect::TemptingOffer { body, .. } => body.primary_target_filter(),
             Effect::ForEachOpponent { body } => body.primary_target_filter(),
             Effect::JoinForces { body, .. } => body.primary_target_filter(),
             Effect::PlayersMayAccept { if_any, otherwise, .. } => {
@@ -6113,7 +6118,7 @@ impl Effect {
                     eff_find(otherwise, slot, mode, kicked)
                 }
                 Effect::Tribute { otherwise, .. } => eff_find(otherwise, slot, mode, kicked),
-                Effect::TemptingOffer { body } => eff_find(body, slot, mode, kicked),
+                Effect::TemptingOffer { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::ForEachOpponent { body } => eff_find(body, slot, mode, kicked),
                 Effect::JoinForces { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PlayersMayAccept { if_any, otherwise, .. } => {

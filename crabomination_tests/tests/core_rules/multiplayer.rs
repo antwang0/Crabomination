@@ -5859,6 +5859,7 @@ fn cr_101_4_every_tempting_offer_run_happens_when_the_body_suspends() {
     let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.stack.push(
         TriggerPush::new(src, 0, Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::Discard {
                 who: Selector::Player(PlayerRef::You),
                 amount: Value::Const(1),

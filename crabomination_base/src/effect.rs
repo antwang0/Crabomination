@@ -7038,8 +7038,13 @@ pub enum Effect {
     /// Tempting offer (ability word, CR 207.2c): run `body` for the
     /// controller; each opponent may copy it for themselves, and the
     /// controller re-runs it once per opponent who accepted. Tempt with
-    /// Bunnies.
-    TemptingOffer { body: Box<Effect> },
+    /// Bunnies. `declined` runs once under each opponent who didn't
+    /// (Wernog's "each opponent who doesn't loses 1 life").
+    TemptingOffer {
+        body: Box<Effect>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        declined: Option<Box<Effect>>,
+    },
 
     /// CR 101.4 — "for each opponent, [body]": run `body` once per opponent of
     /// the controller, in APNAP order, with that opponent bound as the body's

@@ -29133,7 +29133,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::TemptingOffer { body } => {
+            Effect::TemptingOffer { body, declined } => {
                 // Offer each opponent a copy (seat-routed yes/no, so a
                 // networked human actually chooses), then run the body for
                 // the controller, each acceptor, and once more per acceptor.
@@ -29168,6 +29168,19 @@ impl GameState {
                     }
                 }
                 self.clear_answer_log();
+                // "Each opponent who doesn't …" — before any body run, so a
+                // suspend inside one never replays it.
+                if let Some(declined) = declined {
+                    let decliners: Vec<usize> = self
+                        .apnap_sort((0..self.players.len()).filter(|&q| q != me && !self.same_team(q, me)).collect())
+                        .into_iter()
+                        .filter(|q| self.players[*q].is_alive() && !acceptors.contains(q))
+                        .collect();
+                    for seat in decliners {
+                        let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
+                        self.run_effect(declined, &run_ctx, events)?;
+                    }
+                }
                 // "Tempting offer" is an ABILITY WORD (CR 207.2c) with no
                 // rules entry of its own, so the shape is the printed text:
                 // the controller runs the body once, then once per acceptor

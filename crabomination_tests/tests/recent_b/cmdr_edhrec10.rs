@@ -1786,3 +1786,29 @@ fn gisas_favorite_shovel_digs_a_walker() {
     assert!(g.battlefield_find(foe).is_none());
     assert_eq!(tokens_of(&g, 0, "Walker"), 1);
 }
+
+/// Wernog, Rider's Chaplain — "each opponent may investigate. Each opponent who
+/// doesn't loses 1 life. You investigate X times, where X is one plus the
+/// number of opponents who investigated this way." (CR 101.4: every choice in
+/// APNAP order, then the actions.)
+#[test]
+fn wernog_decliners_lose_life_and_acceptors_pay_you_a_clue() {
+    let mut g = pod(4);
+    let wernog = g.add_card_to_hand(0, catalog::wernog_riders_chaplain());
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    // Seat 1 accepts, seats 2 and 3 decline.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    cast_x(&mut g, wernog, &[], None).unwrap();
+    drain_stack(&mut g);
+    let clues = |g: &GameState, p: usize| {
+        g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Clue").count()
+    };
+    assert_eq!((clues(&g, 0), clues(&g, 1), clues(&g, 2)), (2, 1, 0));
+    assert_eq!(g.players[1].life, life[1], "the acceptor loses nothing");
+    assert_eq!((g.players[2].life, g.players[3].life), (life[2] - 1, life[3] - 1));
+    assert_eq!(g.players[0].life, life[0]);
+}

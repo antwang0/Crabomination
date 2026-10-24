@@ -45522,6 +45522,7 @@ pub fn tempt_with_bunnies() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::TemptingOffer {
+            declined: None,
             body: Box::new(bunny_draw()),
         },
         ..Default::default()
@@ -58538,6 +58539,7 @@ pub fn tempt_with_glory() -> CardDefinition {
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::AddCounter {
                 what: each_your_creature(),
                 kind: CounterType::PlusOnePlusOne,
@@ -58556,6 +58558,7 @@ pub fn tempt_with_vengeance() -> CardDefinition {
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
@@ -58586,6 +58589,7 @@ pub fn tempt_with_reflections() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::CreateTokenCopyOf {
                 extra_keywords: vec![],
                 who: PlayerRef::You,

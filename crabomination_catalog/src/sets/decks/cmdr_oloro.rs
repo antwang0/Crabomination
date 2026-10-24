@@ -397,6 +397,7 @@ pub fn tempt_with_immortality() -> CardDefinition {
         cost(&[generic(4), b()]),
         CardType::Sorcery,
         Effect::TemptingOffer {
+            declined: None,
             body: Box::new(Effect::MoveChosen {
                 from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
                 filter: None,

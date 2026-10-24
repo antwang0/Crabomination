@@ -2599,10 +2599,13 @@ pub fn bjorna_nightfall_alchemist() -> CardDefinition {
 
 /// Wernog, Rider's Chaplain — {W}{B} 1/2 legendary Human. Entering or
 /// leaving: each opponent may investigate; you investigate once plus once per
-/// opponent who did (a tempting offer). Partner—Friends forever. Residual: an
-/// opponent who declines doesn't lose 1 life.
+/// opponent who did (a tempting offer); each opponent who doesn't loses 1
+/// life. Partner—Friends forever.
 pub fn wernog_riders_chaplain() -> CardDefinition {
-    let offer = || Effect::TemptingOffer { body: Box::new(crate::effect::shortcut::investigate(1)) };
+    let offer = || Effect::TemptingOffer {
+        body: Box::new(crate::effect::shortcut::investigate(1)),
+        declined: Some(Box::new(Effect::LoseLife { who: Selector::You, amount: Value::ONE })),
+    };
     CardDefinition {
         keywords: vec![Keyword::PartnerLabel("Friends forever".into())],
         triggered_abilities: vec![
