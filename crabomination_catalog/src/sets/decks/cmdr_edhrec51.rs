@@ -91,9 +91,9 @@ pub fn the_fifteenth_doctor() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "The first nonartifact spell you cast each turn has improvise.",
             effect: StaticEffect::WhileCondition {
-                condition: Predicate::Not(Box::new(Predicate::SpellsCastThisTurnAtLeast {
+                condition: Predicate::Not(Box::new(Predicate::CastSpellThisTurnWithout {
                     who: PlayerRef::You,
-                    at_least: Value::ONE,
+                    types: vec![CardType::Artifact],
                 })),
                 inner: Box::new(StaticEffect::GrantImproviseToSpells { filter: R::Not(Box::new(R::Artifact)) }),
             },

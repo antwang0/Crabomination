@@ -63,3 +63,21 @@ fn rose_noble_and_the_fifteenth_doctor() {
     assert!(names.contains(&"Jhoira's Timebug"), "the milled artifact: {names:?}");
     assert_eq!(names.len(), 2, "Rose Noble's draw and the Timebug");
 }
+
+/// The Fifteenth Doctor — "The first nonartifact spell you cast each turn has
+/// improvise" (CR 702.126a): an artifact cast first doesn't use it up; the
+/// first nonartifact spell does.
+#[test]
+fn the_fifteenth_doctor_improvises_the_first_nonartifact_spell() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::the_fifteenth_doctor());
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(g.helper_tap_candidates(0, bear).contains(&thopter));
+    let artifact = g.add_card_to_hand(0, catalog::ornithopter());
+    cast(&mut g, artifact).expect("an artifact first");
+    assert!(g.helper_tap_candidates(0, bear).contains(&thopter), "an artifact spell doesn't count");
+    let first = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, first).expect("the first nonartifact spell");
+    assert!(!g.helper_tap_candidates(0, bear).contains(&thopter), "used up");
+}
