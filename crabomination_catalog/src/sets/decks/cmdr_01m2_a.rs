@@ -1,5 +1,5 @@
-//! Commander: 2026-10-24 (`01M2Ffkh`) — Isu the Abominable's snow deck and
-//! Scarlet Witch, Wanda Maximoff's. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch
+//! and Stegron decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -326,4 +326,146 @@ pub fn vandalize() -> CardDefinition {
             allow_repeats: false,
         },
     )
+}
+
+// ── Stegron the Dinosaur Man's deck ─────────────────────────────────────────
+
+/// Nest Robber — {1}{R} 2/1 haste Dinosaur.
+pub fn nest_robber() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        ..red_creature("Nest Robber", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur], 2, 1)
+    }
+}
+
+/// Sun-Collared Raptor — {1}{R} 1/2 trample Dinosaur. {2}{R}: +3/+0 until end of turn.
+pub fn sun_collared_raptor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(3), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..red_creature("Sun-Collared Raptor", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur], 1, 2)
+    }
+}
+
+/// Stampeding Horncrest — {4}{R} 4/4 Dinosaur; haste while you control another Dinosaur.
+pub fn stampeding_horncrest() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has haste as long as you control another Dinosaur.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Haste,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Dinosaur).and(R::OtherThanSource).and(R::ControlledByYou),
+                )),
+            },
+        }],
+        ..red_creature("Stampeding Horncrest", cost(&[generic(4), r()]), vec![CreatureType::Dinosaur], 4, 4)
+    }
+}
+
+/// Sun-Crowned Hunters — {4}{R}{R} 5/4 Dinosaur. Enrage: 3 damage to target
+/// opponent or planeswalker.
+pub fn sun_crowned_hunters() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)),
+                amount: Value::Const(3),
+            },
+        }],
+        ..red_creature("Sun-Crowned Hunters", cost(&[generic(4), r(), r()]), vec![CreatureType::Dinosaur], 5, 4)
+    }
+}
+
+/// War-Trained Slasher — {3}{R} 4/3 menace Wolverine Dinosaur. Attacking a
+/// battle doubles its power until end of turn.
+pub fn war_trained_slasher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingBattle }),
+            effect: Effect::DoublePower { what: Selector::This, times: Value::ONE, duration: Duration::EndOfTurn },
+        }],
+        ..red_creature(
+            "War-Trained Slasher",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Wolverine, CreatureType::Dinosaur],
+            4,
+            3,
+        )
+    }
+}
+
+/// Tilonalli's Crown — {1}{R} Aura. ETB: 1 damage to the enchanted creature;
+/// it gets +3/+0 and has trample.
+pub fn tilonallis_crown() -> CardDefinition {
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus { power: 3, keywords: vec![Keyword::Trample], ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::DealDamage { to: host(), amount: Value::ONE })],
+        ..aura("Tilonalli's Crown", cost(&[generic(1), r()]))
+    }
+}
+
+/// Dinosaur Stampede — {2}{R} instant. Attacking creatures get +2/+0; your
+/// Dinosaurs gain trample until end of turn.
+pub fn dinosaur_stampede() -> CardDefinition {
+    red_spell(
+        "Dinosaur Stampede",
+        cost(&[generic(2), r()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::IsAttacking)),
+                power: Value::Const(2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Dinosaur).and(R::ControlledByYou)),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Feed the Flames — {3}{R} instant. 5 damage to target creature; if it would
+/// die this turn, exile it instead.
+pub fn feed_the_flames() -> CardDefinition {
+    red_spell(
+        "Feed the Flames",
+        cost(&[generic(3), r()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::Creature) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) },
+        ]),
+    )
+}
+
+/// Cinder Strike — {R} sorcery. You may blight 1 as you cast it: 2 damage to
+/// target creature, 4 if the blight was paid.
+pub fn cinder_strike() -> CardDefinition {
+    CardDefinition {
+        kicker_action_cost: Some(crate::card::AdditionalCastCost::Blight { n: 1 }),
+        ..red_spell(
+            "Cinder Strike",
+            cost(&[r()]),
+            CardType::Sorcery,
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::IfPred {
+                    pred: Box::new(Predicate::SpellWasKicked),
+                    then: Box::new(Value::Const(4)),
+                    else_: Box::new(Value::Const(2)),
+                },
+            },
+        )
+    }
 }

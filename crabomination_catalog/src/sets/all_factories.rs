@@ -19137,6 +19137,15 @@ static DECKS: &[Factory] = &[
     super::decks::volatile_claws,
     super::decks::precision_bolt,
     super::decks::vandalize,
+    super::decks::nest_robber,
+    super::decks::sun_collared_raptor,
+    super::decks::stampeding_horncrest,
+    super::decks::sun_crowned_hunters,
+    super::decks::war_trained_slasher,
+    super::decks::tilonallis_crown,
+    super::decks::dinosaur_stampede,
+    super::decks::feed_the_flames,
+    super::decks::cinder_strike,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

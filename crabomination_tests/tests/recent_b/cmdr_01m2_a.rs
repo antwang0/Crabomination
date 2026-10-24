@@ -247,3 +247,126 @@ fn vandalize_destroys_an_artifact_and_a_land() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(ring).is_none() && g.battlefield_find(land).is_none());
 }
+
+/// Sun-Crowned Hunters' enrage answers damage with 3 to an opponent.
+#[test]
+fn sun_crowned_hunters_enrage_burns_an_opponent() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let hunters = ready(&mut g, 0, catalog::sun_crowned_hunters());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(hunters)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt our own");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+/// Stampeding Horncrest has haste only beside another Dinosaur.
+#[test]
+fn stampeding_horncrest_needs_another_dinosaur_for_haste() {
+    let mut g = pod(2);
+    let horn = g.add_card_to_battlefield(0, catalog::stampeding_horncrest());
+    let haste = |g: &GameState| g.computed_permanent(horn).unwrap().keywords().contains(&Keyword::Haste);
+    assert!(!haste(&g));
+    g.add_card_to_battlefield(0, catalog::nest_robber());
+    assert!(haste(&g));
+}
+
+/// War-Trained Slasher doubles its power attacking a battle, not a player.
+#[test]
+fn war_trained_slasher_doubles_only_against_a_battle() {
+    let mut g = pod(2);
+    let slasher = ready(&mut g, 0, catalog::war_trained_slasher());
+    // Your own Siege, protected by the opponent (CR 310.9b).
+    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    {
+        let b = g.battlefield_find_mut(battle).unwrap();
+        b.counters.insert(CounterType::Defense, 3);
+        b.protected_by = Some(1);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: slasher, target: AttackTarget::Battle(battle) }]))
+        .expect("attack the battle");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, slasher), (8, 3));
+
+    let mut g = pod(2);
+    let slasher = ready(&mut g, 0, catalog::war_trained_slasher());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: slasher, target: AttackTarget::Player(1) }]))
+        .expect("attack a player");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, slasher), (4, 3));
+}
+
+/// Tilonalli's Crown pings its host as it enters, then gives +3/+0 and trample.
+#[test]
+fn tilonallis_crown_pings_then_pumps() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let crown = g.add_card_to_hand(0, catalog::tilonallis_crown());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crown,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("2 toughness survives 1");
+    assert_eq!(c.damage, 1);
+    assert_eq!(pt(&g, bear), (5, 2));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
+}
+
+/// CR 701.68 — Cinder Strike deals 4 with the optional blight paid, 2 without.
+#[test]
+fn cinder_strike_hits_harder_blighted() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let wall = ready(&mut g, 1, catalog::wall_of_stone());
+    let cs = g.add_card_to_hand(0, catalog::cinder_strike());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: cs,
+        target: Some(Target::Permanent(wall)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("blighted");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wall).unwrap().damage, 4);
+}
+
+/// Feed the Flames exiles the creature its 5 damage kills.
+#[test]
+fn feed_the_flames_exiles_what_it_kills() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let f = g.add_card_to_hand(0, catalog::feed_the_flames());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: f,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
