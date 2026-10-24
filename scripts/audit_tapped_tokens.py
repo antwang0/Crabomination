@@ -18,7 +18,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_counter_kinds import CACHE, oracle_of  # noqa: E402
 
-PHRASE = re.compile(r"\bcreate[^.]*?\btapped\b[^.]*", re.I)
+# "create a / two / that many tapped …" — not a later "for each tapped …".
+PHRASE = re.compile(r"\bcreate\s+(?:\S+\s+){0,2}tapped\b[^.]*", re.I)
 ACCEPT = re.compile(r"tapped: true|Tap \{ what: LastCreated|EntersTapped|[A-Z]\w*Tapped\w*|CreateTokenAttacking")
 # "…with 'whenever this token becomes tapped'" — not a tapped mint.
 ALLOWLIST = {"Wildfire Awakener"}

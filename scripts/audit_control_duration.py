@@ -43,6 +43,8 @@ def shape(clause):
 # trigger condition rather than a control change.
 REVIEWED = {
     "Aethersnatch": "`GainControlOfSpell` — a spell, which keeps its new controller",
+    "Commandeer": "`GainControlOfSpell` — a spell, which keeps its new controller",
+    "Invert Polarity": "`GainControlOfSpell` — a spell, which keeps its new controller",
     "Akroan Horse": "`enters_under_opponent_control` — enters under the opponent, permanently",
     "Alicia Masters, Skilled Sculptor": "`OwnersGainControlOf` — owners regain control for good",
     "Brooding Saurian": "`OwnersGainControlOfNontokens` — owners regain control for good",

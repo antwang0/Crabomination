@@ -53,7 +53,8 @@ REVIEWED = {
     ("Tibalt's Trickery", "mill"): "'choose 1, 2, or 3 at random' — the three outcomes",
     ("Wing Storm", "damage"): "'twice the number of' — the multiplier",
     ("Crabomination", "mill"): "documented approximation of the exile-three ETB (its doc)",
-    ("Demonic Consultation", "mill"): "documented approximation of exile-six (its doc)",
+    ("The Millennium Calendar", "lose"): "'1,000 life' — the comma splits the number",
+    ("Phyrexian Purge", "lose"): "the 3-life-per-target cast cost, paid per target as it resolves",
     ("Discover the Formula", "draw"): "documented approximation of seek three (its doc)",
 }
 

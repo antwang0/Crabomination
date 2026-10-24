@@ -71,6 +71,8 @@ REVIEWED = {
     "Mirror Match": "bespoke `CopyAttackersAsBlockers` reads the attackers on you",
     "Onakke Oathkeeper": "bespoke `AttackTaxOnYourPlaneswalkers` static",
     "Ruxa, Patient Professor": "the per-creature clause is a static over your no-ability creatures",
+    "Agrus Kos, Eternal Soldier": "bespoke `CopyAbilityTargetingSourceForEachOtherCreature` reads your creatures",
+    "Paladin Class": "\"other attacking creature\" on your attack — every attacker is yours",
 }
 
 def main():
