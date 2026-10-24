@@ -36774,6 +36774,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIVRISS_29_COMMANDERS,
             main: decks::SIVRISS_29_MAIN,
         },
+        // Seat 6054: Akiri, Line-Slinger and Livio, Oathsworn Sentinel's EDHREC average deck. `--pod-decks 6054`.
+        PodDeck {
+            name: "Akiri, Line-Slinger and Livio, Oathsworn Sentinel (WR)",
+            commanders: decks::AKIRI_52_COMMANDERS,
+            main: decks::AKIRI_52_MAIN,
+        },
     ]
 }
 
@@ -44788,6 +44794,7 @@ mod tests {
             ("Numa, Joraga Chieftain and Radiant, Serra Archangel", &[0x21B9]),
             ("Durnan of the Yawning Portal and Cloakwood Hermit", &[0x21BA]),
             ("Sivriss, Nightmare Speaker and Agent of the Shadow Thieves", &[0x21BB]),
+            ("Akiri, Line-Slinger and Livio, Oathsworn Sentinel", &[0x21BC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

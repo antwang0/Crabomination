@@ -169986,3 +169986,32 @@ pub const SIVRISS_29_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const AKIRI_52_COMMANDERS: &[CardFactory] = &[akiri_line_slinger, livio_oathsworn_sentinel];
+
+/// **Akiri, Line-Slinger and Livio, Oathsworn Sentinel**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 7 Mountains + 6 Plains = 98.
+/// Akiri, Line-Slinger and Livio, Oathsworn Sentinel (EDHREC, fetched 2026-10-24).
+pub const AKIRI_52_MAIN: &[CardFactory] = &[
+    ark_of_hunger, chromatic_star, collectors_vault, conjurers_bauble, cursed_mirror,
+    dispellers_capsule, dragonspark_reactor, expedition_map, extinguisher_battleship,
+    genesis_chamber, implement_of_combustion, implement_of_improvement, mishras_bauble,
+    origin_spellbomb, pyrite_spellbomb, retrofitter_foundry, salvaging_station, sculpting_steel,
+    slagstone_refinery, soul_guide_lantern, sunbeam_spellbomb, trading_post, urzas_bauble,
+    voyager_staff, wand_of_wonder, wayfarers_bauble, welding_jar, ancient_den,
+    battlefield_forge, boros_garrison, clifftop_retreat, command_tower, darksteel_citadel,
+    elegant_parlor, furycalm_snarl, great_furnace, inventors_fair, monumental_henge,
+    radiant_summit, rogues_passage, rugged_prairie, rustvale_bridge, sacred_foundry,
+    spectator_seating, spire_of_industry, sundown_pass, turbulent_steppe, war_room,
+    angel_of_the_ruins, audacious_reshapers, auriok_salvagers, colossus_of_the_blood_age,
+    combustible_gearhulk, complaints_clerk, daretti_rocketeer_engineer, depthshaker_titan,
+    draconian_gate_bot, goblin_engineer, goblin_welder, meteor_golem, rad_rascal,
+    reckless_fireweaver, ride_guide, sandstone_oracle, solemn_simulacrum, thran_spider,
+    weftstalker_ardent, witch_enchanter, artists_talent, ghirapur_aether_grid, pias_revolution,
+    weapons_manufacturing, lorehold_charm, return_the_favor, take_the_bait, valakut_awakening,
+    comet_stellar_pup, blasphemous_act, chain_reaction, disrupt_decorum, reckless_handling,
+    scrap_mastery, shatterskull_smashing, sundering_eruption, trash_for_treasure,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains,
+];
