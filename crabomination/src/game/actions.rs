@@ -6772,204 +6772,12 @@ impl GameState {
                 return Ok(vec![]);
             }
         }
-        // Multi-target spells (Chelonian Tackle's "then it fights up to one
-        // target creature an opponent controls"): the client's cast flow only
-        // collects slot 0, so slots 1+ arrive empty and the extra half of the
-        // effect silently no-ops. Bind the next missing slot here — a
-        // `wants_ui` caster picks via a `ChooseTarget` cursor decision
-        // (suspend + clean replay; nothing has been paid yet), everyone else
-        // auto-fills. No legal candidate leaves the slot empty, which is the
-        // printed "up to one" behavior.
-        {
-            let p = self.priority.player_with_priority;
-            // A `DeclineTarget` answer stamps this cast's shape into the
-            // suppress scratch — skip the prompt so declining ends target
-            // selection. Matched (not consumed): a hand-paying caster's cast
-            // is replayed once per mana tap, and every one of those replays
-            // is the same declined decision.
-            let suppressed = self.scratch.suppress_extra_target_prompts.as_ref().is_some_and(|d| {
-                d.caster == self.priority.player_with_priority
-                    && d.card_id == card_id
-                    && d.target == target
-                    && d.additional_targets == additional_targets
-            });
-            let slot_info = if !suppressed && target.is_some() && self.seat_prompts(p) {
-                self.find_card_anywhere(card_id).and_then(|card| {
-                    // "Extra target only on your main phase" spells (Return
-                    // to Dust) genuinely cast single-target off-main — don't
-                    // prompt for the slot the rules forbid.
-                    if card.definition.extra_targets_main_phase_only
-                        && !(self.active_player_idx == p && self.step.is_main_phase())
-                    {
-                        return None;
-                    }
-                    // Total: a slot count past `u8` is past every printed cap
-                    // (an unbounded slot run once overflowed here).
-                    let slot = u8::try_from(1 + additional_targets.len()).ok()?;
-                    if card.definition.effect.slot_past_x_cap(slot, x_value.unwrap_or(0)) {
-                        return None;
-                    }
-                    card.definition
-                        .effect
-                        .target_filter_for_slot_in_mode(slot, mode)
-                        .map(|f| {
-                            (
-                                f.resolve_x(x_value.unwrap_or(0)),
-                                card.definition.name.to_string(),
-                                // Which *part* of the spell this slot feeds.
-                                // A bare "choose an additional target" leaves a
-                                // two-slot spell unreadable: Together as One
-                                // asks for a player to draw X and then for any
-                                // target to take X, and both prompts read the
-                                // same.
-                                card.definition
-                                    .effect
-                                    .target_slot_text(slot, mode)
-                                    .unwrap_or_else(|| {
-                                        crate::decision::EXTRA_CAST_TARGET_PROMPT.to_string()
-                                    }),
-                                // "Up to N targets" slots past the printed
-                                // minimum may be declined.
-                                card.definition.effect.target_slot_optional_x(
-                                    slot,
-                                    mode,
-                                    x_value.unwrap_or(0),
-                                ),
-                                // CR 115.3 — the slots of one multi-target
-                                // instance must name distinct objects.
-                                // `Some(first)`: distinct from the picks at
-                                // slots `first..`.
-                                card.definition
-                                    .effect
-                                    .distinct_target_range(mode)
-                                    .filter(|&(first, n)| slot >= first && slot < first.saturating_add(n))
-                                    .map(|(first, _)| usize::from(first)),
-                            )
-                        })
-                })
-            } else {
-                None
-            };
-            // CR 601.2c — one target per opponent (`ForEachOpponentTarget`):
-            // no slot past the opponent count, and no candidate under a
-            // controller already named.
-            let (per_opponent, per_player) = self.find_card_anywhere(card_id).map_or((false, false), |c| {
-                (c.definition.effect.per_opponent_targets(mode), c.definition.effect.per_player_targets(mode))
-            });
-            let seats = if per_player { self.living_seats().count() } else { self.opponents_of(p).len() };
-            let slot_info = slot_info.filter(|_| !per_opponent || 1 + additional_targets.len() < seats);
-            if let Some((filter, source_name, slot_text, optional, distinct)) = slot_info {
-                let chosen: Vec<&Target> =
-                    target.iter().chain(additional_targets.iter()).collect();
-                // An off-board slot (a graveyard / exile card) can't be
-                // clicked: a `ChooseCards` modal over the matching cards, the
-                // slot-0 path's shape, with an empty pick as the decline.
-                if filter.mentions_offboard_zone() {
-                    let candidates: Vec<(CardId, String)> = self
-                        .players
-                        .iter()
-                        .flat_map(|pl| pl.graveyard.iter())
-                        .chain(self.exile.iter())
-                        .filter(|c| {
-                            c.id != card_id
-                                && distinct.is_none_or(|first| {
-                                    !chosen.iter().skip(first).any(|t| **t == Target::Permanent(c.id))
-                                })
-                                && self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id))
-                        })
-                        .map(|c| (c.id, c.definition.name.to_string()))
-                        .collect();
-                    if !candidates.is_empty() {
-                        self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
-                            decision: crate::decision::Decision::ChooseCards {
-                                source: card_id,
-                                prompt: format!("{source_name}{}", crate::decision::OFFBOARD_EXTRA_TARGET_PROMPT_SUFFIX),
-                                candidates,
-                                min: u32::from(!optional),
-                                max: 1,
-                                eligible: None,
-                                value: PickValue::Gain,
-                            },
-                            resume: crate::game::types::ResumeContext::CastExtraTargetPick {
-                                caster: p,
-                                action: Box::new(crate::game::types::GameAction::CastSpell {
-                                    card_id,
-                                    target,
-                                    additional_targets,
-                                    mode,
-                                    x_value,
-                                }),
-                            },
-                        }));
-                        return Ok(vec![]);
-                    }
-                }
-                let named_controllers: Vec<usize> = if per_opponent {
-                    chosen.iter().filter_map(|t| self.target_controller_key(t)).collect()
-                } else {
-                    Vec::new()
-                };
-                // One freeze for the whole walk, the same reason
-                // `legal_targets_for_filter` takes one: every candidate asks
-                // `evaluate_requirement_static`'s layer-4 reads and
-                // `check_target_legality`'s Shroud/Hexproof reads, and
-                // `check_target_legality` opens a scope of its own per call —
-                // so unfrozen this re-gathers every continuous effect in the
-                // game once per battlefield permanent *plus* once per player.
-                let candidates: Vec<Target> = self.with_frozen_layers(|s| {
-                    s.battlefield
-                        .iter()
-                        .map(|c| Target::Permanent(c.id))
-                        .chain((0..s.players.len()).map(Target::Player))
-                        .filter(|t| {
-                            distinct.is_none_or(|first| !chosen.iter().skip(first).any(|c| *c == t))
-                                && (named_controllers.is_empty()
-                                    || s.target_controller_key(t).is_none_or(|k| !named_controllers.contains(&k)))
-                                && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
-                                && s.check_target_legality(t, p).is_ok()
-                        })
-                        .collect()
-                });
-                // CR 601.2f — a slot whose surcharge can't be paid isn't offered.
-                let surcharged = optional
-                    && self.find_card_anywhere(card_id).is_some_and(|c| c.definition.cost_per_extra_target.is_some());
-                if !candidates.is_empty()
-                    && (!surcharged
-                        || self.surcharged_slot_affordable(
-                            card_id,
-                            &target,
-                            &additional_targets,
-                            candidates[0].clone(),
-                            mode,
-                            x_value,
-                        ))
-                {
-                    self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
-                        decision: crate::decision::Decision::ChooseTarget {
-                            optional,
-                            source: card_id,
-                            legal: candidates,
-                            source_name,
-                            description: slot_text,
-                            // The cast-time extra slot: the client folds the
-                            // answer into the cast it is holding for manual
-                            // mana payment.
-                            extra_cast_slot: true,
-                        },
-                        resume: crate::game::types::ResumeContext::CastExtraTargetPick {
-                            caster: p,
-                            action: Box::new(crate::game::types::GameAction::CastSpell {
-                                card_id,
-                                target,
-                                additional_targets,
-                                mode,
-                                x_value,
-                            }),
-                        },
-                    }));
-                    return Ok(vec![]);
-                }
-            }
+        // Multi-target spells: bind the next missing slot (see
+        // `pose_extra_cast_target`).
+        if self.pose_extra_cast_target(card_id, &target, &additional_targets, mode, x_value, |card_id, target, additional_targets, mode, x_value| {
+            GameAction::CastSpell { card_id, target, additional_targets, mode, x_value }
+        }) {
+            return Ok(vec![]);
         }
         // Coram, the Undertaker — a card milled into ANY graveyard this turn.
         let p = self.priority.player_with_priority;
@@ -14371,6 +14179,207 @@ impl GameState {
         Ok(events)
     }
 
+    /// Multi-target spells (Chelonian Tackle's "then it fights up to one
+    /// target creature an opponent controls"): the client's cast flow only
+    /// collects slot 0, so slots 1+ arrive empty and the extra half of the
+    /// effect silently no-ops. Bind the next missing slot here — a
+    /// `wants_ui` caster picks via a `ChooseTarget` cursor decision
+    /// (suspend + clean replay; nothing has been paid yet), everyone else
+    /// auto-fills. No legal candidate leaves the slot empty, which is the
+    /// printed "up to one" behavior.
+    ///
+    /// Shared by the hand cast and the flashback cast, whose replay action
+    /// `replay` rebuilds. Returns `true` when a slot prompt was posed and the
+    /// cast must suspend.
+    fn pose_extra_cast_target(
+        &mut self,
+        card_id: CardId,
+        target: &Option<Target>,
+        additional_targets: &[Target],
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        replay: fn(CardId, Option<Target>, Vec<Target>, Option<usize>, Option<u32>) -> GameAction,
+    ) -> bool {
+        let p = self.priority.player_with_priority;
+        // A `DeclineTarget` answer stamps this cast's shape into the
+        // suppress scratch — skip the prompt so declining ends target
+        // selection. Matched (not consumed): a hand-paying caster's cast
+        // is replayed once per mana tap, and every one of those replays
+        // is the same declined decision.
+        let suppressed = self.scratch.suppress_extra_target_prompts.as_ref().is_some_and(|d| {
+            d.caster == self.priority.player_with_priority
+                && d.card_id == card_id
+                && d.target == *target
+                && d.additional_targets == additional_targets
+        });
+        let slot_info = if !suppressed && target.is_some() && self.seat_prompts(p) {
+            self.find_card_anywhere(card_id).and_then(|card| {
+                // "Extra target only on your main phase" spells (Return
+                // to Dust) genuinely cast single-target off-main — don't
+                // prompt for the slot the rules forbid.
+                if card.definition.extra_targets_main_phase_only
+                    && !(self.active_player_idx == p && self.step.is_main_phase())
+                {
+                    return None;
+                }
+                // Total: a slot count past `u8` is past every printed cap
+                // (an unbounded slot run once overflowed here).
+                let slot = u8::try_from(1 + additional_targets.len()).ok()?;
+                if card.definition.effect.slot_past_x_cap(slot, x_value.unwrap_or(0)) {
+                    return None;
+                }
+                card.definition
+                    .effect
+                    .target_filter_for_slot_in_mode(slot, mode)
+                    .map(|f| {
+                        (
+                            f.resolve_x(x_value.unwrap_or(0)),
+                            card.definition.name.to_string(),
+                            // Which *part* of the spell this slot feeds.
+                            // A bare "choose an additional target" leaves a
+                            // two-slot spell unreadable: Together as One
+                            // asks for a player to draw X and then for any
+                            // target to take X, and both prompts read the
+                            // same.
+                            card.definition
+                                .effect
+                                .target_slot_text(slot, mode)
+                                .unwrap_or_else(|| {
+                                    crate::decision::EXTRA_CAST_TARGET_PROMPT.to_string()
+                                }),
+                            // "Up to N targets" slots past the printed
+                            // minimum may be declined.
+                            card.definition.effect.target_slot_optional_x(
+                                slot,
+                                mode,
+                                x_value.unwrap_or(0),
+                            ),
+                            // CR 115.3 — the slots of one multi-target
+                            // instance must name distinct objects.
+                            // `Some(first)`: distinct from the picks at
+                            // slots `first..`.
+                            card.definition
+                                .effect
+                                .distinct_target_range(mode)
+                                .filter(|&(first, n)| slot >= first && slot < first.saturating_add(n))
+                                .map(|(first, _)| usize::from(first)),
+                        )
+                    })
+            })
+        } else {
+            None
+        };
+        // CR 601.2c — one target per opponent (`ForEachOpponentTarget`):
+        // no slot past the opponent count, and no candidate under a
+        // controller already named.
+        let (per_opponent, per_player) = self.find_card_anywhere(card_id).map_or((false, false), |c| {
+            (c.definition.effect.per_opponent_targets(mode), c.definition.effect.per_player_targets(mode))
+        });
+        let seats = if per_player { self.living_seats().count() } else { self.opponents_of(p).len() };
+        let slot_info = slot_info.filter(|_| !per_opponent || 1 + additional_targets.len() < seats);
+        if let Some((filter, source_name, slot_text, optional, distinct)) = slot_info {
+            let chosen: Vec<&Target> =
+                target.iter().chain(additional_targets.iter()).collect();
+            // An off-board slot (a graveyard / exile card) can't be
+            // clicked: a `ChooseCards` modal over the matching cards, the
+            // slot-0 path's shape, with an empty pick as the decline.
+            if filter.mentions_offboard_zone() {
+                let candidates: Vec<(CardId, String)> = self
+                    .players
+                    .iter()
+                    .flat_map(|pl| pl.graveyard.iter())
+                    .chain(self.exile.iter())
+                    .filter(|c| {
+                        c.id != card_id
+                            && distinct.is_none_or(|first| {
+                                !chosen.iter().skip(first).any(|t| **t == Target::Permanent(c.id))
+                            })
+                            && self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id))
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if !candidates.is_empty() {
+                    self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                        decision: crate::decision::Decision::ChooseCards {
+                            source: card_id,
+                            prompt: format!("{source_name}{}", crate::decision::OFFBOARD_EXTRA_TARGET_PROMPT_SUFFIX),
+                            candidates,
+                            min: u32::from(!optional),
+                            max: 1,
+                            eligible: None,
+                            value: PickValue::Gain,
+                        },
+                        resume: crate::game::types::ResumeContext::CastExtraTargetPick {
+                            caster: p,
+                            action: Box::new(replay(card_id, target.clone(), additional_targets.to_vec(), mode, x_value)),
+                        },
+                    }));
+                    return true;
+                }
+            }
+            let named_controllers: Vec<usize> = if per_opponent {
+                chosen.iter().filter_map(|t| self.target_controller_key(t)).collect()
+            } else {
+                Vec::new()
+            };
+            // One freeze for the whole walk, the same reason
+            // `legal_targets_for_filter` takes one: every candidate asks
+            // `evaluate_requirement_static`'s layer-4 reads and
+            // `check_target_legality`'s Shroud/Hexproof reads, and
+            // `check_target_legality` opens a scope of its own per call —
+            // so unfrozen this re-gathers every continuous effect in the
+            // game once per battlefield permanent *plus* once per player.
+            let candidates: Vec<Target> = self.with_frozen_layers(|s| {
+                s.battlefield
+                    .iter()
+                    .map(|c| Target::Permanent(c.id))
+                    .chain((0..s.players.len()).map(Target::Player))
+                    .filter(|t| {
+                        distinct.is_none_or(|first| !chosen.iter().skip(first).any(|c| *c == t))
+                            && (named_controllers.is_empty()
+                                || s.target_controller_key(t).is_none_or(|k| !named_controllers.contains(&k)))
+                            && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
+                            && s.check_target_legality(t, p).is_ok()
+                    })
+                    .collect()
+            });
+            // CR 601.2f — a slot whose surcharge can't be paid isn't offered.
+            let surcharged = optional
+                && self.find_card_anywhere(card_id).is_some_and(|c| c.definition.cost_per_extra_target.is_some());
+            if !candidates.is_empty()
+                && (!surcharged
+                    || self.surcharged_slot_affordable(
+                        card_id,
+                        target,
+                        additional_targets,
+                        candidates[0].clone(),
+                        mode,
+                        x_value,
+                    ))
+            {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseTarget {
+                        optional,
+                        source: card_id,
+                        legal: candidates,
+                        source_name,
+                        description: slot_text,
+                        // The cast-time extra slot: the client folds the
+                        // answer into the cast it is holding for manual
+                        // mana payment.
+                        extra_cast_slot: true,
+                    },
+                    resume: crate::game::types::ResumeContext::CastExtraTargetPick {
+                        caster: p,
+                        action: Box::new(replay(card_id, target.clone(), additional_targets.to_vec(), mode, x_value)),
+                    },
+                }));
+                return true;
+            }
+        }
+        false
+    }
+
     pub(crate) fn cast_flashback(
         &mut self,
         card_id: CardId,
@@ -14516,6 +14525,14 @@ impl GameState {
             && self.required_target_missing(&card, &card.definition.effect, mode, false, x_value.unwrap_or(0))
         {
             return Err(GameError::SelectionRequirementViolated);
+        }
+        // CR 702.34a — a flashback cast is a cast: a multi-target spell
+        // (Predictive Preparations' "one or two target creatures") asks for
+        // its slots 1+ the way the hand cast does.
+        if self.pose_extra_cast_target(card_id, &target, &additional_targets, mode, x_value, |card_id, target, additional_targets, mode, x_value| {
+            GameAction::CastFlashback { card_id, target, additional_targets, mode, x_value }
+        }) {
+            return Ok(vec![]);
         }
         // Validate target.
         if let Some(ref tgt) = target {

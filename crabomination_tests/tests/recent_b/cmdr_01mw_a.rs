@@ -1014,3 +1014,41 @@ fn the_lady_of_otaria_taps_three_dwarves() {
     assert!(g.battlefield_find(lady).is_some());
     assert!(dwarves.iter().all(|&d| g.battlefield_find(d).unwrap().tapped));
 }
+
+/// Predictive Preparations cast with flashback asks for its second target
+/// the way the hand cast does: the flashback path never posed slot 1, so a
+/// player's flashback could only name one creature (a play-test report).
+#[test]
+fn predictive_preparations_flashback_asks_for_the_second_creature() {
+    use crabomination::decision::Decision;
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    let prep = g.add_card_to_graveyard(0, catalog::predictive_preparations());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: prep,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the flashback asks for the second target");
+    let pd = g.pending_decision.as_ref().expect("slot 1 is posed");
+    assert!(
+        matches!(&pd.decision, Decision::ChooseTarget { optional: true, legal, .. } if legal.contains(&Target::Permanent(b))),
+        "the other creature is offered: {:?}",
+        pd.decision
+    );
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(b))))
+        .expect("the pick casts the flashback");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+    assert!(g.exile.iter().any(|c| c.id == prep), "flashback exiles the card");
+}

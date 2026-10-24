@@ -30604,7 +30604,8 @@ impl GameState {
             }
             ResumeContext::CastExtraTargetPick { caster, action } => {
                 let mut action = *action;
-                let GameAction::CastSpell { additional_targets, card_id, target, .. } = &mut action
+                let (GameAction::CastSpell { additional_targets, card_id, target, .. }
+                | GameAction::CastFlashback { additional_targets, card_id, target, .. }) = &mut action
                 else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
