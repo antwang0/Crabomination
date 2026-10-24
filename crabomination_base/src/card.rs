@@ -3314,6 +3314,10 @@ pub enum SelectionRequirement {
     /// "creatures you've put +1/+1 counters on this turn", paired with
     /// `WithCounter`. Live state, so a layer leaf (`requirement_live_leaves`).
     GainedCounterThisTurn,
+    /// "…that you've put one or more +1/+1 counters on this turn" (Kid Loki,
+    /// Beast): "you" placed one, read off the dispatched `CounterAdded`
+    /// (`TurnRegistries::p1p1_put_this_turn`). A layer leaf, as above.
+    YouPutPlusOneCounterOnThisTurn,
     /// "…with N or more [kind] counters on it" (Bomb Squad's fuse check).
     WithCounterAtLeast(CounterType, u32),
     /// True when the candidate has at least one counter of any kind on it —

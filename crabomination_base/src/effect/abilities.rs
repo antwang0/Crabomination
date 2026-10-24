@@ -1733,6 +1733,9 @@ pub enum StaticEffect {
     /// … yourself" (Lae'zel, Vlaakith's Champion): creatures and players as
     /// the Constrictor, a noncreature planeswalker instead of an artifact.
     ExtraCounterOnCreaturePlaneswalkerOrYou,
+    /// `ExtraCounterAllKinds` over "a permanent you control", with no player
+    /// clause (Pir, Imaginative Rascal; Doc Samson).
+    ExtraCounterOnPermanents,
     /// CR 614 — "If you would get one or more {E}, you get that many plus
     /// `amount` instead." An energy-only gain bonus (Izzet Generatorium), unlike
     /// `ExtraCounterAllKinds` which boosts every counter kind.

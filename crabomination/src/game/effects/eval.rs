@@ -8405,6 +8405,9 @@ impl GameState {
             R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
             R::WithAnyCounter => card.has_any_counter(),
             R::GainedCounterThisTurn => self.turn.permanents_gained_counter_this_turn.contains(&card.id),
+            R::YouPutPlusOneCounterOnThisTurn => {
+                self.turn.p1p1_put_this_turn.iter().any(|&(id, p)| id == card.id && p as usize == controller)
+            }
             // CR 603.10 — a blocker that just left reads as blocking (Death
             // Tyrant's "a blocking creature an opponent controls dies").
             R::IsBlocking => self.left_while_blocking.contains(&card.id),

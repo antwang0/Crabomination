@@ -1510,6 +1510,10 @@ pub struct TurnRegistries {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub permanents_gained_counter_this_turn: crate::game::types::IdSet<CardId>,
+    /// (permanent, placer) for each +1/+1 counter placement this turn — Kid
+    /// Loki's "you've put one or more +1/+1 counters on". Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) p1p1_put_this_turn: Vec<(CardId, u8)>,
     /// Seats whose creature or planeswalker was dealt excess damage this
     /// turn (CR 120.4a/120.10 — Rith, Liberated Primeval). Cleared at cleanup.
     #[serde(default)]
@@ -8410,8 +8414,9 @@ impl GameState {
         }
         let mut n = base;
         if is_creature {
-            // Winding Constrictor: +1 to any counter kind on a creature you control.
-            n = n.saturating_add(self.extra_any_kind_adders_for(ctrl));
+            // Winding Constrictor: +1 to any counter kind on a creature you
+            // control; Pir / Doc Samson on any permanent you control.
+            n = n.saturating_add(self.extra_any_kind_adders_for(ctrl)).saturating_add(self.extra_permanent_adders_for(ctrl));
         }
         if is_creature && kind == CounterType::PlusOnePlusOne {
             n = n.saturating_add(self.plus_counter_adders_for(ctrl));
@@ -8510,10 +8515,10 @@ impl GameState {
             }
         }
         // CR 614.16 — Winding Constrictor reaches "an artifact or creature you
-        // control", Lae'zel "a creature or planeswalker"; `scaled_counter_count`
-        // adds both for a creature, so a noncreature artifact or planeswalker
-        // takes its own here (before any doubler, as there).
-        if base > 0 && !is_creature && self.extra_any_kind_adders_for(ctrl) > 0 {
+        // control", Lae'zel "a creature or planeswalker", Pir "a permanent";
+        // `scaled_counter_count` adds them for a creature, so a noncreature
+        // permanent takes its own here (before any doubler, as there).
+        if base > 0 && !is_creature {
             base = base.saturating_add(self.extra_noncreature_adders_for(ctrl, cid));
         }
         let mut n = self.scaled_counter_count(ctrl, kind, base, is_creature);
@@ -8665,10 +8670,25 @@ impl GameState {
             .sum()
     }
 
+    /// Number of "a permanent you control" adders `seat` controls (Pir, Doc
+    /// Samson): creatures and noncreatures alike, never the player.
+    fn extra_permanent_adders_for(&self, seat: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExtraCounterOnPermanents))
+            .count() as u32
+    }
+
     /// The noncreature half of those adders for permanent `cid` of `seat`'s:
-    /// the Constrictor reaches an artifact, Lae'zel a planeswalker.
+    /// the Constrictor reaches an artifact, Lae'zel a planeswalker, Pir any.
     fn extra_noncreature_adders_for(&self, seat: usize, cid: CardId) -> u32 {
         use crate::effect::StaticEffect;
+        let any = self.extra_permanent_adders_for(seat);
+        if self.extra_any_kind_adders_for(seat) == 0 {
+            return any;
+        }
         let (artifact, walker) = match self.computed_permanent(cid) {
             Some(cp) => (
                 cp.card_types().contains(&crate::card::CardType::Artifact),
@@ -8686,6 +8706,7 @@ impl GameState {
                 _ => false,
             })
             .count() as u32
+            + any
     }
 
     /// CR 614 — total energy-gain bonus for `seat` from `EnergyGainBonus`
@@ -26119,10 +26140,15 @@ impl GameState {
                 && self.computed_is_creature(c)
                 && let Some(p) = crate::game::effects::events::counter_placer(self, e)
             {
-                let mine = *counter_type == crate::card::CounterType::PlusOnePlusOne && c.controller == p;
+                let p1p1 = *counter_type == crate::card::CounterType::PlusOnePlusOne;
+                let mine = p1p1 && c.controller == p;
                 placed |= 1u64.checked_shl(p as u32).unwrap_or(0);
                 if mine {
                     self.note_own_p1p1_counters(p, *count);
+                }
+                let key = (*card_id, p.min(u8::MAX as usize) as u8);
+                if p1p1 && *count > 0 && !self.turn.p1p1_put_this_turn.contains(&key) {
+                    self.turn.p1p1_put_this_turn.push(key);
                 }
             }
         }
@@ -35762,6 +35788,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraPlusOneCounterOnSelf
             | StaticEffect::ExtraCounterAllKinds
             | StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou
+            | StaticEffect::ExtraCounterOnPermanents
             // Energy-gain bonus — read at AddEnergy time via
             // `GameState::energy_gain_bonus_for`; no layer effect.
             | StaticEffect::EnergyGainBonus { .. }
@@ -36916,6 +36943,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::TurnedFaceUpThisTurn
         | R::FoughtThisTurn
         | R::GainedCounterThisTurn
+        | R::YouPutPlusOneCounterOnThisTurn
         // A counter-count threshold (Runadi's "three or more +1/+1 counters").
         | R::WithCounterAtLeast(..)
         | R::HasSuspend
