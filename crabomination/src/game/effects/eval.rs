@@ -8425,7 +8425,7 @@ impl GameState {
             | R::SpellWithSingleTarget
             | R::SpellWithAnyTarget
             | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::DealtDamageThisTurnAsSource | R::IsBestowed
-            | R::EquippedByAtLeast(_) | R::EquippedByMatching(_) | R::DealtDamageThisTurn
+            | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::DamagedThisTurnByMatching(_)
             | R::CrewedThisTurnByMatching(_)
