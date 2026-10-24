@@ -39,6 +39,10 @@ REVIEWED = {
     "Pest Rescuer": "'if you don't control a Pest' is the intervening-if",
     "Remove Enchantments": "your own enchantments; the opposing-attacker Aura clause is unmodeled",
     "Vampire Nocturnus": "'this creature and other Vampires' — `IsSource` joins the filter",
+    "Henry Wu, InGen Geneticist": "'Henry Wu and other Humans' — the Human filter includes him",
+    "Sigil Blessing": "`EachPermanentExceptTargets` is the 'other'",
+    "Avatar Yangchen": "bespoke `EachPlayerChoosesOpponentPermanentExile` (the Saga front) reads the side",
+    "Face Yourself": "`ControlledBy { who: Target(0) }` — target player's creatures",
 }
 
 

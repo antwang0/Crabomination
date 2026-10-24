@@ -36,6 +36,10 @@ ALLOW = {
     "Harvest Season", "Rampant Rejuvenator", "Traverse the Outlands", "Kyoshi Island Plaza",
     "Enigmatic Incarnation", "Kasmina, Enigma Sage", "Pack Hunt", "Sisay, Weatherlight Captain",
     "Smuggler Captain", "Yisan, the Wanderer Bard", "Brightglass Gearhulk", "Tallowisp",
+    # Reviewed 2026-10-24: the count lives in `WithX` / `count` / a counter-keyed leaf, or
+    # (Maximus) ManaValueAtLeast + AtMost; Sovereigns' "an Aura that could enchant it" is any Aura.
+    "Beseech the Queen", "Instrument of the Bards", "Jaheira's Respite", "Mausoleum Secrets",
+    "Maximus, Knight Apparent", "Nightmare Incursion", "Sovereigns of Lost Alara",
 }
 
 

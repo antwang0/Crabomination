@@ -60,7 +60,7 @@ def main():
         # A nested token / granted ability has slots of its own.
         dbg = re.sub(r"definition: [^\t]*", "", dbg) if "CreateToken" in dbg else dbg
         f0 = set(slot_filters(dbg, 0))
-        if len(f0) < 2 or re.search(r"slot: [1-9]|Target\([1-9]\)|ApplyToTargets|additional|ChooseMode|ChooseN|Spree|Escalate|Entwine|Kicked|ReflexiveTrigger|GrantActivated|GrantTriggered|GainActivatedAbility|GainTriggeredAbility|CreateToken", dbg):
+        if len(f0) < 2 or re.search(r"slot: [1-9]|Target\([1-9]\)|ApplyToTargets|additional|ChooseMode|ChooseN|ChooseUnchosenMode|ChooseUpToN|Spree|Escalate|Entwine|Kicked|ReflexiveTrigger|Reflexive \{|GrantActivated|GrantTriggered|GainActivatedAbility|GainTriggeredAbility|CreateToken", dbg):
             continue
         card = by_name.get(name.lower())
         if not card:

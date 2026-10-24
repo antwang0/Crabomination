@@ -36,6 +36,12 @@ REVIEWED = {
     "Serene Remembrance": "'up to three target cards from a single graveyard': one-slot approximation",
     "Rite of Renewal": "two- and four-card graveyard targets collapsed: documented approximation",
     "Cathartic Parting": "the 'up to four target cards' shuffle is a resolution pick",
+    "Mordor on the March": "'exile a creature card from your graveyard' modelled as a slot (storm copies re-pick)",
+    "Rhino's Rampage": "the third target is the excess-damage reflexive trigger's own",
+    "Hulk's Thunderclap": "slot 2 only when the behold was paid (If SpellWasKicked)",
+    "Back for More": "the fight target is the reflexive trigger's own slot",
+    "Storm of Steel": "'one or two targets' — min 1 is printed",
+    "The Crowd Goes Wild": "support X: up to X target creatures"
 }
 
 
