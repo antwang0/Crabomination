@@ -829,6 +829,7 @@ pub fn fire_impacts_for_screenshot(
                 power: gone.base_power,
                 toughness: gone.base_toughness,
                 flashback_cost: None,
+                needs_target: false,
                 retrace: false,
                 escape: None,
                 bestow_cost: None,

@@ -1439,6 +1439,7 @@ fn graveyard_entry(
                 }
                 c
             }),
+        needs_target: cursor_needs_target(&card.definition.effect),
         retrace: state.effective_retrace(card, seat),
         escape: state.effective_escape(card, seat),
         bestow_cost: card.definition.has_bestow().cloned(),
@@ -4223,6 +4224,22 @@ mod tests {
             .expect("flashback");
         assert_eq!(mine_cost.cmc(), 1, "2R minus 2 generic");
         assert_eq!(theirs_cost.cmc(), 5, "2R plus 2 generic");
+    }
+
+    /// CR 702.34 — a graveyard tile says whether its flashback needs a
+    /// target, so the client arms the targeting cursor for Predictive
+    /// Preparations (one or two target creatures) and casts Bestial Incursion
+    /// (a token, no target) straight away (2026-10-24 client report: the
+    /// flashback tile cast with auto-chosen targets, or not at all).
+    #[test]
+    fn cr_702_34_graveyard_view_says_whether_flashback_needs_a_target() {
+        let mut state = two_player_game();
+        let prep = state.add_card_to_graveyard(0, catalog::predictive_preparations());
+        let beast = state.add_card_to_graveyard(0, catalog::bestial_incursion());
+        let view = project(&state, 0);
+        let entry = |id| view.players[0].graveyard.iter().find(|c| c.id == id).unwrap();
+        assert!(entry(prep).flashback_cost.is_some() && entry(prep).needs_target, "Predictive Preparations targets");
+        assert!(entry(beast).flashback_cost.is_some() && !entry(beast).needs_target, "Bestial Incursion does not");
     }
 
     #[test]

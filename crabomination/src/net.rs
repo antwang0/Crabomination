@@ -1634,6 +1634,11 @@ pub struct GraveyardCardView {
     /// graveyard via `GameAction::CastFlashback`. `None` otherwise.
     #[serde(default)]
     pub flashback_cost: Option<crate::mana::ManaCost>,
+    /// The card's spell needs a target picked at cast time (the hand's
+    /// `KnownCard::needs_target`), so a graveyard cast arms the targeting
+    /// cursor instead of firing with auto-chosen targets.
+    #[serde(default)]
+    pub needs_target: bool,
     /// True if this card has Retrace (CR 702.81) and can be recast from
     /// the graveyard via `GameAction::CastRetrace` (cost + discard a land).
     #[serde(default)]

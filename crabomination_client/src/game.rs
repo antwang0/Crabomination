@@ -276,6 +276,9 @@ pub enum HandCastVariant {
     /// CR 903.8 — a targeted commander cast from the command zone (commander
     /// tax included). Armed by the command-zone click, not the hand menu.
     CommandZone,
+    /// CR 702.34 — a targeted flashback cast from the graveyard. Armed by the
+    /// graveyard browser's tile click, not the hand menu.
+    Flashback,
 }
 
 impl HandCastVariant {
@@ -289,6 +292,7 @@ impl HandCastVariant {
             Self::Prototype => "Cast as Prototype",
             Self::Plotted => "Cast (plotted)",
             Self::CommandZone => "Cast from the command zone",
+            Self::Flashback => "Cast with Flashback",
         }
     }
 
@@ -332,6 +336,7 @@ impl HandCastVariant {
                 alternative: false,
                 pitch_card: None,
             },
+            Self::Flashback => A::CastFlashback { card_id, target, additional_targets, mode, x_value },
         }
     }
 }

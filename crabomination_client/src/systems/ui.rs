@@ -46,6 +46,9 @@ pub struct GraveyardCardItem {
     /// clicking the tile submits the recast (Flashback / Mayhem / Harmonize /
     /// Disturb / Retrace / Escape) with auto-chosen targets.
     pub recast: Option<(crabomination::card::CardId, GraveyardRecast)>,
+    /// The recast spell needs a target: a click arms the targeting cursor
+    /// (`HandCastVariant::Flashback`) instead of casting with auto-targets.
+    pub needs_target: bool,
 }
 
 /// Which graveyard-cast action a browser tile submits on click.
@@ -1508,7 +1511,7 @@ pub fn graveyard_browser(
         // shows the viewer's own graveyard the tile also carries the recast
         // action so clicking it casts the card.
         let own_graveyard = view.0.as_ref().is_some_and(|cv| cv.your_seat == owner);
-        let card_names: Vec<(String, Option<String>, Option<(crabomination::card::CardId, GraveyardRecast)>)> =
+        let card_names: Vec<(String, Option<String>, Option<(crabomination::card::CardId, GraveyardRecast)>, bool)> =
             view.0.as_ref()
             // Newest first: the engine's last card is the graveyard's top.
             .map(|cv| cv.players[owner].graveyard.iter().rev().map(|c| {
@@ -1527,7 +1530,7 @@ pub fn graveyard_browser(
                 } else {
                     (None, None)
                 };
-                (c.name.clone(), badge, recast.filter(|_| own_graveyard).map(|r| (c.id, r)))
+                (c.name.clone(), badge, recast.filter(|_| own_graveyard).map(|r| (c.id, r)), c.needs_target)
             }).collect())
             .unwrap_or_default();
         let count = card_names.len();
@@ -1616,7 +1619,7 @@ pub fn graveyard_browser(
                             Pickable::IGNORE,
                         ))
                         .with_children(|grid| {
-                            for (name, badge, recast) in &card_names {
+                            for (name, badge, recast, needs_target) in &card_names {
                                 let path = scryfall::card_asset_path(name);
                                 let texture: Handle<Image> = asset_server.load(&path);
                                 // Each tile is a Button so Bevy's
@@ -1640,6 +1643,7 @@ pub fn graveyard_browser(
                                     GraveyardCardItem {
                                         name: name.clone(),
                                         recast: *recast,
+                                        needs_target: *needs_target,
                                     },
                                     // Rules text beside the tile, like the table's.
                                     crate::systems::ui_card_hover::UiCardHover::card(name, recast.map(|(id, _)| id)),
@@ -1976,6 +1980,7 @@ pub fn exile_browser(
                             GraveyardCardItem {
                                 name: name.clone(),
                                 recast: *may_play,
+                                needs_target: false,
                             },
                             crate::systems::ui_card_hover::UiCardHover::card(name, may_play.map(|(id, _)| id)),
                         ))
@@ -2023,7 +2028,7 @@ pub fn exile_browser(
                                 height: Val::Px(BROWSER_CARD_HEIGHT),
                                 ..default()
                             },
-                            GraveyardCardItem { name: name.clone(), recast: None },
+                            GraveyardCardItem { name: name.clone(), recast: None, needs_target: false },
                             crate::systems::ui_card_hover::UiCardHover::card(name, None),
                         ))
                         .with_children(|tile| {
@@ -2129,11 +2134,16 @@ pub fn pile_tooltip(
     }
 }
 
-/// Click-to-cast for the viewer's own castable graveyard tiles: submits the
-/// recast action carried by the tile (targets are auto-chosen server-side;
-/// Escape auto-picks its exile fodder) and closes the browser.
+/// Click-to-cast for the viewer's own castable graveyard tiles, left or
+/// right button (right-click is the table's "do the useful thing" gesture):
+/// submits the recast action carried by the tile (Escape auto-picks its
+/// exile fodder) and closes the browser. A flashback whose spell needs a
+/// target arms the targeting cursor instead, so the pick is the player's —
+/// the same flow a targeted hand cast takes.
 pub fn graveyard_recast_click(
-    items: Query<(&Interaction, &GraveyardCardItem), Changed<Interaction>>,
+    items: Query<(Ref<Interaction>, &GraveyardCardItem)>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    mut targeting: ResMut<crate::game::TargetingState>,
     mut state: ResMut<GraveyardBrowserState>,
     mut exile_state: ResMut<crate::game::ExileBrowserState>,
     view: Res<CurrentView>,
@@ -2141,10 +2151,21 @@ pub fn graveyard_recast_click(
 ) {
     let Some(outbox) = outbox else { return };
     for (interaction, item) in &items {
-        if *interaction != Interaction::Pressed {
+        let left = *interaction == Interaction::Pressed && interaction.is_changed();
+        let right = mouse.just_pressed(MouseButton::Right) && *interaction != Interaction::None;
+        if !(left || right) {
             continue;
         }
         let Some((card_id, recast)) = &item.recast else { continue };
+        if matches!(recast, GraveyardRecast::Flashback) && item.needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = Some(*card_id);
+            targeting.back_face_pending = false;
+            targeting.pending_cast_variant = Some(crate::game::HandCastVariant::Flashback);
+            state.open = false;
+            exile_state.open = false;
+            return;
+        }
         use crabomination::game::GameAction;
         let action = match recast {
             GraveyardRecast::Flashback => GameAction::CastFlashback {

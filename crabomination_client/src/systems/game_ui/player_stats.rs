@@ -1826,6 +1826,7 @@ mod tests {
             power: 0,
             toughness: 0,
             flashback_cost: None,
+            needs_target: false,
             retrace: false,
             escape: None,
             bestow_cost: None,
