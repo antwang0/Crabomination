@@ -2285,6 +2285,13 @@ impl GameState {
                         self.fire_spell_damage_listeners(src, crate::game::types::Target::Permanent(cid), amount);
                     }
                 }
+                // CR 120.3 — "whenever ~ deals damage" hears a planeswalker or
+                // battle hit too (Hooded Blightfang).
+                if (is_pw || is_battle)
+                    && let Some(src) = source
+                {
+                    self.fire_noncombat_damage_to_noncreature_triggers(src, cid, amount);
+                }
             }
             EntityRef::Card(_) => {}
         }

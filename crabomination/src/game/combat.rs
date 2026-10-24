@@ -7680,6 +7680,29 @@ impl GameState {
         );
     }
 
+    /// CR 120.3 — the non-combat half for a noncreature permanent (a
+    /// planeswalker or battle): only the recipient-agnostic `DealsDamage`
+    /// hears it, with the damaged permanent bound to slot 0.
+    pub(crate) fn fire_noncombat_damage_to_noncreature_triggers(
+        &mut self,
+        source: CardId,
+        damaged: CardId,
+        damage_amount: u32,
+    ) {
+        if self.battlefield_find(source).is_none() {
+            return;
+        }
+        let granted = self.static_granted_triggers_of(source);
+        self.fire_combat_damage_triggers(
+            source,
+            &[EventKind::DealsDamage],
+            Target::Permanent(damaged),
+            damage_amount,
+            &granted,
+            false,
+        );
+    }
+
     /// The non-combat, player-side half of `EventKind::DealsDamage` /
     /// `DealsDamageToPlayer`: a permanent that just burned a player fires its
     /// own damage triggers with that player bound to slot 0.
