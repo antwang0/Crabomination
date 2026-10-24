@@ -1910,15 +1910,26 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// A pod (more than two seats) gets the heuristic default, as the lobby's
 /// does: the net reads only two-seat games, and the search on the material
 /// leaf is unmeasured in a pod.
+///
+/// `CRAB_FRA_FIXES=1` adds the 2026-10-23 bot fixes
+/// ([`EvalWeights::with_fra_fixes`]: any-target burn at creatures, no X=0
+/// Hydra, no pointless counter shedding, no misaimed boons / removal). They
+/// are off in the default pilot until a ladder gate adopts them.
 pub(crate) fn local_bot(n_seats: usize) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
     }
     load_champion_once();
+    let mut weights = crabomination::server::EvalWeights::net_on_default();
+    if std::env::var_os("CRAB_FRA_FIXES").is_some_and(|v| v != "0") {
+        weights = weights.with_fra_fixes();
+        static SAID: std::sync::Once = std::sync::Once::new();
+        SAID.call_once(|| eprintln!("CRAB_FRA_FIXES: the local bot plays with the 2026-10-23 FRA fixes"));
+    }
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,
         horizon_turns: 3,
-        weights: crabomination::server::EvalWeights::net_on_default(),
+        weights,
         search_threads: bot_search_threads(),
         ..crabomination::server::MctsConfig::default()
     }))

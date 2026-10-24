@@ -787,6 +787,91 @@ pub struct EvalWeights {
     /// pick ([`skip_noop_x0_on`](Self::skip_noop_x0_on), profile
     /// `x0-skip`).
     pub skip_noop_x0: bool,
+    /// An instant or sorcery that deals damage to "any target", and that the
+    /// auto-targeter aimed at a player, also gets creature-aimed sibling
+    /// casts: the best hostile creature the damage kills, and the best one
+    /// outright. The eval then judges face against board, as it already does
+    /// beside a Repartee payoff. Without it every Shock-shaped spell outside
+    /// an SOS Repartee deck went face: No Admittance hit a player in 141 of
+    /// 141 casts over 400 FRA sealed games (2026-10-23), 5 of them its own
+    /// caster's face through the `player_target_arms` sibling. Profile
+    /// `burn-arms` ([`burn_creature_arms_on`](Self::burn_creature_arms_on)).
+    pub burn_creature_arms: bool,
+    /// The pods' `dies_at_x0` hold in a duel too: a 0-toughness creature
+    /// that enters with X +1/+1 counters waits for X >= 1 instead of dying on
+    /// arrival. Guiding Hydra was cast at X=0 in 48 of 167 casts over 400
+    /// FRA sealed duels (2026-10-23). Profile `x0-hold`
+    /// ([`x0_death_hold_on`](Self::x0_death_hold_on)).
+    pub x0_death_hold: bool,
+    /// A "you may remove a +1/+1 counter from this; if you do, put one on
+    /// each other creature you control" prompt (Guiding Hydra) is taken only
+    /// with another creature to receive it, and with two when the removal
+    /// kills the source. The bot answered yes in 247 of 247 such prompts
+    /// over 400 FRA sealed duels (2026-10-23), so a lone Hydra shrank every
+    /// turn for nothing and an X=1 Hydra killed itself. Profile `fra-fixes`.
+    pub counter_shed_guard: bool,
+    /// A cast whose permanent target sits on the wrong side is not offered:
+    /// a pure boon (counters, pumps, no damage / destroy / exile / fight
+    /// leaf) at an opponent's permanent, or a hostile damage / destroy /
+    /// exile spell at the caster's own when the slot does not ask for one.
+    /// The candidate probe judges a cast with the stack unresolved, so the
+    /// misaim was never priced: Predictive Preparations put counters on an
+    /// opponent's creature in 22 of 362 casts and Wrath of the Bloodmane hit
+    /// its caster's own creature when the opponent had none (400 FRA sealed
+    /// duels, 2026-10-23). Profile `fra-fixes`.
+    pub target_polarity_guard: bool,
+    /// `trick_modes_combat_only` leaves a stat change that kills — negative
+    /// toughness, or base toughness 0 — on the main-phase menu: it is
+    /// removal, not a trick. Last Gasp and Multiply by Zero were cast only
+    /// in the declare-attackers step (319 of 323 casts over 3,000 FRA sealed
+    /// games, 2026-10-23) and stayed in hand in 28 % of the games that drew
+    /// them. Profile `fra-fixes`.
+    pub debuff_removal_anytime: bool,
+    /// The seat flag `Player::duel_sinks`: the Commander-era ability sinks
+    /// `counter_sink`, `selection_sink` and `generic_sink` in a duel, plus
+    /// basic landcycling (`cycling::pick_landcycle`, which no bot had). 3,000
+    /// FRA sealed games (2026-10-23) never activated Arni's loot, Yoshimaru's
+    /// or Inspired Tethermage's {6} sinks, nor landcycled anything: each picker
+    /// returned early for a seat without a commander. Measured 2026-10-24
+    /// (`CRAB_SEALED_SET=fra bot_ladder --decks sealed --games 500`, each
+    /// family alone vs `dflt`, seeds 43 / 97): landcycling 50.9 / 50.8,
+    /// generic 50.6 / 50.1, counters 50.2 / 49.7, selection 50.0 / 50.1.
+    /// The `evasion` grants are NOT opened: alone they read 47.7 / 46.4 (a
+    /// tighter duel rule, 48.9 / 49.0) — a tapped source is a blocker gone
+    /// for the opponent's turn and the mana was the combat trick's. Profile
+    /// `fra-fixes`.
+    pub duel_sinks: bool,
+    /// The greedy attack never redirects attackers at a planeswalker when the
+    /// same attackers going face are lethal through every untapped potential
+    /// blocker. The redirect only asked whether the walker could be finished:
+    /// a 6/4 against a defender at 4 with a tapped board and Jace, Reality
+    /// Sculptor out swung at Jace (FRA sealed trace, 2026-10-24). Profile
+    /// `fra-fixes`.
+    pub lethal_over_walkers: bool,
+    /// After the scored attack, also send every ready creature no block can
+    /// punish — the defender's untapped creatures that could block it, ganged,
+    /// deal less than its toughness, none has deathtouch (or it has menace
+    /// against one, or is indestructible) — when it has vigilance or the
+    /// defender's whole board swinging back leaves us above half our life.
+    /// 25,469 such attackers in 3,000 FRA sealed games, 20 % held, 1,696 of
+    /// them with life to spare (2026-10-24 aggro census, `.ladder/fra_aggro`).
+    pub free_attacks: bool,
+    /// A pump instant that carries a harmless rider — a keyword, untap or
+    /// counter on the pumped creature, or card flow for the caster (Empower
+    /// Jace, a draw, scry / surveil, an impulse) — is a combat trick to the
+    /// rule picker (`is_combat_trick`, `pick_combat_trick`). Without it every
+    /// FRA pump trick (Academic Ascent, Blazing Crescendo, Tethermage's
+    /// Advantage) was invisible after blocks: cast in 2 of 784 combats a
+    /// payable one would have won (2026-10-24 aggro census).
+    pub trick_riders: bool,
+    /// Burn finishes the game: a pending damage trigger that kills the
+    /// opponent takes their face (`damage_pick::lethal_face`), a cast never
+    /// grows creature arms when its face damage is lethal, and
+    /// [`pick_burn_lethal`] fires the castable burn whose face damage adds
+    /// up to the opponent's life. A 40-card R/B burn list over 3,200 FRA
+    /// games missed 53 of 390 burn-lethal windows and aimed 22 burn spells
+    /// at creatures with the opponent dead to them (2026-10-24).
+    pub burn_for_lethal: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
     /// see "this creature survives to block" but not "this is the race I
@@ -1362,6 +1447,16 @@ impl EvalWeights {
             hostile_player_targets: false,
             player_target_arms: false,
             skip_noop_x0: false,
+            burn_creature_arms: false,
+            x0_death_hold: false,
+            counter_shed_guard: false,
+            target_polarity_guard: false,
+            debuff_removal_anytime: false,
+            duel_sinks: false,
+            lethal_over_walkers: false,
+            free_attacks: false,
+            trick_riders: false,
+            burn_for_lethal: false,
             attack_race_horizon: false,
             sac_sinks_priced: false,
             net_slot: 0,
@@ -1478,6 +1573,16 @@ impl EvalWeights {
             hostile_player_targets: false,
             player_target_arms: false,
             skip_noop_x0: false,
+            burn_creature_arms: false,
+            x0_death_hold: false,
+            counter_shed_guard: false,
+            target_polarity_guard: false,
+            debuff_removal_anytime: false,
+            duel_sinks: false,
+            lethal_over_walkers: false,
+            free_attacks: false,
+            trick_riders: false,
+            burn_for_lethal: false,
             attack_race_horizon: false,
             sac_sinks_priced: false,
             net_slot: 0,
@@ -1577,6 +1682,16 @@ impl EvalWeights {
             hostile_player_targets: false,
             player_target_arms: false,
             skip_noop_x0: false,
+            burn_creature_arms: false,
+            x0_death_hold: false,
+            counter_shed_guard: false,
+            target_polarity_guard: false,
+            debuff_removal_anytime: false,
+            duel_sinks: false,
+            lethal_over_walkers: false,
+            free_attacks: false,
+            trick_riders: false,
+            burn_for_lethal: false,
             attack_race_horizon: false,
             sac_sinks_priced: false,
             net_slot: 0,
@@ -2713,6 +2828,16 @@ impl EvalWeights {
             player_target_arms: true,
             own_graveyard_picks: true,
             skip_noop_x0: true,
+            burn_creature_arms: false,
+            x0_death_hold: false,
+            counter_shed_guard: false,
+            target_polarity_guard: false,
+            debuff_removal_anytime: false,
+            duel_sinks: false,
+            lethal_over_walkers: false,
+            free_attacks: false,
+            trick_riders: false,
+            burn_for_lethal: false,
             // Round 72 (2026-09-13): the five mana-sink generators defer a
             // sacrifice-cost ability to `pick_sacrifice_value`. Adopted as the
             // correctness fix it is — **zero incidence on both gating pools**
@@ -2838,6 +2963,16 @@ impl EvalWeights {
             player_target_arms: false,
             own_graveyard_picks: false,
             skip_noop_x0: false,
+            burn_creature_arms: false,
+            x0_death_hold: false,
+            counter_shed_guard: false,
+            target_polarity_guard: false,
+            debuff_removal_anytime: false,
+            duel_sinks: false,
+            lethal_over_walkers: false,
+            free_attacks: false,
+            trick_riders: false,
+            burn_for_lethal: false,
             ..Self::default_const()
         }
     }
@@ -2987,6 +3122,43 @@ impl EvalWeights {
         Self { hostile_player_targets: true, ..Self::default_const() }
     }
 
+    /// Creature arms for any-target burn (profile `burn-arms`).
+    pub const fn burn_creature_arms_on() -> Self {
+        Self { burn_creature_arms: true, ..Self::default_const() }
+    }
+
+    /// The X=0 death hold in duels (profile `x0-hold`).
+    pub const fn x0_death_hold_on() -> Self {
+        Self { x0_death_hold: true, ..Self::default_const() }
+    }
+
+    /// The 2026-10-23/24 FRA fixes together: burn creature arms, the X=0
+    /// death hold, the counter-shed guard, the target polarity guard, kill
+    /// debuffs off the combat-only rule, the duel ability sinks, lethal over
+    /// planeswalkers, free attacks and pump tricks with riders (profile
+    /// `fra-fixes`).
+    pub const fn fra_fixes_on() -> Self {
+        Self::default_const().with_fra_fixes()
+    }
+
+    /// `self` with the [`fra_fixes_on`](Self::fra_fixes_on) flags set —
+    /// the client's `CRAB_FRA_FIXES=1` puts them on its net-leaf pilot.
+    pub const fn with_fra_fixes(self) -> Self {
+        Self {
+            burn_creature_arms: true,
+            x0_death_hold: true,
+            counter_shed_guard: true,
+            target_polarity_guard: true,
+            debuff_removal_anytime: true,
+            duel_sinks: true,
+            lethal_over_walkers: true,
+            free_attacks: true,
+            trick_riders: true,
+            burn_for_lethal: true,
+            ..self
+        }
+    }
+
     /// The other player as a cast-time arm (profile `player-arms`).
     pub const fn player_target_arms_on() -> Self {
         Self { player_target_arms: true, ..Self::default_const() }
@@ -3016,6 +3188,16 @@ impl EvalWeights {
             player_target_arms: true,
             own_graveyard_picks: true,
             skip_noop_x0: true,
+            burn_creature_arms: false,
+            x0_death_hold: false,
+            counter_shed_guard: false,
+            target_polarity_guard: false,
+            debuff_removal_anytime: false,
+            duel_sinks: false,
+            lethal_over_walkers: false,
+            free_attacks: false,
+            trick_riders: false,
+            burn_for_lethal: false,
             ..Self::default_const()
         }
     }
@@ -3243,6 +3425,7 @@ impl Bot for HeuristicBot {
             player.smart_tap = self.weights.smart_tap;
             player.converge_rarest = self.weights.converge_rarest;
             player.hostile_player_targets = self.weights.hostile_player_targets;
+            player.duel_sinks = self.weights.duel_sinks;
         }
     }
 
@@ -3451,6 +3634,7 @@ impl HeuristicBot {
                     let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
                     let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
                     let attacks = super::pod_attack::reaim_prohibited_attacks(state, seat, attacks);
+                    let attacks = add_free_attackers(state, seat, attacks, &self.weights);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
@@ -3516,6 +3700,20 @@ impl HeuristicBot {
                 if let Some(a) = super::next_spell_copy::pick_arm_next_spell_copy(state, seat) {
                     return Some(BotStep::plain(a));
                 }
+                // `burn_for_lethal`: burn in hand that finishes the opponent.
+                if state.stack.is_empty()
+                    && let Some(a) = pick_burn_lethal(state, seat, &self.weights)
+                {
+                    return Some(BotStep::plain(a));
+                }
+                // CR 702.29e — short of lands with the drop unused: landcycle
+                // before spending the mana, then play what it found.
+                if state.step == TurnStep::PreCombatMain
+                    && state.stack.is_empty()
+                    && let Some(a) = super::cycling::pick_landcycle(state, seat)
+                {
+                    return Some(BotStep::plain(a));
+                }
                 let action = main_phase_action_with(state, seat, self.scored, &self.weights);
                 // CR 702.143a — nothing better to do: foretell with the idle mana.
                 if matches!(action.action, GameAction::PassPriority)
@@ -3549,11 +3747,15 @@ impl HeuristicBot {
             // drop out of the candidate set. Without this, every non-counter
             // instant was dead in hand until the bot's own main phase.
             TurnStep::End if !is_active && state.stack.is_empty() => {
+                if let Some(a) = pick_burn_lethal(state, seat, &self.weights) {
+                    return Some(BotStep::plain(a));
+                }
                 let action = main_phase_action_with(state, seat, self.scored, &self.weights);
                 // Spare mana with nothing to cast: cycle, else a scry /
                 // surveil / loot sink (pods only).
                 if matches!(action.action, GameAction::PassPriority)
-                    && let Some(cycle) = super::cycling::pick_cycle(state, seat, &self.weights)
+                    && let Some(cycle) = super::cycling::pick_landcycle(state, seat)
+                        .or_else(|| super::cycling::pick_cycle(state, seat, &self.weights))
                         .or_else(|| super::command_zone::pick_command_zone_ability(state, seat, &self.weights))
                         .or_else(|| super::library_top::pick_library_top(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
@@ -3812,6 +4014,12 @@ fn decide_pending_policy_inner(
         }
         crate::decision::Decision::OrderTriggers { .. } if super::trigger_order::order(state, seat).is_some() => {
             super::trigger_order::order(state, seat).expect("guarded")
+        }
+        // `burn_for_lethal`: a damage trigger that kills the opponent hits them.
+        crate::decision::Decision::ChooseTarget { legal, .. }
+            if w.burn_for_lethal && super::damage_pick::lethal_face(state, seat, legal).is_some() =>
+        {
+            crate::decision::DecisionAnswer::Target(super::damage_pick::lethal_face(state, seat, legal).expect("guarded"))
         }
         // A damage trigger skips opposing permanents its damage can't hurt
         // (`damage_pick.rs`: Vindicator and Raptors ping-ponged over an
@@ -5439,10 +5647,11 @@ pub fn decide_optional_trigger(
     // A trade the outcome sim can price gets a second opinion on a "no"
     // (`eval_modes` gates it off inside sims); a flat cost or a flat upside
     // does not — there is nothing to weigh.
+    let shed = if w.counter_shed_guard { counter_shed_answer(state, seat, source, description) } else { None };
     let (take, priced) = match kind {
         // CR 704.5b — a "may draw" the library can't cover decks the seat.
         K::MayBody if may_draw_would_deck(state, seat, source, description) => (false, false),
-        K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description) {
+        K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description).or(shed) {
             Some(yes) => (yes, false),
             None => (optional_trigger_beneficial(state, source, description), true),
         },
@@ -5564,6 +5773,72 @@ fn sacrifice_fodder_available(state: &GameState, seat: usize) -> bool {
         }
     }
     false
+}
+
+/// `counter_shed_guard`: the answer to a "remove N +1/+1 counters from this;
+/// if you do, put one on each other creature you control" prompt, or `None`
+/// for any other body. Yes needs another creature to receive the counter, and
+/// two when the removal kills the source.
+fn counter_shed_answer(state: &GameState, seat: usize, source: CardId, description: &str) -> Option<bool> {
+    use crate::card::CounterType;
+    use crate::effect::{Selector, Value};
+    let card = state.battlefield_find(source)?;
+    let body = card.definition.triggered_abilities.iter().find_map(|t| find_maydo_body(&t.effect, description))?;
+    let Effect::Seq(steps) = body else { return None };
+    let [
+        Effect::RemoveCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(n) },
+        Effect::AddCounter { what: Selector::EachPermanent(_), kind: CounterType::PlusOnePlusOne, .. },
+    ] = steps.as_slice()
+    else {
+        return None;
+    };
+    let others = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.id != source && state.computed_is_creature(c))
+        .count();
+    let toughness = state.computed_permanent(source).map_or(0, |cp| cp.toughness);
+    let dies = toughness.saturating_sub(card.damage as i32).saturating_sub(*n) <= 0;
+    Some(others >= 1 && (!dies || others >= 2))
+}
+
+/// `target_polarity_guard`: the cast's permanent targets sit on the wrong
+/// side of the table for its effect — a pure boon aimed at an opponent's
+/// permanent, or hostile removal aimed at the caster's own when the slot
+/// does not require one of the caster's.
+fn target_polarity_misaimed(
+    state: &GameState,
+    seat: usize,
+    eff: &Effect,
+    mode: Option<usize>,
+    target: Option<&Target>,
+    extras: &[Target],
+) -> bool {
+    let controller_of = |t: &Target| match t {
+        Target::Permanent(id) => state.battlefield.find_by_id(*id).map(|c| c.controller),
+        _ => None,
+    };
+    let hostile_leaf = eff.any_nested(&|e| {
+        matches!(
+            e,
+            Effect::DealDamage { .. }
+                | Effect::Destroy { .. }
+                | Effect::DestroyNoRegen { .. }
+                | Effect::Exile { .. }
+                | Effect::ExileUntilSourceLeaves { .. }
+                | Effect::ExileWithSource { .. }
+                | Effect::Fight { .. }
+        )
+    }) || stat_change_kills(eff);
+    if eff.prefers_friendly_target() {
+        return !hostile_leaf
+            && target.into_iter().chain(extras).filter_map(controller_of).any(|c| !state.same_team(c, seat));
+    }
+    hostile_leaf
+        && target.and_then(controller_of) == Some(seat)
+        && !eff
+            .target_filter_for_slot_in_mode_kicked(0, mode, false)
+            .is_some_and(requirement_restricts_to_your_creatures)
 }
 
 /// Does `seat` control a permanent worth strictly less than `source`? That is
@@ -7909,8 +8184,11 @@ pub(super) fn cast_candidates<'a>(
         }
         // Pure temp-pump instants are combat tricks: held for the fight
         // window (`pick_combat_trick`), not main-phased where the buff
-        // telegraphs and fizzles at cleanup.
-        if is_combat_trick(&c.definition) || super::fog::held_fog(state, seat, &c.definition) {
+        // telegraphs and fizzles at cleanup. A shrink that kills (Last
+        // Gasp's -3/-3) is removal under `debuff_removal_anytime`.
+        let trick = is_combat_trick_with(&c.definition, w.trick_riders)
+            && !(w.debuff_removal_anytime && stat_change_kills(&c.definition.effect));
+        if trick || super::fog::held_fog(state, seat, &c.definition) {
             continue;
         }
         // Spree spells need `CastSpellSpree` with chosen modes — a plain
@@ -7960,8 +8238,14 @@ pub(super) fn cast_candidates<'a>(
         }
         // A 0-toughness creature that enters with X +1/+1 counters (Walking
         // Ballista, Hangarback Walker) is a 0/0 at X=0 and dies on arrival:
-        // pod bots cast Ballista for 0 on turn 1. Pods only.
-        if x_value == Some(0) && state.players.len() > 2 && dies_at_x0(&c.definition) {
+        // pod bots cast Ballista for 0 on turn 1. Pods, and duels under
+        // `x0_death_hold`.
+        if x_value == Some(0) && (state.players.len() > 2 || w.x0_death_hold) && dies_at_x0(&c.definition) {
+            continue;
+        }
+        // `burn_for_lethal`: an X-damage enters trigger (Ajani's Anguish) at
+        // X=0 spends the card on its static alone (359 of 1,136 casts).
+        if w.burn_for_lethal && x_value == Some(0) && etb_x_damage(&c.definition) {
             continue;
         }
         // `skip_noop_x0`: an X spell whose every leaf scales with X does
@@ -8022,6 +8306,7 @@ pub(super) fn cast_candidates<'a>(
             if w.trick_modes_combat_only
                 && c.definition.card_types.contains(&crate::card::CardType::Instant)
                 && contains_temp_stat_leaf(mode_effect)
+                && !(w.debuff_removal_anytime && stat_change_kills(mode_effect))
                 && !matches!(
                     state.step,
                     TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage
@@ -8082,16 +8367,35 @@ pub(super) fn cast_candidates<'a>(
             // the swap is judged, not assumed. Decided before the
             // primary is built so `additional_targets` is cloned only
             // when there really are two candidates to hand it to.
-            let swap = if has_repartee
-                && matches!(target, Some(Target::Player(_)))
-                && {
-                    use crate::card::CardType;
-                    c.definition.card_types.contains(&CardType::Instant)
-                        || c.definition.card_types.contains(&CardType::Sorcery)
-                } {
+            let is_spell = {
+                use crate::card::CardType;
+                c.definition.card_types.contains(&CardType::Instant)
+                    || c.definition.card_types.contains(&CardType::Sorcery)
+            };
+            let aimed_at_player = matches!(target, Some(Target::Player(_)));
+            let swap = if has_repartee && aimed_at_player && is_spell {
                 best_hostile_creature_target(state, seat, mode_effect, w)
             } else {
                 None
+            };
+            // `burn_creature_arms`: any-target damage gets the creature it
+            // kills and the best creature as arms, the eval picking the side.
+            let face_lethal = w.burn_for_lethal
+                && matches!(target, Some(Target::Player(p)) if p != seat
+                    && face_damage(mode_effect).is_some_and(|d| d >= state.effective_life(p)));
+            let burn_arms: Vec<Target> = if w.burn_creature_arms && swap.is_none() && aimed_at_player && is_spell && !face_lethal {
+                let mut arms: Vec<Target> = Vec::with_capacity(2);
+                for t in [burn_kill_target(state, seat, mode_effect, w), best_hostile_creature_target(state, seat, mode_effect, w)]
+                    .into_iter()
+                    .flatten()
+                {
+                    if !arms.contains(&t) {
+                        arms.push(t);
+                    }
+                }
+                if mode_effect.any_nested(&|e| matches!(e, Effect::DealDamage { .. })) { arms } else { Vec::new() }
+            } else {
+                Vec::new()
             };
             let sibling = swap.map(|t| GameAction::CastSpell {
                 card_id: c.id,
@@ -8100,6 +8404,16 @@ pub(super) fn cast_candidates<'a>(
                 mode,
                 x_value,
             });
+            let burn_siblings: Vec<GameAction> = burn_arms
+                .into_iter()
+                .map(|t| GameAction::CastSpell {
+                    card_id: c.id,
+                    target: Some(t),
+                    additional_targets: additional_targets.clone(),
+                    mode,
+                    x_value,
+                })
+                .collect();
             // `player_target_arms`: a slot-0 player target gets the other
             // player as a sibling arm, legal-checked against the slot's own
             // filter, so the scored eval / the search judges which side the
@@ -8139,10 +8453,16 @@ pub(super) fn cast_candidates<'a>(
                 // Twist discarded nothing, Earthquake was a no-op.
                 x_value,
             };
-            unvalidated.push(primary);
+            let misaimed = w.target_polarity_guard
+                && matches!(&primary, GameAction::CastSpell { target, additional_targets, .. }
+                    if target_polarity_misaimed(state, seat, mode_effect, mode, target.as_ref(), additional_targets));
+            if !misaimed {
+                unvalidated.push(primary);
+            }
             if let Some(sibling) = sibling {
                 unvalidated.push(sibling);
             }
+            unvalidated.extend(burn_siblings);
             if let Some(alt) = player_alt {
                 unvalidated.push(alt);
             }
@@ -9369,6 +9689,13 @@ pub(super) fn cast_candidates<'a>(
             } else {
                 (None, vec![])
             };
+            // `target_polarity_guard` on the graveyard cast too: Predictive
+            // Preparations' flashback still grew an opponent's creature.
+            if w.target_polarity_guard
+                && target_polarity_misaimed(state, seat, &c.definition.effect, None, target.as_ref(), &additional_targets)
+            {
+                continue;
+            }
             let action = GameAction::CastFlashback {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
@@ -12699,6 +13026,64 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
 /// its copies entered this turn too — an 8-seat pod ran a squad of
 /// Stormsinger tokens to 1,025 copies. Kept only if the engine accepts the
 /// trimmed declaration (an attack requirement wins).
+/// `free_attacks`: `attacks` plus each ready creature of `seat`'s that no
+/// block can punish, aimed at the defender, when it has vigilance or the
+/// defender's whole board cannot halve our life on the crack-back. Duels
+/// only; an attack tax (whose budget the scored pick owns) adds nobody.
+fn add_free_attackers(state: &GameState, seat: usize, mut attacks: Vec<Attack>, w: &EvalWeights) -> Vec<Attack> {
+    use crate::card::{Keyword, KeywordSlice};
+    if !w.free_attacks || state.players.len() != 2 {
+        return attacks;
+    }
+    let opp = 1 - seat;
+    let statics = crate::game::combat::attack_static_scan(state);
+    if state.attack_tax_possible(statics) {
+        return attacks;
+    }
+    let caps = state.attack_power_caps(statics);
+    let theirs: Vec<&crate::card::CardInstance> =
+        state.battlefield.iter().filter(|c| c.controller == opp && state.computed_is_creature(c)).collect();
+    let their_power: i32 =
+        theirs.iter().filter_map(|c| state.computed_permanent(c.id)).map(|cp| cp.power.max(0)).fold(0, i32::saturating_add);
+    let comfortable = state.players[seat].life > their_power.saturating_mul(2).saturating_add(2);
+    let blockers: Vec<crate::card::CardId> = theirs.iter().filter(|c| !c.tapped).map(|c| c.id).collect();
+    let mine: Vec<crate::card::CardId> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && !attacks.iter().any(|a| a.attacker == c.id) && state.computed_is_creature(c))
+        .map(|c| c.id)
+        .collect();
+    for id in mine {
+        let (Some(card), Some(cp)) = (state.battlefield.find_by_id(id), state.computed_permanent(id)) else { continue };
+        let kw = cp.keywords();
+        if cp.power <= 0 || !state.attacker_is_able(seat, card, Some(&cp), &caps, statics) {
+            continue;
+        }
+        if !(kw.has_kw(&Keyword::Vigilance) || comfortable) {
+            continue;
+        }
+        let able: Vec<_> = blockers.iter().filter(|b| state.blocker_can_block_attacker(**b, id)).collect();
+        let free = if kw.has_kw(&Keyword::Indestructible) || (kw.has_kw(&Keyword::Menace) && able.len() < 2) {
+            true
+        } else {
+            let mut damage = 0i32;
+            let mut deathtouch = false;
+            for b in &able {
+                if let Some(bcp) = state.computed_permanent(**b) {
+                    let k = bcp.keywords();
+                    deathtouch |= k.has_kw(&Keyword::Deathtouch);
+                    damage = damage.saturating_add(bcp.power.max(0).saturating_mul(if k.has_kw(&Keyword::DoubleStrike) { 2 } else { 1 }));
+                }
+            }
+            !deathtouch && damage < cp.toughness.saturating_sub(card.damage as i32)
+        };
+        if free {
+            attacks.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
+        }
+    }
+    attacks
+}
+
 fn board_bound_attacks(state: &GameState, attacks: Vec<Attack>) -> Vec<Attack> {
     use crate::recommend::BOARD_GATE;
     let start = state.battlefield.len() as i64;
@@ -12733,7 +13118,7 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // computed P/T) run once per candidate attacker — share one gather, the
     // same way `pick_blocks` does. Matters most inside the attack/block sims,
     // which call this on a freshly cloned (and therefore unfrozen) state.
-    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0));
+    let attacks = state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false, 0, false));
     super::pod_attack::trim_life_taxed_attacks(state, seat, attacks)
 }
 
@@ -12743,7 +13128,9 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
 /// `w`. The flagless [`pick_attacks`] is the pre-round-65 filter, kept as
 /// the test entry so the recorded greedy shapes stay pinned.
 pub fn pick_attacks_w(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
-    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, w.attack_blocker_guard, w.leader_target))
+    state.with_frozen_layers(|state| {
+        pick_attacks_inner(state, seat, w.attack_blocker_guard, w.leader_target, w.lethal_over_walkers)
+    })
 }
 
 /// The guarded safe-attack test (round 65): may `c` swing into
@@ -12984,7 +13371,13 @@ pub(crate) fn pod_soft_material(
     Some(-t * lse)
 }
 
-fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target: u8) -> Vec<Attack> {
+fn pick_attacks_inner(
+    state: &GameState,
+    seat: usize,
+    guard: bool,
+    leader_target: u8,
+    lethal_over_walkers: bool,
+) -> Vec<Attack> {
     use crate::card::Keyword;
     let target_player = attack_target_player(state, seat, leader_target);
     // Filter on `controller`, not `owner`: cards that have
@@ -13416,6 +13809,25 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
             state.battlefield.iter().find(|c| c.id == *id).map(|c| c.power())
         })
         .fold(0i32, i32::saturating_add);
+    // `lethal_over_walkers`: the face damage that survives the defender's
+    // best blocks — the attackers' powers less the biggest one per untapped
+    // creature that could block — already kills the player, so no walker.
+    if lethal_over_walkers && !walker_targets.is_empty() {
+        let mut powers: Vec<i32> = attackers
+            .iter()
+            .filter_map(|id| state.computed_permanent(*id).map(|cp| cp.power.max(0)))
+            .collect();
+        powers.sort_unstable_by(|a, b| b.cmp(a));
+        let blockers = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == target_player && !c.tapped && state.computed_is_creature(c))
+            .count();
+        let through: i32 = powers.iter().skip(blockers).fold(0, |a, b| a.saturating_add(*b));
+        if through >= state.players[target_player].life {
+            walker_targets.clear();
+        }
+    }
     let mut attacks: Vec<Attack> = Vec::with_capacity(attackers.len());
     for (pw_id, loyalty) in walker_targets {
         // Only redirect when we can plausibly finish it
@@ -19315,6 +19727,139 @@ fn best_hostile_creature_target(
     })
 }
 
+/// The constant damage `eff` deals to its slot-0 target ("any target" /
+/// "target player" burn), if it is that shape.
+fn face_damage(eff: &Effect) -> Option<i32> {
+    use crate::effect::{Selector, Value};
+    match eff {
+        Effect::DealDamage {
+            to: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. },
+            amount: Value::Const(n),
+        } => Some(*n),
+        Effect::Seq(v) => v.iter().find_map(face_damage),
+        _ => None,
+    }
+}
+
+/// An enters-the-battlefield trigger dealing X damage to a target (Ajani's
+/// Anguish): the spell's X is the damage.
+fn etb_x_damage(def: &CardDefinition) -> bool {
+    use crate::effect::{Selector, Value};
+    def.triggered_abilities.iter().any(|t| {
+        matches!(
+            &t.effect,
+            Effect::DealDamage { to: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. }, amount: Value::XFromCost }
+        )
+    })
+}
+
+/// `burn_for_lethal`: when the face damage of `seat`'s castable burn adds up
+/// to the opponent's life, the first of those casts, aimed at the opponent.
+/// Fixed-damage burn is chosen biggest first within the mana it has, then an
+/// X-damage card (Ajani's Anguish) takes what is left; sorcery-speed burn is
+/// cast first, so the instant is what waits in hand — a sorcery left there
+/// read as "not castable now" to the rummage picker, which discarded the
+/// second No Admittance of a lethal pair (FRA burn census, 2026-10-24).
+/// Duels only.
+fn pick_burn_lethal(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    use crate::card::CardType;
+    if !w.burn_for_lethal || state.players.len() != 2 || !state.stack.is_empty() {
+        return None;
+    }
+    let opp = 1 - seat;
+    let life = state.effective_life(opp);
+    if life <= 0 || !state.players[opp].is_alive() {
+        return None;
+    }
+    let mana = available_mana(state, seat).total as i32;
+    // (damage, mana, instant, action); X cards carry their base cost.
+    let mut fixed: Vec<(i32, i32, bool, GameAction)> = Vec::new();
+    let mut x_cards: Vec<(i32, CardId)> = Vec::new();
+    for c in state.players[seat].hand.iter() {
+        let def = &c.definition;
+        let instant = def.card_types.contains(&CardType::Instant);
+        let modes: Vec<Option<usize>> = match modal_mode_count(&def.effect) {
+            Some(n) => (0..n).map(Some).collect(),
+            None => vec![None],
+        };
+        let cmc = def.cost.cmc() as i32;
+        let mut best: Option<(i32, i32, bool, GameAction)> = None;
+        for mode in modes {
+            let Some(dmg) = face_damage(mode_branch(&def.effect, mode)) else { continue };
+            let action = GameAction::CastSpell {
+                card_id: c.id,
+                target: Some(Target::Player(opp)),
+                additional_targets: vec![],
+                mode,
+                x_value: None,
+            };
+            if best.as_ref().is_none_or(|b| dmg > b.0) && state.would_accept(action.clone()) {
+                best = Some((dmg, cmc, instant, action));
+            }
+        }
+        match best {
+            Some(b) => fixed.push(b),
+            None if def.cost.has_x() && etb_x_damage(def) => x_cards.push((cmc, c.id)),
+            None => {}
+        }
+    }
+    fixed.sort_by_key(|(d, ..)| std::cmp::Reverse(*d));
+    let (mut budget, mut total) = (mana, 0i32);
+    let mut plan: Vec<(bool, GameAction)> = Vec::new();
+    for (d, cost, instant, a) in fixed {
+        if cost <= budget {
+            budget -= cost;
+            total = total.saturating_add(d);
+            plan.push((instant, a));
+        }
+    }
+    if let Some(&(base, id)) = x_cards.iter().min_by_key(|(base, _)| *base)
+        && budget > base
+    {
+        let x = budget - base;
+        let action = GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(x as u32) };
+        if state.would_accept(action.clone()) {
+            total = total.saturating_add(x);
+            plan.push((false, action));
+        }
+    }
+    if total < life {
+        return None;
+    }
+    plan.sort_by_key(|(instant, _)| *instant);
+    plan.into_iter().next().map(|(_, a)| a)
+}
+
+/// The most valuable hostile creature a fixed-amount `DealDamage` in `eff`
+/// kills (marked damage counted) — the `burn_creature_arms` kill arm.
+fn burn_kill_target(state: &GameState, seat: usize, eff: &Effect, w: &EvalWeights) -> Option<Target> {
+    use crate::effect::Value;
+    // `any_nested` takes a `Fn`, so the largest amount is kept in a cell.
+    let most = std::cell::Cell::new(0i32);
+    eff.any_nested(&|e| {
+        if let Effect::DealDamage { amount: Value::Const(n), .. } = e {
+            most.set(most.get().max(*n));
+        }
+        false
+    });
+    let amount = most.get();
+    if amount <= 0 {
+        return None;
+    }
+    let filter = eff.primary_target_filter();
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter(|c| {
+            state.computed_permanent(c.id).is_some_and(|cp| cp.toughness - c.damage as i32 <= amount)
+        })
+        .map(|c| (permanent_value(state, c.id, w), Target::Permanent(c.id)))
+        .filter(|(_, t)| filter.as_ref().is_none_or(|f| state.evaluate_requirement_static(f, t, seat, None)))
+        .max_by_key(|(v, _)| *v)
+        .map(|(_, t)| t)
+}
+
 /// True when casting `def` reads the converge count — the distinct colors of
 /// mana spent. One oracle, [`CardDefinition::wants_converge`], shared with the
 /// payment path.
@@ -20698,6 +21243,24 @@ fn contains_temp_stat_leaf(e: &Effect) -> bool {
     }
 }
 
+/// The Commander-era sinks run for `seat`: it has a commander, or it carries
+/// the `duel_sinks` seat flag.
+pub(super) fn pod_sinks_on(state: &GameState, seat: usize) -> bool {
+    !state.players[seat].commanders.is_empty() || state.players[seat].duel_sinks
+}
+
+/// `debuff_removal_anytime`: `e` lowers toughness (a negative constant pump)
+/// or sets base toughness to 0 or less — the until-end-of-turn shapes that
+/// kill (Last Gasp's -3/-3, Multiply by Zero's 0/0).
+fn stat_change_kills(e: &Effect) -> bool {
+    use crate::effect::Value;
+    e.any_nested(&|e| match e {
+        Effect::PumpPT { toughness: Value::Const(t), .. } => *t < 0,
+        Effect::SetBasePT { toughness: Value::Const(t), .. } => *t <= 0,
+        _ => false,
+    })
+}
+
 /// Every leaf of `e` is a stat change that ends with the turn or the combat:
 /// a pump, a base P/T rewrite or a P/T switch. A keyword grant is not one — an
 /// evasion bought before attacks (Aetherstream Leopard) is the point.
@@ -20742,11 +21305,44 @@ pub(super) fn action_outcome_is_temporary(state: &GameState, action: &GameAction
 /// 2,000 ten-seat pod games, the only card of the ten target decks' 1,000
 /// that a run never played. A multi-slot pump is not a trick; it is removal,
 /// and it belongs on the normal schedule.
+#[cfg(test)]
 fn is_combat_trick(def: &CardDefinition) -> bool {
+    is_combat_trick_with(def, false)
+}
+
+/// `trick_riders`: a clause a pump trick may carry without changing what it
+/// is — a keyword, untap or counter on the pumped creature, or card flow for
+/// the caster.
+fn benign_trick_rider(e: &Effect) -> bool {
+    use crate::effect::{PlayerRef, Selector};
+    let on_target = |s: &Selector| matches!(s, Selector::Target(_) | Selector::TargetFiltered { .. });
+    match e {
+        Effect::GrantKeyword { what, .. } | Effect::Untap { what, .. } | Effect::AddCounter { what, .. } => on_target(what),
+        Effect::EmpowerJace { who: PlayerRef::You, .. }
+        | Effect::Surveil { who: PlayerRef::You, .. }
+        | Effect::Scry { who: PlayerRef::You, .. }
+        | Effect::ExileTopAndGrantMayPlay { who: PlayerRef::You, .. } => true,
+        Effect::Draw { who: Selector::You, .. } => true,
+        _ => false,
+    }
+}
+
+/// [`is_combat_trick`], with `riders` (`EvalWeights::trick_riders`) letting a
+/// pump carry [`benign_trick_rider`] clauses.
+fn is_combat_trick_with(def: &CardDefinition, riders: bool) -> bool {
     use crate::card::CardType;
     use crate::effect::{Duration, Selector, Value};
     if !def.card_types.contains(&CardType::Instant) {
         return false;
+    }
+    if riders
+        && let Effect::Seq(v) = &def.effect
+        && v.iter().any(|e| matches!(e, Effect::PumpPT { .. }))
+        && v.iter().all(|e| matches!(e, Effect::PumpPT { .. }) || benign_trick_rider(e))
+    {
+        let pumps: Vec<Effect> = v.iter().filter(|e| matches!(e, Effect::PumpPT { .. })).cloned().collect();
+        let stripped = CardDefinition { effect: Effect::Seq(pumps), ..def.clone() };
+        return is_combat_trick_with(&stripped, false);
     }
     fn all_temp_pumps(e: &Effect) -> bool {
         match e {
@@ -20856,10 +21452,17 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
     let mut tricks: Vec<(CardId, Option<usize>, Shape)> = state.players[seat]
         .hand
         .iter()
-        .filter(|c| is_combat_trick(&c.definition))
+        .filter(|c| is_combat_trick_with(&c.definition, w.trick_riders))
         .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
         .filter_map(|c| {
-            pump_amounts(&c.definition.effect)
+            // `trick_riders`: the amount is read off the pump clauses alone.
+            let pumps = match &c.definition.effect {
+                Effect::Seq(v) if w.trick_riders => {
+                    Effect::Seq(v.iter().filter(|e| matches!(e, Effect::PumpPT { .. })).cloned().collect())
+                }
+                e => e.clone(),
+            };
+            pump_amounts(&pumps)
                 .map(|(p, t)| (c.id, None, Shape::Pump(p, t)))
                 .or_else(|| {
                     self_power_amount(&c.definition.effect)
@@ -20882,7 +21485,17 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
             }
             for i in 0..n {
                 let branch = mode_branch(&c.definition.effect, Some(i));
-                if let Some((p, t)) = pump_amounts(branch) {
+                // `trick_riders`: a mode that is a pump plus harmless riders
+                // (Charge the Sanctum's +2/+0, first strike and a counter).
+                let pumps = match branch {
+                    Effect::Seq(v)
+                        if w.trick_riders && v.iter().all(|e| matches!(e, Effect::PumpPT { .. }) || benign_trick_rider(e)) =>
+                    {
+                        Effect::Seq(v.iter().filter(|e| matches!(e, Effect::PumpPT { .. })).cloned().collect())
+                    }
+                    e => e.clone(),
+                };
+                if let Some((p, t)) = pump_amounts(&pumps) {
                     tricks.push((c.id, Some(i), Shape::Pump(p, t)));
                 } else if let Some((p, t)) = set_base_amounts(branch) {
                     tricks.push((c.id, Some(i), Shape::SetBase(p, t)));
@@ -23243,6 +23856,129 @@ mod tests {
             }
             _ => panic!("expected an activate-ability action"),
         }
+    }
+
+    /// An untapped 6/4 attacks a defender at 4 whose creatures are all
+    /// tapped: lethal on an empty board. Reproduces a 2026-10-24 FRA sealed
+    /// trace (seed 1234, `9f7386e65d753b43_0_0`, T14) where the bot declared
+    /// no attackers with the defender holding Jace, Reality Sculptor; the
+    /// greedy menu sent the 6/4 at Jace. Under `lethal_over_walkers`.
+    #[test]
+    fn bot_attacks_for_lethal_into_a_tapped_board() {
+        use crate::card::CounterType;
+        let build = |walker: bool| {
+            let mut g = two_player_game();
+            g.active_player_idx = 0;
+            g.step = TurnStep::DeclareAttackers;
+            g.priority.player_with_priority = 0;
+            let crier = g.add_card_to_battlefield(0, catalog::campus_crier());
+            g.clear_sickness(crier);
+            g.battlefield_find_mut(crier).unwrap().counters.insert(CounterType::PlusOnePlusOne, 3);
+            for def in [catalog::yoshimaru_scrappy_stray(), catalog::geist_of_saint_thalia(), catalog::inspired_tethermage()] {
+                let id = g.add_card_to_battlefield(1, def);
+                g.battlefield_find_mut(id).unwrap().tapped = true;
+            }
+            if walker {
+                let j = g.add_card_to_battlefield(1, catalog::jace_reality_sculptor());
+                g.battlefield_find_mut(j).unwrap().counters.insert(CounterType::Loyalty, 6);
+            }
+            g.players[1].life = 4;
+            (g, crier)
+        };
+        let w = EvalWeights { lethal_over_walkers: true, ..EvalWeights::default() };
+        for walker in [false, true] {
+            let (g, crier) = build(walker);
+            let attacks = pick_attacks_w(&g, 0, &w);
+            assert!(
+                attacks.iter().any(|a| a.attacker == crier && a.target == AttackTarget::Player(1)),
+                "walker {walker}: the 6/4 swings for lethal at the player, got {attacks:?}"
+            );
+            let scored = pick_attacks_scored(&g, 0, &w);
+            assert!(
+                scored.iter().any(|a| a.attacker == crier && a.target == AttackTarget::Player(1)),
+                "walker {walker}: the scored search keeps the lethal swing, got {scored:?}"
+            );
+        }
+    }
+
+    /// `free_attacks`: a vigilant 5/7 flyer the scored pick left home is
+    /// added (a 1/2 flyer is the only creature that could block it); a 2/2
+    /// that a deathtouch blocker could kill is not, and neither is a non-
+    /// vigilant attacker when the crack-back could halve our life.
+    #[test]
+    fn free_attacks_adds_only_attackers_no_block_can_punish() {
+        use crate::card::CounterType;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        let angel = g.add_card_to_battlefield(0, catalog::blossom_blessed_angel());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for id in [angel, bear] {
+            g.clear_sickness(id);
+        }
+        g.battlefield_find_mut(angel).unwrap().counters.insert(CounterType::PlusOnePlusOne, 3);
+        g.add_card_to_battlefield(1, catalog::fatehold_chronologist());
+        g.add_card_to_battlefield(1, catalog::arcane_amphisbaena());
+        g.players[0].life = 20;
+        let on = EvalWeights { free_attacks: true, ..EvalWeights::default() };
+        let added = add_free_attackers(&g, 0, vec![], &on);
+        assert!(added.iter().any(|a| a.attacker == angel), "the vigilant flyer goes: {added:?}");
+        assert!(!added.iter().any(|a| a.attacker == bear), "the bear meets deathtouch: {added:?}");
+        assert!(add_free_attackers(&g, 0, vec![], &EvalWeights::default()).is_empty(), "off by default");
+    }
+
+    /// `trick_riders`: Academic Ascent (+2/+2, flying, Empower Jace) turns a
+    /// blocked 2/2 into a 4/4 that kills its 3/3 blocker and lives; without
+    /// the flag the rider hides it from the trick rule.
+    #[test]
+    fn trick_riders_casts_a_pump_with_a_rider_after_blocks() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let blocker = g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.set_attacking(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(blocker, bear)]);
+        g.set_blockers_declared(true);
+        let ascent = g.add_card_to_hand(0, catalog::academic_ascent());
+        g.players[0].mana_pool.add(Color::White, 2);
+        assert!(pick_combat_trick(&g, 0, &EvalWeights::default()).is_none(), "the rider hides it");
+        let on = EvalWeights { trick_riders: true, ..EvalWeights::default() };
+        let picked = pick_combat_trick(&g, 0, &on).expect("the trick wins the fight");
+        assert!(
+            matches!(picked.action(), GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. } if card_id == ascent && t == bear),
+            "Academic Ascent on the bear"
+        );
+    }
+
+    /// `burn_for_lethal`: No Admittance plus Stinging Vitriol (3 + 2) with
+    /// the opponent at 5 — the planner fires the bigger one at their face;
+    /// at 6 it is not lethal and the planner passes. Off by default.
+    #[test]
+    fn burn_for_lethal_fires_burn_that_adds_up() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, catalog::mountain());
+            g.add_card_to_battlefield(0, catalog::swamp());
+        }
+        let na = g.add_card_to_hand(0, catalog::no_admittance());
+        g.add_card_to_hand(0, catalog::stinging_vitriol());
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[1].life = 5;
+        let on = EvalWeights { burn_for_lethal: true, ..EvalWeights::default() };
+        assert!(
+            matches!(pick_burn_lethal(&g, 0, &on), Some(GameAction::CastSpell { card_id, target: Some(Target::Player(1)), .. }) if card_id == na),
+            "No Admittance at the face first"
+        );
+        assert_eq!(pick_burn_lethal(&g, 0, &EvalWeights::default()), None, "off by default");
+        g.players[1].life = 6;
+        assert_eq!(pick_burn_lethal(&g, 0, &on), None, "not lethal");
     }
 
     /// The bot points a ping at the opponent's face when it's exactly lethal
@@ -31121,6 +31857,70 @@ mod stack_response_tests {
             ),
             "with a Repartee payoff out, Shock kills the bear instead of pinging face, \
              got {action:?}"
+        );
+    }
+
+    /// `debuff_removal_anytime`: Last Gasp's -3/-3 kills a bear in the main
+    /// phase like any removal; off, `trick_modes_combat_only` and the combat
+    /// trick classifier hold it for a fight that may never come.
+    #[test]
+    fn debuff_removal_is_cast_in_the_main_phase() {
+        use crate::mana::Color;
+        let setup = || {
+            let mut g = two_player_game();
+            g.step = TurnStep::PreCombatMain;
+            let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            let gasp = g.add_card_to_hand(0, catalog::last_gasp());
+            g.players[0].mana_pool.add(Color::Black, 2);
+            g.priority.player_with_priority = 0;
+            (g, bear, gasp)
+        };
+        let on = EvalWeights { debuff_removal_anytime: true, ..EvalWeights::default() };
+        let (g, bear, gasp) = setup();
+        let action = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. } if card_id == gasp && t == bear),
+            "Last Gasp kills the bear now, got {action:?}"
+        );
+        let (g, _, gasp) = setup();
+        let action = main_phase_action_with(&g, 0, true, &EvalWeights::default()).action;
+        assert!(
+            !matches!(action, GameAction::CastSpell { card_id, .. } if card_id == gasp),
+            "off by default: held for combat, got {action:?}"
+        );
+    }
+
+    /// `burn_creature_arms`: with no Repartee payoff, an "any target" burn
+    /// spell is still offered at the creature it kills, and the eval takes
+    /// the kill over the face ping. Off, the only arms are the two players —
+    /// No Admittance hit a player in 141 of 141 FRA sealed casts.
+    #[test]
+    fn burn_creature_arms_offer_the_kill_for_any_target_burn() {
+        use crate::mana::Color;
+        let setup = || {
+            let mut g = two_player_game();
+            g.step = TurnStep::PostCombatMain;
+            let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            let shock = g.add_card_to_hand(0, catalog::shock());
+            g.players[0].mana_pool.add(Color::Red, 1);
+            g.priority.player_with_priority = 0;
+            (g, bear, shock)
+        };
+        let (g, bear, shock) = setup();
+        let action = main_phase_action_with(&g, 0, true, &EvalWeights::burn_creature_arms_on()).action;
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                    if card_id == shock && t == bear
+            ),
+            "Shock kills the bear instead of pinging face, got {action:?}"
+        );
+        let (g, bear, _) = setup();
+        let action = main_phase_action_with(&g, 0, true, &EvalWeights::default()).action;
+        assert!(
+            !matches!(action, GameAction::CastSpell { target: Some(Target::Permanent(t)), .. } if t == bear),
+            "the flag is off by default, got {action:?}"
         );
     }
 

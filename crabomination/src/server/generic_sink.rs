@@ -32,7 +32,7 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
         }
         _ => false,
     };
-    if state.players.len() <= 2 || !state.stack.is_empty() || !window {
+    if (state.players.len() <= 2 && !state.players[seat].duel_sinks) || !state.stack.is_empty() || !window {
         return None;
     }
     let mut baseline: Option<i32> = None;

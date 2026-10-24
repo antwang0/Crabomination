@@ -21,6 +21,16 @@
 //! the pool (a decklist — one card per line, `N Name`, Arena or MTGO export)
 //! built by the rated builder (best of N rated builds), then every pool card
 //! ranked by its measured value, marked `*` where the build plays it.
+//! `--colors WG` confines the build to those colours.
+//!
+//! `fra_card_eval --gauntlet A.txt B.txt ... [--field 400] [--pairs 4]
+//! [--seed 43] [--pilot dflt] [--field-pilot P]` plays each 40-card list
+//! (piloted by `--pilot`, the field by `--field-pilot`, default the same) against one fixed
+//! field of FRA sealed opponents (`fra_mode::FraPacks` pools, each the
+//! best-of-16 rated build), seat-swapped pairs, the same opponent and seed
+//! for every list. The unit is the opponent: each list's win rate is the
+//! opponent-level mean, and every later list is also read as its paired
+//! difference against the first.
 //!
 //! `fra_card_eval --ab [--pools 2000] [--pairs 8] [--seed 43] [--pilot P]`
 //! is the builder race instead: per FRA pool (`fra_mode::FraPacks`, no
@@ -36,6 +46,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crabomination::card::CardDefinition;
 use crabomination::catalog::sets::all_factories::all_catalog_card_factories;
+use crabomination::mana::{Color, ColorSet};
 use crabomination::recommend::{Pilot, simulate_match_pairs_piloted};
 use crabomination::server::EvalWeights;
 use rand::rngs::StdRng;
@@ -163,15 +174,37 @@ fn done_count<T>(rows: &std::sync::Mutex<Vec<T>>, row: T) -> usize {
     r.len()
 }
 
-/// `--build`: the rated build of a player's pool, and the pool ranked.
-fn build_pool(path: &str, candidates: usize) {
+/// `"WG"` / `"ug"` as a colour set.
+fn parse_colors(spec: &str) -> ColorSet {
+    let mut set = ColorSet::empty();
+    for ch in spec.chars() {
+        set.insert(match ch.to_ascii_uppercase() {
+            'W' => Color::White,
+            'U' => Color::Blue,
+            'B' => Color::Black,
+            'R' => Color::Red,
+            'G' => Color::Green,
+            other => panic!("--colors {spec}: {other:?} is not one of WUBRG"),
+        });
+    }
+    set
+}
+
+/// A decklist file's main deck and sideboard, warning on unknown names.
+fn read_list(path: &str) -> (Vec<Factory>, Vec<Factory>) {
     let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     let parsed = crabomination::decklist::parse_decklist(&text);
     for u in &parsed.unknown {
-        eprintln!("not in the catalog: {} {:?} (did you mean {:?})", u.count, u.name, u.suggestions);
+        eprintln!("{path}: not in the catalog: {} {:?} (did you mean {:?})", u.count, u.name, u.suggestions);
     }
-    let pool: Vec<Factory> = parsed.main.iter().chain(&parsed.sideboard).copied().collect();
-    let deck = crabomination::selfplay::rated_sealed_build(&pool, candidates, 0x5EA1);
+    (parsed.main, parsed.sideboard)
+}
+
+/// `--build`: the rated build of a player's pool, and the pool ranked.
+fn build_pool(path: &str, candidates: usize, colors: ColorSet) {
+    let (main, side) = read_list(path);
+    let pool: Vec<Factory> = main.iter().chain(&side).copied().collect();
+    let deck = crabomination::selfplay::rated_sealed_build_in_colors(&pool, candidates, 0x5EA1, colors);
     let brief = |f: Factory| crabomination::cube::card_brief(f);
     let mut spells: Vec<Factory> = deck.iter().copied().filter(|f| !brief(*f).is_land).collect();
     spells.sort_by_key(|f| (brief(*f).cmc, brief(*f).def.name));
@@ -208,31 +241,122 @@ fn build_pool(path: &str, candidates: usize) {
     for f in seen {
         let mark = if deck.iter().any(|d| *d as usize == f as usize) { '*' } else { ' ' };
         let v = value(f).map_or("    -".to_string(), |v| format!("{v:+5.2}"));
-        println!("{mark} {v}  {}", brief(f).def.name);
+        let b = brief(f);
+        let colors: String = b.pip_colors.iter().map(|c| c.short_name()).collect();
+        println!("{mark} {v}  {colors:<3} {}  {}", b.cmc, b.def.name);
+    }
+}
+
+/// `--gauntlet`: each list against one fixed field of rated FRA builds.
+fn gauntlet(paths: &[String], pilot: Pilot, field_pilot: Pilot, field: usize, pairs: usize, seed: u64, threads: usize) {
+    let lists: Vec<Vec<Factory>> = paths
+        .iter()
+        .map(|p| {
+            let (main, _) = read_list(p);
+            if main.len() != 40 {
+                eprintln!("{p}: {} cards, not 40", main.len());
+            }
+            main
+        })
+        .collect();
+    let packs = crabomination::fra_mode::FraPacks::get();
+    let next = AtomicUsize::new(0);
+    // Per opponent: (wins, losses) for every list, in `paths` order.
+    let rows = std::sync::Mutex::new(Vec::with_capacity(field));
+    let start = std::time::Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| loop {
+                let j = next.fetch_add(1, Ordering::Relaxed);
+                if j >= field {
+                    break;
+                }
+                let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (j as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
+                let mut rng = StdRng::seed_from_u64(salt);
+                let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+                let opp = crabomination::selfplay::rated_sealed_build(&pool, 16, salt ^ 1);
+                let row: Vec<(u32, u32)> = lists
+                    .iter()
+                    .map(|deck| {
+                        let t = simulate_match_pairs_piloted(deck, &opp, pairs, [pilot, field_pilot], 50_000, salt ^ 2);
+                        (t.wins_a, t.wins_b)
+                    })
+                    .collect();
+                let n = done_count(&rows, row);
+                if n % 50 == 0 {
+                    eprintln!("{n}/{field} opponents, {:.0}s", start.elapsed().as_secs_f64());
+                }
+            });
+        }
+    });
+    let rows: Vec<Vec<(u32, u32)>> = rows.into_inner().unwrap();
+    let share = |r: (u32, u32)| (r.0 + r.1 > 0).then(|| 100.0 * r.0 as f64 / (r.0 + r.1) as f64);
+    let mean_ci = |xs: &[f64]| {
+        let n = xs.len() as f64;
+        let m = xs.iter().sum::<f64>() / n;
+        let sd = (xs.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (n - 1.0)).sqrt();
+        (m, 1.96 * sd / n.sqrt())
+    };
+    println!("{field} opponents x {pairs} seat-swapped pairs, seed {seed}; opponent-level 95% intervals");
+    for (d, path) in paths.iter().enumerate() {
+        let shares: Vec<f64> = rows.iter().filter_map(|r| share(r[d])).collect();
+        let (m, h) = mean_ci(&shares);
+        let (w, l) = rows.iter().fold((0, 0), |a, r| (a.0 + r[d].0, a.1 + r[d].1));
+        let mut line = format!("{m:6.2} ±{h:4.2}  games {w}-{l}");
+        if d > 0 {
+            let diffs: Vec<f64> =
+                rows.iter().filter_map(|r| Some(share(r[d])? - share(r[0])?)).collect();
+            let (dm, dh) = mean_ci(&diffs);
+            line += &format!("  vs first {dm:+6.2} ±{dh:4.2}");
+        }
+        println!("{line}  {path}");
+    }
+}
+
+fn pilot_named(name: &str) -> Pilot {
+    match name {
+        "dflt" => Pilot::Scored(EvalWeights::default()),
+        "net67" => {
+            load_net();
+            Pilot::Scored(EvalWeights::net_on_default())
+        }
+        "burn-arms" => Pilot::Scored(EvalWeights::burn_creature_arms_on()),
+        "fra-fixes" => Pilot::Scored(EvalWeights::fra_fixes_on()),
+        "free-attacks" => Pilot::Scored(EvalWeights { free_attacks: true, ..EvalWeights::fra_fixes_on() }),
+        "trick-riders" => Pilot::Scored(EvalWeights { free_attacks: true, trick_riders: true, ..EvalWeights::fra_fixes_on() }),
+        "fra-fixes-noburn" => Pilot::Scored(EvalWeights { burn_for_lethal: false, ..EvalWeights::fra_fixes_on() }),
+        "mcts-dflt-256" | "mcts-burn-256" | "mcts-fixes-256" => Pilot::Mcts(crabomination::server::MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: match name {
+                "mcts-burn-256" => EvalWeights::burn_creature_arms_on(),
+                "mcts-fixes-256" => EvalWeights::fra_fixes_on(),
+                _ => EvalWeights::default(),
+            },
+            ..crabomination::server::MctsConfig::default()
+        }),
+        other => panic!("pilot {other}: dflt, burn-arms, fra-fixes, net67, mcts-dflt-256, mcts-burn-256 or mcts-fixes-256"),
     }
 }
 
 fn main() {
+    let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
     if let Some(path) = arg("--build") {
-        build_pool(&path, num("--candidates", 64));
+        build_pool(&path, num("--candidates", 64), arg("--colors").map_or(ColorSet::empty(), |c| parse_colors(&c)));
+        return;
+    }
+    if std::env::args().any(|a| a == "--gauntlet") {
+        let a: Vec<String> = std::env::args().collect();
+        let i = a.iter().position(|x| x == "--gauntlet").unwrap();
+        let paths: Vec<String> = a[i + 1..].iter().take_while(|x| !x.starts_with("--")).cloned().collect();
+        let name = arg("--pilot").unwrap_or_else(|| "dflt".into());
+        let pilot = pilot_named(&name);
+        let field_pilot = pilot_named(&arg("--field-pilot").unwrap_or(name));
+        gauntlet(&paths, pilot, field_pilot, num("--field", 400), num("--pairs", 4), num("--seed", 43) as u64, threads);
         return;
     }
     if std::env::args().any(|a| a == "--ab") {
-        let pilot = match arg("--pilot").as_deref().unwrap_or("dflt") {
-            "dflt" => Pilot::Scored(EvalWeights::default()),
-            "net67" => {
-                load_net();
-                Pilot::Scored(EvalWeights::net_on_default())
-            }
-            "mcts-dflt-256" => Pilot::Mcts(crabomination::server::MctsConfig {
-                iterations: 256,
-                horizon_turns: 3,
-                weights: EvalWeights::default(),
-                ..crabomination::server::MctsConfig::default()
-            }),
-            other => panic!("--ab pilot {other}: dflt, net67 or mcts-dflt-256"),
-        };
-        let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
+        let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("dflt"));
         race_builders(pilot, num("--pools", 2000), num("--pairs", 8), num("--seed", 43) as u64, threads);
         return;
     }
@@ -243,16 +367,7 @@ fn main() {
     let rounds = num("--rounds", 20);
     let pairs = num("--pairs", 2);
     let seed = num("--seed", 1) as u64;
-    let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
-
-    let pilot = match pilot_name.as_str() {
-        "dflt" => Pilot::Scored(EvalWeights::default()),
-        "net67" => {
-            load_net();
-            Pilot::Scored(EvalWeights::net_on_default())
-        }
-        other => panic!("unknown pilot {other}; expected dflt or net67"),
-    };
+    let pilot = pilot_named(&pilot_name);
 
     let cards = load_cards(&ratings);
     eprintln!("{} FRA cards resolved", cards.len());

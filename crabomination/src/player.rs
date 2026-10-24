@@ -1749,6 +1749,13 @@ pub struct PlayerData {
     /// `EvalWeights::hostile_player_targets` like `smart_tap`; off is the
     /// ladder control.
     pub hostile_player_targets: bool,
+    /// The Commander-era ability sinks in a duel too (bot seats): +1/+1-counter
+    /// and level sinks, scry / surveil / loot sinks, the dry-run generic sink
+    /// and basic landcycling, which otherwise return early for a seat with no
+    /// commander (or, the generic one, in any two-player game). Evasion grants
+    /// stay Commander-only (they lose duels). Pushed from
+    /// `EvalWeights::duel_sinks`; off is the ladder control.
+    pub duel_sinks: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -2151,6 +2158,7 @@ impl Player {
             smart_tap: false,
             converge_rarest: false,
             hostile_player_targets: false,
+            duel_sinks: false,
             manual_mana: false,
             coin_flip_advantage: 0,
             flipped_coin_this_turn: false,

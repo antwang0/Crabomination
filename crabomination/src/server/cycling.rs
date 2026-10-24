@@ -50,6 +50,74 @@ pub(super) fn pick_cycle(state: &GameState, seat: usize, w: &EvalWeights) -> Opt
         .find(|a| state.would_accept(a.clone()))
 }
 
+/// CR 702.29e — a landcycle (`Landcycling` / `Typecycling`, FRA's "basic
+/// landcycling {2}" on its six-drops) when `seat` holds no land, has fewer
+/// than `ENOUGH_LANDS` out, and cannot cast the card next turn: in its own
+/// main phase while the land drop is unused (the fetched land is played on
+/// the next tick), else at an opponent's end step. No bot path cycled one:
+/// 3,000 FRA sealed duels (2026-10-24) held Hexhaven Battalion in 22 % of the
+/// games that drew it and never landcycled anything. Behind the
+/// `duel_sinks` seat flag (or a commander, as the cycling above).
+pub(super) fn pick_landcycle(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::Keyword;
+    use crate::game::types::TurnStep;
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() {
+        return None;
+    }
+    let p = &state.players[seat];
+    let window = if state.active_player_idx == seat {
+        matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain) && p.can_play_land()
+    } else {
+        state.step == TurnStep::End
+    };
+    if !window || p.hand.iter().any(|c| c.definition.is_land()) || !p.library.iter().any(|c| c.definition.is_land()) {
+        return None;
+    }
+    let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
+    if lands >= ENOUGH_LANDS {
+        return None;
+    }
+    // The costliest card first: it is the one furthest from being cast.
+    let mut cards: Vec<(u32, crate::card::CardId, crate::mana::ManaCost)> = p
+        .hand
+        .iter()
+        .filter(|c| c.definition.cost.cmc() as usize > lands + 1)
+        .filter_map(|c| {
+            let cost = c.definition.keywords.iter().find_map(|k| match k {
+                Keyword::Landcycling(mc, _) => Some(mc.clone()),
+                Keyword::Typecycling(spec) => Some(spec.0.clone()),
+                _ => None,
+            })?;
+            Some((c.definition.cost.cmc(), c.id, cost))
+        })
+        .collect();
+    cards.sort_by_key(|(cmc, id, _)| (std::cmp::Reverse(*cmc), *id));
+    cards
+        .into_iter()
+        .map(|(_, id, cost)| (GameAction::Landcycle { card_id: id }, cost))
+        .find(|(a, cost)| landcycle_accepted(state, seat, a, cost))
+        .map(|(a, _)| a)
+}
+
+/// A landcycle the engine takes. `would_accept` refuses every one a promptable
+/// seat makes with two kinds of basic left: the engine suspends it into the
+/// library pick before the cost is paid (`ResumeContext::ActionSearchPick`),
+/// and the bot-side guard reads any replay suspension as a cast it may not be
+/// able to pay. So the probe may end in exactly that pick, with the cost shown
+/// payable up front — the bot answers the search, the replay pays.
+fn landcycle_accepted(state: &GameState, seat: usize, action: &GameAction, cost: &crate::mana::ManaCost) -> bool {
+    if state.would_accept(action.clone()) {
+        return true;
+    }
+    let mut probe = state.clone();
+    probe.perform_action(action.clone()).is_ok()
+        && probe
+            .pending_decision
+            .as_ref()
+            .is_some_and(|pd| matches!(pd.decision, crate::decision::Decision::SearchLibrary { player, .. } if player == seat))
+        && state.could_pay_cost(seat, cost)
+}
+
 /// CR 702.29c — a card that triggers on its own cycling (Decree of Pain's
 /// −2/−2, Krosan Tusker's land search, the Gempalms) cycled for its trigger:
 /// the cycle is dry-run, the trigger settled, and the best outcome above
@@ -107,6 +175,34 @@ mod tests {
         assert_eq!(pick_cycle(&g, 0, &w), None, "five lands: keep it");
         g.add_card_to_battlefield(0, crate::catalog::plains());
         assert_eq!(pick_cycle(&g, 0, &w), Some(GameAction::Cycle { card_id: desert, x_value: None }));
+    }
+
+    /// CR 702.29e — under `duel_sinks`, a duel bot with no land in hand and
+    /// three out basic-landcycles Hexhaven Battalion in its main phase while
+    /// the land drop is unused; with the flag off, or a land in hand, it
+    /// keeps the card.
+    #[test]
+    fn a_duel_bot_landcycles_a_six_drop_when_short_of_lands() {
+        let mut g = crate::game::two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let battalion = g.add_card_to_hand(0, crate::catalog::hexhaven_battalion());
+        g.add_card_to_library(0, crate::catalog::plains());
+        g.add_card_to_library(0, crate::catalog::plains());
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, crate::catalog::plains());
+        }
+        assert_eq!(pick_landcycle(&g, 0), None, "flag off");
+        g.players[0].duel_sinks = true;
+        assert_eq!(pick_landcycle(&g, 0), Some(GameAction::Landcycle { card_id: battalion }));
+        // Two kinds of basic left: the engine asks which one first (a
+        // promptable seat), and the landcycle is still offered.
+        g.add_card_to_library(0, crate::catalog::forest());
+        g.players[0].wants_ui = true;
+        assert_eq!(pick_landcycle(&g, 0), Some(GameAction::Landcycle { card_id: battalion }), "a pick first");
+        g.add_card_to_hand(0, crate::catalog::plains());
+        assert_eq!(pick_landcycle(&g, 0), None, "a land in hand already");
     }
 
     /// CR 702.29c — Decree of Pain is cycled at an opponent's end step for

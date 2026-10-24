@@ -45,7 +45,7 @@ fn target_counter_kind(e: &Effect) -> Option<CounterType> {
 /// The first accepted counter activation on one of `seat`'s own creatures or
 /// planeswalkers, biggest first.
 pub(super) fn pick_counter_sink(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() {
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() {
         return None;
     }
     let abilities: Vec<(crate::card::CardId, usize)> = state
@@ -137,7 +137,7 @@ fn pick_level_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// monstrous yet monstrous. Eleven pod cards were never activated by any bot
 /// path (6-seat census over all 271 decks, seed 4401).
 pub(super) fn pick_monstrosity(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() {
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() {
         return None;
     }
     state.battlefield.iter().filter(|c| c.controller == seat && !c.monstrous).find_map(|c| {
@@ -183,7 +183,7 @@ fn grows_self(ab: &crate::card::ActivatedAbility) -> bool {
 /// The first accepted self-counter sink on `seat`'s permanents — called at
 /// an opponent's end step, where a tapped source untaps before it is needed.
 pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() || state.active_player_idx == seat {
         return None;
     }
     // Midnight Clock's hour counters run toward "shuffle your hand and
@@ -221,7 +221,7 @@ const SPARE_HAND_AT: usize = 2;
 /// four-seat games (seed 280000), so the payoff could never come; it taps, so
 /// it charges at most once a round and the gate has to be loose.
 pub(super) fn pick_discard_charge(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() || state.active_player_idx == seat {
         return None;
     }
     let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
@@ -268,7 +268,7 @@ fn marks_fate(e: &Effect) -> bool {
 /// A fate counter on `seat`'s most valuable nonland permanent without one —
 /// called at an opponent's end step, like [`pick_self_counter_sink`].
 pub(super) fn pick_fate_sink(state: &GameState, seat: usize, w: &super::bot::EvalWeights) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() || state.active_player_idx == seat {
         return None;
     }
     let sinks: Vec<(crate::card::CardId, usize)> = state

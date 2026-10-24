@@ -134,7 +134,15 @@ pub fn heuristic_sealed_build_rated(pool: &[CardFactory], seed: u64) -> Vec<Card
 /// score — [`best_build_v3`] with `SimConfig::rated_cards`. The sealed
 /// helper `fra_card_eval --build` prints this for a player's own pool.
 pub fn rated_sealed_build(pool: &[CardFactory], n: usize, seed: u64) -> Vec<CardFactory> {
-    let cfg = SimConfig { builder_v3: true, rated_cards: true, ..SimConfig::default() };
+    rated_sealed_build_in_colors(pool, n, seed, ColorSet::empty())
+}
+
+/// [`rated_sealed_build`] with the candidate shapes confined to `colors`
+/// ([`SimConfig::color_restriction`]; `ColorSet::empty()` is unrestricted),
+/// so `fra_card_eval --build POOL --colors WG` can put each pair of a pool
+/// on the table instead of only the one the shape score likes.
+pub fn rated_sealed_build_in_colors(pool: &[CardFactory], n: usize, seed: u64, colors: ColorSet) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v3: true, rated_cards: true, color_restriction: colors, ..SimConfig::default() };
     let judge = |d: &[CardFactory]| {
         let spells: Vec<CardFactory> = d.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
         crate::recommend::static_build_score_v3(&spells, spells.len(), true)

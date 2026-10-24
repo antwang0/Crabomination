@@ -57,6 +57,34 @@ pub(super) fn trim_unhurt(state: &GameState, seat: usize, legal: &[Target]) -> O
     (kept.len() < legal.len() && hostile_left).then_some(kept)
 }
 
+/// The constant (or X) amount a damage effect deals to its slot-0 target.
+fn target_damage(e: &Effect, x: u32) -> Option<i32> {
+    use crate::effect::{Selector, Value};
+    match e {
+        Effect::DealDamage { to: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. }, amount } => match amount {
+            Value::Const(n) => Some(*n),
+            Value::XFromCost => Some(x as i32),
+            _ => None,
+        },
+        Effect::Seq(v) => v.iter().find_map(|e| target_damage(e, x)),
+        _ => None,
+    }
+}
+
+/// `burn_for_lethal`: the opposing player a pending damage trigger kills
+/// outright, if one is a legal target. Ajani's Anguish for X=6 aimed its
+/// trigger at Gideon the Oathless with the opponent at 6 (FRA burn census,
+/// 2026-10-24).
+pub(super) fn lethal_face(state: &GameState, seat: usize, legal: &[Target]) -> Option<Target> {
+    let pd = state.pending_decision.as_ref()?;
+    let ResumeContext::TriggerTargetPick { pending, .. } = &pd.resume else { return None };
+    let amount = target_damage(&pending.effect, pending.x_value)?;
+    legal
+        .iter()
+        .find(|t| matches!(t, Target::Player(p) if *p != seat && !state.same_team(*p, seat) && state.effective_life(*p) <= amount))
+        .cloned()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::decision::DecisionAnswer;

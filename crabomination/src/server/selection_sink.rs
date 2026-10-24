@@ -52,7 +52,7 @@ const LIFE_FLOOR: i32 = 25;
 /// The first accepted selection sink `seat` can activate, paid with mana, at
 /// most a tap of its own source, and life it can spare above `LIFE_FLOOR`.
 pub(super) fn pick_selection_sink(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() {
+    if !super::bot::pod_sinks_on(state, seat) {
         return None;
     }
     state
@@ -96,7 +96,7 @@ const CASH_IN_LANDS: usize = 6;
 /// A "{mana}, [{T},] sacrifice this: draw N" on `seat`'s non-creature
 /// artifact, at an opponent's end step once the seat has `CASH_IN_LANDS`.
 pub(super) fn pick_cash_in(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() || state.active_player_idx == seat || !state.stack.is_empty() {
+    if !super::bot::pod_sinks_on(state, seat) || state.active_player_idx == seat || !state.stack.is_empty() {
         return None;
     }
     let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();

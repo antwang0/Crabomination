@@ -1708,17 +1708,21 @@ pub fn simulate_match_pairs_cross(
                     ),
                     Some(dir) => {
                         let mut lines = Vec::new();
+                        let mut end = Vec::new();
                         let o = play_one_game_traced(
                             template,
                             seated,
                             max_actions,
                             Some(&mut shuffle_rng),
                             Some(seed),
-                            GameHooks { trace: Some(&mut lines), ..Default::default() },
+                            GameHooks { trace: Some(&mut lines), end_zones: Some(&mut end), ..Default::default() },
                         );
                         let t = GameTrace { lines, winner: o.winner, turns: o.turns };
                         let path = dir.join(format!("{seed_base:016x}_{k}_{}.txt", u8::from(a_seat0)));
-                        if let Err(e) = std::fs::write(&path, t.text()) {
+                        let mut text: String = zone_lines(template).into_iter().map(|l| l.replace("# p", "# start p") + "\n").collect();
+                        text += &t.text();
+                        text.extend(end.into_iter().map(|l| l.replace("# p", "# end p") + "\n"));
+                        if let Err(e) = std::fs::write(&path, text) {
                             eprintln!("CRAB_DUMP_TRACES: {}: {e}", path.display());
                         }
                         o
@@ -2089,6 +2093,10 @@ pub(crate) struct GameHooks<'a> {
     /// The other build's half of a cross-binary game: this process polls
     /// only `cross.seat` and reads the other seat's actions off the link.
     pub cross: Option<&'a mut crate::crossplay::CrossGame>,
+    /// Every seat's hand and library when the game ends, as `id=name` lists
+    /// (`CRAB_DUMP_TRACES`' footer: a card the deck holds and the trace never
+    /// names was drawn and kept, or never drawn).
+    pub end_zones: Option<&'a mut Vec<String>>,
 }
 
 fn play_one_game_traced(
@@ -2099,7 +2107,9 @@ fn play_one_game_traced(
     jitter_seed: Option<u64>,
     hooks: GameHooks<'_>,
 ) -> GameOutcome {
-    let GameHooks { mut trace, mut cross } = hooks;
+    let GameHooks { mut trace, mut cross, end_zones } = hooks;
+    let mut final_zones: Option<Vec<String>> = None;
+    let mut last_snap: Option<(u32, crate::game::types::TurnStep)> = None;
     // `CRAB_MAX_ACTIONS=<n>` lowers the action cap for a diagnostic run, so
     // a game that would hold a thread for an hour under the 50,000 default
     // ends at `n` and `CRAB_CAP_DIAG=1` names its board. Read once.
@@ -2124,6 +2134,11 @@ fn play_one_game_traced(
             Pilot::Scored(w) => w.hostile_player_targets,
             Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
             Pilot::Uniform => false,
+        };
+        g.players[seat].duel_sinks = match pilot {
+            Pilot::Scored(w) => w.duel_sinks,
+            Pilot::Mcts(cfg) => cfg.weights.duel_sinks,
+            _ => false,
         };
     }
     let mut seeded = shuffle_rng;
@@ -2194,6 +2209,20 @@ fn play_one_game_traced(
             // Formatted before the move, because `perform_action` takes it
             // by value; only kept when the move is accepted.
             let pending = trace.as_ref().map(|_| format!("p{s} {action:?}"));
+            // The footer's zones as they stood before this move: a move that
+            // ends the game clears the loser's zones, so that is the snapshot
+            // a game-ending move leaves behind.
+            let zones_before = end_zones.as_ref().map(|_| zone_lines(&g));
+            // The dump's board snapshot, once per (turn, step): what each seat
+            // could do when it acted. Dump mode only, so the golden traces
+            // (`trace_game`, no `end_zones`) keep their format.
+            if end_zones.is_some()
+                && let Some(t) = trace.as_mut()
+                && last_snap != Some((g.turn_number, g.step))
+            {
+                last_snap = Some((g.turn_number, g.step));
+                t.push(board_snapshot(&g));
+            }
             // A `settled` state is the finalist's dry-run result — the same
             // state a successful `perform_action(action)` on `g` would have
             // produced (see `GameState::accept_on`). This driver *owns* `g`,
@@ -2234,6 +2263,7 @@ fn play_one_game_traced(
                 any = true;
                 actions += 1;
                 if g.is_game_over() {
+                    final_zones = zones_before;
                     break;
                 }
             }
@@ -2267,7 +2297,110 @@ fn play_one_game_traced(
             eprintln!("{}", cap_diagnosis(&g, actions));
         }
     }
+    if let Some(out) = end_zones {
+        *out = final_zones.unwrap_or_else(|| zone_lines(&g));
+    }
     GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
+}
+
+/// `# snap T{turn} {step} active pN || pK life L lands N/U hand […] crt […]`:
+/// each seat's life, lands (total / untapped), hand as `name:mv` (`*` when
+/// payable now), and
+/// creatures as `id=name P/T` plus flags T(apped) S(ick) A(ttacking)
+/// B(locking). The `CRAB_DUMP_TRACES` board line.
+fn board_snapshot(g: &GameState) -> String {
+    let mut out = format!("# snap T{} {:?} active p{}", g.turn_number, g.step, g.active_player_idx);
+    for (i, p) in g.players.iter().enumerate() {
+        let lands: Vec<_> = g.battlefield.iter().filter(|c| c.controller == i && c.definition.is_land()).collect();
+        let untapped = lands.iter().filter(|c| !c.tapped).count();
+        // `*`: the mana cost is payable from what `i` has right now
+        // (colours included; targets and timing are not checked).
+        let hand: Vec<String> = p
+            .hand
+            .iter()
+            .map(|c| {
+                let payable = !c.definition.is_land() && g.could_pay_cost(i, &c.definition.cost);
+                format!("{}:{}{}", c.definition.name, c.definition.cost.cmc(), if payable { "*" } else { "" })
+            })
+            .collect();
+        let crt: Vec<String> = g
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == i && g.computed_is_creature(c))
+            .map(|c| {
+                let (pw, tg) = g.computed_permanent(c.id).map_or((0, 0), |cp| (cp.power, cp.toughness));
+                let mut flags = String::new();
+                if c.tapped {
+                    flags.push('T');
+                }
+                if c.summoning_sick {
+                    flags.push('S');
+                }
+                if g.attacking.iter().any(|a| a.attacker == c.id) {
+                    flags.push('A');
+                }
+                if g.block_map.contains_key(&c.id) {
+                    flags.push('B');
+                }
+                // Combat keywords as one code: F flying, R reach, D deathtouch,
+                // 1 first strike, 2 double strike, M menace, P trample,
+                // V vigilance, X defender, I indestructible, L lifelink,
+                // U unblockable.
+                let kw = g.computed_permanent(c.id).map_or(String::new(), |cp| {
+                    use crate::card::{Keyword as K, KeywordSlice};
+                    let k = cp.keywords();
+                    [
+                        (K::Flying, 'F'),
+                        (K::Reach, 'R'),
+                        (K::Deathtouch, 'D'),
+                        (K::FirstStrike, '1'),
+                        (K::DoubleStrike, '2'),
+                        (K::Menace, 'M'),
+                        (K::Trample, 'P'),
+                        (K::Vigilance, 'V'),
+                        (K::Defender, 'X'),
+                        (K::Indestructible, 'I'),
+                        (K::Lifelink, 'L'),
+                        (K::Unblockable, 'U'),
+                    ]
+                    .iter()
+                    .filter(|(kk, _)| k.has_kw(kk))
+                    .map(|(_, ch)| *ch)
+                    .collect()
+                });
+                format!(
+                    "{}={} {pw}/{tg}{}{flags}{}",
+                    c.id.0,
+                    c.definition.name,
+                    if flags.is_empty() { "" } else { " " },
+                    if kw.is_empty() { String::new() } else { format!(" k:{kw}") }
+                )
+            })
+            .collect();
+        out += &format!(
+            " || p{i} life {} lands {}/{untapped} hand [{}] crt [{}]",
+            p.life,
+            lands.len(),
+            hand.join("; "),
+            crt.join("; ")
+        );
+    }
+    out
+}
+
+/// `# pN hand|library|graveyard: id=name, …` for every seat — the dump's
+/// header (template) and footer (game end).
+fn zone_lines(g: &GameState) -> Vec<String> {
+    let list = |cards: &mut dyn Iterator<Item = &crate::card::CardInstance>| {
+        cards.map(|c| format!("{}={}", c.id.0, c.definition.name)).collect::<Vec<_>>().join(", ")
+    };
+    let mut out = Vec::new();
+    for (i, p) in g.players.iter().enumerate() {
+        out.push(format!("# p{i} hand: {}", list(&mut p.hand.iter())));
+        out.push(format!("# p{i} library: {}", list(&mut p.library.iter())));
+        out.push(format!("# p{i} graveyard: {}", list(&mut p.graveyard.iter())));
+    }
+    out
 }
 
 /// `CRAB_CAP_DIAG=1` — what a game that hit the action cap was actually doing;
