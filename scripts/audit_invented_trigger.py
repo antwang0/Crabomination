@@ -185,7 +185,6 @@ ALLOW = {
     ("druid_class", "StepBegins(Upkeep)"): "level 2's extra land drop granted each upkeep",
     ("exploration_broodship", "StepBegins(Upkeep)"): "the 3+ station extra land drop granted each upkeep",
     # Devices for printed behaviour the engine has no event for:
-    ("desert_warfare", "CardDiscarded"): "a Desert discarded is one of 'put into your graveyard from your hand'",
     ("intet_the_dreamer", "PermanentLeavesBattlefield"): "ends 'for as long as you control Intet' on its departure",
     ("the_day_of_the_doctor", "PermanentLeavesBattlefield"): "ends 'for as long as this Saga remains on the battlefield'",
     ("share_the_spoils", "StepBegins(Upkeep)"): "grants each player's per-turn play from among the exiled cards",
