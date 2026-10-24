@@ -149,7 +149,7 @@ fn king_tchalla_draws_on_a_second_draw_and_transforms() {
 /// face is cast straight from hand for its printed cost.
 #[test]
 fn modal_transform_backs_are_cast_from_hand() {
-    let cards: [(fn() -> crabomination::card::CardDefinition, &str); 11] = [
+    let cards: [(crabomination::cube::CardFactory, &str); 11] = [
         (catalog::king_tchalla, "Black Panther, Hope Enduring"),
         (catalog::tony_stark, "The Invincible Iron Man"),
         (catalog::monica_rambeau, "Photon, Living Light"),
