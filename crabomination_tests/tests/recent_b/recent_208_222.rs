@@ -1761,6 +1761,8 @@ mod recent219 {
         let effect = myojin.triggered_abilities[0].effect.clone();
         let id = g.add_card_to_battlefield(0, catalog::myojin_of_nights_reach());
         g.battlefield_find_mut(id).unwrap().entered_by_cast = true;
+        // Cast from hand, as "if you cast it from your hand" asks.
+        g.battlefield_find_mut(id).unwrap().cast_from_hand = true;
         let ctx = EffectContext::for_trigger(id, 0, None, 0);
         g.resolve_effect(&effect, &ctx).unwrap();
         assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Divinity), 1, "divinity counter");

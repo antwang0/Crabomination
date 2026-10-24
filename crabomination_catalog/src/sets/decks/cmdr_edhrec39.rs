@@ -107,7 +107,7 @@ pub fn enlightened_confidant() -> CardDefinition {
 }
 
 /// Myojin of Blooming Dawn — {5}{W}{W}{W} 4/6 Legendary Spirit. Enters with an
-/// indestructible counter if cast (CR 122.1b: the counter is the keyword);
+/// indestructible counter if cast from hand (CR 122.1b: the counter is the keyword);
 /// remove it: a 1/1 colorless Spirit for each permanent you control.
 pub fn myojin_of_blooming_dawn() -> CardDefinition {
     let spirit = TokenDefinition {
@@ -120,7 +120,7 @@ pub fn myojin_of_blooming_dawn() -> CardDefinition {
     };
     CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::TriggerSourceEnteredByCast,
+            cond: Predicate::EntityMatches { what: Selector::This, filter: R::WasCastFromHand },
             then: Box::new(Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Indestructible,

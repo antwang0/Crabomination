@@ -60,7 +60,7 @@ pub fn ancestral_katana() -> CardDefinition {
 }
 
 /// Myojin of Towering Might — {5}{G}{G}{G} legendary 8/8 Spirit. Enters with
-/// an indestructible counter if cast (CR 122.1b). Remove it: distribute eight
+/// an indestructible counter if cast from hand (CR 122.1b). Remove it: distribute eight
 /// +1/+1 counters among any number of target creatures you control; they gain
 /// trample until end of turn.
 pub fn myojin_of_towering_might() -> CardDefinition {
@@ -77,7 +77,7 @@ pub fn myojin_of_towering_might() -> CardDefinition {
     }));
     CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::TriggerSourceEnteredByCast,
+            cond: Predicate::EntityMatches { what: Selector::This, filter: R::WasCastFromHand },
             then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::Indestructible, amount: Value::ONE }),
             else_: Box::new(Effect::Noop),
         })],

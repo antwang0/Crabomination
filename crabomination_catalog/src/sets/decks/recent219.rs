@@ -209,7 +209,7 @@ pub fn myojin_of_nights_reach() -> CardDefinition {
         power: 5,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::TriggerSourceEnteredByCast,
+            cond: Predicate::EntityMatches { what: Selector::This, filter: R::WasCastFromHand },
             then: Box::new(Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Divinity,

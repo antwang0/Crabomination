@@ -388,3 +388,66 @@ fn mu_yanling_and_anchor_to_reality() {
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
     assert!(g.battlefield_find(sword).is_some(), "Bonesplitter fetched");
 }
+
+/// Every Myojin "enters with a [divinity / indestructible] counter on it if
+/// you cast it from your hand": cast from hand, it has one; put onto the
+/// battlefield from a graveyard (not cast), it doesn't (CR 614.1c).
+#[test]
+fn myojins_count_only_a_cast_from_hand() {
+    use crabomination::card::CounterType;
+    use crabomination::effect::{Effect, Selector, ZoneDest};
+    let myojins: [(fn() -> crabomination::card::CardDefinition, CounterType); 10] = [
+        (catalog::myojin_of_cleansing_fire, CounterType::Divinity),
+        (catalog::myojin_of_infinite_rage, CounterType::Divinity),
+        (catalog::myojin_of_seeing_winds, CounterType::Divinity),
+        (catalog::myojin_of_lifes_web, CounterType::Divinity),
+        (catalog::myojin_of_cryptic_dreams, CounterType::Indestructible),
+        (catalog::myojin_of_grim_betrayal, CounterType::Indestructible),
+        (catalog::myojin_of_roaring_blades, CounterType::Indestructible),
+        (catalog::myojin_of_towering_might, CounterType::Indestructible),
+        (catalog::myojin_of_nights_reach, CounterType::Divinity),
+        (catalog::myojin_of_blooming_dawn, CounterType::Indestructible),
+    ];
+    // An indestructible counter is a keyword counter (CR 122.1b); either
+    // store counts.
+    let has = |c: &crabomination::card::CardInstance, kind: CounterType| {
+        c.counter_count(kind)
+            + if kind == CounterType::Indestructible {
+                c.keyword_counters.get(&Keyword::Indestructible).copied().unwrap_or(0)
+            } else {
+                0
+            }
+    };
+    for (f, kind) in myojins {
+        let name = f().name;
+        let mut g = pod(2);
+        let id = g.add_card_to_hand(0, f());
+        cast(&mut g, id, &[]).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_eq!(g.battlefield_find(id).map(|c| has(c, kind)), Some(1), "{name} cast from hand");
+        let mut g = pod(2);
+        let id = g.add_card_to_graveyard(0, f());
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let to = ZoneDest::Battlefield { controller: crabomination::effect::PlayerRef::You, tapped: false };
+        let evs = g.resolve_effect(&Effect::Move { what: Selector::ExactObjects(vec![id]), to }, &ctx).expect("reanimate");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(id).map(|c| has(c, kind)), Some(0), "{name} put onto the battlefield");
+        // Cast, but from exile: still no counter.
+        let mut g = pod(2);
+        let id = g.add_card_to_exile(0, f());
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let cast_it = Effect::CastWithoutPayingImmediate {
+            what: Selector::ExactObjects(vec![id]),
+            source_zone: crabomination::card::Zone::Exile,
+            exile_after: false,
+            copy: false,
+            reduce_generic: 0,
+            pay_own_cost: false,
+        };
+        g.decider = Box::new(ScriptedDecider::new([A::Bool(true)]));
+        let evs = g.resolve_effect(&cast_it, &ctx).expect("cast from exile");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(id).map(|c| has(c, kind)), Some(0), "{name} cast from exile");
+    }
+}
