@@ -2065,7 +2065,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Teferi, Who Slows the Sunset | +1 takes up to three artifacts/creatures/lands in any mix, not one of each; the −7 emblem untaps your permanents at each opponent's upkeep rather than in their untap step | one `ApplyToTargets` slot set; emblem triggers fire at `StepBegins`, and no trigger fires in an untap step |
 | 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |
 | 🟡 Battletide Alchemist | the "you may prevent" is always taken for its controller's side and never for an opponent | `ReduceDamageToYourTeamByCount` has no per-event prompt |
-| 🟡 King T'Challa // Black Panther, Hope Enduring | the {4}{W}{U} back face can't be cast from hand | modeled as a transforming DFC (CR 712.2 audit: a transforming back prints no cost) |
+| ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.1b) — the back face carries its {4}{W}{U} and is cast from hand | — |
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
 | 🟡 Iron Lad, Diverging Destiny | "you may look at the top card of your library any time" isn't modeled | no hidden-info permission for a seat |
 | 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |

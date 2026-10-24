@@ -344,9 +344,9 @@ pub fn king_tchalla() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: draw(1),
         }],
-        // The printed {4}{W}{U} back can't be cast directly here: the card is
-        // modeled as transforming only (CR 712.2), see INCOMPLETE_CARDS.md.
-        ..legend("Black Panther, Hope Enduring", ManaCost::default(), vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero], 3, 3)
+        // A modal DFC whose front also transforms (CR 712.1b): the back is
+        // cast from hand for {4}{W}{U}, or the front turns over.
+        ..legend("Black Panther, Hope Enduring", cost(&[generic(4), w(), u()]), vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero], 3, 3)
     };
     CardDefinition {
         keywords: vec![Keyword::Flash],
