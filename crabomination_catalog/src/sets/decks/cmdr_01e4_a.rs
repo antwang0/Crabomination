@@ -5792,7 +5792,12 @@ pub fn quicksmith_spy() -> CardDefinition {
                     effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
                     ..Default::default()
                 },
-                condition: None,
+                // "For as long as you control this creature" (CR 611.2b): off once
+                // another player takes it.
+                condition: Some(Predicate::EntityMatches {
+                    what: Selector::ChosenPermanentOfSource,
+                    filter: R::ControlledByYou,
+                }),
             },
         }],
         ..creature("Quicksmith Spy", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 3)
@@ -5987,7 +5992,12 @@ pub fn quicksmith_rebel() -> CardDefinition {
                     effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
                     ..Default::default()
                 },
-                condition: None,
+                // "For as long as you control this creature" (CR 611.2b): off once
+                // another player takes it.
+                condition: Some(Predicate::EntityMatches {
+                    what: Selector::ChosenPermanentOfSource,
+                    filter: R::ControlledByYou,
+                }),
             },
         }],
         ..creature("Quicksmith Rebel", cost(&[generic(3), r()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 2)

@@ -260,7 +260,7 @@ No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they
   1,514): 0 panics; undecided are CR 104.4a/b draws (Guile + Zellix + Altar of the Brood, Descent into Avernus, Divine
   Intervention, simultaneous losses) and one 8-seat Scute Swarm board cap.
 - **Open:** Pir's "your team" (no team pods); The Phasing of Zhalfir's lock ends with the Saga, not its control
-  (`PhaseOut { until_source_leaves }` has no control clause); Quicksmith Spy/Rebel's grant follows a stolen source.
+  (`PhaseOut { until_source_leaves }` has no control clause). Quicksmith Spy/Rebel: the grant is gated on controlling the chosen artifact, so it comes back if control returns.
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall
 

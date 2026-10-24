@@ -2659,6 +2659,15 @@ fn quicksmith_spy_grants_a_draw_ability() {
     let hand = g.players[0].hand.len();
     activate(&mut g, ring, 1).expect("the granted draw");
     assert_eq!(g.players[0].hand.len(), hand + 1);
+    // CR 611.2b — "for as long as you control" the Spy: stolen, it stops.
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::ExactObjects(vec![spy]),
+        to: None,
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    g.resolve_effect(&steal, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.battlefield_find_mut(ring).unwrap().tapped = false;
+    assert!(activate(&mut g, ring, 1).is_err(), "the grant ended with the control");
 }
 
 /// Shape Anew trades an artifact for the next artifact in its controller's
