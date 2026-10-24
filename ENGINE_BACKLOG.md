@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall](#fixedopen-2026-10-24-commander-run-01rsnzao--shipped-card-defects-by-seated-deck-count-one-stall) | 22 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes](#fixedopen-2026-10-24-commander-run-01ge2zts--16-shipped-card-defects-in-seated-decks-three-engine-classes) | 31 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 1,200 seats, four bug classes gated, two bot fixes](#fixedopen-2026-10-23-commander-run-01uv3vwf--1200-seats-four-bug-classes-gated-two-bot-fixes) | 39 |
 | Cards & rules | [FIXED/OPEN 2026-10-21 (Commander run, `01KabMxS`) — Attraction riders](#fixedopen-2026-10-21-commander-run-01kabmxs--attraction-riders) | 14 |
@@ -235,6 +236,31 @@ the handoff.
   names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
+
+## FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall
+
+No seats. INCOMPLETE's 🟡 rows ranked by seated-deck count (the `01GE2zTS` one-liner, keyed on factory names, not
+display names — a display-name count reads 0 for every row).
+- **Primitives:** `StaticEffect::ExtraCounterOnPermanents` (CR 614.16 "a permanent you control", no player clause);
+  `R::YouPutPlusOneCounterOnThisTurn` (`TurnRegistries::p1p1_put_this_turn`, (permanent, placer) off the dispatched
+  `CounterAdded`); `SpendRestriction::ArtifactSpellsOnly` / `ArtifactAbilitiesOnly` / `ArtifactSpellsOrAbilities`
+  (CR 106.6 — `ArtifactOnly` is the "spells or abilities of artifacts" wording); the layer gather applies a hone
+  counter on an Equipment that prints no bonus.
+- **Cards fixed:** Liliana of the Dark Realms (−3 sign chosen at resolution, ruling), Beorn's Hospitality and Ms.
+  Marvel (live P/T, `SetBasePtLive`), Dwalin (hone on any Equipment), Pir / Doc Samson (any permanent; no longer
+  your energy), Kid Loki / Beast, Erudite Aerialist (who put the counter), Chandra, Acolyte of Flame (−2 casts now,
+  `CastImmediatePayingExtra`), Castle Doom / Mishra's Workshop / Steelswarm Operator / Guidelight Optimizer.
+- **Not a gap:** Esoteric Duplicator DOES copy a Treasure sacrificed for mana — the old failing case was a scripted
+  `yes` eaten by the Treasure's colour ask (test added).
+- **FIXED (stall, CR 701.23):** `SearchUpToN` asks no more picks than the library holds — Traverse the Outlands
+  at a doubled Mossborn Hydra's power posed an empty search ~millions of times (pod seed 1015916, action cap).
+- **Sweeps (overflow + debug-assertions, pre-fix binary):** 10132 (4/6, 2,523 games), 10133 (3/5/8, 3,986): 0
+  panics; undecided: the Traverse stall (fixed), one Descent into Avernus CR 104.4a draw, one Mondrak / Tormod /
+  Koma token board cap.
+- **Open, priced:** Gilanra (only Barracks of the Thousand shares `MarksCast`, never in one seated deck — moot
+  until a copy effect matters); Swashbuckler Extraordinaire's per-attacker offer (a targeted "up to that many" over
+  `SacrificeAnyNumber` would sacrifice every Treasure under the headless `free` count); Tale of Tinúviel's "as long
+  as you control" needs a controller-scoped `Duration`.
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes
 

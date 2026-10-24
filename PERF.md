@@ -3136,6 +3136,21 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-24 (Commander run, `01RsnzAo`) — guardrail; card fixes, a hone-counter gather pass, three spend restrictions
+
+The gather's battlefield walk now also asks, per ATTACHED card only, whether it is a bonus-less Equipment with a hone
+counter (`any_bare_hone`); the hone pass runs only on such a board. `release-fast` bot_ladder, 4-core Xeon @ 2.10 GHz:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical; determinism ok; thread_determinism ok
+                 (3 vs 1); peak_rss_mib 52.9; games_per_s 232.97 (single run, unpaired — not a comparison)
+2-player pools   seed 10140: cube 800 / sos 500 / sealed 1,200, 0 undecided
+pods             seed 10141, 200 games at each of 2..8 seats: 1,400 decided;
+                 turns/game 19.50 / 32.16 / 45.38 / 57.85 / 69.29 / 82.69 / 98.03
+sweeps           overflow + debug-assertions, seeds 10132 (4/6) + 10133 (3/5/8): 6,509 games, 0 panics;
+                 1 action cap (SearchUpToN, fixed), 1 CR 104.4a draw, 1 token board cap
+```
+
 ### 2026-10-23 late (Commander run, `01EtjJfo`) — guardrail; death-funnel fixes, five primitives
 
 Both death funnels now ask `death_was_replaced` after the removal (one graveyard scan per death) and the
