@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot](#fixedopen-2026-10-24-commander-run-01s1rwz4--the-counter-placer-class-as-long-as-you-control-livios-bot) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall](#fixedopen-2026-10-24-commander-run-01rsnzao--shipped-card-defects-by-seated-deck-count-one-stall) | 22 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes](#fixedopen-2026-10-24-commander-run-01ge2zts--16-shipped-card-defects-in-seated-decks-three-engine-classes) | 31 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-23 (Commander run, `01Uv3VwF`) — 1,200 seats, four bug classes gated, two bot fixes](#fixedopen-2026-10-23-commander-run-01uv3vwf--1200-seats-four-bug-classes-gated-two-bot-fixes) | 39 |
@@ -236,6 +237,30 @@ the handoff.
   names); the next ones by that count: Liliana of the Dark Realms (loyalty modes), Lae'zel's Acrobatics,
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
+
+## FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot
+
+No seats. INCOMPLETE's 🟡 rows by seated-deck count, then the bug classes they belonged to.
+- **FIXED (class, CR 614.16 / 603.2):** "if YOU would put" / "whenever YOU put" counters read who placed them. Replacements:
+  Doc Samson (`StaticEffect::ExtraCounterOnPermanentsYouPut`), Lae'zel and Prairie Dog's turn bonus (one `placed_by()` helper
+  in `game/mod.rs` gates each adder), Innkeeper's Talent (`StaticEffect::CountersByPlacerDoubled` — Vorinclex's doubling half;
+  was `DoubleCounters`, so it doubled opponents' counters on your permanents and none of yours on theirs). Triggers: Knight of
+  Wundagore, Omarthis, Exemplar of Light (`EventScope::YouPutCounters`). Sweeps of the oracle text found no other card of
+  either shape.
+- **FIXED (primitive, CR 611.2b):** `Duration::WhileYouControlSource` → `EffectDuration::WhileSourceControlledBy { player }`,
+  swept in the SBA pass only while one exists. Aegis Angel, Tale of Tinúviel, Extraction Specialist, Thancred Waters, There
+  and Back Again (each ended only when the source left).
+- **FIXED (bot):** Livio's aegis exile — `keyword_shield` answers an opponent's targeted removal with an "its controller may
+  exile it" ability and says yes while a hostile stack item aims at one of the seat's permanents; the battlefield reanimate
+  sink activates an untargeted return-all-from-exile that brings back at least as many of the seat's cards as anyone's.
+  The may was always declined, so 52 seated decks' Livio did nothing for a bot.
+- **Cards:** Permission Denied, Helm of the Ghastlord — the only top-5000 Commander cards missing (`COMMANDER_BACKLOG`'s
+  other two, Lórien Revealed and Troll of Khazad-dûm, are in the catalog under ASCII names; renaming touches the vocab).
+- **Sweeps (overflow, release asserts off):** 10150 (4/6, 5,046 games), 10151 (3/5/8, 7,972), 10152 (`--a dflt`, 4 seats,
+  1,514): 0 panics; undecided are CR 104.4a/b draws (Guile + Zellix + Altar of the Brood, Descent into Avernus, Divine
+  Intervention, simultaneous losses) and one 8-seat Scute Swarm board cap.
+- **Open:** Pir's "your team" (no team pods); The Phasing of Zhalfir's lock ends with the Saga, not its control
+  (`PhaseOut { until_source_leaves }` has no control clause); Quicksmith Spy/Rebel's grant follows a stolen source.
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall
 
