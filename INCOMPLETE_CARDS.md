@@ -2137,7 +2137,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | 🟡 Werewolf Pack Leader | the activation sets base 5/3 and grants trample, but "and isn't a Human" is dropped — no lose-a-creature-type effect | `SetBasePT` + `GrantKeyword` |
 | 🟡 Robber of the Rich | the exiled card is castable only this turn, not "during any turn you attacked with a Rogue" | `ExileTopAndGrantMayPlay { EndOfThisTurn }` |
-| 🟡 Quilled Greatwurm | the graveyard cast by removing six counters from among your creatures is not modeled | `DealsCombatDamage` trigger only |
+| ~~Quilled Greatwurm~~ ✅ | fixed 2026-10-24: `CastSelfFromGraveyardWithCost(RemoveCountersFromCreatures { count: 6 })` | — |
 | 🟡 Dalkovan Encampment | "whenever you attack this turn" fires on your next attack only, so an extra combat that turn gets no second pair of Warriors | `OnYourNextAttackThisTurn` |
 | 🟡 Vaevictis Asmadi, the Dire | its per-player target is mandatory in print; `ForEachPlayerTarget` lets a seat leave one out | `ForEachPlayerTarget`'s "up to" |
 | 🟡 Soul Exchange | the +2/+2 counter "if the exiled creature was a Thrull" is dropped — the cast's exile-a-creature cost isn't remembered | `AdditionalCastCost::ExilePermanent` |

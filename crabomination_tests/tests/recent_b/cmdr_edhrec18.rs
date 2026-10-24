@@ -1430,6 +1430,22 @@ fn quilled_greatwurm_counts_damage_to_blockers() {
     assert_eq!(pt(&g, tusker), (6, 6), "three counters from the blocked hit");
 }
 
+/// Quilled Greatwurm — "You may cast this card from your graveyard by
+/// removing six counters from among creatures you control" (CR 601.2b, an
+/// additional cost): five counters can't pay it, six can and are spent.
+#[test]
+fn quilled_greatwurm_casts_from_the_graveyard_for_six_counters() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_graveyard(0, catalog::quilled_greatwurm());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 5);
+    assert!(cast(&mut g, wurm, &[]).is_err(), "five counters short");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    cast(&mut g, wurm, &[]).expect("cast from the graveyard");
+    assert!(g.battlefield_find(wurm).is_some());
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
 /// Long River Lurker — "Whenever that creature deals combat damage this turn,
 /// you may exile it. If you do, return it to the battlefield under its owner's
 /// control." (CR 603.6a; the returned creature is untapped.)

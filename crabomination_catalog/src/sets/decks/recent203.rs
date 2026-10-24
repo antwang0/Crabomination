@@ -198,8 +198,8 @@ pub fn elenda_saint_of_dusk() -> CardDefinition {
 
 /// Quilled Greatwurm — {4}{G}{G} 7/7 Wurm, Trample. Whenever a creature you
 /// control deals combat damage during your turn, put that many +1/+1 counters
-/// on it. (Residual: "you may cast this card from your graveyard by removing
-/// six counters from among creatures you control" is not modeled.)
+/// on it. You may cast this card from your graveyard by removing six counters
+/// from among creatures you control in addition to paying its other costs.
 pub fn quilled_greatwurm() -> CardDefinition {
     CardDefinition {
         name: "Quilled Greatwurm",
@@ -220,6 +220,12 @@ pub fn quilled_greatwurm() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::TriggerEventAmount,
             },
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "You may cast this card from your graveyard by removing six counters from among creatures you control in addition to paying its other costs.",
+            effect: crate::effect::StaticEffect::CastSelfFromGraveyardWithCost(
+                crate::card::AdditionalCastCost::RemoveCountersFromCreatures { count: 6 },
+            ),
         }],
         ..Default::default()
     }
