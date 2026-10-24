@@ -1846,12 +1846,14 @@ pub const MAX_BATTLEFIELD: usize = 1_024;
 /// counted: a 771-creature attack puts 771 legitimate triggers there.
 pub const MAX_STACK: usize = 512;
 
-/// The stack's bound on ITEMS of any kind, triggers included: eight times the
+/// The stack's bound on ITEMS of any kind, triggers included: four times the
 /// board bound, so a whole-board trigger fan-out is far inside it. Dina, Soul
 /// Steeper beside Exquisite Blood against a seat that can't lose pushed 9,000
 /// triggers with only passes between them, which the play budget never counts
-/// (six-seat audit pod, seed 4500524 game 17, ran for hours).
-pub const MAX_STACK_ITEMS: usize = 8 * MAX_BATTLEFIELD;
+/// (six-seat audit pod, seed 4500524 game 17, ran for hours). At eight times
+/// the board, a fetch putting three lands under ~1,470 Scute Swarms stacked
+/// 4,405 landfall triggers at ~0.17 s a pass (five-seat pod, seed 1017885).
+pub const MAX_STACK_ITEMS: usize = 4 * MAX_BATTLEFIELD;
 
 /// Where the board-bound gates stop a token effect (a held cast, a declined
 /// free cast, a capped copy fan-out): an eighth short of `MAX_BATTLEFIELD`,
