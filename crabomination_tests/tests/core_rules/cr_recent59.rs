@@ -146,3 +146,24 @@ fn cr_509_1b_tap_cost_gates_blocking() {
     }
     assert!(!g.legal_blockers(1).contains(&warrior), "nothing to tap");
 }
+
+/// CR 702.10 — the legal-attacker list reads haste the way
+/// `declare_attackers` does, through the layers: Samut's "creatures you
+/// control have haste" isn't on the instance, and the client greyed out
+/// every fresh creature it hasted (a play-test report).
+#[test]
+fn cr_702_10_layer_granted_haste_reaches_the_legal_attacker_list() {
+    let mut g = two_player_game();
+    let samut = g.add_card_to_battlefield(0, catalog::samut_hazorets_champion());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let legal = g.legal_attackers(0);
+    assert!(legal.contains(&bear) && legal.contains(&samut), "both are hasted: {legal:?}");
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("the engine agrees");
+}

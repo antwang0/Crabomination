@@ -651,7 +651,6 @@ impl GameState {
                         }))
                     && !c.tapped
                     && !c.has_keyword(&Keyword::CantAttack)
-                    && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
             })
             .filter(|c| {
                 // Honor layer-granted Defender / can't-attack and the
@@ -665,6 +664,13 @@ impl GameState {
                 if (kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(c))
                     || kws.contains(&Keyword::CantAttack)
                 {
+                    return false;
+                }
+                // CR 302.6 / 702.10 — haste by the computed keywords, as
+                // `declare_attackers` reads it: a layer-granted haste (Samut's
+                // "other creatures you control have haste") isn't on the
+                // instance, and the client greyed every such creature out.
+                if c.summoning_sick && !kws.contains(&Keyword::Haste) && !self.attack_as_though_haste(seat, None) {
                     return false;
                 }
                 kws.iter().all(|kw| match kw {
