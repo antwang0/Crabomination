@@ -729,7 +729,9 @@ pub fn slave_of_bolas() -> CardDefinition {
         cost(&[generic(3), hybrid(Color::Blue, Color::Red), b()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::EndOfTurn },
+            // No duration (CR 611.2a): the steal is permanent; the end-step sacrifice
+            // is what ends it, so a creature that can't be sacrificed stays yours.
+            Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::Permanent },
             Effect::Untap { what: Selector::Target(0), up_to: None },
             grant_eot(Selector::Target(0), Keyword::Haste),
             Effect::SacrificeAtNextEndStep { what: Selector::Target(0) },
