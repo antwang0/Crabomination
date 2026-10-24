@@ -36930,6 +36930,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SCARLET_WITCH_2_COMMANDERS,
             main: decks::SCARLET_WITCH_2_MAIN,
         },
+        // Seat 6080: Stegron the Dinosaur Man's EDHREC average deck. `--pod-decks 6080`.
+        PodDeck {
+            name: "Stegron the Dinosaur Man (R)",
+            commanders: decks::STEGRON_THE_DINOSAUR_MAN_COMMANDERS,
+            main: decks::STEGRON_THE_DINOSAUR_MAN_MAIN,
+        },
     ]
 }
 
@@ -44970,6 +44976,7 @@ mod tests {
             ("Zellix, Sanity Flayer and Raised by Giants", &[0x21D3]),
             ("Isu the Abominable", &[0x21D4]),
             ("Scarlet Witch, Wanda Maximoff", &[0x21D5]),
+            ("Stegron the Dinosaur Man", &[0x21D6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

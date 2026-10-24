@@ -170733,3 +170733,30 @@ pub const SCARLET_WITCH_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const STEGRON_THE_DINOSAUR_MAN_COMMANDERS: &[CardFactory] = &[stegron_the_dinosaur_man];
+
+/// **Stegron the Dinosaur Man**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Mountains = 99.
+/// Stegron the Dinosaur Man (EDHREC, fetched 2026-10-24).
+pub const STEGRON_THE_DINOSAUR_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, campfire, chronicle_of_victory, commanders_sphere, explorers_scope,
+    fire_diamond, hazorets_monument, heralds_horn, mind_stone, patchwork_banner, ruby_medallion,
+    sol_ring, stalactite_dagger, wayfarers_bauble, cavern_of_souls, command_beacon,
+    myriad_landscape, rogues_passage, spinerock_knoll, terrain_generator, bonehoard_dracosaur,
+    burning_suns_avatar, changeling_wayfinder, dinotomaton, dromosaur, forerunner_of_the_empire,
+    frenzied_raptor, frilled_deathspitter, giant_cindermaw, marauding_raptor, nest_robber,
+    otepec_huntmaster, panicked_altisaur, rampaging_ferocidon, ridgetop_raptor,
+    ripscale_predator, scytheclaw_raptor, seismic_monstrosaur, stampeding_horncrest,
+    sun_collared_raptor, sun_crowned_hunters, thrash_of_raptors, trumpeting_carnosaur,
+    war_trained_slasher, wrathful_raptors, bitter_reunion, charred_foyer_warped_space,
+    poetic_ingenuity, tilonallis_crown, abrade, demand_answers, dinosaur_stampede,
+    feed_the_flames, lightning_bolt, reckless_ransacking, sear, shock, thrill_of_possibility,
+    blasphemous_act, cathartic_reunion, chain_lightning, cinder_strike, faithless_looting,
+    grab_the_prize, kindle_the_inner_flame, star_of_extinction, triumphant_chomp,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
