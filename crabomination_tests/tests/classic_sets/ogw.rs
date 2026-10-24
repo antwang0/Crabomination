@@ -3101,3 +3101,28 @@ fn akoum_flameseeker_draws_only_after_a_discard() {
     assert_eq!(g.players[0].hand.len(), 1, "the Mountain was traded for the Forest");
     assert_eq!(g.players[0].hand[0].definition.name, "Forest");
 }
+
+/// Hand of Emrakul's alternative cost: four Eldrazi Spawn sacrificed instead
+/// of {9}; three aren't enough.
+#[test]
+fn hand_of_emrakul_casts_for_four_spawn() {
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spawn: Vec<_> = (0..3)
+        .map(|_| g.add_token_to_battlefield(0, &crabomination_base::tokens::eldrazi_spawn_token()))
+        .collect();
+    let hand = g.add_card_to_hand(0, catalog::hand_of_emrakul());
+    let alt = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id: hand, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    assert!(alt(&mut g).is_err(), "three Spawn");
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::eldrazi_spawn_token());
+    alt(&mut g).expect("four Spawn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hand).is_some());
+    assert!(spawn.iter().all(|s| g.battlefield_find(*s).is_none()), "the Spawn were sacrificed");
+}

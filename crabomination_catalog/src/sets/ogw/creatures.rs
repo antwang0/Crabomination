@@ -1421,12 +1421,18 @@ pub fn desolation_twin() -> CardDefinition {
     }
 }
 
-/// Hand of Emrakul — {9} 7/7. Annihilator 1. (Its "sacrifice four Eldrazi
-/// Spawn rather than pay this spell's mana cost" alt-cost is dropped — no
-/// sacrifice-N-of-a-type alternative-cost primitive yet.)
+/// Hand of Emrakul — {9} 7/7. Annihilator 1. You may sacrifice four Eldrazi
+/// Spawn rather than pay its mana cost.
 pub fn hand_of_emrakul() -> CardDefinition {
+    use crate::card::{AlternativeCost, SelectionRequirement as R};
     CardDefinition {
         keywords: vec![Keyword::Annihilator(1)],
+        // "You may sacrifice four Eldrazi Spawn rather than pay this spell's
+        // mana cost."
+        alternative_cost: Some(AlternativeCost {
+            sacrifice_permanents: Some((R::HasCreatureType(CreatureType::Eldrazi).and(R::HasCreatureType(CreatureType::Spawn)), 4)),
+            ..Default::default()
+        }),
         ..colossus("Hand of Emrakul", cost(&[generic(9)]), 7, 7)
     }
 }
