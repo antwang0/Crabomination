@@ -198,7 +198,9 @@ fn cracked_earth_technique_bends_twice() {
     assert_eq!(counters, 6, "two earthbend 3s");
 }
 
-/// Verdant Kraken: every player's upkeep makes you a Forest Tentacle.
+/// Verdant Kraken: every player's upkeep makes you a Forest Tentacle, and a
+/// tentacle taps for {G} (2026-10-24 FRA audit: the token's Forest type is
+/// printed, which grants no intrinsic mana ability, so it never could).
 #[test]
 fn verdant_kraken_grows_tentacles_each_upkeep() {
     let mut g = pod(3);
@@ -210,6 +212,12 @@ fn verdant_kraken_grows_tentacles_each_upkeep() {
         drain_stack(&mut g);
     }
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Forest Tentacle" && c.controller == 0).count(), 2);
+    let tentacle = g.battlefield.iter().find(|c| c.definition.name == "Forest Tentacle").unwrap().id;
+    g.clear_sickness(tentacle);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    activate(&mut g, tentacle, 0, None).expect("{T}: Add {G}");
+    assert!(g.battlefield_find(tentacle).unwrap().tapped, "the tentacle tapped for its mana");
 }
 
 /// Animation Module: {3}, {T}: one more counter of a kind the target has.

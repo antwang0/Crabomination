@@ -505,6 +505,10 @@ pub fn verdant_kraken() -> CardDefinition {
         toughness: 3,
         colors: vec![Color::Green],
         card_types: vec![CardType::Land, CardType::Creature],
+        // A printed basic land type grants no intrinsic mana ability here
+        // (`intrinsic_land_mana_abilities_with` skips printed types), so the
+        // token's "{T}: Add {G}" is spelled out, as on the Forest Dryads.
+        activated_abilities: vec![crate::sets::tap_add(Color::Green)],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Tentacle],
             land_types: vec![LandType::Forest],
