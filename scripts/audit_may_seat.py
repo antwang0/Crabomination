@@ -59,7 +59,7 @@ OTHER_MAY = re.compile(
 # The seat-routed forms, and the wrappers that re-seat `ctx.controller`.
 ROUTED = re.compile(
     r"MayDoBy|MayPayBy|MayDiscardBy|MaySacrificeBy|EachPlayerDoes|EachPlayerMay"
-    r"|UnlessPlayerPays|TemptingOffer|JoinForces|VoteTally|ask_seat|AsPlayer"
+    r"|UnlessPlayerPays|TemptingOffer|JoinForces|VoteTally|ask_seat|AsPlayer|AnyPlayerMayAccept"
 )
 # The controller-asked forms.
 CONTROLLER_ASKED = re.compile(r"Effect::May(Do|Pay)\b")

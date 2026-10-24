@@ -33,7 +33,7 @@ RIDERS = [
     ("p/t", r"\b\d+/\d+\b|base power and toughness",
      r"override_pt: Some|pt: Some|SetBasePT|SetBasePowerToughness|CopyOnePerOpponentWithTotalStats"),
     ("artifact", r"(an?|is an?|are) artifacts?\b",
-     r"extra_card_types: \[[^\]]*Artifact|card_types: \[Artifact\]|AddCardType"),
+     r"extra_card_types: \[[^\]]*Artifact|card_types: \[Artifact\]|AddCardType|set_card_types: Some\(\[Artifact\]\)"),
     ("color", r"\b(" + "|".join(COLORS) + r")\b",
      r"override_colors: Some|add_colors: \[[A-Z]|SetColor|Colou?rs?\(|CopyOnePerOpponentWithTotalStats"),
 ]

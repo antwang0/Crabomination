@@ -36,6 +36,7 @@ REVIEWED = {
     "Quarantine Field": "isolation counter rides Charge",
     "Serrated Arrows": "arrowhead counter rides Charge",
     "Intrepid Adversary": "'pay any number of times, that many valor counters' ETB as an enters-with",
+    "Dragon's Disciple": "'a' counter gated on a revealed or controlled Dragon: IfAtLeast(.., 1) is one or none",
 }
 
 

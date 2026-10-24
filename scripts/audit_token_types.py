@@ -17,7 +17,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # The printed subtype is not a `CreatureType` yet (adding one touches the
 # observation vocabulary): Nesting Dragon's Dragon Egg, Clown Extruder's Clown Robot.
-ALLOWLIST = {("Nesting Dragon", "Dragon Egg"), ("Clown Extruder", "Clown Robot")}
+ALLOWLIST = {("Nesting Dragon", "Dragon Egg"), ("Clown Extruder", "Clown Robot"), ("Greensleeves", "Giant Badger")}
 TOKEN = re.compile(
     r'TokenDefinition \{ name: "([^"]*)", power: -?\d+, toughness: -?\d+, keywords: \[[^\]]*\], '
     r'card_types: \[([^\]]*)\], colors: \[[^\]]*\], supertypes: \[[^\]]*\], '
