@@ -44377,7 +44377,7 @@ mod tests {
             ("Zellix, Sanity Flayer and Noble Heritage", &[0x201E]),
             ("The Eleventh Doctor and Jamie McCrimmon", &[0x201F]),
             ("The First Doctor and Nardole, Resourceful Cyborg", &[0x2020]),
-            ("The Ninth Doctor and Vislor Turlough", &[0x2021]),
+            ("The Ninth Doctor and Vislor Turlough", &[0x7EFE42]),
             ("The Seventh Doctor and K-9, Mark I", &[0x2022]),
             ("The Third Doctor and K-9, Mark I", &[0x2023]),
             ("The Thirteenth Doctor and Peri Brown", &[0x2024]),
