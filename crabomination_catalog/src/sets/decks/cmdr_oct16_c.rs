@@ -858,7 +858,8 @@ pub fn reach_of_branches() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
         effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(treefolk) },
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, EventScope::FromYourGraveyard).with_filter(Predicate::EntityMatches {
+            // "Whenever a Forest you control ENTERS" — played or put there.
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::FromYourGraveyard).with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: R::HasLandType(LandType::Forest),
             }),

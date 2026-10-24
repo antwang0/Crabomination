@@ -920,6 +920,22 @@ fn reach_of_branches_returns_on_a_forest() {
     g.perform_action(GameAction::PlayLand(forest)).expect("land");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == reach));
+    // "Enters", not "is played": a Forest an effect puts there counts too.
+    let mut put = pod(2);
+    let reach = put.add_card_to_graveyard(0, catalog::reach_of_branches());
+    let forest = put.add_card_to_hand(0, catalog::forest());
+    put.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let drop = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::ExactObjects(vec![forest]),
+        to: crabomination::effect::ZoneDest::Battlefield {
+            controller: crabomination::effect::PlayerRef::You,
+            tapped: false,
+        },
+    };
+    let evs = put.resolve_effect(&drop, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    put.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut put);
+    assert!(put.players[0].hand.iter().any(|c| c.id == reach), "put onto the battlefield");
 }
 
 /// Unstoppable Ash: a blocked creature of yours gets +0/+5.
