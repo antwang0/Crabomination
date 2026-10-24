@@ -380,3 +380,28 @@ fn sin_prodder_hands_over_a_declined_card() {
     let to_hand = g.players[0].hand.len() == hand + 1;
     assert!(damaged ^ to_hand, "either an opponent took the damage or the card went to hand");
 }
+
+/// CR 115.7d — Commandeer takes the opponent's Lightning Bolt and may choose
+/// new targets for it: aimed back at its caster.
+#[test]
+fn commandeer_steals_and_retargets_a_spell() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt");
+    let steal = g.add_card_to_hand(0, catalog::commandeer());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: steal, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Commandeer");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (20, 17));
+}

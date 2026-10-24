@@ -674,9 +674,13 @@ pub fn commandeer() -> CardDefinition {
             "Commandeer",
             cost(&[generic(5), u(), u()]),
             CardType::Instant,
-            Effect::GainControlOfSpell {
-                what: target_filtered(R::IsSpellOnStack.and(R::Not(Box::new(R::HasCardType(CardType::Creature))))),
-            },
+            // "… You may choose new targets for it" (CR 115.7d).
+            Effect::Seq(vec![
+                Effect::GainControlOfSpell {
+                    what: target_filtered(R::IsSpellOnStack.and(R::Not(Box::new(R::HasCardType(CardType::Creature))))),
+                },
+                Effect::ChooseNewTargetsForSpell { what: Selector::Target(0) },
+            ]),
         )
     }
 }
@@ -690,7 +694,10 @@ pub fn invert_polarity() -> CardDefinition {
         CardType::Instant,
         Effect::FlipCoin {
             count: Value::ONE,
-            on_heads: Box::new(Effect::GainControlOfSpell { what: target_filtered(R::IsSpellOnStack) }),
+            on_heads: Box::new(Effect::Seq(vec![
+                Effect::GainControlOfSpell { what: target_filtered(R::IsSpellOnStack) },
+                Effect::ChooseNewTargetsForSpell { what: Selector::Target(0) },
+            ])),
             on_tails: Box::new(Effect::CounterSpell { what: Selector::Target(0) }),
         },
     )
