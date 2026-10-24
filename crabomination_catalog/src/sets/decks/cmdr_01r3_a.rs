@@ -374,7 +374,7 @@ pub fn feral_encounter() -> CardDefinition {
                     min: 1,
                     body: Box::new(Effect::DealDamageEqualToPower {
                         source: target_filtered(R::Creature.and(R::ControlledByYou)),
-                        target: target_filtered(R::Creature.and(R::ControlledByYou.negate())),
+                        target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou.negate()) },
                     }),
                 }),
             },

@@ -577,3 +577,20 @@ fn cr_123_2_command_performance_grants_two_tickets() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].tickets, 2);
 }
+
+/// Feral Encounter's combat half: your creature deals damage equal to its
+/// power to a creature you don't control — two targets, two slots (it read
+/// one slot through both filters and could never resolve).
+#[test]
+fn feral_encounter_deals_damage_at_combat() {
+    let mut g = pod(2);
+    let ogre = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let Effect::Seq(steps) = catalog::feral_encounter().effect else { panic!() };
+    let crabomination::effect::Effect::DelayUntil { body, .. } = &steps[1] else { panic!() };
+    let mut ctx = EffectContext::for_spell(0, Some(Target::Permanent(ogre)), 0, 0);
+    ctx.targets = vec![Target::Permanent(ogre), Target::Permanent(bear)];
+    g.resolve_effect(body, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "3 damage kills the Bear");
+}
