@@ -5169,6 +5169,9 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         }
         // A cast-time modal with a counter mode (Mystic Confluence).
         Effect::ChooseModesCast { modes, .. } => modes.iter().any(effect_counters_spells),
+        // "Exile any number of target spells" (Mindbreak Trap — never cast in
+        // a 4-seat census before this arm).
+        Effect::ApplyToTargets { effect, .. } => effect_counters_spells(effect),
         _ => false,
     }
 }
@@ -12389,6 +12392,17 @@ fn effect_reanimates_from_graveyard(eff: &Effect) -> bool {
             what: crate::card::Selector::TargetFiltered { filter, .. },
             to: ZoneDest::Battlefield { .. },
         } => filter_targets_graveyard(filter),
+        // "Exile target creature card from a graveyard. Create a token that's
+        // a copy of it" (The Scarab God — never activated in a 4-seat census).
+        Effect::Seq(v)
+            if matches!(
+                v.as_slice(),
+                [Effect::Move { what: crate::card::Selector::TargetFiltered { filter, .. }, to: ZoneDest::Exile }, Effect::CreateTokenCopyOf { source: crate::card::Selector::Target(0), .. }, ..]
+                    if filter_targets_graveyard(filter)
+            ) =>
+        {
+            true
+        }
         Effect::Seq(v) => v.iter().any(effect_reanimates_from_graveyard),
         _ => false,
     }
@@ -31493,6 +31507,27 @@ mod stack_response_tests {
         assert!(matches!(pick_graveyard_recursion(&g, 0),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
             "bot activates the graveyard self-return");
+    }
+
+    /// The Scarab God's "exile target creature card from a graveyard, create a
+    /// token copy" is a reanimation the sink takes (never activated in a
+    /// 4-seat census before).
+    #[test]
+    fn bot_activates_the_scarab_gods_token_reanimation() {
+        let mut g = two_player_game();
+        let god = g.add_card_to_battlefield(0, catalog::the_scarab_god());
+        g.clear_sickness(god);
+        let dead = g.add_card_to_graveyard(1, catalog::serra_angel());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert!(pick_battlefield_reanimate(&g, 0).is_none(), "no mana");
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let a = pick_battlefield_reanimate(&g, 0).expect("exile a creature card, copy it as a 4/4");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, target: Some(crate::game::Target::Permanent(t)), .. }
+            if card_id == god && t == dead));
     }
 
     /// The bot drives Brass Squire's two-slot attach ability: an Equipment onto
