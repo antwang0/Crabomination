@@ -35933,6 +35933,13 @@ impl GameState {
                     },
                     _ => (**body).clone(),
                 };
+                // CR 603.7c — an X fixed now (a `WithX` snapshot: Ochre Jelly's
+                // counter count as it died) is the X the delayed body reads.
+                let effect = if ctx.x_value > 0 {
+                    Effect::WithX { x: crate::effect::Value::Const(ctx.x_value as i32), body: Box::new(effect) }
+                } else {
+                    effect
+                };
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
