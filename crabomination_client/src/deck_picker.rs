@@ -504,7 +504,9 @@ mod tests {
         assert_eq!(index[0].commanders, "Sigarda, Host of Herons");
         let hits = |q: &str| index.iter().filter(|d| deck_matches(d, q)).map(|d| d.name).collect::<Vec<_>>();
         assert_eq!(hits("").len(), index.len(), "no search lists everything");
-        assert_eq!(hits("ROSE doctor"), ["The Tenth Doctor + Rose Tyler (URW)"]);
+        // Mixed case and word order; specific enough that the other seated
+        // Doctor + Rose pairs (Rose Noble, the other Doctors) drop out.
+        assert_eq!(hits("ROSE tyler TENTH doctor"), ["The Tenth Doctor + Rose Tyler (URW)"]);
         assert!(hits("host of herons").contains(&"Sigarda (GW)"), "a commander's full name finds its deck");
         assert!(hits("zzzz").is_empty());
     }
