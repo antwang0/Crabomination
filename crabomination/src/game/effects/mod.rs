@@ -43558,6 +43558,28 @@ impl GameState {
 
             Effect::AddCounterOfPresentKind { what } => {
                 for ent in self.resolve_selector(what, ctx) {
+                    // CR 122.1 — a player's counters: an opponent's poison, or
+                    // the controller's (or a teammate's) experience / energy.
+                    if let EntityRef::Player(p) = ent {
+                        if self.counters_locked() {
+                            continue;
+                        }
+                        let friendly = p == ctx.controller || self.same_team(p, ctx.controller);
+                        let pl = &self.players[p];
+                        let kind = if !friendly && pl.poison_counters > 0 {
+                            Some(Effect::AddPoison { who: Selector::Player(PlayerRef::Seat(p)), amount: crate::effect::Value::ONE })
+                        } else if friendly && pl.experience > 0 {
+                            Some(Effect::AddExperience(crate::effect::Value::ONE))
+                        } else if friendly && pl.energy > 0 {
+                            Some(Effect::AddEnergy(crate::effect::Value::ONE))
+                        } else {
+                            None
+                        };
+                        if let Some(add) = kind {
+                            self.run_effect(&add, &EffectContext { controller: p, ..ctx.clone() }, events)?;
+                        }
+                        continue;
+                    }
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let pick = self.battlefield_find(cid).and_then(|c| {
                         if c.counter_count(CounterType::PlusOnePlusOne) > 0 {

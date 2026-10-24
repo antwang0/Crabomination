@@ -280,17 +280,20 @@ impl GameState {
         let gathers = prefer_friendly
             && accepts_player
             && eff.any_nested(&|e| matches!(e, Effect::AttachAnyNumberTo { .. }));
-        if accepts_player && !gathers && !strips_counters(eff) {
+        // A counter effect on a player wants a player with the right counter.
+        let aim = if accepts_player { counter_aim(eff) } else { CounterAim::None };
+        let player_ok = |t: &Target| is_legal(t) && !self.counter_player_skip(aim, t, controller);
+        if accepts_player && !gathers {
             let player_primary = Target::Player(primary_player);
-            if is_legal(&player_primary) { return Some(player_primary); }
+            if player_ok(&player_primary) { return Some(player_primary); }
             if prefer_friendly {
                 let player_secondary = Target::Player(secondary_player);
-                if is_legal(&player_secondary) { return Some(player_secondary); }
+                if player_ok(&player_secondary) { return Some(player_secondary); }
             } else if let Some(t) = self
                 .living_seats()
                 .filter(|&p| p != primary_player && p != controller && !self.same_team(p, controller))
                 .map(Target::Player)
-                .find(|t| is_legal(t))
+                .find(|t| player_ok(t))
             {
                 return Some(t);
             }
@@ -463,8 +466,10 @@ impl GameState {
             // "Double the counters on target creature" (Bright-Palm, Tanazir)
             // is worth what the creature already carries, so the most
             // counters outrank the most power.
+            // So is "another counter of a kind it has" (Animation Module).
+            let ranks_counters = doubles_target_counters(eff) || counter_aim(eff) == CounterAim::AddPresent;
             let counters = |cid: CardId| -> u32 {
-                if !doubles_target_counters(eff) {
+                if !ranks_counters {
                     return 0;
                 }
                 self.battlefield.find_by_id(cid).map_or(0, |c| c.counter_sum())
@@ -491,7 +496,7 @@ impl GameState {
             // friendly branch above has always picked its best target;
             // only the hostile side was arbitrary.
             // A counter strip wants a permanent that carries counters.
-            let strips = primary_candidates.len() > 1 && strips_counters(eff);
+            let strips = primary_candidates.len() > 1 && counter_aim(eff) == CounterAim::Strip;
             let bare = |cid: CardId| strips && self.battlefield.find_by_id(cid).is_some_and(|c| c.counter_sum() == 0);
             primary_candidates
                 .sort_by_cached_key(|c| (legend_copy(c.0), hostile_ward(c.0), bare(c.0), std::cmp::Reverse(c.1)));
@@ -519,7 +524,7 @@ impl GameState {
         // went to its caster's face past a hexproof player's Dragon.
         if accepts_player && !gathers && !prefer_friendly {
             let me = Target::Player(controller);
-            if is_legal(&me) {
+            if player_ok(&me) {
                 return Some(me);
             }
         }
@@ -991,7 +996,7 @@ impl GameState {
             .unwrap_or((controller + 1) % self.players.len());
         // Asked lazily: most effects meet no player or counter question.
         let strips = std::cell::OnceCell::new();
-        let strips = || *strips.get_or_init(|| strips_counters(eff));
+        let aim = || *strips.get_or_init(|| counter_aim(eff));
         // Cap at 16 slots — no real card uses more than 4, but cap defensively.
         while slot < 16 {
             // "Destroy X target …": no slot past a known X.
@@ -1110,10 +1115,7 @@ impl GameState {
                 };
                 // A counter strip takes a player's poison only (CR 122.6):
                 // the caster's own when it has some, never an opponent's.
-                let strip_skip = |t: &Target| {
-                    matches!(t, Target::Player(p) if (*p != controller || self.players[*p].poison_counters == 0)
-                        && strips())
-                };
+                let strip_skip = |t: &Target| matches!(t, Target::Player(_)) && self.counter_player_skip(aim(), t, controller);
                 if is_legal(&player_first) && !taken(&player_first) && !strip_skip(&player_first) {
                     found = Some(player_first);
                 } else if let Some(t) = hostile
@@ -1258,7 +1260,7 @@ impl GameState {
                             && c.controller == controller
                             && copies_to_the_team(c);
                         // A counter strip wants a permanent carrying counters.
-                        let bare = c.counter_sum() == 0 && strips();
+                        let bare = c.counter_sum() == 0 && aim() != CounterAim::None;
                         let key = (rank(c.id, c.controller), !fan, bare, -power, c.id);
                         if best.is_none_or(|b| key < b) {
                             best = Some(key);
@@ -1460,8 +1462,40 @@ impl GameState {
     }
 }
 
-/// A counter strip ("remove a counter from target permanent or opponent" —
-/// Etched Slith, Price of Betrayal): on a player it takes poison only.
-fn strips_counters(eff: &Effect) -> bool {
-    eff.any_nested(&|e| matches!(e, Effect::RemoveCountersUpTo { .. } | Effect::RemoveAnyCounter { .. }))
+/// What a counter effect does to a target that has counters: strip one
+/// (Etched Slith, Price of Betrayal) or add one of a kind it has (Animation
+/// Module).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CounterAim {
+    None,
+    Strip,
+    AddPresent,
+}
+
+fn counter_aim(eff: &Effect) -> CounterAim {
+    if eff.any_nested(&|e| matches!(e, Effect::RemoveCountersUpTo { .. } | Effect::RemoveAnyCounter { .. })) {
+        CounterAim::Strip
+    } else if eff.any_nested(&|e| matches!(e, Effect::AddCounterOfPresentKind { .. })) {
+        CounterAim::AddPresent
+    } else {
+        CounterAim::None
+    }
+}
+
+impl GameState {
+    /// CR 122.1 — a player target a counter effect can't use well: a strip
+    /// takes poison only (the caster's own, never an opponent's); an add
+    /// needs an opponent's poison or a friendly seat's experience / energy.
+    fn counter_player_skip(&self, aim: CounterAim, t: &Target, controller: usize) -> bool {
+        let Target::Player(p) = *t else { return false };
+        let pl = &self.players[p];
+        let friendly = p == controller || self.same_team(p, controller);
+        match aim {
+            CounterAim::None => false,
+            CounterAim::Strip => p != controller || pl.poison_counters == 0,
+            CounterAim::AddPresent => {
+                if friendly { pl.experience == 0 && pl.energy == 0 } else { pl.poison_counters == 0 }
+            }
+        }
+    }
 }
