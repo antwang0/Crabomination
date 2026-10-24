@@ -687,6 +687,15 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast artifact spells or activate
     /// abilities of artifacts." (Power Depot, Mishra's Workshop kin.)
     ArtifactOnly,
+    /// "Spend this mana only to cast artifact spells" (Mishra's Workshop,
+    /// Castle Doom) — not an artifact's ability.
+    ArtifactSpellsOnly,
+    /// "Spend this mana only to activate abilities of artifact sources"
+    /// (Steelswarm Operator's {U}{U}).
+    ArtifactAbilitiesOnly,
+    /// "Spend this mana only to cast an artifact spell or activate an
+    /// ability" (Guidelight Optimizer) — any source's ability.
+    ArtifactSpellsOrAbilities,
     /// "Spend this mana only to cast a creature spell of the chosen
     /// type, and that spell can't be countered." (Cavern of Souls.)
     /// Spending it stamps the cast uncounterable via
@@ -991,6 +1000,9 @@ impl SpendRestriction {
             SpendRestriction::ArtifactOrCreatureSpells => "only artifact or creature spells",
             SpendRestriction::CreatureSpellMv4OrX => "only creature spells with MV 4+ or {X}",
             SpendRestriction::ArtifactOnly => "only artifacts",
+            SpendRestriction::ArtifactSpellsOnly => "only artifact spells",
+            SpendRestriction::ArtifactAbilitiesOnly => "only abilities of artifacts",
+            SpendRestriction::ArtifactSpellsOrAbilities => "only artifact spells or abilities",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
             SpendRestriction::CreatureOfTypeOrItsAbility(_) => {
@@ -1118,6 +1130,9 @@ impl SpendRestriction {
                 !kind.activating_ability && kind.creature && (kind.mana_value >= 4 || kind.has_x)
             }
             SpendRestriction::ArtifactOnly => kind.artifact,
+            SpendRestriction::ArtifactSpellsOnly => kind.artifact && !kind.activating_ability,
+            SpendRestriction::ArtifactAbilitiesOnly => kind.artifact && kind.activating_ability,
+            SpendRestriction::ArtifactSpellsOrAbilities => kind.artifact || kind.activating_ability,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
             SpendRestriction::CreatureOfTypeUncounterable(t)

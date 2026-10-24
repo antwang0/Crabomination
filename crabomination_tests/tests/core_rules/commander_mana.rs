@@ -653,7 +653,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
         fn _exhaustive(r: SpendRestriction) {
             use SpendRestriction::*;
             match r {
-                InstantSorceryOnly | InstantSorceryOrClassLevel | InstantSorceryOrKicked | ArtifactOnly | CreatureOfTypeUncounterable(_)
+                InstantSorceryOnly | InstantSorceryOrClassLevel | InstantSorceryOrKicked | ArtifactOnly | ArtifactSpellsOnly | ArtifactAbilitiesOnly | ArtifactSpellsOrAbilities | CreatureOfTypeUncounterable(_)
                 | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfTypeOrItsAbility(_)
                 | CreatureOfAnyTypes(_) | InstantSorceryOrTypes(_)
                 | LandAbilitiesOnly | CreatureOnly | CreatureOnlyFromCreature | MarksCast
@@ -687,6 +687,9 @@ fn cr_106_6_every_rider_allows_every_payment() {
             ArtifactOrCreatureSpells,
             CreatureSpellMv4OrX,
             ArtifactOnly,
+            ArtifactSpellsOnly,
+            ArtifactAbilitiesOnly,
+            ArtifactSpellsOrAbilities,
             CreatureOfTypeUncounterable(CreatureType::Bear),
             CreatureOfType(CreatureType::Bear),
             CreatureSpellOfType(CreatureType::Bear),
