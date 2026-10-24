@@ -3223,6 +3223,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DestroyNoRegen { .. } => "Destroy (no regeneration)",
         Effect::ExileTopAndGrantMayPlay { .. } => "Exile top card, may play it",
         Effect::GainControlWhileSourceTapped { .. }
+        | Effect::GainControlWhileYouControlSourceTapped { .. }
         | Effect::GainControlWhileSourceRemains { .. }
         | Effect::GainControlWhileYouControlSource { .. }
         | Effect::GainControlWhileCounter { .. }

@@ -2327,6 +2327,7 @@ impl Effect {
             Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GainControlWhileYouControlSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainControlWhileMatches { what, .. }
             | Effect::GainControlWhileMonarch { what, .. }
@@ -3059,6 +3060,7 @@ impl Effect {
             | Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileYouControlSource { what }
             | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GainControlWhileYouControlSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainControlWhileMatches { what, .. }
             | Effect::GainControlWhileMonarch { what, .. }
@@ -3811,6 +3813,7 @@ impl Effect {
                 | Effect::GainControlWhileSourceRemains { .. }
                 | Effect::GainControlWhileYouControlSource { .. }
                 | Effect::GainControlWhileSourceTapped { .. }
+                | Effect::GainControlWhileYouControlSourceTapped { .. }
                 | Effect::GainControlWhileMatches { .. }
                 | Effect::GainControlWhileMonarch { .. }
                 // A stack slot (Subtlety) — the spell's caster loses it.
@@ -5745,6 +5748,7 @@ impl Effect {
                 Effect::GainControlWhileSourceRemains { what }
                 | Effect::GainControlWhileYouControlSource { what }
                 | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GainControlWhileYouControlSourceTapped { what }
                 | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainControlWhileMatches { what, .. }
             | Effect::GainControlWhileMonarch { what, .. }

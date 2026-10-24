@@ -21910,9 +21910,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainControlWhileSourceTapped { what } => {
-                // CR 611.2c — the steal lasts while the source stays tapped;
-                // the SBA sweep unwinds it when it untaps or leaves.
+            Effect::GainControlWhileSourceTapped { what } | Effect::GainControlWhileYouControlSourceTapped { what } => {
+                // CR 611.2c — the steal lasts while the source stays tapped
+                // (and, for the second form, its controller keeps it); the SBA
+                // sweep unwinds it when that ends.
+                let and_controlled = matches!(effect, Effect::GainControlWhileYouControlSourceTapped { .. });
                 let Some(src) = ctx.source else { return Ok(()) };
                 let new_ctrl = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
@@ -21927,7 +21929,7 @@ impl GameState {
                             source: Some(src),
                             while_source_tapped: true,
                             while_source_attached: false,
-                            while_you_control_source: false,
+                            while_you_control_source: and_controlled,
                             while_counter: None,
                             while_matches: None,
                             while_monarch: None,

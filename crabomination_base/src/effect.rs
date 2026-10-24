@@ -9972,6 +9972,9 @@ pub enum Effect {
     /// sweep once the source untaps or leaves; while it holds something the
     /// source skips its own untap step ("you may choose not to untap").
     GainControlWhileSourceTapped { what: Selector },
+    /// Both clauses — "for as long as you control this and it remains tapped"
+    /// (Rubinia Soulsinger, Helm of Possession).
+    GainControlWhileYouControlSourceTapped { what: Selector },
     /// CR 611.2c — "gain control of `what` for as long as it has a `kind`
     /// counter on it" (Shield Broker's shield counter). The SBA sweep hands
     /// it back once the last such counter is gone.
