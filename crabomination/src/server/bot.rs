@@ -12622,10 +12622,12 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             .iter()
             .filter(|c| state.same_team(c.controller, seat) && c.definition.is_creature() && !c.tapped)
             .count();
+        // Saturating: a pod board can carry a power past `i32::MAX` in sum
+        // (5-seat audit sweep seed 1246780 overflowed here).
         let threat: i32 = if w.legacy_cashout {
-            incoming.iter().sum()
+            incoming.iter().fold(0i32, |a, p| a.saturating_add(*p))
         } else {
-            incoming.iter().skip(blockers).sum()
+            incoming.iter().skip(blockers).fold(0i32, |a, p| a.saturating_add(*p))
         };
         // Plussing is only pointless if the walker dies *even after* the
         // loyalty it would gain.
@@ -19534,10 +19536,10 @@ fn best_each_sacrifices_count(state: &GameState, seat: usize, max: u32, w: &Eval
         let score: i32 = boards
             .iter()
             .map(|(mine, vals)| {
-                let lost: i32 = vals.iter().take(n as usize).sum();
+                let lost: i32 = vals.iter().take(n as usize).fold(0i32, |a, v| a.saturating_add(*v));
                 if *mine { -lost } else { lost }
             })
-            .sum();
+            .fold(0i32, |a, v| a.saturating_add(v));
         if score > best.0 {
             best = (score, n);
         }
@@ -19568,7 +19570,8 @@ fn best_sweep_damage(state: &GameState, seat: usize, source: CardId, max: u32, w
         .collect();
     let mut best = (0i32, 0u32);
     for n in 1..=max {
-        let score: i32 = lethal_at.iter().filter(|(t, _)| *t <= n as i32).map(|(_, v)| v).sum();
+        let score: i32 =
+            lethal_at.iter().filter(|(t, _)| *t <= n as i32).fold(0i32, |a, (_, v)| a.saturating_add(*v));
         if score > best.0 {
             best = (score, n);
         }
@@ -23780,6 +23783,24 @@ mod tests {
             }
             other => panic!("expected ActivateLoyaltyAbility, got {:?}", other),
         }
+    }
+
+    /// Regression (5-seat audit sweep seed 1246780): the loyalty cash-out's
+    /// threat read summed opposing powers with plain `+`, and two creatures
+    /// at a saturated `i32::MAX` power overflowed it.
+    #[test]
+    fn loyalty_threat_sum_saturates_on_saturated_powers() {
+        let mut g = two_player_game();
+        let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
+        g.clear_sickness(karn);
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(0, catalog::island());
+        for _ in 0..2 {
+            let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            g.battlefield_find_mut(b).unwrap().power_bonus = i32::MAX;
+        }
+        let mut bot = HeuristicBot::new();
+        assert!(bot.next_action(&g, 0).is_some());
     }
 
     /// The attack search must actually *reach* the opponent's crack-back.
