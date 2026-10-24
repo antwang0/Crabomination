@@ -122,3 +122,66 @@ fn livio_exiles_with_aegis_and_returns() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
     assert!(g.exile.is_empty());
 }
+
+/// Permission Denied counters seat 1's Shock and locks every opponent out of
+/// noncreature spells this turn, not only the Shock's caster (ruling); its
+/// caster is unaffected.
+#[test]
+fn permission_denied_counters_and_locks_each_opponent() {
+    let mut g = pod(3);
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Shock");
+    let pd = g.add_card_to_hand(0, catalog::permission_denied());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pd, target: Some(Target::Permanent(shock)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Permission Denied");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Shock countered");
+    assert!(g.players[1].cant_cast_noncreature_this_turn && g.players[2].cant_cast_noncreature_this_turn);
+    assert!(!g.players[0].cant_cast_noncreature_this_turn);
+}
+
+/// Helm of the Ghastlord on a blue-black creature: +2/+2, and damage to an
+/// opponent both draws and makes that player discard (rulings: both bonuses).
+#[test]
+fn helm_of_the_ghastlord_reads_the_host_colours() {
+    let mut g = pod(2);
+    let host = ready(&mut g, 0, catalog::grizzly_bears());
+    let helm = g.add_card_to_hand(0, catalog::helm_of_the_ghastlord());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: helm, target: Some(Target::Permanent(host)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Helm");
+    drain_stack(&mut g);
+    let p = |g: &GameState| g.computed_permanent(host).map(|c| (c.power, c.toughness)).unwrap();
+    assert_eq!(p(&g), (2, 2), "green host: no bonus");
+    let ub = ready(&mut g, 0, catalog::dimir_guildmage());
+    g.battlefield_find_mut(helm).unwrap().attached_to = Some(ub);
+    let base = catalog::dimir_guildmage();
+    assert_eq!(
+        g.computed_permanent(ub).map(|c| (c.power, c.toughness)).unwrap(),
+        (base.power + 2, base.toughness + 2)
+    );
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    attack(&mut g, 0, ub, 1).expect("attack");
+    for _ in 0..40 {
+        if g.step == TurnStep::PostCombatMain {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "blue: draw");
+    assert!(g.players[1].hand.is_empty(), "black: discard");
+}

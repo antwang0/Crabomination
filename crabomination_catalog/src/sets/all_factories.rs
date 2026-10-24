@@ -4697,6 +4697,8 @@ static DECKS: &[Factory] = &[
     super::decks::trusty_packbeast,
     // cmdr_rank6k_g (session 01PxmVAG)
     super::decks::livio_oathsworn_sentinel,
+    super::decks::permission_denied,
+    super::decks::helm_of_the_ghastlord,
     super::decks::island_sanctuary,
     super::decks::youve_been_caught_stealing,
     // cmdr_rank6k_h (session 01PxmVAG)

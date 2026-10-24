@@ -103,3 +103,65 @@ pub fn livio_oathsworn_sentinel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Permission Denied — {W}{U} instant. Counter target noncreature spell; your
+/// opponents can't cast noncreature spells this turn (each opponent, even if
+/// the spell can't be countered — rulings).
+pub fn permission_denied() -> CardDefinition {
+    CardDefinition {
+        name: "Permission Denied",
+        cost: cost(&[w(), crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::Noncreature) },
+            Effect::CantCastNoncreatureThisTurn { who: Selector::Player(PlayerRef::EachOpponent) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Helm of the Ghastlord — {3}{U/B} Aura. A blue host gets +1/+1 and draws
+/// when it deals damage to an opponent; a black host gets +1/+1 and that
+/// player discards. Both when it is both (rulings); the colour is read as
+/// the damage is dealt.
+pub fn helm_of_the_ghastlord() -> CardDefinition {
+    use crate::card::{ConditionalEquipBonus, EnchantmentSubtype, EquipBonus};
+    use crate::effect::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::mana::Color;
+    let on_damage = |color: Color, effect: Effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource).with_filter(Predicate::All(vec![
+            Predicate::PlayerIsOpponent { who: PlayerRef::TriggerEventPlayer },
+            Predicate::EntityMatches { what: Selector::This, filter: R::HasColor(color) },
+        ])),
+        effect,
+    };
+    let bonus = |color: Color| ConditionalEquipBonus {
+        host_filter: R::HasColor(color),
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Helm of the Ghastlord",
+        cost: cost(&[generic(3), crate::mana::hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            conditional: vec![bonus(Color::Blue), bonus(Color::Black)],
+            triggered_abilities: vec![
+                on_damage(Color::Blue, Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                on_damage(
+                    Color::Black,
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                ),
+            ],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
