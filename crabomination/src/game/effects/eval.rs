@@ -7131,6 +7131,7 @@ impl GameState {
                     R::Colorless => color_set().is_empty(),
                     R::Monocolored => color_set().is_monocolored(),
                     R::HasXInCost => card.definition.cost.has_x(),
+                    R::HasNoManaCost => card.definition.no_mana_cost,
                     R::ColoredManaSymbolsAtLeast(n) => card.definition.cost.colored_symbol_count() >= *n,
                     // OtherThanSource: enforce "different from the source"
                     // when a source CardId is threaded into this call (effect
@@ -8211,6 +8212,7 @@ impl GameState {
             R::Colorless => card.definition.printed_color_set().is_empty(),
             R::Monocolored => card.definition.printed_color_set().is_monocolored(),
             R::HasXInCost => card.definition.cost.has_x(),
+            R::HasNoManaCost => card.definition.no_mana_cost,
             // OtherThanSource is `applies_to`-pipeline-only — see the
             // companion arm in `evaluate_requirement_static`. For
             // library/zone searches we don't filter on this; the

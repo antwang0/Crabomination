@@ -818,7 +818,8 @@ fn cultivate_is_one_search_under_leonin_arbiter() {
 
 /// Urza's Saga III — "mana cost {0} or {1}" is the cost itself (2021
 /// ruling): a {W} artifact (Esper Sentinel) and an artifact land (no mana
-/// cost) aren't eligible; Ornithopter is.
+/// cost) aren't eligible, nor is Lotus Bloom (no mana cost, CR 202.1a);
+/// Ornithopter is.
 #[test]
 fn urzas_saga_tutors_only_a_zero_or_one_generic_mana_cost() {
     let run = |with_orni: bool| -> Vec<&'static str> {
@@ -826,6 +827,7 @@ fn urzas_saga_tutors_only_a_zero_or_one_generic_mana_cost() {
         let saga = g.add_card_to_hand(0, catalog::urzas_saga());
         g.add_card_to_library(0, catalog::esper_sentinel());
         g.add_card_to_library(0, catalog::seat_of_the_synod());
+        g.add_card_to_library(0, catalog::lotus_bloom());
         if with_orni {
             g.add_card_to_library(0, catalog::ornithopter());
         }
@@ -839,6 +841,7 @@ fn urzas_saga_tutors_only_a_zero_or_one_generic_mana_cost() {
     };
     let none = run(false);
     assert!(!none.contains(&"Esper Sentinel") && !none.contains(&"Seat of the Synod"), "{none:?}");
+    assert!(!none.contains(&"Lotus Bloom"), "{none:?}");
     assert!(run(true).contains(&"Ornithopter"));
 }
 

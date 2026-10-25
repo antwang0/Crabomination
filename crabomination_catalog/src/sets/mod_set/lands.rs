@@ -505,12 +505,13 @@ pub fn urzas_saga() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     // "Mana cost {0} or {1}" — the cost itself (2021 ruling):
-                    // no coloured pip, and a land has no mana cost at all.
+                    // no coloured pip, and a land or Lotus Bloom has no mana cost at all.
                     filter: SelectionRequirement::Artifact
                         .and(SelectionRequirement::Nonland)
                         .and(SelectionRequirement::Colorless)
                         .and(SelectionRequirement::ManaValueAtMost(1))
-                        .and(SelectionRequirement::HasXInCost.negate()),
+                        .and(SelectionRequirement::HasXInCost.negate())
+                        .and(SelectionRequirement::HasNoManaCost.negate()),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,

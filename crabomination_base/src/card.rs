@@ -4169,6 +4169,9 @@ pub enum SelectionRequirement {
     /// targeting, the on-battlefield permanent's printed cost is read
     /// the same way.
     HasXInCost,
+    /// CR 202.1a — the card has no mana cost at all (`no_mana_cost`: Lotus
+    /// Bloom), which is not a mana cost of {0} (Urza's Saga's chapter III).
+    HasNoManaCost,
     /// The card's mana cost has at least N colored mana symbols (Omnath,
     /// Locus of All's reveal).
     ColoredManaSymbolsAtLeast(u32),
