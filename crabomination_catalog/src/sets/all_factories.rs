@@ -19198,6 +19198,18 @@ static DECKS: &[Factory] = &[
     super::decks::sanguine_glorifier,
     super::decks::queens_commission,
     super::decks::vampires_zeal,
+    super::decks::bitterblade_warrior,
+    super::decks::champion_of_rhonas,
+    super::decks::devoted_crop_mate,
+    super::decks::emberhorn_minotaur,
+    super::decks::gust_walker,
+    super::decks::oketras_avenger,
+    super::decks::rhonass_stalwart,
+    super::decks::watchful_naga,
+    super::decks::vizier_of_the_true,
+    super::decks::resolute_survivors,
+    super::decks::rohirrim_chargers,
+    super::decks::knotvine_paladin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

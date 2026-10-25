@@ -1,6 +1,6 @@
 //! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
-//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh, Brigid and Mavren Fein
-//! decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh, Brigid, Mavren Fein and
+//! Johan decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -1552,4 +1552,182 @@ pub fn vampires_zeal() -> CardDefinition {
             },
         ]),
     )
+}
+
+// ── Johan's deck ────────────────────────────────────────────────────────────
+
+/// "You may exert this creature as it attacks. When you do, [bonus]."
+fn exert_body(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32, bonus: Effect) -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![TriggeredAbility { event: EventSpec::new(EventKind::Exerted, EventScope::SelfSource), effect: bonus }],
+        ..plain_creature(name, mana, types, p, t)
+    }
+}
+
+fn this_until_eot(power: i32, toughness: i32, keywords: Vec<Keyword>) -> Effect {
+    let mut seq = vec![Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(power),
+        toughness: Value::Const(toughness),
+        duration: Duration::EndOfTurn,
+    }];
+    seq.extend(keywords.into_iter().map(|keyword| Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::EndOfTurn }));
+    Effect::Seq(seq)
+}
+
+/// "Whenever you exert a creature, [effect]" on an exert creature.
+fn exert_payoff(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32, effect: Effect) -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![TriggeredAbility { event: EventSpec::new(EventKind::Exerted, EventScope::YourControl), effect }],
+        ..plain_creature(name, mana, types, p, t)
+    }
+}
+
+/// Bitterblade Warrior — {1}{G} 2/2 Jackal Warrior; exerted, +1/+0 and deathtouch.
+pub fn bitterblade_warrior() -> CardDefinition {
+    exert_body("Bitterblade Warrior", cost(&[generic(1), g()]), vec![CreatureType::Jackal, CreatureType::Warrior], 2, 2, this_until_eot(1, 0, vec![Keyword::Deathtouch]))
+}
+
+/// Champion of Rhonas — {3}{G} 3/3 Jackal Warrior; exerted, you may put a
+/// creature card from your hand onto the battlefield.
+pub fn champion_of_rhonas() -> CardDefinition {
+    exert_body(
+        "Champion of Rhonas",
+        cost(&[generic(3), g()]),
+        vec![CreatureType::Jackal, CreatureType::Warrior],
+        3,
+        3,
+        Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: R::Creature,
+            count: Value::ONE,
+            tapped: false,
+            haste: false,
+            sacrifice_eot: false,
+            return_eot: false,
+            then: None,
+        },
+    )
+}
+
+/// Devoted Crop-Mate — {2}{W} 3/2 Human Warrior; exerted, return target
+/// creature card with mana value 2 or less from your graveyard to the battlefield.
+pub fn devoted_crop_mate() -> CardDefinition {
+    exert_body(
+        "Devoted Crop-Mate",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        3,
+        2,
+        Effect::Move {
+            what: target_filtered(R::Creature.and(R::ManaValueAtMost(2)).and(R::InYourGraveyard)),
+            to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    )
+}
+
+/// Emberhorn Minotaur — {3}{R} 4/3 Minotaur Warrior; exerted, +1/+1 and menace.
+pub fn emberhorn_minotaur() -> CardDefinition {
+    exert_body("Emberhorn Minotaur", cost(&[generic(3), r()]), vec![CreatureType::Minotaur, CreatureType::Warrior], 4, 3, this_until_eot(1, 1, vec![Keyword::Menace]))
+}
+
+/// Gust Walker — {1}{W} 2/2 Human Wizard; exerted, +1/+1 and flying.
+pub fn gust_walker() -> CardDefinition {
+    exert_body("Gust Walker", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 2, this_until_eot(1, 1, vec![Keyword::Flying]))
+}
+
+/// Oketra's Avenger — {1}{W} 3/1 Human Warrior; exerted, prevent all combat
+/// damage that would be dealt to it this turn.
+pub fn oketras_avenger() -> CardDefinition {
+    exert_body(
+        "Oketra's Avenger",
+        cost(&[generic(1), w()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        3,
+        1,
+        Effect::PreventCombatDamageToTargetThisTurn { target: Selector::This },
+    )
+}
+
+/// Rhonas's Stalwart — {1}{G} 2/2 Human Warrior; exerted, +1/+1 and creatures
+/// with power 2 or less can't block it this turn.
+pub fn rhonass_stalwart() -> CardDefinition {
+    exert_body(
+        "Rhonas's Stalwart",
+        cost(&[generic(1), g()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        2,
+        2,
+        this_until_eot(1, 1, vec![Keyword::CantBeBlockedBy(Box::new(R::PowerAtMost(2)))]),
+    )
+}
+
+/// Watchful Naga — {2}{G} 2/2 Snake Wizard; exerted, draw a card.
+pub fn watchful_naga() -> CardDefinition {
+    exert_body(
+        "Watchful Naga",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Snake, CreatureType::Wizard],
+        2,
+        2,
+        Effect::Draw { who: Selector::You, amount: Value::ONE },
+    )
+}
+
+/// Vizier of the True — {3}{W} 3/2 Human Cleric with exert; whenever you exert
+/// a creature, tap target creature an opponent controls.
+pub fn vizier_of_the_true() -> CardDefinition {
+    exert_payoff(
+        "Vizier of the True",
+        cost(&[generic(3), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric],
+        3,
+        2,
+        Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+    )
+}
+
+/// Resolute Survivors — {1}{R}{W} 3/3 Human Warrior with exert; whenever you
+/// exert a creature, 1 damage to each opponent and you gain 1 life.
+pub fn resolute_survivors() -> CardDefinition {
+    exert_payoff(
+        "Resolute Survivors",
+        cost(&[generic(1), r(), w()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        3,
+        3,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Rohirrim Chargers — {2}{R}{W} 4/4 Human Knight with exert; whenever you
+/// exert a creature, reveal until an Equipment and put it onto the
+/// battlefield attached.
+pub fn rohirrim_chargers() -> CardDefinition {
+    exert_payoff(
+        "Rohirrim Chargers",
+        cost(&[generic(2), r(), w()]),
+        vec![CreatureType::Human, CreatureType::Knight],
+        4,
+        4,
+        Effect::RevealUntilPutAttachedElseHand { filter: R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment) },
+    )
+}
+
+/// Knotvine Paladin — {G}{W} 2/2 Human Knight. Attacking, +1/+1 per untapped
+/// creature you control.
+pub fn knotvine_paladin() -> CardDefinition {
+    let n = || Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::Untapped).and(R::ControlledByYou))));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT { what: Selector::This, power: n(), toughness: n(), duration: Duration::EndOfTurn },
+        }],
+        ..plain_creature("Knotvine Paladin", cost(&[g(), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
+    }
 }

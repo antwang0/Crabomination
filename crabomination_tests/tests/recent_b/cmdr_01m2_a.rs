@@ -756,3 +756,57 @@ fn vampires_zeal_first_strike_for_vampires() {
         assert_eq!(g.computed_permanent(c).unwrap().keywords().contains(&Keyword::FirstStrike), strikes);
     }
 }
+
+/// CR 701.43d — Gust Walker's bonus rides the exert: exerted, +1/+1 and
+/// flying; attacking without it, nothing.
+#[test]
+fn gust_walker_bonus_only_when_exerted() {
+    for exert in [true, false] {
+        let mut g = pod(2);
+        let gw = ready(&mut g, 0, catalog::gust_walker());
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackersExerting {
+            attacks: vec![Attack { attacker: gw, target: AttackTarget::Player(1) }],
+            exert: if exert { vec![gw] } else { vec![] },
+        })
+        .expect("attack");
+        drain_stack(&mut g);
+        assert_eq!(pt(&g, gw), if exert { (3, 3) } else { (2, 2) });
+        assert_eq!(g.computed_permanent(gw).unwrap().keywords().contains(&Keyword::Flying), exert);
+    }
+}
+
+/// Resolute Survivors pings each opponent and gains 1 whenever you exert any
+/// creature — here another one (three seats).
+#[test]
+fn resolute_survivors_reward_any_exert() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::resolute_survivors());
+    let gw = ready(&mut g, 0, catalog::gust_walker());
+    let lives: Vec<i32> = (0..3).map(|p| g.players[p].life).collect();
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackersExerting {
+        attacks: vec![Attack { attacker: gw, target: AttackTarget::Player(1) }],
+        exert: vec![gw],
+    })
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, lives[0] + 1);
+    assert_eq!(g.players[1].life, lives[1] - 1);
+    assert_eq!(g.players[2].life, lives[2] - 1);
+}
+
+/// Knotvine Paladin grows by your untapped creatures as it attacks (vigilance
+/// aside, the attacking Paladin is tapped).
+#[test]
+fn knotvine_paladin_counts_untapped_creatures() {
+    let mut g = pod(2);
+    let kp = ready(&mut g, 0, catalog::knotvine_paladin());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: kp, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, kp), (4, 4));
+}
