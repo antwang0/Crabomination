@@ -4536,12 +4536,11 @@ pub fn jacob_hauken_inspector() -> CardDefinition {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::Hideaway { count: Value::ONE },
+                // Renewed each upkeep and gone at end of turn: "once during
+                // each of YOUR turns" (no free play on an opponent's turn).
                 Effect::GrantMayPlay {
                     what: linked(),
-                    duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
-                        source: crate::card::CardId(0),
-                        one_spell_a_turn: false,
-                    },
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
                     pay_own_cost: false,

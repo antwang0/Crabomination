@@ -2041,7 +2041,7 @@ fn vorinclex_runs_the_grand_evolution() {
 
 /// Jacob Hauken, Inspector // Hauken's Insight: the {T} hides a hand card
 /// face down and may pay to transform; the Insight hides the top card each
-/// upkeep and casts one of its cards free, once a turn.
+/// upkeep and casts one of its cards free, once during each of your turns.
 #[test]
 fn jacob_hauken_hides_cards_and_casts_one_free() {
     let mut g = pod(2);
@@ -2065,6 +2065,7 @@ fn jacob_hauken_hides_cards_and_casts_one_free() {
     let hidden: Vec<CardId> = g.exile.iter().filter(|c| c.exiled_with == Some(jacob)).map(|c| c.id).collect();
     assert_eq!(hidden.len(), 2, "the upkeep hid the top card too");
     g.step = TurnStep::PreCombatMain;
+    let mut unspent = g.clone();
     let free = |g: &mut GameState, id: CardId| {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::CastFromZoneWithoutPaying {
@@ -2079,6 +2080,12 @@ fn jacob_hauken_hides_cards_and_casts_one_free() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17);
     assert!(free(&mut g, hidden[1]).is_err(), "once each turn");
+    // "Once during each of your turns": a use left unspent on your turn is not
+    // there on an opponent's.
+    let mut events = Vec::new();
+    unspent.do_cleanup(&mut events);
+    unspent.active_player_idx = 1;
+    assert!(free(&mut unspent, hidden[0]).is_err(), "an opponent's turn");
 }
 
 /// Havengul Laboratory // Havengul Mystery: three Clues sacrificed in a
