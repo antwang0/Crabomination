@@ -36978,6 +36978,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIU_BEI_COMMANDERS,
             main: decks::LIU_BEI_MAIN,
         },
+        // Seat 6088: Living Lightning, Charged Up's EDHREC average deck. `--pod-decks 6088`.
+        PodDeck {
+            name: "Living Lightning, Charged Up (R)",
+            commanders: decks::LIVING_LIGHTNING_COMMANDERS,
+            main: decks::LIVING_LIGHTNING_MAIN,
+        },
     ]
 }
 
@@ -45026,6 +45032,7 @@ mod tests {
             ("Mavren Fein, Dusk Apostle", &[0x21DB]),
             ("Johan", &[0x21DC]),
             ("Liu Bei, Lord of Shu", &[0x21DD]),
+            ("Living Lightning, Charged Up", &[0x21DE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -170957,3 +170957,30 @@ pub const LIU_BEI_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const LIVING_LIGHTNING_COMMANDERS: &[CardFactory] = &[living_lightning_charged_up];
+
+/// **Living Lightning, Charged Up**'s EDHREC average deck, card for card:
+/// 53 nonbasic cards + 46 Mountains = 99.
+/// Living Lightning, Charged Up (EDHREC, fetched 2026-10-25).
+pub const LIVING_LIGHTNING_MAIN: &[CardFactory] = &[
+    aces_baseball_bat, contested_game_ball, jar_of_eyeballs, javelin_of_lightning, jesters_cap,
+    lightning_coils, lightning_greaves, lightning_spear, sol_ring, ball_lightning,
+    emeritus_of_conflict, lightning_berserker, lightning_crafter, lightning_dragon,
+    lightning_elemental, lightning_hounds, lightning_mare, lightning_mauler, lightning_phoenix,
+    lightning_runner, lightning_serpent, lightning_visionary, lightning_wolf,
+    lightning_core_excavator, lightning_rig_crew, living_lightning, weaver_of_lightning,
+    leyline_of_lightning, lightning_cloud, lightning_diadem, lightning_prowess,
+    lightning_reflexes, vow_of_lightning, barbed_lightning, homing_lightning, lightning_axe,
+    lightning_blast, lightning_bolt, lightning_dart, lightning_storm, lightning_strike,
+    lightning_volley, radiating_lightning, redirect_lightning, rhystic_lightning,
+    riddle_of_lightning, arc_lightning, chain_lightning, feral_lightning, forked_lightning,
+    jagged_lightning, lightning_javelin, lightning_surge,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
