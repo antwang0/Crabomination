@@ -2046,7 +2046,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Rhys, the Evermore | "remove any number of counters" removes all of them | `Effect::RemoveAllCounters`; there is no any-number counter choice |
 | 🟡 Lara Croft, Tomb Raider | "you may play a card from exile with a discovery counter on it this turn" lets every such card be played, not one | the attack trigger grants `GrantMayPlay` (pay its cost, this turn) over every discovery-counter card in exile; there is no one-of-many cap on a may-play grant set |
 | 🟡 Loki, God of Mischief | an ability of yours targeting only cards in graveyards or on the stack draws too | the trigger is `ChoseTargets` from a non-spell source; the targeted objects' kinds aren't read |
-| 🟡 Eradicator Valkyrie | "hexproof from planeswalkers" is not modelled | there is no hexproof-from-card-type keyword (`HexproofFromColor`/`…Monocolored`/`…Abilities` exist) |
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
 | 🟡 Chiss-Goria, Forge Tyrant | the artifact spell cast from among the exiled cards doesn't gain affinity for artifacts | a may-play grant carries no cost-reduction rider (`MayPlayPermission` has `undaunted` only) |
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |

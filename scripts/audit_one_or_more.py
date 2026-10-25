@@ -32,6 +32,8 @@ BATCH = re.compile(
     r"once_per_batch: true|batch_across_players: true|once_per_turn: true"
     # Event kinds that are one per batch by construction.
     r"|kind: (?:YouAttack|DiscardedOneOrMore|RolledDice|EnergyGained)\b"
+    # The graveyard combat-damage walk fires a card once per damaged subject.
+    r"|kind: DealsCombatDamageToPlayer, scope: FromYourGraveyard\b"
 )
 # One event per batch already, or a repeat that changes nothing.
 ALLOWLIST = {
@@ -72,6 +74,8 @@ ALLOWLIST = {
     # Static / delayed wordings with no EventSpec of their own.
     "Frontier Warmonger", "Forth Eorlingas!", "City in a Bottle",
     "Magmatic Galleon",
+    # Per kept die: the counters sum to the roll's total (`8cdd0d69c`).
+    "Vexing Puzzlebox",
     # 🟡 "choose a creature card from among them": per card, the last copy
     # wins (INCOMPLETE_CARDS).
     "Kaya, Spirits' Justice",

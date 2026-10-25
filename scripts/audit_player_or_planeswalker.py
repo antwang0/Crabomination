@@ -77,7 +77,9 @@ def main():
     rows += sorted(f"{n}\t(one or more: no batch)" for n in batchers
                    if n in src and "once_per_batch" not in src[n] and "your_creatures_hit" not in src[n]
                    and "_connect(" not in src[n] and "yours_hit(" not in src[n]
-                   and "DealingCombatDamageBatch" not in src[n])
+                   and "DealingCombatDamageBatch" not in src[n]
+                   # The graveyard walk fires once per damaged subject.
+                   and "EventScope::FromYourGraveyard" not in src[n])
     print("\n".join(rows))
     print(f"# {len(rows)} rows ({len(hits)} damage, {len(attackers)} attack, {len(batchers)} one-or-more cards)",
           file=sys.stderr)
