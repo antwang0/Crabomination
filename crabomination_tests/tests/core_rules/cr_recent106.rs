@@ -1644,8 +1644,7 @@ fn cr_702_33_a_kicked_spell_counts_one_kick() {
     use crabomination::card::CounterType;
     use crabomination::game::types::GameAction;
     use crabomination::mana::Color;
-    let defs: [(fn() -> crabomination::card::CardDefinition, u32); 2] =
-        [(catalog::skyclave_sentinel, 2), (catalog::skyclave_shade, 2)];
+    let defs: [(Def, u32); 2] = [(catalog::skyclave_sentinel, 2), (catalog::skyclave_shade, 2)];
     for (def, want) in defs {
         for kicked in [false, true] {
             let mut g = peace_main();
@@ -1706,7 +1705,7 @@ fn cr_205_1b_isnt_a_type_removes_only_that_type() {
 fn cr_601_2f_a_sacrifice_or_pay_alternative_keeps_its_colored_pip() {
     use crabomination::game::types::{GameAction, Target};
     use crabomination::mana::Color;
-    let cards: [(fn() -> crabomination::card::CardDefinition, u32, bool); 3] = [
+    let cards: [(Def, u32, bool); 3] = [
         (catalog::eaten_alive, 3, true),
         (catalog::spark_harvest, 3, true),
         (catalog::morkrut_behemoth, 5, false),
@@ -1815,3 +1814,6 @@ fn cr_605_3b_the_auto_tapper_takes_both_of_a_filter_lands_pips() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
 }
+
+/// A catalog factory, for the table-driven tests above.
+type Def = fn() -> crabomination::card::CardDefinition;
