@@ -5439,6 +5439,12 @@ impl ActivatedAbility {
     /// CR 702.128a / 702.129a — the shape `shortcut::embalm` / `eternalize`
     /// build: exile this card from your graveyard for a Zombie token copy of
     /// it with no mana cost.
+    /// CR 702.142a — boast: once each turn, only if this attacked this turn
+    /// (the `shortcut::boast` shape).
+    pub fn is_boast(&self) -> bool {
+        self.once_per_turn && matches!(self.condition, Some(Predicate::SourceAttackedThisTurn))
+    }
+
     pub fn is_embalm_like(&self) -> bool {
         self.from_graveyard
             && self.exile_self_cost

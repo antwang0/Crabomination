@@ -2983,6 +2983,8 @@ pub enum GameEvent {
         embalm: bool,
         /// Mana from a Treasure paid for it (Vazi, Keen Negotiator).
         treasure: bool,
+        /// CR 702.142 — a boast ability (Frenzied Raider).
+        boast: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

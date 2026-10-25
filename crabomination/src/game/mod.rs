@@ -25427,6 +25427,7 @@ impl GameState {
             power_up: false,
             embalm: false,
             treasure: ninjutsu_treasure,
+            boast: false,
         });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
@@ -29949,6 +29950,7 @@ impl GameState {
                 power_up: false,
                 embalm: false,
                 treasure: false,
+                boast: false,
             },
             GameEvent::LoyaltyChanged {
                 card_id,

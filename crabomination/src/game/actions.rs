@@ -25187,6 +25187,7 @@ impl GameState {
                 power_up: ability.power_up,
                 embalm: ability.is_embalm_like(),
                 treasure: activation_treasure_mana > 0,
+                boast: ability.is_boast(),
             });
         }
 

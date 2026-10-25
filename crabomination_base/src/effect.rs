@@ -4470,6 +4470,9 @@ pub enum ActivationTrait {
     ManaWithoutTap,
     /// Mana from a Treasure was spent to activate it (Vazi, Keen Negotiator).
     TreasureMana,
+    /// CR 702.142 — a boast ability (Frenzied Raider), detected structurally
+    /// (`ActivatedAbility::is_boast`).
+    Boast,
 }
 
 /// The zones [`EventKind::CardExiledFrom`] distinguishes (a bitmask).
