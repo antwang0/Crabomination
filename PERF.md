@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-25 (Commander run, `01M3bbRx`) — guardrail; the player-target event, chosen-source redirects, a cast brake
+
+New on hot-ish paths: every targeting site emits `PlayerBecameTarget` for a player slot (one more event a targeted
+player, on `BecameTarget`'s kind bit, so the batch mask admits BecameTarget listeners for it); the damage-redirect
+lookup reads a struct, not a tuple. `release` bot_ladder, 4-core Xeon @ 2.10 GHz, base = this session's start tip:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok; peak_rss_mib 49.9;
+                 bench_ab.py 16 pairs base vs tip: +0.58 % median (sd 9.0 — noise; no regression)
+2-player pools   seed 10704 x 300: cube 2,400 / sos 1,500 / sealed 3,599 decided + 1 CR 104.4a draw (same on base)
+pods             seed 10705, one game per block over all 6,093 decks at 4 seats: 1,524 / 1,524 decided;
+                 seed 10706 at 2/3/6/8 seats: 6,854 / 6,856 (one Earthquake draw; one Skypainter cast loop — the
+                 cast brake, 83777f810); seeds 10702-10703 (mid-run binary): 8,369 / 8,380 — 4 draws, 6 board
+                 caps, 1 action cap (Enduring Tenacity + Exquisite Blood), all identical on the base binary
+```
+
 ### 2026-10-25 (Commander run, `01Y6ZRFx`) — guardrail; 45 cards, 5 seats, nine primitives, a state-trigger class
 
 New on hot-ish paths: `activate_ability_into` calls `static_sacrifice_cast_cost` (a battlefield static walk) only when the
@@ -20392,6 +20408,13 @@ were re-read on a quiet box; the serial cells reproduce to ~2 %. Nothing here
 is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
+
+### 2026-10-25 — a ~100-token flying board costs ~130 ms an action (Commander only)
+
+6-seat pod `--pod-decks 6054,2881,4375,3323,4191,834 --seed 1073858`, `release`: Inspired Skypainter's prepare loop
+under Twinning Staff, now stopped by the 40-cast brake (`83777f810`), still leaves a turn of ~3,800 actions at
+~130 ms each — the game decides at turn 81 in **535 s** (before the brake: killed at 30+ CPU-min). Not profiled;
+likely the "near-cap board gathers O(n²)" row below in another shape (every token is a copy with an ETB trigger).
 
 ### 2026-10-25 — Drought's sacrifice tax walks the battlefield on every black-pip cast and activation
 
