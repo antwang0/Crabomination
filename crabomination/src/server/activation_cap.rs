@@ -7,6 +7,10 @@
 //! non-mana activations in one turn a Commander bot stops activating — the
 //! activation twin of the twelve-combat attack brake. Mana abilities stay
 //! free; two-player play is unchanged.
+//! The same brake for casts: Inspired Skypainter's prepared Maestro's Gift
+//! copying a Skypainter that enters prepared again, doubled by Twinning
+//! Staff, cast copies until each action took seconds (six-seat pod seed
+//! 1073858, decks 6054,2881,4375,3323,4191,834).
 
 use crate::game::GameState;
 use crate::game::types::GameAction;
@@ -14,6 +18,19 @@ use crate::game::types::GameAction;
 /// Non-mana activations in one turn past which a Commander bot stops
 /// activating voluntarily.
 pub(super) const MAX_VOLUNTARY_ACTIVATIONS_PER_TURN: u32 = 40;
+
+/// Spells cast in one turn past which a Commander bot stops casting
+/// voluntarily.
+pub(super) const MAX_VOLUNTARY_CASTS_PER_TURN: u32 = 40;
+
+/// True when `action` is a cast `seat` (a Commander seat that has already
+/// cast `MAX_VOLUNTARY_CASTS_PER_TURN` spells this turn) should not take.
+pub(super) fn over_cast_cap(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    let player = &state.players[seat];
+    action.is_cast()
+        && !player.commanders.is_empty()
+        && player.spells_cast_this_turn >= MAX_VOLUNTARY_CASTS_PER_TURN
+}
 
 /// True when `action` is a non-mana activation `seat` (a Commander seat that
 /// has already spent its per-turn budget) should not take.
@@ -124,5 +141,27 @@ mod tests {
         assert_eq!(g.players[0].nonmana_activations_this_turn, 1);
         g.begin_turn_resets();
         assert_eq!(g.players[0].nonmana_activations_this_turn, 0);
+    }
+
+    /// CR 104.4b — the cast brake: past the budget a Commander seat's cast is
+    /// held (a prepare-spell copy included); a seat without a commander never.
+    #[test]
+    fn cr_104_4b_the_cast_brake_holds_only_commander_casts() {
+        let mut g = multi_player_game(3);
+        let rock = g.add_card_to_battlefield(0, sol_ring_ish());
+        let cast = GameAction::CastPrepareSpell {
+            creature_id: rock,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        g.players[0].spells_cast_this_turn = MAX_VOLUNTARY_CASTS_PER_TURN;
+        assert!(!over_cast_cap(&g, 0, &cast), "no commander: never braked");
+        g.players[0].commanders.push(rock);
+        assert!(over_cast_cap(&g, 0, &cast));
+        assert!(!over_cast_cap(&g, 0, &activate(rock, 1)), "an activation is the other brake's");
+        g.players[0].spells_cast_this_turn = MAX_VOLUNTARY_CASTS_PER_TURN - 1;
+        assert!(!over_cast_cap(&g, 0, &cast), "under budget");
     }
 }

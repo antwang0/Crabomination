@@ -3539,6 +3539,7 @@ impl Bot for HeuristicBot {
         Some(
             if stacks_onto_own_activation(state, seat, &step.action)
                 || super::activation_cap::over_activation_cap(state, seat, &step.action)
+                || super::activation_cap::over_cast_cap(state, seat, &step.action)
                 || super::loop_hazard::action_starts_loop(state, seat, &step, &self.weights)
             {
                 BotStep::plain(GameAction::PassPriority)
