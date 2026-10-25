@@ -36948,6 +36948,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VERAZOL_COMMANDERS,
             main: decks::VERAZOL_MAIN,
         },
+        // Seat 6083: Chandra, Fire of Kaladesh's EDHREC average deck. `--pod-decks 6083`.
+        PodDeck {
+            name: "Chandra, Fire of Kaladesh (R)",
+            commanders: decks::CHANDRA_COMMANDERS,
+            main: decks::CHANDRA_MAIN,
+        },
     ]
 }
 
@@ -44991,6 +44997,7 @@ mod tests {
             ("Stegron the Dinosaur Man", &[0x21D6]),
             ("Nael, Avizoa Aeronaut", &[0x21D7]),
             ("Verazol, the Split Current", &[0x21D8]),
+            ("Chandra, Fire of Kaladesh", &[0x21D9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

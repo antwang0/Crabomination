@@ -170816,3 +170816,32 @@ pub const VERAZOL_MAIN: &[CardFactory] = &[
     forest, forest, island, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const CHANDRA_COMMANDERS: &[CardFactory] = &[chandra_fire_of_kaladesh];
+
+/// **Chandra, Fire of Kaladesh**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Chandra, Fire of Kaladesh (EDHREC, fetched 2026-10-25).
+pub const CHANDRA_MAIN: &[CardFactory] = &[
+    arcane_signet, chandras_regulator, fire_diamond, mind_stone, pyromancers_gauntlet,
+    pyromancers_goggles, ruby_medallion, sol_ring, the_chain_veil, interplanar_beacon,
+    karns_bastion, myriad_landscape, nykthos_shrine_to_nyx, valakut_the_molten_pinnacle,
+    war_room, chandras_embercat, chandras_firemaw, chandras_incinerator, chandras_magmutt,
+    chandras_phoenix, chandras_pyreling, chandras_spitfire, jayas_phoenix, keral_keep_disciples,
+    runaway_steam_kin, solphim_mayhem_dominus, torbran_thane_of_red_fell, young_pyromancer,
+    all_will_be_one, city_on_fire, fiery_emancipation, oath_of_chandra, way_of_the_pyromancer,
+    chandras_fury, chandras_outrage, chandras_pyrohelix, chandras_triumph, chaos_warp,
+    lightning_bolt, pyroblast, repeated_reverberation, seething_song, volt_charge,
+    chandra_ablaze, chandra_nalaar, chandra_acolyte_of_flame, chandra_awakened_inferno,
+    chandra_bold_pyromancer, chandra_dressed_to_kill, chandra_fire_artisan,
+    chandra_flames_catalyst, chandra_flames_fury, chandra_flamecaller, chandra_heart_of_fire,
+    chandra_hopes_beacon, chandra_legacy_of_fire, chandra_pyromaster, chandra_torch_of_defiance,
+    chandra_the_firebrand, blasphemous_act, cathartic_reunion, chandras_flame_wave,
+    chandras_ignition, chandras_outburst, chandras_revolution, fiery_confluence, jeskas_will,
+    liberating_combustion, mana_geyser, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
