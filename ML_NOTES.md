@@ -6237,3 +6237,18 @@ clustered by game seat) and residual by own hand size. The net predicts
 hand size (−0.01..−0.05 at every size), so it cannot reorder a seat's
 choices. No card's residual beyond that offset clears chance: the largest
 |z| is ~3 over ~600 card x zone cells. No per-card blind spot to train out.
+
+**`--build` polishes by play (2026-10-25, ADOPTED for the helper).** The open
+lead above, built. After the colour race, each round makes every swap of the
+deck's six lowest-valued spells for the six best unplayed spells in its
+colours, plus spell ↔ basic swaps (48 a round). It screens them on 200
+opponents x 2 pairs, re-races the top three against the current deck on a
+fresh 400 x 4 field, and keeps the best only if it wins there. The kept deck
+is then judged against the unpolished one on a third field neither choice
+saw. On the user's pool, three rounds brought back exactly the cards the
+hand-tuned list plays (Vigorbloom Charm +1.11, Emergency Phytomedic +1.03,
+Sureshot Sower +0.53). Polished vs unpolished: **+3.62 ±1.47** on the unseen
+field. Against the user's own list (seed 97, a field neither was tuned on):
+**+0.56 ±1.77**, a tie where the unpolished build was −2.84. Cost: about 4.5
+minutes a pool on 22 threads. It is not measured across random pools (one
+pool takes minutes), but each run prints its own unseen-field reading.

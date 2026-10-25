@@ -28,9 +28,12 @@
 //! keeps the best: the builder's colour choice by summed card score is
 //! 2.9 / 3.5 points worse than choosing by play (`--audit-builder`, 200 / 150
 //! pools, chosen on one field and judged on another), and 12 points off on
-//! one real pool. `--static` is the old rated build (best of N by static
-//! score, under a second); `--colors WG` confines the static build to
-//! those colours.
+//! one real pool. Then it polishes the winner by play ([`polish`], up to
+//! `--polish-rounds 4` swaps, `--no-polish` skips it; about four minutes):
+//! on the user's pool the polished build gained +3.62 ±1.47 on a field no
+//! choice saw and tied the user's hand-tuned list (+0.56 ±1.77). `--static`
+//! is the old rated build (best of N by static score, under a second);
+//! `--colors WG` confines the static build to those colours.
 //!
 //! `fra_card_eval --audit-builder [--pools 200] [--field 60] [--pairs 2]
 //! [--seed 43] --out FILE.tsv` measures the builder itself: per random FRA
@@ -277,14 +280,157 @@ fn build_by_play(pool: &[Factory], candidates: usize, bp: &ByPlay) -> Vec<Factor
     cands.swap_remove(scored[0].2).1
 }
 
+/// A card's measured value (`FRA_SIM_VALUE`), when it has one.
+fn sim_value(f: Factory) -> Option<f32> {
+    let name = crabomination::cube::card_brief(f).def.name;
+    crabomination::card_ratings::FRA_SIM_VALUE.iter().find(|(n, _)| *n == name).map(|(_, v)| *v)
+}
+
+/// `--build` after the by-play race: swap search by play (`--no-polish`
+/// skips it). Per-card values add up, so they cannot see a deck's shape — a
+/// creature count, a curve, a spell that needs a target. Each round makes
+/// every swap of the deck's six lowest-valued spells for the six best
+/// unplayed spells in its colours (plus a spell for a basic and a basic
+/// for a spell), screens them on one field, re-races the top three against
+/// the current deck on a fresh field, and keeps the best that wins there.
+/// The kept deck is then judged against the unpolished one on a third field
+/// neither choice saw.
+fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> Vec<Factory> {
+    let brief = |f: Factory| crabomination::cube::card_brief(f);
+    let name = |f: Factory| brief(f).def.name;
+    let value = |f: Factory| sim_value(f).unwrap_or(0.0);
+    let screen = |lists: &[Vec<Factory>], seed: u64| {
+        let rows = field_rows(lists, bp.pilot, bp.pilot, (bp.field / 2).max(50), 2, seed, bp.threads);
+        (0..lists.len()).map(|d| field_share(&rows, d).0).collect::<Vec<f64>>()
+    };
+    // List `d`'s paired gain over list 0 on a field: (mean, 95% half-width).
+    let paired = |rows: &[Vec<(u32, u32)>], d: usize| {
+        let diffs: Vec<f64> = rows.iter().filter_map(|r| Some(win_share(r[d])? - win_share(r[0])?)).collect();
+        mean_ci(&diffs)
+    };
+    let mut deck = start.clone();
+    println!("Polishing by play ({} screening opponents x 2 pairs, re-raced on fresh fields of {} x {}):", (bp.field / 2).max(50), bp.field, bp.pairs);
+    for round in 0..rounds {
+        let mut colors = ColorSet::empty();
+        for f in deck.iter().filter(|f| brief(**f).is_land) {
+            for c in brief(*f).produces.iter() {
+                colors.insert(c);
+            }
+        }
+        let mut left: Vec<Factory> = pool.to_vec();
+        for f in &deck {
+            if let Some(i) = left.iter().position(|g| *g as usize == *f as usize) {
+                left.swap_remove(i);
+            }
+        }
+        let mut ins: Vec<Factory> = Vec::new();
+        for f in left.iter().copied().filter(|f| !brief(*f).is_land && brief(*f).fits(colors)) {
+            if !ins.iter().any(|g| name(*g) == name(f)) {
+                ins.push(f);
+            }
+        }
+        ins.sort_by(|a, b| value(*b).total_cmp(&value(*a)));
+        ins.truncate(6);
+        let mut outs: Vec<usize> = Vec::new();
+        let mut spells: Vec<usize> = (0..deck.len()).filter(|&i| !brief(deck[i]).is_land).collect();
+        spells.sort_by(|&a, &b| value(deck[a]).total_cmp(&value(deck[b])));
+        for i in spells {
+            if outs.len() < 6 && !outs.iter().any(|&j| name(deck[j]) == name(deck[i])) {
+                outs.push(i);
+            }
+        }
+        let lands = deck.iter().filter(|f| brief(**f).is_land).count();
+        let basics: Vec<usize> = (0..deck.len())
+            .filter(|&i| brief(deck[i]).is_land && brief(deck[i]).def.supertypes.contains(&crabomination::card::Supertype::Basic))
+            .collect();
+        // The heaviest colour's basic, for a spell → land swap.
+        let heavy = {
+            let mut pips: Vec<(Color, u32)> = colors.iter().map(|c| (c, 0)).collect();
+            for f in deck.iter().filter(|f| !brief(**f).is_land) {
+                for (c, n) in pips.iter_mut() {
+                    *n += brief(*f).pips.get(*c);
+                }
+            }
+            pips.into_iter().max_by_key(|p| p.1).map(|p| crabomination::draft::basic_land_factory(p.0))
+        };
+        let mut cands: Vec<(String, Vec<Factory>)> = Vec::new();
+        for &o in &outs {
+            for &i in &ins {
+                let mut d = deck.clone();
+                d[o] = i;
+                cands.push((format!("-{} +{}", name(deck[o]), name(i)), d));
+            }
+            if let Some(h) = heavy.filter(|_| lands < 18) {
+                let mut d = deck.clone();
+                d[o] = h;
+                cands.push((format!("-{} +{}", name(deck[o]), name(h)), d));
+            }
+        }
+        if lands > 15 {
+            let mut seen: Vec<&str> = Vec::new();
+            for &b in &basics {
+                if seen.contains(&name(deck[b])) {
+                    continue;
+                }
+                seen.push(name(deck[b]));
+                for &i in ins.iter().take(3) {
+                    let mut d = deck.clone();
+                    d[b] = i;
+                    cands.push((format!("-{} +{}", name(deck[b]), name(i)), d));
+                }
+            }
+        }
+        if cands.is_empty() {
+            break;
+        }
+        let mut lists: Vec<Vec<Factory>> = vec![deck.clone()];
+        lists.extend(cands.iter().map(|(_, d)| d.clone()));
+        let scores = screen(&lists, bp.seed ^ 0x9011_0000 ^ round as u64);
+        let mut order: Vec<usize> = (1..lists.len()).filter(|&d| scores[d] > scores[0]).collect();
+        order.sort_by(|&a, &b| scores[b].total_cmp(&scores[a]));
+        order.truncate(3);
+        if order.is_empty() {
+            println!("  round {}: no swap of {} screens above the deck ({:.2})", round + 1, cands.len(), scores[0]);
+            break;
+        }
+        let mut finals: Vec<Vec<Factory>> = vec![deck.clone()];
+        finals.extend(order.iter().map(|&d| lists[d].clone()));
+        let rows = field_rows(&finals, bp.pilot, bp.pilot, bp.field, bp.pairs, bp.seed ^ 0x9022_0000 ^ round as u64, bp.threads);
+        let best = (1..finals.len())
+            .map(|k| (k, paired(&rows, k)))
+            .max_by(|a, b| a.1.0.total_cmp(&b.1.0))
+            .unwrap();
+        let (k, (gain, half)) = best;
+        let label = &cands[order[k - 1] - 1].0;
+        if gain <= 0.0 {
+            println!("  round {}: best of {} screened swaps, {label}, re-races {gain:+.2} ±{half:.2}: stop", round + 1, cands.len());
+            break;
+        }
+        println!("  round {}: {label}  {gain:+.2} ±{half:.2} on a fresh field ({} swaps screened)", round + 1, cands.len());
+        deck = finals.swap_remove(k);
+    }
+    if deck.iter().map(|f| *f as usize).ne(start.iter().map(|f| *f as usize)) {
+        let rows = field_rows(&[start, deck.clone()], bp.pilot, bp.pilot, bp.field, bp.pairs, bp.seed ^ 0x9033_0000, bp.threads);
+        let (g, h) = paired(&rows, 1);
+        println!("  polished vs unpolished on a field neither saw: {g:+.2} ±{h:.2}");
+    }
+    println!();
+    deck
+}
+
 /// `--build`: the rated build of a player's pool, and the pool ranked.
 fn build_pool(path: &str, candidates: usize, colors: ColorSet, by_play: Option<ByPlay>) {
     let (main, side) = read_list(path);
     let pool: Vec<Factory> = main.iter().chain(&side).copied().collect();
-    let deck = match &by_play {
+    let mut deck = match &by_play {
         Some(bp) if colors.is_empty() => build_by_play(&pool, candidates, bp),
         _ => crabomination::selfplay::rated_sealed_build_in_colors(&pool, candidates, 0x5EA1, colors),
     };
+    if let Some(bp) = &by_play
+        && std::env::args().all(|a| a != "--no-polish")
+    {
+        deck = polish(&pool, deck, bp, num("--polish-rounds", 4));
+    }
     let brief = |f: Factory| crabomination::cube::card_brief(f);
     let mut spells: Vec<Factory> = deck.iter().copied().filter(|f| !brief(*f).is_land).collect();
     spells.sort_by_key(|f| (brief(*f).cmc, brief(*f).def.name));
