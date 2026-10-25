@@ -515,6 +515,7 @@ impl Effect {
             | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body }
+            | Effect::OneSearch { body }
             | Effect::DelayUntil { body, .. }
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::WhenTargetDiesThisTurn { body, .. }
