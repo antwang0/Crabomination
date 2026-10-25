@@ -3186,8 +3186,7 @@ pub fn domris_ambush() -> CardDefinition {
 }
 
 /// Spark Harvest — {B} Sorcery. Additional cost: sacrifice a creature or pay
-/// {3}{B}. Destroy target creature or planeswalker. (The colored half of the
-/// alt-cost is approximated as {4} generic.)
+/// {3}{B}. Destroy target creature or planeswalker.
 pub fn spark_harvest() -> CardDefinition {
     CardDefinition {
         name: "Spark Harvest",
@@ -3195,8 +3194,8 @@ pub fn spark_harvest() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
             filter: R::Creature,
-            pay: 4,
-            pay_pips: vec![],
+            pay: 3,
+            pay_pips: vec![crate::mana::Color::Black],
         }],
         effect: Effect::Destroy {
             what: target_filtered(R::Creature.or(R::Planeswalker)),

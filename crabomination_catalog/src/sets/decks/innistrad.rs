@@ -1342,7 +1342,6 @@ pub fn arrogant_outlaw() -> CardDefinition {
 
 /// Eaten Alive — {B} Sorcery. As an additional cost, sacrifice a creature or
 /// pay {3}{B}. Exile target creature or planeswalker.
-/// Approximation: the alternative is paid as {4} (`SacrificeOrPay` is generic).
 pub fn eaten_alive() -> CardDefinition {
     CardDefinition {
         name: "Eaten Alive",
@@ -1350,8 +1349,8 @@ pub fn eaten_alive() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Creature,
-            pay: 4,
-            pay_pips: vec![],
+            pay: 3,
+            pay_pips: vec![crate::mana::Color::Black],
         }],
         effect: Effect::Exile {
             what: target_filtered(
@@ -2562,8 +2561,8 @@ pub fn mindleech_ghoul() -> CardDefinition {
     }
 }
 
-/// Morkrut Behemoth — {4}{B} 7/6 Zombie Giant. Menace. (The "sacrifice a
-/// creature or pay {1}{B}" additional cast cost is omitted — body only.)
+/// Morkrut Behemoth — {4}{B} 7/6 Zombie Giant. Menace. As an additional cost,
+/// sacrifice a creature or pay {1}{B}.
 pub fn morkrut_behemoth() -> CardDefinition {
     CardDefinition {
         name: "Morkrut Behemoth",
@@ -2576,14 +2575,10 @@ pub fn morkrut_behemoth() -> CardDefinition {
         power: 7,
         toughness: 6,
         keywords: vec![Keyword::Menace],
-        // "As an additional cost to cast this spell, sacrifice a creature or
-        // pay {1}{B}" — the variant prices the alternative in generic mana,
-        // so {1}{B} is {2} here (it shipped with no additional cost at all —
-        // the `addl` audit column, 2026-09-10).
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Creature,
-            pay: 2,
-            pay_pips: vec![],
+            pay: 1,
+            pay_pips: vec![crate::mana::Color::Black],
         }],
         ..Default::default()
     }

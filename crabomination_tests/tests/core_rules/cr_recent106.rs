@@ -1697,3 +1697,36 @@ fn cr_205_1b_isnt_a_type_removes_only_that_type() {
     g.do_cleanup(&mut events);
     assert!(types(&g).contains(&CreatureType::Human), "until end of turn");
 }
+
+/// CR 601.2b / 601.2f — "sacrifice a creature or pay {3}{B}": with nothing to
+/// sacrifice the pay half is paid as printed, coloured pip included (it was
+/// generic {4}; Morkrut Behemoth's {1}{B} was {2}).
+#[test]
+fn cr_601_2f_a_sacrifice_or_pay_alternative_keeps_its_colored_pip() {
+    use crabomination::game::types::{GameAction, Target};
+    use crabomination::mana::Color;
+    let cards: [(fn() -> crabomination::card::CardDefinition, u32, bool); 3] = [
+        (catalog::eaten_alive, 3, true),
+        (catalog::spark_harvest, 3, true),
+        (catalog::morkrut_behemoth, 5, false),
+    ];
+    for (def, generic, targeted) in cards {
+        let name = def().name;
+        for (blacks, ok) in [(1, false), (2, true)] {
+            let mut g = peace_main();
+            let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            let id = g.add_card_to_hand(0, def());
+            g.players[0].mana_pool.add(Color::Black, blacks);
+            // Enough generic either way: only the black pip decides.
+            g.players[0].mana_pool.add_colorless(generic + 2 - blacks);
+            let r = g.perform_action(GameAction::CastSpell {
+                card_id: id,
+                target: targeted.then_some(Target::Permanent(foe)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            });
+            assert_eq!(r.is_ok(), ok, "{name} with {blacks} black");
+        }
+    }
+}
