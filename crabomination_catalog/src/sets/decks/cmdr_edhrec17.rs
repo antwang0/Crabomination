@@ -615,8 +615,8 @@ pub fn into_the_fire() -> CardDefinition {
 // ── Sergeant John Benton ─────────────────────────────────────────────────────
 
 /// Hand of Vecna — {3} legendary Equipment. At the beginning of combat on your
-/// turn, equipped creature — or, unequipped, a creature you control named
-/// Vecna — gets +X/+X until end of turn (X = cards in your hand). Equip — pay
+/// turn, equipped creature or a creature you control named Vecna (your
+/// choice) gets +X/+X until end of turn (X = cards in your hand). Equip — pay
 /// 1 life per card in your hand. Equip {2}.
 pub fn hand_of_vecna() -> CardDefinition {
     CardDefinition {
@@ -628,14 +628,18 @@ pub fn hand_of_vecna() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
-            effect: Effect::If {
-                cond: Predicate::SelectorExists(Selector::AttachedTo(Box::new(Selector::This))),
-                then: Box::new(pump(Selector::AttachedTo(Box::new(Selector::This)), Value::HandSizeOf(PlayerRef::You))),
-                // Legendary, so at most one Vecna.
-                else_: Box::new(pump(
-                    Selector::EachPermanent(R::HasName("Vecna".into()).and(R::ControlledByYou)),
-                    Value::HandSizeOf(PlayerRef::You),
-                )),
+            // CR 608.2d — "equipped creature or a creature you control named
+            // Vecna": one of them, chosen on resolution.
+            effect: Effect::ChooseOneAmong {
+                what: Selector::Both(
+                    Box::new(Selector::AttachedTo(Box::new(Selector::This))),
+                    Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::HasName("Vecna".into())).and(R::ControlledByYou),
+                    )),
+                ),
+                chooser: PlayerRef::You,
+                chosen: Box::new(pump(Selector::SeparatedPile { chosen: true }, Value::HandSizeOf(PlayerRef::You))),
+                other: Box::new(Effect::Noop),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

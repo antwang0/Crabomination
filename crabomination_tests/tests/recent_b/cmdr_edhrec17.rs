@@ -337,6 +337,34 @@ fn embiggen_counts_types() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
 }
 
+/// CR 608.2d — Hand of Vecna: "equipped creature or a creature you control
+/// named Vecna" is one creature, chosen on resolution — never both.
+#[test]
+fn hand_of_vecna_pumps_one_of_the_host_and_vecna() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let vecna = ready(&mut g, 0, crabomination::card::CardDefinition {
+        name: "Vecna",
+        card_types: vec![crabomination::card::CardType::Creature],
+        power: 8,
+        toughness: 8,
+        ..Default::default()
+    });
+    let h = ready(&mut g, 0, catalog::hand_of_vecna());
+    g.battlefield_find_mut(h).unwrap().attached_to = Some(bear);
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let pumped = [(bear, 2), (vecna, 8)]
+        .iter()
+        .filter(|(id, base)| g.computed_permanent(*id).unwrap().power == base + 3)
+        .count();
+    assert_eq!(pumped, 1);
+}
+
 /// Hand of Vecna pumps by hand size at your combat; Wild Defiance answers a
 /// targeting instant.
 #[test]

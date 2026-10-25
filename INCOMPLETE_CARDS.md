@@ -2118,7 +2118,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Press the Enemy | the spell / permanent choice is offered as two modes | one slot cannot hold either a spell or a permanent |
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
-| 🟡 Hand of Vecna | the pump goes only to the equipped creature; the "or a creature you control named Vecna" choice is missing | the trigger targets `AttachedTo` only |
 | 🟡 Game of Chaos | whoever wins a flip decides to flip again by the auto policy (`AnyPlayerMayAccept`); the stakes cap at 2^16 | `Effect::GameOfChaosRound` |
 | 🟡 Azra Oddsmaker | "choose a creature" is a target among your own creatures, picked as the trigger goes on the stack (before the discard) | `TargetPlayerThen { filter: mine() }` around `MayDiscard` |
 | 🟡 The Aesir Escape Valhalla | the exiled permanent card is the engine's pick (the priciest) | `Selector::best_of` |
