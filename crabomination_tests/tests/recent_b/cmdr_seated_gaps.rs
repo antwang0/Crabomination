@@ -552,3 +552,40 @@ fn balthier_and_fran_extra_combat_only_for_a_vehicle_they_crewed() {
     crew_and_attack(&mut h, bear, rambler);
     assert_eq!(h.additional_combat_phases, 0, "crewed by a Bear");
 }
+
+/// Lochmere Serpent — CR 601.2c / 115.1: "exile five target cards from an
+/// opponent's graveyard" names exactly five targets, all in one opponent's
+/// graveyard (2019-10-04 ruling). Four cards there, or five split over two
+/// opponents, can't pay for the activation; five in one graveyard exiles them
+/// and returns the Serpent to hand.
+#[test]
+fn lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard() {
+    let mut g = pod(3);
+    let serpent = g.add_card_to_graveyard(0, catalog::lochmere_serpent());
+    let cards = |g: &mut GameState, seat: usize, n: usize| -> Vec<Target> {
+        (0..n).map(|_| perm(g.add_card_to_graveyard(seat, catalog::grizzly_bears()))).collect()
+    };
+    let one = cards(&mut g, 1, 4);
+    let two = cards(&mut g, 2, 1);
+    let activate = |g: &mut GameState, targets: &[Target]| {
+        flood(g, 0);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: serpent,
+            ability_index: 2,
+            target: targets.first().cloned(),
+            additional_targets: targets.iter().skip(1).cloned().collect(),
+            x_value: None,
+            mode: None,
+        })
+        .map(|_| drain_stack(g))
+    };
+    assert!(activate(&mut g.clone(), &one).is_err(), "four targets");
+    let split: Vec<Target> = one.iter().chain(&two).cloned().collect();
+    assert!(activate(&mut g.clone(), &split).is_err(), "five over two graveyards");
+    let fifth = cards(&mut g, 1, 1);
+    let five: Vec<Target> = one.iter().chain(&fifth).cloned().collect();
+    activate(&mut g, &five).expect("five in one graveyard");
+    assert_eq!(g.players[1].graveyard.len(), 0);
+    assert_eq!(g.players[2].graveyard.len(), 1);
+    assert!(g.players[0].hand.iter().any(|c| c.id == serpent));
+}

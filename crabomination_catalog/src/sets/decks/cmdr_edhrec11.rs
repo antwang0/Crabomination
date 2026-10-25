@@ -941,9 +941,10 @@ pub fn lochmere_serpent() -> CardDefinition {
                 sorcery_speed: true,
                 effect: Effect::Seq(vec![
                     Effect::ApplyToTargets {
+                        // Exactly five, all in one opponent's graveyard (2019-10-04 ruling).
                         max_targets: 5,
-                        min_targets: 0,
-                        filter: R::InOpponentGraveyard,
+                        min_targets: 5,
+                        filter: R::InOpponentGraveyard.and(R::SameGraveyardAsTargetSlot(0)),
                         effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
                     },
                     Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
