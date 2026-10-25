@@ -8602,6 +8602,11 @@ impl CardDefinition {
                 ]
                 .iter()
                 .any(|m| dbg.contains(m))
+                    // "Whenever a player casts a spell of the chosen color,
+                    // that player loses 1 life" (Curse of Wizardry) — the
+                    // caster pays, so name the opponents' colour.
+                    || (dbg.contains("CastSpellSharesChosenColorOfSource")
+                        && dbg.contains("LoseLife { who: Player(Triggerer)"))
                 {
                     v |= debug_flag::CHOSEN_COLOR_HOSTILE;
                 }

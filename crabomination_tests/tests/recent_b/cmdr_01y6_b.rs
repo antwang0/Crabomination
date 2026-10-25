@@ -226,3 +226,22 @@ fn noxious_grasp_and_virtues_ruin_pick_their_colors() {
     assert!(g.battlefield_find(lions).is_none());
     assert!(g.battlefield_find(vamp).is_some());
 }
+
+/// Curse of Wizardry's headless colour is the opponents' densest, not its
+/// controller's: the caster of a spell of that colour is the one who pays.
+#[test]
+fn curse_of_wizardry_names_the_opponents_color() {
+    let mut g = pod(3);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::hill_giant());
+    }
+    for seat in [1, 2] {
+        for _ in 0..2 {
+            g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        }
+    }
+    let curse = g.add_card_to_hand(0, catalog::curse_of_wizardry());
+    g.players[0].mana_pool.add(Color::Black, 4);
+    cast(&mut g, curse, None).expect("cast");
+    assert_eq!(g.battlefield_find(curse).and_then(|c| c.chosen_color), Some(Color::Green));
+}
