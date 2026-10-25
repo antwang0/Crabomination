@@ -925,6 +925,10 @@ pub struct PlayerData {
     /// for snapshot back-compat.
     #[serde(default)]
     pub lost_life_this_turn: bool,
+    /// `lost_life_this_turn` as the previous turn ended — "if you lost life
+    /// last turn" (Paladin of Atonement).
+    #[serde(default)]
+    pub lost_life_last_turn: bool,
     /// Total life lost this turn (CR 119.3). Bumped alongside
     /// `lost_life_this_turn`, reset with it. Powers `Value::LifeLostThisTurn`
     /// (Spinerock Knoll's "an opponent lost 7 or more life" gate).
@@ -2009,6 +2013,7 @@ impl Player {
             play_from_top_pay_life_this_turn: false,
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
+            lost_life_last_turn: false,
             creatures_that_damaged_me_this_turn: Default::default(),
             creatures_that_combat_damaged_me_this_turn: Default::default(),
             lands_entered_this_turn: 0,

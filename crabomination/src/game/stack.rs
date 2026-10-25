@@ -5397,6 +5397,7 @@ impl GameState {
             pl.token_doublings_this_turn = 0;
             pl.steals_opponent_tokens_this_turn = false;
             pl.poison_capped_this_turn = false;
+            pl.lost_life_last_turn = pl.lost_life_this_turn;
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();

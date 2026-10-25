@@ -2221,6 +2221,10 @@ pub enum Predicate {
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.137) — pair with `who: EachOpponent`.
     PlayerLostLifeThisTurn { who: PlayerRef },
+    /// True if any player matched by `who` lost life during the previous turn
+    /// ("if you lost life last turn" — Paladin of Atonement). Backed by
+    /// `Player.lost_life_last_turn`.
+    PlayerLostLifeLastTurn { who: PlayerRef },
     /// True if a permanent was put into the hand of any player matched by
     /// `who` from the battlefield this turn. Backed by
     /// `Player.permanent_to_hand_this_turn` (Barrin, Tolarian Archmage).
