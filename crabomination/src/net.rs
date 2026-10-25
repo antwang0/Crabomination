@@ -2999,6 +2999,8 @@ pub enum GameEventWire {
     /// ability (Tenured Concocter's "you may draw" trigger, future
     /// targeting-payoff cards).
     BecameTarget { target: CardId, caster: usize },
+    /// Wire mirror of `GameEvent::PlayerBecameTarget`.
+    PlayerBecameTarget { player: usize, caster: usize },
     /// Wire mirror of `GameEvent::ChoseTargets` — one per targeting decision
     /// (CR 601.2c), the grouping sibling of the per-object `BecameTarget`.
     ChoseTargets { chooser: usize, object: CardId },
@@ -3471,6 +3473,9 @@ impl From<&GameEvent> for GameEventWire {
                 target: *target,
                 caster: *caster,
             },
+            GameEvent::PlayerBecameTarget { player, caster, .. } => {
+                GameEventWire::PlayerBecameTarget { player: *player, caster: *caster }
+            }
             GameEvent::ChoseTargets { chooser, object } => GameEventWire::ChoseTargets {
                 chooser: *chooser,
                 object: *object,
@@ -3775,6 +3780,9 @@ impl GameEventWire {
             }
             E::BecameTarget { target, caster } => {
                 format!("{} targeted by {}", name(*target), pn(*caster))
+            }
+            E::PlayerBecameTarget { player, caster } => {
+                format!("{} targeted by {}", pn(*player), pn(*caster))
             }
             E::ChoseTargets { chooser, object } => {
                 format!("{} chose targets for {}", pn(*chooser), name(*object))

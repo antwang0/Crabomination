@@ -1810,19 +1810,29 @@ pub fn skittering_horror() -> CardDefinition {
     }
 }
 
-/// Rayne, Academy Chancellor — {2}{U} 1/1 that draws off opposing targeting.
+/// Rayne, Academy Chancellor — {2}{U} 1/1. Whenever you or a permanent you
+/// control becomes the target of an opponent's spell or ability, you may draw
+/// a card, and another if Rayne is enchanted (checked on resolution).
 pub fn rayne_academy_chancellor() -> CardDefinition {
+    let may_draw = || Effect::MayDo {
+        description: "Draw a card".into(),
+        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+    };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::BecameTarget,
-                EventScope::YourPermanentTargetedByOpponent,
+                EventScope::YouOrYourPermanentTargetedByOpponent,
             ),
-            effect: Effect::MayDo {
-                description: "Draw a card".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
-            },
+            effect: Effect::Seq(vec![
+                may_draw(),
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::This, filter: R::IsEnchanted },
+                    then: Box::new(may_draw()),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
         }],
         ..creature(
             "Rayne, Academy Chancellor",

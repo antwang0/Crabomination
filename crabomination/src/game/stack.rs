@@ -1343,6 +1343,7 @@ impl GameState {
             | EventScope::FromYourGraveyardAnyPlayer
             | EventScope::FromYourGraveyardSourceDamagedOpponent => false,
             EventScope::YourPermanentTargetedByOpponent
+            | EventScope::YouOrYourPermanentTargetedByOpponent
             | EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
             | EventScope::YourCreatureTargeted
             | EventScope::OpponentCreatureTargetedByYou

@@ -3361,6 +3361,10 @@ pub enum GameEvent {
     /// ability's source, or triggered ability's source. Gates
     /// `EventSpec::causer_filter` ("becomes the target of an Aura spell").
     BecameTarget { target: CardId, caster: usize, by: Option<CardId> },
+    /// `BecameTarget`'s player half: `player` became a target of `caster`'s
+    /// spell or ability. Shares its kind bit; only
+    /// `EventScope::YouOrYourPermanentTargetedByOpponent` hears it.
+    PlayerBecameTarget { player: usize, caster: usize, by: Option<CardId> },
     /// CR 601.2c / 602.2b — `chooser` finished choosing targets for a single
     /// spell or ability (`object`). Fires ONCE per targeting decision, unlike
     /// the per-object `BecameTarget` (Psychic Battle).

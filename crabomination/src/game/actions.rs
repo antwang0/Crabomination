@@ -6267,6 +6267,9 @@ impl GameState {
                         Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
                             Some(GameEvent::BecameTarget { target: *id, caster: controller, by: Some(card_id) })
                         }
+                        Target::Player(p) => {
+                            Some(GameEvent::PlayerBecameTarget { player: *p, caster: controller, by: Some(card_id) })
+                        }
                         _ => None,
                     }
                 }));
@@ -13800,7 +13803,7 @@ impl GameState {
     }
 
     /// Walk the just-pushed `StackItem::Spell` and emit one
-    /// `GameEvent::BecameTarget` for every permanent target slot, then
+    /// `GameEvent::BecameTarget` (or `PlayerBecameTarget`) for every target slot, then
     /// dispatch the events through the unified trigger pipeline.
     pub(crate) fn dispatch_became_target_events_for_targets(
         &mut self,
@@ -13814,11 +13817,9 @@ impl GameState {
         // CR 601.2c — one "chose targets" event for the whole announcement,
         // plus the per-object `BecameTarget`s.
         let mut events = vec![GameEvent::ChoseTargets { chooser: caster, object: cast_card_id }];
-        events.extend(slots.iter().filter_map(|t| match t {
-            Target::Permanent(id) => {
-                Some(GameEvent::BecameTarget { target: *id, caster, by: Some(cast_card_id) })
-            }
-            _ => None,
+        events.extend(slots.iter().map(|t| match t {
+            Target::Permanent(id) => GameEvent::BecameTarget { target: *id, caster, by: Some(cast_card_id) },
+            Target::Player(p) => GameEvent::PlayerBecameTarget { player: *p, caster, by: Some(cast_card_id) },
         }));
         self.dispatch_triggers_for_events(&events);
     }
@@ -26395,12 +26396,18 @@ impl GameState {
             // Push Ward triggers above the just-queued ability so they
             // resolve first.
             self.push_ward_triggers_for_activated_ability(p, card_id, ability_target.clone());
-            // BecameTarget — fire per permanent target the activation
-            // chose (CR 603.x). The unified dispatcher handles APNAP and
-            // the trigger filter.
-            if let Some(Target::Permanent(target_id)) = &ability_target {
-                let evs =
-                    vec![GameEvent::BecameTarget { target: *target_id, caster: p, by: Some(card_id) }];
+            // BecameTarget — fire per target the activation chose, every
+            // slot (CR 603.x). The unified dispatcher handles APNAP and the
+            // trigger filter.
+            let evs: Vec<GameEvent> = ability_target
+                .iter()
+                .chain(additional_targets.iter())
+                .map(|t| match t {
+                    Target::Permanent(id) => GameEvent::BecameTarget { target: *id, caster: p, by: Some(card_id) },
+                    Target::Player(q) => GameEvent::PlayerBecameTarget { player: *q, caster: p, by: Some(card_id) },
+                })
+                .collect();
+            if !evs.is_empty() {
                 self.dispatch_triggers_for_events(&evs);
             }
             // CR 601.2c — one "chose targets" event per activation. Queued

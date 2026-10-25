@@ -29230,6 +29230,9 @@ impl GameState {
                 Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
                     Some(GameEvent::BecameTarget { target: *id, caster: controller, by: Some(source) })
                 }
+                Target::Player(p) => {
+                    Some(GameEvent::PlayerBecameTarget { player: *p, caster: controller, by: Some(source) })
+                }
                 _ => None,
             }));
             // CR 603.3b — a trigger that fires off this one's targets waits
@@ -30013,11 +30016,9 @@ impl GameState {
         // ability" triggers, same omission as Ward.
         let became: Vec<GameEvent> = all_targets
             .iter()
-            .filter_map(|t| match t {
-                Target::Permanent(id) => {
-                    Some(GameEvent::BecameTarget { target: *id, caster: p, by: Some(card_id) })
-                }
-                _ => None,
+            .map(|t| match t {
+                Target::Permanent(id) => GameEvent::BecameTarget { target: *id, caster: p, by: Some(card_id) },
+                Target::Player(q) => GameEvent::PlayerBecameTarget { player: *q, caster: p, by: Some(card_id) },
             })
             .collect();
         if !became.is_empty() {

@@ -148,7 +148,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CardPutIntoHandFromGraveyard { .. } => bits!(K::PutIntoHandFromGraveyard),
         E::PermanentExiled { .. } => bits!(K::CardExiled),
         E::CardExiledFrom { .. } => bits!(K::CardExiledFrom(0)),
-        E::BecameTarget { .. } => bits!(K::BecameTarget),
+        E::BecameTarget { .. } | E::PlayerBecameTarget { .. } => bits!(K::BecameTarget),
         E::ChoseTargets { .. } => bits!(K::ChoseTargets),
         E::CardCycled { .. } => bits!(K::CardCycled),
         E::PermanentDestroyedByEffect { .. } => bits!(K::PermanentDestroyedByEffect),
@@ -208,6 +208,9 @@ fn event_payload_matches(
     source: Option<&CardInstance>,
 ) -> bool {
     match (&spec.kind, event) {
+        (EventKind::BecameTarget, GameEvent::PlayerBecameTarget { .. }) => {
+            spec.scope == EventScope::YouOrYourPermanentTargetedByOpponent
+        }
         (
             EventKind::CreatureOrArtifactDied,
             GameEvent::PermanentDied { is_creature, is_artifact, .. },
@@ -470,6 +473,9 @@ fn reference_event_kind_matches(
             GameEvent::CardExiledFrom { from, .. },
         ) => mask & from != 0,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
+        (EventKind::BecameTarget, GameEvent::PlayerBecameTarget { .. }) => {
+            spec.scope == EventScope::YouOrYourPermanentTargetedByOpponent
+        }
         (EventKind::ChoseTargets, GameEvent::ChoseTargets { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
@@ -947,6 +953,7 @@ fn event_matches_spec_rest(
         // of a spell or ability" rail (Horobi, Death's Wail) — it fires for
         // any creature targeted, with the `with_filter` predicate refining.
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
+        && spec.scope != EventScope::YouOrYourPermanentTargetedByOpponent
         && spec.scope != EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
         && spec.scope != EventScope::OpponentCreatureTargetedByYou
@@ -1269,6 +1276,16 @@ fn event_matches_spec_rest(
                     && !state.same_team(*p, source.controller)
                     && *from_card != Some(source.id)
         ),
+        EventScope::YouOrYourPermanentTargetedByOpponent => match event {
+            GameEvent::BecameTarget { target, caster, .. } => {
+                state.battlefield_find(*target).is_some_and(|c| c.controller == source.controller)
+                    && !state.same_team(*caster, source.controller)
+            }
+            GameEvent::PlayerBecameTarget { player, caster, .. } => {
+                *player == source.controller && !state.same_team(*caster, source.controller)
+            }
+            _ => false,
+        },
         EventScope::YourPermanentTargetedByOpponent => {
             // The targeted permanent must be controlled by the trigger's
             // controller, and the caster must be an opponent. Battle Mammoth.
@@ -1888,6 +1905,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::FromYourGraveyardSourceDamagedOpponent
         | EventScope::YourPermanentTargetedByOpponent
+        | EventScope::YouOrYourPermanentTargetedByOpponent
         | EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
         | EventScope::YourCreatureTargeted
         | EventScope::OpponentCreatureTargetedByYou

@@ -4547,6 +4547,10 @@ pub enum EventScope {
     /// checks the targeted permanent's controller == trigger controller and
     /// the caster is an opponent.
     YourPermanentTargetedByOpponent,
+    /// **You** or a permanent you control becomes the target of a spell or
+    /// ability an opponent controls — once per such target (Leovold, Rayne;
+    /// their rulings). Hears `PlayerBecameTarget` as well as `BecameTarget`.
+    YouOrYourPermanentTargetedByOpponent,
     /// A creature **you control** or a creature **spell** you control becomes
     /// the target of a spell or ability an **opponent** controls (Surrak,
     /// Elusive Hunter). Used with `EventKind::BecameTarget`.

@@ -3,6 +3,7 @@
 
 use crabomination::card::CardId;
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -625,4 +626,57 @@ fn spikeshell_harrier_slows_only_the_fastest_opponent() {
     assert_eq!(run([1, 3, 2]), 2, "strictly fastest");
     assert_eq!(run([3, 3, 2]), 3, "tied with its caster");
     assert_eq!(run([0, 1, 0]), 1, "not below 1");
+}
+
+fn draws_after(g: &mut GameState, caster: usize, target: Target) -> usize {
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let shock = g.add_card_to_hand(caster, catalog::shock());
+    g.active_player_idx = caster;
+    cast_as(g, caster, shock, &[target]).expect("shock");
+    drain_stack(g);
+    g.players[0].hand.len() - before
+}
+
+/// Leovold, Emissary of Trest — CR 603.2 with its 2018-12-07 ruling:
+/// "whenever you or a permanent you control becomes the target of a spell or
+/// ability an opponent controls" hears its controller being targeted and any
+/// of their permanents, not only Leovold; a third seat or their own spell
+/// doesn't.
+#[test]
+fn leovold_draws_when_you_or_your_permanents_are_targeted_by_an_opponent() {
+    let setup = || {
+        let mut g = pod(3);
+        ready(&mut g, 0, catalog::leovold_emissary_of_trest());
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        (g, bear)
+    };
+    let (mut g, _) = setup();
+    assert_eq!(draws_after(&mut g, 1, Target::Player(0)), 1, "you");
+    let (mut g, bear) = setup();
+    assert_eq!(draws_after(&mut g, 2, perm(bear)), 1, "your other permanent");
+    let (mut g, _) = setup();
+    assert_eq!(draws_after(&mut g, 1, Target::Player(2)), 0, "another opponent");
+    let (mut g, bear) = setup();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    let before = g.players[0].hand.len();
+    cast_as(&mut g, 0, shock, &[perm(bear)]).expect("own shock");
+    assert_eq!(g.players[0].hand.len(), before - 1, "your own spell");
+}
+
+/// Rayne, Academy Chancellor — its 2004-10-04 rulings: the player half
+/// triggers too, and "draw an additional card if Rayne is enchanted" is read
+/// on resolution.
+#[test]
+fn rayne_draws_off_its_controller_and_twice_when_enchanted() {
+    let mut g = pod(3);
+    let rayne = ready(&mut g, 0, catalog::rayne_academy_chancellor());
+    assert_eq!(draws_after(&mut g, 1, Target::Player(0)), 1, "you, unenchanted");
+    let aura = g.add_card_to_battlefield(0, catalog::holy_strength());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(rayne);
+    assert_eq!(draws_after(&mut g, 1, Target::Player(0)), 2, "enchanted");
 }

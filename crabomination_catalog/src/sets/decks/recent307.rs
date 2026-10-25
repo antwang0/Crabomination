@@ -92,7 +92,7 @@ pub fn leovold_emissary_of_trest() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::OpponentControl),
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YouOrYourPermanentTargetedByOpponent),
             effect: Effect::MayDo {
                 description: "Draw a card".into(),
                 body: Box::new(draw(1)),
