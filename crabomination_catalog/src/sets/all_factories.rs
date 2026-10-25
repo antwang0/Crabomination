@@ -19155,6 +19155,16 @@ static DECKS: &[Factory] = &[
     super::decks::convincing_mirage,
     super::decks::grixis_illusionist,
     super::decks::pixie_illusionist,
+    super::decks::verazol_the_split_current,
+    super::decks::coralhelm_chronicler,
+    super::decks::elvish_hydromancer,
+    super::decks::lullmages_familiar,
+    super::decks::tazeem_roilmage,
+    super::decks::territorial_allosaurus,
+    super::decks::bubble_snare,
+    super::decks::roost_of_drakes,
+    super::decks::wild_onslaught,
+    super::decks::field_research,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1,5 +1,5 @@
 //! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
-//! Stegron and Nael decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Stegron, Nael and Verazol decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -636,5 +636,232 @@ pub fn pixie_illusionist() -> CardDefinition {
         })],
         activated_abilities: vec![illusionist_ability()],
         ..plain_creature("Pixie Illusionist", cost(&[u()]), vec![CreatureType::Faerie, CreatureType::Wizard], 1, 1)
+    }
+}
+
+// ── Verazol, the Split Current's deck ───────────────────────────────────────
+
+fn kicked_cast() -> EventSpec {
+    EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellWasKicked)
+}
+
+fn kicked_etb(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::SpellWasKicked),
+        effect,
+    }
+}
+
+fn drake() -> std::sync::Arc<crate::card::TokenDefinition> {
+    std::sync::Arc::new(crate::card::TokenDefinition {
+        name: "Drake".into(),
+        colors: vec![crate::mana::Color::Blue],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    })
+}
+
+/// Verazol, the Split Current — {X}{G}{U} legendary 0/0 Serpent. Enters with a
+/// +1/+1 counter per mana spent; your kicked spell may cost it two counters to
+/// copy that spell.
+pub fn verazol_the_split_current() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::CastSpellManaSpent)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: kicked_cast(),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+                    Value::Const(2),
+                ),
+                then: Box::new(Effect::MayDo {
+                    description: "Remove two +1/+1 counters from Verazol to copy that spell?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+                        Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..plain_creature(
+            "Verazol, the Split Current",
+            cost(&[crate::mana::x(), g(), u()]),
+            vec![CreatureType::Serpent],
+            0,
+            0,
+        )
+    }
+}
+
+/// Coralhelm Chronicler — {2}{U} 2/2 Merfolk Wizard. Your kicked spells loot;
+/// ETB: a kicker card from the top five to hand, the rest to the bottom.
+pub fn coralhelm_chronicler() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: kicked_cast(),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+            },
+            etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(5),
+                pick_filter: Some(R::HasKickerAbility),
+                optional: true,
+                ..Default::default()
+            }))),
+        ],
+        ..plain_creature("Coralhelm Chronicler", cost(&[generic(2), u()]), vec![CreatureType::Merfolk, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Elvish Hydromancer — {2}{G} 3/2 Elf Wizard, kicker {3}{U}: kicked, a token
+/// copy of target creature you control.
+pub fn elvish_hydromancer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(3), u()]))],
+        triggered_abilities: vec![kicked_etb(Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            source: target_filtered(R::Creature.and(R::ControlledByYou)),
+            extra_creature_types: vec![],
+            extra_card_types: vec![],
+            override_pt: None,
+            override_colors: None,
+            enters_tapped: false,
+            non_legendary: false,
+            legendary: false,
+            extra_keywords: vec![],
+            no_mana_cost: false,
+            enters_with_counters: None,
+            remove_keywords: vec![],
+        })],
+        ..plain_creature("Elvish Hydromancer", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Wizard], 3, 2)
+    }
+}
+
+/// Lullmage's Familiar — {1}{G}{U} 2/4 Beast. {T}: add {G} or {U}; your
+/// kicked spells gain you 2 life.
+pub fn lullmages_familiar() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::OfColors(vec![crate::mana::Color::Green, crate::mana::Color::Blue], Value::ONE),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: kicked_cast(),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        }],
+        ..plain_creature("Lullmage's Familiar", cost(&[generic(1), g(), u()]), vec![CreatureType::Beast], 2, 4)
+    }
+}
+
+/// Tazeem Roilmage — {1}{U} 2/1 Merfolk Wizard, kicker {4}: kicked, return
+/// target instant or sorcery card from your graveyard to your hand.
+pub fn tazeem_roilmage() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(4)]))],
+        triggered_abilities: vec![kicked_etb(Effect::Move {
+            what: target_filtered(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
+            ),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..plain_creature("Tazeem Roilmage", cost(&[generic(1), u()]), vec![CreatureType::Merfolk, CreatureType::Wizard], 2, 1)
+    }
+}
+
+/// Territorial Allosaurus — {2}{G}{G} 5/5 Dinosaur, kicker {2}{G}: kicked, it
+/// fights another target creature.
+pub fn territorial_allosaurus() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), g()]))],
+        triggered_abilities: vec![kicked_etb(Effect::Fight {
+            attacker: Selector::This,
+            defender: target_filtered(R::Creature.and(R::OtherThanSource)),
+        })],
+        ..plain_creature("Territorial Allosaurus", cost(&[generic(2), g(), g()]), vec![CreatureType::Dinosaur], 5, 5)
+    }
+}
+
+/// Bubble Snare — {U} Aura, kicker {2}{U}: kicked, it taps the enchanted
+/// creature; that creature doesn't untap during its controller's untap step.
+pub fn bubble_snare() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![kicked_etb(Effect::Tap { what: host() })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: host() },
+        }],
+        ..aura("Bubble Snare", cost(&[u()]))
+    }
+}
+
+/// Roost of Drakes — {U} enchantment, kicker {2}{U}: kicked, a 2/2 flying
+/// Drake; each kicked spell you cast makes another.
+pub fn roost_of_drakes() -> CardDefinition {
+    let token = || Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: drake() };
+    CardDefinition {
+        name: "Roost of Drakes",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![kicked_etb(token()), TriggeredAbility { event: kicked_cast(), effect: token() }],
+        ..Default::default()
+    }
+}
+
+/// Wild Onslaught — {3}{G} instant, kicker {4}: a +1/+1 counter on each
+/// creature you control, two if kicked.
+pub fn wild_onslaught() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(4)]))],
+        ..plain_spell(
+            "Wild Onslaught",
+            cost(&[generic(3), g()]),
+            CardType::Instant,
+            Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::IfPred {
+                    pred: Box::new(Predicate::SpellWasKicked),
+                    then: Box::new(Value::Const(2)),
+                    else_: Box::new(Value::ONE),
+                },
+            },
+        )
+    }
+}
+
+/// Field Research — {2}{U} sorcery, kicker {2}{U}: draw two, three if kicked.
+pub fn field_research() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), u()]))],
+        ..plain_spell(
+            "Field Research",
+            cost(&[generic(2), u()]),
+            CardType::Sorcery,
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::IfPred {
+                    pred: Box::new(Predicate::SpellWasKicked),
+                    then: Box::new(Value::Const(3)),
+                    else_: Box::new(Value::Const(2)),
+                },
+            },
+        )
     }
 }

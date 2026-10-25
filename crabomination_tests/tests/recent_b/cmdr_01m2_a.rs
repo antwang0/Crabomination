@@ -458,3 +458,62 @@ fn nael_draws_with_five_basic_land_types() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+fn cast_kicked(g: &mut GameState, id: CardId, target: Option<crabomination::game::types::Target>) -> Result<(), GameError> {
+    g.perform_action(GameAction::CastSpellKicked { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Verazol enters with a counter per mana spent; a kicked spell may cost it
+/// two counters to copy (CR 707.10) — Field Research kicked twice over.
+#[test]
+fn verazol_copies_a_kicked_spell_for_two_counters() {
+    let mut g = pod(2);
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let v = g.add_card_to_hand(0, catalog::verazol_the_split_current());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: v, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("X = 2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(v).unwrap().counter_count(CounterType::PlusOnePlusOne), 4, "four mana spent");
+    let fr = g.add_card_to_hand(0, catalog::field_research());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_kicked(&mut g, fr, None).expect("kicked");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 6, "three and a copy's three");
+    assert_eq!(g.battlefield_find(v).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Roost of Drakes: kicked, a Drake as it enters; each later kicked spell, another.
+#[test]
+fn roost_of_drakes_makes_drakes_off_kicker() {
+    let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let roost = g.add_card_to_hand(0, catalog::roost_of_drakes());
+    flood(&mut g, 0);
+    cast_kicked(&mut g, roost, None).expect("kicked");
+    let drakes = |g: &GameState| g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Drake").count();
+    assert_eq!(drakes(&g), 1);
+    let fr = g.add_card_to_hand(0, catalog::field_research());
+    flood(&mut g, 0);
+    cast_kicked(&mut g, fr, None).expect("kicked");
+    assert_eq!(drakes(&g), 2);
+}
+
+/// Territorial Allosaurus kicked fights another target creature.
+#[test]
+fn territorial_allosaurus_kicked_fights() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let allo = g.add_card_to_hand(0, catalog::territorial_allosaurus());
+    flood(&mut g, 0);
+    cast_kicked(&mut g, allo, None).expect("kicked; the trigger aims at the only other creature");
+    assert!(g.battlefield_find(bear).is_none(), "5 damage kills the Bears");
+    assert_eq!(g.battlefield_find(allo).unwrap().damage, 2);
+}
