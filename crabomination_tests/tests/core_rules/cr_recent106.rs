@@ -1666,3 +1666,34 @@ fn cr_702_33_a_kicked_spell_counts_one_kick() {
         }
     }
 }
+
+/// CR 205.1b — "isn't a Human" removes that one creature type until end of
+/// turn and leaves the others (Werewolf Pack Leader's {3}{G}: base 5/3,
+/// trample, a Werewolf that isn't a Human).
+#[test]
+fn cr_205_1b_isnt_a_type_removes_only_that_type() {
+    use crabomination::card::CreatureType;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut g = peace_main();
+    let leader = g.add_card_to_battlefield(0, catalog::werewolf_pack_leader());
+    g.clear_sickness(leader);
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: leader,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let types = |g: &GameState| g.computed_permanent(leader).unwrap().subtypes().creature_types.clone();
+    assert_eq!(types(&g), vec![CreatureType::Werewolf]);
+    let c = g.computed_permanent(leader).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 3));
+    let mut events = Vec::new();
+    g.do_cleanup(&mut events);
+    assert!(types(&g).contains(&CreatureType::Human), "until end of turn");
+}

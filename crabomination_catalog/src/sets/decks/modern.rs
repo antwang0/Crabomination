@@ -11176,6 +11176,11 @@ pub fn werewolf_pack_leader() -> CardDefinition {
                     keyword: Keyword::Trample,
                     duration: Duration::EndOfTurn,
                 },
+                Effect::LoseCreatureType {
+                    what: Selector::This,
+                    creature_type: CreatureType::Human,
+                    duration: Duration::EndOfTurn,
+                },
             ]),
             ..Default::default()
         }],
