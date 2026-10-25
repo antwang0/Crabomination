@@ -1984,15 +1984,12 @@ pub fn tamiyo_compleated_sage() -> CardDefinition {
 /// untapping your permanents and drawing you a card on each opponent's turn.
 pub fn teferi_who_slows_the_sunset() -> CardDefinition {
     let loyalty = |cost: i32, effect: Effect| crate::card::LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() };
-    let toggle = |filter: R| Effect::ApplyToTargets {
-        max_targets: 3,
-        min_targets: 0,
-        filter,
-        effect: Box::new(Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ControlledByYou },
-            then: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
-            else_: Box::new(Effect::Tap { what: Selector::Target(0) }),
-        }),
+    // "Up to one target artifact, up to one target creature, and up to one
+    // target land" — a slot each (CR 601.2c); untap yours, tap the rest.
+    let toggle = |slot: u8, filter: R| Effect::If {
+        cond: Predicate::EntityMatches { what: Selector::Target(slot), filter: R::ControlledByYou },
+        then: Box::new(Effect::Untap { what: Selector::TargetFiltered { slot, filter: filter.clone() }, up_to: None }),
+        else_: Box::new(Effect::Tap { what: Selector::TargetFiltered { slot, filter } }),
     };
     let on_their_step = |step: TurnStep, effect: Effect| TriggeredAbility {
         event: EventSpec::new(EventKind::StepBegins(step), EventScope::OpponentControl),
@@ -2006,7 +2003,20 @@ pub fn teferi_who_slows_the_sunset() -> CardDefinition {
         },
         base_loyalty: 4,
         loyalty_abilities: vec![
-            loyalty(1, Effect::Seq(vec![toggle(R::Artifact.or(R::Creature).or(R::Land)), gain(2)])),
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::Seq(vec![
+                            toggle(0, R::Artifact),
+                            toggle(1, R::Creature),
+                            toggle(2, R::Land),
+                        ])),
+                    },
+                    gain(2),
+                ]),
+            ),
             loyalty(
                 -2,
                 Effect::LookPickToHand(Box::new(crate::effect::LookPick { count: Value::Const(3), ..Default::default() })),

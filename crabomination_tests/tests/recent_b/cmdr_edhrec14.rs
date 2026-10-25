@@ -300,24 +300,36 @@ fn golden_argosy_flickers_its_crew_at_end_step() {
     assert!(g.battlefield_find(idle).is_some(), "a creature that didn't crew stays");
 }
 
-/// Teferi, Who Slows the Sunset +1: of the chosen artifact, creature and land,
-/// yours untap and the others tap; you gain 2 life.
+/// CR 601.2c — Teferi, Who Slows the Sunset +1: up to one target artifact,
+/// one creature and one land (a slot each, not three of a kind); yours untap,
+/// the others tap; you gain 2 life.
 #[test]
 fn teferi_who_slows_the_sunset_untaps_yours_and_taps_theirs() {
     let mut g = pod(2);
     let teferi = ready(&mut g, 0, catalog::teferi_who_slows_the_sunset());
-    let my_land = ready(&mut g, 0, catalog::wastes());
-    g.battlefield_find_mut(my_land).unwrap().tapped = true;
-    let their_bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let their_ring = ready(&mut g, 1, catalog::sol_ring());
+    let bears = [ready(&mut g, 1, catalog::grizzly_bears()), ready(&mut g, 1, catalog::grizzly_bears())];
     let life = g.players[0].life;
+    assert!(
+        g.perform_action(GameAction::ActivateLoyaltyAbility {
+            card_id: teferi,
+            ability_index: 0,
+            target: Some(Target::Permanent(bears[0])),
+            x_value: None,
+        })
+        .is_err(),
+        "the first slot is the artifact's"
+    );
     act(&mut g, GameAction::ActivateLoyaltyAbility {
         card_id: teferi,
         ability_index: 0,
-        target: Some(Target::Permanent(their_bear)),
+        target: Some(Target::Permanent(their_ring)),
         x_value: None,
     })
     .expect("+1");
-    assert!(g.battlefield_find(their_bear).unwrap().tapped, "their creature taps");
+    assert!(g.battlefield_find(their_ring).unwrap().tapped, "their artifact taps");
+    let tapped = bears.iter().filter(|b| g.battlefield_find(**b).unwrap().tapped).count();
+    assert!(tapped <= 1, "one creature slot");
     assert_eq!(g.players[0].life, life + 2);
 }
 
