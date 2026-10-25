@@ -209,6 +209,7 @@ mod quest_copy;
 mod discard_pick;
 mod growth_loop;
 mod drain_shortcut;
+mod mana_pips;
 mod venture_limit;
 mod craft_each;
 mod copy_loop;

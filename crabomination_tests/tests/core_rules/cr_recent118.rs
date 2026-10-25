@@ -1785,3 +1785,25 @@ fn cr_603_2_a_castle_land_put_in_tapped_does_not_trigger() {
         }
     }
 }
+
+/// Regression (4-seat `random_pods` seed 10856, decks 434,1376,5670,5938,
+/// game 3: OOM at 13.6 GB): Selvala's "add X mana in any combination of
+/// colors" with X off a saturated power pushed one event per pip — two
+/// billion of them. The pip count saturates at `SCALE_CEILING`.
+#[test]
+fn a_saturated_mana_amount_makes_a_bounded_pool() {
+    let mut g = main_phase();
+    let selvala = g.add_card_to_battlefield(0, catalog::selvala_heart_of_the_wilds());
+    let mut huge = catalog::grizzly_bears();
+    huge.power = i32::MAX;
+    g.add_card_to_battlefield(0, huge);
+    let ab = catalog::selvala_heart_of_the_wilds()
+        .activated_abilities
+        .into_iter()
+        .find(|a| a.effect.any_nested(&|e| matches!(e, Effect::AddMana { .. })))
+        .expect("the mana ability");
+    let events = g.resolve_effect(&ab.effect, &EffectContext::for_ability(selvala, 0, None)).expect("resolves");
+    let total = g.players[0].mana_pool.total();
+    assert!(total > 0 && total <= 10_000, "{total}");
+    assert!(events.len() <= 10_001);
+}

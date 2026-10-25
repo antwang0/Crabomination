@@ -15093,7 +15093,7 @@ impl GameState {
                     | ManaPayload::AnyTypeAGateYouControlCouldProduce => {
                         let (n, gates) = match pool {
                             ManaPayload::AnyTypeALandYouControlCouldProduce(v) => {
-                                (self.evaluate_value(v, ctx).max(0) as u32, false)
+                                (self.mana_pip_count(v, ctx), false)
                             }
                             _ => (1, true),
                         };
@@ -15223,7 +15223,7 @@ impl GameState {
                         // state and isn't needed by any catalog card today.
                         // "Different colors" drops each pick from the palette.
                         let distinct = matches!(pool, ManaPayload::DifferentColors(_));
-                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        let n = self.mana_pip_count(v, ctx);
                         let mut legal = vec![
                             Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                         ];
@@ -15253,7 +15253,7 @@ impl GameState {
                     ManaPayload::OfColors(colors, v) => {
                         // N pips, each chosen from the restricted palette
                         // (Culling Ritual: {B} or {G} per permanent destroyed).
-                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        let n = self.mana_pip_count(v, ctx);
                         for _ in 0..n {
                             let color = self.chosen_mana_color(p, colors, ctx.source);
                             add_one(self, p, color);
@@ -15282,7 +15282,7 @@ impl GameState {
                 if colors.is_empty() {
                     return Ok(());
                 }
-                for _ in 0..self.evaluate_value(amount, ctx).max(0) {
+                for _ in 0..self.mana_pip_count(amount, ctx) {
                     let color = self.chosen_mana_color(p, &colors, ctx.source);
                     self.players[p].mana_pool.add(color, 1);
                     events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
@@ -15333,7 +15333,7 @@ impl GameState {
 
             Effect::AddRedUntilEndOfCombat { amount } => {
                 let p = ctx.controller;
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let n = self.mana_pip_count(amount, ctx);
                 if n > 0 && self.players.get(p).is_some_and(|pl| pl.is_alive()) {
                     self.players[p].mana_pool.add(crate::mana::Color::Red, n);
                     self.players[p].firebending_kept_red = self.players[p].firebending_kept_red.saturating_add(n);
@@ -15345,7 +15345,7 @@ impl GameState {
             }
             Effect::Firebend { amount } => {
                 let p = ctx.controller;
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let n = self.mana_pip_count(amount, ctx);
                 if n > 0 && self.players.get(p).is_some_and(|pl| pl.is_alive()) {
                     self.players[p].mana_pool.add(crate::mana::Color::Red, n);
                     self.players[p].firebending_kept_red = self.players[p].firebending_kept_red.saturating_add(n);
@@ -15371,7 +15371,7 @@ impl GameState {
             }
             Effect::AddManaKeptThisTurnCount { who, color, amount } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let n = self.mana_pip_count(amount, ctx);
                 let mult = self.mana_production_multiplier.max(1);
                 for _ in 0..(n * mult) {
                     self.players[p].mana_pool.add(*color, 1);
