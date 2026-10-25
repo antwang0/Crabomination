@@ -1676,8 +1676,9 @@ fn cr_608_2d_a_graveyard_return_takes_the_players_pick() {
     use crabomination::card::Zone;
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     type Factory = fn() -> crabomination::card::CardDefinition;
+    type Row = (&'static str, Effect, Vec<DecisionAnswer>, Factory, Factory, Zone);
     let adventure = |f: Factory| f().adventure.expect("an adventure").effect;
-    let rows: Vec<(&str, Effect, Vec<DecisionAnswer>, Factory, Factory, Zone)> = vec![
+    let rows: Vec<Row> = vec![
         ("Incarnation Technique", catalog::incarnation_technique().effect, vec![], catalog::grizzly_bears, catalog::serra_angel, Zone::Battlefield),
         ("Roots of Wisdom", catalog::roots_of_wisdom().effect, vec![], catalog::forest, catalog::llanowar_elves, Zone::Hand),
         ("Cruel Ultimatum", catalog::cruel_ultimatum().effect, vec![], catalog::grizzly_bears, catalog::serra_angel, Zone::Hand),
