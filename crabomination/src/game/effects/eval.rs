@@ -3129,11 +3129,13 @@ impl GameState {
                         .any(|c| c.controller == p && self.is_own_commander_object(p, c.id))
                 })
             }
-            Predicate::CastWithMarkedMana { what } => self
-                .resolve_selector(what, ctx)
-                .into_iter()
-                .filter_map(|e| e.as_card_id())
-                .any(|id| self.find_card_anywhere(id).is_some_and(|c| c.cast_with_marked_mana)),
+            Predicate::CastWithMarkedMana { what, mark } => {
+                let bit = 1u8.checked_shl((*mark).into()).unwrap_or(0);
+                self.resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .any(|id| self.find_card_anywhere(id).is_some_and(|c| c.cast_marked_mana & bit != 0))
+            }
             Predicate::SnowOfItsColorSpentToCast { what } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
@@ -6493,6 +6495,7 @@ impl GameState {
                     R::HasCyclingAbility => card.definition.has_cycling_ability(),
                     R::HasKickerAbility => card.definition.has_kicker_ability(),
                     R::HasActivatedAbility => card.definition.has_activated_ability(),
+                    R::HasTapAbility => card.definition.activated_abilities.iter().any(|a| a.tap_cost),
                     R::HasEmbalmOrEternalize => card.definition.has_embalm_or_eternalize(),
                     R::HasDisturb => card.definition.has_disturb(),
                     R::HasFlashback => card.definition.has_flashback_ability(),
@@ -7770,6 +7773,7 @@ impl GameState {
             R::HasCyclingAbility => card.definition.has_cycling_ability(),
             R::HasKickerAbility => card.definition.has_kicker_ability(),
             R::HasActivatedAbility => card.definition.has_activated_ability(),
+            R::HasTapAbility => card.definition.activated_abilities.iter().any(|a| a.tap_cost),
             R::HasEmbalmOrEternalize => card.definition.has_embalm_or_eternalize(),
             R::HasDisturb => card.definition.has_disturb(),
             R::HasFlashback => card.definition.has_flashback_ability(),

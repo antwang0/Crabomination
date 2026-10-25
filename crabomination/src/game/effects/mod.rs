@@ -16008,6 +16008,11 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let EntityRef::Permanent(cid) = ent else { continue; };
+                    // A selector naming one object twice (a `LastMoved` that
+                    // moved it out and back) flickers it once.
+                    if self.battlefield_find(cid).is_none() {
+                        continue;
+                    }
                     self.remove_from_battlefield_to_exile(cid);
                     if ctx.controller < self.players.len() {
                         self.players[ctx.controller].cards_exiled_this_turn =

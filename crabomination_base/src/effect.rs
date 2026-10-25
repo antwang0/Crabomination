@@ -2193,9 +2193,13 @@ pub enum Predicate {
     /// spell's colors was spent to cast it", on a `SpellCast` trigger with
     /// `Selector::TriggerSource`). Reads `CardData::cast_snow_colors`.
     SnowOfItsColorSpentToCast { what: Selector },
-    /// `SpendRestriction::MarksCast` mana was spent to cast `what` (Barracks
-    /// of the Thousand's "using mana produced by" this).
-    CastWithMarkedMana { what: Selector },
+    /// `SpendRestriction::MarksCast(mark)` mana was spent to cast `what`
+    /// (Barracks of the Thousand's "using mana produced by" this).
+    CastWithMarkedMana {
+        what: Selector,
+        #[serde(default)]
+        mark: u8,
+    },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
     /// the listed threshold. Backed by `Player.speed`.

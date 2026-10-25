@@ -215,10 +215,10 @@ pub struct PlayerCold {
     /// is written so an ordinary cast never unshares the seat.
     #[serde(skip)]
     pub cast_paid_with_treasure: u32,
-    /// Transient: `MarksCast` mana funded the cast in flight; consumed into
-    /// `CardData::cast_with_marked_mana`.
+    /// Transient: the `MarksCast` marks whose mana funded the cast in flight
+    /// (a bit per mark); consumed into `CardData::cast_marked_mana`.
     #[serde(skip)]
-    pub cast_paid_marked: bool,
+    pub cast_paid_marked: u8,
     /// Transient: how much artifact-produced mana this seat's cast in flight
     /// spent (the pool's `artifact` provenance fell). Consumed by
     /// `finalize_cast` into `CardData::cast_artifact_mana`, read-guarded the

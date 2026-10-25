@@ -7956,15 +7956,17 @@ impl GameState {
                     }
                 }
             }
-            // Auras on the attacker with an `EnchantedBySource` combat-damage
-            // trigger ("whenever enchanted creature deals combat damage to a
-            // player" — Pollenbright Wings). The trigger fires off the *Aura*,
-            // so `Selector::AttachedTo(This)` reaches the host.
+            // Attachments on the attacker with an `EnchantedBySource`
+            // combat-damage trigger ("whenever enchanted creature deals combat
+            // damage to a player" — Pollenbright Wings; one an Equipment gains
+            // for a turn — Vorpal Sword). The trigger fires off the
+            // attachment, so `Selector::AttachedTo(This)` reaches the host.
             for aura in &self.battlefield {
-                if aura.attached_to != Some(source) || !self.computed_has_card_type(aura, crate::card::CardType::Enchantment) {
+                if aura.attached_to != Some(source) {
                     continue;
                 }
-                for (idx, t) in aura.definition.triggered_abilities.iter().enumerate() {
+                let printed = aura.definition.triggered_abilities.iter().enumerate().map(|(i, t)| (Some(i), t));
+                for (idx, t) in printed.chain(self.granted_triggers(aura.id).map(|t| (None, t))) {
                     if t.event.scope == crate::effect::EventScope::EnchantedBySource
                         && let Some(i) = slot(&t.event)
                     {
@@ -7974,7 +7976,7 @@ impl GameState {
                             aura.controller,
                             t.event.filter.clone(),
                             false,
-                            once_key(Some(idx), t),
+                            once_key(idx, t),
                         ));
                     }
                 }

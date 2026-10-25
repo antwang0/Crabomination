@@ -3625,14 +3625,14 @@ pub fn thousand_moons_smithy() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Restricted(Box::new(ManaPayload::Colors(vec![Color::White])), SpendRestriction::MarksCast),
+                pool: ManaPayload::Restricted(Box::new(ManaPayload::Colors(vec![Color::White])), SpendRestriction::MarksCast(0)),
             },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
                 Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.or(R::Creature) },
-                Predicate::CastWithMarkedMana { what: Selector::TriggerSource },
+                Predicate::CastWithMarkedMana { what: Selector::TriggerSource, mark: 0 },
             ])),
             effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(gnome_soldier()) },
         }],

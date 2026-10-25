@@ -2175,6 +2175,7 @@ pub(crate) fn requirement_matches_card_typed(
         // Survivor's "creature cards with activated abilities that aren't mana
         // abilities"): this walker answered false for both leaves.
         R::HasActivatedAbility => def.has_activated_ability(),
+        R::HasTapAbility => def.activated_abilities.iter().any(|a| a.tap_cost),
         R::HasEmbalmOrEternalize => def.has_embalm_or_eternalize(),
         // CR 715.1 — "a card that has an Adventure" among milled/revealed
         // cards (Seek Thrills): this walker answered false.

@@ -3237,6 +3237,9 @@ pub enum SelectionRequirement {
     /// that is one (equip, crew, reconfigure, cycling): The Enigma Jewel's
     /// "four or more nonlands with activated abilities".
     HasActivatedAbility,
+    /// Prints an activated ability with {T} in its cost (Magewright's Stone's
+    /// "creature that has an activated ability with {T} in its cost").
+    HasTapAbility,
     /// Prints an embalm (CR 702.128) or eternalize (CR 702.129) ability —
     /// Vizier of the Anointed's "creature card with eternalize or embalm".
     HasEmbalmOrEternalize,
@@ -10718,9 +10721,9 @@ pub struct CardData {
     /// Read by `StaticEffect::OtherCreaturesEnterWithCountersPerTreasureMana`
     /// (Kalain, Reclusive Painter). Not serialized.
     pub cast_treasure_mana: u8,
-    /// `SpendRestriction::MarksCast` mana funded this spell. Read by
-    /// `Predicate::CastWithMarkedMana`. Not serialized.
-    pub cast_with_marked_mana: bool,
+    /// Bit `i` set: `SpendRestriction::MarksCast(i)` mana funded this spell.
+    /// Read by `Predicate::CastWithMarkedMana`. Not serialized.
+    pub cast_marked_mana: u8,
     /// Mana from artifact sources spent to cast this spell, capped at 255.
     /// Read by `Value::ArtifactManaSpentToCastSource` (Coin of Mastery). Not
     /// serialized.
@@ -11787,7 +11790,7 @@ impl CardInstance {
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
             cast_treasure_mana: 0,
-            cast_with_marked_mana: false,
+            cast_marked_mana: 0,
             cast_artifact_mana: 0,
             cast_desert_mana: 0,
             cast_snow_mana: 0,

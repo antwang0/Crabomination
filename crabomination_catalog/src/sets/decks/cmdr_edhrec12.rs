@@ -531,7 +531,7 @@ pub fn release_to_the_wind() -> CardDefinition {
 
 /// Gilanra, Caller of Wirewood — {2}{G} 1/2 Elf Druid, partner. {T}: add
 /// {G}; when you spend this mana on a spell with mana value 6 or greater,
-/// draw a card (the `MarksCast` rider, which does not name its source).
+/// draw a card (`MarksCast(1)`, its own mark — Barracks of the Thousand is 0).
 pub fn gilanra_caller_of_wirewood() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Partner],
@@ -541,7 +541,7 @@ pub fn gilanra_caller_of_wirewood() -> CardDefinition {
                 who: PlayerRef::You,
                 pool: ManaPayload::Restricted(
                     Box::new(ManaPayload::Colors(vec![Color::Green])),
-                    SpendRestriction::MarksCast,
+                    SpendRestriction::MarksCast(1),
                 ),
             },
             ..Default::default()
@@ -549,7 +549,7 @@ pub fn gilanra_caller_of_wirewood() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
                 Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ManaValueAtLeast(6) },
-                Predicate::CastWithMarkedMana { what: Selector::TriggerSource },
+                Predicate::CastWithMarkedMana { what: Selector::TriggerSource, mark: 1 },
             ])),
             effect: draw(1),
         }],

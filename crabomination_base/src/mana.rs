@@ -730,9 +730,9 @@ pub enum SpendRestriction {
     CreatureOnly,
     /// A rider that marks the spell it funds — "whenever you cast [a spell]
     /// using mana produced by [this]" (Barracks of the Thousand). Freely
-    /// spendable; read by `Predicate::CastWithMarkedMana`. One source per
-    /// deck prints it, so the mark doesn't name its source.
-    MarksCast,
+    /// spendable; read by `Predicate::CastWithMarkedMana` with the same mark
+    /// index (0..8), so Barracks' mana never answers Gilanra's rider.
+    MarksCast(u8),
     /// `CreatureOnly` made by a creature (Inga and Esika's granted ability):
     /// restricted mana skips the pool's creature provenance, so a payment's
     /// spent count of this one is added to the creature-mana tally instead.
@@ -1087,7 +1087,7 @@ impl SpendRestriction {
             | SpendRestriction::RedInstantSorceryCopy
             | SpendRestriction::InstantSorceryCopy
             | SpendRestriction::SpellOrAbilityCopy
-            | SpendRestriction::MarksCast => {
+            | SpendRestriction::MarksCast(_) => {
                 return None;
             }
         })
@@ -1292,7 +1292,7 @@ impl SpendRestriction {
             | SpendRestriction::RedInstantSorceryCopy
             | SpendRestriction::InstantSorceryCopy
             | SpendRestriction::SpellOrAbilityCopy
-            | SpendRestriction::MarksCast => {
+            | SpendRestriction::MarksCast(_) => {
                 debug_assert!(self.is_rider(), "rider arm reached through the match");
                 true
             }
