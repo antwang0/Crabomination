@@ -3176,6 +3176,18 @@ closing tip      (loyalty abilities obey protection) --bench 27.64 / 613.0 / 0 s
                  cube/sos/sealed seed 10168 x 300: 7,500 decided; pods seed 10168 x 200 at 3/4/6/8 seats: 800 decided
 ```
 
+### 2026-10-25 (Commander run, `01M2Ffkh` second pass) — guardrail; one kick-count store, a per-cast pip check on or-pay costs
+
+New on cast paths: a kicked spell with a printed kicker stores `kick_count = 1`; `or_pay_cost_symbols` walks the
+battlefield only for a `SacrificeOrPay` with coloured pips (three cards). `release-fast` bot_ladder, same box as below:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+2-player pools   seed 10185 x 300: cube 2,400 / sos 1,500 / sealed 3,600 decided, 0 undecided
+pods             seed 10184, 200 games at each of 3/4/6/8 seats: 800 decided
+seat test        6,093 seats, overflow, two shards: 296 s + 294 s, green
+```
+
 ### 2026-10-24 night (Commander run, `01M2Ffkh`) — guardrail; gather key +1 mix, a stack walk in the bot's activation guard
 
 New on hot-ish paths: one more `mix` of four turn-registry lengths per `gather_key`, and `stacks_onto_own_activation`

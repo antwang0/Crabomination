@@ -20,6 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs](#fixedopen-2026-10-25-commander-run-01y6zrfx--the-last-five-edhrec-singles-a-state-trigger-class-stale-residual-docs) | 27 |
+| Bugs & robustness | [FIXED 2026-10-25 (Commander run, `01M2Ffkh` second pass) — no seats: kicker count, three engine shapes, seven seated-deck rows](#fixed-2026-10-25-commander-run-01m2ffkh-second-pass--no-seats-kicker-count-three-engine-shapes-seven-seated-deck-rows) | 26 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang](#fixedopen-2026-10-24-commander-run-01m2ffkh--33-seats-a-stale-layer-memo-a-sacrifice-cost-draw-loop-a-trigger-stack-hang) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot](#fixedopen-2026-10-24-commander-run-01s1rwz4--the-counter-placer-class-as-long-as-you-control-livios-bot) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall](#fixedopen-2026-10-24-commander-run-01rsnzao--shipped-card-defects-by-seated-deck-count-one-stall) | 22 |
@@ -309,6 +310,29 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   never picks a 5-mana pump; Reroute needs an activated ability with one target on the stack) — not plumbing bugs.
 - **Fuzz:** `random_pods.sh` 4 seats × 1,000 groups × 5 (seed 10181): 2 undecided of 5,000 — one CR 104.4b draw, one board
   cap (Rabble Rousing doubling Citizens, NEXT line 6's known shape); 6 seats × 400 × 3 (10601): 1,200 decided, 0 panics.
+## FIXED 2026-10-25 (Commander run, `01M2Ffkh` second pass) — no seats: kicker count, three engine shapes, seven seated-deck rows
+
+The EDHREC well is dry (`01Y6ZRFx`), so this pass mined bugs and closed 🟡 rows by seated-deck count
+(`scratchpad rank_yellow` = INCOMPLETE ∩ `pod/decks.rs`; `scripts/pod_residuals.py --cards` for doc residuals).
+- **FIXED (class, CR 702.33):** `kick_count` was stamped only by the multikicker cast, so `Value::TimesKicked` /
+  `CastSpellTimesKicked` read 0 for a plainly kicked spell — Skyclave Sentinel and Skyclave Shade entered with no
+  counters when kicked (found by the rotted `audit_enters_with` gate, whose Shade exemption had assumed the fix).
+- **FIXED (audit gates rotted to 3 red after the other sessions' cards):** the two batch audits now know the
+  `FromYourGraveyard` combat-damage walk is one per damaged subject (Thunderblade Charge) and Vexing Puzzlebox's
+  per-die counters sum to the roll; `audit_gates.py` 0 failing.
+- **New shapes:** `Modification::RemoveCreatureType` + `Effect::LoseCreatureType` (CR 205.1b, Werewolf Pack Leader's
+  "isn't a Human"); `SacrificeOrPay { pay_pips }` (Eaten Alive / Spark Harvest {3}{B}, Morkrut Behemoth {1}{B} —
+  were generic); Teferi, Who Slows the Sunset's +1 as three per-type slots (`OptionalTargets` + `TargetFiltered`).
+- **Rows closed:** Hand of Vecna (equipped creature *or* Vecna, `ChooseOneAmong`), In Search of Greatness (MV
+  *exactly* 1 + other permanents' greatest), Werewolf Pack Leader, Teferi's +1 (its −7 emblem timing stays 🟡),
+  Eradicator Valkyrie (stale — `HexproofFromPlaneswalkers` had landed).
+- **Sweeps:** release 10181 (4/6 seats, 2,538 games): 2 CR 104.4a draws (Descent into Avernus) + 1 board cap
+  (Hollowhenge Overlord doubling Wolves under an opponent's Stormtide Leviathan — no attack possible, a true
+  exponential); audit 10182 (3/5, 3,250 games) 0 bad; audit 10183 (6/8, `CRAB_POD_CONCEDE=20 CRAB_POD_FUZZ=300`,
+  1,778 games) 0 bad.
+- **OPEN, priced:** Karn, Living Legacy (21 decks) needs an emblem that is a damage *source* (`Emblem` has no id);
+  Jacob Hauken's free play needs a your-turn gate and land counting on `OneCastPerTurnAmongGranted`; Wizard's
+  Rockets' X mana ability (no X on a mana ability); `ActivateLoyaltyAbility` extra targets (human seats only).
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
 
