@@ -588,10 +588,21 @@ fn cr_105_3_colored_animation_sets_colors_for_its_duration() {
     let idx = def
         .activated_abilities
         .iter()
-        .position(|a| matches!(a.effect, Effect::BecomeCreature { .. }))
+        // Bare, or first in a Seq (its layer-4 every-type rides beside it).
+        .position(|a| match &a.effect {
+            Effect::BecomeCreature { .. } => true,
+            Effect::Seq(v) => matches!(v.first(), Some(Effect::BecomeCreature { .. })),
+            _ => false,
+        })
         .expect("Mutavault animates");
-    let animate = def.activated_abilities[idx].effect.clone();
-    def.activated_abilities[idx].effect = colored_animation(animate, &[Color::Red, Color::Green]);
+    let paint = |e: Effect| colored_animation(e, &[Color::Red, Color::Green]);
+    match &mut def.activated_abilities[idx].effect {
+        Effect::Seq(v) => {
+            let first = v.remove(0);
+            v.insert(0, paint(first));
+        }
+        e => *e = paint(e.clone()),
+    }
     let mut g = main_phase();
     let land = g.add_card_to_battlefield(0, def);
     assert!(g.computed_permanent(land).unwrap().colors.is_empty(), "colorless land");
