@@ -42012,7 +42012,7 @@ mod tests {
             ("Kamahl, Heart of Krosa and Sakashima of a Thousand Faces", &[0x1615]),
             ("Malcolm, Keen-Eyed Navigator and Sidar Kondo of Jamuraa", &[0x1616]),
             ("Rograkh, Son of Rohgahh and Thrasios, Triton Hero", &[0x1617]),
-            ("Sakashima of a Thousand Faces and Sidar Kondo of Jamuraa", &[0x1618]),
+            ("Sakashima of a Thousand Faces and Sidar Kondo of Jamuraa", &[0x7EFE43]),
             ("Sakashima of a Thousand Faces and Tevesh Szat, Doom of Fools", &[0x1619]),
             ("Siani, Eye of the Storm and Toggo, Goblin Weaponsmith", &[0x161A]),
             ("The Eighth Doctor and Jo Grant", &[0x161B]),
