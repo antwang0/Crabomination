@@ -806,6 +806,8 @@ pub enum CounterType {
     /// Point counter — Strixhaven Stadium's combat-damage score. Ten or
     /// more on the Stadium ends the game for the damaged opponent.
     Point,
+    /// Influence counter — Palantír of Orthanc's end-step tally.
+    Influence,
     /// Hone counter — Strixhaven cast-from-exile timer (Uvilda, Dean of
     /// Perfection). An instant/sorcery exiled with hone counters ticks one off
     /// each of the owner's upkeeps; when the last is removed it becomes

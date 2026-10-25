@@ -1368,13 +1368,11 @@ pub fn conjurers_closet() -> CardDefinition {
 /// opponent may have you draw a card. If that player doesn't, you mill X cards,
 /// where X is the number of influence counters on Palantír of Orthanc, and that
 /// player loses life equal to the total mana value of those cards.
-///
-/// Approximation: influence counters are charge counters.
 pub fn palantir_of_orthanc() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![your_end_step(Effect::Seq(vec![
-            Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+            Effect::AddCounter { what: Selector::This, kind: CounterType::Influence, amount: Value::ONE },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::AnyPlayerMayAccept {
                 who: PlayerRef::Target(0),
@@ -1385,7 +1383,7 @@ pub fn palantir_of_orthanc() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::CountersOn {
                             what: Box::new(Selector::This),
-                            kind: CounterType::Charge,
+                            kind: CounterType::Influence,
                         },
                     },
                     Effect::LoseLife {

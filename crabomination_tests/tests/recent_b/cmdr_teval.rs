@@ -1106,7 +1106,7 @@ fn palantir_of_orthanc_ticks_and_punishes_or_feeds() {
     }
     let (hand, lib, life) = (g.players[0].hand.len(), g.players[0].library.len(), g.players[1].life);
     advance_to(&mut g, TurnStep::End);
-    assert_eq!(g.battlefield_find(palantir).unwrap().counter_count(CounterType::Charge), 1);
+    assert_eq!(g.battlefield_find(palantir).unwrap().counter_count(CounterType::Influence), 1);
     let drew = g.players[0].hand.len() == hand + 1;
     let milled = g.players[0].library.len() == lib - 1 && g.players[1].life == life - 2;
     assert!(drew ^ milled, "exactly one branch ran");
