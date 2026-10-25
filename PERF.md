@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-25 late (Commander run, `claude/modern_decks` drain shortcut) — guardrail; a life-only loop watch, eight MoveChosen bodies
+
+New on hot-ish paths: every top-of-stack resolution reads one more cold `Option` (`drain_watch`, `game/drain_shortcut.rs`);
+the watch arms only when the exact CR 104.4b watch re-anchors a trigger chain that ran its 8-resolution period, so an
+ordinary game never writes the cold group for it. `fingerprint_head` takes a `with_life` flag (both old callers pass
+true). `release-fast` bot_ladder, 4-core Xeon @ 2.10 GHz, base `2ff167cad` built in a worktree with its own target dir:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok; peak_rss_mib 56.5;
+                 bench_ab.py 16 pairs base vs tip: +1.21 % median (sd 11.2 — noise; no regression)
+pods             seed 10707 x 300 at 2..8 seats: 2,100 / 2,100 decided on both binaries, identical turns/game;
+                 seed 10708 x 2,000 at 2..8 seats: 14,000 / 14,000 decided; random_pods 4 x 1,000 x 5 (10709): 0 undecided
+repro            8-seat --pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --seed 1071172: base action cap at 43,547
+                 actions; tip decided in 4,710 actions, 0.26 s
+```
+
 ### 2026-10-25 (Commander run, `01M3bbRx`) — guardrail; the player-target event, chosen-source redirects, a cast brake
 
 New on hot-ish paths: every targeting site emits `PlayerBecameTarget` for a player slot (one more event a targeted
@@ -20420,6 +20436,10 @@ is a `--bench` reading and none of it belongs in the Baseline.
 under Twinning Staff, now stopped by the 40-cast brake (`83777f810`), still leaves a turn of ~3,800 actions at
 ~130 ms each — the game decides at turn 81 in **535 s** (before the brake: killed at 30+ CPU-min). Not profiled;
 likely the "near-cap board gathers O(n²)" row below in another shape (every token is a copy with an ETB trigger).
+Re-read at the drain-shortcut tip (`release-fast`, same box): **592 s**, 8,899 actions. A timestamped `CRAB_POD_TRACE`
+puts the first 6,462 actions at 11.6 s; the rest is turn 81, where the Skypainter seat's own priority passes climb
+from ~0.05 s (stack 20) to ~0.28 s (stack 26) each while the other seats' stay ~1 ms — its bot's per-pass work, not
+the engine's resolution.
 
 ### 2026-10-25 — Drought's sacrifice tax walks the battlefield on every black-pip cast and activation
 

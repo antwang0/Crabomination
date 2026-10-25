@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01NTUmZf`) — a CR 732.2a drain shortcut, eight player-chosen returns, bot protection picks](#fixedopen-2026-10-25-commander-run-01ntumzf--a-cr-7322a-drain-shortcut-eight-player-chosen-returns-bot-protection-picks) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01M3bbRx`) — the targeted-player event, chosen-source redirects, a CR 903.4f misreading](#fixedopen-2026-10-25-commander-run-01m3bbrx--the-targeted-player-event-chosen-source-redirects-a-cr-9034f-misreading) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs](#fixedopen-2026-10-25-commander-run-01y6zrfx--the-last-five-edhrec-singles-a-state-trigger-class-stale-residual-docs) | 27 |
 | Bugs & robustness | [FIXED 2026-10-25 (Commander run, `01M2Ffkh` second pass) — no seats: kicker count, three engine shapes, seven seated-deck rows](#fixed-2026-10-25-commander-run-01m2ffkh-second-pass--no-seats-kicker-count-three-engine-shapes-seven-seated-deck-rows) | 26 |
@@ -272,7 +273,8 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   (Nevinyrral was skipped on a cold layer cache). `Keyword::HexproofFromPlaneswalkers` — Eradicator Valkyrie (12).
 - **FIXED (cards):** Archenemy's Charm's mode 2 targets one or two graveyard cards (20); Tenacious Underdog lost a
   `CantBlock` the printed card never had (9); Bilbo's Gambit's two residuals were stale (31, pinned).
-- **OPEN (bot):** the slot walker / `auto_target_for_effect` check `check_target_legality` but not the ability
+- **OPEN (bot), half fixed by `01NTUmZf`** (`auto_target_for_ability` at the single-slot activation sites; the
+  multi-slot walker is still unaware): the slot walker / `auto_target_for_effect` check `check_target_legality` but not the ability
   source's protection, so a bot may skip an activated or loyalty ability whose first pick is protected though another
   target is legal (`state.accept` rejects it cleanly — no stall).
 - **OPEN, next by count:**
@@ -284,6 +286,40 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
 
+## FIXED/OPEN 2026-10-25 (Commander run, `01NTUmZf`) — a CR 732.2a drain shortcut, eight player-chosen returns, bot protection picks
+
+No seats (the EDHREC well is dry; the 🟡-row lane is `01M2Ffkh`'s). Fixed, each with a test:
+- **CR 732.2a finite life-only loops** (`game/drain_shortcut.rs`): the Enduring Tenacity + Exquisite Blood drain against
+  a 22,562-life seat (8-seat `--pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --seed 1071172`) ran to the action cap
+  at 43,547 actions; it now decides in 4,710. A trigger chain past the exact watch's period arms a life-free digest;
+  when the last m returns repeat the m before them, the cycle is repeated k times at once, one short of the first cycle
+  that could take a living seat to 0. The same shape as the older Sanguine Bond + Exquisite Blood row (seed 99300260,
+  not re-run: the seat list has moved since). `cr_recent113::cr_732_2a_*`.
+- **CR 608.2d — "return a card" was the engine's priciest pick** on eight cards (Incarnation Technique, Dim Oubliette,
+  Roots of Wisdom, Cruel Ultimatum, Experimental Overload, Unseal the Necropolis, Gix's Command, Fetch Quest): now
+  `MoveChosen`. The census was `best_of` / `take_priciest` under a `Move`; the ~15 left are casts, searches or
+  exiles with their own semantics. Sakashima's Protégé's 🟡 row was stale (its copy is a `ChooseCards`).
+- **Geode Golem** (66 seated decks): with two commanders in the command zone the seat picks which is cast.
+- **Bot, CR 702.16b:** `GameState::auto_target_for_ability` — the activation / loyalty single-slot pick passes over a
+  target protected from the ability's source (the bot used to drop the ability with another target legal). The
+  multi-slot walker is unchanged: its `source` is also a spell's, whose protection test differs.
+- **CR 613.7:** a `GrantTriggeredAbility { Permanent }` after a "loses all abilities" survives it (the trigger half of
+  `f8c7dc177`); `GrantStateTrigger` and the type bakes still don't, and a timed grant *older* than a strip survives it.
+- **The staple-audit rows (`01M3bbRx`'s six, by seated count):** CR 603.3a — an attachment's own trigger
+  (`triggers_on_equipment`) is its controller's at all six binding sites (`EquipBonus::trigger_binding`); Skullclamp
+  (924 decks) is now its own trigger. CR 603.2 — the castle lands' "enters untapped" is a trigger filter, not a
+  recount (Mystic Sanctuary 497, Witch's Cottage, Dwarven Mine, Gingerbread Cabin). Black Market Connections (458)
+  offers all three modes (the bot's `mode_life` trim keeps the floor). Chrome Mox (212) imprints the controller's pick.
+  Urza's Saga (339): `R::HasNoManaCost` — Lotus Bloom isn't "mana cost {0}". Myriad Landscape's row didn't reproduce
+  (pinned). Clean seated decks 2,326 → 4,649 / 6,093.
+- `audit_panics` back to **0 bare** (three FRA sites from the ML session; the env-var error exits instead).
+- **Stale OPENs closed:** Gandalf the White's leave half (the dispatcher's `triggered_by_leave`), the Kraul Harpooner /
+  Winter Eladrin `OptionalTargets` decline (pinned by two bot-driven tests).
+
+OPEN: the Skypainter pod (6-seat `--pod-decks 6054,2881,4375,3323,4191,834 --seed 1073858`) still decides in ~590 s —
+PERF's candidate, now with a per-action trace. Stinging Study's partner pick needs a gain-valued "choose a commander"
+(`ChooseOneAmong` ranks a draw-and-lose body as a cost).
+
 ## FIXED/OPEN 2026-10-25 (Commander run, `01M3bbRx`) — the targeted-player event, chosen-source redirects, a CR 903.4f misreading
 
 No seats (the EDHREC well is dry). Fixed, each with a test:
@@ -294,7 +330,7 @@ No seats (the EDHREC well is dry). Fixed, each with a test:
 - **A cast loop with no repeat:** Inspired Skypainter's prepared Maestro's Gift copying a Skypainter that enters prepared, doubled by Twinning Staff, ran a six-seat pod for 30+ CPU-minutes (seed 1073858, decks 6054,2881,4375,3323,4191,834). `activation_cap::over_cast_cap` — past 40 spells in a turn a Commander bot stops casting.
 - A subagent read all 76 COMMANDER_BACKLOG §3 commander-clause cards against Scryfall: the Plate and Forge above; Stinging Study / Geode Golem pick the higher-MV partner (INCOMPLETE 🟡); the rest correct.
 
-OPEN: the Enduring Tenacity + Exquisite Blood drain against a 22,562-life seat runs to the action cap (8-seat `--pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --seed 1071172`) — finite, so neither loop watch fires; a CR 732.2 shortcut for a two-trigger drain would end it. Board caps 7 / 8,380 at seeds 10702-10703 (Scute Swarm, Hare Apparent, Saheeli, Tireless Tracker; all reproduce on the session's base binary).
+~~OPEN: the Enduring Tenacity + Exquisite Blood drain against a 22,562-life seat runs to the action cap (8-seat `--pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --seed 1071172`) — finite, so neither loop watch fires; a CR 732.2 shortcut for a two-trigger drain would end it.~~ Fixed by `01NTUmZf` (`game/drain_shortcut.rs`). Board caps 7 / 8,380 at seeds 10702-10703 (Scute Swarm, Hare Apparent, Saheeli, Tireless Tracker; all reproduce on the session's base binary).
 
 ## FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs
 
