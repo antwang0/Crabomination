@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-25 (Commander run, `013mwV6T`) — guardrail; attachment combat walk reads granted triggers, MarksCast bitmask
+
+New on hot-ish paths: phase 1b of the combat-damage walk visits every attached permanent (not only Auras) and chains
+`granted_triggers(id)` (empty fast path); `cast_paid_marked` is a `u8` mask. `release-fast` bot_ladder, 4-core Xeon @
+2.10 GHz (a slower box than the row below), base `ab833866a` built in a worktree with its own target dir:
+
+```
+--bench          decisions 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok; thread_determinism ok (3 vs 1);
+                 peak_rss_mib 55.0; decisions_per_s base 155,165 / tip 154,672 over 8 interleaved pairs: -0.32 % (noise)
+2-player pools   seed 10163 x 300: cube 2,400 / sos 1,500 / sealed 3,600 decided, 0 undecided
+pods             seed 10161, 200 games at each of 2..8 seats: 1,400 decided;
+                 turns/game 19.80 / 32.11 / 47.02 / 57.86 / 70.56 / 83.95 / 96.90
+fixed-card seats the 430 decks holding a card this run changed, 106 four-seat groups x 20 (seed 10162):
+                 2,119 / 2,120 decided, 1 CR 104.4a draw, 0 panics
+```
+
 ### 2026-10-24 night (Commander run, `01M2Ffkh`) — guardrail; gather key +1 mix, a stack walk in the bot's activation guard
 
 New on hot-ish paths: one more `mix` of four turn-registry lengths per `gather_key`, and `stacks_onto_own_activation`
