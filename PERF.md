@@ -3136,6 +3136,25 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-25 (Commander run, `01Y6ZRFx`) — guardrail; 45 cards, 5 seats, nine primitives, a state-trigger class
+
+New on hot-ish paths: `activate_ability_into` calls `static_sacrifice_cast_cost` (a battlefield static walk) only when the
+activation cost has a black pip; the Suppression-Field tax walk matches one more arm (`FilteredActivationTax`);
+`AbilityActivated` carries one more bool. `release-fast` bot_ladder, 4-core Xeon @ 2.10 GHz, base `183436ab3` built in a
+worktree with its own target dir:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok; thread_determinism ok
+                 (3 vs 1); peak_rss_mib 56.5; decisions_per_s base 136,187 / tip 148,387 median over 10 interleaved
+                 pairs: +8.0 % (sd 13.0 — this box is noisy; read as no regression)
+2-player pools   seed 10182 x 300: cube 2,400 / sos 1,500 / sealed 3,600 decided, 0 undecided
+pods             seed 10183, 200 games at each of 2..8 seats: 1,400 decided;
+                 turns/game 19.57 / 32.36 / 45.92 / 57.73 / 69.38 / 80.91 / 96.88
+fuzz             random_pods 4 seats x 1,000 x 5 (10181): 4,998 / 5,000 (1 draw, 1 Rabble Rousing board cap);
+                 6 seats x 400 x 3 (10601): 1,200 / 1,200; the 98 decks holding a card this run changed, 24
+                 four-seat groups x 20 (10190+): 478 / 480, 2 Divine Intervention draws (identical on the base)
+```
+
 ### 2026-10-25 (Commander run, `013mwV6T`) — guardrail; attachment combat walk reads granted triggers, MarksCast bitmask
 
 New on hot-ish paths: phase 1b of the combat-damage walk visits every attached permanent (not only Auras) and chains
@@ -20355,6 +20374,14 @@ were re-read on a quiet box; the serial cells reproduce to ~2 %. Nothing here
 is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
+
+### 2026-10-25 — Drought's sacrifice tax walks the battlefield on every black-pip cast and activation
+
+`GameState::static_sacrifice_cast_cost` scans every permanent's statics (`active_static` per static) whenever the cost
+being paid has a black pip — each black spell cast and, since `01Y6ZRFx`, each non-mana activation with {B}. It is
+O(permanents × statics) on a board where no Drought can exist (one card in the catalog). Not measured: `--bench` read
+byte-identical and inside noise, and `fixed` casts few black spells. Candidate: a presence bit (the `PresenceGate`
+device) for `SacrificeSwampPerBlackSymbolToCast`, answered off the battlefield's static lane.
 
 ### 2026-10-19 — a near-cap Commander board gathers O(n²) per token mint
 
