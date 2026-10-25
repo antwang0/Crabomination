@@ -1445,6 +1445,12 @@ pub enum MayPlayDuration {
     /// only while the holder controls a creature of `creature_type` —
     /// checked as the card is played (`GameState::may_play_usable`).
     WhileExiledIfHolderControls { creature_type: CreatureType },
+    /// "During any turn you attacked with a [type], you may cast that card"
+    /// (Robber of the Rich): `WhileExiled`, usable only while the holder
+    /// controls a creature of `creature_type` that attacked this turn
+    /// (`CardInstance.attacked_this_turn`) — one that attacked and has since
+    /// left doesn't count.
+    WhileExiledIfHolderAttackedWith { creature_type: CreatureType },
     /// The planeswalker twin: "you may cast this card from exile as long as you
     /// control a [subtype] planeswalker" (Lukka, Coppercoat Outcast's +1).
     WhileExiledIfHolderControlsPlaneswalker { subtype: PlaneswalkerSubtype },

@@ -6298,6 +6298,7 @@ impl GameState {
                     crate::card::MayPlayDuration::UntilSeatsNextTurn { seat } => seat == next_active,
                     crate::card::MayPlayDuration::WhileExiled
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControls { .. }
+                    | crate::card::MayPlayDuration::WhileExiledIfHolderAttackedWith { .. }
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { .. }
                     | crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell
                     | crate::card::MayPlayDuration::WhileExiledIfHolderControlsCounterCaster { .. }
