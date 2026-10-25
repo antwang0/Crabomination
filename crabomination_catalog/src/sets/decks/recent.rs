@@ -5602,7 +5602,9 @@ pub fn pawpatch_recruit() -> CardDefinition {
                 }),
                 effect: Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanTriggerSubject),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),

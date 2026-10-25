@@ -1428,27 +1428,23 @@ mod recent {
         assert_eq!((c.power, c.toughness), (3, 3), "another Knight got +1/+1");
     }
 
-    /// Pawpatch Recruit grows a creature when an opponent targets one you control.
+    /// Pawpatch Recruit grows a creature when an opponent targets one you
+    /// control — "other than that creature", so the targeted bear doesn't.
     #[test]
     fn pawpatch_recruit_counters_on_opponent_target() {
         let mut g = two_player_game();
         let pixie = g.add_card_to_battlefield(0, catalog::pawpatch_recruit());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        // Opponent's Stab targets your bear; Pawpatch's trigger puts a counter on it.
         let stab = g.add_card_to_hand(1, catalog::stab());
         g.players[1].mana_pool.add(Color::Black, 1);
         g.active_player_idx = 1;
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 1;
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
         cast_at(&mut g, stab, Target::Permanent(bear));
         drain_stack(&mut g);
-        let _ = pixie;
-        assert!(
-            g.battlefield_find(bear).map(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
-                == Some(Some(1)),
-            "Pawpatch put a +1/+1 counter on the targeted creature"
-        );
+        let p1p1 = |id| g.battlefield_find(id).map(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied());
+        assert_eq!(p1p1(pixie), Some(Some(1)), "the other creature you control");
+        assert_ne!(p1p1(bear), Some(Some(1)), "not the targeted one");
     }
 
     /// Helping Hand returns a small creature from your graveyard tapped.

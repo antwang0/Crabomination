@@ -742,3 +742,21 @@ fn kor_chant_redirects_all_of_the_chosen_sources_damage_this_turn() {
     assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0));
     assert!(g.battlefield_find(giant).is_none(), "2 of its own + 2 redirected");
 }
+
+/// Pawpatch Recruit — "put a +1/+1 counter on target creature you control
+/// other than that creature": the targeted bear can't take it, so with the
+/// Recruit as the only other creature the counter lands there.
+#[test]
+fn pawpatch_recruit_counters_a_creature_other_than_the_targeted_one() {
+    use crabomination::card::CounterType;
+    let mut g = pod(3);
+    let recruit = ready(&mut g, 0, catalog::pawpatch_recruit());
+    let bear = ready(&mut g, 0, catalog::hill_giant());
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.active_player_idx = 1;
+    cast_as(&mut g, 1, shock, &[perm(bear)]).expect("shock");
+    drain_stack(&mut g);
+    let counters = |id| g.battlefield_find(id).map_or(0, |c| c.counter_count(CounterType::PlusOnePlusOne));
+    assert_eq!(counters(bear), 0, "not the targeted creature");
+    assert_eq!(counters(recruit), 1);
+}
