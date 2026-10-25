@@ -2039,7 +2039,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // keyword counter and the two removal lists are all instance fields
         // that effect resolution writes, so `requirement_matches_card` reads
         // them off `has_keyword` on every layer recompute. See its doc.
-        R::HasKeyword(_) | R::HasToxic | R::HasModular | R::HasProtection | R::HasPartner => true,
+        R::HasKeyword(_) | R::HasToxic | R::HasCumulativeUpkeep | R::HasModular | R::HasProtection | R::HasPartner => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
@@ -2206,6 +2206,7 @@ pub(crate) fn requirement_matches_card_typed(
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
         R::HasKeyword(k) => keywords.map_or_else(|| card.has_keyword(k), |kws| kws.contains(k)),
         R::HasToxic => card.has_toxic(),
+        R::HasCumulativeUpkeep => card.has_cumulative_upkeep(),
         R::HasModular => card.has_modular(),
         R::HasProtection => keywords.map_or_else(|| card.has_protection(), |kws| kws.iter().any(Keyword::is_protection)),
         R::HasPartner => keywords.map_or_else(|| card.has_partner(), |kws| kws.iter().any(Keyword::is_partner)),

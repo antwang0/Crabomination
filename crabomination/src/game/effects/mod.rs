@@ -49173,6 +49173,14 @@ impl GameState {
                     WardCost::RemoveCounterFromPermanent => {
                         self.remove_one_counter_from_own_permanent(payer, events)
                     }
+                    // "{X}, where X is that creature's mana value" (Arcum's Whistle).
+                    WardCost::GenericTargetManaValue => {
+                        let x = match ctx.targets.first() {
+                            Some(Target::Permanent(id)) => self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc()),
+                            _ => 0,
+                        };
+                        self.pay_generic(payer, x)
+                    }
                     // "{X}, where X is this creature's power" (Esper Sentinel).
                     WardCost::GenericSourcePower => {
                         let x = ctx

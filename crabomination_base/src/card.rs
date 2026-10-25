@@ -1247,6 +1247,9 @@ pub enum WardCost {
     /// off the source's computed power at payment time (Esper Sentinel's
     /// rhystic tax).
     GenericSourcePower,
+    /// "{X}, where X is that creature's mana value" — generic mana equal to
+    /// the effect's first target's mana value at payment (Arcum's Whistle).
+    GenericTargetManaValue,
     /// "Pay life equal to this creature's power" — a dynamic life cost read
     /// off the source's computed power at payment time (Phyrexian Fleshgorger).
     LifeSourcePower,
@@ -1317,6 +1320,7 @@ impl WardCost {
             W::SacrificeMatchingN(_, n) => format!("Ward—sacrifice {n} matching permanents"),
             W::ReturnMatchingToHand(_, n) => format!("Ward—return {n} matching permanent(s)"),
             W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
+            W::GenericTargetManaValue => "{X} (that creature's mana value)".to_string(),
             W::GenericXFromCost => "Ward—{X}".to_string(),
             W::GenericCountersOnSource(kind) => {
                 format!("Ward—{{X}} (this permanent's {kind:?} counters)")
@@ -3220,6 +3224,9 @@ pub enum SelectionRequirement {
     /// `HasKeyword(Toxic(n))` — matches "a creature you control with toxic"
     /// regardless of the toxic value (Slaughter Singer, Skrelv's Hive).
     HasToxic,
+    /// Has cumulative upkeep of any cost (CR 702.24) — Balduvian Shaman's
+    /// "that doesn't have cumulative upkeep".
+    HasCumulativeUpkeep,
     /// Has Modular N for any N (CR 702.43) — "each creature you control with
     /// modular" (Arcbound Overseer).
     HasModular,
@@ -3483,6 +3490,11 @@ pub enum SelectionRequirement {
     /// The candidate shares a name with some permanent on the battlefield
     /// (Mitotic Manipulation). A permanent matches itself.
     SameNameAsAPermanent,
+    /// Shares a name with a nontoken permanent on the battlefield (Bazaar of
+    /// Wonders). A permanent matches itself.
+    SameNameAsANontokenPermanent,
+    /// Shares a name with a card in any graveyard (Bazaar of Wonders).
+    SameNameAsAGraveyardCard,
     /// The candidate shares a name with the effect's first target (Pack Hunt).
     SameNameAsTarget,
     /// Shares a colour with the card exiled with the ability's source
@@ -12197,6 +12209,11 @@ impl CardInstance {
     /// keyword sources (CR 702.180).
     pub fn has_toxic(&self) -> bool {
         self.has_keyword_tag(&Keyword::Toxic(0))
+    }
+
+    /// True if this permanent has cumulative upkeep of any cost (CR 702.24).
+    pub fn has_cumulative_upkeep(&self) -> bool {
+        self.has_keyword_tag(&Keyword::CumulativeUpkeep(CumulativeUpkeepCost::FlipCoin))
     }
 
     /// True if this permanent has Modular N for any N (CR 702.43), from any

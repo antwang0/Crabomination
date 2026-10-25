@@ -325,7 +325,10 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::GenericXFromCost | WardCost::GenericCountersOnSource(_) | WardCost::GenericControllerExperience => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
-        WardCost::GenericSourcePower | WardCost::LifeSourcePower | WardCost::DamageSourcePower => false,
+        WardCost::GenericSourcePower
+        | WardCost::GenericTargetManaValue
+        | WardCost::LifeSourcePower
+        | WardCost::DamageSourcePower => false,
         WardCost::RemoveCounterFromPermanent
         | WardCost::ManaCostOfAttached
         | WardCost::ManaOrLife(_, _)

@@ -37991,6 +37991,7 @@ fn blocker_matches_block_filter(
         R::Monocolored => computed.colors.len() == 1,
         R::HasKeyword(k) => computed.keywords().contains(k),
         R::HasToxic => computed.keywords().iter().any(|k| matches!(k, Keyword::Toxic(_))),
+        R::HasCumulativeUpkeep => computed.keywords().iter().any(|k| matches!(k, Keyword::CumulativeUpkeep(_))),
         R::HasModular => computed.keywords().iter().any(|k| matches!(k, Keyword::Modular(_))),
         R::HasProtection => computed.keywords().iter().any(Keyword::is_protection),
         R::HasPartner => computed.keywords().iter().any(Keyword::is_partner),

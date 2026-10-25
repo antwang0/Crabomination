@@ -6483,6 +6483,9 @@ impl GameState {
                     R::HasColor(c) => color_set().contains(c),
                     R::HasKeyword(kw) => has_kw(kw),
                     R::HasToxic => has_kw_tag(&crate::card::Keyword::Toxic(0)),
+                    R::HasCumulativeUpkeep => has_kw_tag(&crate::card::Keyword::CumulativeUpkeep(
+                        crate::card::CumulativeUpkeepCost::FlipCoin,
+                    )),
                     R::HasModular => has_kw_tag(&crate::card::Keyword::Modular(0)),
                     R::HasProtection => match computed() {
                         Some(cp) => cp.keywords().iter().any(crate::card::Keyword::is_protection),
@@ -6662,6 +6665,8 @@ impl GameState {
                     R::SameNameAsAPermanent => {
                         self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
                     }
+                    R::SameNameAsANontokenPermanent => self.same_name_as_a_nontoken_permanent(card),
+                    R::SameNameAsAGraveyardCard => self.same_name_as_a_graveyard_card(card),
                     R::IsBasicLand => card.definition.is_land() && self.is_basic_card(card),
                     R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
                     R::IsNonbasicLand => card.definition.is_land() && !self.is_basic_card(card),
@@ -7766,6 +7771,7 @@ impl GameState {
             R::HasColor(c) => self.off_battlefield_colors(card).contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasToxic => card.has_toxic(),
+            R::HasCumulativeUpkeep => card.has_cumulative_upkeep(),
             R::HasModular => card.has_modular(),
             R::HasProtection => card.has_protection(),
             R::HasPartner => card.has_partner(),
@@ -7873,6 +7879,8 @@ impl GameState {
             R::SameNameAsAPermanent => {
                 self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
             }
+            R::SameNameAsANontokenPermanent => self.same_name_as_a_nontoken_permanent(card),
+            R::SameNameAsAGraveyardCard => self.same_name_as_a_graveyard_card(card),
             R::HasPhyrexianManaInCost => card.definition.cost.has_phyrexian(),
             R::IsBasicLand => card.definition.is_land() && self.is_basic_card(card),
             R::IsNonbasicLand => card.definition.is_land() && !self.is_basic_card(card),
@@ -8460,6 +8468,16 @@ impl GameState {
 }
 
 impl GameState {
+    /// A nontoken permanent shares `card`'s name (Bazaar of Wonders).
+    fn same_name_as_a_nontoken_permanent(&self, card: &CardInstance) -> bool {
+        self.battlefield.iter().any(|p| !p.is_token && p.definition.name == card.definition.name)
+    }
+
+    /// A card in any graveyard shares `card`'s name (Bazaar of Wonders).
+    fn same_name_as_a_graveyard_card(&self, card: &CardInstance) -> bool {
+        self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.definition.name == card.definition.name))
+    }
+
     /// Do `types` share a card type with the first permanent sacrificed this
     /// resolution, as it last existed on the battlefield (CR 608.2h)?
     /// With nothing sacrificed yet this resolution it reads the permanent a
