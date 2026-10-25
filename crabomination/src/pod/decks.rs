@@ -170787,3 +170787,32 @@ pub const NAEL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, island, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const VERAZOL_COMMANDERS: &[CardFactory] = &[verazol_the_split_current];
+
+/// **Verazol, the Split Current**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 10 Islands = 99.
+/// Verazol, the Split Current (EDHREC, fetched 2026-10-25).
+pub const VERAZOL_MAIN: &[CardFactory] = &[
+    arcane_signet, everflowing_chalice, simic_signet, skyclave_relic, sol_ring, twinning_staff,
+    breeding_pool, command_tower, dreamroot_cascade, flooded_grove, hinterland_harbor,
+    opal_palace, reliquary_tower, rogues_passage, simic_growth_chamber, temple_of_mystery,
+    throne_of_makindi, vineglimmer_snarl, yavimaya_coast, citanul_woodreaders,
+    coralhelm_chronicler, cragplate_baloth, elfhame_druid, elvish_hydromancer,
+    errant_street_artist, evolution_sage, forgotten_ancient, gnarlid_colony,
+    kami_of_whispered_hopes, lullmages_familiar, mold_shambler, murasa_sproutling,
+    myriad_construct, sea_gate_stormcaller, slinn_voda_the_rising_deep, sphinx_of_lost_truths,
+    tazeem_roilmage, territorial_allosaurus, thieving_skydiver, untamed_kavu, vine_gecko,
+    vineshaper_prodigy, vorel_of_the_hull_clade, wastescape_battlemage, wolfbriar_elemental,
+    branching_evolution, bubble_snare, hardened_scales, hydras_growth, roost_of_drakes,
+    simic_ascendancy, blink_of_an_eye, consult_the_star_charts, counterspell, growth_spiral,
+    inscription_of_abundance, inspiring_call, into_the_roil, invigorating_surge,
+    joint_exploration, repulsive_mutation, strength_of_the_tajuru, vines_of_vastwood,
+    wild_onslaught, jace_mirror_mage, cultivate, field_research, grow_from_the_ashes,
+    inscription_of_insight, kodamas_reach, maddening_cacophony, primal_growth, rampant_growth,
+    reclaim_the_wastes, rite_of_replication, vastwood_surge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, island, island, island, island, island, island, island, island, island,
+    island,
+];

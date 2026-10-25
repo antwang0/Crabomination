@@ -36942,6 +36942,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NAEL_COMMANDERS,
             main: decks::NAEL_MAIN,
         },
+        // Seat 6082: Verazol, the Split Current's EDHREC average deck. `--pod-decks 6082`.
+        PodDeck {
+            name: "Verazol, the Split Current (UG)",
+            commanders: decks::VERAZOL_COMMANDERS,
+            main: decks::VERAZOL_MAIN,
+        },
     ]
 }
 
@@ -44984,6 +44990,7 @@ mod tests {
             ("Scarlet Witch, Wanda Maximoff", &[0x21D5]),
             ("Stegron the Dinosaur Man", &[0x21D6]),
             ("Nael, Avizoa Aeronaut", &[0x21D7]),
+            ("Verazol, the Split Current", &[0x21D8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
