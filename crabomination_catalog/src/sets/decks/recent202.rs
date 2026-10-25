@@ -250,14 +250,18 @@ pub fn soulstone_sanctuary() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(4)]),
-                effect: Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(3),
-                    toughness: Value::Const(3),
-                    creature_types: vec![],
-                    keywords: vec![Keyword::Vigilance, Keyword::Changeling],
-                    duration: Duration::Permanent,
-                },
+                // Every creature type as a layer-4 type (CR 205.3, 613.6).
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![],
+                        keywords: vec![Keyword::Vigilance],
+                        duration: Duration::Permanent,
+                    },
+                    Effect::GainAllCreatureTypes { what: Selector::This, duration: Duration::Permanent },
+                ]),
                 ..Default::default()
             },
         ],

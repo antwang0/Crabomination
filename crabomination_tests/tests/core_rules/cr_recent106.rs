@@ -1837,5 +1837,37 @@ fn cr_613_6_an_attachments_every_creature_type_survives_a_strip() {
     }
 }
 
+/// CR 205.3 / 613.6 — a man-land's "becomes a creature with all creature
+/// types" is a layer-4 type too: still every type after it loses all its
+/// abilities (Mutavault, Soulstone Sanctuary).
+#[test]
+fn cr_613_6_an_animated_lands_every_creature_type_survives_a_strip() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::types::GameAction;
+    let lands: [(Def, u32); 2] = [(catalog::mutavault, 1), (catalog::soulstone_sanctuary, 4)];
+    for (def, mana) in lands {
+        let mut g = peace_main();
+        let land = g.add_card_to_battlefield(0, def());
+        g.players[0].mana_pool.add_colorless(mana);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("animate");
+        drain_stack(&mut g);
+        let every = |g: &GameState| g.computed_permanent(land).unwrap().keywords().contains(&Keyword::Changeling);
+        assert!(every(&g), "{}", def().name);
+        let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+        g.resolve_effect(&Effect::LoseAllAbilities { what: Selector::ExactObjects(vec![land]), duration: Duration::EndOfTurn }, &ctx)
+            .expect("strip");
+        assert!(every(&g), "{} after the strip", def().name);
+    }
+}
+
 /// A catalog factory, for the table-driven tests above.
 type Def = fn() -> crabomination::card::CardDefinition;

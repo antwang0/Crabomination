@@ -211,14 +211,18 @@ pub fn faceless_haven() -> CardDefinition {
             tap_for_colorless(1),
             ActivatedAbility {
                 mana_cost: cost(&[snow_mana(), snow_mana(), snow_mana()]),
-                effect: Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(4),
-                    toughness: Value::Const(3),
-                    creature_types: vec![],
-                    keywords: vec![Keyword::Vigilance, Keyword::Changeling],
-                    duration: Duration::EndOfTurn,
-                },
+                // Every creature type as a layer-4 type (CR 205.3, 613.6).
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(3),
+                        creature_types: vec![],
+                        keywords: vec![Keyword::Vigilance],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GainAllCreatureTypes { what: Selector::This, duration: Duration::EndOfTurn },
+                ]),
                 ..Default::default()
             },
         ],

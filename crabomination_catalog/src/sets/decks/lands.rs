@@ -898,18 +898,22 @@ pub(crate) fn manland_pump(
 }
 
 /// Mutavault — `{T}: Add {C}`. `{1}`: becomes a 2/2 creature with all creature
-/// types (Changeling) until end of turn (still a land).
+/// types until end of turn (still a land; CR 205.3 — a layer-4 type).
 pub fn mutavault() -> CardDefinition {
-    use crate::card::Keyword;
-    colorless_manland(
-        "Mutavault",
-        cost(&[generic(1)]),
-        2,
-        2,
-        vec![],
-        vec![Keyword::Changeling],
-        false,
-    )
+    let mut def = colorless_manland("Mutavault", cost(&[generic(1)]), 2, 2, vec![], vec![], false);
+    with_all_creature_types(&mut def.activated_abilities[1]);
+    def
+}
+
+/// "…a creature with all creature types until end of turn": the man-land's
+/// animation also gains every creature type in layer 4 (CR 205.3, 613.6), not
+/// as a granted changeling a layer-6 strip would take.
+pub(crate) fn with_all_creature_types(animate: &mut ActivatedAbility) {
+    let become_ = std::mem::replace(&mut animate.effect, Effect::Noop);
+    animate.effect = Effect::Seq(vec![
+        become_,
+        Effect::GainAllCreatureTypes { what: Selector::This, duration: crate::effect::Duration::EndOfTurn },
+    ]);
 }
 
 /// Mishra's Factory — `{T}: Add {C}`. `{1}`: becomes a 2/2 Assembly-Worker
