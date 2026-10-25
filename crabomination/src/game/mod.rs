@@ -36653,6 +36653,7 @@ fn static_effect_to_effects(
             | StaticEffect::SpellsCostLessPerSameNameInYourGraveyard
             | StaticEffect::PerTargetSpellCost { .. }
             | StaticEffect::ActivationTax { .. }
+            | StaticEffect::FilteredActivationTax { .. }
             | StaticEffect::NamedSourcesActivationTax { .. }
             // Pithing Needle's lock — consulted in `activate_ability`
             // against the source's `named_card`; no layer effect.

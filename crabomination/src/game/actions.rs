@@ -24809,23 +24809,29 @@ impl GameState {
         // for every player's activations. Tithe Taker adds the same tax but
         // only to opponents' activations on its controller's turn.
         if !ability_is_mana {
-            let tax: u32 = self
+            let state: &GameState = self;
+            let tax: u32 = state
                 .battlefield
                 .iter()
                 .flat_map(|c| {
-                    let opp_your_turn = c.controller != p && c.controller == self.active_player_idx;
+                    let opp_your_turn = c.controller != p && c.controller == state.active_player_idx;
                     let attached_here = c.attached_to == Some(card_id);
-                    c.definition.static_abilities.iter().map(move |sa| match sa.effect {
-                        crate::effect::StaticEffect::ActivationTax { amount } => amount,
+                    c.definition.static_abilities.iter().map(move |sa| match &sa.effect {
+                        crate::effect::StaticEffect::ActivationTax { amount } => *amount,
+                        crate::effect::StaticEffect::FilteredActivationTax { filter, amount }
+                            if state.evaluate_requirement_static(filter, &Target::Permanent(card_id), c.controller, Some(c.id)) =>
+                        {
+                            *amount
+                        }
                         crate::effect::StaticEffect::AttachedActivationTax { amount }
                             if attached_here =>
                         {
-                            amount
+                            *amount
                         }
                         crate::effect::StaticEffect::OpponentActivityCostsMoreOnYourTurn { amount }
                             if opp_your_turn =>
                         {
-                            amount
+                            *amount
                         }
                         _ => 0,
                     })

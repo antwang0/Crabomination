@@ -1565,3 +1565,46 @@ fn cr_602_2b_a_static_adds_a_swamp_sacrifice_to_black_activations() {
     assert!(g.battlefield_find(swamp).is_none(), "sacrificed");
     assert_eq!(g.computed_permanent(shade).unwrap().power, 3);
 }
+
+/// CR 602.2b / 601.2f — "Activated abilities of white enchantments cost {3}
+/// more" (Gloom): a matching source pays the tax, another source does not.
+#[test]
+fn cr_602_2b_a_filtered_activation_tax_hits_only_matching_sources() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::StaticEffect;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut g = peace_main();
+    g.add_card_to_battlefield(1, CardDefinition {
+        name: "Gloom Test",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of white enchantments cost {3} more.",
+            effect: StaticEffect::FilteredActivationTax {
+                filter: R::HasCardType(CardType::Enchantment).and(R::HasColor(Color::White)),
+                amount: 3,
+            },
+        }],
+        ..Default::default()
+    });
+    let activate = |g: &mut GameState, id| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    let shade = g.add_card_to_battlefield(0, catalog::nantuko_shade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    activate(&mut g, shade).expect("a black creature: untaxed");
+    drain_stack(&mut g);
+    let mesa = g.add_card_to_battlefield(0, catalog::sacred_mesa());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(activate(&mut g, mesa).is_err(), "{{1}}{{W}} without the tax");
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, mesa).expect("{1}{W} + {3}");
+}

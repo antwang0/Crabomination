@@ -2772,6 +2772,10 @@ pub enum StaticEffect {
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).
     ActivationTax { amount: u32 },
+    /// CR 602.5 / 614 — "Activated abilities of [filter] cost {N} more to
+    /// activate" (Gloom's white enchantments). Every player's non-mana
+    /// activations whose source matches `filter`.
+    FilteredActivationTax { filter: SelectionRequirement, amount: u32 },
     /// "Activated abilities of sources with the chosen name cost {N} more to
     /// activate" (Skyseer's Chariot). The name comes from the static source's
     /// `named_card` (CR 201.3, stamped by `Effect::NameCard`); mana abilities
