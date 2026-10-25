@@ -170984,3 +170984,55 @@ pub const LIVING_LIGHTNING_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const MAJOR_TEROH_COMMANDERS: &[CardFactory] = &[major_teroh];
+
+/// **Major Teroh**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Major Teroh (EDHREC, fetched 2026-10-25).
+pub const MAJOR_TEROH_MAIN: &[CardFactory] = &[
+    akromas_memorial, arcane_signet, demons_horn, distorting_lens, heraldic_banner, kormus_bell,
+    oketras_monument, pearl_medallion, sol_ring, sword_of_feast_and_famine, castle_ardenvale,
+    emeria_the_sky_ruin, myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower,
+    urborg_tomb_of_yawgmoth, akroma_angel_of_wrath, angel_of_jubilation, angry_mob,
+    apostle_of_purifying_light, auriok_champion, cho_arrim_legate, crovax_ascendant_hero,
+    crusading_knight, daraja_griffin, devout_lightcaster, disciple_of_grace, duskrider_falcon,
+    exorcist, fiendslayer_paladin, karmic_guide, knight_of_glory, lightbringer,
+    lightwielder_paladin, mirran_crusader, northern_paladin, obsidian_acolyte,
+    order_of_the_sacred_torch, order_of_the_white_shield, painters_servant, pilgrim_of_virtue,
+    sanctifier_en_vec, soltari_monk, stern_judge, sun_titan, white_knight, absolute_grace,
+    circle_of_protection_black, drought, greater_realm_of_preservation, honor_of_the_pure,
+    karma, land_tax, light_of_day, mangaras_equity, mask_of_law_and_grace, royal_decree,
+    rune_of_protection_black, brave_the_elements, celestial_purge, divine_smite, generous_gift,
+    inquisitors_snare, path_to_exile, purge, swords_to_plowshares, blinding_light, farewell,
+    mass_calcify, ravnica_at_war, starlight,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const IRINI_SENGIR_COMMANDERS: &[CardFactory] = &[irini_sengir];
+
+/// **Irini Sengir**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Irini Sengir (EDHREC, fetched 2026-10-25).
+pub const IRINI_SENGIR_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, defense_grid, distorting_lens, god_pharaohs_statue,
+    jet_medallion, mind_stone, sol_ring, the_darkness_crystal, bojuka_bog, cabal_coffers,
+    myriad_landscape, nykthos_shrine_to_nyx, urborg_tomb_of_yawgmoth, witchs_cottage,
+    abomination, ascendant_evincar, black_knight, blightbeetle, crypt_ghast, dunerider_outlaw,
+    eastern_paladin, gray_merchant_of_asphodel, knight_of_malice, knight_of_stromgald,
+    lifebane_zombie, marauding_knight, painters_servant, phyrexian_reaper, phyrexian_slayer,
+    scuttlemutt, slithery_stalker, soot_imp, stromgald_cabal, thrull_wizard, western_paladin,
+    bereavement, black_market, curse_of_wizardry, deathgrip, dread_of_night, dystopia, gloom,
+    koskun_falls, leshracs_sigil, painful_quandary, phyrexian_arena, putrefaction,
+    tourachs_chant, yawgmoths_edict, dark_ritual, defile, doom_blade, execute, noxious_grasp,
+    slay, soul_rend, deathmark, exsanguinate, feed_the_swarm, mutilate, natures_ruin,
+    nights_whisper, perish, read_the_bones, reign_of_terror, sign_in_blood, syphon_mind,
+    virtues_ruin,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];

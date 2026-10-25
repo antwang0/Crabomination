@@ -36984,6 +36984,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIVING_LIGHTNING_COMMANDERS,
             main: decks::LIVING_LIGHTNING_MAIN,
         },
+        // Seat 6089: Major Teroh's EDHREC average deck. `--pod-decks 6089`.
+        PodDeck {
+            name: "Major Teroh (W)",
+            commanders: decks::MAJOR_TEROH_COMMANDERS,
+            main: decks::MAJOR_TEROH_MAIN,
+        },
+        // Seat 6090: Irini Sengir's EDHREC average deck. `--pod-decks 6090`.
+        PodDeck {
+            name: "Irini Sengir (B)",
+            commanders: decks::IRINI_SENGIR_COMMANDERS,
+            main: decks::IRINI_SENGIR_MAIN,
+        },
     ]
 }
 
@@ -45033,6 +45045,8 @@ mod tests {
             ("Johan", &[0x21DC]),
             ("Liu Bei, Lord of Shu", &[0x21DD]),
             ("Living Lightning, Charged Up", &[0x21DE]),
+            ("Major Teroh", &[0x21DF]),
+            ("Irini Sengir", &[0x21E0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
