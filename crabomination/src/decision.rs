@@ -963,28 +963,37 @@ impl ScriptedDecider {
 /// Thirty-eight engine sites branch on `matches!(decider.kind(), Auto)` and
 /// none of them reads the payload, so the two are interchangeable there —
 /// `one_color_decider_matches_the_scripted_one` is the check.
+///
+/// ⚠ Unlike a one-answer script, a *colour* ask after the first gets the same
+/// colour: a filter land ("{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}") asks
+/// once per pip, and the second pip fell through to the first legal colour, so
+/// the auto-tapper could not make {R}{R} from Graven Cairns.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct OneColorDecider {
     answer: Option<Color>,
+    spent: bool,
 }
 
 impl OneColorDecider {
     pub fn new(color: Color) -> Self {
-        Self { answer: Some(color) }
+        Self { answer: Some(color), spent: false }
     }
 }
 
 impl Decider for OneColorDecider {
     fn kind(&self) -> DeciderKind {
         DeciderKind::Scripted {
-            answers: self.answer.map(DecisionAnswer::Color).into_iter().collect(),
+            answers: self.answer.filter(|_| !self.spent).map(DecisionAnswer::Color).into_iter().collect(),
             asked: Vec::new(),
         }
     }
     fn decide(&mut self, decision: &Decision) -> DecisionAnswer {
-        match self.answer.take() {
-            Some(c) => DecisionAnswer::Color(c),
-            None => AutoDecider.decide(decision),
+        match self.answer {
+            Some(c) if !self.spent || matches!(decision, Decision::ChooseColor { .. }) => {
+                self.spent = true;
+                DecisionAnswer::Color(c)
+            }
+            _ => AutoDecider.decide(decision),
         }
     }
     /// Only a `Color` can be scripted here — the two auto-tap sites pass
@@ -992,6 +1001,7 @@ impl Decider for OneColorDecider {
     /// a state to carry. Debug-asserted; in release it leaves the slot empty,
     /// which falls through to `AutoDecider` exactly as an exhausted script does.
     fn rearm_script(&mut self, answer: DecisionAnswer) {
+        self.spent = false;
         self.answer = match answer {
             DecisionAnswer::Color(c) => Some(c),
             other => {
@@ -1069,7 +1079,9 @@ mod one_color_decider_tests {
             );
             // Every ask after the first falls through to `AutoDecider`.
             same(scripted.decide(&later), one.decide(&later));
-            same(scripted.decide(&ask), one.decide(&ask));
+            // A second colour ask repeats the colour (a filter land's second
+            // pip); the one-answer script would fall through.
+            assert!(matches!(one.decide(&ask), DecisionAnswer::Color(got) if got == c));
             // And the recycled path: `auto_tap_for_cost_inner` holds one box
             // for the whole payment and re-arms it per pip, so a spent decider
             // must answer the next pip's colour.

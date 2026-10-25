@@ -1731,3 +1731,87 @@ fn cr_601_2f_a_sacrifice_or_pay_alternative_keeps_its_colored_pip() {
         }
     }
 }
+
+/// CR 602.2b / 605.3a — Drought taxes a mana ability's {B/R} too, including
+/// when the auto-tapper fires it to pay a spell: Graven Cairns' filter needs a
+/// Swamp to sacrifice before it makes the {R}{R} (its {B/R} paid from the pool).
+#[test]
+fn cr_602_2b_drought_taxes_a_filter_land_the_auto_tapper_fires() {
+    use crabomination::card::{CardDefinition, CardType, StaticAbility};
+    use crabomination::effect::StaticEffect;
+    use crabomination::game::types::{GameAction, Target};
+    for swamps in [0, 1] {
+        let mut g = peace_main();
+        g.add_card_to_battlefield(1, CardDefinition {
+            name: "Drought Test",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                description: "Activated abilities cost an additional \"Sacrifice a Swamp\" per black symbol.",
+                effect: StaticEffect::SacrificeSwampPerBlackSymbolToCast,
+            }],
+            ..Default::default()
+        });
+        g.add_card_to_battlefield(0, catalog::graven_cairns());
+        let lands: Vec<_> = (0..swamps).map(|_| g.add_card_to_battlefield(0, catalog::swamp())).collect();
+        for &s in &lands {
+            g.battlefield_find_mut(s).unwrap().tapped = true;
+        }
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        // {R}{R}: only the Cairns' filter can make red.
+        let spell = g.add_card_to_hand(0, CardDefinition {
+            name: "Red Red Test",
+            cost: crabomination::mana::cost(&[crabomination::mana::r(), crabomination::mana::r()]),
+            card_types: vec![CardType::Instant],
+            effect: crabomination::effect::Effect::Destroy {
+                what: crabomination::effect::shortcut::target_filtered(crabomination::card::SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        });
+        let r = g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        if swamps == 0 {
+            assert!(r.is_err(), "no Swamp to sacrifice: the filter can't fire");
+        } else {
+            r.expect("the Swamp is sacrificed, the filter makes {R}{R}");
+            assert!(g.battlefield_find(lands[0]).is_none(), "sacrificed");
+        }
+    }
+}
+
+/// CR 605.3b / 106.1 — the auto-tapper pays {R}{R} with one filter land: both
+/// of Graven Cairns' pips are the colour it was fired for (the second used to
+/// fall to the first legal colour, black).
+#[test]
+fn cr_605_3b_the_auto_tapper_takes_both_of_a_filter_lands_pips() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::game::types::{GameAction, Target};
+    let mut g = peace_main();
+    g.add_card_to_battlefield(0, catalog::graven_cairns());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Red Red Test",
+        cost: crabomination::mana::cost(&[crabomination::mana::r(), crabomination::mana::r()]),
+        card_types: vec![CardType::Instant],
+        effect: crabomination::effect::Effect::Destroy {
+            what: crabomination::effect::shortcut::target_filtered(crabomination::card::SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    });
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Swamp pays {B/R}, Cairns makes {R}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}

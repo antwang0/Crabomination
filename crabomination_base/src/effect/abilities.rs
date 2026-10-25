@@ -867,9 +867,9 @@ pub enum StaticEffect {
     /// each black mana symbol in their mana costs" (CR 601.2b; CR 107.4, a
     /// hybrid or Phyrexian black symbol counts). Every player's spells, one
     /// Swamp per symbol per copy, paid through the shared
-    /// `AdditionalCastCost::SacrificePermanent` payer; activated abilities
-    /// pay it in `activate_ability_into` (not when the auto-tap planner fires
-    /// a mana ability to pay a cost).
+    /// `AdditionalCastCost::SacrificePermanent` payer; activated abilities,
+    /// mana abilities the auto-tapper fires included, pay it in
+    /// `activate_ability_into`.
     SacrificeSwampPerBlackSymbolToCast,
     /// Grand-Arbiter-style tax: spells matching `filter` cast by an opponent of
     /// the source's controller cost `amount` more (Sphinx's Decree, Thalia of
