@@ -38,6 +38,12 @@ fn target_counter_kind(e: &Effect) -> Option<CounterType> {
             ..
         } => Some(*kind),
         Effect::If { then, else_, .. } => target_counter_kind(then).or_else(|| target_counter_kind(else_)),
+        // Forge of Heroes' per-type pair (a +1/+1 counter if a creature, a
+        // loyalty counter if a planeswalker) — only when every part is one, so
+        // a counter-then-fight body stays out of the sink.
+        Effect::Seq(parts) if parts.iter().all(|e| target_counter_kind(e).is_some()) => {
+            parts.first().and_then(target_counter_kind)
+        }
         _ => None,
     }
 }
