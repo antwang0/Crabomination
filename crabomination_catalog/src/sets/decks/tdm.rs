@@ -391,7 +391,7 @@ pub fn seize_opportunity() -> CardDefinition {
 
 /// Ringing Strike Mastery — {U} Aura. Enchant creature. When it enters, tap the
 /// enchanted creature. Enchanted creature doesn't untap during its controller's
-/// untap step. (The granted "{5}: untap this creature" is dropped.)
+/// untap step and has "{5}: Untap this creature."
 pub fn ringing_strike_mastery() -> CardDefinition {
     CardDefinition {
         name: "Ringing Strike Mastery",

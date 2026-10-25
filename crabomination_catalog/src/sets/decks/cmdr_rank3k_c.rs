@@ -863,7 +863,7 @@ pub fn baru_fist_of_krosa() -> CardDefinition {
 /// Leatherhead, Swamp Stalker — {2}{G}{G} legendary 5/4 trample; enters with a
 /// hexproof counter. Combat damage to a player: you may remove a counter from
 /// her; when you do, destroy target artifact or enchantment that player
-/// controls. (Residual: the hexproof counter arrives on an entry trigger.)
+/// controls. The counter is an as-enters replacement (CR 614.1c).
 pub fn leatherhead_swamp_stalker() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
