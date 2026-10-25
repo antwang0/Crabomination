@@ -760,3 +760,33 @@ fn pawpatch_recruit_counters_a_creature_other_than_the_targeted_one() {
     assert_eq!(counters(bear), 0, "not the targeted creature");
     assert_eq!(counters(recruit), 1);
 }
+
+/// Heartless Act — "remove up to three counters from target creature": on an
+/// opponent's creature the caster takes the counters that help it (+1/+1) and
+/// leaves its stun counter; on their own creature, the reverse.
+#[test]
+fn heartless_act_removes_the_counters_that_help_the_creatures_controller() {
+    use crabomination::card::CounterType::{PlusOnePlusOne as P, Stun as M};
+    let run = |owner: usize| {
+        let mut g = pod(3);
+        let giant = ready(&mut g, owner, catalog::hill_giant());
+        let c = g.battlefield_find_mut(giant).unwrap();
+        c.add_counters(P, 2);
+        c.add_counters(M, 1);
+        let act = g.add_card_to_hand(0, catalog::heartless_act());
+        flood(&mut g, 0);
+        g.perform_action(GameAction::CastSpell {
+            card_id: act,
+            target: Some(perm(giant)),
+            additional_targets: vec![],
+            mode: Some(1),
+            x_value: None,
+        })
+        .expect("act");
+        drain_stack(&mut g);
+        let c = g.battlefield_find(giant).unwrap();
+        (c.counter_count(P), c.counter_count(M))
+    };
+    assert_eq!(run(1), (0, 1), "an opponent's creature keeps its stun counter");
+    assert_eq!(run(0), (2, 0), "your own keeps its +1/+1 counters");
+}

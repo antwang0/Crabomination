@@ -30730,9 +30730,8 @@ pub fn charmed_sleep() -> CardDefinition {
 }
 
 /// Heartless Act — {1}{B} Instant. Choose one — Destroy target creature with
-/// no counters on it; or Remove up to three counters from target creature.
-/// (The "up to three" clause is modeled as remove-all — creatures rarely
-/// carry more than three counters.)
+/// no counters on it; or Remove up to three counters from target creature
+/// (the ones whose removal helps the caster).
 pub fn heartless_act() -> CardDefinition {
     CardDefinition {
         name: "Heartless Act",
@@ -30744,8 +30743,10 @@ pub fn heartless_act() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::HasNoCounters),
                 ),
             },
-            Effect::RemoveAllCounters {
+            Effect::RemoveCountersUpTo {
                 what: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+                only_helpful: true,
             },
         ]),
         ..Default::default()

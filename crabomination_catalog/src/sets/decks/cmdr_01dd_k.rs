@@ -1152,7 +1152,7 @@ pub fn slumbering_walker() -> CardDefinition {
                 then: Box::new(Effect::MayDo {
                     description: "Remove a counter from Slumbering Walker to return a small creature card?".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::RemoveCountersUpTo { what: Selector::This, amount: Value::ONE },
+                        Effect::RemoveCountersUpTo { what: Selector::This, amount: Value::ONE, only_helpful: false },
                         Effect::Reflexive {
                             body: Box::new(Effect::Move {
                                 what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::PowerAtMost(2))),

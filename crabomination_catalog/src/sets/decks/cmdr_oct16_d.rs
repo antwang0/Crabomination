@@ -1309,6 +1309,7 @@ pub fn mabel_bitter_recluse() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::RemoveCountersUpTo {
             what: target_filtered(R::Creature.or(R::Planeswalker).and(R::OtherThanSource)),
             amount: Value::Const(3),
+            only_helpful: true,
         })],
         ..creature("Mabel, Bitter Recluse", cost(&[b()]), vec![CreatureType::Mouse, CreatureType::Warlock], 1, 1)
     }

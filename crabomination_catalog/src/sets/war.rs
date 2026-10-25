@@ -1372,6 +1372,7 @@ pub fn price_of_betrayal() -> CardDefinition {
                     .or(R::OpponentPlayer),
             ),
             amount: Value::Const(5),
+            only_helpful: true,
         },
         ..Default::default()
     }

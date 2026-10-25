@@ -1834,6 +1834,7 @@ pub fn etched_slith() -> CardDefinition {
                         body: Box::new(Effect::RemoveCountersUpTo {
                             what: target_filtered(R::Permanent.and(R::OtherThanSource).or(R::OpponentPlayer)),
                             amount: Value::ONE,
+                            only_helpful: true,
                         }),
                     }),
                 },

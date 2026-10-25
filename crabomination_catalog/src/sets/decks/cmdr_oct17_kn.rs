@@ -1587,7 +1587,7 @@ pub fn thornmantle_striker() -> CardDefinition {
     };
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::RemoveCountersUpTo { what: target_filtered(R::Permanent), amount: elves() },
+            Effect::RemoveCountersUpTo { what: target_filtered(R::Permanent), amount: elves(), only_helpful: false },
             Effect::PumpPT {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 power: Value::Negate(Box::new(elves())),

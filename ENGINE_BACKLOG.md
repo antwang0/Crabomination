@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01M3bbRx`) — the targeted-player event, chosen-source redirects, a CR 903.4f misreading](#fixedopen-2026-10-25-commander-run-01m3bbrx--the-targeted-player-event-chosen-source-redirects-a-cr-9034f-misreading) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs](#fixedopen-2026-10-25-commander-run-01y6zrfx--the-last-five-edhrec-singles-a-state-trigger-class-stale-residual-docs) | 27 |
 | Bugs & robustness | [FIXED 2026-10-25 (Commander run, `01M2Ffkh` second pass) — no seats: kicker count, three engine shapes, seven seated-deck rows](#fixed-2026-10-25-commander-run-01m2ffkh-second-pass--no-seats-kicker-count-three-engine-shapes-seven-seated-deck-rows) | 26 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang](#fixedopen-2026-10-24-commander-run-01m2ffkh--33-seats-a-stale-layer-memo-a-sacrifice-cost-draw-loop-a-trigger-stack-hang) | 40 |
@@ -274,8 +275,18 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   target is legal (`state.accept` rejects it cleanly — no stall).
 - **OPEN, next by count:**
   Agadeem's Awakening (29), Sakashima's Protege (27), Urza's Bauble (25, the random look),
-  Palantír of Orthanc (22), Karn Living Legacy (21). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
-  helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.
+  Palantír of Orthanc (22), Karn Living Legacy (21). ~~`RemoveCountersUpTo`'s headless pick ignores whose side a counter
+  helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.~~ Heartless Act closed (`01M3bbRx`: `CounterType::is_harmful`, `only_helpful`); Rhys stays remove-all — undying wants its +1/+1s gone too.
+
+## FIXED/OPEN 2026-10-25 (Commander run, `01M3bbRx`) — the targeted-player event, chosen-source redirects, a CR 903.4f misreading
+
+No seats (the EDHREC well is dry). Fixed, each with a test:
+- **The BecameTarget scope class.** No event fired for a targeted *player*, and a `BecameTarget` trigger on `OpponentControl` / `YourControl` passes the implicit "the source is the target" check, so Leovold drew only when Leovold was targeted. `GameEvent::PlayerBecameTarget` (shares the kind bit; only `EventScope::YouOrYourPermanentTargetedByOpponent` hears it) — Leovold, Rayne (+ its enchanted second draw). An activation now emits `BecameTarget` for every slot, not only the first. Sweep of every `BecameTarget` user: Pawpatch Recruit lacked "other than that creature"; the rest match their oracle.
+- **Commander's Plate with no commander** had protection from all five colours; CR 903.4f / the 2020-11-10 ruling say none. One helper (`outside_commander_identity`) for the four gates; the test that asserted the old reading is rewritten.
+- `RedirectNextDamageTo { chosen_source, whole_turn }` (CR 614.9): Jade Monolith, Kor Chant. `SelectionRequirement::AttachedToYou`: Witchbane Orb's Curse sweep. `Effect::ReduceSpeedIfFastest`: Spikeshell Harrier. Lochmere Serpent: exactly five targets in one graveyard. Forge of Heroes: both counters on a creature planeswalker.
+- A subagent read all 76 COMMANDER_BACKLOG §3 commander-clause cards against Scryfall: the Plate and Forge above; Stinging Study / Geode Golem pick the higher-MV partner (INCOMPLETE 🟡); the rest correct.
+
+OPEN: the Enduring Tenacity + Exquisite Blood drain against a 22,562-life seat runs to the action cap (8-seat `--pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --seed 1071172`) — finite, so neither loop watch fires; a CR 732.2 shortcut for a two-trigger drain would end it. Board caps 7 / 8,380 at seeds 10702-10703 (Scute Swarm, Hare Apparent, Saheeli, Tireless Tracker; all reproduce on the session's base binary).
 
 ## FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs
 

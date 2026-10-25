@@ -2322,6 +2322,7 @@ pub fn hex_parasite() -> CardDefinition {
                 Effect::RemoveCountersUpTo {
                     what: target_filtered(R::Permanent),
                     amount: Value::XFromCost,
+                    only_helpful: false,
                 },
                 Effect::PumpPT {
                     what: Selector::This,

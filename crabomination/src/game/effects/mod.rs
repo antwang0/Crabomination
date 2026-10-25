@@ -21206,7 +21206,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RemoveCountersUpTo { what, amount } => {
+            Effect::RemoveCountersUpTo { what, amount, only_helpful } => {
                 // CR 122.6 — remove up to N counters (any kinds) from a
                 // permanent, or up to N poison counters from a player.
                 let budget = self.evaluate_value(amount, ctx).max(0) as u32;
@@ -21214,13 +21214,19 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     match ent {
                         EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                            let Some(ctrl) = self.battlefield_find(cid).map(|c| c.controller) else { continue };
+                            let friendly = self.same_team(ctrl, ctx.controller);
                             let Some(c) = self.battlefield_find_mut(cid) else { continue };
-                            let ctrl = c.controller;
                             let mut left = budget;
                             let mut oil_removed = false;
                             let mut taken = 0u32;
-                            let kinds: Vec<CounterType> =
+                            let mut kinds: Vec<CounterType> =
                                 c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
+                            // Helpful-to-remove kinds first (stable: printed order within).
+                            kinds.sort_by_key(|k| k.is_harmful() != friendly);
+                            if *only_helpful {
+                                kinds.retain(|k| k.is_harmful() == friendly);
+                            }
                             for kind in kinds {
                                 if left == 0 { break; }
                                 let removed = c.remove_counters(kind, left);

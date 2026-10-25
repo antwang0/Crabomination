@@ -186,9 +186,6 @@ impl GameState {
             }
             let Some(c) = self.battlefield_find(id) else { continue };
             let mine = c.controller == me;
-            let harmful = |k: CounterType| {
-                matches!(k, CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne | CounterType::Stun)
-            };
             let removal_rewarded = time_removal_rewarded(&c.definition);
             // (label, effect, remove?, good for the permanent's controller)
             let target = || Selector::ExactObjects(vec![id]);
@@ -197,7 +194,7 @@ impl GameState {
                 if n == 0 {
                     continue;
                 }
-                let good = !(harmful(k) || k == CounterType::Time && removal_rewarded);
+                let good = !(k.is_harmful() || k == CounterType::Time && removal_rewarded);
                 options.push((format!("Remove a {k:?} counter"), Effect::RemoveCounter { what: target(), kind: k, amount: Value::ONE }, true, good));
                 options.push((format!("Add a {k:?} counter"), Effect::AddCounter { what: target(), kind: k, amount: Value::ONE }, false, good));
             }

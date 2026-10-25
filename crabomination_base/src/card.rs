@@ -624,6 +624,13 @@ impl Sector {
     }
 }
 
+impl CounterType {
+    /// A counter nobody wants on their own permanent (-1/-1, -0/-1, stun).
+    pub fn is_harmful(self) -> bool {
+        matches!(self, CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne | CounterType::Stun)
+    }
+}
+
 /// Counter types that can be placed on permanents or players.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CounterType {

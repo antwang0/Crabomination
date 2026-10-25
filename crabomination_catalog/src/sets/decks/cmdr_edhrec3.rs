@@ -2952,7 +2952,7 @@ pub fn sanctuary_warden() -> CardDefinition {
             Selector::EachPermanent(R::Creature.or(R::Planeswalker).and(R::ControlledByYou).and(R::WithAnyCounter)),
             PlayerRef::You,
             Effect::Seq(vec![
-                Effect::RemoveCountersUpTo { what: chosen_one(), amount: Value::ONE },
+                Effect::RemoveCountersUpTo { what: chosen_one(), amount: Value::ONE, only_helpful: false },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(Value::CountersRemovedThisEffect, Value::ONE),
                     then: Box::new(Effect::Seq(vec![

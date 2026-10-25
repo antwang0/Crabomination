@@ -1428,7 +1428,7 @@ Six of the seven `decks/modern.rs` rows are training-pool cards, which is
 the column's point: the pool the nets learn on had a -2/-2 Languish and a
 half-strength Searing Wind. Residue, 64 rows, each an approximation a doc
 already names (multi-target "up to N" collapsed to one slot: ~~Conduct
-Electricity, Trick Shot~~ (slot groups, `01WwQaPJ`), Heartless Act's counters, Secret Tunnel; a
+Electricity, Trick Shot~~ (slot groups, `01WwQaPJ`), ~~Heartless Act's counters~~ (`only_helpful`, `01M3bbRx`), Secret Tunnel; a
 missing conditional branch: Systems Override's counters, The Necrobloom's
 Zombie, Agency Coroner's suspect, Paroxysm's pump; an alternative or
 additional cost the engine does not price: Bitter Triumph, Redirect

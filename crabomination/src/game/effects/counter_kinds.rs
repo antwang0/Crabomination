@@ -18,12 +18,7 @@ pub(crate) enum CounterKind {
 impl CounterKind {
     /// A counter nobody wants on their own creature (a -1/-1, a stun).
     fn is_harmful(&self) -> bool {
-        matches!(
-            self,
-            CounterKind::Plain(
-                CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne | CounterType::Stun
-            )
-        )
+        matches!(self, CounterKind::Plain(k) if k.is_harmful())
     }
 
     /// The kind as a prompt names it ("+1/+1", "flying").

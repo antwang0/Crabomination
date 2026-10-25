@@ -9671,8 +9671,16 @@ pub enum Effect {
     /// auto-picker drains present kinds greedily) from `what`. A permanent
     /// target drains its counters; a player target drains poison counters
     /// (CR 122.6 — Price of Betrayal's "artifact, creature, planeswalker, or
-    /// opponent"). Fewer than `amount` present removes all of them.
-    RemoveCountersUpTo { what: Selector, amount: Value },
+    /// opponent"). Fewer than `amount` present removes all of them. The pick
+    /// takes first the kinds whose removal helps the remover (a harmful
+    /// counter off its own side, any other off an opponent's); `only_helpful`
+    /// stops there — "up to" with no payoff for the count (Heartless Act).
+    RemoveCountersUpTo {
+        what: Selector,
+        amount: Value,
+        #[serde(default)]
+        only_helpful: bool,
+    },
     /// "You may remove up to `max` `kind` counters from among all permanents
     /// [matching `filter`]" (Sensational Spider-Man's stun counters): the
     /// headless pick takes them off the controller's own permanents first,

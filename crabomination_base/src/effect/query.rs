@@ -2292,7 +2292,7 @@ impl Effect {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::RemoveAllCounters { what } | Effect::RemoveAnyCounter { what } => sel_has_target(what),
-            Effect::RemoveCountersUpTo { what, amount } => sel_has_target(what) || value_has_target(amount),
+            Effect::RemoveCountersUpTo { what, amount, .. } => sel_has_target(what) || value_has_target(amount),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::GrantLoyaltyTwiceThisTurn { what }
             | Effect::LoyaltyTwoMoreTimesThisTurn { what }
