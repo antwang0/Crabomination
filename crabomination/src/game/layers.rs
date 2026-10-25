@@ -135,6 +135,9 @@ pub enum Modification {
     RemoveCardType(CardType),
     SetCardTypes(Vec<CardType>),
     AddCreatureType(CreatureType),
+    /// CR 205.1b — "isn't a [type]" (Werewolf Pack Leader's "isn't a Human").
+    /// A no-op on an object that is every creature type.
+    RemoveCreatureType(CreatureType),
     SetCreatureTypes(Vec<CreatureType>),
     /// CR 205.3 — "is every creature type" (Omo). A type effect, so a layer-6
     /// strip leaves it; the pass reports it as a computed changeling.
@@ -269,7 +272,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         // Two families: a layer-4 land-type change *and* the layer-3 rewrite
         // of a `Landwalk` payload (CR 612 / 702.15).
         M::ReplaceBasicLandType(..) => F::LAND_TYPE | F::KEYWORD_EDIT,
-        M::AddCreatureType(_) | M::SetCreatureTypes(_) => F::CREATURE_TYPE,
+        M::AddCreatureType(_) | M::RemoveCreatureType(_) | M::SetCreatureTypes(_) => F::CREATURE_TYPE,
         // Read through the computed changeling, so the keyword gates see it.
         M::EveryCreatureType => F::CREATURE_TYPE | F::KEYWORD,
         M::AddColor(_) | M::SetColors(_) | M::LoseAllColors => F::COLOR,
@@ -1130,7 +1133,9 @@ impl SecondPass {
                 _ => false,
             };
             match e.modification {
-                Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
+                Modification::SetCreatureTypes(_)
+                | Modification::AddCreatureType(_)
+                | Modification::RemoveCreatureType(_) => g.type_changer = true,
                 // CR 702.73a — a granted changeling makes the bearer every type.
                 Modification::AddKeyword(Keyword::Changeling) | Modification::EveryCreatureType => {
                     g.type_changer = true;
@@ -1544,6 +1549,11 @@ fn compute_permanent_pass(
             Modification::AddCreatureType(ct) => {
                 if !subtypes.creature_types.contains(ct) {
                     subtypes.creature_types.push(*ct);
+                }
+            }
+            Modification::RemoveCreatureType(ct) => {
+                if !every_creature_type {
+                    subtypes.creature_types.retain(|x| x != ct);
                 }
             }
             Modification::SetCreatureTypes(cts) => {

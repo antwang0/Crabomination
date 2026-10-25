@@ -2218,6 +2218,7 @@ impl Effect {
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
             | Effect::GainAllCreatureTypes { what, .. }
+            | Effect::LoseCreatureType { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
@@ -3518,6 +3519,7 @@ impl Effect {
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
             | Effect::GainAllCreatureTypes { what, .. }
+            | Effect::LoseCreatureType { what, .. }
             | Effect::GrantMayPlay { what, .. }
             | Effect::GrantMayPlayForLife { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
@@ -4605,6 +4607,9 @@ impl Effect {
                 format!("{} becomes a {}", self.target_phrase(), words.join(" "))
             }
             Effect::GainAllCreatureTypes { .. } => format!("{} gains all creature types", self.target_phrase()),
+            Effect::LoseCreatureType { creature_type, .. } => {
+                format!("{} isn't a {creature_type:?}", self.target_phrase())
+            }
             Effect::LoseAllAbilities { .. } => {
                 format!("{} loses all abilities", self.target_phrase())
             }
@@ -6010,6 +6015,7 @@ impl Effect {
                 | Effect::SwitchPowerToughness { what, .. }
                 | Effect::AddCreatureTypes { what, .. }
                 | Effect::GainAllCreatureTypes { what, .. }
+                | Effect::LoseCreatureType { what, .. }
                 | Effect::ReplaceColorWord { what, .. }
                 | Effect::ReplaceBasicLandType { what, .. }
                 | Effect::GrantMayPlay { what, .. }

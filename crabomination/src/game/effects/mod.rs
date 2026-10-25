@@ -20267,6 +20267,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LoseCreatureType { what, creature_type, duration } => {
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::just(cid),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::RemoveCreatureType(*creature_type),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GainAllCreatureTypes { what, duration } => {
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));

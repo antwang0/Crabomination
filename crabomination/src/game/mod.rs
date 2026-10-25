@@ -14659,7 +14659,9 @@ impl GameState {
         debug_assert!(
             !out.iter().any(|e| matches!(
                 e.modification,
-                Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+                Modification::AddCreatureType(_)
+                    | Modification::RemoveCreatureType(_)
+                    | Modification::SetCreatureTypes(_)
             )) || self.creature_type_change_in_scope(),
             "the creature-type presence gate missed a layer-4 creature-type source",
         );
@@ -19125,7 +19127,9 @@ impl GameState {
             .filter(|e| {
                 matches!(
                     e.modification,
-                    Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
+                    Modification::SetCreatureTypes(_)
+                        | Modification::AddCreatureType(_)
+                        | Modification::RemoveCreatureType(_)
                 )
             })
             .collect();
@@ -19138,6 +19142,7 @@ impl GameState {
             match &e.modification {
                 Modification::SetCreatureTypes(ts) => types = ts.clone(),
                 Modification::AddCreatureType(t) if !types.contains(t) => types.push(*t),
+                Modification::RemoveCreatureType(t) => types.retain(|x| x != t),
                 _ => {}
             }
         }

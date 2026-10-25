@@ -9490,6 +9490,9 @@ pub enum Effect {
     /// `ChooseColorForSelf` from a printed short list — Mangara's Equity's
     /// "choose black or red".
     ChooseColorForSelfAmong(Vec<crate::mana::Color>),
+    /// CR 205.1b — `what` stops being a `creature_type` for `duration`
+    /// ("and isn't a Human" — Werewolf Pack Leader); its other types stay.
+    LoseCreatureType { what: Selector, creature_type: crate::card::CreatureType, duration: Duration },
     /// Tablet of the Guilds: as this enters, choose two colors (stamped on
     /// `CardInstance.chosen_colors`).
     ChooseTwoColorsForSource,
