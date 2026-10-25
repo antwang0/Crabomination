@@ -49133,6 +49133,17 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::DamageSourcePower => {
+                        // "…unless [player] has [this] deal damage equal to
+                        // its power to them" (Combustion Man). Always payable.
+                        let n = ctx
+                            .source
+                            .and_then(|sid| self.computed_permanent(sid))
+                            .map(|c| c.power.max(0) as u32)
+                            .unwrap_or(0);
+                        self.deal_damage_to_from(EntityRef::Player(payer), n, ctx.source, events);
+                        true
+                    }
                     WardCost::LifeSourcePower => {
                         // Ward—Pay life equal to this creature's power.
                         let n = ctx

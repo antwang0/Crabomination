@@ -1225,6 +1225,9 @@ pub enum WardCost {
     /// Odyssey pay-in-damage menu (Blazing Salvo, Lava Blister, Molten
     /// Influence). Always payable; the damage comes from the effect's source.
     DamageFromSource(u32),
+    /// `DamageFromSource` for damage equal to the source's computed power at
+    /// payment time (Combustion Man).
+    DamageSourcePower,
     SacrificeCreature,
     /// "…unless you sacrifice a [filter]" — the filtered sibling of
     /// `SacrificeCreature` (Endless Wurm's enchantment, Contamination's
@@ -1320,6 +1323,7 @@ impl WardCost {
             }
             W::GenericControllerExperience => "Ward—{X} (your experience counters)".to_string(),
             W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
+            W::DamageSourcePower => "take damage equal to this creature's power".to_string(),
             W::RemoveCounterFromPermanent => {
                 "Ward—remove a counter from a permanent".to_string()
             }
