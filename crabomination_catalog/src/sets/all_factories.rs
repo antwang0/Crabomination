@@ -19250,6 +19250,14 @@ static DECKS: &[Factory] = &[
     super::decks::tourachs_chant,
     super::decks::noxious_grasp,
     super::decks::virtues_ruin,
+    super::decks::antler_skulkin,
+    super::decks::fang_skulkin,
+    super::decks::clockwork_beast,
+    super::decks::ronom_serpent,
+    super::decks::bazaar_of_wonders,
+    super::decks::balduvian_shaman,
+    super::decks::arcums_whistle,
+    super::decks::acidic_dagger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
