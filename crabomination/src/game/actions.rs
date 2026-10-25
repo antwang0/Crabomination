@@ -117,6 +117,9 @@ fn pick_densest(table: &[(ManaColor, u32)], legal: &[ManaColor]) -> ManaColor {
 /// colors)`. Stamped onto the resolution scratch so the spell body can read
 /// `Value::Sacrificed*` and `Predicate::SacrificedWas*`.
 type SacrificeSnapshot = (CardId, u32, bool, i32, u32, bool, bool, Vec<ManaColor>);
+/// Rebuilds a suspended cast's action from its card, target, extra targets,
+/// mode and X (`pose_extra_cast_target`'s `replay`).
+type CastReplay = fn(CardId, Option<Target>, Vec<Target>, Option<usize>, Option<u32>) -> GameAction;
 
 /// Rebuilds a cast action from its card, targets, mode and X — the replay a
 /// suspended extra-target prompt resumes with (`pose_extra_cast_target`).
