@@ -226,8 +226,10 @@ the handoff.
   `one::drivnod_doubles_a_lethal_damage_death`); the destroy funnel dropped soulbond-granted dies triggers
   (`push_soulbond_death_triggers`, Breathkeeper Seraph by Murder). Still divergent, unreached by a seated card:
   the lethal funnel ignores a creature's own `PermanentDied` self-trigger (only artifacts print it).
-- **OPEN:** Gandalf the White's "leaving" half — the dispatcher's `TriggerCandidate` carries no leaver id, so a
-  leave doubler can't read what left. One token-engine board cap (TODO NEXT item 6).
+- ~~**OPEN:** Gandalf the White's "leaving" half — the dispatcher's `TriggerCandidate` carries no leaver id, so a
+  leave doubler can't read what left.~~ Stale (checked 2026-10-25, `claude/modern_decks`): the dispatcher reads
+  `triggered_by_leave` → `leave_trigger_extra_fires` (`game/mod.rs`), pinned by
+  `cmdr_edhrec11::gandalf_the_white_doubles_triggers_a_leaving_legend_causes`. One token-engine board cap (TODO NEXT item 6).
 - **Primitives:** `StaticEffect::ExileDyingOpponentCreaturesWithCounter` (Ravenloft Adventurer, was a dies
   trigger); `Predicate::CompletedDungeon` + `PlayerCold::completed_dungeons` (Acererak);
   `SelectionRequirement::HasProtection` / `HasPartner` (Akroma, Vision of Ixidor); `StaticEffect::CrewPowerBonus`
@@ -1688,7 +1690,7 @@ decks hold the card).
 ## FIXED/OPEN 2026-10-14 (Commander run, `01KXJ5zX`) — EDHREC ranks 4501-5500
 
 - **FIXED (`f8c7dc177`) CR 113.10b:** the destroy/sacrifice funnel (`remove_to_graveyard_with_triggers`) and the SBA lethal-damage funnel read the dying creature's *printed* triggers even when a layer-6 strip had removed them — a stripped Hellcat returned on every death. Both now skip them under `GameState::lost_all_abilities`. **FIXED (`adf436766`):** the bounce/exile exit snapshot (`note_left_without_dying`, `lki_clone`) now drops a stripped permanent's printed triggers, read before it leaves.
-- **FIXED (`f8c7dc177`) CR 613.7:** `Duration::Permanent` keyword grants are baked onto the printed list, so an earlier `RemoveAllAbilities` cleared them; on a stripped permanent the grant is now a timestamped layer-6 effect. **OPEN:** the same bake applies to `GrantTriggeredAbility { Permanent }` and the type/subtype bakes beside it (`effects/mod.rs`, `bake_grant()` callers) — a strip that lands *before* them wipes them too.
+- **FIXED (`f8c7dc177`) CR 613.7:** `Duration::Permanent` keyword grants are baked onto the printed list, so an earlier `RemoveAllAbilities` cleared them; on a stripped permanent the grant is now a timestamped layer-6 effect. **OPEN:** the same bake applies to ~~`GrantTriggeredAbility { Permanent }`~~ (fixed 2026-10-25, `claude/modern_decks`: on a stripped permanent it rides `granted_triggers_timed` as `Indefinite`; `cr_613_7_permanent_trigger_grant_after_a_strip_survives_it`), `GrantStateTrigger` and the type/subtype bakes beside it (`effects/mod.rs`, `bake_grant()` callers) — a strip that lands *before* them wipes them too. The other direction is open as well: a timed trigger grant *older* than a strip survives it (`granted_triggers` carries no grant timestamp).
 - **FIXED (`9148c7908`) CR 903.4:** a land token's intrinsic `{T}: Add` (the Forest Dryad tokens, given one in `229786480`) counted toward the making card's identity — Staff of Titania read green.
 - **FIXED (`6bd38751d`):** "exile the top two, choose one of them, you may play it" granted both cards on Tectonic Giant, Riverwheel Sweep and Mishra's Research Desk; `sets::impulse_choose_one` is exact.
 - **FIXED (`cdbd98019`) CR 106.6:** the bot payment path's auto-tapper counts only unrestricted pool mana, so restricted floating mana that already covered a cost had it tap sources anyway — for Urn of Godfire's `{2}: Add one mana of any color` (no {T}) it re-entered the activating ability and failed with mana to spare. Restricted float that covers the cost is now spent first.

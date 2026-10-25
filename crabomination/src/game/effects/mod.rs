@@ -19290,7 +19290,13 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    match &expiry {
+                    // CR 613.7 — a permanent grant after a "loses all abilities"
+                    // effect outlives it, which a trigger baked onto the
+                    // printed list would not: it rides the timestamped list,
+                    // for as long as this object exists (`GrantKeyword`'s twin).
+                    let stripped_expiry = (expiry.is_none() && self.lost_all_abilities(cid))
+                        .then_some(crate::game::layers::EffectDuration::Indefinite);
+                    match stripped_expiry.as_ref().or(expiry.as_ref()) {
                         Some(expiry) => {
                             let stamp = self.battlefield_find(cid).map(|c| c.battlefield_timestamp);
                             self.granted_triggers_timed.entry(cid).or_default().push(

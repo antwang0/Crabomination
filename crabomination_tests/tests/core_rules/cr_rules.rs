@@ -1825,6 +1825,28 @@ fn cr_613_7_permanent_grant_after_a_strip_survives_it() {
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
+/// CR 613.7 — the same for a *permanent* triggered-ability grant: resolved
+/// after the strip, Flame-Wreathed Phoenix's "when this dies, return it to its
+/// owner's hand" still fires (it was baked onto the printed trigger list,
+/// which the strip clears).
+#[test]
+fn cr_613_7_permanent_trigger_grant_after_a_strip_survives_it() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(&Effect::LoseAllAbilities { what: Selector::This, duration: Duration::Permanent }, &ctx).unwrap();
+    // The Phoenix's tribute body: haste, and the return-to-hand death trigger.
+    let grant = catalog::flame_wreathed_phoenix().triggered_abilities[0].effect.clone();
+    let Effect::Tribute { otherwise, .. } = grant else { panic!("tribute body") };
+    g.resolve_effect(&otherwise, &ctx).unwrap();
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::This }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the granted death trigger fired");
+}
+
 /// CR 113.10b / 603.10a — a creature that has lost all abilities dies with no
 /// printed death trigger to look back at.
 #[test]
