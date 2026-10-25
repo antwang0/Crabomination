@@ -36996,6 +36996,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IRINI_SENGIR_COMMANDERS,
             main: decks::IRINI_SENGIR_MAIN,
         },
+        // Seat 6091: Stockman, Mad Fly-entist's EDHREC average deck. `--pod-decks 6091`.
+        PodDeck {
+            name: "Stockman, Mad Fly-entist (U)",
+            commanders: decks::STOCKMAN_COMMANDERS,
+            main: decks::STOCKMAN_MAIN,
+        },
     ]
 }
 
@@ -45047,6 +45053,7 @@ mod tests {
             ("Living Lightning, Charged Up", &[0x21DE]),
             ("Major Teroh", &[0x21DF]),
             ("Irini Sengir", &[0x21E0]),
+            ("Stockman, Mad Fly-entist", &[0x21E1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

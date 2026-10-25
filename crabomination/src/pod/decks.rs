@@ -171036,3 +171036,31 @@ pub const IRINI_SENGIR_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const STOCKMAN_COMMANDERS: &[CardFactory] = &[stockman_mad_fly_entist];
+
+/// **Stockman, Mad Fly-entist**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 12 Islands + 1 Wastes = 99.
+/// Stockman, Mad Fly-entist (EDHREC, fetched 2026-10-25).
+pub const STOCKMAN_MAIN: &[CardFactory] = &[
+    acidic_dagger, aladdins_lamp, arcane_signet, arcums_whistle, ashnods_transmogrant,
+    bosium_strip, delifs_cone, despotic_scepter, jack_o_lantern, rolling_hamsphere,
+    serum_powder, sol_ring, animal_sanctuary, arena, arid_mesa, bazaar_of_baghdad,
+    bloodstained_mire, city_of_shadows, diamond_valley, elephant_graveyard, escape_tunnel,
+    eye_of_ugin, griffin_canyon, homeward_path, island_of_wak_wak, jund_panorama, marsh_flats,
+    mishras_factory, mouth_of_ronom, myriad_landscape, naya_panorama, oasis, sorrows_path,
+    swarmyard, urborg_tomb_of_yawgmoth, urzas_mine, urzas_power_plant, verdant_catacombs,
+    windswept_heath, wooded_foothills, yavimaya_cradle_of_growth, aether_searcher,
+    agent_of_acquisitions, antler_skulkin, apprentice_sorcerer, balduvian_shaman,
+    capricious_sorcerer, cephalid_snitch, clockwork_beast, clockwork_gnomes, clockwork_swarm,
+    coastal_wizard, eater_of_days, fang_skulkin, ferropede, giant_albatross, grid_monitor,
+    hunted_phantasm, jawbone_skulkin, keldon_battlewagon, llawan_cephalid_empress,
+    phyrexian_marauder, ronom_serpent, rust_elemental, sky_swallower, steel_golem,
+    the_prismatic_piper, wormfang_crab, battle_of_wits, bazaar_of_wonders, collective_restraint,
+    douse, phantasmal_terrain, wizard_class, aether_tradewinds, displace, grip_of_phyresis,
+    negate, resculpt, test_of_talents, this_town_aint_big_enough, baleful_stare, clear_the_mind,
+    echo_of_eons, stock_up, tempted_by_the_oriq,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, wastes,
+];
