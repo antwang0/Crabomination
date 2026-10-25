@@ -19560,11 +19560,6 @@ pub fn big_game_hunter() -> CardDefinition {
 /// sorcery card with mana value less than or equal to Dreadhorde Arcanist's
 /// power from your graveyard without paying its mana cost. If that spell
 /// would be put into a graveyard, exile it instead."
-///
-/// Approximation: attack trigger moves the top instant-or-sorcery card from
-/// your graveyard to your hand (simplified from free-cast). The MV ≤ power
-/// restriction is omitted. The exile-instead-of-graveyard rider is also
-/// omitted in this simplified version.
 pub fn dreadhorde_arcanist() -> CardDefinition {
     use crate::card::CardType as CT;
     CardDefinition {
@@ -19580,17 +19575,18 @@ pub fn dreadhorde_arcanist() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CT::Instant)
-                            .or(SelectionRequirement::HasCardType(CT::Sorcery)),
-                    },
-                    Value::Const(1),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CT::Instant)
+                        .or(SelectionRequirement::HasCardType(CT::Sorcery))
+                        .and(SelectionRequirement::ManaValueAtMostSourcePower)
+                        .from_your_graveyard(),
                 ),
-                to: ZoneDest::Hand(PlayerRef::You),
+                source_zone: crate::card::Zone::Graveyard,
+                exile_after: true,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
             },
         }],
         ..Default::default()

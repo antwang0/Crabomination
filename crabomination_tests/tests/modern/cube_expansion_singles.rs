@@ -313,38 +313,32 @@ fn teleportal_pumps_and_grants_unblockable() {
 
 // ── Modern cube supplement ──────────────────────────────────────────────────
 
+/// Dreadhorde Arcanist casts a graveyard instant of mana value up to its
+/// power free on attack, and the spell is exiled after; a costlier one stays.
 #[test]
-fn dreadhorde_arcanist_attack_returns_instant_from_graveyard() {
-    let mut g = two_player_game();
-    // Put an instant card in P0's graveyard.
-    let bolt_id = g.add_card_to_library(0, catalog::lightning_bolt());
-    let pos = g.players[0].library.iter().position(|c| c.id == bolt_id).unwrap();
-    let bolt_card = g.players[0].library.remove(pos);
-    g.players[0].graveyard.push(bolt_card);
-
-    let arcanist = g.add_card_to_battlefield(0, catalog::dreadhorde_arcanist());
-    g.clear_sickness(arcanist);
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
-    g.active_player_idx = 0;
-
-    let hand_before = g.players[0].hand.len();
-    let gy_before = g.players[0].graveyard.len();
-
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: arcanist,
-        target: AttackTarget::Player(1),
-    }]))
-    .expect("Dreadhorde Arcanist attacks");
-    drain_stack(&mut g);
-
-    // The attack trigger should move the Lightning Bolt from graveyard to hand.
-    assert_eq!(g.players[0].hand.len(), hand_before + 1,
-        "Arcanist attack should return an IS card from graveyard to hand");
-    assert_eq!(g.players[0].graveyard.len(), gy_before - 1,
-        "Graveyard should lose one card");
-    assert!(g.players[0].hand.iter().any(|c| c.id == bolt_id),
-        "Lightning Bolt should now be in hand");
+fn dreadhorde_arcanist_casts_an_instant_from_the_graveyard_free() {
+    for (def, mv_fits) in [(catalog::lightning_bolt(), true), (catalog::counterspell(), false)] {
+        let mut g = two_player_game();
+        let spell = g.add_card_to_graveyard(0, def);
+        let arcanist = g.add_card_to_battlefield(0, catalog::dreadhorde_arcanist());
+        g.clear_sickness(arcanist);
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
+        let life = g.players[1].life;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: arcanist, target: AttackTarget::Player(1) }]))
+            .expect("Dreadhorde Arcanist attacks");
+        drain_stack(&mut g);
+        if mv_fits {
+            assert_eq!(g.players[1].life, life - 3, "the free Bolt hit");
+            assert!(g.exile.iter().any(|c| c.id == spell), "exiled instead of the graveyard");
+        } else {
+            assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "mana value above its power");
+        }
+    }
 }
 
 #[test]

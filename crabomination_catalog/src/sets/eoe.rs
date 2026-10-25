@@ -7576,9 +7576,9 @@ pub fn command_bridge() -> CardDefinition {
     }
 }
 
-/// Secluded Starforge — Land. {T}: Add {C}. {5}, {T}: Create a 2/2 colorless
-/// Robot artifact creature token. (The "tap X artifacts: target gets +X/+0"
-/// pump is dropped — no variable-tap cost primitive.)
+/// Secluded Starforge — Land. {T}: Add {C}. {2}, {T}, tap X untapped
+/// artifacts you control, sorcery speed: target creature gets +X/+0 until end
+/// of turn. {5}, {T}: Create a 2/2 colorless Robot artifact creature token.
 pub fn secluded_starforge() -> CardDefinition {
     use crate::effect::ManaPayload;
     CardDefinition {
