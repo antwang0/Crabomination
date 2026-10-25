@@ -259,7 +259,7 @@ pub fn flitterwing_nuisance() -> CardDefinition {
         enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::ONE)),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
-            remove_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
+            remove_counter_among_filter: Some((None, 1, R::Not(Box::new(R::OtherThanSource)))),
             // "… combat damage to a player or planeswalker" (CR 510.2): both kinds.
             effect: Effect::Seq(
                 [EventKind::DealsCombatDamageToPlayer, EventKind::DealsCombatDamageToPlaneswalker]

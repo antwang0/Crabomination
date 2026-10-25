@@ -222,14 +222,13 @@ pub fn escarpment_fortress() -> CardDefinition {
 }
 
 /// Moonlit Lamenter — {2}{W} 2/5 Treefolk Cleric that enters with a -1/-1
-/// counter. {1}{W}, remove a counter: draw a card (sorcery speed). The cost
-/// reads its -1/-1 counters, the only kind it puts on itself.
+/// counter. {1}{W}, remove a counter (any kind): draw a card (sorcery speed).
 pub fn moonlit_lamenter() -> CardDefinition {
     CardDefinition {
         enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::ONE)),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
-            remove_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
+            remove_counter_among_filter: Some((None, 1, R::Not(Box::new(R::OtherThanSource)))),
             sorcery_speed: true,
             effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
             ..Default::default()
@@ -246,7 +245,7 @@ pub fn burdened_stoneback() -> CardDefinition {
         enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(2))),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
-            remove_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
+            remove_counter_among_filter: Some((None, 1, R::Not(Box::new(R::OtherThanSource)))),
             sorcery_speed: true,
             effect: Effect::GrantKeyword {
                 what: target_filtered(R::Creature),
