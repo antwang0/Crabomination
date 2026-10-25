@@ -763,3 +763,41 @@ fn the_celestus_flips_the_sky() {
     activate(&mut g, cel, 1, None).expect("flip");
     assert_eq!(g.players[0].life, life + 1);
 }
+
+/// CR 706.2 — Vexing Puzzlebox charges by a roll's RESULT: two dice showing
+/// 3 and 5 are a result of 8 (ruling: the total), not the higher die; its own
+/// {T} d20 charges by the face.
+#[test]
+fn vexing_puzzlebox_charges_by_the_rolls_total() {
+    use crabomination::card::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(2);
+    let bx = ready(&mut g, 0, catalog::vexing_puzzlebox());
+    let roll = Effect::RollDie {
+        sides: 6,
+        count: Value::Const(2),
+        modifier: Value::ZERO,
+        reroll_at_most: 0,
+        results: vec![(1, 6, Effect::GainLife { who: Selector::You, amount: Value::ZERO })],
+        ignore_lowest: 0,
+        on_doubles: None,
+    };
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(3), DecisionAnswer::DieRoll(5)]));
+    let ev = g.resolve_effect(&roll, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bx).unwrap().counter_count(CounterType::Charge), 8);
+    // Dice only: the mana ability's colour ask goes to the auto policy.
+    struct D20(u8);
+    impl crabomination::decision::Decider for D20 {
+        fn decide(&mut self, d: &crabomination::decision::Decision) -> DecisionAnswer {
+            match d {
+                crabomination::decision::Decision::DieRoll { .. } => DecisionAnswer::DieRoll(self.0),
+                other => crabomination::decision::AutoDecider.decide(other),
+            }
+        }
+    }
+    g.decider = Box::new(D20(12));
+    activate(&mut g, bx, 0, None).expect("tap for mana and roll");
+    assert_eq!(g.battlefield_find(bx).unwrap().counter_count(CounterType::Charge), 20);
+}

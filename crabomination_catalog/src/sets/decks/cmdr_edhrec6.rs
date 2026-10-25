@@ -646,20 +646,20 @@ pub fn treasure_chest() -> CardDefinition {
     }
 }
 
-/// Vexing Puzzlebox — {3} Artifact. Your rolls charge it by the result; {T}:
-/// any color, then a d20; {T}, remove 100 charge counters: an artifact from
-/// your library onto the battlefield. Residual: a multi-die roll charges by
-/// its highest result (INCOMPLETE_CARDS).
+/// Vexing Puzzlebox — {3} Artifact. Your rolls charge it by the result (a
+/// multi-die roll's result is the total of the dice kept, modifiers added —
+/// counted die by die off `DieResult`; the planar die has none); {T}: any
+/// color, then a d20; {T}, remove 100 charge counters: an artifact from your
+/// library onto the battlefield.
 pub fn vexing_puzzlebox() -> CardDefinition {
     CardDefinition {
         name: "Vexing Puzzlebox",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![on_roll(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::Charge,
-            amount: Value::TriggerEventAmount,
-        })],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Performed(crate::effect::KeywordAct::DieResult), EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::TriggerEventAmount },
+        }],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
