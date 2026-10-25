@@ -2043,11 +2043,10 @@ pub enum Keyword {
     /// CR 702.16 / CR 903.4 — "protection from each color that's not in your
     /// commander's color identity" (Commander's Plate). The protected set is
     /// the *complement* of a colour set the game state owns, so it is resolved
-    /// at check time against `GameState::commander_identity_set` — the **raw**
-    /// identity, empty for a seat with no commander. A source gets through
-    /// only when every colour it has is inside the identity; a colourless
-    /// source has no colour outside it and always gets through, so a seat with
-    /// no commander has protection from all five colours and from nothing else.
+    /// at check time (`GameState::outside_commander_identity`). A source gets
+    /// through only when every colour it has is inside the identity; a
+    /// colourless source always gets through. A seat with no commander has
+    /// no protection at all (CR 903.4f, the 2020-11-10 ruling).
     ///
     /// ⚠ **"Your" is read as the bearer's controller, not the granting
     /// Equipment's.** They differ only after control of the equipped creature

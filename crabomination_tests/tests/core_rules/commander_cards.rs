@@ -337,15 +337,12 @@ fn cr_702_16b_plate_protection_bars_a_block_by_an_off_identity_creature() {
     assert!(g.blocker_can_block_attacker(white, attacker), "white is inside W/U");
 }
 
-/// CR 903.4 — a seat with **no commander** has an empty colour identity, so
-/// every colour is outside it and the bearer has protection from all five.
-/// ⚠ This is the reading `GameState::commander_identity_colors` deliberately
-/// does *not* take (it answers all five so Command Tower stays a fixing land
-/// in the two-player pool); read as a protection set that fallback would mean
-/// protection from nothing at all. The raw `commander_identity_set` is what
-/// this keyword asks, and it answers empty.
+/// CR 903.4f — with **no commander** "the colors in your commander's color
+/// identity" is undefined and that part of the ability does nothing: the
+/// bearer has protection from no colour (2020-11-10 ruling). This used to
+/// assert the opposite, reading the empty identity as "every colour outside".
 #[test]
-fn cr_903_4_plate_protection_covers_every_colour_for_a_seat_with_no_commander() {
+fn cr_903_4f_plate_protection_is_nothing_for_a_seat_with_no_commander() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, plated_bear());
     for (name, pip) in [
@@ -356,16 +353,10 @@ fn cr_903_4_plate_protection_covers_every_colour_for_a_seat_with_no_commander() 
         ("Test G", crabomination::mana::g()),
     ] {
         let src = g.add_card_to_battlefield(1, creature_costing(name, cost(&[pip])));
-        assert!(
-            g.damage_prevented_by_protection(src, bear),
-            "{name}: no commander means every colour is outside the identity",
-        );
+        assert!(!g.damage_prevented_by_protection(src, bear), "{name}");
+        assert!(!g.ability_target_has_protection(&Target::Permanent(bear), src), "{name}");
+        assert!(g.blocker_can_block_attacker(src, bear), "{name}");
     }
-    let grey = g.add_card_to_battlefield(1, creature_costing("Test Grey", cost(&[generic(2)])));
-    assert!(
-        !g.damage_prevented_by_protection(grey, bear),
-        "and a colourless source still gets through — it has no colour to be protected from",
-    );
 }
 
 /// CR 702.16 — and the fourth gate: a **spell** still in hand is checked

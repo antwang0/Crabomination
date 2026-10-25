@@ -7415,6 +7415,17 @@ impl GameState {
     /// is computed as the commanders are seated, and an empty cache is either a
     /// colourless commander or a snapshot from a build without the field — the
     /// walk answers both and never runs on the ordinary path.
+    /// CR 702.16 / 903.4 — Commander's Plate: does `seat` have protection
+    /// from some colour of `colors`? None outside a commander's identity —
+    /// and none at all with no commander (2020-11-10 ruling).
+    pub(crate) fn outside_commander_identity(&self, seat: usize, colors: &crate::mana::ColorSet) -> bool {
+        if self.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
+            return false;
+        }
+        let identity = self.commander_identity_set(seat);
+        colors.iter().any(|c| !identity.contains(c))
+    }
+
     pub fn commander_identity_set(&self, seat: usize) -> crate::mana::ColorSet {
         let Some(p) = self.players.get(seat) else { return crate::mana::ColorSet::empty() };
         if p.commanders.is_empty() {
@@ -19902,8 +19913,7 @@ impl GameState {
             // stopped as soon as it has ONE such colour. Colourless sources
             // have none and always get through.
             ProtectionKind::ColorsOutsideCommanderIdentity => {
-                let identity = self.commander_identity_set(tgt.controller);
-                src_colors.iter().any(|c| !identity.contains(c))
+                self.outside_commander_identity(tgt.controller, &src_colors)
             }
             // CR 702.16 — protection from creatures prevents all damage from a
             // creature source (Spirit Mantle).
@@ -21292,8 +21302,7 @@ impl GameState {
                 // set is the complement of the attacker's controller's
                 // commander identity, which only the game state knows.
                 Keyword::ProtectionFromColorsOutsideCommanderIdentity => {
-                    let identity = self.commander_identity_set(attacker.controller);
-                    blocker_cp.colors.iter().any(|c| !identity.contains(c))
+                    self.outside_commander_identity(attacker.controller, &blocker_cp.colors)
                 }
                 // CR 702.15 — plain landwalk, unless a `LandwalkIgnored`
                 // static blanks that flavour (Great Wall and friends).
