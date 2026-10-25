@@ -304,6 +304,12 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 - **FIXED (simulator bound):** `MAX_STACK_ITEMS` 8x → 4x `MAX_BATTLEFIELD`. A fetch putting three lands under ~1,470 Scute
   Swarms stacked 4,405 landfall triggers at ~0.17 s a pass — one five-seat game ran past 14 minutes (sweep 10159,
   `--pod-decks 5826,1830,4785,2122,434 --seed 1017885`); now a board cap.
+- **Seat 6088: Living Lightning, Charged Up** (8 gaps, `decks::cmdr_01m2_b`): Contested Game Ball (CR 506.2 — the
+  attacking player takes it, once per combat-damage batch), Jester's Cap (CR 701.23a, `SearchPickedBy`), Lightning
+  Visionary, Lightning Prowess, Lightning Storm (🟡 — no ability activates from the stack), Radiating Lightning, Riddle
+  of Lightning, Lightning Javelin. Primitives for the next two singles: `Effect::ChooseColorForSelfAmong` (Mangara's
+  Equity) and `StaticEffect::SacrificeSwampPerBlackSymbolToCast` (Drought, CR 601.2b) — `01Y6` seated Major Teroh and
+  Irini Sengir on them (6089-6090) while this run built the same two decks; ours were dropped.
 - **OPEN (board cap, not a bug) → seat re-seeded:** seat 3074 (Sakashima of a Thousand Faces + Sidar Kondo) at the
   seat test's seed 0x1618 (`--commander --a dflt --pod-decks 3074,1,2,3 --seed 5656`): Nesting Dovehawk populates a
   token Exalted Sunborn under Anointed Procession, each Sunborn doubling the next populate — 69 Sunborns and 882 Birds
