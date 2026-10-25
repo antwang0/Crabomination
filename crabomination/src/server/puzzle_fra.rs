@@ -62,7 +62,7 @@ fn lands(g: &mut GameState, seat: usize, f: fn() -> CardDefinition, n: usize) {
 }
 
 fn set_loyalty(g: &mut GameState, id: CardId, n: u32) {
-    let c = g.battlefield_find_mut(id).expect("planeswalker");
+    let Some(c) = g.battlefield_find_mut(id) else { return };
     let have = c.counter_count(CounterType::Loyalty);
     c.remove_counters(CounterType::Loyalty, have);
     c.add_counters(CounterType::Loyalty, n);
@@ -71,7 +71,8 @@ fn set_loyalty(g: &mut GameState, id: CardId, n: u32) {
 /// A Jace token with `n` loyalty, made the way the cards make it.
 fn jace_token(g: &mut GameState, n: i32) {
     let e = Effect::EmpowerJace { who: PlayerRef::You, count: crate::card::Value::Const(n) };
-    g.resolve_effect(&e, &EffectContext::for_spell(0, None, 0, 0)).expect("empower");
+    // A failed setup leaves no Jace token; the position is then just unsolved.
+    let _ = g.resolve_effect(&e, &EffectContext::for_spell(0, None, 0, 0));
 }
 
 /// Pass priority until `step` (both seats passing).

@@ -327,14 +327,18 @@ pub enum SealedSet {
 
 impl SealedSet {
     /// `CRAB_SEALED_SET` (`sos` | `fra`), read once per process. An unknown
-    /// value is a panic rather than a quiet SOS: a gate that meant to run on
-    /// FRA and silently didn't is the measurement this switch exists for.
+    /// value exits the process rather than running a quiet SOS: a gate that
+    /// meant to run on FRA and silently didn't is the measurement this switch
+    /// exists for.
     pub fn current() -> SealedSet {
         static SET: std::sync::OnceLock<SealedSet> = std::sync::OnceLock::new();
         *SET.get_or_init(|| match std::env::var("CRAB_SEALED_SET").as_deref() {
             Err(_) | Ok("") | Ok("sos") => SealedSet::Sos,
             Ok("fra") => SealedSet::Fra,
-            Ok(other) => panic!("CRAB_SEALED_SET={other}: expected sos or fra"),
+            Ok(other) => {
+                eprintln!("CRAB_SEALED_SET={other}: expected sos or fra");
+                std::process::exit(2)
+            }
         })
     }
 }
