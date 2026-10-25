@@ -297,8 +297,8 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   charge counters.
 - ⚠ **`pod_residuals.py` over-reports**: of the docs checked this run, Secluded Starforge (19 decks), Leatherhead (13) and
   Ringing Strike Mastery (7) named gaps the code had already closed. Read a flagged doc against its body before building.
-- **FIXED:** Werewolf Pack Leader's "isn't a Human" (9 decks + cube) — `Effect::LoseCreatureTypes` /
-  `Modification::RemoveCreatureType`, layer 4.
+- Werewolf Pack Leader's "isn't a Human" (9 decks + cube) was built here too and dropped at rebase: `01M2Ffkh` landed
+  the same primitive first (`d48449be8`, `Effect::LoseCreatureType`).
 - **OPEN:** Drought's mana-ability half (INCOMPLETE); Devouring Rage / Reroute go uncast in 1,000 Molly Hayes pods (the trick heuristic
   never picks a 5-mana pump; Reroute needs an activated ability with one target on the stack) — not plumbing bugs.
 - **Fuzz:** `random_pods.sh` 4 seats × 1,000 groups × 5 (seed 10181): 2 undecided of 5,000 — one CR 104.4b draw, one board
