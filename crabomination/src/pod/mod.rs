@@ -37002,6 +37002,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STOCKMAN_COMMANDERS,
             main: decks::STOCKMAN_MAIN,
         },
+        // Seat 6092: Molly Hayes, Runaway's EDHREC average deck. `--pod-decks 6092`.
+        PodDeck {
+            name: "Molly Hayes, Runaway (R)",
+            commanders: decks::MOLLY_HAYES_COMMANDERS,
+            main: decks::MOLLY_HAYES_MAIN,
+        },
+        // Seat 6093: Spider-Man, Hometown Hero's EDHREC average deck. `--pod-decks 6093`.
+        PodDeck {
+            name: "Spider-Man, Hometown Hero (R)",
+            commanders: decks::SPIDER_MAN_8_COMMANDERS,
+            main: decks::SPIDER_MAN_8_MAIN,
+        },
     ]
 }
 
@@ -45054,6 +45066,8 @@ mod tests {
             ("Major Teroh", &[0x21DF]),
             ("Irini Sengir", &[0x21E0]),
             ("Stockman, Mad Fly-entist", &[0x21E1]),
+            ("Molly Hayes, Runaway", &[0x21E2]),
+            ("Spider-Man, Hometown Hero", &[0x21E3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

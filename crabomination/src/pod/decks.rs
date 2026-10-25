@@ -171064,3 +171064,58 @@ pub const STOCKMAN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, wastes,
 ];
+
+pub const MOLLY_HAYES_COMMANDERS: &[CardFactory] = &[molly_hayes_runaway];
+
+/// **Molly Hayes, Runaway**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Mountains = 99.
+/// Molly Hayes, Runaway (EDHREC, fetched 2026-10-25).
+pub const MOLLY_HAYES_MAIN: &[CardFactory] = &[
+    dowsing_device, dungeon_map, essence_bottle, hulkbuster_armor, mind_stone,
+    thaumatic_compass, thran_dynamo, titan_forge, trip_noose, void_mirror, ancient_tomb,
+    dunes_of_the_dead, exotic_orchard, fire_nation_palace, gateway_plaza, ghitu_encampment,
+    kavaron_memorial_world, keldon_necropolis, rockface_village, the_great_mound,
+    the_mycosynth_gardens, thespians_stage, tocasias_dig_site, abstruse_archaic, akoum_warrior,
+    bearer_of_the_heavens, big_mother_mouser, bloodfire_dwarf, bonehoard_dracosaur,
+    firestorm_phoenix, frontline_devastator, harmonic_prodigy, ignition_team, iron_myr,
+    keldon_berserker, khorvath_brightflame, leyline_tyrant, mage_ring_responder,
+    pillardrop_warden, ruinous_gremlin, shrieking_mogg, skittering_precursor,
+    slicer_hired_muscle, sliversmith, squawkroaster, stormbreath_dragon, thermopod,
+    utvara_hellkite, vengeful_tracker, eomer_marshal_of_rohan, bloodshed_fever, chaos_moon,
+    flame_blitz, melting, ticket_booth_tunnel_of_hate, total_war, blind_fury, devouring_rage,
+    jayas_greeting, might_of_the_meek, pyroblast, reroute, ricochet_trap, samuts_sprint,
+    thunderbolt, lukka_coppercoat_outcast, apex_of_power, blazing_volley, cryoclasm, flashfires,
+    inner_fire, nahiris_lithoforming, song_mad_treachery, tahngarths_glare, thunderblade_charge,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const SPIDER_MAN_8_COMMANDERS: &[CardFactory] = &[spider_man_hometown_hero];
+
+/// **Spider-Man, Hometown Hero**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Mountains = 99.
+/// Spider-Man, Hometown Hero (EDHREC, fetched 2026-10-25).
+pub const SPIDER_MAN_8_MAIN: &[CardFactory] = &[
+    chromatic_orrery, coin_of_mastery, scepter_of_empires, damping_engine, fools_tome,
+    lightning_greaves, ornate_kanzashi, sol_ring, spiked_pit_trap, ur_golems_eye,
+    crucible_of_the_spirit_dragon, fogwells_gym, hall_of_tagsin, inkmoth_nexus, night_market,
+    phyrexias_core, radiant_fountain, seafarers_quay, shire_terrace, study_hall,
+    tendo_ice_bridge, the_great_mound, turtle_lair, warped_landscape, wintermoon_mesa,
+    witchs_clinic, aether_chaser, blight_herder, chrome_dome, corrupt_eunuchs,
+    darksteel_colossus, emrakul_the_promised_end, feldon_ronom_excavator, frenzied_raider,
+    goblin_piker, haunted_guardian, impulsive_pilferer, laccolith_warrior, legion_loyalist,
+    lodestone_golem, mad_ratter, maze_rusher, minion_of_the_mighty, sand_golem,
+    satyr_firedancer, skyclave_sentinel, skyscanner, soulbright_seeker, spartan_veteran,
+    ulamog_the_ceaseless_hunger, wiccan_young_avenger, xorn, yellow_scarves_cavalry,
+    dwarven_armory, font_of_ire, imminent_doom, stensia_uprising, eldrazi_confluence,
+    grab_the_reins, laughing_mad, redcap_melee, volcanic_offering, chandra_hopes_beacon,
+    blow_your_house_down, bonus_round, fervent_mastery, honor_the_god_pharaoh,
+    incendiary_command, landslide, molten_duplication, reckless_blaze, sundering_eruption,
+    thunderwave, unearthly_blizzard, volcanic_hammer,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
