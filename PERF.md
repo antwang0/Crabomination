@@ -3150,6 +3150,8 @@ pods             seed 10705, one game per block over all 6,093 decks at 4 seats:
                  seed 10706 at 2/3/6/8 seats: 6,854 / 6,856 (one Earthquake draw; one Skypainter cast loop — the
                  cast brake, 83777f810); seeds 10702-10703 (mid-run binary): 8,369 / 8,380 — 4 draws, 6 board
                  caps, 1 action cap (Enduring Tenacity + Exquisite Blood), all identical on the base binary
+after OneSearch  (cube cards changed) --bench 196,176 byte-identical; pools seed 10707 x 300: 7,500 / 7,500 decided
+                 (base identical); pods seed 10708 at 4 seats: 1,524 / 1,524
 ```
 
 ### 2026-10-25 (Commander run, `01Y6ZRFx`) — guardrail; 45 cards, 5 seats, nine primitives, a state-trigger class
