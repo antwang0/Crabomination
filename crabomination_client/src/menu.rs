@@ -1915,12 +1915,21 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// ([`EvalWeights::with_fra_fixes`]: any-target burn at creatures, no X=0
 /// Hydra, no pointless counter shedding, no misaimed boons / removal). They
 /// are off in the default pilot until a ladder gate adopts them.
-pub(crate) fn local_bot(n_seats: usize) -> Box<dyn crabomination::server::Bot> {
+///
+/// An FRA game (`fra`, from `fra_mode::is_fra_game`) puts the Reality
+/// Fracture net under the search instead — `CRAB_FRA_NET` or
+/// `nets/fra-champion.safetensors`, loaded into its own slot. The champion
+/// is the SOS net: on FRA it adds nothing over the material leaf, and the
+/// FRA net makes the same search +3.75 (round 82, `ML_NOTES`).
+pub(crate) fn local_bot(n_seats: usize, fra: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
     }
     load_champion_once();
     let mut weights = crabomination::server::EvalWeights::net_on_default();
+    if fra && load_fra_net_once() {
+        weights.net_slot = crabomination::server::net_eval::SLOT_FRA;
+    }
     if std::env::var_os("CRAB_FRA_FIXES").is_some_and(|v| v != "0") {
         weights = weights.with_fra_fixes();
         static SAID: std::sync::Once = std::sync::Once::new();
@@ -1954,6 +1963,26 @@ fn load_champion_once() {
             Err(e) => eprintln!("value net {path}: {e}; the local bot searches on the material leaf"),
         }
     });
+}
+
+/// Load the FRA value net into its slot, once per process; whether it is
+/// there. Missing or bad: announced, and the FRA game keeps the champion.
+fn load_fra_net_once() -> bool {
+    use crabomination::server::net_eval;
+    static LOADED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *LOADED.get_or_init(|| {
+        let path = std::env::var("CRAB_FRA_NET").unwrap_or_else(|_| "nets/fra-champion.safetensors".to_string());
+        match net_eval::load_slot(net_eval::SLOT_FRA, std::path::Path::new(&path)) {
+            Ok(()) => {
+                eprintln!("FRA value net loaded from {path}; the local bot searches FRA games on its leaf");
+                true
+            }
+            Err(e) => {
+                eprintln!("FRA value net {path}: {e}; FRA games keep the champion leaf");
+                false
+            }
+        }
+    })
 }
 
 /// Worker threads for the bot's root search.
@@ -2034,7 +2063,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
         name_seats(&mut state, &human_name, "Bot");
         state
     };
-    let occupants = local_occupants(server_seat, state.players.len());
+    let occupants = local_occupants(server_seat, &state);
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
     });
@@ -2046,10 +2075,12 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
 /// The human's seat 0 plus one local bot for every other seat of the state.
 pub(crate) fn local_occupants(
     human: crabomination::server::SeatChannel,
-    n_seats: usize,
+    state: &GameState,
 ) -> Vec<SeatOccupant> {
+    let n_seats = state.players.len();
+    let fra = crabomination::fra_mode::is_fra_game(state);
     std::iter::once(SeatOccupant::Human(human))
-        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats))))
+        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra))))
         .collect()
 }
 
@@ -2192,6 +2223,7 @@ pub(crate) fn host_lan_seats(
     joiner: crabomination::server::SeatChannel,
 ) -> Vec<SeatOccupant> {
     let n_seats = state.players.len();
+    let fra = crabomination::fra_mode::is_fra_game(state);
     for (i, p) in state.players.iter_mut().enumerate() {
         p.name = match i {
             0 => host_name.to_string(),
@@ -2201,7 +2233,7 @@ pub(crate) fn host_lan_seats(
     }
     [SeatOccupant::Human(host), SeatOccupant::Human(joiner)]
         .into_iter()
-        .chain((2..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats))))
+        .chain((2..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra))))
         .collect()
 }
 
@@ -2623,7 +2655,7 @@ mod tests {
         assert_eq!(state.players[0].name, "Ann");
         assert_eq!(state.players[0].command.len(), 2, "Krark + Rograkh come back");
         let (seat, _client) = crabomination::server::seat_pair();
-        assert_eq!(local_occupants(seat, state.players.len()).len(), 3);
+        assert_eq!(local_occupants(seat, &state).len(), 3);
         // No deck: the stock Commander pod, still sized by the menu option.
         let stock_pod = build_local_match_state(MatchFormat::Commander, None, 2, PodDecks::default(), "Ann");
         assert_eq!(stock_pod.players.len(), 2);

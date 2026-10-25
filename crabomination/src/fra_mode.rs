@@ -339,6 +339,25 @@ impl SealedSet {
     }
 }
 
+/// Is `state` a Reality Fracture game: are most of the nonland cards the
+/// players brought (library, hand, battlefield) on the FRA sheet? The
+/// client reads it to put the FRA net under its bot.
+pub fn is_fra_game(state: &crate::game::GameState) -> bool {
+    static NAMES: std::sync::OnceLock<crate::fxhash::HashSet<&'static str>> = std::sync::OnceLock::new();
+    let names = NAMES.get_or_init(|| FRA_SHEET.iter().map(|&(n, _)| n).collect());
+    let (mut fra, mut all) = (0usize, 0usize);
+    let cards = state
+        .players
+        .iter()
+        .flat_map(|p| p.library.iter().chain(p.hand.iter()))
+        .chain(state.battlefield.iter());
+    for c in cards.filter(|c| !c.definition.is_land()) {
+        all += 1;
+        fra += usize::from(names.contains(c.definition.name));
+    }
+    all > 0 && fra * 2 > all
+}
+
 /// The sheet resolved to catalog factories, bucketed by rarity. Built once.
 pub struct FraPacks {
     pub common: Vec<CardFactory>,
@@ -394,6 +413,23 @@ impl FraPacks {
 mod tests {
     use super::*;
     use rand::SeedableRng;
+
+    #[test]
+    fn an_fra_deck_is_an_fra_game_and_bears_are_not() {
+        let mut g = crate::game::two_player_game();
+        let packs = FraPacks::get();
+        for (i, f) in packs.common.iter().take(20).enumerate() {
+            g.add_card_to_library(i % 2, f());
+        }
+        for _ in 0..10 {
+            g.add_card_to_library(0, crate::catalog::plains());
+        }
+        assert!(is_fra_game(&g), "twenty FRA commons and some lands");
+        for _ in 0..30 {
+            g.add_card_to_library(1, crate::catalog::grizzly_bears());
+        }
+        assert!(!is_fra_game(&g), "mostly Bears");
+    }
 
     #[test]
     fn the_fra_sheet_resolves_and_rolls_the_rarity_mix() {

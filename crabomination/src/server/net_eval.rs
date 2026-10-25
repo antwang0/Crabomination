@@ -25,14 +25,18 @@ use crate::game::GameState;
 pub const SLOT_BEST: u8 = 1;
 /// The training loop's un-promoted checkpoint, for gatekeeper matches.
 pub const SLOT_CANDIDATE: u8 = 2;
-const NUM_SLOTS: usize = 3;
+/// The Reality Fracture net: the client's leaf for an FRA game
+/// (`fra_mode::is_fra_game`), since the champion is the SOS net and reads
+/// FRA's cards off its vocabulary (round 82: +3.75 as the search leaf).
+pub const SLOT_FRA: u8 = 3;
+const NUM_SLOTS: usize = 4;
 
 /// The slot table: one optional evaluator per slot, shared by the global
 /// `SLOTS` and each thread's generation-tagged `CACHE`.
 type SlotTable = [Option<Arc<dyn NetEvaluator>>; NUM_SLOTS];
 
 static SLOTS: RwLock<SlotTable> =
-    RwLock::new([None, None, None]);
+    RwLock::new([None, None, None, None]);
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 
 /// The encoder vocabulary every net in the registry must match. Built
@@ -73,7 +77,7 @@ pub fn load_slot(slot: u8, path: &std::path::Path) -> Result<(), String> {
 
 thread_local! {
     static CACHE: RefCell<(u64, SlotTable)> =
-        const { RefCell::new((u64::MAX, [None, None, None])) };
+        const { RefCell::new((u64::MAX, [None, None, None, None])) };
 }
 
 fn net_for(slot: u8) -> Option<Arc<dyn NetEvaluator>> {
