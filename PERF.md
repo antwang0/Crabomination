@@ -3150,6 +3150,9 @@ pods             seed 10161, 200 games at each of 2..8 seats: 1,400 decided;
                  turns/game 19.80 / 32.11 / 47.02 / 57.86 / 70.56 / 83.95 / 96.90
 fixed-card seats the 430 decks holding a card this run changed, 106 four-seat groups x 20 (seed 10162):
                  2,119 / 2,120 decided, 1 CR 104.4a draw, 0 panics
+after CR 115.3   (Seq-aware distinct targets) --bench 27.64 / 613.0 / 0 stalls, byte-identical; cube/sos/sealed seed
+                 10164 x 300: 7,498 decided + 2 draws (identical with the pre-fix binary); the 220 decks holding a
+                 second-batch card, 54 four-seat groups x 20 (seed 10165): 1,079 / 1,080, 1 CR 104.4a draw
 ```
 
 ### 2026-10-24 night (Commander run, `01M2Ffkh`) — guardrail; gather key +1 mix, a stack walk in the bot's activation guard
