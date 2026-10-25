@@ -1634,3 +1634,35 @@ fn cr_603_8_control_no_islands_sacrifices_without_waiting_for_upkeep() {
         assert!(g.battlefield_find(c).is_none(), "sacrificed in the main phase");
     }
 }
+
+/// CR 702.33 — a spell kicked with its single kicker cost was kicked once, so
+/// "two +1/+1 counters for each time it was kicked" / `TimesKicked` read 1
+/// (Skyclave Sentinel and Skyclave Shade entered with none, 2026-10-25).
+#[test]
+fn cr_702_33_a_kicked_spell_counts_one_kick() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let defs: [(fn() -> crabomination::card::CardDefinition, u32); 2] =
+        [(catalog::skyclave_sentinel, 2), (catalog::skyclave_shade, 2)];
+    for (def, want) in defs {
+        for kicked in [false, true] {
+            let mut g = peace_main();
+            let id = g.add_card_to_hand(0, def());
+            for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+                g.players[0].mana_pool.add(c, 2);
+            }
+            g.players[0].mana_pool.add_colorless(6);
+            let (card_id, target, additional_targets, mode, x_value) = (id, None, vec![], None, None);
+            let act = if kicked {
+                GameAction::CastSpellKicked { card_id, target, additional_targets, mode, x_value }
+            } else {
+                GameAction::CastSpell { card_id, target, additional_targets, mode, x_value }
+            };
+            g.perform_action(act).expect("cast");
+            drain_stack(&mut g);
+            let n = g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne));
+            assert_eq!(n, Some(if kicked { want } else { 0 }), "{} kicked={kicked}", def().name);
+        }
+    }
+}

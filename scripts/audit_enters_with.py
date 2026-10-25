@@ -29,7 +29,6 @@ KINDS = {"+1/+1": "PlusOnePlusOne", "-1/-1": "MinusOneMinusOne", "+1/+0": "PlusO
 # isolation / arrowhead counter by name, so only proliferate-style "a kind of
 # counter" reads could tell).
 REVIEWED = {
-    "Skyclave Shade": "'if kicked, two': one kicker, so 2 x TimesKicked is two or none",
     "Icatian Javelineers": "javelin counter rides Charge",
     "Wishclaw Talisman": "wish counter rides Charge",
     "Prism Array": "crystal counter rides Charge",
@@ -106,8 +105,11 @@ def main():
             # An `IfPred` whose either branch is the printed number: "If you
             # do, it enters with …" (Undead Sprinter) / "It escapes with
             # twelve … instead" (Polukranos).
+            # "If it was kicked, it enters with two": N x TimesKicked, which
+            # reads 1 for a spell kicked with its one kicker cost (CR 702.33).
             if dval != f"Const({WORDS[word]})" and not (
-                    dval.startswith("IfPred") and f"Const({WORDS[word]})" in dval):
+                    dval.startswith("IfPred") and f"Const({WORDS[word]})" in dval) and not (
+                    dval == f"Times(Const({WORDS[word]}), TimesKicked)" and "kicked" in oracle[max(0, m.start() - 60):m.end()].lower()):
                 rows.append(f"{name:40} amount {dval[:60]} vs printed {word!r}")
         elif word == "x" and dval.startswith("Const("):
             rows.append(f"{name:40} amount {dval} vs printed X")

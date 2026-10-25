@@ -10874,6 +10874,11 @@ impl GameState {
                 || !kicker_options.is_empty()
                 || self.granted_offspring_cost(p, &card.definition).is_some());
         card.kicked = kicked;
+        // CR 702.33 — a spell kicked with its one kicker cost was kicked once:
+        // `Value::TimesKicked` reads 1, not multikicker's unset 0.
+        if kicked && card.kick_count == 0 && card.definition.has_kicker().is_some() {
+            card.kick_count = 1;
+        }
         // CR 701.4a — the beheld type is chosen as the cost is announced.
         if kicked
             && let Some(crate::card::AdditionalCastCost::BeholdOfChosenType { count }) =
