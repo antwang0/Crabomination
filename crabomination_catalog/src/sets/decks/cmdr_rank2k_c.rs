@@ -338,22 +338,22 @@ pub fn ivorytusk_fortress() -> CardDefinition {
 
 /// Loch Mare — {1}{U} 4/5 Horse Serpent; enters with three -1/-1 counters.
 /// {1}{U}, remove a counter: draw. {2}{U}, remove two: tap a creature and stun
-/// it. (The counters removed are its -1/-1 counters — the only kind it is
-/// built to carry.)
+/// it. Any kind of counter pays (CR 122.1).
 pub fn loch_mare() -> CardDefinition {
     let m = CounterType::MinusOneMinusOne;
+    let own = || R::Not(Box::new(R::OtherThanSource));
     CardDefinition {
         enters_with_counters: Some((m, Value::Const(3))),
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), u()]),
-                remove_counter_cost: Some((m, 1)),
+                remove_counter_among_filter: Some((None, 1, own())),
                 effect: draw(1),
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), u()]),
-                remove_counter_cost: Some((m, 2)),
+                remove_counter_among_filter: Some((None, 2, own())),
                 effect: Effect::Seq(vec![
                     Effect::Tap { what: target_filtered(R::Creature) },
                     Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },

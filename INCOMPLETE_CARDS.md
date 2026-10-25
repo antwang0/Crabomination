@@ -2082,7 +2082,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Treasure Keeper | the dies walk exiles the cards it passes (cascade's walk) rather than revealing them | no reveal-until-cast-free effect without the exile |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
-| 🟡 Loch Mare | "remove a counter" spends only its -1/-1 counters | `remove_counter_cost` names one kind |
 | 🟡 Scrap Welder | the returned artifact card is chosen as the ability resolves, not targeted | targets are fixed before the sacrifice that sets X |
 | 🟡 Angel of Condemnation | the exert is paid as the ability resolves (`SkipNextUntap`), not as a cost | no exert activation cost |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
@@ -2141,7 +2140,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
 | 🟡 Dread | like No Mercy, damage from your own creatures is not watched | `PlayerDamaged` scoped to opponents' sources |
 | ~~Leatherhead, Swamp Stalker~~ ✅ | fixed 2026-10-24: `StaticEffect::SelfEntersWithKeywordCounter` puts the hexproof counter on as she enters (CR 614.1c) — `leatherhead_enters_already_hexproof` | — |
-| 🟡 The Duke, Rebel Sentry | the cost removes a +1/+1 counter, the only kind he enters with | `remove_counter_cost` |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |

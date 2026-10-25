@@ -899,14 +899,13 @@ pub fn leatherhead_swamp_stalker() -> CardDefinition {
 
 /// The Duke, Rebel Sentry — {W} legendary 0/1; enters with a +1/+1 counter.
 /// {T}, remove a counter from him: a +1/+1 counter on another target creature
-/// you control; it gains hexproof until end of turn. (Residual: the cost
-/// removes a +1/+1 counter, the only kind he enters with.)
+/// you control; it gains hexproof until end of turn. Any kind of counter pays.
 pub fn the_duke_rebel_sentry() -> CardDefinition {
     CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            remove_counter_among_filter: Some((None, 1, R::Not(Box::new(R::OtherThanSource)))),
             effect: Effect::Seq(vec![
                 counter_on(target_filtered(your_creature().and(R::OtherThanSource)), 1),
                 Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },

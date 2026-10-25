@@ -623,6 +623,32 @@ fn the_duke_passes_his_counter() {
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof));
 }
 
+/// CR 122.1 — "remove a counter from The Duke" takes any kind: a stun
+/// counter pays; no counter at all doesn't.
+#[test]
+fn the_duke_pays_with_any_counter() {
+    let mut g = pod(2);
+    let duke = ready(&mut g, 0, catalog::the_duke_rebel_sentry());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let go = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: duke,
+            ability_index: 0,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert_eq!(g.battlefield_find(duke).unwrap().total_counters(), 0);
+    assert!(go(&mut g).is_err(), "nothing to remove");
+    g.battlefield_find_mut(duke).unwrap().add_counters(CounterType::Stun, 1);
+    go(&mut g).expect("a stun counter pays");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(duke).unwrap().counter_count(CounterType::Stun), 0);
+    assert_eq!(plus(&g, bear), 1);
+}
+
 /// Temporary Truce: everyone draws two (auto) or banks life; Green Goblin
 /// trades a discard for each opponent's.
 #[test]
