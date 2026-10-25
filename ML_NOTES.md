@@ -6252,3 +6252,12 @@ field. Against the user's own list (seed 97, a field neither was tuned on):
 **+0.56 ±1.77**, a tie where the unpolished build was −2.84. Cost: about 4.5
 minutes a pool on 22 threads. It is not measured across random pools (one
 pool takes minutes), but each run prints its own unseen-field reading.
+
+**Round 81's champion swap — MADE (2026-10-25, the user's call).**
+`nets/champion.safetensors` is now `nets_r81_s43/best.safetensors` (sha256
+966f436c…; the round-69 champion it replaces was 597184b8…, recoverable from
+git). Its gate (round 81 above): +1.36 [+0.37, +2.36] as a scored pilot over
+four training seeds, +1.05 as the search leaf on one. Every non-FRA game's
+net leaf (client, lobby, server, `net67` profiles) reads it by default; FRA
+games keep `nets/fra-champion.safetensors`. Any later "vs champion" reading
+is against this net.
