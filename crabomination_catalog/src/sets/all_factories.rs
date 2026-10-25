@@ -19267,6 +19267,16 @@ static DECKS: &[Factory] = &[
     super::decks::melting,
     super::decks::total_war,
     super::decks::thunderblade_charge,
+    super::decks::corrupt_eunuchs,
+    super::decks::frenzied_raider,
+    super::decks::haunted_guardian,
+    super::decks::skyclave_sentinel,
+    super::decks::spartan_veteran,
+    super::decks::yellow_scarves_cavalry,
+    super::decks::dwarven_armory,
+    super::decks::imminent_doom,
+    super::decks::redcap_melee,
+    super::decks::blow_your_house_down,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

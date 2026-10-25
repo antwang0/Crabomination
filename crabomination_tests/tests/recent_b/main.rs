@@ -389,3 +389,4 @@ mod cmdr_01y6_a;
 mod cmdr_01y6_b;
 mod cmdr_01y6_c;
 mod cmdr_01y6_d;
+mod cmdr_01y6_e;
