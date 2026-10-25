@@ -390,8 +390,8 @@ pub fn darwin_adaptive_mutant() -> CardDefinition {
 
 /// Beorn's Hospitality — {1}{G} enchantment. Landfall — a +1/+1 counter on
 /// target creature you control. {5}{G}{G}: it becomes a Bear creature with
-/// power and toughness equal to the lands you control. (Residual: the size is
-/// fixed as the ability resolves rather than tracking your lands.)
+/// power and toughness equal to the lands you control, re-read as lands
+/// come and go (`SetBasePtLive`).
 pub fn beorns_hospitality() -> CardDefinition {
     let lands = || {
         Value::CountOf(Box::new(Selector::EachPermanent(

@@ -1011,11 +1011,12 @@ pub fn rangers_firebrand() -> CardDefinition {
 
 /// Andúril, Flame of the West — {3} Legendary Equipment. Equipped creature gets
 /// +3/+1. Whenever it attacks, create two tapped 1/1 white Spirit tokens with
-/// flying. Equip {2}. (The legendary-equipped vigilance upgrade is dropped — minor.)
+/// flying — tapped and attacking instead if that creature is legendary.
+/// Equip {2}.
 pub fn anduril_flame_of_the_west() -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus, TokenDefinition};
     use crate::mana::Color;
-    let spirit = TokenDefinition {
+    let spirit = std::sync::Arc::new(TokenDefinition {
         name: "Spirit".into(),
         power: 1,
         toughness: 1,
@@ -1028,7 +1029,7 @@ pub fn anduril_flame_of_the_west() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         tapped: true,
         ..Default::default()
-    };
+    });
     CardDefinition {
         name: "Andúril, Flame of the West",
         cost: cost(&[generic(3)]),
@@ -1044,10 +1045,19 @@ pub fn anduril_flame_of_the_west() -> CardDefinition {
             toughness: 1,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(2),
-                    definition: std::sync::Arc::new(spirit),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::HasSupertype(Supertype::Legendary),
+                    },
+                    then: Box::new(Effect::CreateTokenAttacking {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        definition: spirit.clone(),
+                        cleanup: Default::default(),
+                        defender: None,
+                    }),
+                    else_: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: spirit }),
                 },
             }],
             ..Default::default()

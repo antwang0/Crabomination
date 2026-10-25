@@ -47712,8 +47712,8 @@ pub fn burrenton_forge_tender() -> CardDefinition {
 
 /// Reckoner Bankbuster — {2} Artifact — Vehicle 4/4, Crew 3. Enters with
 /// three charge counters; {2}, {T}, remove a charge: draw a card, then if
-/// empty, create a Treasure and a 1/1 Pilot (the Pilot's crew-boost rider
-/// is dropped).
+/// empty, create a Treasure and a 1/1 Pilot that crews Vehicles as though
+/// its power were 2 greater.
 pub fn reckoner_bankbuster() -> CardDefinition {
     CardDefinition {
         name: "Reckoner Bankbuster",
@@ -47762,6 +47762,10 @@ pub fn reckoner_bankbuster() -> CardDefinition {
                                     creature_types: vec![CreatureType::Pilot],
                                     ..Default::default()
                                 },
+                                static_abilities: vec![crate::card::StaticAbility {
+                                    description: "This token crews Vehicles as though its power were 2 greater.",
+                                    effect: crate::card::StaticEffect::CrewPowerBonus { applies_to: Selector::This, amount: 2 },
+                                }],
                                 ..Default::default()
                             }),
                         },

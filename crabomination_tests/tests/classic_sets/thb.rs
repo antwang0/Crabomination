@@ -2830,6 +2830,29 @@ fn mirror_shield_grants_toughness_and_hexproof() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Hexproof), "gains hexproof");
 }
 
+/// CR 509.1 / 603.2 — Mirror Shield's granted trigger: a deathtouch creature
+/// that blocks the bearer is destroyed before damage; a plain blocker isn't.
+#[test]
+fn mirror_shield_destroys_a_deathtouch_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    for (rats, dies) in [(true, true), (false, false)] {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let shield = g.add_card_to_battlefield(0, catalog::mirror_shield());
+        g.battlefield_find_mut(shield).unwrap().attached_to = Some(bear);
+        g.clear_sickness(bear);
+        let blocker = g.add_card_to_battlefield(1, if rats { catalog::typhoid_rats() } else { catalog::grizzly_bears() });
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        advance_to(&mut g, TurnStep::DeclareBlockers);
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("block");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(blocker).is_none(), dies, "deathtouch blocker: {rats}");
+    }
+}
+
 /// Shimmerwing Chimera bounces another enchantment you control at upkeep.
 #[test]
 fn shimmerwing_chimera_bounces_own_enchantment_at_upkeep() {

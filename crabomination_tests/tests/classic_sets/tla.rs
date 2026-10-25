@@ -2954,8 +2954,8 @@ fn obsessive_pursuit_attack_counters_and_lifelink() {
         "X≥3 grants lifelink");
 }
 
-/// Combustion Man destroys the target unless its controller pays life = his
-/// power; the AutoDecider declines, so the permanent dies.
+/// Combustion Man destroys the target unless its controller takes damage
+/// equal to his power; the AutoDecider declines, so the permanent dies.
 #[test]
 fn combustion_man_destroys_when_unpaid() {
     let mut g = two_player_game();
@@ -2963,6 +2963,25 @@ fn combustion_man_destroys_when_unpaid() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     attack_with(&mut g, cm);
     assert!(g.battlefield_find(victim).is_none(), "target destroyed (life unpaid)");
+}
+
+/// The punisher half is DAMAGE from Combustion Man, not life loss: paid, the
+/// Bears live and his controller's lifelink (Basilisk Collar) gains 4.
+#[test]
+fn combustion_man_punisher_is_damage() {
+    let mut g = two_player_game();
+    let cm = g.add_card_to_battlefield(0, catalog::combustion_man());
+    let collar = g.add_card_to_battlefield(0, catalog::basilisk_collar());
+    g.battlefield_find_mut(collar).unwrap().attached_to = Some(cm);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let (life0, life1) = (g.players[0].life, g.players[1].life);
+    attack_with(&mut g, cm);
+    assert!(g.battlefield_find(victim).is_some(), "paid: the Bears live");
+    assert_eq!(g.players[1].life, life1 - 4);
+    assert_eq!(g.players[0].life, life0 + 4, "lifelink: it was damage");
 }
 
 /// Teo loots when a flyer attacks and adds a counter when a nonland is pitched.

@@ -699,6 +699,28 @@ fn anduril_equips_and_spawns_spirits() {
     assert_eq!(spirits, 2, "two Spirit tokens on attack");
 }
 
+/// CR 508.3a — on a legendary bearer Andúril's Spirits enter tapped and
+/// attacking (seat 2 of three, the player the bearer attacks); on a
+/// nonlegendary one they only enter tapped.
+#[test]
+fn anduril_legendary_bearer_spirits_attack() {
+    for (legendary, attacking) in [(true, 2usize), (false, 0)] {
+        let mut g = multi_player_game(3);
+        let blade = g.add_card_to_battlefield(0, catalog::anduril_flame_of_the_west());
+        let bearer = g.add_card_to_battlefield(0, if legendary { catalog::isamaru_hound_of_konda() } else { catalog::grizzly_bears() });
+        g.clear_sickness(bearer);
+        g.battlefield_find_mut(blade).unwrap().attached_to = Some(bearer);
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bearer, target: AttackTarget::Player(2) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        let spirits: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Spirit").map(|c| c.id).collect();
+        assert_eq!(spirits.len(), 2);
+        let on_two = g.attacking.iter().filter(|a| spirits.contains(&a.attacker) && a.target == AttackTarget::Player(2)).count();
+        assert_eq!(on_two, attacking, "legendary: {legendary}");
+    }
+}
+
 /// Galadhrim Guide scries 2 on ETB (no crash; resolves).
 #[test]
 fn galadhrim_guide_scries_on_etb() {

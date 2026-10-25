@@ -5687,8 +5687,8 @@ pub fn sandbender_scavengers() -> CardDefinition {
 }
 
 /// Combustion Man — {3}{R}{R} 4/6 Legendary Human Assassin. Whenever he
-/// attacks, destroy target permanent unless its controller takes damage equal
-/// to his power. (Punisher cost modeled as life loss = his power.)
+/// attacks, destroy target permanent unless its controller has him deal damage
+/// equal to his power to them.
 pub fn combustion_man() -> CardDefinition {
     CardDefinition {
         name: "Combustion Man",
@@ -5703,7 +5703,7 @@ pub fn combustion_man() -> CardDefinition {
         toughness: 6,
         triggered_abilities: vec![on_attack(Effect::UnlessPlayerPays {
             who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-            cost: crate::card::WardCost::LifeSourcePower,
+            cost: crate::card::WardCost::DamageSourcePower,
             then: Box::new(Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Permanent),
             }),

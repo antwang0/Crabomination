@@ -5176,7 +5176,8 @@ pub fn wolfwillow_haven() -> CardDefinition {
 }
 
 /// Mirror Shield — {2} Equipment. Equipped creature gets +0/+2 and has
-/// hexproof. Equip {2}. (The deathtouch-blocker destroy clause is omitted.)
+/// hexproof and "whenever a creature with deathtouch blocks or becomes
+/// blocked by this creature, destroy that creature." Equip {2}.
 pub fn mirror_shield() -> CardDefinition {
     CardDefinition {
         name: "Mirror Shield",
@@ -5191,6 +5192,24 @@ pub fn mirror_shield() -> CardDefinition {
             power: 0,
             toughness: 2,
             keywords: vec![Keyword::Hexproof],
+            // Blocking, the creature it blocks; attacking, its blockers.
+            triggered_abilities: [EventKind::Blocks, EventKind::BecomesBlocked]
+                .into_iter()
+                .map(|kind| TriggeredAbility {
+                    event: EventSpec::new(kind, EventScope::SelfSource),
+                    effect: Effect::ForEach {
+                        selector: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+                        body: Box::new(Effect::If {
+                            cond: Predicate::EntityMatches {
+                                what: Selector::TriggerSource,
+                                filter: SelectionRequirement::HasKeyword(Keyword::Deathtouch),
+                            },
+                            then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                            else_: Box::new(Effect::Noop),
+                        }),
+                    },
+                })
+                .collect(),
             ..Default::default()
         }),
         ..Default::default()

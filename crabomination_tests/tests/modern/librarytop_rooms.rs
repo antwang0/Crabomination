@@ -832,6 +832,11 @@ fn reckoner_bankbuster_draws_then_pays_out_when_empty() {
         }
     }
     assert_eq!(g.players[0].hand.len(), hand_before + 3, "drew once per activation");
+    // CR 702.122a — the 1/1 Pilot crews as though its power were 3: alone it
+    // pays Crew 3.
+    let pilot = g.battlefield.iter().find(|c| c.definition.name == "Pilot").unwrap().id;
+    g.clear_sickness(pilot);
+    g.perform_action(GameAction::Crew { vehicle: id, crew_creatures: vec![pilot] }).expect("the Pilot crews alone");
 }
 
 /// Mizzium Mortars: targeted for {1}{R}, overloaded for {3}{R}{R}{R} it hits

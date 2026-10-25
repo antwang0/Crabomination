@@ -54,8 +54,7 @@ fn yours(filter: R) -> Selector {
 /// Ms. Marvel, Kamala Khan — {2}{U} legendary 1/4 reach, vigilance Mutant
 /// Inhuman Hero. You have no maximum hand size. Whenever you cast a spell that
 /// targets a creature you control, draw a card; until end of turn her base
-/// power is the number of cards in your hand. (Residual: the power is set as
-/// the trigger resolves, not tracked as the hand changes.)
+/// power is the number of cards in your hand, tracked as the hand changes.
 pub fn ms_marvel_kamala_khan() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Reach, Keyword::Vigilance],
