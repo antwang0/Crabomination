@@ -6313,6 +6313,11 @@ impl GameState {
                     | crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. } => false,
                     // Step-bounded miracle windows are also dead by turn end.
                     crate::card::MayPlayDuration::EndOfThisStep => true,
+                    // Swept as the holder's next combat ends; a next turn with
+                    // no combat ends it here.
+                    crate::card::MayPlayDuration::UntilEndOfCombatOnYourNextTurn => {
+                        ended_active == perm.player && ended_turn > perm.granted_turn
+                    }
                     crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }
                     | crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
                     | crate::card::MayPlayDuration::TurnsHolderAttacks { .. }

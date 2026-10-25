@@ -1367,6 +1367,11 @@ pub enum MayPlayDuration {
     /// begins, by the step-transition sweep (`clear_step_bounded_may_play`),
     /// so it is gated by the same `step_bounded_may_play` flag.
     UntilYourNextEndStep,
+    /// "Until end of combat on your next turn" (Brazen Cannonade's raid card):
+    /// cleared as the holder's next turn leaves its end-of-combat step, or as
+    /// that turn ends if it had no combat. Step-bounded, like
+    /// `UntilYourNextEndStep`.
+    UntilEndOfCombatOnYourNextTurn,
     /// "Until **your** next end step" over a card another player holds —
     /// Rocco, Street Chef's "each player may play the card they exiled": ends
     /// as `seat`'s next end step begins, whoever holds it. Printed with seat

@@ -24367,6 +24367,8 @@ impl GameState {
         // "Until your next end step" ends as that step begins: the transition
         // out of the second main phase, for the active player's windows.
         let end_step_begins = self.step == TurnStep::PostCombatMain;
+        let combat_ends = self.step == TurnStep::EndCombat;
+        let turn_number = self.turn_number;
         let active = self.active_player_idx;
         let clear = |c: &mut crate::card::CardInstance| {
             if matches!(
@@ -24377,6 +24379,10 @@ impl GameState {
                         && p.player == active)
                     || (p.duration == crate::card::MayPlayDuration::UntilSeatsNextEndStep { seat: active }
                         && end_step_begins)
+                    || (p.duration == crate::card::MayPlayDuration::UntilEndOfCombatOnYourNextTurn
+                        && combat_ends
+                        && p.player == active
+                        && turn_number > p.granted_turn)
             ) {
                 c.may_play_until = None;
                 c.granted_alt_cast_cost_eot = None;
@@ -24407,6 +24413,7 @@ impl GameState {
             crate::card::MayPlayDuration::EndOfThisStep
                 | crate::card::MayPlayDuration::UntilYourNextEndStep
                 | crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. }
+                | crate::card::MayPlayDuration::UntilEndOfCombatOnYourNextTurn
         ) {
             self.step_bounded_may_play = true;
         }
@@ -24424,6 +24431,7 @@ impl GameState {
                     crate::card::MayPlayDuration::EndOfThisStep
                         | crate::card::MayPlayDuration::UntilYourNextEndStep
                         | crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. }
+                | crate::card::MayPlayDuration::UntilEndOfCombatOnYourNextTurn
                 )
             )
         };
