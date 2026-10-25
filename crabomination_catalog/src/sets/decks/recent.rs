@@ -11358,14 +11358,14 @@ pub fn bloodvial_purveyor() -> CardDefinition {
 
 /// Croaking Counterpart — {1}{G}{U} Sorcery. Create a token that's a copy of
 /// target non-Frog creature, except it's a 1/1 green Frog. Flashback
-/// {3}{G}{U}. Residual: the copy keeps its other creature types beside Frog.
+/// {3}{G}{U}. The Frog type replaces its creature types (CR 707.9b).
 pub fn croaking_counterpart() -> CardDefinition {
     CardDefinition {
         name: "Croaking Counterpart",
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(3), g(), u()]))],
-        effect: Effect::CreateTokenCopyOf {
+        effect: Effect::Seq(vec![Effect::CreateTokenCopyOf {
             extra_keywords: vec![],
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -11384,6 +11384,8 @@ pub fn croaking_counterpart() -> CardDefinition {
             enters_with_counters: None,
             remove_keywords: vec![],
         },
+        Effect::SetCopiableCreatureTypes { what: Selector::LastCreatedToken, creature_types: vec![CreatureType::Frog] },
+        ]),
         ..Default::default()
     }
 }

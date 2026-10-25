@@ -5703,7 +5703,7 @@ mod recent {
         assert_eq!(g.battlefield.len(), before + 1, "made a token copy");
         let tok = g.battlefield.iter().find(|c| c.is_token && c.id != bear).unwrap();
         assert_eq!((tok.definition.base_power(), tok.definition.base_toughness()), (1, 1));
-        assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Frog));
+        assert_eq!(tok.definition.subtypes.creature_types, vec![CreatureType::Frog], "a Frog, not a Bear Frog");
     }
 
     /// Voldaren Estate's Blood ability costs {1} less per Vampire you control,
