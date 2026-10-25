@@ -19146,6 +19146,15 @@ static DECKS: &[Factory] = &[
     super::decks::dinosaur_stampede,
     super::decks::feed_the_flames,
     super::decks::cinder_strike,
+    super::decks::nael_avizoa_aeronaut,
+    super::decks::voda_sea_scavenger,
+    super::decks::territorial_maro,
+    super::decks::might_of_alara,
+    super::decks::manaforce_mace,
+    super::decks::herd_migration,
+    super::decks::convincing_mirage,
+    super::decks::grixis_illusionist,
+    super::decks::pixie_illusionist,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

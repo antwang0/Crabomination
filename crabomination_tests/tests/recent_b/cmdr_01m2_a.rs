@@ -370,3 +370,91 @@ fn feed_the_flames_exiles_what_it_kills() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear));
 }
+
+fn lands(g: &mut GameState, seat: usize, defs: Vec<crabomination::card::CardDefinition>) {
+    for d in defs {
+        g.add_card_to_battlefield(seat, d);
+    }
+}
+
+/// CR 702.43 — domain: Territorial Maro is twice the basic land types among
+/// your lands, Might of Alara pumps once per type, Manaforce Mace likewise.
+#[test]
+fn domain_cards_count_basic_land_types() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    lands(&mut g, 0, vec![catalog::plains(), catalog::island(), catalog::forest(), catalog::forest()]);
+    let maro = ready(&mut g, 0, catalog::territorial_maro());
+    assert_eq!(pt(&g, maro), (6, 6), "three types, doubled");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mace = g.add_card_to_battlefield(0, catalog::manaforce_mace());
+    g.battlefield_find_mut(mace).unwrap().attached_to = Some(bear);
+    assert_eq!(pt(&g, bear), (5, 5));
+    let might = g.add_card_to_hand(0, catalog::might_of_alara());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: might, target: Some(Target::Permanent(maro)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, maro), (9, 9));
+}
+
+/// Herd Migration: a 3/3 Beast per basic land type; from hand, {1}{G} and a
+/// discard fetch a basic land and gain 3 life.
+#[test]
+fn herd_migration_beasts_and_its_hand_cycling() {
+    let mut g = pod(2);
+    lands(&mut g, 0, vec![catalog::swamp(), catalog::mountain()]);
+    let hm = g.add_card_to_hand(0, catalog::herd_migration());
+    flood(&mut g, 0);
+    cast(&mut g, hm).expect("cast");
+    let beasts = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Beast").count();
+    assert_eq!(beasts, 2);
+
+    let mut g = pod(2);
+    let basic = g.add_card_to_library(0, catalog::forest());
+    let hm = g.add_card_to_hand(0, catalog::herd_migration());
+    flood(&mut g, 0);
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
+    activate(&mut g, hm).expect("{1}{G}, discard it");
+    assert!(g.players[0].hand.iter().any(|c| c.id == basic));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == hm));
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Pixie Illusionist kicked enters with two +1/+1 counters.
+#[test]
+fn pixie_illusionist_kicked_enters_with_two_counters() {
+    let mut g = pod(2);
+    let pixie = g.add_card_to_hand(0, catalog::pixie_illusionist());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked { card_id: pixie, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pixie).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Nael's combat damage digs and, with all five basic land types, draws.
+#[test]
+fn nael_draws_with_five_basic_land_types() {
+    let mut g = pod(2);
+    lands(&mut g, 0, vec![catalog::plains(), catalog::island(), catalog::swamp(), catalog::mountain(), catalog::forest()]);
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let nael = ready(&mut g, 0, catalog::nael_avizoa_aeronaut());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: nael, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

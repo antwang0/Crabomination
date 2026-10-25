@@ -1,5 +1,5 @@
-//! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch
-//! and Stegron decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
+//! Stegron and Nael decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -191,7 +191,8 @@ pub fn cover_of_winter() -> CardDefinition {
 
 // ── Scarlet Witch, Wanda Maximoff's deck ────────────────────────────────────
 
-fn red_creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+/// A creature body (Scarlet Witch's deck on).
+fn plain_creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
         name,
         cost: mana,
@@ -203,7 +204,7 @@ fn red_creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p:
     }
 }
 
-fn red_spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
+fn plain_spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
     CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
 }
 
@@ -212,7 +213,7 @@ pub fn barging_sergeant() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![crate::effect::shortcut::mentor()],
-        ..red_creature("Barging Sergeant", cost(&[generic(4), r()]), vec![CreatureType::Minotaur, CreatureType::Soldier], 4, 2)
+        ..plain_creature("Barging Sergeant", cost(&[generic(4), r()]), vec![CreatureType::Minotaur, CreatureType::Soldier], 4, 2)
     }
 }
 
@@ -232,7 +233,7 @@ pub fn bladeback_sliver() -> CardDefinition {
                 condition: Some(Predicate::HellbentActive { who: PlayerRef::You }),
             },
         }],
-        ..red_creature("Bladeback Sliver", cost(&[generic(1), r()]), vec![CreatureType::Sliver], 2, 2)
+        ..plain_creature("Bladeback Sliver", cost(&[generic(1), r()]), vec![CreatureType::Sliver], 2, 2)
     }
 }
 
@@ -248,7 +249,7 @@ pub fn hellkite_whelp() -> CardDefinition {
                 amount: Value::ONE,
             },
         }],
-        ..red_creature("Hellkite Whelp", cost(&[generic(4), r()]), vec![CreatureType::Dragon], 3, 3)
+        ..plain_creature("Hellkite Whelp", cost(&[generic(4), r()]), vec![CreatureType::Dragon], 3, 3)
     }
 }
 
@@ -262,7 +263,7 @@ pub fn voldaren_duelist() -> CardDefinition {
             keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
         })],
-        ..red_creature("Voldaren Duelist", cost(&[generic(3), r()]), vec![CreatureType::Vampire, CreatureType::Warrior], 3, 2)
+        ..plain_creature("Voldaren Duelist", cost(&[generic(3), r()]), vec![CreatureType::Vampire, CreatureType::Warrior], 3, 2)
     }
 }
 
@@ -288,7 +289,7 @@ pub fn prophetic_ravings() -> CardDefinition {
 /// creature types until end of turn.
 pub fn volatile_claws() -> CardDefinition {
     let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
-    red_spell(
+    plain_spell(
         "Volatile Claws",
         cost(&[generic(2), r()]),
         CardType::Instant,
@@ -301,7 +302,7 @@ pub fn volatile_claws() -> CardDefinition {
 
 /// Precision Bolt — {2}{R} sorcery. 3 damage to any target.
 pub fn precision_bolt() -> CardDefinition {
-    red_spell(
+    plain_spell(
         "Precision Bolt",
         cost(&[generic(2), r()]),
         CardType::Sorcery,
@@ -312,7 +313,7 @@ pub fn precision_bolt() -> CardDefinition {
 /// Vandalize — {4}{R} sorcery. Choose one or both — destroy target artifact;
 /// destroy target land.
 pub fn vandalize() -> CardDefinition {
-    red_spell(
+    plain_spell(
         "Vandalize",
         cost(&[generic(4), r()]),
         CardType::Sorcery,
@@ -334,7 +335,7 @@ pub fn vandalize() -> CardDefinition {
 pub fn nest_robber() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Haste],
-        ..red_creature("Nest Robber", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur], 2, 1)
+        ..plain_creature("Nest Robber", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur], 2, 1)
     }
 }
 
@@ -347,7 +348,7 @@ pub fn sun_collared_raptor() -> CardDefinition {
             effect: Effect::PumpPT { what: Selector::This, power: Value::Const(3), toughness: Value::ZERO, duration: Duration::EndOfTurn },
             ..Default::default()
         }],
-        ..red_creature("Sun-Collared Raptor", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur], 1, 2)
+        ..plain_creature("Sun-Collared Raptor", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur], 1, 2)
     }
 }
 
@@ -363,7 +364,7 @@ pub fn stampeding_horncrest() -> CardDefinition {
                 )),
             },
         }],
-        ..red_creature("Stampeding Horncrest", cost(&[generic(4), r()]), vec![CreatureType::Dinosaur], 4, 4)
+        ..plain_creature("Stampeding Horncrest", cost(&[generic(4), r()]), vec![CreatureType::Dinosaur], 4, 4)
     }
 }
 
@@ -378,7 +379,7 @@ pub fn sun_crowned_hunters() -> CardDefinition {
                 amount: Value::Const(3),
             },
         }],
-        ..red_creature("Sun-Crowned Hunters", cost(&[generic(4), r(), r()]), vec![CreatureType::Dinosaur], 5, 4)
+        ..plain_creature("Sun-Crowned Hunters", cost(&[generic(4), r(), r()]), vec![CreatureType::Dinosaur], 5, 4)
     }
 }
 
@@ -392,7 +393,7 @@ pub fn war_trained_slasher() -> CardDefinition {
                 .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingBattle }),
             effect: Effect::DoublePower { what: Selector::This, times: Value::ONE, duration: Duration::EndOfTurn },
         }],
-        ..red_creature(
+        ..plain_creature(
             "War-Trained Slasher",
             cost(&[generic(3), r()]),
             vec![CreatureType::Wolverine, CreatureType::Dinosaur],
@@ -415,7 +416,7 @@ pub fn tilonallis_crown() -> CardDefinition {
 /// Dinosaur Stampede — {2}{R} instant. Attacking creatures get +2/+0; your
 /// Dinosaurs gain trample until end of turn.
 pub fn dinosaur_stampede() -> CardDefinition {
-    red_spell(
+    plain_spell(
         "Dinosaur Stampede",
         cost(&[generic(2), r()]),
         CardType::Instant,
@@ -438,7 +439,7 @@ pub fn dinosaur_stampede() -> CardDefinition {
 /// Feed the Flames — {3}{R} instant. 5 damage to target creature; if it would
 /// die this turn, exile it instead.
 pub fn feed_the_flames() -> CardDefinition {
-    red_spell(
+    plain_spell(
         "Feed the Flames",
         cost(&[generic(3), r()]),
         CardType::Instant,
@@ -454,7 +455,7 @@ pub fn feed_the_flames() -> CardDefinition {
 pub fn cinder_strike() -> CardDefinition {
     CardDefinition {
         kicker_action_cost: Some(crate::card::AdditionalCastCost::Blight { n: 1 }),
-        ..red_spell(
+        ..plain_spell(
             "Cinder Strike",
             cost(&[r()]),
             CardType::Sorcery,
@@ -467,5 +468,173 @@ pub fn cinder_strike() -> CardDefinition {
                 },
             },
         )
+    }
+}
+
+// ── Nael, Avizoa Aeronaut's deck ────────────────────────────────────────────
+
+fn domain() -> Value {
+    Value::DomainCount(PlayerRef::You)
+}
+
+/// "Look at the top X cards, put up to one of them on top and the rest on the
+/// bottom in a random order" with X = domain; the seat picks the one it keeps.
+fn domain_dig() -> Effect {
+    Effect::LookTopKeepOneRestToGraveyard { count: domain(), who: None, exile_rest: false, rest_bottom_random: true }
+}
+
+/// Nael, Avizoa Aeronaut — {2}{G}{U} legendary 2/4 flying Elf Scout. Its
+/// combat damage to a player digs domain deep; with all five types, draw.
+pub fn nael_avizoa_aeronaut() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                domain_dig(),
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(domain(), Value::Const(5)),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..plain_creature("Nael, Avizoa Aeronaut", cost(&[generic(2), g(), u()]), vec![CreatureType::Elf, CreatureType::Scout], 2, 4)
+    }
+}
+
+/// Voda Sea Scavenger — {2}{U} 3/2 Merfolk Rogue. ETB: a domain-deep dig.
+pub fn voda_sea_scavenger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(domain_dig())],
+        ..plain_creature("Voda Sea Scavenger", cost(&[generic(2), u()]), vec![CreatureType::Merfolk, CreatureType::Rogue], 3, 2)
+    }
+}
+
+/// Territorial Maro — {4}{G} */* Elemental: twice your domain.
+pub fn territorial_maro() -> CardDefinition {
+    let x = || Value::Times(Box::new(Value::Const(2)), Box::new(domain()));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Territorial Maro's power and toughness are each equal to twice the number of basic land types among lands you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: x(), toughness: x() },
+        }],
+        ..plain_creature("Territorial Maro", cost(&[generic(4), g()]), vec![CreatureType::Elemental], 0, 0)
+    }
+}
+
+/// Might of Alara — {G} instant. Target creature gets +1/+1 per basic land
+/// type among your lands until end of turn.
+pub fn might_of_alara() -> CardDefinition {
+    plain_spell(
+        "Might of Alara",
+        cost(&[g()]),
+        CardType::Instant,
+        Effect::PumpPT { what: target_filtered(R::Creature), power: domain(), toughness: domain(), duration: Duration::EndOfTurn },
+    )
+}
+
+/// Manaforce Mace — {4} Equipment. Equipped creature gets +1/+1 per basic
+/// land type among your lands. Equip {3}.
+pub fn manaforce_mace() -> CardDefinition {
+    CardDefinition {
+        name: "Manaforce Mace",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        static_abilities: vec![StaticAbility {
+            description: "Domain — Equipped creature gets +1/+1 for each basic land type among lands you control.",
+            effect: StaticEffect::PumpPTByValue { applies_to: host(), power: domain(), toughness: domain() },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Herd Migration — {6}{G} sorcery: a 3/3 Beast per basic land type among
+/// your lands. {1}{G}, discard it: a basic land to hand and 3 life.
+pub fn herd_migration() -> CardDefinition {
+    let beast = std::sync::Arc::new(crate::card::TokenDefinition {
+        name: "Beast".into(),
+        colors: vec![crate::mana::Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    });
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Search { who: PlayerRef::You, filter: R::IsBasicLand, to: crate::effect::ZoneDest::Hand(PlayerRef::You) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+            ..Default::default()
+        }],
+        ..plain_spell(
+            "Herd Migration",
+            cost(&[generic(6), g()]),
+            CardType::Sorcery,
+            Effect::CreateToken { who: PlayerRef::You, count: domain(), definition: beast },
+        )
+    }
+}
+
+/// Convincing Mirage — {1}{U} Aura, enchant land. As it enters, choose a basic
+/// land type; the enchanted land is that type.
+pub fn convincing_mirage() -> CardDefinition {
+    CardDefinition {
+        name: "Convincing Mirage",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        as_enters_effect: Some(Effect::ChooseBasicLandTypeForSource),
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land is the chosen type.",
+            effect: StaticEffect::LandTypeChangerChosen { applies_to: host(), replace: true },
+        }],
+        ..Default::default()
+    }
+}
+
+/// "{T}: Target land you control becomes the basic land type of your choice
+/// until end of turn."
+fn illusionist_ability() -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::LandsBecomeChosenBasicType {
+            what: target_filtered(R::Land.and(R::ControlledByYou)),
+            duration: Duration::EndOfTurn,
+            from_chosen_basic: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Grixis Illusionist — {U} 1/1 Human Wizard with the land-type ability.
+pub fn grixis_illusionist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![illusionist_ability()],
+        ..plain_creature("Grixis Illusionist", cost(&[u()]), vec![CreatureType::Human, CreatureType::Wizard], 1, 1)
+    }
+}
+
+/// Pixie Illusionist — {U} 1/1 flying Faerie Wizard; kicker {3}{G} for two
+/// +1/+1 counters; the land-type ability.
+pub fn pixie_illusionist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Kicker(cost(&[generic(3), g()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![illusionist_ability()],
+        ..plain_creature("Pixie Illusionist", cost(&[u()]), vec![CreatureType::Faerie, CreatureType::Wizard], 1, 1)
     }
 }
