@@ -8669,6 +8669,7 @@ pub fn louisoixs_sacrifice() -> CardDefinition {
             filter: SelectionRequirement::HasSupertype(Supertype::Legendary)
                 .and(SelectionRequirement::Creature),
             pay: 2,
+            pay_pips: vec![],
         }],
         effect: Effect::CounterSpell {
             what: Selector::TargetFiltered {

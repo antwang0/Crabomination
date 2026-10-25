@@ -514,7 +514,7 @@ pub fn silence_the_echo() -> CardDefinition {
         name: "Silence the Echo",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay { filter: R::Creature.or(R::Planeswalker), pay: 3 }],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay { filter: R::Creature.or(R::Planeswalker), pay: 3, pay_pips: vec![] }],
         effect: Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
         ..Default::default()
     }

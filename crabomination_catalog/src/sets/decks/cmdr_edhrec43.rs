@@ -168,7 +168,7 @@ pub fn lash_of_the_balrog() -> CardDefinition {
         name: "Lash of the Balrog",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay { filter: R::Creature, pay: 4 }],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay { filter: R::Creature, pay: 4, pay_pips: vec![] }],
         effect: Effect::Destroy { what: target_filtered(R::Creature) },
         ..Default::default()
     }

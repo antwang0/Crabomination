@@ -89,6 +89,7 @@ pub fn bayou_groff() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Creature,
             pay: 3,
+            pay_pips: vec![],
         }],
         ..Default::default()
     }

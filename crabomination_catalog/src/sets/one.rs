@@ -1662,6 +1662,7 @@ pub fn annihilating_glare() -> CardDefinition {
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
             pay: 4,
+            pay_pips: vec![],
         }],
         effect: Effect::Destroy {
             what: target_filtered(

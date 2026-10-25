@@ -3196,6 +3196,7 @@ pub fn spark_harvest() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
             filter: R::Creature,
             pay: 4,
+            pay_pips: vec![],
         }],
         effect: Effect::Destroy {
             what: target_filtered(R::Creature.or(R::Planeswalker)),

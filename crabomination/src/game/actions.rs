@@ -1581,6 +1581,19 @@ pub(crate) fn or_pay_cost_symbols(
                 out.extend(pay.symbols.iter().cloned());
             }
         }
+        // "Sacrifice a creature or pay {3}{B}": the generic part rides the
+        // tax channel, the pips join here, both only when nothing can be
+        // sacrificed.
+        if let crate::card::AdditionalCastCost::SacrificeOrPay { filter, pay_pips, .. } = c
+            && !pay_pips.is_empty()
+            && !state.battlefield.iter().any(|b| {
+                b.controller == caster
+                    && state.requirement_on_permanent(filter, b, caster, None, &crate::game::effects::PrintedGates::default())
+                    && state.sacrificeable_for_cost(b)
+            })
+        {
+            out.extend(pay_pips.iter().map(|&c| crate::mana::ManaSymbol::Colored(c)));
+        }
     }
     out
 }
@@ -1887,7 +1900,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
             {
                 tax += pay;
             }
-            crate::card::AdditionalCastCost::SacrificeOrPay { filter, pay } => {
+            crate::card::AdditionalCastCost::SacrificeOrPay { filter, pay, .. } => {
                 let gates = crate::game::effects::PrintedGates::default();
                 let has_match = state.battlefield.iter().any(|c| {
                     c.controller == caster

@@ -2029,6 +2029,7 @@ pub fn deadly_precision() -> CardDefinition {
             filter: SelectionRequirement::HasCardType(CardType::Artifact)
                 .or(SelectionRequirement::Creature),
             pay: 4,
+            pay_pips: vec![],
         }],
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature),

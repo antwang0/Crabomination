@@ -6863,6 +6863,10 @@ pub enum AdditionalCastCost {
     SacrificeOrPay {
         filter: SelectionRequirement,
         pay: u32,
+        /// The pay half's coloured pips beside its generic `pay` ("or pay
+        /// {3}{B}" — Eaten Alive), joined by `or_pay_cost_symbols`.
+        #[serde(default)]
+        pay_pips: Vec<crate::mana::Color>,
     },
     /// "As an additional cost to cast this spell, tap N untapped permanents you
     /// control matching `filter`." Guardian of the Great Door ("tap four

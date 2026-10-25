@@ -1351,6 +1351,7 @@ pub fn eaten_alive() -> CardDefinition {
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Creature,
             pay: 4,
+            pay_pips: vec![],
         }],
         effect: Effect::Exile {
             what: target_filtered(
@@ -2582,6 +2583,7 @@ pub fn morkrut_behemoth() -> CardDefinition {
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Creature,
             pay: 2,
+            pay_pips: vec![],
         }],
         ..Default::default()
     }

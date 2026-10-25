@@ -621,6 +621,7 @@ pub fn stir_up_trouble() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
             filter: R::Artifact.or(R::Creature),
             pay: 4,
+            pay_pips: vec![],
         }],
         ..spell(
             "Stir Up Trouble",

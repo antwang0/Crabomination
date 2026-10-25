@@ -44,6 +44,7 @@ pub fn betrayers_bargain() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
             filter: R::Creature.or(R::Enchantment),
             pay: 2,
+            pay_pips: vec![],
         }],
         effect: Effect::Seq(vec![
             Effect::ExileIfWouldDieThisTurn {
