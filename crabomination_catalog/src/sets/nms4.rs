@@ -159,6 +159,7 @@ pub fn harvest_mage() -> CardDefinition {
                 mine_only: true,
                 nonbasic_only: false,
                 color_of_choice: true,
+                land_type: None,
             },
             ..Default::default()
         }],
@@ -295,6 +296,7 @@ pub fn pale_moon() -> CardDefinition {
             mine_only: false,
             nonbasic_only: true,
             color_of_choice: false,
+            land_type: None,
         },
         ..Default::default()
     }

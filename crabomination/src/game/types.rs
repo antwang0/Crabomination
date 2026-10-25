@@ -2883,6 +2883,9 @@ pub struct LandManaReplacement {
     pub indefinite: bool,
     /// What the land produces instead.
     pub output: LandManaOutput,
+    /// Only lands of this type (Chaos Moon's Mountains). `None` = any.
+    #[serde(default)]
+    pub land_type: Option<crate::card::LandType>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

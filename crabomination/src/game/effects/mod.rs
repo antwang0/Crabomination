@@ -14660,6 +14660,16 @@ impl GameState {
                             r.who.is_none_or(|w| w == p)
                                 && !(r.nonbasic_only && basic)
                                 && r.land.is_none_or(|id| Some(id) == ctx.source)
+                                && r.land_type.is_none_or(|lt| {
+                                    ctx.source.is_some_and(|s| {
+                                        self.evaluate_requirement_static(
+                                            &crate::card::SelectionRequirement::HasLandType(lt),
+                                            &Target::Permanent(s),
+                                            p,
+                                            None,
+                                        )
+                                    })
+                                })
                         })
                         .map(|r| r.output);
                     if let Some(out) = out {
@@ -32237,12 +32247,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReplaceLandManaThisTurn { mine_only, nonbasic_only, color_of_choice } => {
+            Effect::ReplaceLandManaThisTurn { mine_only, nonbasic_only, color_of_choice, land_type } => {
                 use crate::game::types::{LandManaOutput, LandManaReplacement};
                 self.land_mana_replacements_this_turn.push(LandManaReplacement {
                     who: mine_only.then_some(ctx.controller),
                     nonbasic_only: *nonbasic_only,
                     land: None,
+                    land_type: *land_type,
                     indefinite: false,
                     output: if *color_of_choice {
                         LandManaOutput::ColorOfChoice
@@ -32264,6 +32275,7 @@ impl GameState {
                         who: None,
                         nonbasic_only: false,
                         land: Some(id),
+                        land_type: None,
                         indefinite: true,
                         output: LandManaOutput::Colorless,
                     });

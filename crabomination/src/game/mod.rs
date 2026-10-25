@@ -12733,7 +12733,11 @@ impl GameState {
                 Some(p) => format!("player {}'s ", p + 1),
                 None => String::new(),
             };
-            let which = if r.nonbasic_only { "nonbasic land" } else { "land" };
+            let which = match r.land_type {
+                Some(lt) => format!("{lt:?}"),
+                None if r.nonbasic_only => "nonbasic land".to_string(),
+                None => "land".to_string(),
+            };
             let makes = match r.output {
                 LandManaOutput::Colorless => "one colorless mana",
                 LandManaOutput::ColorOfChoice => "one mana of a chosen color",
@@ -35565,6 +35569,20 @@ fn static_effect_to_effects(
                         modification: Modification::SetColors(vec![*color]),
                     });
                 }
+            }
+            StaticEffect::MatchingLoseSupertype { filter, supertype } => {
+                out.push(ContinuousEffect {
+                    timestamp,
+                    source,
+                    affected: AffectedPermanents::CardMatch {
+                        source_controller: card.controller,
+                        requirement: Box::new(filter.clone()),
+                    },
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveSupertype(*supertype),
+                });
             }
             StaticEffect::MatchingLandsAreCreatures {
                 filter,

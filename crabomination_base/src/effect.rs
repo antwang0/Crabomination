@@ -13487,6 +13487,9 @@ pub enum Effect {
         /// The tapping player picks a color instead of getting {C}.
         #[serde(default)]
         color_of_choice: bool,
+        /// Only lands of this type (Chaos Moon's Mountains).
+        #[serde(default)]
+        land_type: Option<crate::card::LandType>,
     },
     /// CR 615.7 — "Prevent all damage a [filter] source of your choice would
     /// deal this turn." The source is chosen as the effect resolves among

@@ -583,6 +583,9 @@ pub enum StaticEffect {
     /// (layer 4) with base power and toughness each equal to its mana value
     /// (layer 7b). March of the Machines.
     NoncreatureArtifactsAreCreatures,
+    /// CR 205.4 / 613.1d — "All lands are no longer snow" (Melting): each
+    /// permanent matching `filter` loses `supertype` (layer 4).
+    MatchingLoseSupertype { filter: SelectionRequirement, supertype: crate::card::Supertype },
     /// CR 613 — "Lands you control are `power`/`toughness` creatures with
     /// [keywords]. They're still lands" (Natural Emergence). Layer 4 adds the
     /// Creature type, layer 7b sets the base P/T, layer 6 grants the keywords.
