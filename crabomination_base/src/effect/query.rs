@@ -2266,7 +2266,9 @@ impl Effect {
             Effect::SearchSameNameToBattlefield { who, what } => {
                 player_has_target(who) || sel_has_target(what)
             }
-            Effect::ChooseColorForSelf | Effect::ChooseColorForSelfOtherThan(_) => false,
+            Effect::ChooseColorForSelf
+            | Effect::ChooseColorForSelfOtherThan(_)
+            | Effect::ChooseColorForSelfAmong(_) => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }

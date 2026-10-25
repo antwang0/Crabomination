@@ -9484,6 +9484,9 @@ pub enum Effect {
     /// `ChooseColorForSelf` with one color ruled out — the Thriving lands'
     /// "choose a color other than green".
     ChooseColorForSelfOtherThan(crate::mana::Color),
+    /// `ChooseColorForSelf` from a printed short list — Mangara's Equity's
+    /// "choose black or red".
+    ChooseColorForSelfAmong(Vec<crate::mana::Color>),
     /// Tablet of the Guilds: as this enters, choose two colors (stamped on
     /// `CardInstance.chosen_colors`).
     ChooseTwoColorsForSource,

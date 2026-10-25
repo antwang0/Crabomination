@@ -927,6 +927,34 @@ fn cr_105_4_a_color_other_than_x_excludes_x() {
     assert!(chosen.is_some_and(|c| c != Color::Green), "chose {chosen:?}");
 }
 
+/// CR 105.4 — "choose black or red" (Mangara's Equity) names one of the two:
+/// an answer off the list falls back to a legal colour, one on it stands.
+#[test]
+fn cr_105_4_a_choice_among_listed_colors_stays_on_the_list() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::Effect;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    for (answer, want) in [(Color::Green, None), (Color::Red, Some(Color::Red))] {
+        let mut g = peace_main();
+        let land = g.add_card_to_hand(0, CardDefinition {
+            name: "Listed Color Test",
+            card_types: vec![CardType::Land],
+            as_enters_effect: Some(Effect::ChooseColorForSelfAmong(vec![Color::Black, Color::Red])),
+            ..Default::default()
+        });
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(answer)]));
+        g.perform_action(GameAction::PlayLand(land)).expect("play");
+        drain_stack(&mut g);
+        let chosen = g.battlefield_find(land).and_then(|c| c.chosen_color);
+        assert!(chosen.is_some_and(|c| matches!(c, Color::Black | Color::Red)), "chose {chosen:?}");
+        if want.is_some() {
+            assert_eq!(chosen, want);
+        }
+    }
+}
+
 /// Kwain's offer: each player may draw; only the takers gain the life.
 #[test]
 fn cr_101_4_each_player_may_draw_and_takers_gain_life() {

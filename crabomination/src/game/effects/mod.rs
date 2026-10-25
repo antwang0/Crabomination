@@ -20322,6 +20322,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseColorForSelfAmong(legal) => {
+                let Some(source) = ctx.source else { return Ok(()); };
+                if legal.is_empty() {
+                    return Ok(());
+                }
+                let color = self.chosen_color_for_source(ctx.controller, Some(source), legal);
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_color = Some(color);
+                }
+                Ok(())
+            }
+
             Effect::ChooseTwoColorsForSource => {
                 let Some(source) = ctx.source else { return Ok(()); };
                 let mut picked: Vec<Color> = Vec::new();
