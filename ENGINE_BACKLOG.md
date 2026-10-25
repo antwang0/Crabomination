@@ -296,6 +296,12 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 - **FIXED (simulator bound):** `MAX_STACK_ITEMS` 8x → 4x `MAX_BATTLEFIELD`. A fetch putting three lands under ~1,470 Scute
   Swarms stacked 4,405 landfall triggers at ~0.17 s a pass — one five-seat game ran past 14 minutes (sweep 10159,
   `--pod-decks 5826,1830,4785,2122,434 --seed 1017885`); now a board cap.
+- **OPEN (board cap, not a bug) → seat re-seeded:** seat 3074 (Sakashima of a Thousand Faces + Sidar Kondo) at the
+  seat test's seed 0x1618 (`--commander --a dflt --pod-decks 3074,1,2,3 --seed 5656`): Nesting Dovehawk populates a
+  token Exalted Sunborn under Anointed Procession, each Sunborn doubling the next populate — 69 Sunborns and 882 Birds
+  at turn 63. This run's trajectory changes moved the game onto it; re-seeded to 0x7EFE43 (decides at turn 50,
+  `92726d5f2`), both overflow shards green at 6,087 seats. Audit sweeps 10164 + 10165 over seats 6055-6086 at 3/4/6
+  seats: 250 games, 0 bad.
 - **Seat 6078: Isu the Abominable** (rank 937, the first Commander-legal unseated single): its 7 missing snow cards in
   `decks::cmdr_01m2_a` — Isu (`PlayFromLibraryTop { IsSnow }`, the pay-{G}/{W}/{U} counter as a colour mode, then one `MayPay`), Diamond
   Faerie, Frostpeak Yeti, Squall Drifter, Snow Devil, Glacial Plating, Cover of Winter (new
