@@ -3188,6 +3188,12 @@ pods             seed 10184, 200 games at each of 3/4/6/8 seats: 800 decided
 seat test        6,093 seats, overflow, two shards: 296 s + 294 s, green
 ```
 
+Later in the pass (a per-declared-attacker exile read for `TurnsHolderAttacksWithType`, one more step-sweep
+duration): `--bench` byte-identical; alternating A/B vs the pass's first binary, 3 runs each, decisions/s
+129,373 / 123,404 / 129,842 (before) vs 133,736 / 145,383 / 136,957 (after) — no regression; pools seed 10702
+x 300: 7,497 decided + 3 CR 104.4 draws (the same three with the before binary); pods 10703 x 200 at 3/4/6/8:
+800 decided; seat test 314 s + 322 s green.
+
 ### 2026-10-24 night (Commander run, `01M2Ffkh`) — guardrail; gather key +1 mix, a stack walk in the bot's activation guard
 
 New on hot-ish paths: one more `mix` of four turn-registry lengths per `gather_key`, and `stacks_onto_own_activation`

@@ -330,6 +330,14 @@ The EDHREC well is dry (`01Y6ZRFx`), so this pass mined bugs and closed 🟡 row
   (Hollowhenge Overlord doubling Wolves under an opponent's Stormtide Leviathan — no attack possible, a true
   exponential); audit 10182 (3/5, 3,250 games) 0 bad; audit 10183 (6/8, `CRAB_POD_CONCEDE=20 CRAB_POD_FUZZ=300`,
   1,778 games) 0 bad.
+- **Later the same pass:** `RemoveAnyCounterFromAmongThen` (Mister Hyde — any kind, stun / -1/-1 first);
+  "remove a counter from this creature" is any kind (CR 122.1) on Loch Mare, The Duke, Flitterwing Nuisance,
+  Moonlit Lamenter, Burdened Stoneback (the class, scanned off `remove_counter_cost` × oracle);
+  `MayPlayDuration::TurnsHolderAttacksWithType` (Robber of the Rich, woken as a Rogue is declared — CR 508.1) and
+  `UntilEndOfCombatOnYourNextTurn` (Brazen Cannonade); Hauken's Insight's free play is your turns only (its
+  "land doesn't spend the use" half was stale); Undercover Skrull's every-type is layer 4 (CR 613.6 — survives a
+  strip). **Regression found and fixed:** the bot's counter sink no longer saw Forge of Heroes after `97f26d293`
+  made its body a `Seq` (`forge_of_heroes_grows_a_fresh_commander`).
 - **OPEN, priced:** Karn, Living Legacy (21 decks) needs an emblem that is a damage *source* (`Emblem` has no id);
   Jacob Hauken's free play needs a your-turn gate and land counting on `OneCastPerTurnAmongGranted`; Wizard's
   Rockets' X mana ability (no X on a mana ability); `ActivateLoyaltyAbility` extra targets (human seats only).
