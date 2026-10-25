@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs](#fixedopen-2026-10-25-commander-run-01y6zrfx--the-last-five-edhrec-singles-a-state-trigger-class-stale-residual-docs) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang](#fixedopen-2026-10-24-commander-run-01m2ffkh--33-seats-a-stale-layer-memo-a-sacrifice-cost-draw-loop-a-trigger-stack-hang) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot](#fixedopen-2026-10-24-commander-run-01s1rwz4--the-counter-placer-class-as-long-as-you-control-livios-bot) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall](#fixedopen-2026-10-24-commander-run-01rsnzao--shipped-card-defects-by-seated-deck-count-one-stall) | 22 |
@@ -274,6 +275,33 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   Agadeem's Awakening (29), Sakashima's Protege (27), Urza's Bauble (25, the random look),
   Palantír of Orthanc (22), Karn Living Legacy (21). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
   helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.
+
+## FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs
+
+- **Seats 6089-6093** (Major Teroh, Irini Sengir, Stockman, Molly Hayes, Spider-Man Hometown Hero), 45 cards in
+  `decks::cmdr_01y6_a`..`_e`. Primitives, each its own commit: Drought's activated-ability half (`activate_ability_into`
+  joins `static_sacrifice_cast_cost`), `StaticEffect::FilteredActivationTax` (Gloom), `WardCost::GenericTargetManaValue`
+  (Arcum's Whistle), `R::HasCumulativeUpkeep` (all five keyword walkers), `R::SameNameAsANontokenPermanent` /
+  `SameNameAsAGraveyardCard` (Bazaar of Wonders), a land-type filter on `ReplaceLandManaThisTurn` (Chaos Moon),
+  `StaticEffect::MatchingLoseSupertype` (Melting), `ActivationTrait::Boast` (Frenzied Raider), `CounterType::Influence`.
+- **The EDHREC well is dry**: a fresh 69-page `commanders/year.json` scan (curl — Python's `urllib` gets 403 here) leaves
+  112 unseated commanders, all Unfinity / acorn or Star Trek (STR — Commander-legal from 2026-11-13; ~40 of its singles are
+  commander-only gaps). Re-scan after that date.
+- **FIXED, a class:** six "when you control no Islands / lands, sacrifice this" cards (Dandân, Sea Serpent, Merchant Ship,
+  Island Fish Jasconius, Kukemssa Serpent, Serendib Djinn) checked at upkeep instead of as a CR 603.8 state trigger; now
+  `sacrifice_when`, one table-driven test (`cr_603_8_control_no_islands_sacrifices_without_waiting_for_upkeep`). The
+  census script that found them (oracle "When you control no …, sacrifice" × catalog bodies without `state_trigger` /
+  `sacrifice_when*`) reports zero left.
+- **FIXED, seated-deck defects:** Dreadhorde Arcanist (16 decks + the cube) cast nothing — it moved a card to hand; Croaking
+  Counterpart's copy (12) kept its creature types beside Frog (`SetCopiableCreatureTypes`); Palantír of Orthanc (22) used
+  charge counters.
+- ⚠ **`pod_residuals.py` over-reports**: of the docs checked this run, Secluded Starforge (19 decks), Leatherhead (13) and
+  Ringing Strike Mastery (7) named gaps the code had already closed. Read a flagged doc against its body before building.
+- **OPEN:** Drought's mana-ability half (INCOMPLETE); Werewolf Pack Leader's "isn't a Human" needs a lose-a-creature-type
+  layer-4 modification (9 decks + cube); Devouring Rage / Reroute go uncast in 1,000 Molly Hayes pods (the trick heuristic
+  never picks a 5-mana pump; Reroute needs an activated ability with one target on the stack) — not plumbing bugs.
+- **Fuzz:** `random_pods.sh` 4 seats × 1,000 groups × 5 (seed 10181): 2 undecided of 5,000 — one CR 104.4b draw, one board
+  cap (Rabble Rousing doubling Citizens, NEXT line 6's known shape); 6 seats × 400 × 3 (10601): 1,200 decided, 0 panics.
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
 

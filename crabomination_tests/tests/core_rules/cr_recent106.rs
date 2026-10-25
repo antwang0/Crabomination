@@ -1614,7 +1614,8 @@ fn cr_602_2b_a_filtered_activation_tax_hits_only_matching_sources() {
 /// upkeep (Dandân and five siblings used to wait for one).
 #[test]
 fn cr_603_8_control_no_islands_sacrifices_without_waiting_for_upkeep() {
-    let cases: [(fn() -> crabomination::card::CardDefinition, fn() -> crabomination::card::CardDefinition); 6] = [
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let cases: [(Factory, Factory); 6] = [
         (catalog::dandan, catalog::island),
         (catalog::sea_serpent, catalog::island),
         (catalog::merchant_ship, catalog::island),
