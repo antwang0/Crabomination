@@ -129,7 +129,8 @@ fn magar_sorceries() {
 }
 
 /// Azra Oddsmaker: at your beginning of combat, a discard sets up "draw two
-/// when that creature connects".
+/// when that creature connects" — the creature chosen on resolution (CR
+/// 608.2d), and the bot's pick is its own, not a bigger opposing body.
 #[test]
 fn azra_oddsmaker_draws_on_the_hit() {
     let mut g = pod(2);
@@ -137,6 +138,7 @@ fn azra_oddsmaker_draws_on_the_hit() {
         g.add_card_to_library(0, catalog::island());
     }
     let azra = ready(&mut g, 0, catalog::azra_oddsmaker());
+    ready(&mut g, 1, catalog::serra_angel());
     g.add_card_to_hand(0, catalog::island());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.step = TurnStep::BeginCombat;

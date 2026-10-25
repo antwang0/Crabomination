@@ -93,18 +93,25 @@ pub fn azra_oddsmaker() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
-            effect: Effect::TargetPlayerThen {
-                filter: mine(),
-                then: Box::new(Effect::MayDiscard {
-                    description: "Discard a card to draw two when that creature connects?".into(),
-                    count: Value::ONE,
-                    then: Box::new(Effect::WhenTargetDealsCombatDamageToPlayerThisTurn {
-                        slot: 0,
-                        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
-                        this_combat: false,
+            // CR 608.2d — "if you do, choose a creature": any creature, picked
+            // on resolution after the discard, not targeted.
+            effect: Effect::MayDiscard {
+                description: "Discard a card to draw two when a chosen creature connects?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(R::Creature),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::WithTargets {
+                        what: Selector::SeparatedPile { chosen: true },
+                        body: Box::new(Effect::WhenTargetDealsCombatDamageToPlayerThisTurn {
+                            slot: 0,
+                            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                            this_combat: false,
+                        }),
                     }),
-                    else_: None,
+                    other: Box::new(Effect::Noop),
                 }),
+                else_: None,
             },
         }],
         ..creature(

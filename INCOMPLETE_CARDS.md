@@ -2123,7 +2123,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
 | 🟡 Game of Chaos | whoever wins a flip decides to flip again by the auto policy (`AnyPlayerMayAccept`); the stakes cap at 2^16 | `Effect::GameOfChaosRound` |
-| 🟡 Azra Oddsmaker | "choose a creature" is a target among your own creatures, picked as the trigger goes on the stack (before the discard) | `TargetPlayerThen { filter: mine() }` around `MayDiscard` |
 | 🟡 The Aesir Escape Valhalla | the exiled permanent card is the engine's pick (the priciest) | `Selector::best_of` |
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |
