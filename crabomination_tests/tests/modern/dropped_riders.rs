@@ -3251,3 +3251,40 @@ fn garruk_wildspeaker_untaps_two_target_lands() {
     assert!(!g.battlefield_find(fresh).unwrap().tapped);
     assert!(!g.battlefield_find(b).unwrap().tapped, "the second target: the caster's other tapped land");
 }
+
+/// CR 702.168a / 603.4 — The Everflowing Well's descend 8 counts permanent
+/// cards: eight instants don't transform it, eight lands do. Then CR 106.6 /
+/// 707.2: a permanent spell cast with The Myriad Pools' {U} makes up to one
+/// other permanent of yours a copy of that spell until end of turn.
+#[test]
+fn everflowing_well_descends_on_permanents_and_pools_copy() {
+    let mut g = main_phase();
+    let well = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let upkeep = |g: &mut GameState| {
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(g);
+    };
+    for _ in 0..8 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    upkeep(&mut g);
+    assert_eq!(g.battlefield_find(well).unwrap().definition.name, "The Everflowing Well", "instants aren't permanent cards");
+    for _ in 0..8 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    upkeep(&mut g);
+    assert_eq!(g.battlefield_find(well).unwrap().definition.name, "The Myriad Pools");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: well, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap the Pools");
+    g.players[0].mana_pool.add_colorless(1);
+    let looter = g.add_card_to_hand(0, catalog::merfolk_looter());
+    cast(&mut g, looter, None).expect("cast the Looter with the Pools' mana");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().def.name, "Merfolk Looter", "the Bear is a copy this turn");
+}

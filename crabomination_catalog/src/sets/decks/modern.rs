@@ -33340,20 +33340,44 @@ pub fn delver_of_secrets() -> CardDefinition {
 
 /// The Everflowing Well // The Myriad Pools — {2}{U} Legendary Artifact
 /// (transform DFC). Front ETB: mill two, then draw two. Descend 8 — at the
-/// beginning of your upkeep, if there are eight or more cards in your
-/// graveyard, transform it. Back: The Myriad Pools, a Legendary Artifact Land
-/// that taps for {U}. (The "copy a permanent spell" back trigger is dropped;
-/// Descend 8 counts all graveyard cards rather than permanent cards only.)
+/// beginning of your upkeep, if eight or more permanent cards are in your
+/// graveyard, transform it. Back: The Myriad Pools, a Legendary Artifact Land:
+/// {T}: add {U}; whenever you cast a permanent spell using its mana
+/// (`MarksCast(2)`), up to one other target permanent you control becomes a
+/// copy of that spell until end of turn.
 pub fn the_everflowing_well() -> CardDefinition {
-    use crate::card::Supertype;
-    use crate::effect::Predicate;
+    use crate::card::{Supertype, SelectionRequirement as R};
+    use crate::effect::{ManaPayload, Predicate};
     let myriad_pools = CardDefinition {
         name: "The Myriad Pools",
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact, CardType::Land],
-        activated_abilities: vec![crate::catalog::sets::tap_add(Color::Blue)],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![Color::Blue])),
+                    crate::mana::SpendRestriction::MarksCast(2),
+                ),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::PermanentCard },
+                Predicate::CastWithMarkedMana { what: Selector::TriggerSource, mark: 2 },
+            ])),
+            effect: Effect::BecomeCopyOfFor {
+                what: crate::effect::shortcut::target_filtered(R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource)),
+                source: Selector::TriggerSource,
+                duration: crate::effect::Duration::EndOfTurn,
+                non_legendary: false,
+            },
+        }],
         ..Default::default()
     };
+    let descend = || Predicate::DescendActive { who: PlayerRef::You, count: 8 };
     CardDefinition {
         name: "The Everflowing Well",
         cost: cost(&[generic(2), u()]),
@@ -33363,29 +33387,20 @@ pub fn the_everflowing_well() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
-                    Effect::Mill {
-                        who: Selector::You,
-                        amount: Value::Const(2),
-                    },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(2),
-                    },
+                    Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
                 ]),
             },
+            // CR 603.4 — an intervening "if", checked as it triggers and again as it resolves.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
                     EventScope::YourControl,
-                ),
+                )
+                .with_filter(descend()),
                 effect: Effect::If {
-                    cond: Predicate::ValueAtLeast(
-                        Value::GraveyardSizeOf(PlayerRef::You),
-                        Value::Const(8),
-                    ),
-                    then: Box::new(Effect::Transform {
-                        what: Selector::This,
-                    }),
+                    cond: descend(),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
                     else_: Box::new(Effect::Noop),
                 },
             },
