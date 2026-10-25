@@ -36966,6 +36966,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MAVREN_FEIN_COMMANDERS,
             main: decks::MAVREN_FEIN_MAIN,
         },
+        // Seat 6086: Johan's EDHREC average deck. `--pod-decks 6086`.
+        PodDeck {
+            name: "Johan (WRG)",
+            commanders: decks::JOHAN_COMMANDERS,
+            main: decks::JOHAN_MAIN,
+        },
     ]
 }
 
@@ -45012,6 +45018,7 @@ mod tests {
             ("Chandra, Fire of Kaladesh", &[0x21D9]),
             ("Brigid, Hero of Kinsbaile", &[0x21DA]),
             ("Mavren Fein, Dusk Apostle", &[0x21DB]),
+            ("Johan", &[0x21DC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

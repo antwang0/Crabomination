@@ -170901,3 +170901,30 @@ pub const MAVREN_FEIN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const JOHAN_COMMANDERS: &[CardFactory] = &[johan];
+
+/// **Johan**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 7 Forests + 6 Mountains + 6 Plains = 99.
+/// Johan (EDHREC, fetched 2026-10-25).
+pub const JOHAN_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, dolmen_gate, gruul_signet, lightning_greaves, selesnya_signet,
+    sol_ring, swiftfoot_boots, battlefield_forge, brushland, canopy_vista, cinder_glade,
+    clifftop_retreat, command_tower, exotic_orchard, jetmirs_garden, jungle_shrine,
+    karplusan_forest, rogues_passage, rootbound_crag, sacred_foundry, stomping_ground,
+    sunpetal_grove, temple_garden, ahn_crop_champion, ahn_crop_crasher, anep_vizier_of_hazoret,
+    battlefield_scavenger, beast_whisperer, birds_of_paradise, bitterblade_warrior,
+    champion_of_rhonas, clockwork_droid, combat_celebrant, devoted_crop_mate,
+    druid_of_the_anima, emberhorn_minotaur, glory_bound_initiate, glorybringer, gust_walker,
+    hooded_brawler, knotvine_paladin, llanowar_elves, oketras_avenger, resolute_survivors,
+    rhonass_stalwart, rohirrim_chargers, sandstorm_crasher, saryth_the_vipers_fang,
+    sunblast_angel, tah_crop_elite, toski_bearer_of_secrets, trueheart_twins,
+    vizier_of_the_true, watchful_naga, always_watching, beastmaster_ascension, brave_the_sands,
+    garruks_uprising, guardian_project, miraris_wake, rhythm_of_the_wild, wild_growth,
+    beast_within, boros_charm, fog, generous_gift, heroic_intervention, naya_charm,
+    path_to_exile, swords_to_plowshares, ajani_the_greathearted, blasphemous_act, cultivate,
+    dont_move, farseek, harmonize, kodamas_reach, natures_lore, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+];
