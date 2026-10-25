@@ -3202,6 +3202,9 @@ pub enum SelectionRequirement {
     Untapped,
     /// Not attached to anything (an Equipment or Aura with no host).
     Unattached,
+    /// CR 303.4 — attached to the evaluating player (Witchbane Orb's "Curses
+    /// attached to you").
+    AttachedToYou,
     /// CR 120.x — the permanent has been dealt damage this turn (Initiate of
     /// Blood // Goka's "target creature that was dealt damage this turn").
     DealtDamageThisTurn,

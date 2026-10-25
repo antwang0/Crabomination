@@ -56668,13 +56668,20 @@ pub fn ox_of_agonas() -> CardDefinition {
     }
 }
 
-/// Witchbane Orb — {4} Artifact. You have hexproof. (The destroy-Curses ETB
-/// is dropped — player-attached Curses aren't modeled.)
+/// Witchbane Orb — {4} Artifact. Entering, it destroys all Curses attached
+/// to you. You have hexproof.
 pub fn witchbane_orb() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
     CardDefinition {
         name: "Witchbane Orb",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Curse)
+                    .and(SelectionRequirement::AttachedToYou),
+            ),
+        })],
         static_abilities: vec![StaticAbility {
             description: "You have hexproof.",
             effect: StaticEffect::ControllerHasHexproof,

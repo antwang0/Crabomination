@@ -589,3 +589,19 @@ fn lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard() {
     assert_eq!(g.players[2].graveyard.len(), 1);
     assert!(g.players[0].hand.iter().any(|c| c.id == serpent));
 }
+
+/// Witchbane Orb — CR 303.4: "destroy all Curses attached to you" takes the
+/// Curses on its controller only; one on another player and a Curse-less
+/// player Aura stay.
+#[test]
+fn witchbane_orb_destroys_only_the_curses_attached_to_you() {
+    let mut g = pod(3);
+    let mine = g.add_card_to_battlefield(1, catalog::curse_of_the_pierced_heart());
+    g.battlefield_find_mut(mine).unwrap().attached_to_player = Some(0);
+    let theirs = g.add_card_to_battlefield(1, catalog::curse_of_the_pierced_heart());
+    g.battlefield_find_mut(theirs).unwrap().attached_to_player = Some(2);
+    let orb = g.add_card_to_hand(0, catalog::witchbane_orb());
+    cast_as(&mut g, 0, orb, &[]).expect("orb");
+    assert!(g.battlefield_find(mine).is_none(), "the Curse on its controller");
+    assert!(g.battlefield_find(theirs).is_some(), "another player's Curse");
+}

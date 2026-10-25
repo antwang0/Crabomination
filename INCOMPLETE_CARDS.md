@@ -2002,7 +2002,7 @@ library-exile event.
 | Imprison | neither the {T}-ability tax nor the attacks-or-blocks tax is implemented | two pay-or-destroy triggers on the enchanted creature's actions |
 | Jace, Vryn's Prodigy | the −9 emblem mills EACH opponent five, not one target opponent | an emblem trigger with a player target is untested ground; the ultimate is rarely reached |
 | Rayne, Academy Chancellor | only a PERMANENT of yours being targeted by an opponent draws; "you … become the target" doesn't | `YourPermanentTargetedByOpponent` binds permanents; a player-target twin scope is missing |
-| Witchbane Orb | "When this artifact enters, destroy all Curses attached to you" is absent (the hexproof ships) | no "attached to you" requirement; the only card that needs one |
+| ~~Witchbane Orb~~ ✅ | fixed 2026-10-25: the ETB destroys `Curse` + `R::AttachedToYou` (CR 303.4) — `witchbane_orb_destroys_only_the_curses_attached_to_you` | — |
 | Psychic Purge | "when a spell or ability an opponent controls causes you to discard this, that player loses 5 life" is absent | `GameEvent::OpponentCausedYouToDiscard` doesn't carry the causing seat, and no `PlayerRef` names it |
 | The Raven's Warning | III "you may put a card you own from outside the game on top of your library" does nothing | no wish-to-library-top effect (`WishToLibrary` shuffles in); a Commander game has no sideboard, so the gap only shows in sideboarded play |
 | 🟡 Cryptic Spires | the two colors are circled as the deck is built | no deck-building choice: `ManaPayload::CircledColors` reads the controller's commander identity — exact for a one- or two-color identity, its first two colors (WUBRG order) in a 3+ color deck, white and blue with no commander |

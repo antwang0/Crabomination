@@ -5589,6 +5589,7 @@ impl GameState {
             R::Tapped => Some(card.tapped),
             R::Untapped => Some(!card.tapped),
             R::Unattached => Some(card.attached_to.is_none() && card.attached_to_player.is_none()),
+            R::AttachedToYou => Some(card.attached_to_player == Some(controller)),
             R::EnteredThisTurn => Some(card.entered_turn == Some(self.turn_number)),
             R::PaidGrantedOffspring => Some(card.paid_granted_offspring()),
             // CR 603.10 — an attacker that just left reads as attacking.
@@ -6414,6 +6415,7 @@ impl GameState {
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
                     R::Unattached => card.attached_to.is_none() && card.attached_to_player.is_none(),
+                    R::AttachedToYou => card.attached_to_player == Some(controller),
                     R::DealtDamageThisTurn => card.dealt_damage_this_turn,
                     R::DamagedBySourceThisTurn => {
                         source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
@@ -8433,7 +8435,7 @@ impl GameState {
             // Battlefield-state predicates can't be evaluated for library cards.
             // Zevlor's "when you next cast" gate reads the cast card here.
             R::SpellTargetsOnlyOneOpponentOrTheirs => self.spell_targets_only_one_opponent_or_theirs(card.id, controller),
-            R::Tapped | R::Untapped | R::Unattached
+            R::Tapped | R::Untapped | R::Unattached | R::AttachedToYou
             | R::IsUnblocked | R::IsBlocked | R::InCombatWithSource
             | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack | R::HasTriggeredAbilityOnStack
