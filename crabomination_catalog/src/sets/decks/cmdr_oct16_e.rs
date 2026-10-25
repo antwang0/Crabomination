@@ -355,21 +355,29 @@ pub fn serpent_specialist() -> CardDefinition {
 
 /// Undercover Skrull — {1}{G} 1/1 Skrull Shapeshifter Villain. With two or
 /// more creature cards in your graveyard it gets +2/+2 and is every creature
-/// type (a granted changeling, CR 702.73a). {T}: one mana of any color.
+/// type (CR 205.3 — a type, not a granted changeling). {T}: one mana of any
+/// color.
 pub fn undercover_skrull() -> CardDefinition {
+    let two_in_yard = || {
+        Predicate::ValueAtLeast(
+            Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+            Value::Const(2),
+        )
+    };
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "As long as there are two or more creature cards in your graveyard, this gets +2/+2 and is all creature types.",
-            effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ValueAtLeast(
-                    Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
-                    Value::Const(2),
-                ),
-                power: 2,
-                toughness: 2,
-                keywords: vec![Keyword::Changeling],
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as there are two or more creature cards in your graveyard, this gets +2/+2.",
+                effect: StaticEffect::PumpSelfIf { condition: two_in_yard(), power: 2, toughness: 2, keywords: vec![] },
             },
-        }],
+            StaticAbility {
+                description: "As long as there are two or more creature cards in your graveyard, this is all creature types.",
+                effect: StaticEffect::WhileCondition {
+                    condition: two_in_yard(),
+                    inner: Box::new(StaticEffect::EveryCreatureType { applies_to: Selector::This }),
+                },
+            },
+        ],
         activated_abilities: vec![tap_add_any_color()],
         ..creature(
             "Undercover Skrull",

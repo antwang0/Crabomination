@@ -229,6 +229,13 @@ fn undercover_skrull_wakes_with_two_creatures_in_the_graveyard() {
     let cp = g.computed_permanent(skrull).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
     assert!(cp.keywords().contains(&Keyword::Changeling));
+    // CR 205.3 / 613.1d — every creature type is a layer-4 type, so a layer-6
+    // "loses all abilities" leaves it (a granted changeling would go).
+    use crabomination::effect::{Duration, Effect, Selector};
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::LoseAllAbilities { what: Selector::ExactObjects(vec![skrull]), duration: Duration::EndOfTurn }, &ctx)
+        .expect("strip");
+    assert!(g.computed_permanent(skrull).unwrap().keywords().contains(&Keyword::Changeling), "still every type");
 }
 
 /// Matt Murdock: the reflexive counter at your beginning of combat, then the
