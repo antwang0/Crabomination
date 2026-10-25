@@ -121,10 +121,6 @@ type SacrificeSnapshot = (CardId, u32, bool, i32, u32, bool, bool, Vec<ManaColor
 /// mode and X (`pose_extra_cast_target`'s `replay`).
 type CastReplay = fn(CardId, Option<Target>, Vec<Target>, Option<usize>, Option<u32>) -> GameAction;
 
-/// Rebuilds a cast action from its card, targets, mode and X — the replay a
-/// suspended extra-target prompt resumes with (`pose_extra_cast_target`).
-type CastReplay = fn(CardId, Option<Target>, Vec<Target>, Option<usize>, Option<u32>) -> GameAction;
-
 /// CR 804.2 — the 2HG deploy-creatures option's grant, "{T}: Target teammate
 /// gains control of this creature. Activate only as a sorcery."
 ///
