@@ -36954,6 +36954,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHANDRA_COMMANDERS,
             main: decks::CHANDRA_MAIN,
         },
+        // Seat 6084: Brigid, Hero of Kinsbaile's EDHREC average deck. `--pod-decks 6084`.
+        PodDeck {
+            name: "Brigid, Hero of Kinsbaile (W)",
+            commanders: decks::BRIGID_2_COMMANDERS,
+            main: decks::BRIGID_2_MAIN,
+        },
     ]
 }
 
@@ -44998,6 +45004,7 @@ mod tests {
             ("Nael, Avizoa Aeronaut", &[0x21D7]),
             ("Verazol, the Split Current", &[0x21D8]),
             ("Chandra, Fire of Kaladesh", &[0x21D9]),
+            ("Brigid, Hero of Kinsbaile", &[0x21DA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

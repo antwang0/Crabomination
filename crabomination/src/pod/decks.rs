@@ -170845,3 +170845,31 @@ pub const CHANDRA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const BRIGID_2_COMMANDERS: &[CardFactory] = &[brigid_hero_of_kinsbaile];
+
+/// **Brigid, Hero of Kinsbaile**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Brigid, Hero of Kinsbaile (EDHREC, fetched 2026-10-25).
+pub const BRIGID_2_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, gorgon_flail, gorgons_head, kusari_gama, lightning_greaves,
+    marble_diamond, nemesis_mask, pearl_medallion, quietus_spike, scythe_of_the_wretched,
+    sol_ring, sting_the_glinting_dagger, swiftfoot_boots, thousand_year_elixir,
+    vanquishers_banner, buried_ruin, emeria_the_sky_ruin, nykthos_shrine_to_nyx,
+    path_of_ancestry, rustic_clachan, war_room, windbrisk_heights, amrou_kithkin,
+    ballynock_cohort, ballynock_trapper, ballyrush_banneret, cenns_heir, cenns_tactician,
+    drumbellower, galepowder_mage, goldmeadow_dodger, goldmeadow_harrier, goldmeadow_stalwart,
+    kinsbaile_borderguard, kithkin_billyrider, kithkin_harbinger, kithkin_rabble,
+    kithkin_zephyrnaut, knight_of_meadowgrain, mentor_of_the_meek, mirror_entity,
+    mistmeadow_skulk, order_of_whiteclay, order_of_the_golden_cricket, patrol_signaler,
+    preeminent_captain, springjack_shepherd, thoughtweft_trio, wizened_cenn, folk_hero,
+    honor_of_the_pure, land_tax, militias_pride, rally_the_ranks, sigardas_aid,
+    smothering_tithe, tocasias_welcome, brave_the_elements, flawless_maneuver, generous_gift,
+    path_to_exile, stroke_of_midnight, surge_of_thoughtweft, swords_to_plowshares,
+    unbreakable_formation, your_temple_is_under_attack, gideon_jura, austere_command,
+    mass_calcify, open_the_armory, steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
