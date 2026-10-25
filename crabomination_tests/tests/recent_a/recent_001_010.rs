@@ -6667,6 +6667,21 @@ mod recent {
         assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
     }
 
+    /// CR 115.1 — "target player" lets Contagion Engine aim at anyone, and
+    /// the auto-targeter reads -1/-1 counters as hostile: an opponent's board
+    /// shrinks, never its own controller's.
+    #[test]
+    fn contagion_engine_targets_any_player_and_picks_an_opponent() {
+        let mut g = multi_player_game(3);
+        let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+        let theirs: Vec<_> = (1..3).map(|s| g.add_card_to_battlefield(s, catalog::hill_giant())).collect();
+        g.move_card_to_battlefield_for_test(0, catalog::contagion_engine());
+        drain_stack(&mut g);
+        let shrunk = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::MinusOneMinusOne);
+        assert_eq!(shrunk(&g, mine), 0);
+        assert_eq!(theirs.iter().map(|id| shrunk(&g, *id)).sum::<u32>(), 1, "one opponent's board");
+    }
+
     /// Kami of False Hope sacrifices to fog all combat damage.
     #[test]
     fn kami_of_false_hope_fogs() {
