@@ -1479,3 +1479,48 @@ fn cr_122_2_a_card_leaving_exile_drops_its_counters() {
     let card = g.players[0].hand.iter().find(|c| c.id == canonist).expect("wished into hand");
     assert_eq!(card.counter_count(CounterType::Blood), 0);
 }
+
+/// CR 601.2b / 107.4 — Drought's "Spells cost an additional 'Sacrifice a
+/// Swamp' for each black mana symbol": every player's spells, one Swamp per
+/// symbol; too few Swamps and the spell can't be cast; no black, no cost.
+#[test]
+fn cr_601_2b_a_static_adds_a_swamp_sacrifice_per_black_symbol() {
+    use crabomination::card::{CardDefinition, CardType, StaticAbility};
+    use crabomination::effect::StaticEffect;
+    use crabomination::game::types::{GameAction, Target};
+    use crabomination::mana::Color;
+    let mut g = peace_main();
+    g.add_card_to_battlefield(1, CardDefinition {
+        name: "Drought Test",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Spells cost an additional \"Sacrifice a Swamp\" per black symbol.",
+            effect: StaticEffect::SacrificeSwampPerBlackSymbolToCast,
+        }],
+        ..Default::default()
+    });
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cast = |g: &mut GameState, id, target| {
+        g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+    };
+    // {1}{B}{B}, no Swamp: can't be cast, and it stays in hand.
+    let hymn = g.add_card_to_hand(0, catalog::hymn_to_tourach());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    assert!(cast(&mut g, hymn, Some(Target::Player(1))).is_err());
+    assert!(g.players[0].hand.iter().any(|c| c.id == hymn));
+    // Two Swamps pay its two symbols.
+    let swamps: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::swamp())).collect();
+    for &s in &swamps {
+        g.battlefield_find_mut(s).unwrap().tapped = true;
+    }
+    cast(&mut g, hymn, Some(Target::Player(1))).expect("two Swamps");
+    drain_stack(&mut g);
+    let left = swamps.iter().filter(|s| g.battlefield_find(**s).is_some()).count();
+    assert_eq!(left, 1, "two sacrificed");
+    // A spell without black costs nothing extra.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("no black symbol");
+    drain_stack(&mut g);
+    assert_eq!(swamps.iter().filter(|s| g.battlefield_find(**s).is_some()).count(), 1);
+}

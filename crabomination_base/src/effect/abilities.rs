@@ -860,6 +860,13 @@ pub enum StaticEffect {
     /// cast time alongside `AdditionalCostAfterFirstSpell` in
     /// `extra_cost_for_spell`.
     AdditionalCost { filter: SelectionRequirement, amount: u32 },
+    /// Drought — "Spells cost an additional 'Sacrifice a Swamp' to cast for
+    /// each black mana symbol in their mana costs" (CR 601.2b; CR 107.4, a
+    /// hybrid or Phyrexian black symbol counts). Every player's spells, one
+    /// Swamp per symbol per copy, paid through the shared
+    /// `AdditionalCastCost::SacrificePermanent` payer. The activated-ability
+    /// half is not modelled.
+    SacrificeSwampPerBlackSymbolToCast,
     /// Grand-Arbiter-style tax: spells matching `filter` cast by an opponent of
     /// the source's controller cost `amount` more (Sphinx's Decree, Thalia of
     /// Traben-for-opponents). Unlike `AdditionalCost`, the source's controller

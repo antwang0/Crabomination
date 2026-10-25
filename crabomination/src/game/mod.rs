@@ -35842,6 +35842,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionForYourSpellsTargetingThis { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
+            | StaticEffect::SacrificeSwampPerBlackSymbolToCast
             | StaticEffect::OpponentSpellsCostMore { .. }
             | StaticEffect::OpponentSpellsFromGraveyardOrExileCostMore { .. }
             | StaticEffect::SpellTaxPerControllerPermanent { .. }

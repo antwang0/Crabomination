@@ -9415,6 +9415,11 @@ impl GameState {
             .find(|c| c.id == card_id)
             .map(|c| c.definition.adventure_additional_cast_cost.clone())
             .unwrap_or_default();
+        // CR 715.3 — the Adventure's own mana cost is the one Drought reads.
+        let mut extra = extra;
+        if let Some(c) = self.static_sacrifice_cast_cost(&adv.cost) {
+            extra.push(c);
+        }
         if !extra.is_empty() && !self.additional_costs_payable(p, &extra) {
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -11421,6 +11426,10 @@ impl GameState {
         // so an unpayable spell reverts to hand before any mana is spent;
         // the costs themselves are paid after the mana cost succeeds.
         let mut additional_costs = card.definition.additional_cast_cost.clone();
+        // Drought's "Sacrifice a Swamp" per black symbol.
+        if let Some(c) = self.static_sacrifice_cast_cost(&card.definition.cost) {
+            additional_costs.push(c);
+        }
         // CR 601.2h — Into the Pit: a spell cast off the library top by its
         // grant also sacrifices a nonland permanent, paid with the other costs.
         if self.casting_hop == Some((card.id, crate::game::HopFrom::LibraryTop))
@@ -12141,6 +12150,36 @@ impl GameState {
         self.push_commander_mana_scry(p, &spell_kind, provenance_scry);
 
         Ok(events)
+    }
+
+    /// CR 601.2b — the "Sacrifice a Swamp" each Drought adds to a spell, one
+    /// per black symbol in `mana_cost` (CR 107.4: a hybrid or Phyrexian black
+    /// symbol is black) per copy on the battlefield. `None` when nothing is
+    /// owed, which is every cast on a board without a Drought.
+    pub(crate) fn static_sacrifice_cast_cost(
+        &self,
+        mana_cost: &crate::mana::ManaCost,
+    ) -> Option<crate::card::AdditionalCastCost> {
+        let pips = mana_cost.pips_of(crate::mana::Color::Black);
+        if pips == 0 {
+            return None;
+        }
+        let copies = self
+            .battlefield
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+            .filter(|(c, sa)| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::SacrificeSwampPerBlackSymbolToCast)
+                )
+            })
+            .count() as u32;
+        (copies > 0).then(|| crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: crate::card::SelectionRequirement::HasLandType(crate::card::LandType::Swamp)
+                .and(crate::card::SelectionRequirement::ControlledByYou),
+            count: pips * copies,
+        })
     }
 
     /// Is `sac_id` a legal answer to `card_id`'s "sacrifice a permanent"
@@ -14514,6 +14553,9 @@ impl GameState {
         // graveyard"); only the flashback riders were being paid.
         if gy_cast {
             flashback_additional.extend(card.definition.additional_cast_cost.iter().cloned());
+        }
+        if let Some(c) = self.static_sacrifice_cast_cost(&card.definition.cost) {
+            flashback_additional.push(c);
         }
         if !flashback_additional.is_empty() {
             // The flashback card can't fund its own riders (e.g. Resurgent
