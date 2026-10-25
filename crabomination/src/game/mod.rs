@@ -10758,6 +10758,15 @@ impl GameState {
                         {
                             amount = amount.saturating_add(*bonus);
                         }
+                        // Pyromancer's Gauntlet — only a spell its controller
+                        // controls (an instant or sorcery: no other spell
+                        // deals damage as it resolves, CR 608.2).
+                        StaticEffect::ColorSpellsAndPlaneswalkersYouControlDealExtraDamage { color, amount: bonus }
+                            if spell_colors.contains(color)
+                                && source_info.as_ref().is_some_and(|(caster, _)| *caster == c.controller) =>
+                        {
+                            amount = amount.saturating_add(*bonus);
+                        }
                         // Benevolent Unicorn — the shave twin, colour-blind.
                         StaticEffect::ReduceSpellDamageBy { amount: shave } => {
                             amount = amount.saturating_sub(*shave);
@@ -10770,6 +10779,21 @@ impl GameState {
                             amount = amount.saturating_add(*bonus);
                         }
                         _ => {}
+                    }
+                }
+            }
+        }
+        // Pyromancer's Gauntlet's planeswalker half: a `color` planeswalker
+        // its controller controls.
+        if let Some(cp) = source_cp.as_ref().filter(|cp| cp.card_types().contains(&crate::card::CardType::Planeswalker)) {
+            for c in &self.battlefield {
+                for sa in &c.definition.static_abilities {
+                    let Some(eff) = self.active_static(&sa.effect, c) else { continue };
+                    if let StaticEffect::ColorSpellsAndPlaneswalkersYouControlDealExtraDamage { color, amount: bonus } = eff
+                        && c.controller == cp.controller
+                        && cp.colors.contains(color)
+                    {
+                        amount = amount.saturating_add(*bonus);
                     }
                 }
             }
@@ -34931,6 +34955,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::CapDamageToYourOtherMatchingCreatures { .. }
         // Source-scoped.
         | SE::AddDamageFromColorSpells { .. }
+        | SE::ColorSpellsAndPlaneswalkersYouControlDealExtraDamage { .. }
         | SE::ReduceSpellDamageBy { .. }
         | SE::SpellDamageToOpponentsBonus { .. }
         | SE::AddDamageToOpponents { .. }
@@ -35938,6 +35963,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToYouAndYoursFromNamed
             | StaticEffect::SpellDamageToOpponentsBonus { .. }
             | StaticEffect::AddDamageFromColorSpells { .. }
+            | StaticEffect::ColorSpellsAndPlaneswalkersYouControlDealExtraDamage { .. }
             // Read where the matching action happens: the hand-reveal
             // projection, the Cycling cost path, and `tap_for_mana`.
             | StaticEffect::OpponentsPlayWithHandsRevealed

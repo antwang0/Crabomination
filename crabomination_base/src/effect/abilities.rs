@@ -4550,6 +4550,11 @@ pub enum StaticEffect {
     /// Vapors). Unlike `AddDamageFromColorToPlayers` the source must be a
     /// spell, but the recipient may be a permanent.
     AddDamageFromColorSpells { color: crate::mana::Color, amount: u32 },
+    /// CR 614.1a — "If a `color` instant or sorcery spell you control or a
+    /// `color` planeswalker you control would deal damage to a permanent or
+    /// player, it deals that much damage plus `amount` instead" (Pyromancer's
+    /// Gauntlet). Read in `scale_damage_to` beside `AddDamageFromColorSpells`.
+    ColorSpellsAndPlaneswalkersYouControlDealExtraDamage { color: crate::mana::Color, amount: u32 },
     /// "If a land is tapped for mana, it produces `color` instead of any other
     /// type and amount" (Contamination).
     LandsProduceColorInstead(crate::mana::Color),
