@@ -19258,6 +19258,15 @@ static DECKS: &[Factory] = &[
     super::decks::balduvian_shaman,
     super::decks::arcums_whistle,
     super::decks::acidic_dagger,
+    super::decks::trip_noose,
+    super::decks::mage_ring_responder,
+    super::decks::ruinous_gremlin,
+    super::decks::squawkroaster,
+    super::decks::bloodshed_fever,
+    super::decks::chaos_moon,
+    super::decks::melting,
+    super::decks::total_war,
+    super::decks::thunderblade_charge,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
