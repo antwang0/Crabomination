@@ -417,3 +417,43 @@ fn commandeer_steals_and_retargets_a_spell() {
     drain_stack(&mut g);
     assert_eq!((g.players[0].life, g.players[1].life), (20, 17));
 }
+
+/// Brazen Cannonade's raid card is playable until end of combat on your next
+/// turn — through the rest of this turn and that turn's combat, gone after.
+#[test]
+fn brazen_cannonade_raid_card_lasts_until_your_next_combat_ends() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    g.add_card_to_battlefield(0, catalog::brazen_cannonade());
+    g.players[0].attacked_this_turn = true;
+    g.step = TurnStep::PostCombatMain;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    let card = g.exile.iter().find(|c| c.may_play_until.is_some()).map(|c| c.id).expect("the raid card");
+    let live = |g: &GameState| g.exile.iter().any(|c| c.id == card && c.may_play_until.is_some());
+    let start = g.turn_number;
+    let mut saw_next_combat = false;
+    let mut declared = None;
+    for _ in 0..400 {
+        if g.active_player_idx == 0 && g.turn_number > start && g.step == TurnStep::PostCombatMain {
+            break;
+        }
+        if g.active_player_idx == 0 && g.turn_number > start && g.step == TurnStep::DeclareAttackers {
+            saw_next_combat = live(&g);
+        }
+        let p = g.priority.player_with_priority;
+        let a = if g.step == TurnStep::DeclareAttackers && g.active_player_idx == p && declared != Some(g.turn_number) {
+            declared = Some(g.turn_number);
+            GameAction::DeclareAttackers(vec![])
+        } else {
+            GameAction::PassPriority
+        };
+        if g.perform_action(a).is_err() {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(g.turn_number > start && g.step == TurnStep::PostCombatMain, "reached the next turn's second main");
+    assert!(saw_next_combat, "still playable during your next combat");
+    assert!(!live(&g), "gone once that combat ended");
+}

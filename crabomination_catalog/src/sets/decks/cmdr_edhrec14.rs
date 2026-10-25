@@ -1446,7 +1446,7 @@ pub fn brazen_cannonade() -> CardDefinition {
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    duration: crate::card::MayPlayDuration::UntilEndOfCombatOnYourNextTurn,
                     pay_any_color: false,
                     max_mana_value: None,
                     pay_own_cost: true,
