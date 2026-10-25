@@ -196,6 +196,20 @@ fn geode_golem_casts_the_commander_free() {
     assert_eq!(g.commander_cast_count.get(&id), Some(&1));
 }
 
+/// Geode Golem with two commanders in the command zone: the seat picks which
+/// one is cast (it named the cheaper one; the old pick was the greater MV).
+#[test]
+fn geode_golem_casts_the_partner_its_controller_picks() {
+    let mut g = pod(2);
+    let big = CardDefinition { name: "Test Big Commander", cost: cost(&[generic(6)]), ..bear_commander() };
+    let ids = g.seat_commanders(0, vec![bear_commander(), big]);
+    let golem = g.add_card_to_battlefield(0, catalog::geode_golem());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![ids[0]])]));
+    attack(&mut g, golem, 1);
+    assert!(g.battlefield_find(ids[0]).is_some(), "the named partner was cast");
+    assert!(g.players[0].command.iter().any(|c| c.id == ids[1]), "the other stays");
+}
+
 /// Highland Lake enters tapped; Inkwell Leviathan has its three keywords.
 #[test]
 fn highland_lake_and_inkwell_leviathan() {

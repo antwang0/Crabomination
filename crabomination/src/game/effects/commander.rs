@@ -14,21 +14,15 @@ use crate::mana::{SpellKind, SpendRestriction};
 impl GameState {
     /// Geode Golem — cast one of `seat`'s commanders from the command zone
     /// without paying its mana cost (the tax is still paid; see
-    /// `cast_from_command_zone_as`). With two in the zone (Partner) the one
-    /// with the greater mana value goes, the one the discount is worth most
-    /// on. A cast that fails leaves the commander where it was.
+    /// `cast_from_command_zone_as`). With two in the zone (Partner) the seat
+    /// picks which. A cast that fails leaves the commander where it was.
     pub(crate) fn cast_commander_without_paying(
         &mut self,
         seat: usize,
+        source: Option<CardId>,
         events: &mut Vec<crate::game::types::GameEvent>,
     ) {
-        let Some(id) = self.players.get(seat).and_then(|p| {
-            p.command
-                .iter()
-                .filter(|c| p.commanders.contains(&c.id))
-                .max_by_key(|c| c.definition.cost.cmc())
-                .map(|c| c.id)
-        }) else {
+        let Some(id) = self.choose_commander_in_command_zone(seat, source, "Cast which commander?") else {
             return;
         };
         if let Ok(mut evs) = self.cast_from_command_zone_as(seat, id, None, vec![], None, None, true) {

@@ -14459,7 +14459,7 @@ impl GameState {
             }
 
             Effect::CastCommanderWithoutPaying => {
-                self.cast_commander_without_paying(ctx.controller, events);
+                self.cast_commander_without_paying(ctx.controller, ctx.source, events);
                 Ok(())
             }
             Effect::NextSpellHasAffinityForArtifacts => {
