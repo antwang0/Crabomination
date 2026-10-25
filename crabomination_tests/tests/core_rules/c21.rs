@@ -160,6 +160,26 @@ fn myriad_landscape_second_basic_shares_a_land_type() {
     }
 }
 
+/// "Up to two … that share a land type": a first search that finds nothing
+/// leaves the second free (a pin: `SharesLandTypeWithLastMoved` also ignores
+/// a last move with no land type, so a stale non-land can't constrain it).
+#[test]
+fn myriad_landscape_a_declined_first_pick_leaves_the_second_free() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let island = g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(None), DecisionAnswer::Search(Some(island))]));
+    let id = g.add_card_to_battlefield(0, catalog::myriad_landscape());
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("sac fetch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(island).is_some(), "the second search's Island");
+}
+
 /// Barren Moor can be cycled from hand for {B} (the cycle shipped at {2}).
 #[test]
 fn barren_moor_cycles() {

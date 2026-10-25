@@ -7959,11 +7959,17 @@ impl GameState {
                 })
             }
             R::SharesLandTypeWithLastMoved => {
+                // The first pick's land types. A last move with none — the
+                // sacrificed Myriad Landscape when the first search found
+                // nothing — leaves nothing to share, so any basic answers.
                 let mine = &card.definition.subtypes.land_types;
-                self.scratch.last_moved_cards.first().is_none_or(|&id| {
-                    self.find_card_anywhere(id)
-                        .is_some_and(|c| c.definition.subtypes.land_types.iter().any(|t| mine.contains(t)))
-                })
+                self.scratch
+                    .last_moved_cards
+                    .first()
+                    .and_then(|&id| self.find_card_anywhere(id))
+                    .map(|c| &c.definition.subtypes.land_types)
+                    .filter(|theirs| !theirs.is_empty())
+                    .is_none_or(|theirs| theirs.iter().any(|t| mine.contains(t)))
             }
             // Harsh Mercy — "of a type chosen this way".
             R::IsTypeChosenThisWay => {
