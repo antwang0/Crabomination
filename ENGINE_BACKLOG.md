@@ -299,7 +299,13 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   Ringing Strike Mastery (7) named gaps the code had already closed. Read a flagged doc against its body before building.
 - Werewolf Pack Leader's "isn't a Human" (9 decks + cube) was built here too and dropped at rebase: `01M2Ffkh` landed
   the same primitive first (`d48449be8`, `Effect::LoseCreatureType`).
-- **OPEN:** Drought's mana-ability half (INCOMPLETE); Devouring Rage / Reroute go uncast in 1,000 Molly Hayes pods (the trick heuristic
+- **FIXED, bot:** Curse of Wizardry's headless colour was its controller's densest — the hostile-chosen-colour detector
+  (`CardDefinition::chosen_color_aimed_at_opponents`) now knows "that player loses life"; an audit of all 61 chosen-colour
+  cards found the other 34 non-hostile ones self-benefiting (mana, anthems, lifegain).
+- **FIXED, auto-tap:** `OneColorDecider` answered only the first colour ask, so a filter land fired for {R}{R} made R + the
+  first legal colour; a colour ask now repeats (`cr_605_3b_the_auto_tapper_takes_both_of_a_filter_lands_pips`). With it,
+  Drought's mana-ability half closes — costed mana sources already went through `activate_ability_into`.
+- **OPEN:** Devouring Rage / Reroute go uncast in 1,000 Molly Hayes pods (the trick heuristic
   never picks a 5-mana pump; Reroute needs an activated ability with one target on the stack) — not plumbing bugs.
 - **Fuzz:** `random_pods.sh` 4 seats × 1,000 groups × 5 (seed 10181): 2 undecided of 5,000 — one CR 104.4b draw, one board
   cap (Rabble Rousing doubling Citizens, NEXT line 6's known shape); 6 seats × 400 × 3 (10601): 1,200 decided, 0 panics.
