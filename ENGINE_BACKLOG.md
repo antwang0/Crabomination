@@ -355,6 +355,10 @@ The EDHREC well is dry (`01Y6ZRFx`), so this pass mined bugs and closed 🟡 row
   "land doesn't spend the use" half was stale); Undercover Skrull's every-type is layer 4 (CR 613.6 — survives a
   strip). **Regression found and fixed:** the bot's counter sink no longer saw Forge of Heroes after `97f26d293`
   made its body a `Seq` (`forge_of_heroes_grows_a_fresh_commander`).
+- **Class, CR 205.3 / 613.6:** "is (every|all) creature type(s)" granted as a Changeling keyword lived in layer 6,
+  so losing all abilities took the types; now `EveryCreatureType` / `GainAllCreatureTypes` (layer 4) on Undercover
+  Skrull, Runed Stalactite, Amorphous Axe, Arachnoform, Mutavault, Faceless Haven, Soulstone Sanctuary (found by a
+  `dump_cards --grep Changeling` × oracle scan; Mistform Ultimus's CDA and token reminder text are right as is).
 - **OPEN, priced:** Karn, Living Legacy (21 decks) needs an emblem that is a damage *source* (`Emblem` has no id);
   Jacob Hauken's free play needs a your-turn gate and land counting on `OneCastPerTurnAmongGranted`; Wizard's
   Rockets' X mana ability (no X on a mana ability); `ActivateLoyaltyAbility` extra targets (human seats only).
