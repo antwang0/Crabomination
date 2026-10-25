@@ -1518,12 +1518,12 @@ pub fn thieves_tools() -> CardDefinition {
     }
 }
 
-/// Eradicator Valkyrie — {2}{B}{B} 4/3 flying, lifelink Angel Berserker.
-/// Boast — {1}{B}, sacrifice a creature: each opponent sacrifices a creature
-/// or planeswalker. Residual: "hexproof from planeswalkers" is not modelled.
+/// Eradicator Valkyrie — {2}{B}{B} 4/3 flying, lifelink, hexproof from
+/// planeswalkers Angel Berserker. Boast — {1}{B}, sacrifice a creature: each
+/// opponent sacrifices a creature or planeswalker.
 pub fn eradicator_valkyrie() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        keywords: vec![Keyword::Flying, Keyword::Lifelink, Keyword::HexproofFromPlaneswalkers],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((yours(), 1)),
             sac_other_may_be_source: true,

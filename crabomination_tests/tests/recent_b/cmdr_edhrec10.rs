@@ -332,6 +332,18 @@ fn liliana_of_the_dark_realms_counts_swamps() {
     assert_eq!(g.players[0].mana_pool.total(), pool + 4);
 }
 
+/// CR 702.11d — Eradicator Valkyrie has hexproof from planeswalkers: an
+/// opponent's Liliana can't aim her −3 at it, but can at a Grizzly Bears.
+#[test]
+fn eradicator_valkyrie_has_hexproof_from_planeswalkers() {
+    let mut g = pod(2);
+    let lili = walker(&mut g, catalog::liliana_of_the_dark_realms(), 15);
+    let valkyrie = ready(&mut g, 1, catalog::eradicator_valkyrie());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    assert!(walk(&mut g, lili, 1, Some(perm(valkyrie))).is_err(), "a loyalty ability can't target it");
+    walk(&mut g, lili, 1, Some(perm(bears))).expect("the Bears are fair game");
+}
+
 /// Koth of the Hammer: +1 untaps and animates a Mountain into a 4/4 red
 /// Elemental; −2 adds {R} per Mountain.
 #[test]
