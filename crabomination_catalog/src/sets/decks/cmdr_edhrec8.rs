@@ -9,7 +9,7 @@ use crate::card::{
     SpellSubtype, StaticAbility, Zone, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
-use crate::effect::{ActivatedAbility, Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{ActivatedAbility, DelayedTriggerKind, Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color, ManaCost, SpendRestriction};
 use std::sync::Arc;
@@ -315,27 +315,48 @@ pub fn preston_the_vanisher() -> CardDefinition {
     }
 }
 
-/// Lae'zel's Acrobatics — {3}{W} Instant. Your nontoken creatures leave and
-/// come back at the next end step; on a 10 or more they blink first.
+/// Lae'zel's Acrobatics — {3}{W} Instant. Exile your nontoken creatures, then
+/// roll a d20: 1-9 returns those cards at the next end step; 10-20 returns
+/// them now, then exiles them again until the next end step.
 pub fn laezels_acrobatics() -> CardDefinition {
-    let crew = || Selector::EachPermanent(mine().and(R::IsToken.negate()));
-    let later = || Effect::ExileReturnToOwnerNextEndStep { what: crew(), tapped: false };
+    let back = || ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false };
+    let at_end_step = Effect::ForEach {
+        selector: Selector::LastMoved,
+        body: Box::new(Effect::DelayUntilWithCapture {
+            kind: DelayedTriggerKind::NextEndStep,
+            capture: Selector::TriggerSource,
+            body: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            }),
+        }),
+    };
     spell(
         "Lae'zel's Acrobatics",
         cost(&[generic(3), w()]),
         CardType::Instant,
-        Effect::RollDie {
-            sides: 20,
-            count: Value::ONE,
-            modifier: Value::Const(0),
-            reroll_at_most: 0,
-            ignore_lowest: 0,
-            on_doubles: None,
-            results: vec![
-                (1, 9, later()),
-                (10, 20, Effect::Seq(vec![Effect::ExileAndReturnToOwner { what: crew() }, later()])),
-            ],
-        },
+        Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::Move { what: Selector::EachPermanent(mine().and(R::IsToken.negate())), to: ZoneDest::Exile },
+            Effect::RollDie {
+                sides: 20,
+                count: Value::ONE,
+                modifier: Value::Const(0),
+                reroll_at_most: 0,
+                ignore_lowest: 0,
+                on_doubles: None,
+                results: vec![
+                    (1, 9, at_end_step),
+                    (10, 20, Effect::Seq(vec![
+                        Effect::Move { what: Selector::LastMoved, to: back() },
+                        Effect::ExileReturnToOwnerNextEndStep { what: Selector::LastMoved, tapped: false },
+                    ])),
+                ],
+            },
+        ]),
     )
 }
 

@@ -309,6 +309,31 @@ fn snapper_and_gilanra_draw_off_big_spells() {
     assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
 }
 
+/// CR 106.6 — Gilanra draws only off its own mana: a six-drop funded by
+/// another source's marked mana (Barracks of the Thousand's mark) draws
+/// nothing; one funded by Gilanra's {G} draws.
+#[test]
+fn gilanra_reads_only_its_own_mark() {
+    use crabomination::mana::SpendRestriction;
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::gilanra_caller_of_wirewood());
+    for (mark, draws) in [(0u8, 0usize), (1, 1)] {
+        let wurm = g.add_card_to_hand(0, catalog::wurmcoil_engine());
+        let hand = g.players[0].hand.len();
+        g.players[0].mana_pool = Default::default();
+        g.players[0].mana_pool.add_colorless(5);
+        g.players[0].mana_pool.add_restricted(Color::Green, 1, SpendRestriction::MarksCast(mark));
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand - 1 + draws, "mark {mark}");
+    }
+}
+
 /// Heartwood Storyteller: a noncreature spell lets each of the caster's
 /// opponents draw.
 #[test]
@@ -736,4 +761,24 @@ fn edhrec12_printed_shapes() {
     cast(&mut g, b, &[Target::Player(1)]).expect("bolt");
     let kws = g.computed_permanent(v).unwrap().keywords().to_vec();
     assert!(kws.contains(&crabomination::card::Keyword::DoubleStrike), "The Vision's first mode");
+}
+
+/// CR 104.3e / 611.2 — Vorpal Sword's {5}{B}{B}{B}: this turn the Sword's
+/// granted trigger makes the player its equipped creature hits lose the game
+/// (seat 1 of three; the game goes on). Unactivated, a hit is just damage.
+#[test]
+fn vorpal_sword_activated_makes_a_hit_lethal() {
+    for activated in [false, true] {
+        let mut g = pod(3);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        let sword = ready(&mut g, 0, catalog::vorpal_sword());
+        g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+        if activated {
+            activate(&mut g, sword, 0, None).expect("activate");
+        }
+        declare(&mut g, 0, &[(bear, 1)]).expect("attack");
+        combat_damage(&mut g);
+        assert_eq!(g.players[1].eliminated, activated, "activated: {activated}");
+        assert!(!g.players[2].eliminated);
+    }
 }

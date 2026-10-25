@@ -56,8 +56,8 @@ pub fn youve_been_caught_stealing() -> CardDefinition {
 /// Livio, Oathsworn Sentinel — {1}{W} 2/2 legendary Human Knight, partner.
 /// {1}{W}: choose another target creature; its controller may exile it with
 /// an aegis counter on it. {2}{W}, {T}: return all exiled cards with aegis
-/// counters to the battlefield under their owners' control. (Residual: the
-/// return is one card at a time rather than simultaneous, CR 610.3.)
+/// counters to the battlefield under their owners' control, all at once
+/// (`OwnerOfMoved`, so each entry sees the others — CR 603.6a).
 pub fn livio_oathsworn_sentinel() -> CardDefinition {
     CardDefinition {
         name: "Livio, Oathsworn Sentinel",
@@ -87,15 +87,9 @@ pub fn livio_oathsworn_sentinel() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), w()]),
                 tap_cost: true,
-                effect: Effect::ForEach {
-                    selector: Selector::EachMatching { zone: ZoneRef::Exile, filter: R::WithCounter(CounterType::Aegis) },
-                    body: Box::new(Effect::Move {
-                        what: Selector::TriggerSource,
-                        to: ZoneDest::Battlefield {
-                            controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
-                            tapped: false,
-                        },
-                    }),
+                effect: Effect::Move {
+                    what: Selector::EachMatching { zone: ZoneRef::Exile, filter: R::WithCounter(CounterType::Aegis) },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
                 },
                 ..Default::default()
             },

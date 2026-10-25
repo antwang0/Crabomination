@@ -101,9 +101,9 @@ pub fn goblin_welder() -> CardDefinition {
     }
 }
 
-/// Paradox Haze — {2}{U} Enchantment. At the first upkeep of your turn you
-/// get an additional upkeep step (CR 500.9; enchant-player is modeled as a
-/// controller-scoped enchantment).
+/// Paradox Haze — {2}{U} Aura, enchant player. At the beginning of the
+/// enchanted player's first upkeep each turn, that player gets an additional
+/// upkeep step after this one (CR 500.9).
 pub fn paradox_haze() -> CardDefinition {
     CardDefinition {
         name: "Paradox Haze",
@@ -113,12 +113,19 @@ pub fn paradox_haze() -> CardDefinition {
             enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
             ..Default::default()
         },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Player),
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                EventScope::YourControl,
+                EventScope::AnyPlayer,
             )
-            .with_filter(Predicate::IsFirstUpkeepThisTurn),
+            .with_filter(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::EnchantedPlayer),
+                Predicate::IsFirstUpkeepThisTurn,
+            ])),
             effect: Effect::AdditionalUpkeepStep { count: Value::ONE },
         }],
         ..Default::default()

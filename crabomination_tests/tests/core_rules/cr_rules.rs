@@ -7881,13 +7881,15 @@ fn cr_702_65_aura_swap_exchanges_with_hand() {
 
 // ── CR 500.9 — additional upkeep steps ───────────────────────────────────────
 
-/// Paradox Haze banks an additional upkeep step at the first upkeep of your
-/// turn; the extra upkeep begins (and doesn't loop a third time).
+/// Paradox Haze banks an additional upkeep step at the first upkeep of the
+/// enchanted player's turn; the extra upkeep begins (and doesn't loop a third
+/// time). CR 303.4 — it enchants a player, here its caster.
 #[test]
 fn cr_500_9_paradox_haze_grants_second_upkeep() {
     use crabomination::game::types::TurnStep;
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::paradox_haze());
+    let haze = g.add_card_to_battlefield(0, catalog::paradox_haze());
+    g.battlefield_find_mut(haze).unwrap().attached_to_player = Some(0);
     g.active_player_idx = 0;
     g.step = TurnStep::Upkeep;
     g.upkeep_steps_this_turn = 1;
@@ -7907,6 +7909,22 @@ fn cr_500_9_paradox_haze_grants_second_upkeep() {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
     assert_eq!(g.step, TurnStep::Draw, "no third upkeep");
+}
+
+/// CR 303.4 / 500.9 — Paradox Haze enchanting seat 1 gives seat 0's upkeep
+/// nothing.
+#[test]
+fn cr_303_4_paradox_haze_enchants_a_player() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    let haze = g.add_card_to_battlefield(1, catalog::paradox_haze());
+    g.battlefield_find_mut(haze).unwrap().attached_to_player = Some(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.upkeep_steps_this_turn = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.additional_upkeep_steps, 0, "seat 0 isn't the enchanted player");
 }
 
 // ── CR 702.62a — suspend's eventual cast respects cast-zone locks ────────────

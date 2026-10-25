@@ -384,3 +384,33 @@ fn chandra_acolyte_of_flame_recasts_from_the_graveyard_now() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "cast, then exiled");
     assert_eq!(g.players[1].life, 17);
 }
+
+/// CR 706.2 / 603.7 — Lae'zel's Acrobatics exiles first, then rolls: on a 1-9
+/// the exiled cards come back at the end step (one ETB); on a 10-20 they come
+/// back at once, are exiled again, and come back at the end step (two ETBs).
+/// A token stays put either way.
+#[test]
+fn laezels_acrobatics_rolls_over_the_exiled_group() {
+    for (face, draws) in [(5u8, 1usize), (15, 2)] {
+        let mut g = pod(2);
+        let elf = ready(&mut g, 0, catalog::elvish_visionary());
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let token = ready(&mut g, 0, catalog::grizzly_bears());
+        g.battlefield_find_mut(token).unwrap().is_token = true;
+        let s = g.add_card_to_hand(0, catalog::laezels_acrobatics());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(face)]));
+        cast(&mut g, s, &[]).expect("cast");
+        assert!(g.battlefield_find(elf).is_none(), "d{face}: exiled until the end step");
+        assert!(g.battlefield_find(token).is_some(), "a token isn't exiled");
+        let hand = g.players[0].hand.len();
+        assert_eq!(hand, draws - 1, "d{face}: the 10-20 return is an entry");
+        while g.step != TurnStep::End {
+            let _ = g.advance_step(Vec::new());
+        }
+        drain_stack(&mut g);
+        assert!(g.battlefield.iter().any(|c| c.definition.name == "Elvish Visionary" && c.controller == 0));
+        assert_eq!(g.players[0].hand.len(), draws, "d{face}");
+    }
+}

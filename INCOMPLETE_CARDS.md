@@ -2031,7 +2031,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Vexing Puzzlebox | a roll of several dice charges it by the highest counted result, not the dice's total | `GameEvent::DiceRolled` carries `high` only, and "the result" of a multi-die roll is unruled |
 | 🟡 Night Shift of the Living Dead | a UI seat isn't asked: it takes the headless shift (+1 when that reaches a later results arm or a die-trigger threshold) | the shift is offered inside `RollDie`'s resolver after the dice land; it can't park there and resume with the same faces |
 | 🟡 Neera, Wild Mage | the dig exiles the passed-over cards as it walks instead of revealing them in the library (they still end on the bottom in a random order) | the dig rides `Effect::Cascade` with no mana value cap; there is no reveal-until-nonland-cast-free walk |
-| 🟡 Lae'zel's Acrobatics | the d20 is rolled before the creatures are exiled, not after | `RollDie`'s arms each exile the group themselves; there is no captured exiled group to roll over |
 | ~~Animation Module~~ ✅ | fixed 2026-10-24: `AddCounterOfPresentKind` takes a player target (an opponent's poison, your experience / energy) | — |
 | 🟡 Bramble Familiar // Fetch Quest | the milled card put onto the battlefield is the engine's pick (the priciest creature, enchantment or land), not asked of its controller | `Selector::best_of` over `MatchingAmong { LastMoved }`; the post-mill choice has no decision of its own |
 | 🟡 Cover of Winter | "prevent X of that damage" is X from each combat damage *event*, so a creature damaging two of your creatures (or a blocker and you, trample) at once has X prevented from each rather than X in total | `StaticEffect::ReduceCreatureCombatDamageToYouAndYoursByCounters` shaves in the per-recipient prevention funnel; there is no per-source combat damage total to split X over |
@@ -2098,7 +2097,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Yasharn, Implacable Earth~~ ✅ | fixed 2026-10-24: emerge, offering, casualty and bargain sacrifices ask `sacrificeable_for_cost` like the additional-cost and alternative-cost paths | — |
 | 🟡 Karn, Living Legacy | the emblem's ability is granted to each artifact as "{T}: 1 damage": a summoning-sick artifact creature can't use it, and the artifact (not the emblem) is the source | emblems carry no activated abilities; `GrantActivatedAbility` in the emblem's statics is the lane |
 | 🟡 Sakashima's Protege | the copy choice is the engine's pick among permanents that entered this turn | `EntersAsCopy` auto-picks |
-| 🟡 Gilanra, Caller of Wirewood | any `MarksCast` mana (not only Gilanra's) funding a mana value 6+ spell draws | `SpendRestriction::MarksCast` doesn't record its source |
 | 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |
 | 🟡 Game Plan | no assist: nobody else may pay toward it | there is no assist keyword |
 | 🟡 Pact Weapon | the drawn card isn't revealed; X is read off the library top before the draw | no "last drawn card" value; Dark Confidant's top-of-library read is the lane |
@@ -2170,7 +2168,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Black Widow, Super Spy | the +1/+1 counter and the cast aren't exclusive: the counter is offered and the exiled card stays castable either way | `ExileTopUntilNonlandMayPlay` + `MayDo` |
 | 🟡 Petty Larceny | the two cards are exiled face up rather than face down | `ExileTopAndGrantMayPlay { WhileExiled }` |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
-| 🟡 Livio, Oathsworn Sentinel | the aegis return moves the cards one at a time rather than simultaneously (CR 610.3) | `MayDoBy` + `ForEach` over aegis cards |
 | 🟡 Mikey & Mona, Mutant Sitters | "each mode must target a different player" is not enforced | `ChooseN` over two `TargetPlayerThen` + `AsPlayer` modes |
 | 🟡 Ego Erasure | "and lose all creature types until end of turn" is not modelled (only the -2/-0) | `TargetPlayerThen` + `AsPlayer` pump |
 | 🟡 Yotia Declares War | chapter II's damage target is picked as the chapter triggers, not on the reflexive "when you do" after the artifacts are tapped | `TapAnyNumberThen` over a targeted `DealDamage` |

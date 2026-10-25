@@ -932,22 +932,29 @@ fn grand_arbiter_taxes_and_discounts() {
     assert_eq!(extra_cost_for_spell(&g, 1, &blue, None), 1, "opponent spell taxed {{1}}");
 }
 
-/// Magewright's Stone untaps a target creature.
+/// Magewright's Stone untaps a target creature that has an activated ability
+/// with {T} in its cost (Llanowar Elves); a vanilla Bear isn't a legal target.
 #[test]
-fn magewrights_stone_untaps_a_creature() {
+fn magewrights_stone_untaps_a_tap_ability_creature() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let stone = g.add_card_to_battlefield(0, catalog::magewrights_stone());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield_find_mut(bear).unwrap().tapped = true;
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
-    })
-    .expect("untap the bear");
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    for id in [bear, elf] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    let untap = |g: &mut GameState, id| {
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: stone, ability_index: 0,
+            target: Some(Target::Permanent(id)), additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    assert!(untap(&mut g, bear).is_err(), "the Bear has no {{T}} ability");
+    untap(&mut g, elf).expect("untap the elf");
     drain_stack(&mut g);
-    assert!(!g.battlefield_find(bear).unwrap().tapped, "bear untapped");
+    assert!(!g.battlefield_find(elf).unwrap().tapped, "elf untapped");
 }
 
 /// Hellhole Rats makes a player discard, then burns them for the discard's MV.

@@ -123,6 +123,27 @@ fn livio_exiles_with_aegis_and_returns() {
     assert!(g.exile.is_empty());
 }
 
+/// CR 603.6a — Livio's return is one event: an aegis Soul Warden owned by
+/// seat 1 comes back beside seat 0's Bears and sees it enter, whichever left
+/// first; each card returns under its own owner's control.
+#[test]
+fn livio_returns_every_aegis_card_at_once() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let livio = ready(&mut g, 0, catalog::livio_oathsworn_sentinel());
+    let warden = ready(&mut g, 1, catalog::soul_warden());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    activate(&mut g, livio, 0, Some(Target::Permanent(warden)));
+    activate(&mut g, livio, 0, Some(Target::Permanent(bears)));
+    assert_eq!(g.exile.len(), 2);
+    let life = g.players[1].life;
+    activate(&mut g, livio, 1, None);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Soul Warden" && c.controller == 1));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
+    assert_eq!(g.players[1].life, life + 1, "the Warden saw the Bears enter with it");
+}
+
 /// Permission Denied counters seat 1's Shock and locks every opponent out of
 /// noncreature spells this turn, not only the Shock's caster (ruling); its
 /// caster is unaffected.

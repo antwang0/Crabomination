@@ -154,6 +154,24 @@ fn bot_enchants_itself_with_shadow_of_the_second_sun() {
     }
 }
 
+/// The same boon-Aura rule casts Paradox Haze (enchant player) on its caster.
+#[test]
+fn bot_enchants_itself_with_paradox_haze() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(3);
+    let haze = g.add_card_to_hand(0, catalog::paradox_haze());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    match HeuristicBot::new().next_action(&g, 0).expect("an action") {
+        GameAction::CastSpell { card_id, target, .. } => {
+            assert_eq!(card_id, haze);
+            assert_eq!(target, Some(Target::Player(0)));
+        }
+        other => panic!("expected the Haze cast, got {other:?}"),
+    }
+}
+
 fn named(g: &GameState, seat: usize, name: &str) -> Vec<CardId> {
     g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == name).map(|c| c.id).collect()
 }

@@ -842,8 +842,7 @@ pub fn grand_arbiter_augustin_iv() -> CardDefinition {
 }
 
 /// Magewright's Stone — {2} Artifact. `{1}, {T}: Untap target creature that has
-/// an activated ability with {T} in its cost.` (The tap-ability restriction on
-/// the target is approximated as any creature.)
+/// an activated ability with {T} in its cost.`
 pub fn magewrights_stone() -> CardDefinition {
     CardDefinition {
         name: "Magewright's Stone",
@@ -853,7 +852,7 @@ pub fn magewrights_stone() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             effect: Effect::Untap {
-                what: target_filtered(R::Creature),
+                what: target_filtered(R::Creature.and(R::HasTapAbility)),
                 up_to: None,
             },
             ..Default::default()

@@ -405,8 +405,8 @@ fn land_grant(description: &'static str, kind: LandType, effect: Effect) -> Stat
 
 /// Liliana of the Dark Realms — {2}{B}{B}, loyalty 3. +1: a Swamp card to
 /// hand. −3: target creature gets +X/+X or −X/−X (X = your Swamps). −6: your
-/// Swamps tap for {B}{B}{B}{B}. Residual: the −3's sign follows the target's
-/// controller (+X on yours, −X on anyone else's) rather than a free choice.
+/// Swamps tap for {B}{B}{B}{B}. The −3's sign is the controller's choice as it
+/// resolves; the option order (the bot's default) favours +X on yours.
 pub fn liliana_of_the_dark_realms() -> CardDefinition {
     let swamps = || Value::PermanentCountControlledByMatching(PlayerRef::You, lands_of(LandType::Swamp));
     let pump = |sign: bool| Effect::PumpPT {
@@ -434,8 +434,8 @@ pub fn liliana_of_the_dark_realms() -> CardDefinition {
                 filter: R::HasLandType(LandType::Swamp),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
-            // The sign is chosen as the ability resolves (ruling); headless,
-            // +X on your creature and −X on another's.
+            // The sign is chosen as the ability resolves (ruling); the first
+            // option, +X on your creature and −X on another's, is the default.
             loyalty(-3, Effect::If {
                 cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ControlledByYou },
                 then: Box::new(sign(true)),

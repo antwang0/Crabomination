@@ -517,17 +517,25 @@ pub fn prowlers_helm() -> CardDefinition {
 }
 
 /// Vorpal Sword — {B} Equipment. Equipped creature gets +2/+0 and has
-/// deathtouch. Equip {B}{B}. (The {5}{B}{B}{B} "loses the game" grant is
-/// dropped.)
+/// deathtouch. {5}{B}{B}{B}: until end of turn this gains "whenever equipped
+/// creature deals combat damage to a player, that player loses the game."
+/// Equip {B}{B}.
 pub fn vorpal_sword() -> CardDefinition {
-    simple_equipment(
-        "Vorpal Sword",
-        cost(&[b()]),
-        cost(&[b(), b()]),
-        2,
-        0,
-        vec![Keyword::Deathtouch],
-    )
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b(), b(), b()]),
+            effect: Effect::GrantTriggeredAbility {
+                what: Selector::This,
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::EnchantedBySource),
+                    effect: Effect::LoseGame { who: PlayerRef::Triggerer },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..simple_equipment("Vorpal Sword", cost(&[b()]), cost(&[b(), b()]), 2, 0, vec![Keyword::Deathtouch])
+    }
 }
 
 /// Argentum Armor — {6} Equipment. Equipped creature gets +6/+6. Whenever it
