@@ -19224,6 +19224,14 @@ static DECKS: &[Factory] = &[
     super::decks::misfortunes_gain,
     super::decks::peach_garden_oath,
     super::decks::virtuous_charge,
+    super::decks::contested_game_ball,
+    super::decks::jesters_cap,
+    super::decks::lightning_visionary,
+    super::decks::lightning_prowess,
+    super::decks::lightning_storm,
+    super::decks::radiating_lightning,
+    super::decks::riddle_of_lightning,
+    super::decks::lightning_javelin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
