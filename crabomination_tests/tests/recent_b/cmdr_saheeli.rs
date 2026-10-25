@@ -160,6 +160,28 @@ fn forge_of_heroes_boosts_a_fresh_commander() {
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// Forge of Heroes — its 2018 rulings: a commander that is both a creature
+/// and a planeswalker gets a +1/+1 counter AND a loyalty counter.
+#[test]
+fn forge_of_heroes_gives_a_creature_planeswalker_both_counters() {
+    let mut g = pod(2);
+    let forge = g.add_card_to_battlefield(0, catalog::forge_of_heroes());
+    let mut def = bear_commander();
+    def.card_types.push(CardType::Planeswalker);
+    def.base_loyalty = 3;
+    g.seat_commanders(0, vec![def]);
+    let id = g.players[0].commanders[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None, alternative: false, pitch_card: None })
+        .expect("cast the commander");
+    drain_stack(&mut g);
+    let loyalty = g.battlefield_find(id).unwrap().counter_count(CounterType::Loyalty);
+    activate(&mut g, forge, 1, Some(Target::Permanent(id))).expect("forge");
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(c.counter_count(CounterType::Loyalty), loyalty + 1);
+}
+
 /// Geode Golem — connecting, the commander is cast from the command zone
 /// without its mana cost; only the tax is owed.
 #[test]

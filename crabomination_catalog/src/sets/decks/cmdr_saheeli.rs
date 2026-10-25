@@ -177,9 +177,15 @@ pub fn echo_storm() -> CardDefinition {
     }
 }
 
-/// Forge of Heroes — {C}, or a +1/+1 counter (creature) or loyalty counter
-/// (planeswalker) on a commander that entered this turn.
+/// Forge of Heroes — {C}, or on a commander that entered this turn a +1/+1
+/// counter if it's a creature and a loyalty counter if it's a planeswalker
+/// (both on a creature planeswalker, neither on anything else).
 pub fn forge_of_heroes() -> CardDefinition {
+    let counter_if = |what: Selector, filter: R, kind: CounterType| Effect::If {
+        cond: Predicate::EntityMatches { what: Selector::Target(0), filter },
+        then: Box::new(Effect::AddCounter { what, kind, amount: Value::ONE }),
+        else_: Box::new(Effect::Noop),
+    };
     CardDefinition {
         name: "Forge of Heroes",
         card_types: vec![CardType::Land],
@@ -187,19 +193,14 @@ pub fn forge_of_heroes() -> CardDefinition {
             crate::sets::tap_add_colorless(),
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::If {
-                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Creature },
-                    then: Box::new(Effect::AddCounter {
-                        what: target_filtered(R::IsCommander.and(R::EnteredThisTurn)),
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::ONE,
-                    }),
-                    else_: Box::new(Effect::AddCounter {
-                        what: Selector::Target(0),
-                        kind: CounterType::Loyalty,
-                        amount: Value::ONE,
-                    }),
-                },
+                effect: Effect::Seq(vec![
+                    counter_if(
+                        target_filtered(R::IsCommander.and(R::EnteredThisTurn)),
+                        R::Creature,
+                        CounterType::PlusOnePlusOne,
+                    ),
+                    counter_if(Selector::Target(0), R::Planeswalker, CounterType::Loyalty),
+                ]),
                 ..Default::default()
             },
         ],
