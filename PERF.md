@@ -3153,6 +3153,8 @@ fixed-card seats the 430 decks holding a card this run changed, 106 four-seat gr
 after CR 115.3   (Seq-aware distinct targets) --bench 27.64 / 613.0 / 0 stalls, byte-identical; cube/sos/sealed seed
                  10164 x 300: 7,498 decided + 2 draws (identical with the pre-fix binary); the 220 decks holding a
                  second-batch card, 54 four-seat groups x 20 (seed 10165): 1,079 / 1,080, 1 CR 104.4a draw
+closing tip      (loyalty abilities obey protection) --bench 27.64 / 613.0 / 0 stalls, byte-identical;
+                 cube/sos/sealed seed 10168 x 300: 7,500 decided; pods seed 10168 x 200 at 3/4/6/8 seats: 800 decided
 ```
 
 ### 2026-10-24 night (Commander run, `01M2Ffkh`) — guardrail; gather key +1 mix, a stack walk in the bot's activation guard
