@@ -262,8 +262,16 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   player (32), The Everflowing Well's descend counts permanent cards + The Myriad Pools' copy trigger on
   `MarksCast(2)` (32), Encroaching Mycosynth's off-battlefield half (32; `OwnedCardsOffBattlefieldHaveCardType {
   nonland }`), Stonespeaker Crystal's any number of target players (25).
+- **FIXED (class, CR 702.16c):** `activate_loyalty_ability` now runs `ability_target_has_protection` (it checked only
+  hexproof/shroud), and that check's early-out keyword list gained `HexproofFromArtifactsCreaturesEnchantments`
+  (Nevinyrral was skipped on a cold layer cache). `Keyword::HexproofFromPlaneswalkers` — Eradicator Valkyrie (12).
+- **FIXED (cards):** Archenemy's Charm's mode 2 targets one or two graveyard cards (20); Tenacious Underdog lost a
+  `CantBlock` the printed card never had (9); Bilbo's Gambit's two residuals were stale (31, pinned).
+- **OPEN (bot):** the slot walker / `auto_target_for_effect` check `check_target_legality` but not the ability
+  source's protection, so a bot may skip an activated or loyalty ability whose first pick is protected though another
+  target is legal (`state.accept` rejects it cleanly — no stall).
 - **OPEN, next by count:**
-  Bilbo's Gambit (31), Agadeem's Awakening (29), Sakashima's Protege (27), Urza's Bauble (25, the random look),
+  Agadeem's Awakening (29), Sakashima's Protege (27), Urza's Bauble (25, the random look),
   Palantír of Orthanc (22), Karn Living Legacy (21). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
   helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.
 
