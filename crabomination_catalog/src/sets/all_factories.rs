@@ -19187,6 +19187,17 @@ static DECKS: &[Factory] = &[
     super::decks::order_of_the_golden_cricket,
     super::decks::thoughtweft_trio,
     super::decks::surge_of_thoughtweft,
+    super::decks::bishop_of_binding,
+    super::decks::duskborne_skymarcher,
+    super::decks::exultant_skymarcher,
+    super::decks::skyblade_of_the_legion,
+    super::decks::famished_paladin,
+    super::decks::glorifier_of_dusk,
+    super::decks::inspiring_cleric,
+    super::decks::paladin_of_atonement,
+    super::decks::sanguine_glorifier,
+    super::decks::queens_commission,
+    super::decks::vampires_zeal,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

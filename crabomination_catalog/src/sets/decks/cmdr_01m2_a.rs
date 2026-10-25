@@ -1,5 +1,6 @@
 //! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
-//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh and Brigid decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh, Brigid and Mavren Fein
+//! decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -1381,4 +1382,174 @@ pub fn surge_of_thoughtweft() -> CardDefinition {
         ]),
         ..Default::default()
     }
+}
+
+// ── Mavren Fein, Dusk Apostle's deck ────────────────────────────────────────
+
+fn vampire() -> R {
+    R::HasCreatureType(CreatureType::Vampire)
+}
+
+/// Bishop of Binding — {3}{W} 1/1 Vampire Cleric. ETB: exile target creature
+/// an opponent controls until it leaves; attacking, target Vampire gets +X/+X
+/// where X is the exiled card's power.
+pub fn bishop_of_binding() -> CardDefinition {
+    let x = || Value::PowerOf(Box::new(Selector::CardExiledWithSource));
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::ExileUntilSourceLeaves {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PumpPT { what: target_filtered(vampire()), power: x(), toughness: x(), duration: Duration::EndOfTurn },
+            },
+        ],
+        ..plain_creature("Bishop of Binding", cost(&[generic(3), w()]), vec![CreatureType::Vampire, CreatureType::Cleric], 1, 1)
+    }
+}
+
+/// Duskborne Skymarcher — {W} 1/1 flying Vampire Cleric. {W}, {T}: target
+/// attacking Vampire gets +1/+1 until end of turn.
+pub fn duskborne_skymarcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[w()]),
+            effect: Effect::PumpPT {
+                what: target_filtered(vampire().and(R::IsAttacking)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..plain_creature("Duskborne Skymarcher", cost(&[w()]), vec![CreatureType::Vampire, CreatureType::Cleric], 1, 1)
+    }
+}
+
+/// Exultant Skymarcher — {1}{W}{W} 2/3 flying Vampire Soldier.
+pub fn exultant_skymarcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        ..plain_creature("Exultant Skymarcher", cost(&[generic(1), w(), w()]), vec![CreatureType::Vampire, CreatureType::Soldier], 2, 3)
+    }
+}
+
+/// Skyblade of the Legion — {1}{W} 1/3 flying Vampire Soldier.
+pub fn skyblade_of_the_legion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        ..plain_creature("Skyblade of the Legion", cost(&[generic(1), w()]), vec![CreatureType::Vampire, CreatureType::Soldier], 1, 3)
+    }
+}
+
+/// Famished Paladin — {1}{W} 3/3 Vampire Knight. Doesn't untap in your untap
+/// step; gaining life untaps it.
+pub fn famished_paladin() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..plain_creature("Famished Paladin", cost(&[generic(1), w()]), vec![CreatureType::Vampire, CreatureType::Knight], 3, 3)
+    }
+}
+
+/// Glorifier of Dusk — {3}{W}{W} 4/4 Vampire Soldier. Pay 2 life: flying until
+/// end of turn. Pay 2 life: vigilance until end of turn.
+pub fn glorifier_of_dusk() -> CardDefinition {
+    let gain = |keyword| ActivatedAbility {
+        life_cost: 2,
+        effect: Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::EndOfTurn },
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![gain(Keyword::Flying), gain(Keyword::Vigilance)],
+        ..plain_creature("Glorifier of Dusk", cost(&[generic(3), w(), w()]), vec![CreatureType::Vampire, CreatureType::Soldier], 4, 4)
+    }
+}
+
+/// Inspiring Cleric — {2}{W} 3/2 Vampire Cleric. ETB: gain 4 life.
+pub fn inspiring_cleric() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(4) })],
+        ..plain_creature("Inspiring Cleric", cost(&[generic(2), w()]), vec![CreatureType::Vampire, CreatureType::Cleric], 3, 2)
+    }
+}
+
+/// Paladin of Atonement — {1}{W} 1/1 Vampire Knight. Each upkeep, if you lost
+/// life last turn, a +1/+1 counter; dying, gain life equal to its toughness.
+pub fn paladin_of_atonement() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::AnyPlayer)
+                    .with_filter(Predicate::PlayerLostLifeLastTurn { who: PlayerRef::You }),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::ToughnessOf(Box::new(Selector::This)) },
+            },
+        ],
+        ..plain_creature("Paladin of Atonement", cost(&[generic(1), w()]), vec![CreatureType::Vampire, CreatureType::Knight], 1, 1)
+    }
+}
+
+/// Sanguine Glorifier — {3}{W} 3/3 Vampire Cleric. ETB: a +1/+1 counter on
+/// another target Vampire you control.
+pub fn sanguine_glorifier() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(vampire().and(R::ControlledByYou).and(R::OtherThanSource)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..plain_creature("Sanguine Glorifier", cost(&[generic(3), w()]), vec![CreatureType::Vampire, CreatureType::Cleric], 3, 3)
+    }
+}
+
+/// Queen's Commission — {2}{W} sorcery: two 1/1 white lifelink Vampires.
+pub fn queens_commission() -> CardDefinition {
+    let token = std::sync::Arc::new(crate::card::TokenDefinition {
+        name: "Vampire".into(),
+        colors: vec![crate::mana::Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        ..Default::default()
+    });
+    plain_spell(
+        "Queen's Commission",
+        cost(&[generic(2), w()]),
+        CardType::Sorcery,
+        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: token },
+    )
+}
+
+/// Vampire's Zeal — {W} instant. Target creature gets +2/+2; a Vampire also
+/// gains first strike, until end of turn.
+pub fn vampires_zeal() -> CardDefinition {
+    plain_spell(
+        "Vampire's Zeal",
+        cost(&[w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT { what: target_filtered(R::Creature), power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: vampire() },
+                then: Box::new(Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
 }

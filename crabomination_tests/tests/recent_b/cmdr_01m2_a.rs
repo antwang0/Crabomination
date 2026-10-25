@@ -692,3 +692,67 @@ fn ballynock_trapper_untaps_on_a_white_spell() {
     assert!(!g.battlefield_find(t).unwrap().tapped);
     assert_eq!(g.players[0].hand.len(), hand, "Surge left, and a Kithkin drew one");
 }
+
+/// Bishop of Binding exiles an opposing creature until it leaves, and its
+/// attack pumps a Vampire by the exiled card's power.
+#[test]
+fn bishop_of_binding_holds_a_creature_and_pumps_by_its_power() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let bishop = g.add_card_to_hand(0, catalog::bishop_of_binding());
+    flood(&mut g, 0);
+    cast(&mut g, bishop).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == giant), "the only opposing creature");
+    g.clear_sickness(bishop);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bishop, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bishop), (4, 4), "Hill Giant's 3 on the only Vampire");
+}
+
+/// Paladin of Atonement: a counter at an upkeep after a turn you lost life
+/// in, none after one you didn't; dying, it gains life equal to its toughness.
+#[test]
+fn paladin_of_atonement_reads_last_turns_life_loss() {
+    let mut g = pod(2);
+    let pal = ready(&mut g, 0, catalog::paladin_of_atonement());
+    g.players[0].lost_life_last_turn = true;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pal).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.players[0].lost_life_last_turn = false;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pal).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crabomination::game::types::Target::Permanent(pal)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt our own");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "its toughness as it died");
+}
+
+/// Vampire's Zeal gives first strike only to a Vampire.
+#[test]
+fn vampires_zeal_first_strike_for_vampires() {
+    use crabomination::game::types::Target;
+    for (def, strikes) in [(catalog::skyblade_of_the_legion(), true), (catalog::grizzly_bears(), false)] {
+        let mut g = pod(2);
+        let c = ready(&mut g, 0, def);
+        let z = g.add_card_to_hand(0, catalog::vampires_zeal());
+        flood(&mut g, 0);
+        g.perform_action(GameAction::CastSpell { card_id: z, target: Some(Target::Permanent(c)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(c).unwrap().keywords().contains(&Keyword::FirstStrike), strikes);
+    }
+}
