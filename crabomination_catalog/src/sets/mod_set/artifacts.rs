@@ -1637,18 +1637,16 @@ pub fn chrome_mox() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description: "Imprint: exile a nonartifact, nonland card from your hand?".into(),
-                body: Box::new(Effect::ExileTaggedWithSource {
-                    what: Selector::take(
-                        Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Hand,
-                            filter: SelectionRequirement::Land
-                                .negate()
-                                .and(SelectionRequirement::Artifact.negate()),
-                        },
-                        Value::Const(1),
-                    ),
-                }),
+                // The imprinted card is the controller's pick (it sets the colour).
+                body: Box::new(crate::effect::shortcut::choose_one_then(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::Land.negate().and(SelectionRequirement::Artifact.negate()),
+                    },
+                    PlayerRef::You,
+                    Effect::ExileTaggedWithSource { what: crate::effect::shortcut::chosen_one() },
+                )),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

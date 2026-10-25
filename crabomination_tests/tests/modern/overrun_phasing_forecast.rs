@@ -764,6 +764,29 @@ fn chrome_mox_imprints_and_taps_for_imprinted_color() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "produced red (the imprinted Bolt's color)");
 }
 
+/// Chrome Mox imprints the card its controller picks (it sets the colour),
+/// not the first eligible card in hand.
+#[test]
+fn chrome_mox_imprints_the_card_its_controller_picks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    let mox = g.add_card_to_hand(0, catalog::chrome_mox());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let growth = g.add_card_to_hand(0, catalog::giant_growth());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![growth])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chrome Mox for {0}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == growth) && g.players[0].hand.iter().any(|c| c.id == bolt));
+    g.clear_sickness(mox);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("tap for green");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
 /// Chrome Mox with nothing imprinted (empty hand) produces no mana.
 #[test]
 fn chrome_mox_with_no_imprint_makes_no_mana() {
