@@ -1192,9 +1192,42 @@ fn stonespeaker_crystal_exiles_graveyards_and_draws() {
     let crystal = g.add_card_to_battlefield(0, catalog::stonespeaker_crystal());
     let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     let hand = g.players[0].hand.len();
-    activate(&mut g, crystal, 1, None);
+    activate(&mut g, crystal, 1, Some(Target::Player(1)));
     assert!(in_exile(&g, theirs));
     assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// CR 115.1 — "any number of target players": the slot walker the bot casts
+/// with aims at both opponents of three and never at its own graveyard;
+/// activated with those targets, both opponents' graveyards go.
+#[test]
+fn stonespeaker_crystal_targets_players_and_spares_its_own_graveyard() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    stock_libraries(&mut g, 5);
+    let crystal = g.add_card_to_battlefield(0, catalog::stonespeaker_crystal());
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs: Vec<_> = (1..3).map(|s| g.add_card_to_graveyard(s, catalog::grizzly_bears())).collect();
+    let eff = catalog::stonespeaker_crystal().activated_abilities[1].effect.clone();
+    let (first, rest) = g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, Some(crystal), None);
+    let mut picked: Vec<Target> = first.into_iter().chain(rest).collect();
+    picked.sort_by_key(|t| format!("{t:?}"));
+    assert_eq!(picked, vec![Target::Player(1), Target::Player(2)]);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crystal,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(2)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(theirs.iter().all(|id| in_exile(&g, *id)));
+    assert!(!in_exile(&g, mine));
 }
 
 // ── Lands ────────────────────────────────────────────────────────────────────

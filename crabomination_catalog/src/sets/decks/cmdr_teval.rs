@@ -1481,9 +1481,8 @@ pub fn the_soul_stone() -> CardDefinition {
 }
 
 /// Stonespeaker Crystal — {4} Artifact. {T}: Add {C}{C}. {2}, {T}, Sacrifice
-/// this artifact: Exile any number of target players' graveyards. Draw a card.
-///
-/// Approximation: exiles every opponent's graveyard.
+/// this artifact: Exile any number of target players' graveyards (one target
+/// slot per seat, up to eight). Draw a card.
 pub fn stonespeaker_crystal() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
@@ -1500,7 +1499,12 @@ pub fn stonespeaker_crystal() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::ExileAllGraveyards { filter: None, opponents_only: true },
+                    Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::Player,
+                        effect: Box::new(Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0), filter: None }),
+                    },
                     Effect::Draw { who: Selector::You, amount: Value::ONE },
                 ]),
                 ..Default::default()
