@@ -14,19 +14,31 @@
 //! * `games.tsv`  — deck a, deck b, games a won, games b won, undecided.
 //!
 //! Usage: `fra_card_eval --ratings FRA.tsv --out DIR [--pilot dflt|net67]
-//! [--decks 2000] [--rounds 20] [--pairs 2] [--seed 1] [--threads N]`.
+//! [--decks 2000] [--rounds 20] [--pairs 2] [--seed 1] [--explore 0]
+//! [--threads N]`. `--explore N` swaps N of each deck's spells for left-out
+//! on-colour pool cards, so cards the builder never plays still get rated.
 //! `net67` loads `CRAB_NET` (default `nets/champion.safetensors`).
 //!
 //! `fra_card_eval --build POOL.txt [--candidates 64]` is the sealed helper:
 //! the pool (a decklist — one card per line, `N Name`, Arena or MTGO export)
-//! built by the rated builder (best of N rated builds), then every pool card
-//! ranked by its measured value, marked `*` where the build plays it.
-//! `--colors WG` confines the build to those colours. `--by-play` instead
-//! builds every two-colour pair (and the builder's own pick), races them
-//! against one fixed field (`--field 400 --pairs 4 --seed 43`, piloted by
-//! `--pilot`, default `fra-fixes`) and keeps the best: the builder's colour
-//! choice by summed card score missed the best pair by 12 points on a real
-//! pool.
+//! built and every pool card ranked by its measured value, marked `*` where
+//! the build plays it. By default it builds every two-colour pair (and the
+//! builder's own pick), races them against one fixed field (`--field 400
+//! --pairs 4 --seed 43`, piloted by `--pilot`, default `fra-fixes`) and
+//! keeps the best: the builder's colour choice by summed card score is
+//! 2.9 / 3.5 points worse than choosing by play (`--audit-builder`, 200 / 150
+//! pools, chosen on one field and judged on another), and 12 points off on
+//! one real pool. `--static` is the old rated build (best of N by static
+//! score, under a second); `--colors WG` confines the static build to
+//! those colours.
+//!
+//! `fra_card_eval --audit-builder [--pools 200] [--field 60] [--pairs 2]
+//! [--seed 43] --out FILE.tsv` measures the builder itself: per random FRA
+//! pool, its pick against variants of it (one more land in place of the
+//! weakest spell; every two-colour pair; with `CRAB_AUDIT_LANDS`, fixed
+//! 17- and 18-land builds; with `CRAB_AUDIT_SWAPS`, the swaps that tell
+//! those apart; `CRAB_AUDIT_NO_PAIRS` skips the pairs), each raced on two
+//! independent fields.
 //!
 //! `fra_card_eval --gauntlet A.txt B.txt ... [--field 400] [--pairs 4]
 //! [--seed 43] [--pilot dflt] [--field-pilot P]` plays each 40-card list
@@ -205,7 +217,7 @@ fn read_list(path: &str) -> (Vec<Factory>, Vec<Factory>) {
     (parsed.main, parsed.sideboard)
 }
 
-/// `--build --by-play`: how the candidate builds are raced.
+/// `--build` (unless `--static`): how the candidate builds are raced.
 struct ByPlay {
     pilot: Pilot,
     field: usize,
@@ -214,7 +226,7 @@ struct ByPlay {
     threads: usize,
 }
 
-/// `--by-play`: the rated build in each two-colour pair, plus the builder's
+/// `--build`: the rated build in each two-colour pair, plus the builder's
 /// own pick, all played against one fixed field; the best by win share.
 ///
 /// The builder picks colours by its summed card scores, and that sum is not
@@ -407,6 +419,144 @@ fn field_rows(
     rows.into_inner().unwrap()
 }
 
+/// `--audit-builder`: per random FRA pool, the builder's pick against its
+/// own variants (one more land; each two-colour pair), every list raced on
+/// two independent fields so a choice made on field A is judged on field B.
+/// One TSV row per (pool, list): `pool name lands colors shareA shareB`.
+fn audit_builder(pilot: Pilot, pools: usize, field: usize, pairs: usize, seed: u64, threads: usize, out: &str) {
+    use crabomination::selfplay::{rated_sealed_build_in_colors, rated_sealed_build_lands};
+    let packs = crabomination::fra_mode::FraPacks::get();
+    let brief = |f: Factory| crabomination::cube::card_brief(f);
+    let value = |f: Factory| {
+        crabomination::card_ratings::FRA_SIM_VALUE.iter().find(|(n, _)| *n == brief(f).def.name).map_or(0.0, |(_, v)| *v)
+    };
+    let colors_of = |d: &[Factory]| {
+        let mut set = ColorSet::empty();
+        for f in d.iter().filter(|f| !brief(**f).is_land) {
+            for c in brief(*f).pip_colors.iter() {
+                set.insert(c);
+            }
+        }
+        set.iter().map(|c| c.short_name()).collect::<String>()
+    };
+    // The deck with its lowest-valued spell swapped for a basic of its
+    // heaviest colour.
+    let plus_land = |d: &[Factory]| -> Vec<Factory> {
+        let mut d = d.to_vec();
+        let Some(worst) = (0..d.len())
+            .filter(|&i| !brief(d[i]).is_land)
+            .min_by(|&a, &b| value(d[a]).total_cmp(&value(d[b])))
+        else {
+            return d;
+        };
+        let mut pips = [0u32; 5];
+        let wubrg = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+        for f in d.iter().filter(|f| !brief(**f).is_land) {
+            for (k, c) in wubrg.iter().enumerate() {
+                pips[k] += brief(*f).pips.get(*c);
+            }
+        }
+        let heavy = (0..5).max_by_key(|&k| pips[k]).unwrap();
+        d[worst] = crabomination::draft::basic_land_factory(wubrg[heavy]);
+        d
+    };
+    let mut w = std::io::BufWriter::new(std::fs::File::create(out).expect("--out file"));
+    writeln!(w, "pool\tname\tlands\tcolors\tshareA\tshareB").unwrap();
+    let start = std::time::Instant::now();
+    for p in 0..pools {
+        let salt = seed.wrapping_mul(0xA24B_AED4_963E_E407) ^ (p as u64).wrapping_mul(0x9FB2_1C65_1E98_DF25);
+        let mut rng = StdRng::seed_from_u64(salt);
+        let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+        let pick = rated_sealed_build_in_colors(&pool, 64, 0x5EA1, ColorSet::empty());
+        let mut cands: Vec<(String, Vec<Factory>)> =
+            vec![("pick".into(), pick.clone()), ("pick+land".into(), plus_land(&pick))];
+        if std::env::var("CRAB_AUDIT_SWAPS").is_ok() {
+            // Which part of `pick+land` pays: dropping the worst spell, the
+            // extra land, or the extra source of the heaviest colour.
+            let wubrg = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+            let spells: Vec<usize> = (0..pick.len()).filter(|&i| !brief(pick[i]).is_land).collect();
+            let worst = *spells.iter().min_by(|&&a, &&b| value(pick[a]).total_cmp(&value(pick[b]))).unwrap();
+            let mut pips = [0u32; 5];
+            for &i in &spells {
+                for (k, c) in wubrg.iter().enumerate() {
+                    pips[k] += brief(pick[i]).pips.get(*c);
+                }
+            }
+            let mut order: Vec<usize> = (0..5).filter(|&k| pips[k] > 0).collect();
+            order.sort_by_key(|&k| std::cmp::Reverse(pips[k]));
+            let basic = |k: usize| crabomination::draft::basic_land_factory(wubrg[k]);
+            // Worst spell → a basic of the lightest colour.
+            if let Some(&light) = order.last() {
+                let mut d = pick.clone();
+                d[worst] = basic(light);
+                cands.push(("worst->light".into(), d));
+            }
+            // A light-colour basic → a heavy-colour basic, land count unchanged.
+            if order.len() >= 2 {
+                let (heavy, light) = (order[0], order[order.len() - 1]);
+                if let Some(i) = pick.iter().position(|f| *f as usize == basic(light) as usize) {
+                    let mut d = pick.clone();
+                    d[i] = basic(heavy);
+                    cands.push(("light->heavy".into(), d));
+                }
+            }
+            // Worst spell → the best unplayed spell in the deck's colours.
+            let mut left: Vec<Factory> = pool.clone();
+            for f in &pick {
+                if let Some(i) = left.iter().position(|g| *g as usize == *f as usize) {
+                    left.swap_remove(i);
+                }
+            }
+            let mut deck_colors = ColorSet::empty();
+            for &i in &spells {
+                for c in brief(pick[i]).pip_colors.iter() {
+                    deck_colors.insert(c);
+                }
+            }
+            if let Some(best) = left
+                .iter()
+                .filter(|f| !brief(**f).is_land && brief(**f).pip_colors.is_subset_of(deck_colors))
+                .max_by(|a, b| value(**a).total_cmp(&value(**b)))
+            {
+                let mut d = pick.clone();
+                d[worst] = *best;
+                cands.push(("worst->spell".into(), d));
+            }
+        }
+        if std::env::var("CRAB_AUDIT_LANDS").is_ok() {
+            for lands in [17, 18] {
+                cands.push((format!("pick{lands}"), rated_sealed_build_lands(&pool, 64, 0x5EA1, ColorSet::empty(), lands)));
+            }
+        }
+        let wubrg = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+        let pairs_too = std::env::var("CRAB_AUDIT_NO_PAIRS").is_err();
+        for i in (0..5).filter(|_| pairs_too) {
+            for j in i + 1..5 {
+                let mut set = ColorSet::empty();
+                set.insert(wubrg[i]);
+                set.insert(wubrg[j]);
+                let d = match std::env::var("CRAB_AUDIT_LANDS") {
+                    Ok(_) => rated_sealed_build_lands(&pool, 64, 0x5EA1, set, 17),
+                    Err(_) => rated_sealed_build_in_colors(&pool, 64, 0x5EA1, set),
+                };
+                if d.len() == 40 {
+                    cands.push((format!("{}{}", wubrg[i].short_name(), wubrg[j].short_name()), d));
+                }
+            }
+        }
+        let lists: Vec<Vec<Factory>> = cands.iter().map(|(_, d)| d.clone()).collect();
+        let a = field_rows(&lists, pilot, pilot, field, pairs, seed ^ (p as u64) << 20, threads);
+        let b = field_rows(&lists, pilot, pilot, field, pairs, seed ^ 0x5555 ^ (p as u64) << 20, threads);
+        for (d, (name, deck)) in cands.iter().enumerate() {
+            let lands = deck.iter().filter(|f| brief(**f).is_land).count();
+            writeln!(w, "{p}\t{name}\t{lands}\t{}\t{:.3}\t{:.3}", colors_of(deck), field_share(&a, d).0, field_share(&b, d).0)
+                .unwrap();
+        }
+        w.flush().unwrap();
+        eprintln!("pool {}/{pools}, {:.0}s", p + 1, start.elapsed().as_secs_f64());
+    }
+}
+
 fn pilot_named(name: &str) -> Pilot {
     match name {
         "dflt" => Pilot::Scored(EvalWeights::default()),
@@ -436,7 +586,7 @@ fn pilot_named(name: &str) -> Pilot {
 fn main() {
     let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
     if let Some(path) = arg("--build") {
-        let by_play = std::env::args().any(|a| a == "--by-play").then(|| ByPlay {
+        let by_play = std::env::args().all(|a| a != "--static").then(|| ByPlay {
             pilot: pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")),
             field: num("--field", 400),
             pairs: num("--pairs", 4),
@@ -456,6 +606,12 @@ fn main() {
         gauntlet(&paths, pilot, field_pilot, num("--field", 400), num("--pairs", 4), num("--seed", 43) as u64, threads);
         return;
     }
+    if std::env::args().any(|a| a == "--audit-builder") {
+        let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes"));
+        let out = arg("--out").expect("--out FILE.tsv");
+        audit_builder(pilot, num("--pools", 200), num("--field", 60), num("--pairs", 2), num("--seed", 43) as u64, threads, &out);
+        return;
+    }
     if std::env::args().any(|a| a == "--ab") {
         let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("dflt"));
         race_builders(pilot, num("--pools", 2000), num("--pairs", 8), num("--seed", 43) as u64, threads);
@@ -468,6 +624,7 @@ fn main() {
     let rounds = num("--rounds", 20);
     let pairs = num("--pairs", 2);
     let seed = num("--seed", 1) as u64;
+    let explore = num("--explore", 0);
     let pilot = pilot_named(&pilot_name);
 
     let cards = load_cards(&ratings);
@@ -496,7 +653,32 @@ fn main() {
             }
         }
         let pool: Vec<Factory> = pool_idx.iter().map(|&i| cards[i].f).collect();
-        let deck = crabomination::selfplay::heuristic_sealed_build_v3(&pool, seed ^ (d as u64) << 20);
+        let mut deck = crabomination::selfplay::heuristic_sealed_build_v3(&pool, seed ^ (d as u64) << 20);
+        // `--explore N`: N of the deck's spells swapped for pool cards the
+        // build left out, inside the deck's colours. The v3 builder all but
+        // never plays some cards (Way of the Wildspeaker made 17 of 16,000
+        // decks), so they never reach the 30-deck cut; the regression
+        // credits a swapped card the same way as a chosen one.
+        // Its own stream, so the pools match a run without exploration.
+        let mut xrng = StdRng::seed_from_u64(seed ^ 0xE491_0000 ^ d as u64);
+        for _ in 0..explore {
+            let b = |f: Factory| crabomination::cube::card_brief(f);
+            let mut colors = ColorSet::empty();
+            for f in deck.iter().filter(|f| !b(**f).is_land) {
+                for c in b(*f).pip_colors.iter() {
+                    colors.insert(c);
+                }
+            }
+            let out: Vec<Factory> = pool
+                .iter()
+                .copied()
+                .filter(|f| !b(*f).is_land && b(*f).fits(colors) && !deck.iter().any(|g| *g as usize == *f as usize))
+                .collect();
+            let spells: Vec<usize> = (0..deck.len()).filter(|&i| !b(deck[i]).is_land).collect();
+            if let (Some(&add), Some(&at)) = (out.choose(&mut xrng), spells.choose(&mut xrng)) {
+                deck[at] = add;
+            }
+        }
         let mut seen = vec![false; cards.len()];
         for f in &deck {
             if let Some(&i) = index.get(&(*f as usize))

@@ -6184,3 +6184,56 @@ card score, and on the user's pool that choice was 12 points off: W/U at
 62.7 % (`--gauntlet`). `--by-play` builds every two-colour pair plus the
 builder's pick and races them on one field (under a minute); on that pool it
 takes W/G (58.5; the builder's pick 47.5, W/R 43.9).
+
+**Recommender and net audit (2026-10-25).** The user: "audit for more
+net/recommender shortcomings". New instrument: `fra_card_eval
+--audit-builder` builds each random FRA pool's pick plus variants of it and
+races every list on two independent 60-opponent fields, so a choice made on
+field A is judged on field B (no winner's curse). Work dir
+`.ladder/fra_builder_audit/` (`an.py`, `flat.py`, `v5.py`).
+
+| finding | reading |
+|---|---|
+| colour choice by play, over the builder's pick | +2.92 ±0.59 / +3.48 ±0.69 / +2.97 ±0.70 (seeds 43 / 97 / 151) |
+| every pick has 16 lands (the judge sums spell scores) | a proper 17-land build +0.08 ±0.52, 18 lands −0.53: not the defect |
+| pick's lowest-value spell → best unplayed spell | +1.97 ±0.35; → any basic +1.73; a light basic → heavy basic −1.40 |
+
+The swap readings name the defect: the builder plays cards its own values
+rank last. **The rated scorer kept the static +6 an on-colour pip**, about
+4.6 rating points a pip against a table whose spread is ±2.4, so a
+double-pip card outranked a better single-pip one and the shape sums leaned
+pip-heavy. Without it (`score_brief_rated`, ADOPTED): +1.44 ±0.81 / +1.77
+±0.67 (seeds 199 / 211), and the colours change in 58 % of pools. Two more on
+top, ADOPTED together: a two-colour hybrid `{G/U}` counted as both colours,
+which kept Tam's Resistance out of every G/x deck but G/U
+(`CardBrief::fits` / `off_pips`, rated path only), and unrated cards kept the
+pip bonus the rated ones lost: hybrids +0.49 / +0.96, unrated +1.47 / +2.23,
+both **+2.99 ±0.63 / +3.19 ±0.62** (seeds 307 / 401, 300 pools).
+
+The unrated rule exposed thin ratings: on the user's pool it cut Guiding
+Hydra, rated by play at +5.75 but from 25 decks, under the 30-deck cut. The
+v3 builder that makes the rating run's decks seldom plays some cards. Re-rated
+on 16,000 pools (Hydra 91 decks, +6.66), then with `--explore 3` (three of
+each deck's spells swapped for left-out on-colour pool cards; Way of the
+Wildspeaker 17 → 241 decks, +4.45; 12 cards left under the cut, Draftsim
+agreement 0.29). `scripts/fra_card_table.py` emits the table. Rated builder
+vs v3 (`--ab`, 2,000 pools x 16): **66.55 / 65.58 %** (seeds 43 / 97),
+against 63.34 / 62.57 before this round; the unexplored 16,000-pool table
+66.19 / 66.02 (a tie; the explored one is kept for coverage).
+
+`--build` now races by play by default (`--static` is the old build). On
+the user's pool it picks W/G with Hydra, still −2.84 ±1.93 behind the
+user's hand-tuned W/G list on a field neither was tuned on (seed 97). The
+cards in question rate +0.1..+0.9 apiece, inside what additive per-card
+values can separate. The list plays two more cheap creatures, and one of the
+builder's picks (Flourishing Grapple) needs creatures. A swap-by-play polish
+after the build is the open lead.
+
+**The FRA net, `--calibrate` on FRA (3,000 games).** AUC 0.801 against the
+heuristic's 0.708, log-loss 0.536 / 0.616, 8.1 % of outputs outside
+[0.05, 0.95]. `--calibrate` now prints per-card residuals (result − net,
+clustered by game seat) and residual by own hand size. The net predicts
+0.528 for both seats on average, a uniform optimism that does not move with
+hand size (−0.01..−0.05 at every size), so it cannot reorder a seat's
+choices. No card's residual beyond that offset clears chance: the largest
+|z| is ~3 over ~600 card x zone cells. No per-card blind spot to train out.

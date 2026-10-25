@@ -432,22 +432,37 @@ pub(crate) fn aggro_curve_delta(brief: &crate::cube::CardBrief) -> i32 {
     }
 }
 
-/// [`score_brief_quality`] plus [`aggro_curve_delta`] — the sealed builder's
-/// scorer under `SimConfig::curve_aggro`.
-/// [`score_brief_quality`] with a rated card's colour-independent score
-/// (`base_score + quality`) replaced by its measured one
-/// ([`crate::card_ratings`]) — the scorer under `SimConfig::rated_cards`.
-/// An unrated card scores exactly as [`score_brief_quality`] does.
+/// The sealed builder's scorer under `SimConfig::rated_cards`: a rated
+/// card ([`crate::card_ratings`]) scores its measured value, an unrated one
+/// its colour-independent static score (`base_score + quality`), and either
+/// loses 10 a pip it cannot pay in the seat's colours
+/// ([`crate::cube::CardBrief::off_pips`], which reads `{G/U}` as G or U).
+///
+/// On-colour pips earn nothing here, unlike the static scorer's +6 a pip.
+/// The measured value already prices how castable a card is, and at about
+/// 4.6 rating points a pip the bonus outweighed most of the table's spread:
+/// a mediocre double-pip card outranked a better single-pip one, and the
+/// summed shape scores leaned toward pip-heavy colours. With the bonus, the
+/// pick's lowest-valued spell swapped for the best unplayed one won
+/// +2.0 ±0.35 (`fra_card_eval --audit-builder`, 150 pools); without it the
+/// build is +1.44 ±0.81 / +1.77 ±0.67 over the old one (seeds 199 / 211,
+/// 173 / 300 pools, two fields each), and changes colours in 58 % of pools.
+/// Unrated cards (51 FRA cards too seldom built to rate, Flourishing
+/// Grapple among them) kept the bonus at first, which ranked them over
+/// rated ones; dropping it and reading hybrids as either colour was
+/// +2.99 ±0.63 / +3.19 ±0.62 more (seeds 307 / 401, 300 pools; the two
+/// alone +0.49 / +0.96 for hybrids, +1.47 / +2.23 for unrated cards).
 pub(crate) fn score_brief_rated(
     brief: &crate::cube::CardBrief,
     seat_colors: &ColorCounts,
 ) -> i32 {
-    match brief.rated {
-        Some(r) => score_brief_with_colors(brief, seat_colors) - brief.base_score + r,
-        None => score_brief_quality(brief, seat_colors),
-    }
+    let seat = seat_colors.support();
+    let off_cost = if seat.is_empty() { 0 } else { brief.off_pips(seat) * 10 };
+    brief.rated.unwrap_or(brief.base_score + brief.quality) - off_cost
 }
 
+/// [`score_brief_quality`] plus [`aggro_curve_delta`] — the sealed builder's
+/// scorer under `SimConfig::curve_aggro`.
 pub(crate) fn score_brief_aggro(
     brief: &crate::cube::CardBrief,
     seat_colors: &ColorCounts,

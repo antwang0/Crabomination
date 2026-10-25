@@ -2915,6 +2915,9 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
 
     // (net p, heuristic score, actual result, ply)
     let mut obs: Vec<(f32, f32, f32, u16)> = Vec::new();
+    let mut by_card = CardResiduals::default();
+    // Own hand size (8 = 8+) → (positions, Σ residual, Σ prediction).
+    let mut by_hand = [(0u64, 0f64, 0f64); 9];
     let mut rng = StdRng::seed_from_u64(args.seed ^ 0xCA11B);
     for n in 0..games as u64 {
         let salt =
@@ -2936,6 +2939,14 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
         }
         let refs: Vec<&TrainRow> = rec.rows.iter().collect();
         let preds = trainer.predict_win_batch(&refs, 512).expect("forward");
+        by_card.add_game(&rec.rows, &preds);
+        for (row, &p) in rec.rows.iter().zip(&preds) {
+            let h = row.state.group_len(crabomination_nn::G_HAND_SELF).min(8);
+            let e = &mut by_hand[h];
+            e.0 += 1;
+            e.1 += (row.win - p) as f64;
+            e.2 += p as f64;
+        }
         for ((row, h), p) in rec.rows.iter().zip(&rec.heur).zip(preds) {
             obs.push((p, *h as f32, row.win, row.ply));
         }
@@ -2993,6 +3004,98 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
          inside a saturated band",
         100.0 * extreme as f64 / obs.len() as f64
     );
+    let mean_p = obs.iter().map(|o| o.0 as f64).sum::<f64>() / obs.len() as f64;
+    println!("  mean prediction {mean_p:.4} against base rate {base:.4}");
+    println!("  by own hand size: positions, mean prediction, mean residual (result − net)");
+    for (h, &(n, r, p)) in by_hand.iter().enumerate().filter(|(_, e)| e.0 > 0) {
+        println!("    {h}{}  {n:>7}  {:.3}  {:+.3}", if h == 8 { "+" } else { " " }, p / n as f64, r / n as f64);
+    }
+    by_card.report(vocab, base as f64 - mean_p);
+}
+
+/// `--calibrate`'s per-card blind-spot table: for each card, the mean of
+/// (result − net prediction) over the positions where it sits in a zone
+/// group. A calibrated net leaves every card's mean near zero; a card the
+/// net undervalues has a positive mean where its controller holds it.
+///
+/// The unit is the game seat, not the position: every snapshot of one seat
+/// shares its result, so a per-position interval would be several times too
+/// narrow. Each (game, seat) contributes the mean residual of its positions
+/// holding the card, once.
+#[derive(Default)]
+struct CardResiduals {
+    /// (group, vocab index) → (game seats, Σ seat mean, Σ seat mean², positions).
+    cells: std::collections::HashMap<(usize, u16), (u64, f64, f64, u64)>,
+    /// The open seat's per-cell (Σ residual, positions), flushed by `end_seat`.
+    open: std::collections::HashMap<(usize, u16), (f64, u64)>,
+}
+
+impl CardResiduals {
+    const GROUPS: [(usize, &'static str); 3] = [
+        (crabomination_nn::G_BF_SELF, "own battlefield"),
+        (crabomination_nn::G_BF_OPP, "opponent's battlefield"),
+        (crabomination_nn::G_HAND_SELF, "own hand"),
+    ];
+
+    /// Record one game's rows (both seats, split on `traj`).
+    fn add_game(&mut self, rows: &[TrainRow], preds: &[f32]) {
+        let mut trajs: Vec<u32> = rows.iter().map(|r| r.traj).collect();
+        trajs.sort_unstable();
+        trajs.dedup();
+        for t in trajs {
+            for (row, &p) in rows.iter().zip(preds).filter(|(r, _)| r.traj == t) {
+                let r = (row.win - p) as f64;
+                for (g, _) in Self::GROUPS {
+                    let mut seen: Vec<u16> = row.state.group(g).iter().map(|o| o.card).filter(|&c| c != 0).collect();
+                    seen.sort_unstable();
+                    seen.dedup();
+                    for c in seen {
+                        let e = self.open.entry((g, c)).or_default();
+                        e.0 += r;
+                        e.1 += 1;
+                    }
+                }
+            }
+            for (k, (s, n)) in self.open.drain() {
+                let m = s / n as f64;
+                let e = self.cells.entry(k).or_default();
+                e.0 += 1;
+                e.1 += m;
+                e.2 += m * m;
+                e.3 += n;
+            }
+        }
+    }
+
+    /// `bias` is the residual every position carries (base rate − mean
+    /// prediction); cards are ranked on their residual net of it.
+    fn report(&self, vocab: &Vocab, bias: f64) {
+        let names: std::collections::HashMap<u16, &str> = crabomination::server::vocab_snapshot::VOCAB_SNAPSHOT
+            .iter()
+            .map(|n| (vocab.index_of(n), *n))
+            .collect();
+        let min_n: u64 = std::env::var("CRAB_CALIB_MIN_N").ok().and_then(|v| v.parse().ok()).unwrap_or(100);
+        for (g, label) in Self::GROUPS {
+            // (z, mean, game seats, name): z is the mean over its
+            // seat-level standard error, ranked by |z| so a common card's
+            // small bias and a rare card's large one read on one scale.
+            let mut rows: Vec<(f64, f64, u64, &str)> = self
+                .cells
+                .iter()
+                .filter(|((gg, _), v)| *gg == g && v.0 >= min_n)
+                .map(|((_, c), &(n, s, s2, _))| {
+                    let m = s / n as f64;
+                    let var = ((s2 - n as f64 * m * m) / (n as f64 - 1.0)).max(1e-12);
+                    ((m - bias) / (var / n as f64).sqrt(), m - bias, n, names.get(c).copied().unwrap_or("?"))
+                })
+                .collect();
+            rows.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+            println!("  per-card residual (result − net − {bias:+.3}), {label}, |z| order, n ≥ {min_n} game seats:");
+            for (z, m, n, name) in rows.iter().take(30) {
+                println!("    {m:+.3}  z {z:+6.1}  seats {n:>6}  {name}");
+            }
+        }
+    }
 }
 
 /// Score net and heuristic on the positions the search *consumes* —

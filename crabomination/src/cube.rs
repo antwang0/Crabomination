@@ -168,12 +168,63 @@ pub struct CardBrief {
     /// [`crate::recommend::land_produced_colors`], which used to hand back
     /// a freshly allocated `Vec<Color>` per land examined.
     pub produces: crate::mana::ColorSet,
+    /// Colours of the cost's single-colour pips (plain and Phyrexian), plus
+    /// every colour of any hybrid symbol past the second: what a deck must
+    /// hold to cast the card, before the hybrids are read.
+    pub hard_colors: crate::mana::ColorSet,
+    /// The cost's first two two-colour hybrid symbols' colours (empty when
+    /// absent); each needs one of its colours in the deck.
+    pub hybrid_pairs: [crate::mana::ColorSet; 2],
 }
 
 impl CardBrief {
+    /// True when a deck in `want` can cast this card, reading `{G/U}` as G
+    /// or U rather than both — [`Self::pip_colors`] counts both halves.
+    pub fn fits(&self, want: crate::mana::ColorSet) -> bool {
+        self.hard_colors.is_subset_of(want) && self.hybrid_pairs.iter().all(|p| p.is_empty() || p.intersects(want))
+    }
+
+    /// Coloured pips a deck in `seat` cannot pay: single-colour pips outside
+    /// it, and hybrid symbols with neither colour in it.
+    pub fn off_pips(&self, seat: crate::mana::ColorSet) -> i32 {
+        use crate::mana::ManaSymbol as S;
+        self.def
+            .cost
+            .symbols
+            .iter()
+            .map(|sym| match sym {
+                S::Colored(c) | S::Phyrexian(c) => i32::from(!seat.contains(c)),
+                S::Hybrid(a, b) | S::PhyrexianHybrid(a, b) => i32::from(!seat.contains(a) && !seat.contains(b)),
+                _ => 0,
+            })
+            .sum()
+    }
+
     fn of(def: &'static CardDefinition) -> CardBrief {
         use crate::card::CardType;
         let pips = crate::draft::pip_counts(&def.cost);
+        let mut hard_colors = crate::mana::ColorSet::empty();
+        let mut hybrid_pairs = [crate::mana::ColorSet::empty(); 2];
+        let mut hybrids = 0;
+        for sym in &def.cost.symbols {
+            use crate::mana::ManaSymbol as S;
+            match sym {
+                S::Colored(c) | S::Phyrexian(c) => hard_colors.insert(*c),
+                S::Hybrid(a, b) | S::PhyrexianHybrid(a, b) => {
+                    let mut pair = crate::mana::ColorSet::single(*a);
+                    pair.insert(*b);
+                    match hybrid_pairs.get_mut(hybrids) {
+                        Some(slot) => *slot = pair,
+                        None => {
+                            hard_colors.insert(*a);
+                            hard_colors.insert(*b);
+                        }
+                    }
+                    hybrids += 1;
+                }
+                _ => {}
+            }
+        }
         let pips_total: u32 = pips.iter().map(|(_, n)| n).sum();
         let cmc = def.cost.cmc();
         let is_land = def.card_types.contains(&CardType::Land);
@@ -210,6 +261,8 @@ impl CardBrief {
             rated: if is_land { None } else { crate::card_ratings::rated_score(def.name) },
             is_fixing: crate::recommend::is_fixing_card(def),
             produces: crate::recommend::land_produced_colors(def),
+            hard_colors,
+            hybrid_pairs,
         }
     }
 }

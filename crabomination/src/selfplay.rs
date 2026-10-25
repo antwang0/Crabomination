@@ -142,7 +142,27 @@ pub fn rated_sealed_build(pool: &[CardFactory], n: usize, seed: u64) -> Vec<Card
 /// so `fra_card_eval --build POOL --colors WG` can put each pair of a pool
 /// on the table instead of only the one the shape score likes.
 pub fn rated_sealed_build_in_colors(pool: &[CardFactory], n: usize, seed: u64, colors: ColorSet) -> Vec<CardFactory> {
-    let cfg = SimConfig { builder_v3: true, rated_cards: true, color_restriction: colors, ..SimConfig::default() };
+    rated_sealed_build_cfg(pool, n, seed, SimConfig { color_restriction: colors, ..SimConfig::default() })
+}
+
+/// [`rated_sealed_build_in_colors`] with the land count fixed at `lands`
+/// (and the spells at 40 − `lands`) instead of sampled from 16..=18.
+pub fn rated_sealed_build_lands(pool: &[CardFactory], n: usize, seed: u64, colors: ColorSet, lands: u32) -> Vec<CardFactory> {
+    let spells = 40 - lands as usize;
+    let cfg = SimConfig {
+        color_restriction: colors,
+        spell_count_range: (spells, spells),
+        land_count_range: (lands, lands),
+        target_spells: spells,
+        total_lands: lands,
+        ..SimConfig::default()
+    };
+    rated_sealed_build_cfg(pool, n, seed, cfg)
+}
+
+/// The best of `n` rated v3 builds under `cfg` (its builder flags forced on).
+fn rated_sealed_build_cfg(pool: &[CardFactory], n: usize, seed: u64, cfg: SimConfig) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v3: true, rated_cards: true, ..cfg };
     let judge = |d: &[CardFactory]| {
         let spells: Vec<CardFactory> = d.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
         crate::recommend::static_build_score_v3(&spells, spells.len(), true)

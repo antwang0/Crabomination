@@ -437,8 +437,14 @@ fn suggest_main_deck_shape<R: Rng>(
         if brief.is_land {
             return false;
         }
-        brief.pip_colors.is_subset_of(want)
-            || splash.iter().any(|s| *s as usize == f as usize)
+        // The rated builder reads `{G/U}` as G or U; the others keep the
+        // both-colours reading they were measured under.
+        let fits = if scores.rated {
+            brief.fits(want)
+        } else {
+            brief.pip_colors.is_subset_of(want)
+        };
+        fits || splash.iter().any(|s| *s as usize == f as usize)
     };
     // Fixing-aware bonus: mana rocks / land fetchers earn their keep in
     // proportion to how many colors the build stretches across.
@@ -653,7 +659,11 @@ pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> 
 /// `SimConfig::builder_v3` so the v2 ranker stays as the measurement
 /// control; raced by `selfplay_train --gate-builder-v3`.
 pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize, rated: bool) -> i32 {
-    let main_colors = colors_of_picks(main);
+    let main_colors = if rated {
+        hybrid_aware_colors(main)
+    } else {
+        colors_of_picks(main)
+    };
     let mut score: i32 = main
         .iter()
         .map(|&f| {
@@ -671,6 +681,30 @@ pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize, 
     score -= extra_colors * 12;
     score -= pips.iter().skip(2).sum::<i32>() * 6;
     score - curve_penalty(main)
+}
+
+/// [`colors_of_picks`] with each two-colour hybrid symbol counted once, for
+/// whichever of its colours the deck's single-colour pips lean on more: a
+/// W/G deck playing `{1}{G/U}` has no blue pip to pay for.
+fn hybrid_aware_colors(main: &[CardFactory]) -> crate::draft::ColorCounts {
+    use crate::mana::ManaSymbol as S;
+    let mut totals = crate::draft::ColorCounts::default();
+    for &f in main {
+        for sym in &crate::cube::card_def(f).cost.symbols {
+            if let S::Colored(c) | S::Phyrexian(c) = sym {
+                totals.add(*c, 1);
+            }
+        }
+    }
+    let hard = totals;
+    for &f in main {
+        for sym in &crate::cube::card_def(f).cost.symbols {
+            if let S::Hybrid(a, b) | S::PhyrexianHybrid(a, b) = sym {
+                totals.add(if hard.get(*b) > hard.get(*a) { *b } else { *a }, 1);
+            }
+        }
+    }
+    totals
 }
 
 /// The curve a build must hit, in slots, under `SimConfig::curve_aggro`.
