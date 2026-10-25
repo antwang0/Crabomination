@@ -170928,3 +170928,32 @@ pub const JOHAN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
     mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const LIU_BEI_COMMANDERS: &[CardFactory] = &[liu_bei_lord_of_shu];
+
+/// **Liu Bei, Lord of Shu**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Plains = 99.
+/// Liu Bei, Lord of Shu (EDHREC, fetched 2026-10-25).
+pub const LIU_BEI_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, caged_sun, heralds_horn, kondas_banner,
+    lightning_greaves, marble_diamond, oketras_monument, patchwork_banner, pearl_medallion,
+    sol_ring, swiftfoot_boots, sword_of_the_animist, vanquishers_banner, castle_ardenvale,
+    eiganjo_castle, eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith,
+    myriad_landscape, nykthos_shrine_to_nyx, path_of_ancestry, war_room, alert_shu_infantry,
+    ballyrush_banneret, bastion_protector, captain_of_the_watch, coppercoat_vanguard,
+    daru_warchief, field_marshal, flanking_troops, guan_yu_sainted_warrior,
+    huang_zhong_shu_general, keeper_of_the_accord, kongmings_contraptions,
+    kongming_sleeping_dragon, loyal_retainers, pang_tong_young_phoenix, shu_cavalry,
+    shu_defender, shu_elite_companions, shu_elite_infantry, shu_farmer, shu_general,
+    shu_grain_caravan, shu_soldier_farmers, volunteer_militia, zhang_fei_fierce_warrior,
+    zhao_zilong_tiger_general, cathars_crusade, day_of_destiny, flowering_of_the_white_tree,
+    honor_of_the_pure, land_tax, smothering_tithe, true_conviction, akromas_will, disenchant,
+    eightfold_maze, flawless_maneuver, generous_gift, path_to_exile, rally_the_troops,
+    swords_to_plowshares, warriors_stand, elspeth_suns_champion, empty_city_ruse, false_defeat,
+    guan_yus_1_000_li_march, martial_coup, misfortunes_gain, peach_garden_oath, riding_red_hare,
+    virtuous_charge,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];

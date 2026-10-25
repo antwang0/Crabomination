@@ -36972,6 +36972,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JOHAN_COMMANDERS,
             main: decks::JOHAN_MAIN,
         },
+        // Seat 6087: Liu Bei, Lord of Shu's EDHREC average deck. `--pod-decks 6087`.
+        PodDeck {
+            name: "Liu Bei, Lord of Shu (W)",
+            commanders: decks::LIU_BEI_COMMANDERS,
+            main: decks::LIU_BEI_MAIN,
+        },
     ]
 }
 
@@ -45019,6 +45025,7 @@ mod tests {
             ("Brigid, Hero of Kinsbaile", &[0x21DA]),
             ("Mavren Fein, Dusk Apostle", &[0x21DB]),
             ("Johan", &[0x21DC]),
+            ("Liu Bei, Lord of Shu", &[0x21DD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
