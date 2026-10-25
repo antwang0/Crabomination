@@ -19165,6 +19165,17 @@ static DECKS: &[Factory] = &[
     super::decks::roost_of_drakes,
     super::decks::wild_onslaught,
     super::decks::field_research,
+    super::decks::chandra_nalaar,
+    super::decks::chandra_heart_of_fire,
+    super::decks::chandra_pyromaster,
+    super::decks::chandra_the_firebrand,
+    super::decks::keral_keep_disciples,
+    super::decks::chandras_firemaw,
+    super::decks::pyromancers_gauntlet,
+    super::decks::chandras_fury,
+    super::decks::chandras_outburst,
+    super::decks::chandras_flame_wave,
+    super::decks::chandras_revolution,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

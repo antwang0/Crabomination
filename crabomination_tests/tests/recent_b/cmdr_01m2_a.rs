@@ -517,3 +517,114 @@ fn territorial_allosaurus_kicked_fights() {
     assert!(g.battlefield_find(bear).is_none(), "5 damage kills the Bears");
     assert_eq!(g.battlefield_find(allo).unwrap().damage, 2);
 }
+
+fn loyalty(g: &mut GameState, id: CardId, index: usize, target: Option<crabomination::game::types::Target>, x: Option<u32>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: id, ability_index: index, target, x_value: x })
+        .expect("loyalty ability");
+    drain_stack(g);
+}
+
+/// CR 614.1a — Pyromancer's Gauntlet adds 2 to your red sorcery and your red
+/// planeswalker's damage, never to an opponent's spell.
+#[test]
+fn pyromancers_gauntlet_adds_two_to_your_red_spells_and_walkers() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::pyromancers_gauntlet());
+    let pb = g.add_card_to_hand(0, catalog::precision_bolt());
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: pb, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 5, "3 + 2");
+    let nalaar = g.add_card_to_battlefield(0, catalog::chandra_nalaar());
+    g.battlefield_find_mut(nalaar).unwrap().add_counters(CounterType::Loyalty, 6);
+    let life = g.players[1].life;
+    loyalty(&mut g, nalaar, 0, Some(Target::Player(1)), None);
+    assert_eq!(g.players[1].life, life - 3, "1 + 2 from a red planeswalker");
+    // An opponent's red spell is theirs, not the Gauntlet controller's.
+    let theirs = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    let mine = g.players[0].life;
+    g.perform_action(GameAction::CastSpell { card_id: theirs, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, mine - 3, "a Lightning Bolt, unboosted");
+}
+
+/// Chandra's Fury: 4 to the targeted player and 1 to each creature that
+/// player controls — not another opponent's (three seats).
+#[test]
+fn chandras_fury_sweeps_only_the_targeted_players_creatures() {
+    use crabomination::game::types::Target;
+    let mut g = pod(3);
+    let theirs = ready(&mut g, 1, catalog::llanowar_elves());
+    let other = ready(&mut g, 2, catalog::llanowar_elves());
+    let fury = g.add_card_to_hand(0, catalog::chandras_fury());
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: fury, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert!(g.battlefield_find(other).is_some());
+}
+
+/// Keral Keep Disciples pings each opponent when a Chandra's loyalty ability
+/// is activated.
+#[test]
+fn keral_keep_disciples_ping_on_chandra_loyalty() {
+    use crabomination::game::types::Target;
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::keral_keep_disciples());
+    let fb = g.add_card_to_battlefield(0, catalog::chandra_the_firebrand());
+    g.battlefield_find_mut(fb).unwrap().add_counters(CounterType::Loyalty, 3);
+    let lives: Vec<i32> = (1..3).map(|p| g.players[p].life).collect();
+    loyalty(&mut g, fb, 0, Some(Target::Player(1)), None);
+    assert_eq!(g.players[1].life, lives[0] - 2, "the +1 and the Disciples");
+    assert_eq!(g.players[2].life, lives[1] - 1);
+}
+
+/// Chandra, Heart of Fire's −9 exiles every red instant and sorcery from the
+/// graveyard and library, castable this turn, and adds six red.
+#[test]
+fn chandra_heart_of_fire_ultimate_gathers_red_spells() {
+    let mut g = pod(2);
+    let gy = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let lib = g.add_card_to_library(0, catalog::precision_bolt());
+    let keep = g.add_card_to_library(0, catalog::island());
+    let hof = g.add_card_to_battlefield(0, catalog::chandra_heart_of_fire());
+    g.battlefield_find_mut(hof).unwrap().add_counters(CounterType::Loyalty, 9);
+    loyalty(&mut g, hof, 2, None, None);
+    assert!([gy, lib].iter().all(|id| g.exile.iter().any(|c| c.id == *id)));
+    assert!(g.players[0].library.iter().any(|c| c.id == keep));
+    assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Red), 6);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: lib,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable from exile this turn");
+}
+
+/// Chandra, Pyromaster's −7 casts an exiled instant three times for free.
+#[test]
+fn chandra_pyromaster_ultimate_casts_three_copies() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..9 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let pm = g.add_card_to_battlefield(0, catalog::chandra_pyromaster());
+    g.battlefield_find_mut(pm).unwrap().add_counters(CounterType::Loyalty, 7);
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    loyalty(&mut g, pm, 2, None, None);
+    assert_eq!(g.players[1].life, life - 9, "three Bolts at the opponent");
+}

@@ -1,5 +1,5 @@
 //! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
-//! Stegron, Nael and Verazol decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Stegron, Nael, Verazol and Chandra, Fire of Kaladesh decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -864,4 +864,322 @@ pub fn field_research() -> CardDefinition {
             },
         )
     }
+}
+
+// ── Chandra, Fire of Kaladesh's deck ────────────────────────────────────────
+
+fn chandra(name: &'static str, mana: ManaCost, loyalty: u32, abilities: Vec<crate::card::LoyaltyAbility>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Chandra], ..Default::default() },
+        base_loyalty: loyalty,
+        loyalty_abilities: abilities,
+        ..Default::default()
+    }
+}
+
+fn loyalty(cost: i32, effect: Effect) -> crate::card::LoyaltyAbility {
+    crate::card::LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() }
+}
+
+fn player_or_walker() -> Selector {
+    target_filtered(R::Player.or(R::Planeswalker))
+}
+
+/// "…and each creature that player or that planeswalker's controller controls."
+fn creatures_of_target_slot0() -> Selector {
+    Selector::ControlledBy { who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))), filter: R::Creature }
+}
+
+/// "Search your library and/or graveyard for a card named `name`, reveal it,
+/// and put it into your hand."
+fn fetch_named(name: &str) -> Effect {
+    Effect::SearchZones {
+        who: PlayerRef::You,
+        zones: vec![crate::card::Zone::Library, crate::card::Zone::Graveyard],
+        filter: R::HasName(name.into()),
+        to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+    }
+}
+
+fn red_instant_or_sorcery() -> R {
+    R::HasColor(crate::mana::Color::Red).and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))
+}
+
+/// Chandra Nalaar — {3}{R}{R}, loyalty 6. +1: 1 to target player or
+/// planeswalker. −X: X to target creature. −8: 10 to target player or
+/// planeswalker and each creature that player or its controller controls.
+pub fn chandra_nalaar() -> CardDefinition {
+    chandra(
+        "Chandra Nalaar",
+        cost(&[generic(3), r(), r()]),
+        6,
+        vec![
+            loyalty(1, Effect::DealDamage { to: player_or_walker(), amount: Value::ONE }),
+            crate::card::LoyaltyAbility {
+                x_cost: true,
+                effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::XFromCost },
+                ..Default::default()
+            },
+            loyalty(
+                -8,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: player_or_walker(), amount: Value::Const(10) },
+                    Effect::DealDamage { to: creatures_of_target_slot0(), amount: Value::Const(10) },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// Chandra, Heart of Fire — {3}{R}{R}, loyalty 5. +1: discard your hand,
+/// exile the top three, play them this turn. +1: 2 to any target. −9: exile
+/// every red instant and sorcery from your graveyard and library, cast them
+/// this turn, add {R}{R}{R}{R}{R}{R}.
+pub fn chandra_heart_of_fire() -> CardDefinition {
+    chandra(
+        "Chandra, Heart of Fire",
+        cost(&[generic(3), r(), r()]),
+        5,
+        vec![
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You), random: false },
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::Const(3),
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    },
+                ]),
+            ),
+            loyalty(1, Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) }),
+            loyalty(
+                -9,
+                Effect::Seq(vec![
+                    // "Any number": every match, the most a seat can take.
+                    Effect::Move {
+                        what: Selector::Both(
+                            Box::new(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Graveyard,
+                                filter: red_instant_or_sorcery(),
+                            }),
+                            Box::new(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Library,
+                                filter: red_instant_or_sorcery(),
+                            }),
+                        ),
+                        to: crate::effect::ZoneDest::Exile,
+                    },
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                    Effect::ShuffleLibrary { who: PlayerRef::You },
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: crate::effect::ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(6)),
+                    },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// Chandra, Pyromaster — {2}{R}{R}, loyalty 4. +1: 1 to target player or
+/// planeswalker and 1 to up to one target creature of theirs, which can't
+/// block. 0: exile the top card, play it this turn. −7: exile the top ten,
+/// copy an instant or sorcery among them three times and cast the copies free.
+pub fn chandra_pyromaster() -> CardDefinition {
+    let exiled_spell = || {
+        Selector::best_of(Selector::MatchingAmong {
+            inner: Box::new(Selector::CardExiledWithSource),
+            filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+        })
+    };
+    chandra(
+        "Chandra, Pyromaster",
+        cost(&[generic(2), r(), r()]),
+        4,
+        vec![
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: player_or_walker(), amount: Value::ONE },
+                    Effect::DealDamage {
+                        to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                        amount: Value::ONE,
+                    },
+                    Effect::GrantKeyword { what: Selector::Target(1), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+                ]),
+            ),
+            loyalty(
+                0,
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            ),
+            loyalty(
+                -7,
+                Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::Const(10), link_to_source: true, face_down: false },
+                    Effect::CopyCardAndCastFree { what: exiled_spell() },
+                    Effect::CopyCardAndCastFree { what: exiled_spell() },
+                    Effect::CopyCardAndCastFree { what: exiled_spell() },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// Chandra, the Firebrand — {3}{R}, loyalty 3. +1: 1 to any target. −2: copy
+/// your next instant or sorcery this turn. −6: 6 to each of up to six targets.
+pub fn chandra_the_firebrand() -> CardDefinition {
+    chandra(
+        "Chandra, the Firebrand",
+        cost(&[generic(3), r()]),
+        3,
+        vec![
+            loyalty(1, Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE }),
+            loyalty(
+                -2,
+                Effect::OnYourNextInstantSorceryThisTurn {
+                    body: Box::new(Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE }),
+                },
+            ),
+            loyalty(
+                -6,
+                Effect::ApplyToTargets {
+                    max_targets: 6,
+                    min_targets: 0,
+                    filter: R::any_target(),
+                    effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(6) }),
+                },
+            ),
+        ],
+    )
+}
+
+/// Keral Keep Disciples — {2}{R}{R} 4/3 Human Monk. Activating a Chandra's
+/// loyalty ability deals 1 damage to each opponent.
+pub fn keral_keep_disciples() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Loyalty),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasPlaneswalkerType(crate::card::PlaneswalkerSubtype::Chandra),
+            }),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        }],
+        ..plain_creature("Keral Keep Disciples", cost(&[generic(2), r(), r()]), vec![CreatureType::Human, CreatureType::Monk], 4, 3)
+    }
+}
+
+/// Chandra's Firemaw — {3}{R}{R} 4/2 haste Hellion. ETB: you may fetch
+/// Chandra, Flame's Catalyst from your library and/or graveyard.
+pub fn chandras_firemaw() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for Chandra, Flame's Catalyst?".into(),
+            body: Box::new(fetch_named("Chandra, Flame's Catalyst")),
+        })],
+        ..plain_creature("Chandra's Firemaw", cost(&[generic(3), r(), r()]), vec![CreatureType::Hellion], 4, 2)
+    }
+}
+
+/// Pyromancer's Gauntlet — {5} artifact. Your red instants, sorceries and
+/// planeswalkers deal 2 more damage.
+pub fn pyromancers_gauntlet() -> CardDefinition {
+    CardDefinition {
+        name: "Pyromancer's Gauntlet",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "If a red instant or sorcery spell you control or a red planeswalker you control would deal damage to a permanent or player, it deals that much damage plus 2 to that permanent or player instead.",
+            effect: StaticEffect::ColorSpellsAndPlaneswalkersYouControlDealExtraDamage { color: crate::mana::Color::Red, amount: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chandra's Fury — {4}{R} instant. 4 to target player or planeswalker and 1
+/// to each creature that player or its controller controls.
+pub fn chandras_fury() -> CardDefinition {
+    plain_spell(
+        "Chandra's Fury",
+        cost(&[generic(4), r()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: player_or_walker(), amount: Value::Const(4) },
+            Effect::DealDamage { to: creatures_of_target_slot0(), amount: Value::ONE },
+        ]),
+    )
+}
+
+/// Chandra's Outburst — {3}{R}{R} sorcery. 4 to target player or planeswalker;
+/// fetch Chandra, Bold Pyromancer from your library and/or graveyard.
+pub fn chandras_outburst() -> CardDefinition {
+    plain_spell(
+        "Chandra's Outburst",
+        cost(&[generic(3), r(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: player_or_walker(), amount: Value::Const(4) },
+            fetch_named("Chandra, Bold Pyromancer"),
+        ]),
+    )
+}
+
+/// Chandra's Flame Wave — {3}{R}{R} sorcery. 2 to target player and each
+/// creature they control; fetch Chandra, Flame's Fury.
+pub fn chandras_flame_wave() -> CardDefinition {
+    plain_spell(
+        "Chandra's Flame Wave",
+        cost(&[generic(3), r(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Player), amount: Value::Const(2) },
+            Effect::DealDamage { to: creatures_of_target_slot0(), amount: Value::Const(2) },
+            fetch_named("Chandra, Flame's Fury"),
+        ]),
+    )
+}
+
+/// Chandra's Revolution — {3}{R} sorcery. 4 to target creature; tap target
+/// land, which skips its controller's next untap.
+pub fn chandras_revolution() -> CardDefinition {
+    plain_spell(
+        "Chandra's Revolution",
+        cost(&[generic(3), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+            Effect::Tap { what: Selector::TargetFiltered { slot: 1, filter: R::Land } },
+            Effect::SkipNextUntap { what: Selector::Target(1) },
+        ]),
+    )
 }
