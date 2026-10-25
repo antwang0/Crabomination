@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 31 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang](#fixedopen-2026-10-24-commander-run-01m2ffkh--31-seats-a-stale-layer-memo-a-sacrifice-cost-draw-loop-a-trigger-stack-hang) | 40 |
+| Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang](#fixedopen-2026-10-24-commander-run-01m2ffkh--33-seats-a-stale-layer-memo-a-sacrifice-cost-draw-loop-a-trigger-stack-hang) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01S1RwZ4`) — the counter-placer class, "as long as you control", Livio's bot](#fixedopen-2026-10-24-commander-run-01s1rwz4--the-counter-placer-class-as-long-as-you-control-livios-bot) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01RsnzAo`) — shipped-card defects by seated-deck count, one stall](#fixedopen-2026-10-24-commander-run-01rsnzao--shipped-card-defects-by-seated-deck-count-one-stall) | 22 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-24 (Commander run, `01GE2zTS`) — 16 shipped-card defects in seated decks, three engine classes](#fixedopen-2026-10-24-commander-run-01ge2zts--16-shipped-card-defects-in-seated-decks-three-engine-classes) | 31 |
@@ -259,7 +259,7 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   Agadeem's Awakening (29), Sakashima's Protege (27). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
   helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.
 
-## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 31 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
+## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
 
 - **FIXED (class, the layer gather memo):** `gather_key` did not witness the turn registries layer leaves read
   (`requirement_live_leaves`): `dispatch_triggers_for_events_slow` reads `computed_is_creature` before it notes
@@ -307,9 +307,14 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   Brigid, Hero of Kinsbaile (11 Kithkin), Mavren Fein (11 Vampires; new `Predicate::PlayerLostLifeLastTurn` +
   `Player.lost_life_last_turn`). Their approximations are INCOMPLETE rows (Pyromaster's cross-slot target and pick, Heart
   of Fire's all-of-them −9, Firebrand's six-target auto-fill, the keep-none dig).
-- **Left on the single list:** Johan (12, exert), Liu Bei (14), Irini Sengir (10 hosers: Tourach's Chant's "unless they put
-  a -1/-1 counter", Leshrac's Sigil, Dystopia), Major Teroh (Drought), Stockman, Living Lightning (Lightning Storm), and the
-  Unfinity Attraction decks (Blorpityblorpboop 23, Tusk and Whiskers 22, Roxi 20).
+- **Seats 6086-6087:** Johan (12 exert cards on `EventKind::Exerted`; Rohirrim Chargers' host is a 🟡) and Liu Bei, Lord of
+  Shu (14 Portal Three Kingdoms cards; "only during the declare attackers step and only if you've been attacked this step"
+  is a `cast_condition` / ability `condition` over `IsAttackingYouOrYourPlaneswalker`).
+- **Left on the single list, each blocked on primitives:** Irini Sengir (10: Gloom's activation-cost increase for white
+  enchantments, Tourach's Chant's "unless they put a -1/-1 counter", Dunerider Outlaw's "dealt damage to an opponent this
+  turn", Leshrac's Sigil's look-and-discard), Major Teroh (Drought), Stockman (Arcum's Whistle, Acidic Dagger, Balduvian
+  Shaman), Living Lightning (Lightning Storm), and the Unfinity Attraction decks (Blorpityblorpboop 23, Tusk and Whiskers
+  22, Roxi 20).
 - **Found by the suite:** Isu's first shape (`MayPay` through `else_`) nested two answer-log arms —
   `structural_audit::no_shipped_card_nests_two_answer_log_arms` caught it; it is a colour mode, then one `MayPay`.
 - **Sweep 10159** (3/5/8, 4,002 games, binary at `0257fa4f5`): the Scute Swarm hang, one CR 104.4a draw, two token board
