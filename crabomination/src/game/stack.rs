@@ -1489,13 +1489,13 @@ impl GameState {
                 let Some(host_id) = eq.attached_to else { return };
                 let Some(bonus) = &eq.definition.equipped_bonus else { return };
                 let Some(host) = self.battlefield.find_by_id(host_id) else { return };
+                let (source, controller) = bonus.trigger_binding((eq.id, eq.controller), (host_id, host.controller));
                 for t in &bonus.triggered_abilities {
-                    if t.event.kind == kind && scope_matches(&t.event, host.controller) {
-                        let source = if bonus.triggers_on_equipment { eq.id } else { host_id };
+                    if t.event.kind == kind && scope_matches(&t.event, controller) {
                         candidates.push((
                             source,
                             t.effect.clone(),
-                            host.controller,
+                            controller,
                             t.event.filter.clone(),
                         ));
                     }
@@ -8607,13 +8607,13 @@ impl GameState {
                     }
                     riders.push((eq.id, eq.controller));
                     let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-                    let src = if bonus.triggers_on_equipment { eq.id } else { id };
+                    let (src, ctrl) = bonus.trigger_binding((eq.id, eq.controller), (id, controller_idx));
                     for ta in &bonus.triggered_abilities {
                         if ta.event.kind == EventKind::CreatureDied && !dies_suppressed {
                             die_triggers.push((
                                 src,
                                 ta.effect.clone(),
-                                controller_idx,
+                                ctrl,
                                 ta.event.filter.clone(),
                                 true,
                             ));
@@ -10189,10 +10189,10 @@ impl GameState {
                     continue;
                 }
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-                let src = if bonus.triggers_on_equipment { eq.id } else { id };
+                let (src, ctrl) = bonus.trigger_binding((eq.id, eq.controller), (id, controller));
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind == EventKind::CreatureDied {
-                        leave_triggers.push((src, ta.effect.clone(), controller, ta.event.filter.clone(), true));
+                        leave_triggers.push((src, ta.effect.clone(), ctrl, ta.event.filter.clone(), true));
                     }
                 }
             }

@@ -20128,6 +20128,8 @@ pub fn skullclamp() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             }],
+            // Skullclamp's own trigger: its controller draws (CR 603.3a).
+            triggers_on_equipment: true,
             ..Default::default()
         }),
         ..Default::default()

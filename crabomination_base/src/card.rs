@@ -7188,6 +7188,17 @@ pub struct EquipBonus {
     pub remove_abilities: bool,
 }
 
+impl EquipBonus {
+    /// The (source, controller) a `triggered_abilities` entry fires with: the
+    /// host and its controller (CR 702.6e, a granted ability), or under
+    /// `triggers_on_equipment` the attachment and its controller — the
+    /// attachment's own ability (CR 603.3a; Skullclamp's draw is its
+    /// controller's after a steal).
+    pub fn trigger_binding(&self, attachment: (CardId, usize), host: (CardId, usize)) -> (CardId, usize) {
+        if self.triggers_on_equipment { attachment } else { host }
+    }
+}
+
 /// One "as long as enchanted creature is [filter]" rider of an
 /// [`EquipBonus`]. Evaluated against the host each layer pass.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

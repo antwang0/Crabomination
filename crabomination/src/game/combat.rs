@@ -7939,7 +7939,7 @@ impl GameState {
                 // CR 702.6e — the granted ability fires off the creature, unless
                 // the Equipment opts to fire off itself (Umezawa's Jitte puts the
                 // counters on the Equipment, so `Selector::This` must read it).
-                let trig_source = if bonus.triggers_on_equipment { eq.id } else { source };
+                let (trig_source, trig_ctrl) = bonus.trigger_binding((eq.id, eq.controller), (source, atk_ctrl));
                 for t in &bonus.triggered_abilities {
                     if matches!(
                         t.event.scope,
@@ -7950,7 +7950,7 @@ impl GameState {
                         by_kind[i].push((
                             trig_source,
                             t.effect.clone(),
-                            atk_ctrl,
+                            trig_ctrl,
                             t.event.filter.clone(),
                             false,
                             None,

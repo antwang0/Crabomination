@@ -27193,6 +27193,11 @@ impl GameState {
                             crate::effect::EventKind::LostControl { yours: false },
                             GameEvent::ControlChanged { from, .. },
                         ) => *from,
+                        // An attachment's own ability (`triggers_on_equipment`,
+                        // CR 603.3a) is its controller's, not the host's.
+                        _ if trig_source != card.id => {
+                            self.battlefield_find(trig_source).map_or(card.controller, |s| s.controller)
+                        }
                         _ => card.controller,
                     };
                     let event_amount = if ta.event.batch_counts_card_types {
@@ -27446,7 +27451,7 @@ impl GameState {
             for (eq_id, _) in self.auras_at_death.get(&snap.id).into_iter().flatten() {
                 let Some(eq) = self.battlefield_find(*eq_id) else { continue };
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-                let src = if bonus.triggers_on_equipment { eq.id } else { snap.id };
+                let (src, ctrl) = bonus.trigger_binding((eq.id, eq.controller), (snap.id, snap.controller));
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind != crate::effect::EventKind::DealtDamage
                         || ta.event.scope != crate::effect::EventScope::SelfSource
@@ -27460,7 +27465,7 @@ impl GameState {
                                 actor: None,
                                 source: src,
                                 effect: self.trigger_effect_for(&ta.effect, &ta.event, snap, ev, events),
-                                controller: snap.controller,
+                                controller: ctrl,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_in(ev, events),

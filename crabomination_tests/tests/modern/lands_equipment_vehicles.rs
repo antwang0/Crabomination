@@ -462,6 +462,35 @@ fn skullclamp_draws_two_when_equipped_creature_destroyed() {
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "Skullclamp drew two");
 }
 
+/// CR 603.3a — "whenever equipped creature dies, draw two cards" is
+/// Skullclamp's ability, so its controller draws even after the creature
+/// changed sides, through both death funnels (it was the creature's
+/// controller, as for a granted ability).
+#[test]
+fn skullclamp_draws_for_its_controller_after_the_creature_is_stolen() {
+    for sba in [true, false] {
+        let mut g = two_player_game();
+        for seat in 0..2 {
+            for _ in 0..3 { g.add_card_to_library(seat, catalog::island()); }
+        }
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let clamp = g.add_card_to_battlefield(0, catalog::skullclamp());
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::Equip { equipment: clamp, target: bear }).expect("equip {1}");
+        g.battlefield_find_mut(bear).unwrap().controller = 1;
+        let hands = (g.players[0].hand.len(), g.players[1].hand.len());
+        if sba {
+            g.battlefield_find_mut(bear).unwrap().damage = 1;
+            g.check_state_based_actions();
+        } else {
+            g.remove_to_graveyard_with_triggers(bear);
+        }
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).is_none());
+        assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (hands.0 + 2, hands.1), "sba {sba}");
+    }
+}
+
 /// Equip rejects a creature you don't control (CR 702.6c).
 #[test]
 fn equip_rejects_creature_you_dont_control() {
