@@ -2476,6 +2476,7 @@ impl GameState {
                     _ => false,
                 }));
         let grow = self.note_growth_loop(was_trigger, depth_before, grew, (w2 >> 16, w1 >> 16), &mut events);
+        let mut long_chain = false;
         if was_trigger && self.game_over.is_none() {
             // The watch holds an *anchor* fingerprint and counts the trigger
             // resolutions that return the game to it. Comparing each
@@ -2493,7 +2494,7 @@ impl GameState {
             // moved digest; and the branch a moved digest takes here, with an
             // anchor set and `since` inside the period, is `since + 1`, which
             // never reads the digest. 54.4 % of `cube`'s samples take it.
-            let head = self.fingerprint_head(true, self.turn_number, false);
+            let head = self.fingerprint_head(true, self.turn_number, false, true);
             let settled_by_head =
                 anchor != 0 && since < Self::MANDATORY_LOOP_MAX_PERIOD && head != self.mandatory_loop_head;
             if settled_by_head {
@@ -2517,6 +2518,7 @@ impl GameState {
                         events.push(GameEvent::GameOver { winner: None });
                     }
                 } else if anchor == 0 || since >= Self::MANDATORY_LOOP_MAX_PERIOD {
+                    long_chain = anchor != 0;
                     self.mandatory_loop_watch = (fp, 0, 0);
                     self.mandatory_loop_head = head;
                 } else {
@@ -2528,6 +2530,7 @@ impl GameState {
         }
         self.mandatory_loop_watch.1 |= grow.1 << 16;
         self.mandatory_loop_watch.2 |= grow.0 << 16;
+        self.note_drain_loop(was_trigger, long_chain);
         Ok(events)
     }
 
@@ -2584,7 +2587,7 @@ impl GameState {
     /// progress across one — a life total past the saturation band, and which
     /// permanents are tapped. Both are commented at their field below.
     fn fingerprint_as(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
-        let h = self.fingerprint_head(with_stack, turn, player_counters);
+        let h = self.fingerprint_head(with_stack, turn, player_counters, true);
         self.fingerprint_tail(h, player_counters)
     }
 
@@ -2597,7 +2600,10 @@ impl GameState {
     /// because [`fp_mix`] is injective in its accumulator: two states with the
     /// same permanent stream and different heads cannot digest equal. PERF
     /// candidate (L) is the consumer.
-    fn fingerprint_head(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
+    ///
+    /// `with_life: false` leaves the life totals out — the CR 732.2 drain
+    /// watch's digest (`drain_shortcut.rs`), which reads them on the side.
+    pub(crate) fn fingerprint_head(&self, with_stack: bool, turn: u32, player_counters: bool, with_life: bool) -> u64 {
         // ⚠ A LIFE TOTAL PAST THE SATURATION BAND IS NOT A NUMBER, IT IS A
         // STATE: "this seat cannot be killed". Draining 1 a turn off `i32::MAX`
         // moves the digest every sample and ends the game in two billion turns,
@@ -2617,7 +2623,7 @@ impl GameState {
         };
         let mut h = fp_mix(0, fp_pair(turn, if with_stack { self.stack.len() as u32 } else { 0 }));
         for p in &self.players {
-            h = fp_mix(h, fp_pair(life_of(p) as u32, p.hand.len() as u32));
+            h = fp_mix(h, fp_pair(if with_life { life_of(p) as u32 } else { 0 }, p.hand.len() as u32));
             h = fp_mix(h, fp_pair(p.library.len() as u32, p.graveyard.len() as u32));
             if with_stack {
                 h = fp_mix(h, u64::from(p.poison_counters));
@@ -2634,7 +2640,7 @@ impl GameState {
     }
 
     /// The per-permanent half, chained onto [`fingerprint_head`]'s value.
-    fn fingerprint_tail(&self, head: u64, player_counters: bool) -> u64 {
+    pub(crate) fn fingerprint_tail(&self, head: u64, player_counters: bool) -> u64 {
         let mut h = head;
         // ⚠ WHICH PERMANENTS ARE TAPPED AT THE END OF A TURN IS BOOKKEEPING,
         // NOT PROGRESS — and it is the whole of what kept `all` 1159 running

@@ -197,6 +197,52 @@ fn cr_104_4b_a_finite_life_drain_is_not_a_loop() {
     assert_eq!(g.game_over, Some(Some(0)), "the drain wins");
 }
 
+/// CR 732.2a — a finite drain is shortcut: against 1,000,000 life, the
+/// 20,000 passes `vito_blood_drain` allows are a fiftieth of the laps, and
+/// the game still ends with the drained seat out and every point tallied
+/// (pod seed 1071172 ran an eight-seat game to the action cap this way).
+#[test]
+fn cr_732_2a_a_long_finite_drain_is_shortcut_to_its_end() {
+    let g = vito_blood_drain(1_000_000, false);
+    assert_eq!(g.game_over, Some(Some(0)), "the drain wins");
+    // The killing point's Exquisite Blood trigger never resolves: the game is over.
+    assert_eq!(g.players[0].life, 20 + 1_000_000 - 1);
+    assert_eq!(g.players[0].life_gained_this_turn, 1_000_000 - 1);
+    assert_eq!(g.players[1].life_lost_this_turn, 1_000_000);
+}
+
+/// CR 732.2a / 800.4a — at four seats the shortcut stops one lap short of the
+/// drained seat's death, the death happens for real, and the drain moves on:
+/// Vito's next trigger targets a living opponent.
+#[test]
+fn cr_732_2a_a_shortcut_drain_at_four_seats_kills_each_opponent_in_turn() {
+    use crabomination::game::types::GameAction;
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::vito_thorn_of_the_dusk_rose());
+    let blood = g.add_card_to_battlefield(0, catalog::exquisite_blood());
+    for (seat, life) in [(1, 50_000), (2, 60_000), (3, 70_000)] {
+        g.players[seat].life = life;
+    }
+    let events = g
+        .resolve_effect(
+            &Effect::LoseLife { who: Selector::Player(PlayerRef::Seat(1)), amount: Value::Const(1) },
+            &EffectContext::for_ability(blood, 0, None),
+        )
+        .expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    for _ in 0..20_000 {
+        if g.is_game_over() || g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.game_over, Some(Some(0)), "the drain outlasts every opponent");
+    assert_eq!(g.players[0].life, 20 + 180_000 - 1, "every point but the last one's gain");
+}
+
 /// CR 704.3 / 704.5n — Grip of Phyresis takes Konda's Banner and attaches it
 /// to a 0/0 Germ the Banner may not equip. The sweep unattaches it (the
 /// Banner's +1/+1s go with it) and must then repeat, so the Germ dies before

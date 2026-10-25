@@ -208,6 +208,7 @@ mod move_spell;
 mod quest_copy;
 mod discard_pick;
 mod growth_loop;
+mod drain_shortcut;
 mod venture_limit;
 mod craft_each;
 mod copy_loop;
@@ -2482,6 +2483,10 @@ pub struct ColdState {
     /// one entry per resolution, spent by the next loss that turn.
     #[serde(default)]
     pub(crate) loss_reversals_this_turn: Vec<(usize, u32)>,
+    /// CR 732.2 — the life-only trigger loop watch (`drain_shortcut.rs`).
+    /// Cold: only a trigger chain past the exact watch's period writes it.
+    #[serde(skip)]
+    pub(crate) drain_watch: Option<Box<drain_shortcut::DrainWatch>>,
 }
 
 /// A declined optional extra-target slot (CR 601.2c — "up to N targets"),
