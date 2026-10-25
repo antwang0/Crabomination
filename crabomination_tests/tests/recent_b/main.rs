@@ -385,3 +385,4 @@ mod cmdr_01ka_a;
 mod cmdr_01m2_a;
 mod cmdr_01m2_b;
 mod cmdr_seated_gaps;
+mod cmdr_01y6_a;

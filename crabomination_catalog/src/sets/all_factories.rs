@@ -19232,6 +19232,14 @@ static DECKS: &[Factory] = &[
     super::decks::radiating_lightning,
     super::decks::riddle_of_lightning,
     super::decks::lightning_javelin,
+    super::decks::kormus_bell,
+    super::decks::order_of_the_white_shield,
+    super::decks::drought,
+    super::decks::karma,
+    super::decks::mangaras_equity,
+    super::decks::royal_decree,
+    super::decks::inquisitors_snare,
+    super::decks::starlight,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
