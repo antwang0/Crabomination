@@ -3188,6 +3188,9 @@ pods             seed 10155, 200 games at each of 2..8 seats: 1,400 decided;
                  turns/game 19.93 / 32.59 / 46.03 / 57.61 / 69.77 / 80.98 / 98.48
 sweeps           overflow: 10150 (4/6) + 10151 (3/5/8) + 10152 (--a dflt, 4) = 14,532 games, 0 panics;
                  undecided: CR 104.4 draws and one 8-seat Scute Swarm board cap
+close            after the census bot sinks (loot/tutor, Scarab God, Maze of Ith, proliferate) at the tip of
+                 2026-10-25: --bench 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, determinism ok;
+                 random_pods 4 x 300 groups x 10 games seed 10170: 0 panics, 2 CR 104.4 draws, 1 board cap
 ```
 
 ### 2026-10-24 (Commander run, `01RsnzAo`) — guardrail; card fixes, a hone-counter gather pass, three spend restrictions
