@@ -1524,3 +1524,44 @@ fn cr_601_2b_a_static_adds_a_swamp_sacrifice_per_black_symbol() {
     drain_stack(&mut g);
     assert_eq!(swamps.iter().filter(|s| g.battlefield_find(**s).is_some()).count(), 1);
 }
+
+/// CR 602.2b — Drought's second sentence: an activated ability costs one
+/// "Sacrifice a Swamp" per black symbol in its activation cost; no Swamp,
+/// no activation (and the mana stays unspent).
+#[test]
+fn cr_602_2b_a_static_adds_a_swamp_sacrifice_to_black_activations() {
+    use crabomination::card::{CardDefinition, CardType, StaticAbility};
+    use crabomination::effect::StaticEffect;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut g = peace_main();
+    g.add_card_to_battlefield(1, CardDefinition {
+        name: "Drought Test",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities cost an additional \"Sacrifice a Swamp\" per black symbol.",
+            effect: StaticEffect::SacrificeSwampPerBlackSymbolToCast,
+        }],
+        ..Default::default()
+    });
+    let shade = g.add_card_to_battlefield(0, catalog::nantuko_shade());
+    let pump = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: shade,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::Black, 1);
+    assert!(pump(&mut g).is_err(), "no Swamp to sacrifice");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "nothing paid");
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    g.battlefield_find_mut(swamp).unwrap().tapped = true;
+    pump(&mut g).expect("one Swamp pays the one symbol");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(swamp).is_none(), "sacrificed");
+    assert_eq!(g.computed_permanent(shade).unwrap().power, 3);
+}

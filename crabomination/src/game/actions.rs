@@ -23757,6 +23757,26 @@ impl GameState {
             sac_other_picks.extend(picks);
         }
 
+        // CR 602.2b — Drought's "Sacrifice a Swamp" per black symbol in the
+        // activation cost, disjoint from the printed sacrifices.
+        if let Some(crate::card::AdditionalCastCost::SacrificePermanent { filter, count }) =
+            self.static_sacrifice_cast_cost(&ability.mana_cost)
+        {
+            let candidates: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p && self.sacrificeable_for_cost(c))
+                .map(|c| c.id)
+                .filter(|id| !sac_other_picks.contains(id))
+                .filter(|id| self.evaluate_requirement_static(&filter, &Target::Permanent(*id), p, Some(card_id)))
+                .collect();
+            if candidates.len() < count as usize {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            let picks = self.auto_pick_lowest_power(&candidates, count as usize);
+            sac_other_picks.extend(picks);
+        }
+
         // CR 602.5b — "…and any number of [filter] you control". Zero is a
         // legal payment, so there is no candidate-count gate; a hand-paying
         // activator picks the subset, everything else sacrifices all of them
