@@ -7642,26 +7642,35 @@ pub fn graaz_unstoppable_juggernaut() -> CardDefinition {
     }
 }
 
-/// Encroaching Mycosynth — {3}{U}. Your nonland permanents are artifacts in
-/// addition to their other types. (The spell/off-battlefield halves are
-/// dropped.)
+/// Encroaching Mycosynth — {3}{U}. Nonland permanents you control are
+/// artifacts in addition to their other types, and so are permanent spells you
+/// control and nonland permanent cards you own off the battlefield
+/// (`OwnedCardsOffBattlefieldHaveCardType`, one per permanent type).
 pub fn encroaching_mycosynth() -> CardDefinition {
+    let off_battlefield = |having: CardType| StaticAbility {
+        description: "The same is true for permanent spells you control and nonland permanent cards you own that aren't on the battlefield.",
+        effect: StaticEffect::OwnedCardsOffBattlefieldHaveCardType { having, add: CardType::Artifact, nonland: true },
+    };
+    let mut static_abilities = vec![StaticAbility {
+        description: "Nonland permanents you control are artifacts in addition to their other types.",
+        effect: StaticEffect::AddCardTypeToMatching {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            card_type: CardType::Artifact,
+            artifact_subtype: None,
+        },
+    }];
+    static_abilities.extend(
+        [CardType::Creature, CardType::Enchantment, CardType::Planeswalker, CardType::Battle].map(off_battlefield),
+    );
     CardDefinition {
         name: "Encroaching Mycosynth",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Artifact],
-        static_abilities: vec![StaticAbility {
-            description: "Nonland permanents you control are artifacts in addition to their other types.",
-            effect: StaticEffect::AddCardTypeToMatching {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                card_type: CardType::Artifact,
-                    artifact_subtype: None,
-            },
-        }],
+        static_abilities,
         ..Default::default()
     }
 }

@@ -646,3 +646,19 @@ fn canoptek_spyder_fabricator_claw_array() {
     cast(&mut g, rw, None).expect("cast");
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for the Warden, none for its tokens");
 }
+
+/// CR 611.3a — Encroaching Mycosynth makes nonland permanent cards you own
+/// artifacts off the battlefield too: Szarekh takes a milled Grizzly Bears,
+/// but a milled Dryad Arbor (a land) stays a nonartifact.
+#[test]
+fn cr_611_3a_encroaching_mycosynth_reaches_milled_nonland_cards_only() {
+    for (milled, taken) in [(catalog::grizzly_bears(), true), (catalog::dryad_arbor(), false)] {
+        let mut g = main_phase(2);
+        g.add_card_to_battlefield(0, catalog::encroaching_mycosynth());
+        library(&mut g, 0, 2);
+        let card = g.add_card_to_library(0, milled);
+        let szarekh = g.add_card_to_battlefield(0, catalog::szarekh_the_silent_king());
+        attack(&mut g, &[szarekh], 1);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == card), taken);
+    }
+}
