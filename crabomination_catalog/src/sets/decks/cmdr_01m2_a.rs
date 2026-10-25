@@ -1,6 +1,6 @@
 //! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
-//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh, Brigid, Mavren Fein and
-//! Johan decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh, Brigid, Mavren Fein, Johan
+//! and Liu Bei decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -1730,4 +1730,201 @@ pub fn knotvine_paladin() -> CardDefinition {
         }],
         ..plain_creature("Knotvine Paladin", cost(&[g(), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
     }
+}
+
+// ── Liu Bei, Lord of Shu's deck ─────────────────────────────────────────────
+
+fn shu(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    plain_creature(name, mana, types, p, t)
+}
+
+/// "Cast this spell only during the declare attackers step and only if you've
+/// been attacked this step."
+fn when_attacked() -> Predicate {
+    Predicate::All(vec![
+        Predicate::CurrentStepIs(crate::game::types::TurnStep::DeclareAttackers),
+        Predicate::SelectorExists(Selector::EachPermanent(R::IsAttackingYouOrYourPlaneswalker)),
+    ])
+}
+
+fn ambush_spell(name: &'static str, mana: ManaCost, effect: Effect) -> CardDefinition {
+    CardDefinition { cast_condition: Some(when_attacked()), ..plain_spell(name, mana, CardType::Instant, effect) }
+}
+
+/// Alert Shu Infantry — {2}{W} 2/2 vigilance Human Soldier.
+pub fn alert_shu_infantry() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        ..shu("Alert Shu Infantry", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Flanking Troops — {2}{W}{W} 2/2 Human Soldier. Attacking, you may tap
+/// target creature.
+pub fn flanking_troops() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Tap target creature?".into(),
+                body: Box::new(Effect::Tap { what: target_filtered(R::Creature) }),
+            },
+        }],
+        ..shu("Flanking Troops", cost(&[generic(2), w(), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Kongming's Contraptions — {3}{W} 2/4 Human Soldier. {T}: 2 damage to target
+/// attacking creature, only in the declare attackers step you were attacked in.
+pub fn kongmings_contraptions() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(when_attacked()),
+            effect: Effect::DealDamage { to: target_filtered(R::Creature.and(R::IsAttacking)), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..shu("Kongming's Contraptions", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 4)
+    }
+}
+
+/// Shu Defender — {2}{W} 2/2 Human Soldier; blocking, +0/+2 until end of turn.
+pub fn shu_defender() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ZERO, toughness: Value::Const(2), duration: Duration::EndOfTurn },
+        }],
+        ..shu("Shu Defender", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Shu Elite Infantry — {3}{W} 3/3 Human Soldier.
+pub fn shu_elite_infantry() -> CardDefinition {
+    shu("Shu Elite Infantry", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 3)
+}
+
+/// Shu Farmer — {1}{W} 1/1 Human. {T}: gain 1 life, only during your turn
+/// before attackers are declared.
+pub fn shu_farmer() -> CardDefinition {
+    use crate::game::types::TurnStep as S;
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::Any(
+                    [S::Upkeep, S::Draw, S::PreCombatMain, S::BeginCombat]
+                        .into_iter()
+                        .map(Predicate::CurrentStepIs)
+                        .collect(),
+                ),
+            ])),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..shu("Shu Farmer", cost(&[generic(1), w()]), vec![CreatureType::Human], 1, 1)
+    }
+}
+
+/// Shu Soldier-Farmers — {4}{W} 2/4 Human Soldier. ETB: gain 4 life.
+pub fn shu_soldier_farmers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(4) })],
+        ..shu("Shu Soldier-Farmers", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 4)
+    }
+}
+
+/// Eightfold Maze — {2}{W} instant, only in a declare attackers step you were
+/// attacked in: destroy target attacking creature.
+pub fn eightfold_maze() -> CardDefinition {
+    ambush_spell(
+        "Eightfold Maze",
+        cost(&[generic(2), w()]),
+        Effect::Destroy { what: target_filtered(R::Creature.and(R::IsAttacking)) },
+    )
+}
+
+/// Rally the Troops — {W} instant, only in a declare attackers step you were
+/// attacked in: untap all creatures you control.
+pub fn rally_the_troops() -> CardDefinition {
+    ambush_spell(
+        "Rally the Troops",
+        cost(&[w()]),
+        Effect::Untap { what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)), up_to: None },
+    )
+}
+
+/// Warrior's Stand — {1}{W} instant, only in a declare attackers step you were
+/// attacked in: your creatures get +2/+2 until end of turn.
+pub fn warriors_stand() -> CardDefinition {
+    ambush_spell(
+        "Warrior's Stand",
+        cost(&[generic(1), w()]),
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Empty City Ruse — {W} sorcery. Target opponent skips their next combat
+/// phase (a turn with extra combats keeps the later ones).
+pub fn empty_city_ruse() -> CardDefinition {
+    plain_spell(
+        "Empty City Ruse",
+        cost(&[w()]),
+        CardType::Sorcery,
+        Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::SkipNextCombatPhase { who: PlayerRef::Target(0) }),
+        },
+    )
+}
+
+/// Misfortune's Gain — {3}{W} sorcery. Destroy target creature; its owner
+/// gains 4 life.
+pub fn misfortunes_gain() -> CardDefinition {
+    plain_spell(
+        "Misfortune's Gain",
+        cost(&[generic(3), w()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::GainLife { who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))), amount: Value::Const(4) },
+        ]),
+    )
+}
+
+/// Peach Garden Oath — {W} sorcery. Gain 2 life per creature you control.
+pub fn peach_garden_oath() -> CardDefinition {
+    plain_spell(
+        "Peach Garden Oath",
+        cost(&[w()]),
+        CardType::Sorcery,
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))))),
+            ),
+        },
+    )
+}
+
+/// Virtuous Charge — {2}{W} sorcery. Your creatures get +1/+1 until end of turn.
+pub fn virtuous_charge() -> CardDefinition {
+    plain_spell(
+        "Virtuous Charge",
+        cost(&[generic(2), w()]),
+        CardType::Sorcery,
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        },
+    )
 }

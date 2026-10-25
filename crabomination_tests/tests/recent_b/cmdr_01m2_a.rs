@@ -810,3 +810,56 @@ fn knotvine_paladin_counts_untapped_creatures() {
     drain_stack(&mut g);
     assert_eq!(pt(&g, kp), (4, 4));
 }
+
+/// Eightfold Maze casts only in a declare attackers step you're attacked in,
+/// and kills an attacker there.
+#[test]
+fn eightfold_maze_needs_an_attack_on_you() {
+    use crabomination::game::types::Target;
+    let mut g = pod(3);
+    let atk = ready(&mut g, 1, catalog::grizzly_bears());
+    let maze = g.add_card_to_hand(0, catalog::eightfold_maze());
+    flood(&mut g, 0);
+    let try_cast = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: maze, target: Some(Target::Permanent(atk)), additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(try_cast(&mut g).is_err(), "main phase");
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: atk, target: AttackTarget::Player(2) }]))
+        .expect("attack the other seat");
+    assert!(try_cast(&mut g).is_err(), "attacked, but not you");
+
+    let mut g = pod(3);
+    let atk = ready(&mut g, 1, catalog::grizzly_bears());
+    let maze = g.add_card_to_hand(0, catalog::eightfold_maze());
+    flood(&mut g, 0);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }]))
+        .expect("attack us");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: maze, target: Some(Target::Permanent(atk)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("we were attacked this step");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none());
+}
+
+/// Misfortune's Gain: the destroyed creature's owner gains 4 life.
+#[test]
+fn misfortunes_gain_pays_the_owner() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let mg = g.add_card_to_hand(0, catalog::misfortunes_gain());
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: mg, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[1].life, life + 4);
+}
