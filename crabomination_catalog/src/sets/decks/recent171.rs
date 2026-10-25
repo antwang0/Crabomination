@@ -155,8 +155,8 @@ pub fn trip_up() -> CardDefinition {
 }
 
 /// Spikeshell Harrier — {4}{U} 4/4 Robot Turtle. ETB: return target creature or
-/// Vehicle an opponent controls to its owner's hand. (The "reduce the leading
-/// opponent's speed" rider is dropped.)
+/// Vehicle an opponent controls to its owner's hand; if that opponent's speed
+/// is the table's highest, it drops by 1 (not below 1).
 pub fn spikeshell_harrier() -> CardDefinition {
     CardDefinition {
         name: "Spikeshell Harrier",
@@ -168,14 +168,18 @@ pub fn spikeshell_harrier() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(
-                R::Creature
-                    .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
-                    .and(R::ControlledByOpponent),
-            ),
-            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-        })],
+        // The speed check reads "that opponent" before the bounce moves it.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ReduceSpeedIfFastest { who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))) },
+            Effect::Move {
+                what: target_filtered(
+                    R::Creature
+                        .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                        .and(R::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]))],
         ..Default::default()
     }
 }

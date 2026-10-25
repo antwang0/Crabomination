@@ -7044,6 +7044,9 @@ pub enum Effect {
         #[serde(default)]
         rest_bottom_random: bool,
     },
+    /// CR 702.179f — if `who`'s speed is greater than each other player's,
+    /// reduce it by 1, not below 1 (Spikeshell Harrier).
+    ReduceSpeedIfFastest { who: PlayerRef },
     /// Remove all counters from the selected permanent; the controller's
     /// next spell this turn costs {1} less per counter removed (Mutated
     /// Cultist's cast trigger — the "or opponent" half is dropped).

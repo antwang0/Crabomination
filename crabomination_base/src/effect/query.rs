@@ -2005,6 +2005,7 @@ impl Effect {
             Effect::GameOfChaosRound { opponent, .. } => player_has_target(opponent),
             Effect::CopyNextInstantSorceryThisTurn { .. } => false,
             Effect::ShuffleLibrary { who } => player_has_target(who),
+            Effect::ReduceSpeedIfFastest { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
             Effect::ExchangeCreatureControlWith { who, .. } => sel_has_target(who),

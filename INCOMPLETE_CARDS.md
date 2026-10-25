@@ -554,7 +554,7 @@ plain missing fan-out:
 | ~~Absolute Virtue~~ ✅ | `ControllerProtectionFromMatching { ControlledByOpponent }` (2026-10-23): targeting and damage. A Curse an opponent already attached isn't shed (704.5m reads only seat protection). |
 | Damping Engine | the whole "controls more permanents than each other player" lock, plus its sacrifice-to-ignore rider. |
 | ~~Lavinia, Azorius Renegade~~ ✅ | Stale row (checked 2026-09-28, `01MgDzfC`): `cast_lock::ABOVE_LANDS` compares the spell against the **caster's own** land count (`game/mod.rs`), which is the per-opponent threshold. |
-| Spikeshell Harrier | the speed-comparison clause is dropped (the bounce half is complete). |
+| ~~Spikeshell Harrier~~ ✅ | fixed 2026-10-25: `Effect::ReduceSpeedIfFastest` on the bounced creature's controller (CR 702.179f) — `spikeshell_harrier_slows_only_the_fastest_opponent`. |
 | Grim Reminder | not a gap — `Effect::SearchRevealPunishSameNameCasters` is the per-opponent walk, under a name the regex can't see. |
 
 Two residuals the CR 603.2c batch ratchet

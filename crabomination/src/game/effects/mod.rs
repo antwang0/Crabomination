@@ -24258,6 +24258,14 @@ impl GameState {
                 self.grant_jace_loyalty_at_instant_speed(ctx.controller);
                 Ok(())
             }
+            Effect::ReduceSpeedIfFastest { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let speed = self.players[p].speed;
+                if speed > 1 && self.living_seats().all(|q| q == p || self.players[q].speed < speed) {
+                    self.players[p].speed = speed - 1;
+                }
+                Ok(())
+            }
 
             Effect::EmpowerJace { who, count } => {
                 use crate::card::{CardType, CounterType, PlaneswalkerSubtype};

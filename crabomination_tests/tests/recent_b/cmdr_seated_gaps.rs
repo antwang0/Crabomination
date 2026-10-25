@@ -605,3 +605,24 @@ fn witchbane_orb_destroys_only_the_curses_attached_to_you() {
     assert!(g.battlefield_find(mine).is_none(), "the Curse on its controller");
     assert!(g.battlefield_find(theirs).is_some(), "another player's Curse");
 }
+
+/// Spikeshell Harrier — CR 702.179f: the bounced creature's controller loses
+/// 1 speed only while theirs is strictly the table's highest, never below 1.
+#[test]
+fn spikeshell_harrier_slows_only_the_fastest_opponent() {
+    let run = |speeds: [u32; 3]| -> u32 {
+        let mut g = pod(3);
+        for (p, s) in speeds.into_iter().enumerate() {
+            g.players[p].speed = s;
+        }
+        let bear = ready(&mut g, 1, catalog::grizzly_bears());
+        let harrier = g.add_card_to_hand(0, catalog::spikeshell_harrier());
+        cast_as(&mut g, 0, harrier, &[]).expect("harrier");
+        drain_stack(&mut g);
+        assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced");
+        g.players[1].speed
+    };
+    assert_eq!(run([1, 3, 2]), 2, "strictly fastest");
+    assert_eq!(run([3, 3, 2]), 3, "tied with its caster");
+    assert_eq!(run([0, 1, 0]), 1, "not below 1");
+}
