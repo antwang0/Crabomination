@@ -2,12 +2,6 @@
 //! Markov** that the catalog lacked (`cmdr_edgar`). Vampire tribal, the
 //! W/B/R support suite (Sorins, Olivias, Elenda), choose-a-creature-type
 //! kindred payoffs, and the multiplayer lands. Tests in `recent_b/cmdr_edgar`.
-//!
-//! Residuals (approximated or omitted clauses — each also noted on its card):
-//! - **Bilbo's Gambit** — "return target spell to its owner's hand" rides the
-//!   countered-spell-to-hand path (as Reprieve does), so an uncounterable spell
-//!   is not bounced; the gift's Treasure goes to the first opponent in turn
-//!   order (the engine's gift model has no recipient choice).
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
@@ -1022,7 +1016,8 @@ pub fn carmen_cruel_skymarcher() -> CardDefinition {
 
 /// Bilbo's Gambit — {1}{W} Instant. "Gift a Treasure. Return target spell to
 /// its owner's hand. If the gift was promised, players can't cast spells this
-/// turn." (See the module residuals for the bounce and gift recipient.)
+/// turn." The bounce is not a counter (`MoveSpellToZone`), so it moves an
+/// uncounterable spell; the caster names the gift's opponent (CR 702.174a).
 pub fn bilbos_gambit() -> CardDefinition {
     let bounce = Effect::MoveSpellToZone {
         what: target_filtered(R::IsSpellOnStack),

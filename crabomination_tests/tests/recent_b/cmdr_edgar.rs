@@ -680,6 +680,32 @@ fn bilbos_gambit_bounces_and_silences_when_gifted() {
     );
 }
 
+/// CR 608.2 / 702.21 — the Gambit's return is not a counter: Carnage
+/// Tyrant ("can't be countered") still goes back to its owner's hand.
+#[test]
+fn bilbos_gambit_bounces_an_uncounterable_spell() {
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    flood(&mut g, 1);
+    let tyrant = g.add_card_to_hand(1, catalog::carnage_tyrant());
+    g.perform_action(GameAction::CastSpell { card_id: tyrant, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("opponent casts");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    let gambit = g.add_card_to_hand(0, catalog::bilbos_gambit());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gambit,
+        target: Some(Target::Permanent(tyrant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Gambit");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == tyrant), "back in hand");
+}
+
 /// Olivia's Wrath shrinks every non-Vampire by the Vampire count.
 #[test]
 fn olivias_wrath_spares_vampires() {
