@@ -6599,6 +6599,11 @@ impl Effect {
             Effect::If { then, else_, .. } => {
                 then.distinct_target_count(mode).or_else(|| else_.distinct_target_count(mode))
             }
+            // CR 115.3 — a multi-target instance followed by an untargeted
+            // rider ("exile any number of target players' graveyards. Draw a
+            // card.") is still one instance: Stonespeaker Crystal and Wheel and
+            // Deal named one player in all eight slots.
+            Effect::Seq(v) => v.iter().find_map(|e| e.distinct_target_count(mode)),
             Effect::OptionalTargets { body, .. }
             | Effect::CollectEvidence { then: body, .. }
             | Effect::CollectEvidenceX { then: body }

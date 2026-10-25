@@ -238,3 +238,31 @@ fn cr_115_3_one_up_to_n_instance_names_each_target_once_under_a_condition() {
     assert_eq!(g.players[1].life, life - 2);
     assert!(g.battlefield_find(bear).is_none());
 }
+
+/// CR 115.3 — "any number of target opponents" names each player at most
+/// once, even with an untargeted rider after it (Wheel and Deal's "Draw a
+/// card." — a `Seq` the distinct-target check didn't look inside): the slot
+/// walker named seat 1 in all eight slots; now no player twice, and a cast
+/// naming one twice is rejected.
+#[test]
+fn cr_115_3_any_number_of_target_players_are_distinct_players() {
+    let mut g = multi_player_game(3);
+    let wheel = g.add_card_to_hand(0, catalog::wheel_and_deal());
+    let eff = catalog::wheel_and_deal().effect;
+    let (first, rest) = g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, Some(wheel), None);
+    let picked: Vec<Target> = first.into_iter().chain(rest).collect();
+    assert!(!picked.is_empty());
+    assert!(picked.iter().enumerate().all(|(i, t)| !picked[..i].contains(t)), "{picked:?}");
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let twice = GameAction::CastSpell {
+        card_id: wheel,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(twice).is_err(), "one opponent named twice");
+}
