@@ -36936,6 +36936,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STEGRON_THE_DINOSAUR_MAN_COMMANDERS,
             main: decks::STEGRON_THE_DINOSAUR_MAN_MAIN,
         },
+        // Seat 6081: Nael, Avizoa Aeronaut's EDHREC average deck. `--pod-decks 6081`.
+        PodDeck {
+            name: "Nael, Avizoa Aeronaut (UG)",
+            commanders: decks::NAEL_COMMANDERS,
+            main: decks::NAEL_MAIN,
+        },
     ]
 }
 
@@ -44977,6 +44983,7 @@ mod tests {
             ("Isu the Abominable", &[0x21D4]),
             ("Scarlet Witch, Wanda Maximoff", &[0x21D5]),
             ("Stegron the Dinosaur Man", &[0x21D6]),
+            ("Nael, Avizoa Aeronaut", &[0x21D7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

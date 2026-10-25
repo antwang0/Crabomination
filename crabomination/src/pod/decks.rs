@@ -170760,3 +170760,30 @@ pub const STEGRON_THE_DINOSAUR_MAN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const NAEL_COMMANDERS: &[CardFactory] = &[nael_avizoa_aeronaut];
+
+/// **Nael, Avizoa Aeronaut**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 10 Islands = 99.
+/// Nael, Avizoa Aeronaut (EDHREC, fetched 2026-10-25).
+pub const NAEL_MAIN: &[CardFactory] = &[
+    arcane_signet, fireshrieker, jodahs_codex, manaforce_mace, navigators_compass,
+    prismatic_geoscope, sol_ring, swiftfoot_boots, breeding_pool, command_tower, hedge_maze,
+    hinterland_harbor, simic_growth_chamber, sodden_verdure, tangled_islet, temple_of_mystery,
+    thespians_stage, thran_portal, unstable_frontier, urborg_tomb_of_yawgmoth, vesuva,
+    yavimaya_coast, yavimaya_cradle_of_growth, birds_of_paradise, briar_hydra, draco,
+    dream_thrush, dryad_of_the_ilysian_grove, glinting_creeper, grixis_illusionist,
+    nishoba_brawler, omo_queen_of_vesuva, oracle_of_mul_daya, overlord_of_the_hauntwoods,
+    pixie_illusionist, rancorous_archaic, realmwright, sakura_tribe_elder, scion_of_draco,
+    sphinx_of_clear_skies, stormtide_leviathan, sundering_archaic, tatyova_benthic_druid,
+    territorial_maro, transcendent_archaic, vedalken_plotter, voda_sea_scavenger,
+    wildgrowth_archaic, woodland_wanderer, annex, collective_restraint, convincing_mirage,
+    copy_land, lush_growth, nyleas_presence, prismatic_omen, spelunking, the_weatherseed_treaty,
+    beast_within, counterspell, energybending, evasive_action, gaeas_might, growth_spiral,
+    might_of_alara, rapid_hybridization, reality_shift, worldly_counsel, allied_strategies,
+    bring_to_light, cultivate, herd_migration, kodamas_reach, natures_lore, rampant_growth,
+    together_as_one, tromp_the_domains,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+];
