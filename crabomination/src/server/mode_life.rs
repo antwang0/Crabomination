@@ -105,9 +105,9 @@ mod tests {
         let mut g = crate::game::multi_player_game(3);
         g.seat_commanders(0, vec![catalog::grizzly_bears()]);
         let bmc = g.add_card_to_battlefield(0, catalog::black_market_connections());
-        assert_eq!(trim_costly_modes(&g, 0, bmc, 3, &[0, 1]), None, "40 life: the default");
+        assert_eq!(trim_costly_modes(&g, 0, bmc, 3, &[0, 1, 2]), None, "40 life: the default");
         g.players[0].life = 12;
-        assert_eq!(trim_costly_modes(&g, 0, bmc, 3, &[0, 1]), Some(DecisionAnswer::Modes(vec![0])), "the card goes first");
+        assert_eq!(trim_costly_modes(&g, 0, bmc, 3, &[0, 1, 2]), Some(DecisionAnswer::Modes(vec![0])), "the 3/2, then the card, go first");
     }
 
     /// Invasion of Fiora beside your own legend: only the nonlegendary wipe.

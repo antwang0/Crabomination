@@ -870,15 +870,22 @@ fn firdoch_core_animates() {
 
 // ── Enchantments ─────────────────────────────────────────────────────────────
 
-/// Black Market Connections' default picks: a Treasure and a card for 3 life.
+/// Black Market Connections' "choose one or more": the default takes all three
+/// (a Treasure, a card and a 3/2 for 6 life); a seat may take any one alone.
 #[test]
 fn black_market_connections_sells_and_buys() {
     let mut g = main_phase(2);
     g.add_card_to_battlefield(0, catalog::black_market_connections());
     let hand = g.players[0].hand.len();
     enter_step(&mut g, TurnStep::Draw);
-    assert_eq!(on_bf(&g, "Treasure"), 1);
+    assert_eq!((on_bf(&g, "Treasure"), on_bf(&g, "Shapeshifter")), (1, 1));
     assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].life, 14);
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::black_market_connections());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![2])]));
+    enter_step(&mut g, TurnStep::Draw);
+    assert_eq!((on_bf(&g, "Treasure"), on_bf(&g, "Shapeshifter")), (0, 1), "the 3/2 alone");
     assert_eq!(g.players[0].life, 17);
 }
 

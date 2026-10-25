@@ -1370,7 +1370,7 @@ pub fn firdoch_core() -> CardDefinition {
 
 /// Black Market Connections — {2}{B} Enchantment. At the beginning of your first
 /// main phase, choose one or more: Treasure and lose 1; draw and lose 2; a 3/2
-/// colorless changeling Shapeshifter and lose 3. (Default picks: the first two.)
+/// colorless changeling Shapeshifter and lose 3.
 pub fn black_market_connections() -> CardDefinition {
     let lose = |n: i32| Effect::LoseLife { who: Selector::You, amount: Value::Const(n) };
     CardDefinition {
@@ -1379,8 +1379,11 @@ pub fn black_market_connections() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::PreCombatMain),
                 EventScope::YourControl,
             ),
+            // "Choose one or more": all three is the default, any non-empty
+            // subset an answer (a bot drops the dearest near its life floor,
+            // `server/mode_life.rs`).
             effect: Effect::ChooseN { up_to: None,
-                picks: vec![0, 1],
+                picks: vec![0, 1, 2],
                 modes: vec![
                     Effect::Seq(vec![
                         Effect::CreateToken {

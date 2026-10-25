@@ -2056,7 +2056,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |
 | 🟡 Stinging Study | with two commanders X is the greater mana value, not the one you choose (its ruling) | `Value::GreatestCommanderManaValueInPlayOrCommandZone`; partner pairs only |
-| 🟡 Black Market Connections | "choose one or more" always takes the Treasure and the draw (two modes) | `ChooseN { picks: [0, 1] }` asks for exactly `picks.len()` modes; there is no "one or more" count |
 | 🟡 Chrome Mox | the imprinted card is the first nonartifact, nonland card in hand, not the player's pick (so the colour isn't chosen) | `Selector::take(CardsInZone{Hand}, 1)` keeps the first match |
 | 🟡 Urza's Saga | an artifact with no mana cost that isn't a land (Lotus Bloom) still counts as "{0}" | the filter is `Nonland & Colorless & ManaValueAtMost(1)`; no leaf reads `no_mana_cost` |
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
