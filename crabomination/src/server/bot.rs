@@ -11567,7 +11567,7 @@ pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeigh
                     if !eff.requires_target() {
                         return Some((mode, None));
                     }
-                    state.auto_target_for_effect(eff, seat).map(|t| (mode, Some(t)))
+                    state.auto_target_for_ability(eff, seat, card.id).map(|t| (mode, Some(t)))
                 })
                 .collect();
             for (mode, target) in variants {
@@ -12005,7 +12005,7 @@ fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Op
             }
             // A draw counted off a target (Volo's Journal's noted types).
             let target = if ab.effect.requires_target() {
-                let Some(t) = state.auto_target_for_effect(&ab.effect, seat) else { continue };
+                let Some(t) = state.auto_target_for_ability(&ab.effect, seat, card.id) else { continue };
                 Some(t)
             } else {
                 None
@@ -12634,7 +12634,7 @@ fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameActi
                     None => continue,
                 }
             } else {
-                (state.auto_target_for_effect(&ab.effect, seat), None)
+                (state.auto_target_for_ability(&ab.effect, seat, card.id), None)
             };
             if target.is_none() {
                 continue; // no graveyard creature worth returning
@@ -13130,7 +13130,7 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
                 // No legal target for *this* ability — skip it and try the
                 // next (formerly `?`-returned, which abandoned every other
                 // ability and planeswalker the bot controls).
-                match state.auto_target_for_effect(&ability.effect, seat) {
+                match state.auto_target_for_ability(&ability.effect, seat, card.id) {
                     Some(t) => Some(t),
                     None => continue,
                 }

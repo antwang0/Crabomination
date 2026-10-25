@@ -36,6 +36,29 @@ impl GameState {
         self.auto_target_for_effect_avoiding(eff, controller, None)
     }
 
+    /// [`auto_target_for_effect`](Self::auto_target_for_effect) for an
+    /// ability of `source`: a pick that has protection from the source (CR
+    /// 702.16b) is passed over for the next, rather than handed to an
+    /// activation the engine then rejects while another target was legal.
+    pub fn auto_target_for_ability(&self, eff: &Effect, controller: usize, source: CardId) -> Option<Target> {
+        let mut t = self.auto_target_for_effect(eff, controller)?;
+        // A retry's avoid set leads with the source: its first entry is read
+        // as the trigger source, and the protected picks ride behind it. Its
+        // fallback hands an avoided one back when nothing else is legal.
+        let mut avoid = vec![source];
+        loop {
+            if !self.ability_target_has_protection(&t, source) {
+                return Some(t);
+            }
+            let Target::Permanent(id) = t else { return None };
+            if avoid.contains(&id) || avoid.len() > 8 {
+                return None;
+            }
+            avoid.push(id);
+            t = self.auto_target_for_effect_avoiding_set(eff, controller, &avoid)?;
+        }
+    }
+
     /// Source-aware auto-target picker. When `avoid_source` is set, the
     /// returned target prefers any *other* legal candidate to the avoided
     /// permanent — falling back to the source only if no other legal pick

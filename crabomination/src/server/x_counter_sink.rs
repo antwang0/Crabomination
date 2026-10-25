@@ -45,7 +45,7 @@ pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWei
             }
             for (mode, eff) in super::modal_activation::mode_variants(&ab.effect) {
                 let target = if eff.requires_target() {
-                    match state.auto_target_for_effect(eff, seat) {
+                    match state.auto_target_for_ability(eff, seat, card.id) {
                         Some(t) => Some(t),
                         None => continue,
                     }

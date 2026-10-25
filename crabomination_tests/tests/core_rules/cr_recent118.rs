@@ -1710,3 +1710,28 @@ fn cr_608_2d_a_graveyard_return_takes_the_players_pick() {
         assert!(!at(b), "{name}: the priciest stayed");
     }
 }
+
+/// CR 702.16b — a permanent with protection from red can't be the target of
+/// a red source's ability. The bot's single-slot pick for an activation passes
+/// over it for the next legal target instead of offering an activation the
+/// engine rejects (the bot then skipped the ability with a legal target left).
+#[test]
+fn cr_702_16b_the_bots_ability_pick_passes_over_a_protected_target() {
+    use crabomination::card::Keyword;
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    let pyro = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    let mut angel = catalog::serra_angel();
+    angel.keywords.push(Keyword::Protection(Color::Red));
+    let angel = g.add_card_to_battlefield(1, angel);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // "1 damage to target creature": the Angel is the bigger threat, so the unaware pick.
+    let shot = Effect::DealDamage {
+        to: Selector::TargetFiltered { slot: 0, filter: crabomination::card::SelectionRequirement::Creature },
+        amount: crabomination::effect::Value::Const(1),
+    };
+    assert_eq!(g.auto_target_for_effect(&shot, 0), Some(Target::Permanent(angel)), "the premise: the unaware pick");
+    let picked = g.auto_target_for_ability(&shot, 0, pyro).expect("another target is legal");
+    assert_ne!(picked, Target::Permanent(angel));
+    assert!(g.check_target_legality(&picked, 0).is_ok() && !g.ability_target_has_protection(&picked, pyro));
+}
