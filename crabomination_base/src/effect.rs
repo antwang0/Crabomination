@@ -7345,6 +7345,12 @@ pub enum Effect {
         filter: SelectionRequirement,
         then: Box<Effect>,
     },
+    /// "Remove a counter from a [filter] you control. If you do, [then]"
+    /// (Mister Hyde, Monster Within) — any kind, on any match. Does nothing
+    /// without a counter to remove. The headless pick takes the counter a seat
+    /// least wants on its own permanent: stun, then -1/-1, then any other kind,
+    /// +1/+1 and loyalty last; ties go to the weakest permanent.
+    RemoveAnyCounterFromAmongThen { filter: SelectionRequirement, then: Box<Effect> },
     /// "Deals `amount` damage to each creature for each Aura attached to that
     /// creature" (Baki's Curse). Creatures with no Aura take nothing.
     DamageEachCreaturePerAura { amount: Value },

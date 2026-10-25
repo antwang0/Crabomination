@@ -438,7 +438,8 @@ impl Effect {
                 }
             }
             Effect::GuessManaValueAgainstValue { otherwise, .. } => f(otherwise),
-            Effect::RemoveCountersFromAmongThen { then, .. } => f(then),
+            Effect::RemoveCountersFromAmongThen { then, .. }
+            | Effect::RemoveAnyCounterFromAmongThen { then, .. } => f(then),
             Effect::SecretCouncilPermanentVoteMost { on_most, on_none, .. } => {
                 f(on_most);
                 f(on_none);
@@ -798,6 +799,7 @@ impl Effect {
             | Effect::SecretCouncilPermanentVote { .. }
             | Effect::SecretCouncilPermanentVoteMost { .. }
             | Effect::RemoveCountersFromAmongThen { .. }
+            | Effect::RemoveAnyCounterFromAmongThen { .. }
             | Effect::ReturnOneYouControl { .. }
             | Effect::EachPlayerTakesCreatureOfNext
             | Effect::LookTopFiveDigForLife

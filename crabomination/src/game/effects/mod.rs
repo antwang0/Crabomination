@@ -41191,6 +41191,36 @@ impl GameState {
                 self.run_effect(then, ctx, events)
             }
 
+            Effect::RemoveAnyCounterFromAmongThen { filter, then } => {
+                let p = ctx.controller;
+                let rank = |k: CounterType| match k {
+                    CounterType::Stun => 0,
+                    CounterType::MinusOneMinusOne => 1,
+                    CounterType::PlusOnePlusOne => 3,
+                    CounterType::Loyalty => 4,
+                    _ => 2,
+                };
+                let pick = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.total_counters() > 0)
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, p, ctx.source))
+                    .flat_map(|c| {
+                        c.counters.iter().filter(|(_, n)| **n > 0).map(move |(k, _)| (rank(*k), c.power(), c.id, *k))
+                    })
+                    .min_by_key(|(r, pw, _, _)| (*r, *pw));
+                let Some((_, _, cid, kind)) = pick else { return Ok(()) };
+                let Some(c) = self.battlefield.find_by_id_mut(cid) else { return Ok(()) };
+                if c.remove_counters(kind, 1) == 0 {
+                    return Ok(());
+                }
+                if kind == CounterType::Oil {
+                    self.players[p].oil_activity_this_turn = true;
+                }
+                events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: 1 });
+                self.run_effect(then, ctx, events)
+            }
+
             Effect::RemoveAllRadCounters { who } => {
                 for seat in self.resolve_players(who, ctx) {
                     if self.players[seat].rad_counters != 0 {
