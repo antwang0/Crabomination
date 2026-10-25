@@ -625,10 +625,20 @@ pub fn in_search_of_greatness() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::MayCastFromHandFreeMatching {
-                filter: R::Permanent,
-                max_mv: Value::Sum(vec![Value::GreatestManaValueAmongPermanents(PlayerRef::You), Value::ONE]),
-                else_: Box::new(scry(1)),
+            // CR 601.2b — mana value *equal to* 1 + the greatest among your
+            // *other* permanents, pinned as X (Brain in a Jar's shape).
+            effect: Effect::WithX {
+                x: Value::Sum(vec![
+                    Value::HighestManaValueAmong(Box::new(Selector::EachPermanent(
+                        R::ControlledByYou.and(R::OtherThanSource),
+                    ))),
+                    Value::ONE,
+                ]),
+                body: Box::new(Effect::MayCastFromHandFreeMatching {
+                    filter: R::Permanent.and(R::ManaValueExactlyXFromCost),
+                    max_mv: Value::XFromCost,
+                    else_: Box::new(scry(1)),
+                }),
             },
         }],
         ..Default::default()

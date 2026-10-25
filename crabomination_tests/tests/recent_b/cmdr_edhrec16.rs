@@ -528,3 +528,41 @@ fn ashling_deck_big_spell_payoffs() {
     assert_eq!(g.players[1].life, life - 2);
     assert_eq!(g.players[0].hand.len(), hand);
 }
+
+/// CR 601.2b — In Search of Greatness casts a permanent spell of mana value
+/// *exactly* 1 + the greatest among your *other* permanents: alone, a 1 (it
+/// doesn't count itself); beside a 2-drop, a 3 and never a 2.
+#[test]
+fn in_search_of_greatness_casts_exactly_one_more() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::mana::{cost, generic};
+    let drop = |name: &'static str, mv: u32| CardDefinition {
+        name,
+        cost: cost(&[generic(mv)]),
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    };
+    // No other permanent: exactly mana value 1 (it doesn't count itself).
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::in_search_of_greatness());
+    let one = g.add_card_to_hand(0, drop("One Drop", 1));
+    let three = g.add_card_to_hand(0, drop("Three Drop", 3));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(on_bf(&g, one), "1 + 0");
+    assert!(!on_bf(&g, three));
+    // A 2-drop beside it: exactly 3, never the cheaper 2.
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::in_search_of_greatness());
+    g.add_card_to_battlefield(0, drop("Board Two", 2));
+    let two = g.add_card_to_hand(0, drop("Two Drop", 2));
+    let three = g.add_card_to_hand(0, drop("Three Drop", 3));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(on_bf(&g, three), "1 + 2");
+    assert!(!on_bf(&g, two), "not equal");
+}
