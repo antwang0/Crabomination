@@ -359,6 +359,8 @@ fn ward_suffix(cost: &WardCost) -> String {
         GenericXFromCost => "X".into(),
         LifeSourcePower => "P♥".into(),
         Waterbend(n) => format!("{n}≈"),
+        DamageSourcePower => "P dmg".into(),
+        GenericTargetManaValue => "MV".into(),
     }
 }
 

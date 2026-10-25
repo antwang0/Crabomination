@@ -1205,6 +1205,8 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
                 "Ward—Pay life equal to its power".into()
             }
             crabomination::card::WardCost::Waterbend(n) => format!("Ward—Waterbend {{{n}}}"),
+            crabomination::card::WardCost::DamageSourcePower => "Ward—Take damage equal to its power".into(),
+            crabomination::card::WardCost::GenericTargetManaValue => "Ward—Pay {X}, X = that creature's mana value".into(),
         },
         // Protection rolls up the color name in lowercase to match
         // printed Oracle ("protection from white", not "from White").
@@ -1581,6 +1583,7 @@ pub(crate) fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Echo => "Echo",
         CounterType::Midway => "Midway",
         CounterType::Point => "Point",
+        CounterType::Influence => "Influence",
         CounterType::Hone => "Hone",
         CounterType::Burden => "Burden",
         CounterType::Fate => "Fate",
