@@ -1613,8 +1613,8 @@ fn robber_of_the_rich_exiles_top_when_defender_has_more_cards() {
     // a later turn without a Rogue attack can't; one with it can.
     let mut events = Vec::new();
     g.do_cleanup(&mut events);
-    g.battlefield_find_mut(robber).unwrap().attacked_this_turn = false;
-    g.step = TurnStep::PostCombatMain;
+    g.turn_number += 1;
+    g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let cast = |g: &mut GameState| {
         g.players[0].mana_pool.add(Color::Blue, 1);
@@ -1623,7 +1623,16 @@ fn robber_of_the_rich_exiles_top_when_defender_has_more_cards() {
         })
     };
     assert!(cast(&mut g).is_err(), "no Rogue attacked this turn");
-    g.battlefield_find_mut(robber).unwrap().attacked_this_turn = true;
+    g.battlefield_find_mut(robber).unwrap().tapped = false;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: robber, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
     let life = g.players[1].life;
     cast(&mut g).expect("a Rogue attacked: {U} pays the {R}");
     drain_stack(&mut g);

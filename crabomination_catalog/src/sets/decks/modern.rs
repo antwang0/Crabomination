@@ -22937,8 +22937,7 @@ pub fn smugglers_copter() -> CardDefinition {
 /// Reach, Haste. "Whenever this attacks, if defending player has more cards
 /// in hand than you, exile the top card of their library. During any turn you
 /// attacked with a Rogue, you may cast that card and you may spend mana as
-/// though it were mana of any color to cast that spell." (A Rogue that
-/// attacked and then left the battlefield doesn't count.)
+/// though it were mana of any color to cast that spell."
 pub fn robber_of_the_rich() -> CardDefinition {
     use crate::card::{MayPlayDuration, TriggeredAbility};
     use crate::effect::{EventKind, EventScope, EventSpec, PlayerRef, Predicate, Value};
@@ -22967,7 +22966,7 @@ pub fn robber_of_the_rich() -> CardDefinition {
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::DefendingPlayer,
                     count: Value::Const(1),
-                    duration: MayPlayDuration::WhileExiledIfHolderAttackedWith { creature_type: CreatureType::Rogue },
+                    duration: MayPlayDuration::TurnsHolderAttacksWithType { holder: 0, creature_type: CreatureType::Rogue },
                     pay_any_color: true,
                     max_mana_value: None,
                     pay_own_cost: true,

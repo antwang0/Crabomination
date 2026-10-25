@@ -2252,6 +2252,8 @@ impl GameState {
             if self.battlefield.find_by_id(id).is_some_and(|c| c.is_token) {
                 self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { holder: p }, p);
             }
+            // Robber of the Rich's "during any turn you attacked with a Rogue".
+            self.wake_may_play_for_attacker_type(id, p);
             if !self.players[p].attacked_with_commander_this_turn && self.is_commander(id) {
                 self.players[p].attacked_with_commander_this_turn = true;
                 self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { holder: p }, p);
@@ -8688,6 +8690,27 @@ struct AttackerInfo {
 impl GameState {
     /// Re-arm every dormant exile permission of exactly `duration` for `p`
     /// (Neyali's token attacks, Neriv's commander attacks).
+    /// Wake `p`'s dormant `TurnsHolderAttacksWithType` grants whose type the
+    /// declared attacker `id` has. One exile read when none is parked.
+    fn wake_may_play_for_attacker_type(&mut self, id: CardId, p: usize) {
+        let mut types: Vec<crate::card::CreatureType> = Vec::new();
+        for c in self.exile.iter() {
+            if let Some(perm) = c.may_play_until
+                && perm.player == crate::card::MAY_PLAY_DORMANT
+                && let crate::card::MayPlayDuration::TurnsHolderAttacksWithType { holder, creature_type } = perm.duration
+                && holder == p
+                && !types.contains(&creature_type)
+            {
+                types.push(creature_type);
+            }
+        }
+        for creature_type in types {
+            if self.permanent_has_creature_type(id, creature_type) {
+                self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithType { holder: p, creature_type }, p);
+            }
+        }
+    }
+
     fn wake_may_play(&mut self, duration: crate::card::MayPlayDuration, p: usize) {
         let wakes = |c: &crate::card::CardInstance| {
             c.cold_any(|k| {

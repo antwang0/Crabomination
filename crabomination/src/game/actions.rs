@@ -5282,17 +5282,6 @@ impl GameState {
                         )
                 })
             }
-            crate::card::MayPlayDuration::WhileExiledIfHolderAttackedWith { creature_type } => {
-                self.battlefield.iter().any(|c| {
-                    c.controller == perm.player
-                        && c.attacked_this_turn
-                        && self.evaluate_requirement_on_card(
-                            &crate::card::SelectionRequirement::HasCreatureType(creature_type),
-                            c,
-                            perm.player,
-                        )
-                })
-            }
             crate::card::MayPlayDuration::WhileExiledIfHolderControlsPlaneswalker { subtype } => {
                 self.battlefield.iter().any(|c| {
                     c.controller == perm.player
