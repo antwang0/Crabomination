@@ -312,6 +312,9 @@ No seats (the EDHREC well is dry; the 🟡-row lane is `01M2Ffkh`'s). Fixed, eac
   offers all three modes (the bot's `mode_life` trim keeps the floor). Chrome Mox (212) imprints the controller's pick.
   Urza's Saga (339): `R::HasNoManaCost` — Lotus Bloom isn't "mana cost {0}". Myriad Landscape's row didn't reproduce
   (pinned). Clean seated decks 2,326 → 4,649 / 6,093.
+- **OOM in a pod (fixed):** `random_pods` seed 10856 (decks 434,1376,5670,5938, game 3) was killed at 13.6 GB —
+  Selvala, Heart of the Wilds' X off an `i32::MAX` power pushed one `ManaAdded` per pip. `GameState::mana_pip_count`
+  (`game/mana_pips.rs`) clamps at `SCALE_CEILING` across all seven per-pip `AddMana` loops.
 - `audit_panics` back to **0 bare** (three FRA sites from the ML session; the env-var error exits instead).
 - **Stale OPENs closed:** Gandalf the White's leave half (the dispatcher's `triggered_by_leave`), the Kraul Harpooner /
   Winter Eladrin `OptionalTargets` decline (pinned by two bot-driven tests).

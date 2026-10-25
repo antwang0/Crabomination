@@ -3152,6 +3152,12 @@ repro            8-seat --pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --see
                  actions; tip decided in 4,710 actions, 0.26 s
 ```
 
+Closing tip (after the bot / CR 613.7 / staple-row / mana-pip commits), same box and profile: `--bench` **196,176 / 27.64 /
+613.0 / 0 stalls byte-identical**, determinism ok; bench_ab.py 16 pairs base vs tip **-1.55 % median (sd 8.8, noise)**;
+pods seed 10712 x 1,000 at 2/4/6/8 seats 4,000 / 4,000 decided; random_pods 4 x 500 x 4 (10713): one CR 104.4 draw and
+one OOM kill (13.6 GB, Selvala's per-pip mana events off a saturated power) — fixed (`game/mana_pips.rs`), the group
+re-run decides 4 / 4 in 0.3 s.
+
 ### 2026-10-25 (Commander run, `01M3bbRx`) — guardrail; the player-target event, chosen-source redirects, a cast brake
 
 New on hot-ish paths: every targeting site emits `PlayerBecameTarget` for a player slot (one more event a targeted
