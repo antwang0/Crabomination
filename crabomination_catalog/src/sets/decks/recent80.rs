@@ -5,12 +5,10 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EquipBonus,
-    EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
-    SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
+    EquipScale, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, TokenDefinition,
 };
 use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
-use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, x};
 
 /// Bonehoard — {4} Artifact — Equipment. Living weapon. Equipped creature gets
@@ -290,10 +288,12 @@ pub fn goblin_recruiter() -> CardDefinition {
 
 /// Sea Serpent — {5}{U} 5/5 Serpent. Can't attack unless defending player
 /// controls an Island. When you control no Islands, sacrifice this creature.
-/// (The "control no Islands" sacrifice is modeled as an upkeep check, matching
-/// Dandân.)
 pub fn sea_serpent() -> CardDefinition {
     CardDefinition {
+        // CR 603.8 — "when you control no …, sacrifice" is a state trigger.
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasLandType(LandType::Island).and(R::ControlledByYou),
+        ))))),
         name: "Sea Serpent",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Creature],
@@ -306,21 +306,6 @@ pub fn sea_serpent() -> CardDefinition {
         keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(
             R::HasLandType(LandType::Island),
         ))],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::YourControl,
-            ),
-            effect: Effect::If {
-                cond: Predicate::Not(Box::new(Predicate::SelectorExists(
-                    Selector::EachPermanent(
-                        R::HasLandType(LandType::Island).and(R::ControlledByYou),
-                    ),
-                ))),
-                then: Box::new(Effect::SacrificeSource),
-                else_: Box::new(Effect::Noop),
-            },
-        }],
         ..Default::default()
     }
 }

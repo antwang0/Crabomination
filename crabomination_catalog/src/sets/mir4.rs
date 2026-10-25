@@ -303,16 +303,10 @@ pub fn kukemssa_serpent() -> CardDefinition {
             },
             ..Default::default()
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
-                .with_filter(Predicate::ValueAtMost(
-                    Value::CountOf(Box::new(Selector::EachPermanent(
-                        R::HasLandType(LandType::Island).and(R::ControlledByYou),
-                    ))),
-                    Value::ZERO,
-                )),
-            effect: Effect::SacrificeSource,
-        }],
+        // CR 603.8 — "when you control no Islands, sacrifice" is a state trigger.
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasLandType(LandType::Island).and(R::ControlledByYou),
+        ))))),
         ..creature("Kukemssa Serpent", cost(&[generic(3), u()]), vec![CreatureType::Serpent], 4, 3)
     }
 }

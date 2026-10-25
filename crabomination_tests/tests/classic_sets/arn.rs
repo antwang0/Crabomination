@@ -361,7 +361,7 @@ fn merchant_ship_needs_an_island_to_sail_at() {
 fn merchant_ship_sinks_without_islands() {
     let mut g = main_phase();
     let ship = g.add_card_to_battlefield(0, catalog::merchant_ship());
-    upkeep(&mut g);
+    g.check_state_based_actions();
     assert!(g.battlefield_find(ship).is_none());
 }
 

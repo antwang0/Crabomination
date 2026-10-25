@@ -812,26 +812,15 @@ pub fn oubliette() -> CardDefinition {
 /// Merchant Ship — {U} 0/2 that only sails at Islands, and pays out unblocked.
 pub fn merchant_ship() -> CardDefinition {
     CardDefinition {
+        // CR 603.8 — "when you control no …, sacrifice" is a state trigger.
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasLandType(LandType::Island).and(R::ControlledByYou),
+        ))))),
         keywords: vec![Keyword::CantAttackUnlessDefenderControlsLandType(LandType::Island)],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
                 effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(TurnStep::Upkeep),
-                    EventScope::AnyPlayer,
-                ),
-                effect: Effect::If {
-                    cond: Predicate::Not(Box::new(Predicate::SelectorExists(
-                        Selector::EachPermanent(
-                            R::HasLandType(LandType::Island).and(R::ControlledByYou),
-                        ),
-                    ))),
-                    then: Box::new(Effect::SacrificeSource),
-                    else_: Box::new(Effect::Noop),
-                },
             },
         ],
         ..creature("Merchant Ship", cost(&[u()]), vec![CreatureType::Human], 0, 2)
@@ -841,6 +830,10 @@ pub fn merchant_ship() -> CardDefinition {
 /// Island Fish Jasconius — a 6/8 that needs {U}{U}{U} a turn and an Island to swim at.
 pub fn island_fish_jasconius() -> CardDefinition {
     CardDefinition {
+        // CR 603.8 — "when you control no …, sacrifice" is a state trigger.
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasLandType(LandType::Island).and(R::ControlledByYou),
+        ))))),
         keywords: vec![Keyword::CantAttackUnlessDefenderControlsLandType(LandType::Island)],
         static_abilities: vec![crate::card::StaticAbility {
             description: "This creature doesn't untap during your untap step.",
@@ -853,21 +846,6 @@ pub fn island_fish_jasconius() -> CardDefinition {
                 body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
                 else_: None,
             }),
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(TurnStep::Upkeep),
-                    EventScope::AnyPlayer,
-                ),
-                effect: Effect::If {
-                    cond: Predicate::Not(Box::new(Predicate::SelectorExists(
-                        Selector::EachPermanent(
-                            R::HasLandType(LandType::Island).and(R::ControlledByYou),
-                        ),
-                    ))),
-                    then: Box::new(Effect::SacrificeSource),
-                    else_: Box::new(Effect::Noop),
-                },
-            },
         ],
         ..creature(
             "Island Fish Jasconius",
@@ -882,6 +860,10 @@ pub fn island_fish_jasconius() -> CardDefinition {
 /// Serendib Djinn — a 5/6 flier that eats one of your lands every upkeep.
 pub fn serendib_djinn() -> CardDefinition {
     CardDefinition {
+        // CR 603.8 — "when you control no …, sacrifice" is a state trigger.
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            R::Land.and(R::ControlledByYou),
+        ))))),
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             upkeep(Effect::Seq(vec![
@@ -902,19 +884,6 @@ pub fn serendib_djinn() -> CardDefinition {
                     else_: Box::new(Effect::Noop),
                 },
             ])),
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(TurnStep::Upkeep),
-                    EventScope::AnyPlayer,
-                ),
-                effect: Effect::If {
-                    cond: Predicate::Not(Box::new(Predicate::SelectorExists(
-                        Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
-                    ))),
-                    then: Box::new(Effect::SacrificeSource),
-                    else_: Box::new(Effect::Noop),
-                },
-            },
         ],
         ..creature(
             "Serendib Djinn",

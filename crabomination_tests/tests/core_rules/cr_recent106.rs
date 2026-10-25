@@ -1608,3 +1608,29 @@ fn cr_602_2b_a_filtered_activation_tax_hits_only_matching_sources() {
     g.players[0].mana_pool.add_colorless(3);
     activate(&mut g, mesa).expect("{1}{W} + {3}");
 }
+
+/// CR 603.8 — "When you control no Islands, sacrifice this" is a state
+/// trigger: losing the last Island sacrifices it at once, not at the next
+/// upkeep (Dandân and five siblings used to wait for one).
+#[test]
+fn cr_603_8_control_no_islands_sacrifices_without_waiting_for_upkeep() {
+    let cases: [(fn() -> crabomination::card::CardDefinition, fn() -> crabomination::card::CardDefinition); 6] = [
+        (catalog::dandan, catalog::island),
+        (catalog::sea_serpent, catalog::island),
+        (catalog::merchant_ship, catalog::island),
+        (catalog::island_fish_jasconius, catalog::island),
+        (catalog::kukemssa_serpent, catalog::island),
+        (catalog::serendib_djinn, catalog::plains),
+    ];
+    for (card, land) in cases {
+        let mut g = peace_main();
+        let land = g.add_card_to_battlefield(0, land());
+        let c = g.add_card_to_battlefield(0, card());
+        g.check_state_based_actions();
+        assert!(g.battlefield_find(c).is_some(), "the land keeps it");
+        let _ = g.remove_to_graveyard_with_triggers(land);
+        g.check_state_based_actions();
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(c).is_none(), "sacrificed in the main phase");
+    }
+}

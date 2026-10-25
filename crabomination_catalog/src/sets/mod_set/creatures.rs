@@ -4006,6 +4006,10 @@ pub fn dandan() -> CardDefinition {
     use crate::card::LandType;
     use crate::effect::Predicate;
     CardDefinition {
+        // CR 603.8 — "when you control no …, sacrifice" is a state trigger.
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::HasLandType(LandType::Island).and(SelectionRequirement::ControlledByYou),
+        ))))),
         name: "Dandân",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Creature],
@@ -4018,22 +4022,6 @@ pub fn dandan() -> CardDefinition {
         keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(
             SelectionRequirement::HasLandType(LandType::Island),
         ))],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::YourControl,
-            ),
-            effect: Effect::If {
-                cond: Predicate::Not(Box::new(Predicate::SelectorExists(
-                    Selector::EachPermanent(
-                        SelectionRequirement::HasLandType(LandType::Island)
-                            .and(SelectionRequirement::ControlledByYou),
-                    ),
-                ))),
-                then: Box::new(Effect::SacrificeSource),
-                else_: Box::new(Effect::Noop),
-            },
-        }],
         ..Default::default()
     }
 }
