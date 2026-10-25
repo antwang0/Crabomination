@@ -6140,4 +6140,47 @@ On the puzzles, the s97 net under `net67` solves 11/16 (it adds FP14,
 flashback); the champion solves 10/16. Search scores 8/16 with either net.
 The search cells (s97 and the champion as the leaf of `mcts-net67-256` vs
 `mcts-dflt-256`, 500 x 12, seeds 43 / 97) started 2026-10-23 10:27, at
-about 1h45m a cell. Their readings go here when they land.
+about 1h45m a cell.
+
+**Search gate — CLEARED (2026-10-25).** `mcts-net67-256` vs `mcts-dflt-256`,
+FRA sealed, 500 x 12:
+
+| leaf | seed 43 | seed 97 | mean |
+|---|---|---|---|
+| r82 FRA net (s97) | 53.0 | **54.8** | 53.9 |
+| champion (SOS) | 50.3 | **50.0** | 50.15 |
+
+Fresh − champion **+2.7 / +4.8, mean +3.75**, over the +0.5 bar: the FRA net
+is an FRA lobby candidate (recorded; nothing is swapped). The seed-97 pair is
+both cells re-run on one binary (`.ladder/r82/run_g97_v2.sh`): the 2026-10-23
+champion cell was interrupted, and its fresh partner (54.2) ran on an older
+binary. On FRA the champion leaf adds nothing over the material leaf (50.0 /
+50.3) — the off-vocabulary net is pure noise there — while the FRA net makes
+the search +3.9.
+
+Found while reading the r82 replays (`CRAB_DUMP_TRACES`, 2026-10-25), both
+behind flags pending their ladder reads: the MCTS main phase skipped 646 of
+4,226 land drops (`mcts_land_first`; the land arm ties "pass" because the
+rollout plays the land later; 31 % of the misses at 6+ lands, 5 % at <= 3;
+the A/B read 49.5 ±2.2, so the misses are mostly flood), and Icy Reception's
+counter mode was invisible to the counter pickers (`modal_counters`).
+
+**The card values re-rated under `fra-fixes` (2026-10-25, ADOPTED).** The
+seed-7 run's exact pools and schedule (4,000 pools, 30 rounds x 2 pairs,
+240k games, 4 minutes), only the pilot changed: `fra-fixes` (every FRA
+flag, including `tap_timing`, `no_empty_attacks`, `modal_counters`). Draftsim
+agreement 0.32 overall (`dflt` 0.28), 0.67 on rares (0.57); 17lands 0.29.
+The moves are the misplays the flags fixed: Icy Reception −1.34 → −0.71,
+Living Library −0.92 → −0.25, Academic Ascent 0.95 → 2.93, the burn
++2.7..+3.4 (Charge the Sanctum, Essence Burn, Terminal Criticism). The
+rated builder against v3 under `fra-fixes`, 2,000 pools x 16: old table
+62.25 / 61.90, new **63.34 / 62.57** (seeds 43 / 97). Ratings in
+`.ladder/fra_card_eval/ratings_fra_fixes.tsv`; SCALE / OFFSET re-matched
+(1.295 / 6.444).
+
+**`fra_card_eval --build --by-play`.** The builder chooses colours by summed
+card score, and on the user's pool that choice was 12 points off: W/U at
+50.1 % against a 400-deck field while its own W/G build in the same pool won
+62.7 % (`--gauntlet`). `--by-play` builds every two-colour pair plus the
+builder's pick and races them on one field (under a minute); on that pool it
+takes W/G (58.5; the builder's pick 47.5, W/R 43.9).

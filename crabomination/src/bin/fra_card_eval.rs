@@ -21,7 +21,12 @@
 //! the pool (a decklist — one card per line, `N Name`, Arena or MTGO export)
 //! built by the rated builder (best of N rated builds), then every pool card
 //! ranked by its measured value, marked `*` where the build plays it.
-//! `--colors WG` confines the build to those colours.
+//! `--colors WG` confines the build to those colours. `--by-play` instead
+//! builds every two-colour pair (and the builder's own pick), races them
+//! against one fixed field (`--field 400 --pairs 4 --seed 43`, piloted by
+//! `--pilot`, default `fra-fixes`) and keeps the best: the builder's colour
+//! choice by summed card score missed the best pair by 12 points on a real
+//! pool.
 //!
 //! `fra_card_eval --gauntlet A.txt B.txt ... [--field 400] [--pairs 4]
 //! [--seed 43] [--pilot dflt] [--field-pilot P]` plays each 40-card list
@@ -200,11 +205,74 @@ fn read_list(path: &str) -> (Vec<Factory>, Vec<Factory>) {
     (parsed.main, parsed.sideboard)
 }
 
+/// `--build --by-play`: how the candidate builds are raced.
+struct ByPlay {
+    pilot: Pilot,
+    field: usize,
+    pairs: usize,
+    seed: u64,
+    threads: usize,
+}
+
+/// `--by-play`: the rated build in each two-colour pair, plus the builder's
+/// own pick, all played against one fixed field; the best by win share.
+///
+/// The builder picks colours by its summed card scores, and that sum is not
+/// a deck's strength: on the user's pool (2026-10-25) its pick was W/U at
+/// 50.1 % against the field while its own W/G build in the same pool won
+/// 62.7 %.
+fn build_by_play(pool: &[Factory], candidates: usize, bp: &ByPlay) -> Vec<Factory> {
+    use crabomination::selfplay::rated_sealed_build_in_colors;
+    let wubrg = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+    let mut cands: Vec<(String, Vec<Factory>)> =
+        vec![("builder's pick".to_string(), rated_sealed_build_in_colors(pool, candidates, 0x5EA1, ColorSet::empty()))];
+    for i in 0..5 {
+        for j in i + 1..5 {
+            let mut set = ColorSet::empty();
+            set.insert(wubrg[i]);
+            set.insert(wubrg[j]);
+            let name = format!("{}{}", wubrg[i].short_name(), wubrg[j].short_name());
+            cands.push((name, rated_sealed_build_in_colors(pool, candidates, 0x5EA1, set)));
+        }
+    }
+    let key = |d: &[Factory]| {
+        let mut k: Vec<&'static str> = d.iter().map(|f| crabomination::cube::card_brief(*f).def.name).collect();
+        k.sort_unstable();
+        k
+    };
+    let mut seen: Vec<Vec<&'static str>> = Vec::new();
+    cands.retain(|(_, d)| {
+        let k = key(d);
+        let fresh = d.len() == 40 && !seen.contains(&k);
+        if fresh {
+            seen.push(k);
+        }
+        fresh
+    });
+    let lists: Vec<Vec<Factory>> = cands.iter().map(|(_, d)| d.clone()).collect();
+    let rows = field_rows(&lists, bp.pilot, bp.pilot, bp.field, bp.pairs, bp.seed, bp.threads);
+    let mut scored: Vec<(f64, f64, usize)> =
+        (0..cands.len()).map(|d| { let (m, h) = field_share(&rows, d); (m, h, d) }).collect();
+    scored.sort_by(|a, b| b.0.total_cmp(&a.0));
+    println!(
+        "Builds raced against {} FRA sealed opponents x {} seat-swapped pairs (seed {}; 95% intervals):",
+        bp.field, bp.pairs, bp.seed
+    );
+    for &(m, h, d) in &scored {
+        println!("  {m:6.2} ±{h:4.2}  {}", cands[d].0);
+    }
+    println!();
+    cands.swap_remove(scored[0].2).1
+}
+
 /// `--build`: the rated build of a player's pool, and the pool ranked.
-fn build_pool(path: &str, candidates: usize, colors: ColorSet) {
+fn build_pool(path: &str, candidates: usize, colors: ColorSet, by_play: Option<ByPlay>) {
     let (main, side) = read_list(path);
     let pool: Vec<Factory> = main.iter().chain(&side).copied().collect();
-    let deck = crabomination::selfplay::rated_sealed_build_in_colors(&pool, candidates, 0x5EA1, colors);
+    let deck = match &by_play {
+        Some(bp) if colors.is_empty() => build_by_play(&pool, candidates, bp),
+        _ => crabomination::selfplay::rated_sealed_build_in_colors(&pool, candidates, 0x5EA1, colors),
+    };
     let brief = |f: Factory| crabomination::cube::card_brief(f);
     let mut spells: Vec<Factory> = deck.iter().copied().filter(|f| !brief(*f).is_land).collect();
     spells.sort_by_key(|f| (brief(*f).cmc, brief(*f).def.name));
@@ -259,6 +327,53 @@ fn gauntlet(paths: &[String], pilot: Pilot, field_pilot: Pilot, field: usize, pa
             main
         })
         .collect();
+    let rows = field_rows(&lists, pilot, field_pilot, field, pairs, seed, threads);
+    println!("{field} opponents x {pairs} seat-swapped pairs, seed {seed}; opponent-level 95% intervals");
+    for (d, path) in paths.iter().enumerate() {
+        let (m, h) = field_share(&rows, d);
+        let (w, l) = rows.iter().fold((0, 0), |a, r| (a.0 + r[d].0, a.1 + r[d].1));
+        let mut line = format!("{m:6.2} ±{h:4.2}  games {w}-{l}");
+        if d > 0 {
+            let diffs: Vec<f64> =
+                rows.iter().filter_map(|r| Some(win_share(r[d])? - win_share(r[0])?)).collect();
+            let (dm, dh) = mean_ci(&diffs);
+            line += &format!("  vs first {dm:+6.2} ±{dh:4.2}");
+        }
+        println!("{line}  {path}");
+    }
+}
+
+/// A list's win percentage against one opponent, when they played.
+fn win_share(r: (u32, u32)) -> Option<f64> {
+    (r.0 + r.1 > 0).then(|| 100.0 * r.0 as f64 / (r.0 + r.1) as f64)
+}
+
+/// Mean and 95% half-width (normal) of `xs`.
+fn mean_ci(xs: &[f64]) -> (f64, f64) {
+    let n = xs.len() as f64;
+    let m = xs.iter().sum::<f64>() / n;
+    let sd = (xs.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (n - 1.0)).sqrt();
+    (m, 1.96 * sd / n.sqrt())
+}
+
+/// List `d`'s mean win share over the field, with its opponent-level interval.
+fn field_share(rows: &[Vec<(u32, u32)>], d: usize) -> (f64, f64) {
+    let shares: Vec<f64> = rows.iter().filter_map(|r| win_share(r[d])).collect();
+    mean_ci(&shares)
+}
+
+/// Every list against the same `field` FRA sealed opponents (each the
+/// best-of-16 rated build of a seeded pool), `pairs` seat-swapped pairs
+/// apiece: one row per opponent of (wins, losses), in `lists` order.
+fn field_rows(
+    lists: &[Vec<Factory>],
+    pilot: Pilot,
+    field_pilot: Pilot,
+    field: usize,
+    pairs: usize,
+    seed: u64,
+    threads: usize,
+) -> Vec<Vec<(u32, u32)>> {
     let packs = crabomination::fra_mode::FraPacks::get();
     let next = AtomicUsize::new(0);
     // Per opponent: (wins, losses) for every list, in `paths` order.
@@ -289,28 +404,7 @@ fn gauntlet(paths: &[String], pilot: Pilot, field_pilot: Pilot, field: usize, pa
             });
         }
     });
-    let rows: Vec<Vec<(u32, u32)>> = rows.into_inner().unwrap();
-    let share = |r: (u32, u32)| (r.0 + r.1 > 0).then(|| 100.0 * r.0 as f64 / (r.0 + r.1) as f64);
-    let mean_ci = |xs: &[f64]| {
-        let n = xs.len() as f64;
-        let m = xs.iter().sum::<f64>() / n;
-        let sd = (xs.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (n - 1.0)).sqrt();
-        (m, 1.96 * sd / n.sqrt())
-    };
-    println!("{field} opponents x {pairs} seat-swapped pairs, seed {seed}; opponent-level 95% intervals");
-    for (d, path) in paths.iter().enumerate() {
-        let shares: Vec<f64> = rows.iter().filter_map(|r| share(r[d])).collect();
-        let (m, h) = mean_ci(&shares);
-        let (w, l) = rows.iter().fold((0, 0), |a, r| (a.0 + r[d].0, a.1 + r[d].1));
-        let mut line = format!("{m:6.2} ±{h:4.2}  games {w}-{l}");
-        if d > 0 {
-            let diffs: Vec<f64> =
-                rows.iter().filter_map(|r| Some(share(r[d])? - share(r[0])?)).collect();
-            let (dm, dh) = mean_ci(&diffs);
-            line += &format!("  vs first {dm:+6.2} ±{dh:4.2}");
-        }
-        println!("{line}  {path}");
-    }
+    rows.into_inner().unwrap()
 }
 
 fn pilot_named(name: &str) -> Pilot {
@@ -342,7 +436,14 @@ fn pilot_named(name: &str) -> Pilot {
 fn main() {
     let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
     if let Some(path) = arg("--build") {
-        build_pool(&path, num("--candidates", 64), arg("--colors").map_or(ColorSet::empty(), |c| parse_colors(&c)));
+        let by_play = std::env::args().any(|a| a == "--by-play").then(|| ByPlay {
+            pilot: pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")),
+            field: num("--field", 400),
+            pairs: num("--pairs", 4),
+            seed: num("--seed", 43) as u64,
+            threads,
+        });
+        build_pool(&path, num("--candidates", 64), arg("--colors").map_or(ColorSet::empty(), |c| parse_colors(&c)), by_play);
         return;
     }
     if std::env::args().any(|a| a == "--gauntlet") {
