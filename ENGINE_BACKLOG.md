@@ -255,9 +255,16 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 - **Stale residual docs:** Liliana of the Dark Realms (58), Beorn's Hospitality (29), Ms. Marvel (11) — already a free
   choice / live P/T, tests pinned.
 - **FIXED:** Swashbuckler Extraordinaire (57) on the existing `SacrificeAnyNumber` → `WithX` → `ReflexiveTrigger` → `CapTargetsAtX` shape. The `not untapping` census accepts an instant/sorcery `SkipNextUntap` (Chandra's Revolution, another session's card, read as a miss).
+- **FIXED (class, CR 115.3):** `distinct_target_count` looks inside `Seq` — a multi-target instance followed by an
+  untargeted rider named one player in every slot (Wheel and Deal, Stonespeaker Crystal; 82 `Seq`-wrapped
+  `ApplyToTargets` in the catalog). `core_rules::per_opponent_targets::cr_115_3_any_number_of_target_players_are_distinct_players`.
+- **FIXED (cards):** Vexing Puzzlebox charges by the roll's total (48, per its rulings), Contagion Engine targets any
+  player (32), The Everflowing Well's descend counts permanent cards + The Myriad Pools' copy trigger on
+  `MarksCast(2)` (32), Encroaching Mycosynth's off-battlefield half (32; `OwnedCardsOffBattlefieldHaveCardType {
+  nonland }`), Stonespeaker Crystal's any number of target players (25).
 - **OPEN, next by count:**
-  Vexing Puzzlebox (48), Everflowing Well / Encroaching Mycosynth / Contagion Engine (32 each), Bilbo's Gambit (31),
-  Agadeem's Awakening (29), Sakashima's Protege (27). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
+  Bilbo's Gambit (31), Agadeem's Awakening (29), Sakashima's Protege (27), Urza's Bauble (25, the random look),
+  Palantír of Orthanc (22), Karn Living Legacy (21). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
   helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.
 
 ## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 33 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
