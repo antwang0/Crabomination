@@ -1738,8 +1738,10 @@ decks hold the card).
 - **FIXED:** Mana Breach's "that player returns a land they control" bounced *every* land the
   caster controlled (a `ControlledBy` move); it is one land of their choice now
   (`OpponentChoosesPermanentThen`, `theirs`).
-- **OPEN (bot):** an ETB `OptionalTargets` trigger (Kraul Harpooner, Winter Eladrin) can be declined
-  by the auto-targeter even with a good target; the card tests resolve the trigger directly.
+- ~~**OPEN (bot):** an ETB `OptionalTargets` trigger (Kraul Harpooner, Winter Eladrin) can be declined
+  by the auto-targeter even with a good target; the card tests resolve the trigger directly.~~ Stale
+  (2026-10-25, `claude/modern_decks`): cast by a `wants_ui` bot seat both take the opposing target;
+  pinned by `cmdr_rank2k_j::a_bot_cast_*`.
 
 ## FIXED/OPEN 2026-10-13 (Commander run, `019gJJoX`) — six EDHREC seats from the unclaimed primitive gaps
 

@@ -236,3 +236,60 @@ fn pol_jamaar_dead_before_its_trigger_draws_clean() {
     let card = g.players[0].graveyard.iter().find(|c| c.id == pol).unwrap();
     assert_eq!(card.chosen_creature_type, None);
 }
+
+/// Kraul Harpooner cast by a bot seat (every pod seat is `wants_ui`): its ETB
+/// "up to one target creature with flying you don't control" takes the
+/// opponent's flier and the bot fights it, rather than declining the slot.
+#[test]
+fn a_bot_cast_kraul_harpooner_fights_the_opposing_flier() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        g.players[seat].wants_ui = true;
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let flier = ready(&mut g, 1, catalog::wind_drake());
+    let h = g.add_card_to_hand(0, catalog::kraul_harpooner());
+    cast_with_bots(&mut g, h);
+    assert!(g.battlefield_find(flier).is_none(), "the 2/2 flier was fought");
+}
+
+/// Winter Eladrin cast by a bot seat bounces the opposing creature with its
+/// "up to one other target creature" rather than declining the slot.
+#[test]
+fn a_bot_cast_winter_eladrin_bounces_an_opposing_creature() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        g.players[seat].wants_ui = true;
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let e = g.add_card_to_hand(0, catalog::winter_eladrin());
+    cast_with_bots(&mut g, e);
+    assert!(g.players[1].hand.iter().any(|c| c.id == angel), "the Angel went home");
+}
+
+fn cast_with_bots(g: &mut GameState, h: CardId) {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    flood(g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: h, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    let mut bots = [HeuristicBot::new(), HeuristicBot::new()];
+    for _ in 0..200 {
+        if g.stack.is_empty() && g.pending_decision.is_none() {
+            break;
+        }
+        let seat = g.pending_decision.as_ref().map_or(g.priority.player_with_priority, |d| d.acting_player());
+        let Some(action) = bots[seat].next_action(g, seat) else { break };
+        if g.perform_action(action.clone()).is_err() {
+            let _ = g.perform_action(GameAction::PassPriority);
+        }
+    }
+}
