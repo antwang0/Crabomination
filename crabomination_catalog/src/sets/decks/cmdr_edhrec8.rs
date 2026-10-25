@@ -802,11 +802,11 @@ pub fn bramble_familiar() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::Seq(vec![
                 Effect::Mill { who: Selector::You, amount: Value::Const(7) },
-                Effect::Move {
-                    what: Selector::best_of(Selector::MatchingAmong {
-                        inner: Box::new(Selector::LastMoved),
-                        filter: R::Creature.or(R::HasCardType(CardType::Enchantment)).or(R::Land),
-                    }),
+                Effect::MoveChosen {
+                    from: Selector::LastMoved,
+                    filter: Some(R::Creature.or(R::HasCardType(CardType::Enchantment)).or(R::Land)),
+                    count: Value::ONE,
+                    up_to: false,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
             ]),

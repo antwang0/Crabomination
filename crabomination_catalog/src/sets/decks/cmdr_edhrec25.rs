@@ -167,11 +167,11 @@ pub fn gixs_command() -> CardDefinition {
                     ])),
                 },
                 Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::PowerAtMost(2))) },
-                Effect::Move {
-                    what: Selector::take_priciest(
-                        Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
-                        Value::Const(2),
-                    ),
+                Effect::MoveChosen {
+                    from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+                    filter: None,
+                    count: Value::Const(2),
+                    up_to: true,
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 Effect::Sacrifice {

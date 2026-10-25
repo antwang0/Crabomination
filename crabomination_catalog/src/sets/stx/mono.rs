@@ -890,12 +890,15 @@ pub fn incarnation_technique() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(5),
             },
-            Effect::Move {
-                what: Selector::best_of(Selector::CardsInZone {
+            Effect::MoveChosen {
+                from: Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: crate::card::Zone::Graveyard,
                     filter: SelectionRequirement::Creature,
-                }),
+                },
+                filter: None,
+                count: Value::ONE,
+                up_to: false,
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

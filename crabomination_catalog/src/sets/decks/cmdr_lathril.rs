@@ -488,8 +488,11 @@ pub fn roots_of_wisdom() -> CardDefinition {
             Effect::Mill { who: Selector::You, amount: Value::Const(3) },
             Effect::If {
                 cond: Predicate::SelectorExists(your_yard()),
-                then: Box::new(Effect::Move {
-                    what: Selector::best_of(your_yard()),
+                then: Box::new(Effect::MoveChosen {
+                    from: your_yard(),
+                    filter: None,
+                    count: Value::ONE,
+                    up_to: false,
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
                 else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),

@@ -55954,15 +55954,15 @@ pub fn cruel_ultimatum() -> CardDefinition {
                 who: Selector::Target(0),
                 amount: Value::Const(5),
             },
-            Effect::Move {
-                what: Selector::take_priciest(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
-                    },
-                    Value::Const(1),
-                ),
+            Effect::MoveChosen {
+                from: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                },
+                filter: None,
+                count: Value::ONE,
+                up_to: false,
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::Draw {

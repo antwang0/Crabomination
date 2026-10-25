@@ -276,7 +276,7 @@ fn fetch_quest_puts_a_milled_creature_onto_the_battlefield() {
     let mut g = pod(2);
     library(&mut g, 0, 6);
     let bear = g.add_card_to_library(0, catalog::grizzly_bears());
-    let _ = bear;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
     let bf = g.add_card_to_hand(0, catalog::bramble_familiar());
     flood(&mut g, 0);
     g.priority.player_with_priority = 0;

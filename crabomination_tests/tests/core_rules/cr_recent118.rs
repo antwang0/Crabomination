@@ -1665,3 +1665,48 @@ fn cr_701_17c_a_mill_shuffled_back_into_the_library_is_not_seen() {
     assert!(g.players[1].graveyard.is_empty());
     assert_eq!(g.battlefield.len(), before, "no Horror token");
 }
+
+/// CR 608.2d — "return a [quality] card from your graveyard" is the resolving
+/// player's choice, not the engine's pick: each of these named the cheaper of
+/// two legal cards and got it, where the old bodies took the priciest. One row
+/// a card: (effect, the player's other answers first, the cheap and pricey
+/// cards, where the pick goes).
+#[test]
+fn cr_608_2d_a_graveyard_return_takes_the_players_pick() {
+    use crabomination::card::Zone;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let adventure = |f: Factory| f().adventure.expect("an adventure").effect;
+    let rows: Vec<(&str, Effect, Vec<DecisionAnswer>, Factory, Factory, Zone)> = vec![
+        ("Incarnation Technique", catalog::incarnation_technique().effect, vec![], catalog::grizzly_bears, catalog::serra_angel, Zone::Battlefield),
+        ("Roots of Wisdom", catalog::roots_of_wisdom().effect, vec![], catalog::forest, catalog::llanowar_elves, Zone::Hand),
+        ("Cruel Ultimatum", catalog::cruel_ultimatum().effect, vec![], catalog::grizzly_bears, catalog::serra_angel, Zone::Hand),
+        ("Experimental Overload", catalog::experimental_overload().effect, vec![DecisionAnswer::Bool(true)], catalog::lightning_bolt, catalog::divination, Zone::Hand),
+        ("Unseal the Necropolis", catalog::unseal_the_necropolis().effect, vec![], catalog::grizzly_bears, catalog::serra_angel, Zone::Hand),
+        ("Fetch Quest", adventure(catalog::bramble_familiar), vec![], catalog::grizzly_bears, catalog::serra_angel, Zone::Battlefield),
+    ];
+    for (name, effect, mut answers, cheap, pricey, zone) in rows {
+        let mut g = main_phase();
+        // Fetch Quest reads the milled seven: the two go on top.
+        let (a, b) = if name == "Fetch Quest" {
+            (g.add_card_to_library(0, cheap()), g.add_card_to_library(0, pricey()))
+        } else {
+            (g.add_card_to_graveyard(0, cheap()), g.add_card_to_graveyard(0, pricey()))
+        };
+        for seat in 0..2 {
+            for _ in 0..8 {
+                g.add_card_to_library(seat, catalog::island());
+            }
+        }
+        answers.push(DecisionAnswer::Cards(vec![a]));
+        g.decider = Box::new(ScriptedDecider::new(answers));
+        let src = g.add_card_to_battlefield(0, catalog::island());
+        resolve(&mut g, src, Some(Target::Player(1)), &effect);
+        let at = |id| match zone {
+            Zone::Battlefield => g.battlefield_find(id).is_some(),
+            _ => g.players[0].hand.iter().any(|c| c.id == id),
+        };
+        assert!(at(a), "{name}: the named card moved");
+        assert!(!at(b), "{name}: the priciest stayed");
+    }
+}

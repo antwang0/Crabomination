@@ -172,10 +172,16 @@ fn dwynens_elite_token_needs_another_elf() {
 fn cruel_ultimatum_sequence() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    for _ in 0..4 { g.add_card_to_hand(1, catalog::island()); }
-    // The pick is the best creature card (Shivan Dragon), not the oldest.
+    let islands: Vec<_> = (0..4).map(|_| g.add_card_to_hand(1, catalog::island())).collect();
+    // The returned creature card is the caster's pick (CR 608.2d), asked
+    // after the opponent's discard (a lone creature's sacrifice asks nothing).
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let dead = g.add_card_to_graveyard(0, catalog::shivan_dragon());
+    use crabomination::decision::DecisionAnswer::{Cards, Discard};
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        Discard(islands[..3].to_vec()),
+        Cards(vec![dead]),
+    ]));
     for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     let cu = g.add_card_to_hand(0, catalog::cruel_ultimatum());
     g.players[0].mana_pool.add(Color::Blue, 2);

@@ -3065,15 +3065,11 @@ pub fn unseal_the_necropolis() -> CardDefinition {
         CardType::Instant,
         Effect::Seq(vec![
             Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) },
-            Effect::Move {
-                what: Selector::TakeGreatestManaValue {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: R::Creature,
-                    }),
-                    count: Box::new(Value::Const(2)),
-                },
+            Effect::MoveChosen {
+                from: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Creature },
+                filter: None,
+                count: Value::Const(2),
+                up_to: true,
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),

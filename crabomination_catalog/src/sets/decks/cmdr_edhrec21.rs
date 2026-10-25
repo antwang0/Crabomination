@@ -177,15 +177,11 @@ pub fn experimental_overload() -> CardDefinition {
                 Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(weird) },
                 Effect::MayDo {
                     description: "Return an instant or sorcery card from your graveyard to your hand?".into(),
-                    body: Box::new(Effect::Move {
-                        what: Selector::take_priciest(
-                            Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: instant_or_sorcery(),
-                            },
-                            Value::ONE,
-                        ),
+                    body: Box::new(Effect::MoveChosen {
+                        from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: instant_or_sorcery() },
+                        filter: None,
+                        count: Value::ONE,
+                        up_to: false,
                         to: ZoneDest::Hand(PlayerRef::You),
                     }),
                 },

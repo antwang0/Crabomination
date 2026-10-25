@@ -510,12 +510,11 @@ pub fn polluted_cistern_dim_oubliette() -> CardDefinition {
                     event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
                     effect: Effect::Seq(vec![
                         mill(3),
-                        Effect::Move {
-                            what: Selector::best_of(Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: Zone::Graveyard,
-                                filter: R::Creature,
-                            }),
+                        Effect::MoveChosen {
+                            from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+                            filter: None,
+                            count: Value::ONE,
+                            up_to: false,
                             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                         },
                     ]),
