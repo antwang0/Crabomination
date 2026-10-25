@@ -101,6 +101,8 @@ pub fn glarecaster() -> CardDefinition {
                     Box::new(Selector::Player(PlayerRef::You)),
                 ),
                 to: target_any(),
+                chosen_source: false,
+                whole_turn: false,
             },
             ..Default::default()
         }],

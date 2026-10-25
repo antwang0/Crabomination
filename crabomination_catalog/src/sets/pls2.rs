@@ -1744,7 +1744,7 @@ pub fn mirrorwood_treefolk() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r(), w()]),
-            effect: Effect::RedirectNextDamageTo { what: Selector::This, to: target_any() },
+            effect: Effect::RedirectNextDamageTo { what: Selector::This, to: target_any(), chosen_source: false, whole_turn: false },
             ..Default::default()
         }],
         ..creature(

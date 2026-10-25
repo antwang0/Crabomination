@@ -2791,7 +2791,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(count)
             }
             Effect::RerollStoredResults { what } => sel_has_target(what),
-            Effect::RedirectNextDamageTo { what, to } => {
+            Effect::RedirectNextDamageTo { what, to, .. } => {
                 sel_has_target(what) || sel_has_target(to)
             }
             Effect::GrantProtectionFromColorsOf { what, of, .. } => {
@@ -5658,7 +5658,7 @@ impl Effect {
                 | Effect::RedirectYourCombatDamageToTarget { what }
                 | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_find(what, slot),
                 Effect::ExileSpellWithDelayCounters { what, .. } => sel_find(what, slot),
-                Effect::RedirectNextDamageTo { what, to } => {
+                Effect::RedirectNextDamageTo { what, to, .. } => {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),

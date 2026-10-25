@@ -5757,14 +5757,27 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RedirectNextDamageTo { what, to } => {
+            Effect::RedirectNextDamageTo { what, to, chosen_source, whole_turn } => {
                 let Some(dest) = self.resolve_selector(to, ctx).into_iter().next() else {
                     return Ok(());
                 };
+                let source = if *chosen_source {
+                    match self.choose_damage_prevention_source(&crate::card::SelectionRequirement::Any, ctx) {
+                        Some(s) => Some(s),
+                        None => return Ok(()),
+                    }
+                } else {
+                    None
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
-                        retain_cold!(self.turn.next_damage_redirect, |(c, _)| *c != cid);
-                        self.turn.next_damage_redirect.push((cid, dest));
+                        retain_cold!(self.turn.next_damage_redirect, |r| r.hit != cid || r.source != source);
+                        self.turn.next_damage_redirect.push(crate::game::DamageRedirect {
+                            hit: cid,
+                            to: dest,
+                            source,
+                            whole_turn: *whole_turn,
+                        });
                     }
                 }
                 Ok(())

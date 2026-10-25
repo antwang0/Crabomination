@@ -13642,7 +13642,17 @@ pub enum Effect {
     /// CR 614.9 — "The next time damage would be dealt to `what` this turn,
     /// that damage is dealt to `to` instead" (Mirrorwood Treefolk). A one-shot
     /// per-permanent redirect consumed by the first damage event.
-    RedirectNextDamageTo { what: Selector, to: Selector },
+    /// `chosen_source`: only damage from "a source of your choice", picked on
+    /// resolution (Jade Monolith); `whole_turn`: "all damage … this turn",
+    /// not consumed (Kor Chant).
+    RedirectNextDamageTo {
+        what: Selector,
+        to: Selector,
+        #[serde(default)]
+        chosen_source: bool,
+        #[serde(default)]
+        whole_turn: bool,
+    },
     /// Goblin Game (CR 720-adjacent silliness) — each player secretly hides at
     /// least one item, all are revealed, each player loses life equal to their
     /// own count, and the player(s) with the fewest then lose half their life

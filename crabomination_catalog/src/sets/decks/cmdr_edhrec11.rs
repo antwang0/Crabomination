@@ -1304,8 +1304,8 @@ pub fn fateful_discovery() -> CardDefinition {
 
 // ── Darien, King of Kjeldor ──────────────────────────────────────────────────
 
-/// Jade Monolith — {4} Artifact. {1}: the next damage to a target creature
-/// this turn is dealt to you instead.
+/// Jade Monolith — {4} Artifact. {1}: the next damage a source of your choice
+/// would deal to target creature this turn is dealt to you instead.
 pub fn jade_monolith() -> CardDefinition {
     CardDefinition {
         name: "Jade Monolith",
@@ -1313,7 +1313,12 @@ pub fn jade_monolith() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::RedirectNextDamageTo { what: target_filtered(R::Creature), to: Selector::You },
+            effect: Effect::RedirectNextDamageTo {
+                what: target_filtered(R::Creature),
+                to: Selector::You,
+                chosen_source: true,
+                whole_turn: false,
+            },
             ..Default::default()
         }],
         ..Default::default()

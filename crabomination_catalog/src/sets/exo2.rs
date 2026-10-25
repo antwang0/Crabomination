@@ -1432,10 +1432,8 @@ pub fn fighting_chance() -> CardDefinition {
     )
 }
 
-/// Kor Chant — {2}{W}. Push the next hit off your creature onto another one.
-///
-/// Approximation: the chosen source collapses into "the next damage event",
-/// so a second source can steal the redirect.
+/// Kor Chant — {2}{W}. All damage a source of your choice would deal to your
+/// target creature this turn is dealt to another target creature instead.
 pub fn kor_chant() -> CardDefinition {
     instant(
         "Kor Chant",
@@ -1443,6 +1441,8 @@ pub fn kor_chant() -> CardDefinition {
         Effect::RedirectNextDamageTo {
             what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
             to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanSource).and(R::OtherThanTargetSlot(0))},
+            chosen_source: true,
+            whole_turn: true,
         },
     )
 }

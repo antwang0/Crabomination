@@ -1491,6 +1491,19 @@ pub struct TurnDeaths {
     pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
 }
 
+/// One `TurnRegistries::next_damage_redirect` entry (CR 614.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct DamageRedirect {
+    pub hit: CardId,
+    pub to: crate::game::effects::EntityRef,
+    /// Only damage from this source ("a source of your choice").
+    #[serde(default)]
+    pub source: Option<CardId>,
+    /// "All damage … this turn": not consumed by the first event.
+    #[serde(default)]
+    pub whole_turn: bool,
+}
+
 /// The per-turn registries an *effect* writes — damage redirects and
 /// tallies, prevention shields, the "gained a counter" set, the turn-granted
 /// triggers — split out of [`ColdState`] the way [`TurnDeaths`] was (PERF
@@ -1654,12 +1667,12 @@ pub struct TurnRegistries {
     /// (Reverberation). Cleared at cleanup.
     #[serde(default)]
     pub spell_damage_to_controller: Vec<(CardId, usize)>,
-    /// CR 614.9 — one-shot per-permanent redirects: "the next time damage
-    /// would be dealt to `.0` this turn, it's dealt to `.1` instead"
-    /// (Mirrorwood Treefolk). Consumed by the first damage event and cleared
-    /// at cleanup.
+    /// CR 614.9 — per-permanent redirects: "the next time damage would be
+    /// dealt to `hit` this turn, it's dealt to `to` instead" (Mirrorwood
+    /// Treefolk). Consumed by the first damage event unless `whole_turn`;
+    /// cleared at cleanup.
     #[serde(default)]
-    pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    pub next_damage_redirect: Vec<DamageRedirect>,
     /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
     /// seat controls deals this turn. Cleared at cleanup.
     #[serde(default)]

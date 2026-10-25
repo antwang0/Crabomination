@@ -1591,9 +1591,17 @@ impl GameState {
         // a registered permanent goes somewhere else instead. Consumed here.
         if !self.in_damage_redirect
             && let EntityRef::Permanent(hit) = ent
-            && let Some(idx) = self.turn.next_damage_redirect.iter().position(|(c, _)| *c == hit)
+            && let Some(idx) = self
+                .turn
+                .next_damage_redirect
+                .iter()
+                .position(|r| r.hit == hit && r.source.is_none_or(|s| source == Some(s)))
         {
-            let (_, to) = self.turn.next_damage_redirect.remove(idx);
+            let r = self.turn.next_damage_redirect[idx];
+            if !r.whole_turn {
+                self.turn.next_damage_redirect.remove(idx);
+            }
+            let to = r.to;
             self.in_damage_redirect = true;
             self.deal_damage_to_from(to, amount, source, events);
             self.in_damage_redirect = false;

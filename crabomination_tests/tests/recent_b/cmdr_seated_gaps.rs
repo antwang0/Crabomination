@@ -680,3 +680,65 @@ fn rayne_draws_off_its_controller_and_twice_when_enchanted() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(rayne);
     assert_eq!(draws_after(&mut g, 1, Target::Player(0)), 2, "enchanted");
 }
+
+fn activate_as(g: &mut GameState, seat: usize, id: CardId, index: usize, targets: &[Target]) {
+    flood(g, seat);
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target: targets.first().cloned(),
+        additional_targets: targets.iter().skip(1).cloned().collect(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+/// Jade Monolith — CR 614.9: only damage from the source chosen on
+/// resolution is dealt to its controller instead; another source's damage
+/// still hits the creature.
+#[test]
+fn jade_monolith_redirects_only_the_chosen_source() {
+    let mut g = pod(3);
+    let monolith = ready(&mut g, 0, catalog::jade_monolith());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let pest = ready(&mut g, 2, catalog::pestilence());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![giant])]));
+    activate_as(&mut g, 0, monolith, 0, &[perm(bear)]);
+    let life = g.players[0].life;
+    activate_as(&mut g, 2, pest, 0, &[]);
+    assert_eq!(g.players[0].life, life - 1, "Pestilence's own point to you only");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(1), "not the chosen source");
+
+    let mut g = pod(3);
+    let monolith = ready(&mut g, 0, catalog::jade_monolith());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let pest = ready(&mut g, 2, catalog::pestilence());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![pest])]));
+    activate_as(&mut g, 0, monolith, 0, &[perm(bear)]);
+    let life = g.players[0].life;
+    activate_as(&mut g, 2, pest, 0, &[]);
+    assert_eq!(g.players[0].life, life - 2, "its point plus the bear's");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0));
+}
+
+/// Kor Chant — CR 614.9: "all damage … this turn" from the chosen source is
+/// redirected every time, not only the first; two Pestilence activations
+/// leave the bear untouched and put four on the Hill Giant.
+#[test]
+fn kor_chant_redirects_all_of_the_chosen_sources_damage_this_turn() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let pest = ready(&mut g, 2, catalog::pestilence());
+    let chant = g.add_card_to_hand(0, catalog::kor_chant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![pest])]));
+    cast_as(&mut g, 0, chant, &[perm(bear), perm(giant)]).expect("chant");
+    activate_as(&mut g, 2, pest, 0, &[]);
+    activate_as(&mut g, 2, pest, 0, &[]);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(0));
+    assert!(g.battlefield_find(giant).is_none(), "2 of its own + 2 redirected");
+}
