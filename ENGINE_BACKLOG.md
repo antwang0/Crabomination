@@ -239,6 +239,26 @@ the handoff.
   Gilanra, Vexing Puzzlebox, Gandalf the White (leave half), Swashbuckler Extraordinaire, Teferi Temporal
   Pilgrim, Livio.
 
+## FIXED/OPEN 2026-10-25 (Commander run, `013mwV6T`) — shipped-card residuals ranked by seated-deck count
+
+Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the 6,080 seats (505 cards, 2,086 decks).
+- **FIXED (class, CR 106.6):** `SpendRestriction::MarksCast(u8)` + `Predicate::CastWithMarkedMana { mark }` — a
+  "using mana produced by this" rider reads only its own mark (Gilanra 1, Barracks of the Thousand 0; 61 decks).
+- **FIXED (engine):** an attachment's `EnchantedBySource` combat-damage trigger fires when it is granted for a while
+  and on any attached permanent (`combat.rs`) — Vorpal Sword's {5}{B}{B}{B} (42).
+- **FIXED (engine):** `WardCost::DamageSourcePower` — Combustion Man's punisher is damage, not life (14).
+- **FIXED (engine):** `SelectionRequirement::HasTapAbility` — Magewright's Stone (36).
+- **FIXED (engine):** `ExileReturnToOwnerNextEndStep` flickers a twice-named permanent once.
+- **FIXED (cards):** Livio's simultaneous return (52), Lae'zel's Acrobatics rolls over the exiled group (51), Paradox
+  Haze enchants a player (41; bot self-targets it), Mirror Shield's deathtouch trigger (16), Andúril's legendary-bearer
+  attacking Spirits (13), Reckoner Bankbuster's Pilot crews as power 3 (21; cube pool too).
+- **Stale residual docs:** Liliana of the Dark Realms (58), Beorn's Hospitality (29), Ms. Marvel (11) — already a free
+  choice / live P/T, tests pinned.
+- **OPEN, next by count:** Swashbuckler Extraordinaire (57; needs "sacrifice any number, then up to that many targets"),
+  Vexing Puzzlebox (48), Everflowing Well / Encroaching Mycosynth / Contagion Engine (32 each), Bilbo's Gambit (31),
+  Agadeem's Awakening (29), Sakashima's Protege (27). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
+  helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.
+
 ## FIXED/OPEN 2026-10-24 (Commander run, `01M2Ffkh`) — 26 seats, a stale layer memo, a sacrifice-cost draw loop, a trigger-stack hang
 
 - **FIXED (class, the layer gather memo):** `gather_key` did not witness the turn registries layer leaves read

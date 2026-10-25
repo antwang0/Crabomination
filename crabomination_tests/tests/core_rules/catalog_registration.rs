@@ -3611,6 +3611,11 @@ fn every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket() {
         ("DealsDamage", "AnyPlayer", "ps"),
         ("DealsDamageToPlayer", "YourControl", "ps"),
         ("DealsDamageToPlayer", "AnyPlayer", "ps"),
+        // Phase 1b's attachment walk (`combat.rs`): an Aura's or Equipment's
+        // printed `EnchantedBySource` trigger and one granted it for a while
+        // (Vorpal Sword's activation), 2026-10-25.
+        ("DealsCombatDamage", "EnchantedBySource", "pi"),
+        ("DealsCombatDamageToPlayer", "EnchantedBySource", "pi"),
         // The three combat listener walks: printed + instance since (-277).
         ("ControllerDealtCombatDamage", "SelfSource", "pi"),
         ("YouAttack", "*", "pi"),

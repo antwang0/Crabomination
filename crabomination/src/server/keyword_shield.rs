@@ -88,12 +88,19 @@ pub(super) fn shelter_exile_answer(state: &GameState, seat: usize, source: CardI
 
 /// "Return all exiled cards [matching] to the battlefield under their owners'
 /// control" (Livio's second ability, the way back from [`shelter_exile`]):
-/// the filter, for an untargeted `ForEach` over exile.
+/// the filter, for an untargeted `Move` (or `ForEach`) over exile.
 pub(super) fn exile_mass_return(e: &Effect) -> Option<&crate::card::SelectionRequirement> {
-    let Effect::ForEach { selector: Selector::EachMatching { zone: crate::effect::ZoneRef::Exile, filter }, body } = e else {
-        return None;
-    };
-    matches!(&**body, Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Battlefield { .. } }).then_some(filter)
+    match e {
+        Effect::Move {
+            what: Selector::EachMatching { zone: crate::effect::ZoneRef::Exile, filter },
+            to: ZoneDest::Battlefield { .. },
+        } => Some(filter),
+        Effect::ForEach { selector: Selector::EachMatching { zone: crate::effect::ZoneRef::Exile, filter }, body } => {
+            matches!(&**body, Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Battlefield { .. } })
+                .then_some(filter)
+        }
+        _ => None,
+    }
 }
 
 /// An [`exile_mass_return`] is worth it when it brings back at least one of
