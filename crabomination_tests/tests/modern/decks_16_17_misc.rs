@@ -1609,6 +1609,26 @@ fn robber_of_the_rich_exiles_top_when_defender_has_more_cards() {
     assert!(exiled.is_some(), "the top card is exiled by Robber's attack trigger");
     assert!(exiled.unwrap().may_play_until.is_some(),
         "the exiled card carries a may-play permission");
+    // "During any turn you attacked with a Rogue", with mana of any colour —
+    // a later turn without a Rogue attack can't; one with it can.
+    let mut events = Vec::new();
+    g.do_cleanup(&mut events);
+    g.battlefield_find_mut(robber).unwrap().attacked_this_turn = false;
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let cast = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: top, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    assert!(cast(&mut g).is_err(), "no Rogue attacked this turn");
+    g.battlefield_find_mut(robber).unwrap().attacked_this_turn = true;
+    let life = g.players[1].life;
+    cast(&mut g).expect("a Rogue attacked: {U} pays the {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "one of the two {{U}} paid — not a free cast");
 }
 
 #[test]
