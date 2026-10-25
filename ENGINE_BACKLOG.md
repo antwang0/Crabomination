@@ -359,6 +359,9 @@ The EDHREC well is dry (`01Y6ZRFx`), so this pass mined bugs and closed 🟡 row
   so losing all abilities took the types; now `EveryCreatureType` / `GainAllCreatureTypes` (layer 4) on Undercover
   Skrull, Runed Stalactite, Amorphous Axe, Arachnoform, Mutavault, Faceless Haven, Soulstone Sanctuary (found by a
   `dump_cards --grep Changeling` × oracle scan; Mistform Ultimus's CDA and token reminder text are right as is).
+- **Last:** Azra Oddsmaker's creature is chosen on resolution among every creature (CR 608.2d). Audit sweep 10707
+  (fresh audit build at `562e1a861`, 4/6 seats, `CRAB_POD_CONCEDE=20 CRAB_POD_FUZZ=300`, 2,540 games): 1 undecided —
+  Divine Intervention's printed "the game is a draw"; 0 panics.
 - **OPEN, priced:** Karn, Living Legacy (21 decks) needs an emblem that is a damage *source* (`Emblem` has no id);
   Jacob Hauken's free play needs a your-turn gate and land counting on `OneCastPerTurnAmongGranted`; Wizard's
   Rockets' X mana ability (no X on a mana ability); `ActivateLoyaltyAbility` extra targets (human seats only).
