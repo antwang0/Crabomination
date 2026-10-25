@@ -19176,6 +19176,17 @@ static DECKS: &[Factory] = &[
     super::decks::chandras_outburst,
     super::decks::chandras_flame_wave,
     super::decks::chandras_revolution,
+    super::decks::rustic_clachan,
+    super::decks::ballynock_cohort,
+    super::decks::ballynock_trapper,
+    super::decks::cenns_heir,
+    super::decks::goldmeadow_dodger,
+    super::decks::goldmeadow_stalwart,
+    super::decks::kithkin_rabble,
+    super::decks::kithkin_zephyrnaut,
+    super::decks::order_of_the_golden_cricket,
+    super::decks::thoughtweft_trio,
+    super::decks::surge_of_thoughtweft,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -628,3 +628,67 @@ fn chandra_pyromaster_ultimate_casts_three_copies() {
     loyalty(&mut g, pm, 2, None, None);
     assert_eq!(g.players[1].life, life - 9, "three Bolts at the opponent");
 }
+
+/// Kithkin Rabble counts your white permanents; Rustic Clachan enters tapped
+/// unless a Kithkin card is in hand to reveal.
+#[test]
+fn kithkin_rabble_counts_white_and_clachan_reveals_a_kithkin() {
+    let mut g = pod(2);
+    let rabble = ready(&mut g, 0, catalog::kithkin_rabble());
+    ready(&mut g, 0, catalog::savannah_lions());
+    assert_eq!(pt(&g, rabble), (2, 2), "itself and the Lions");
+    let c1 = g.add_card_to_hand(0, catalog::rustic_clachan());
+    g.perform_action(GameAction::PlayLand(c1)).expect("land");
+    assert!(g.battlefield_find(c1).unwrap().tapped, "no Kithkin to reveal");
+    let mut g = pod(2);
+    g.add_card_to_hand(0, catalog::cenns_heir());
+    let c2 = g.add_card_to_hand(0, catalog::rustic_clachan());
+    g.perform_action(GameAction::PlayLand(c2)).expect("land");
+    assert!(!g.battlefield_find(c2).unwrap().tapped, "revealed Cenn's Heir");
+}
+
+/// Cenn's Heir grows by each other attacking Kithkin.
+#[test]
+fn cenns_heir_grows_with_attacking_kithkin() {
+    let mut g = pod(2);
+    let heir = ready(&mut g, 0, catalog::cenns_heir());
+    let a = ready(&mut g, 0, catalog::goldmeadow_dodger());
+    let b = ready(&mut g, 0, catalog::ballynock_cohort());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(
+        [heir, a, b].iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, heir), (3, 3));
+}
+
+/// Kinship — a Kithkin on top gives Kithkin Zephyrnaut +2/+2, flying and
+/// vigilance at your upkeep.
+#[test]
+fn kithkin_zephyrnaut_kinship() {
+    let mut g = pod(2);
+    let z = ready(&mut g, 0, catalog::kithkin_zephyrnaut());
+    g.add_card_to_library(0, catalog::cenns_heir());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, z), (4, 4));
+    assert!(g.computed_permanent(z).unwrap().keywords().contains(&Keyword::Flying));
+}
+
+/// Ballynock Trapper may untap whenever you cast a white spell.
+#[test]
+fn ballynock_trapper_untaps_on_a_white_spell() {
+    let mut g = pod(2);
+    let t = ready(&mut g, 0, catalog::ballynock_trapper());
+    g.battlefield_find_mut(t).unwrap().tapped = true;
+    g.add_card_to_library(0, catalog::plains());
+    let surge = g.add_card_to_hand(0, catalog::surge_of_thoughtweft());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    cast(&mut g, surge).expect("cast");
+    assert!(!g.battlefield_find(t).unwrap().tapped);
+    assert_eq!(g.players[0].hand.len(), hand, "Surge left, and a Kithkin drew one");
+}

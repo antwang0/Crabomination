@@ -1,5 +1,5 @@
 //! Commander: 2026-10-24 (`01M2Ffkh`) — the Isu the Abominable, Scarlet Witch,
-//! Stegron, Nael, Verazol and Chandra, Fire of Kaladesh decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
+//! Stegron, Nael, Verazol, Chandra, Fire of Kaladesh and Brigid decks' closers. Tests in `tests/recent_b/cmdr_01m2_a.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -1182,4 +1182,203 @@ pub fn chandras_revolution() -> CardDefinition {
             Effect::SkipNextUntap { what: Selector::Target(1) },
         ]),
     )
+}
+
+// ── Brigid, Hero of Kinsbaile's deck ────────────────────────────────────────
+
+fn kithkin() -> R {
+    R::HasCreatureType(CreatureType::Kithkin)
+}
+
+fn white() -> R {
+    R::HasColor(crate::mana::Color::White)
+}
+
+/// Rustic Clachan — land. Enters tapped unless you reveal a Kithkin card from
+/// hand. {T}: add {W}. Reinforce 1—{1}{W}.
+pub fn rustic_clachan() -> CardDefinition {
+    CardDefinition {
+        name: "Rustic Clachan",
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::Reinforce(1, cost(&[generic(1), w()]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::OfColor(crate::mana::Color::White, Value::ONE),
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As this land enters, you may reveal a Kithkin card from your hand. If you don't, this land enters tapped.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Hand,
+                    filter: kithkin(),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ballynock Cohort — {2}{W} 2/2 first strike Kithkin Soldier; +1/+1 while you
+/// control another white creature.
+pub fn ballynock_cohort() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 as long as you control another white creature.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Creature.and(white()).and(R::OtherThanSource).and(R::ControlledByYou),
+                )),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+            },
+        }],
+        ..plain_creature("Ballynock Cohort", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Ballynock Trapper — {3}{W} 2/2 Kithkin Soldier. {T}: tap target creature;
+/// your white spells may untap it.
+pub fn ballynock_trapper() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellMatches(white())),
+            effect: Effect::MayDo {
+                description: "Untap Ballynock Trapper?".into(),
+                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+            },
+        }],
+        ..plain_creature("Ballynock Trapper", cost(&[generic(3), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Cenn's Heir — {1}{W} 1/1 Kithkin Soldier. Attacking, +1/+1 per other
+/// attacking Kithkin until end of turn.
+pub fn cenns_heir() -> CardDefinition {
+    let n = || Value::CountOf(Box::new(Selector::EachPermanent(kithkin().and(R::IsAttacking).and(R::OtherThanSource))));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT { what: Selector::This, power: n(), toughness: n(), duration: Duration::EndOfTurn },
+        }],
+        ..plain_creature("Cenn's Heir", cost(&[generic(1), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Goldmeadow Dodger — {W} 1/1 Kithkin Rogue; creatures with power 4 or
+/// greater can't block it.
+pub fn goldmeadow_dodger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::PowerAtLeast(4)))],
+        ..plain_creature("Goldmeadow Dodger", cost(&[w()]), vec![CreatureType::Kithkin, CreatureType::Rogue], 1, 1)
+    }
+}
+
+/// Goldmeadow Stalwart — {W} 2/2 Kithkin Soldier; reveal a Kithkin card from
+/// hand or pay {3} as an additional cost.
+pub fn goldmeadow_stalwart() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::RevealFromHandOrPay { filter: kithkin(), pay: 3 }],
+        ..plain_creature("Goldmeadow Stalwart", cost(&[w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Kithkin Rabble — {3}{W} */* vigilance Kithkin: your white permanents.
+pub fn kithkin_rabble() -> CardDefinition {
+    let n = || Value::CountOf(Box::new(Selector::EachPermanent(white().and(R::ControlledByYou))));
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Kithkin Rabble's power and toughness are each equal to the number of white permanents you control.",
+            effect: StaticEffect::SelfBasePtFromValue { power: n(), toughness: n() },
+        }],
+        ..plain_creature("Kithkin Rabble", cost(&[generic(3), w()]), vec![CreatureType::Kithkin], 0, 0)
+    }
+}
+
+/// Kithkin Zephyrnaut — {2}{W} 2/2 Kithkin Soldier. Kinship: a top card that
+/// shares a creature type with it gives +2/+2, flying and vigilance this turn.
+pub fn kithkin_zephyrnaut() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::MatchingAmong {
+                    inner: Box::new(Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE }),
+                    filter: kithkin().or(R::HasCreatureType(CreatureType::Soldier)),
+                }),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..plain_creature("Kithkin Zephyrnaut", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Order of the Golden Cricket — {1}{W} 2/2 Kithkin Knight. Attacking, you may
+/// pay {W} for flying until end of turn.
+pub fn order_of_the_golden_cricket() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {W} for flying?".into(),
+                mana_cost: cost(&[w()]),
+                body: Box::new(Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn }),
+                else_: None,
+            },
+        }],
+        ..plain_creature("Order of the Golden Cricket", cost(&[generic(1), w()]), vec![CreatureType::Kithkin, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Thoughtweft Trio — {2}{W}{W} 5/5 first strike, vigilance Kithkin Soldier.
+/// Champion a Kithkin; it can block any number of creatures.
+pub fn thoughtweft_trio() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance, Keyword::CanBlockAnyNumber],
+        triggered_abilities: vec![etb(Effect::Champion { filter: kithkin() })],
+        ..plain_creature("Thoughtweft Trio", cost(&[generic(2), w(), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 5, 5)
+    }
+}
+
+/// Surge of Thoughtweft — {1}{W} Kindred instant — Kithkin. Your creatures get
+/// +1/+1 until end of turn; with a Kithkin, draw a card.
+pub fn surge_of_thoughtweft() -> CardDefinition {
+    CardDefinition {
+        name: "Surge of Thoughtweft",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Kindred, CardType::Instant],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kithkin], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(kithkin().and(R::ControlledByYou))),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
 }
