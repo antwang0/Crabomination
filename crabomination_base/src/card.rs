@@ -2014,6 +2014,10 @@ pub enum Keyword {
     /// CR 702.11d — "hexproof from instants" (Elenda, Saint of Dusk): an
     /// opponent's instant spell can't target it.
     HexproofFromInstants,
+    /// CR 702.11d — "hexproof from planeswalkers" (Eradicator Valkyrie): an
+    /// opponent's planeswalker spell, or an ability whose source is a
+    /// planeswalker (a loyalty ability), can't target it.
+    HexproofFromPlaneswalkers,
     Shroud,
     CantBeCountered,
     /// CR 117.x — "If X is N or more, this spell can't be countered."

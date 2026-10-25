@@ -10263,6 +10263,9 @@ impl GameState {
                         Keyword::HexproofFromInstants => {
                             card.definition.card_types.contains(&crate::card::CardType::Instant)
                         }
+                        Keyword::HexproofFromPlaneswalkers => {
+                            card.definition.card_types.contains(&crate::card::CardType::Planeswalker)
+                        }
                         Keyword::HexproofFromArtifactsCreaturesEnchantments => {
                             card.definition.card_types.iter().any(|t| {
                                 matches!(
@@ -17242,6 +17245,8 @@ impl GameState {
                     | Keyword::HexproofFromMulticolored
                     | Keyword::HexproofFromItsColors
                     | Keyword::HexproofExceptColors(_)
+                    | Keyword::HexproofFromArtifactsCreaturesEnchantments
+                    | Keyword::HexproofFromPlaneswalkers
                     | Keyword::Protection(_)
                     | Keyword::ProtectionFromCreatures
                     | Keyword::ProtectionFromCreatureType(_)
@@ -17345,6 +17350,7 @@ impl GameState {
                     | Keyword::ProtectionFromEverything
                     | Keyword::HexproofExceptColors(_)
                     | Keyword::HexproofFromArtifactsCreaturesEnchantments
+                    | Keyword::HexproofFromPlaneswalkers
             )
         }) && !(src_is_opponent && (printed_hexproof_color || turn_hexproof_color))
         {
@@ -17378,6 +17384,7 @@ impl GameState {
                     .card_types()
                     .iter()
                     .any(|t| matches!(t, CardType::Artifact | CardType::Creature | CardType::Enchantment)),
+                Keyword::HexproofFromPlaneswalkers => src.card_types().contains(&CardType::Planeswalker),
                 _ => false,
             }) {
                 return true;

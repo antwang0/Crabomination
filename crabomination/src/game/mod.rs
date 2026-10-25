@@ -29857,6 +29857,11 @@ impl GameState {
         // at the controller's own permanent.
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
+            // CR 702.16c / 702.11d — protection and "hexproof from [quality]"
+            // read the ability's source, as an activated ability's do.
+            if self.ability_target_has_protection(tgt, card_id) {
+                return Err(GameError::TargetHasProtection(card_id));
+            }
             if let Some(filter) = ability.effect.target_filter_for_slot(0)
                 && !self.evaluate_requirement_static(filter, tgt, p, Some(card_id))
             {

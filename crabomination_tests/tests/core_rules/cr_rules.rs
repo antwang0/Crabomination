@@ -3393,6 +3393,24 @@ fn cr_702_16c_ability_cant_target_protection_from_source_color() {
     }).expect("can ping an unprotected creature");
 }
 
+/// CR 702.16c — a loyalty ability is an ability of its planeswalker: Liliana
+/// of the Dark Realms (black) can't aim her −3 at Paladin en-Vec (protection
+/// from black and red). The loyalty path used to check only hexproof/shroud.
+#[test]
+fn cr_702_16c_loyalty_ability_cant_target_protection_from_its_walkers_color() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let lili = g.add_card_to_battlefield(0, catalog::liliana_of_the_dark_realms());
+    g.battlefield_find_mut(lili).unwrap().counters.insert(CounterType::Loyalty, 10);
+    let paladin = g.add_card_to_battlefield(1, catalog::paladin_en_vec());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let minus = |t| GameAction::ActivateLoyaltyAbility { card_id: lili, ability_index: 1, target: Some(Target::Permanent(t)), x_value: None };
+    assert!(g.perform_action(minus(paladin)).is_err(), "protection from black");
+    g.perform_action(minus(bear)).expect("an unprotected creature");
+}
+
 // ── CR 704.5n / 303.4f — illegally-attached Aura SBA ──────────────────────────
 
 /// An "enchant creature you control" Aura whose host changes controllers is
