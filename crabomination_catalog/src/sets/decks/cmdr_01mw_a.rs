@@ -2456,6 +2456,7 @@ pub fn druid_of_the_emerald_grove() -> CardDefinition {
         filter: basic(),
         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
     };
+    let one_search = |a, b| Effect::OneSearch { body: Box::new(Effect::Seq(vec![a, b])) };
     CardDefinition {
         name: "Druid of the Emerald Grove",
         cost: cost(&[generic(3), g()]),
@@ -2470,9 +2471,9 @@ pub fn druid_of_the_emerald_grove() -> CardDefinition {
             reroll_at_most: 0,
             ignore_lowest: 0,
             results: vec![
-                (1, 9, Effect::Seq(vec![to_hand(), to_hand()])),
-                (10, 19, Effect::Seq(vec![to_bf(), to_hand()])),
-                (20, 20, Effect::Seq(vec![to_bf(), to_bf()])),
+                (1, 9, one_search(to_hand(), to_hand())),
+                (10, 19, one_search(to_bf(), to_hand())),
+                (20, 20, one_search(to_bf(), to_bf())),
             ],
             on_doubles: None,
         })],

@@ -2010,7 +2010,7 @@ pub fn flare_of_cultivation() -> CardDefinition {
         name: "Flare of Cultivation",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
@@ -2024,7 +2024,7 @@ pub fn flare_of_cultivation() -> CardDefinition {
                 filter: R::IsBasicLand,
                 to: ZoneDest::Hand(PlayerRef::You),
             },
-        ]),
+        ])) },
         alternative_cost: Some(flare_cost(Color::Green)),
         ..Default::default()
     }

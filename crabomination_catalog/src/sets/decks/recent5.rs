@@ -379,7 +379,7 @@ pub fn garruks_uprising() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::If {
                     cond: Predicate::SelectorCountAtLeast {
-                        sel: Selector::EachPermanent(power4()),
+                        sel: Selector::EachPermanent(power4().and(SelectionRequirement::ControlledByYou)),
                         n: Value::ONE,
                     },
                     then: Box::new(Effect::Draw {

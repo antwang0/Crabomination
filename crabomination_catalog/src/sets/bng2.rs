@@ -932,7 +932,7 @@ pub fn peregrination() -> CardDefinition {
         "Peregrination",
         cost(&[generic(3), g()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
+        Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
@@ -950,7 +950,7 @@ pub fn peregrination() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::ONE,
             },
-        ]),
+        ])) },
     )
 }
 

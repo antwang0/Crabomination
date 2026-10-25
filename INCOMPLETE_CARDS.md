@@ -2057,6 +2057,13 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |
 | 🟡 Stinging Study | with two commanders X is the greater mana value, not the one you choose (its ruling) | `Value::GreatestCommanderManaValueInPlayOrCommandZone`; partner pairs only |
+| 🟡 Black Market Connections | "choose one or more" always takes the Treasure and the draw (two modes) | `ChooseN { picks: [0, 1] }` asks for exactly `picks.len()` modes; there is no "one or more" count |
+| 🟡 Chrome Mox | the imprinted card is the first nonartifact, nonland card in hand, not the player's pick (so the colour isn't chosen) | `Selector::take(CardsInZone{Hand}, 1)` keeps the first match |
+| 🟡 Urza's Saga | an artifact with no mana cost that isn't a land (Lotus Bloom) still counts as "{0}" | the filter is `Nonland & Colorless & ManaValueAtMost(1)`; no leaf reads `no_mana_cost` |
+| 🟡 Mystic Sanctuary | "when this land enters untapped" fires on any entry and re-checks four Islands on resolution | the ETB condition is the Island count, not the entered-untapped fact |
+| 🟡 Skullclamp | the draw is the equipped creature's controller's, not the Skullclamp controller's (they differ after a steal) | the dies trigger is granted to the creature with `Selector::You` |
+| 🟡 Myriad Landscape | the second basic's "shares a land type" reads `LastMoved`, stale when the first pick found nothing | `SharesLandTypeWithLastMoved` |
+| 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
 | ~~Lochmere Serpent~~ ✅ | fixed 2026-10-25: exactly five targets, all in one opponent's graveyard (`SameGraveyardAsTargetSlot(0)`, the 2019-10-04 ruling) — `lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard` | — |
 | 🟡 Mystic Reflection | a token model that left the battlefield before the entries copies nothing (a card model copies from its new zone, which is its printed self) | `Effect::NextEntriesEnterAsCopy` stores the model's id, not its last-known copiable values |
 | 🟡 Angel of Jubilation | also bars a Phyrexian pip's life in a non-cast payment (a ward "pay {U/P}"), which the printed "to cast spells or activate abilities" doesn't | `cost_life_payable` gates the shared Phyrexian payment ladder |

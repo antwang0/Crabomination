@@ -6681,7 +6681,7 @@ pub fn sun_titan() -> CardDefinition {
 /// them onto the battlefield tapped, then shuffle." (M11)
 pub fn primeval_titan() -> CardDefinition {
     let fetch = || {
-        Effect::Seq(vec![
+        Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
@@ -6698,7 +6698,7 @@ pub fn primeval_titan() -> CardDefinition {
                     tapped: true,
                 },
             },
-        ])
+        ])) }
     };
     CardDefinition {
         name: "Primeval Titan",
@@ -6915,7 +6915,7 @@ pub fn merciless_executioner() -> CardDefinition {
 /// battlefield tapped, then shuffle." (THS)
 pub fn burnished_hart() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    let fetch = Effect::Seq(vec![
+    let fetch = Effect::OneSearch { body: Box::new(Effect::Seq(vec![
         Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
@@ -6932,7 +6932,7 @@ pub fn burnished_hart() -> CardDefinition {
                 tapped: true,
             },
         },
-    ]);
+    ])) };
     CardDefinition {
         name: "Burnished Hart",
         cost: cost(&[generic(3)]),

@@ -5858,7 +5858,7 @@ pub fn aangs_journey() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         subtypes: lesson(),
         keywords: vec![Keyword::Kicker(cost(&[generic(2)]))],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
@@ -5877,7 +5877,7 @@ pub fn aangs_journey() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(2),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

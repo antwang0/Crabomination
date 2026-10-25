@@ -246,12 +246,12 @@ pub fn foresight() -> CardDefinition {
         name: "Foresight",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Exile },
             Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Exile },
             Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Exile },
             cantrip_next_upkeep(),
-        ]),
+        ])) },
         ..Default::default()
     }
 }

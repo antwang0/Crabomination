@@ -747,14 +747,14 @@ pub fn navigation_orb() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::Seq(vec![
+            effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: basic_or_gate(),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                 },
                 Effect::Search { who: PlayerRef::You, filter: basic_or_gate(), to: ZoneDest::Hand(PlayerRef::You) },
-            ]),
+            ])) },
             ..Default::default()
         }],
         ..Default::default()

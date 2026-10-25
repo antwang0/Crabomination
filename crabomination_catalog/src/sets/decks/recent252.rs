@@ -65,7 +65,7 @@ pub fn flourishing_bloom_kin() -> CardDefinition {
         keywords: vec![Keyword::Disguise(cost(&[generic(4), g()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
+            effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Land.and(R::HasLandType(LandType::Forest)),
@@ -79,7 +79,7 @@ pub fn flourishing_bloom_kin() -> CardDefinition {
                     filter: R::Land.and(R::HasLandType(LandType::Forest)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-            ]),
+            ])) },
         }],
         ..Default::default()
     }

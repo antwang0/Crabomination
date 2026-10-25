@@ -504,7 +504,11 @@ pub fn urzas_saga() -> CardDefinition {
                 3,
                 Effect::Search {
                     who: PlayerRef::You,
+                    // "Mana cost {0} or {1}" — the cost itself (2021 ruling):
+                    // no coloured pip, and a land has no mana cost at all.
                     filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::Colorless)
                         .and(SelectionRequirement::ManaValueAtMost(1))
                         .and(SelectionRequirement::HasXInCost.negate()),
                     to: ZoneDest::Battlefield {

@@ -431,7 +431,7 @@ pub fn final_parting() -> CardDefinition {
         name: "Final Parting",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Any,
@@ -442,7 +442,7 @@ pub fn final_parting() -> CardDefinition {
                 filter: SelectionRequirement::Any,
                 to: ZoneDest::Graveyard,
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

@@ -523,7 +523,7 @@ pub fn fork_in_the_road() -> CardDefinition {
         "Fork in the Road",
         cost(&[generic(1), g()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
+        Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
@@ -534,7 +534,7 @@ pub fn fork_in_the_road() -> CardDefinition {
                 filter: R::IsBasicLand,
                 to: ZoneDest::Graveyard,
             },
-        ]),
+        ])) },
     )
 }
 

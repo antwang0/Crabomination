@@ -217,14 +217,16 @@ fn fetch_two_basics(share_type: bool) -> Effect {
             tapped: true,
         },
     };
-    Effect::Seq(vec![
-        search(SelectionRequirement::IsBasicLand),
-        search(if share_type {
-            SelectionRequirement::IsBasicLand.and(SelectionRequirement::SharesLandTypeWithLastMoved)
-        } else {
-            SelectionRequirement::IsBasicLand
-        }),
-    ])
+    Effect::OneSearch {
+        body: Box::new(Effect::Seq(vec![
+            search(SelectionRequirement::IsBasicLand),
+            search(if share_type {
+                SelectionRequirement::IsBasicLand.and(SelectionRequirement::SharesLandTypeWithLastMoved)
+            } else {
+                SelectionRequirement::IsBasicLand
+            }),
+        ])),
+    }
 }
 
 // ── Onslaught cycling lands (mono, enter tapped, Cycling {C}) ──────────────

@@ -2263,7 +2263,7 @@ pub fn corpse_harvester() -> CardDefinition {
             sac_other_filter: Some((R::Creature, 1)),
             // "Sacrifice a creature" — this one included.
             sac_other_may_be_source: true,
-            effect: Effect::Seq(vec![
+            effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::HasCreatureType(CreatureType::Zombie),
@@ -2274,7 +2274,7 @@ pub fn corpse_harvester() -> CardDefinition {
                     filter: R::Land.and(R::HasLandType(crate::card::LandType::Swamp)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-            ]),
+            ])) },
             ..Default::default()
         }],
         ..creature(

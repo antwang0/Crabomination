@@ -790,3 +790,96 @@ fn heartless_act_removes_the_counters_that_help_the_creatures_controller() {
     assert_eq!(run(1), (0, 1), "an opponent's creature keeps its stun counter");
     assert_eq!(run(0), (2, 0), "your own keeps its +1/+1 counters");
 }
+
+/// Cultivate — CR 701.23: "search for up to two basic land cards" is one
+/// search, so Leonin Arbiter's {2} is paid once: with exactly the tax left
+/// over, both basics are found.
+#[test]
+fn cultivate_is_one_search_under_leonin_arbiter() {
+    let mut g = pod(3);
+    ready(&mut g, 1, catalog::leonin_arbiter());
+    let lands: Vec<CardId> = (0..3).map(|_| g.add_card_to_library(0, catalog::forest())).collect();
+    let cultivate = g.add_card_to_hand(0, catalog::cultivate());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cultivate,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cultivate");
+    drain_stack(&mut g);
+    let found = lands.iter().filter(|id| !g.players[0].library.iter().any(|c| c.id == **id)).count();
+    assert_eq!(found, 2, "one tax, two picks");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+/// Urza's Saga III — "mana cost {0} or {1}" is the cost itself (2021
+/// ruling): a {W} artifact (Esper Sentinel) and an artifact land (no mana
+/// cost) aren't eligible; Ornithopter is.
+#[test]
+fn urzas_saga_tutors_only_a_zero_or_one_generic_mana_cost() {
+    let run = |with_orni: bool| -> Vec<&'static str> {
+        let mut g = pod(2);
+        let saga = g.add_card_to_hand(0, catalog::urzas_saga());
+        g.add_card_to_library(0, catalog::esper_sentinel());
+        g.add_card_to_library(0, catalog::seat_of_the_synod());
+        if with_orni {
+            g.add_card_to_library(0, catalog::ornithopter());
+        }
+        g.perform_action(GameAction::PlayLand(saga)).expect("land");
+        drain_stack(&mut g);
+        g.saga_advance(saga);
+        drain_stack(&mut g);
+        g.saga_advance(saga);
+        drain_stack(&mut g);
+        g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.definition.name).collect()
+    };
+    let none = run(false);
+    assert!(!none.contains(&"Esper Sentinel") && !none.contains(&"Seat of the Synod"), "{none:?}");
+    assert!(run(true).contains(&"Ornithopter"));
+}
+
+/// Garruk's Uprising — "if YOU control a creature with power 4 or greater":
+/// an opponent's Serra Angel doesn't draw you a card.
+#[test]
+fn garruks_uprising_counts_only_your_creatures() {
+    let draws = |mine: bool| {
+        let mut g = pod(3);
+        ready(&mut g, if mine { 0 } else { 1 }, catalog::serra_angel());
+        g.add_card_to_library(0, catalog::plains());
+        let up = g.add_card_to_hand(0, catalog::garruks_uprising());
+        let before = g.players[0].hand.len();
+        cast_as(&mut g, 0, up, &[]).expect("uprising");
+        g.players[0].hand.len() + 1 - before
+    };
+    assert_eq!(draws(false), 0, "an opponent's creature");
+    assert_eq!(draws(true), 1);
+}
+
+/// Generous Gift — "destroy target permanent": a player is not a legal target.
+#[test]
+fn generous_gift_cannot_target_a_player() {
+    let mut g = pod(3);
+    let gift = g.add_card_to_hand(0, catalog::generous_gift());
+    assert!(cast_as(&mut g, 0, gift, &[Target::Player(1)]).is_err());
+}
+
+/// Assassin's Trophy — "ITS CONTROLLER may search": a stolen permanent's
+/// basic goes to the player who controlled it, not its owner.
+#[test]
+fn assassins_trophy_ramps_the_destroyed_permanents_controller() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    let trophy = g.add_card_to_hand(2, catalog::assassins_trophy());
+    g.active_player_idx = 2;
+    g.decider = Box::new(ScriptedDecider::new([]));
+    cast_as(&mut g, 2, trophy, &[perm(bear)]).expect("trophy");
+    let forests = |p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Forest").count();
+    assert_eq!((forests(0), forests(1)), (0, 1));
+}

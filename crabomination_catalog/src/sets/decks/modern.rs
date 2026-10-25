@@ -1924,7 +1924,8 @@ pub fn abrupt_decay() -> CardDefinition {
 
 /// Kodama's Reach — {2}{G} Sorcery — Arcane. Search your library for up to
 /// two basic land cards, put one onto the battlefield tapped and the other
-/// into your hand, then shuffle. Two `Search`es, each declinable.
+/// into your hand, then shuffle. Two `Search`es, each declinable, as one
+/// search (`OneSearch`).
 pub fn kodamas_reach() -> CardDefinition {
     CardDefinition {
         name: "Kodama's Reach",
@@ -1934,7 +1935,7 @@ pub fn kodamas_reach() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Arcane],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
@@ -1948,7 +1949,7 @@ pub fn kodamas_reach() -> CardDefinition {
                 filter: SelectionRequirement::IsBasicLand,
                 to: ZoneDest::Hand(PlayerRef::You),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -5280,10 +5281,10 @@ pub fn explosive_vegetation() -> CardDefinition {
         name: "Explosive Vegetation",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             search_to_battlefield(SelectionRequirement::IsBasicLand, true),
             search_to_battlefield(SelectionRequirement::IsBasicLand, true),
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -5297,10 +5298,10 @@ pub fn circuitous_route() -> CardDefinition {
         name: "Circuitous Route",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             search_to_battlefield(gate_or_basic(), true),
             search_to_battlefield(gate_or_basic(), true),
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -5313,10 +5314,10 @@ pub fn skyshroud_claim() -> CardDefinition {
         name: "Skyshroud Claim",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             search_to_battlefield(SelectionRequirement::HasLandType(LandType::Forest), false),
             search_to_battlefield(SelectionRequirement::HasLandType(LandType::Forest), false),
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -5333,14 +5334,16 @@ pub fn cultivate() -> CardDefinition {
         name: "Cultivate",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-        ]),
+        effect: Effect::OneSearch {
+            body: Box::new(Effect::Seq(vec![
+                search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ])),
+        },
         ..Default::default()
     }
 }
@@ -6725,8 +6728,8 @@ pub fn into_the_roil() -> CardDefinition {
 /// Assassin's Trophy — {B}{G} Instant. "Destroy target permanent an
 /// opponent controls. Its controller may search their library for a basic
 /// land card, put it onto the battlefield, then shuffle." The destroyed
-/// permanent's owner (resolved post-destroy via the graveyard) does the
-/// basic-land search — the printed ramp downside.
+/// permanent's last controller (LKI, CR 608.2h) does the basic-land search —
+/// not its owner, who differs for a stolen permanent.
 pub fn assassins_trophy() -> CardDefinition {
     CardDefinition {
         name: "Assassin's Trophy",
@@ -6739,10 +6742,10 @@ pub fn assassins_trophy() -> CardDefinition {
                 ),
             },
             Effect::Search {
-                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 filter: SelectionRequirement::IsBasicLand,
                 to: ZoneDest::Battlefield {
-                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                     tapped: false,
                 },
             },
@@ -8766,7 +8769,7 @@ pub fn generous_gift() -> CardDefinition {
                 definition: std::sync::Arc::new(elephant),
             },
             Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::Permanent),
             },
         ]),
         ..Default::default()
@@ -10184,7 +10187,7 @@ pub fn harrow() -> CardDefinition {
             filter: SelectionRequirement::Land,
             count: 1,
         }],
-        effect: Effect::Seq(vec![
+        effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
@@ -10201,7 +10204,7 @@ pub fn harrow() -> CardDefinition {
                     tapped: false,
                 },
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -12482,7 +12485,7 @@ pub fn saheeli_rai() -> CardDefinition {
             LoyaltyAbility { condition: None,
                 x_cost: false,
                 loyalty_cost: -7,
-                effect: Effect::Seq(vec![
+                effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                     Effect::Search {
                         who: PlayerRef::You,
                         filter: SelectionRequirement::Artifact,
@@ -12509,7 +12512,7 @@ pub fn saheeli_rai() -> CardDefinition {
                             tapped: false,
                         },
                     },
-                ]),
+                ])) },
             },
         ],
         ..Default::default()
@@ -55996,7 +55999,7 @@ pub fn khalni_heart_expedition() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::Quest, 3)),
             sac_cost: true,
-            effect: Effect::Seq(vec![
+            effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::IsBasicLand,
@@ -56013,7 +56016,7 @@ pub fn khalni_heart_expedition() -> CardDefinition {
                         tapped: true,
                     },
                 },
-            ]),
+            ])) },
             ..Default::default()
         }],
         ..Default::default()

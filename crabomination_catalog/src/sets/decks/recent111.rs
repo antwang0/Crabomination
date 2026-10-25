@@ -230,7 +230,7 @@ pub fn defense_of_the_heart() -> CardDefinition {
                 ),
                 n: Value::Const(3),
             }),
-            effect: Effect::Seq(vec![
+            effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                 Effect::SacrificeSource,
                 Effect::Search {
                     who: PlayerRef::You,
@@ -248,7 +248,7 @@ pub fn defense_of_the_heart() -> CardDefinition {
                         tapped: false,
                     },
                 },
-            ]),
+            ])) },
         }],
         ..Default::default()
     }

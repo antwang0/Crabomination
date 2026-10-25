@@ -861,7 +861,7 @@ pub fn krosan_verge() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
-                effect: Effect::Seq(vec![
+                effect: Effect::OneSearch { body: Box::new(Effect::Seq(vec![
                     Effect::Search {
                         who: PlayerRef::You,
                         filter: R::HasLandType(LandType::Forest),
@@ -872,7 +872,7 @@ pub fn krosan_verge() -> CardDefinition {
                         filter: R::HasLandType(LandType::Plains),
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                     },
-                ]),
+                ])) },
                 ..Default::default()
             },
         ],
