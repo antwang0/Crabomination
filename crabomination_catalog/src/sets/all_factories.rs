@@ -19240,6 +19240,16 @@ static DECKS: &[Factory] = &[
     super::decks::royal_decree,
     super::decks::inquisitors_snare,
     super::decks::starlight,
+    super::decks::dunerider_outlaw,
+    super::decks::knight_of_stromgald,
+    super::decks::lifebane_zombie,
+    super::decks::curse_of_wizardry,
+    super::decks::dystopia,
+    super::decks::gloom,
+    super::decks::leshracs_sigil,
+    super::decks::tourachs_chant,
+    super::decks::noxious_grasp,
+    super::decks::virtues_ruin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
