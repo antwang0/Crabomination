@@ -627,8 +627,8 @@ pub fn keldon_halberdier() -> CardDefinition {
 
 // ── Blitz (CR 702.152) ───────────────────────────────────────────────────────
 
-/// Tenacious Underdog — {1}{B} 3/2 Human Warrior that can't block. Blitz {2}{B}.
-/// (The drew-two-cards graveyard recursion is omitted.)
+/// Tenacious Underdog — {1}{B} 3/2 Human Warrior. Blitz—{2}{B}{B}, pay 2
+/// life, and it may be cast from your graveyard using its blitz ability.
 pub fn tenacious_underdog() -> CardDefinition {
     CardDefinition {
         name: "Tenacious Underdog",
@@ -640,7 +640,6 @@ pub fn tenacious_underdog() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::CantBlock],
         // "Blitz—{2}{B}{B}, Pay 2 life. You may cast this card from your
         // graveyard using its blitz ability."
         alternative_cost: Some(crate::card::AlternativeCost {

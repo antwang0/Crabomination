@@ -157,6 +157,26 @@ fn blitz(g: &mut GameState, id: crabomination::card::CardId) {
     drain_stack(g);
 }
 
+/// Tenacious Underdog prints no blocking restriction (Scryfall oracle): it
+/// blocks a Grizzly Bears like any 3/2.
+#[test]
+fn tenacious_underdog_can_block() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(1, catalog::tenacious_underdog());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(dog, bear)])).expect("the Underdog blocks");
+}
+
 /// A blitzed creature enters with haste, draws a card when it dies, and is
 /// sacrificed at the next end step.
 #[test]
