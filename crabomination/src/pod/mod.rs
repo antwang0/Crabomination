@@ -36960,6 +36960,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRIGID_2_COMMANDERS,
             main: decks::BRIGID_2_MAIN,
         },
+        // Seat 6085: Mavren Fein, Dusk Apostle's EDHREC average deck. `--pod-decks 6085`.
+        PodDeck {
+            name: "Mavren Fein, Dusk Apostle (W)",
+            commanders: decks::MAVREN_FEIN_COMMANDERS,
+            main: decks::MAVREN_FEIN_MAIN,
+        },
     ]
 }
 
@@ -45005,6 +45011,7 @@ mod tests {
             ("Verazol, the Split Current", &[0x21D8]),
             ("Chandra, Fire of Kaladesh", &[0x21D9]),
             ("Brigid, Hero of Kinsbaile", &[0x21DA]),
+            ("Mavren Fein, Dusk Apostle", &[0x21DB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -170873,3 +170873,31 @@ pub const BRIGID_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const MAVREN_FEIN_COMMANDERS: &[CardFactory] = &[mavren_fein_dusk_apostle];
+
+/// **Mavren Fein, Dusk Apostle**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Mavren Fein, Dusk Apostle (EDHREC, fetched 2026-10-25).
+pub const MAVREN_FEIN_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_the_bloodchief, heralds_horn, heraldic_banner, idol_of_oblivion,
+    marble_diamond, oketras_monument, patchwork_banner, pearl_medallion, skullclamp, sol_ring,
+    vanquishers_banner, emeria_the_sky_ruin, myriad_landscape, nykthos_shrine_to_nyx,
+    path_of_ancestry, rogues_passage, voldaren_estate, war_room, windbrisk_heights,
+    adanto_vanguard, bishop_of_binding, bishop_of_rebirth, bishops_soldier, bloodline_pretender,
+    charismatic_conqueror, dusk_legion_duelist, duskborne_skymarcher, elendas_hierophant,
+    exultant_skymarcher, famished_paladin, forerunner_of_the_legion, glorifier_of_dusk,
+    glorifier_of_suffering, inspiring_cleric, martyr_of_dusk, mirror_entity,
+    paladin_of_atonement, paladin_of_the_bloodstained, redemption_choir, sanguine_evangelist,
+    sanguine_glorifier, skyblade_of_the_legion, skymarcher_aspirant, unholy_officiant,
+    vanguard_of_the_rose, welcoming_vampire, anointed_procession, cathars_crusade, cleric_class,
+    intangible_virtue, land_tax, legions_landing, march_of_the_canonized, radiant_destiny,
+    rally_the_ranks, squires_devotion, tocasias_welcome, brave_the_elements, disenchant,
+    flawless_maneuver, generous_gift, path_to_exile, return_to_dust, swords_to_plowshares,
+    unbreakable_formation, vampires_zeal, austere_command, cut_a_deal, dusk_dawn, mass_calcify,
+    queens_commission,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
