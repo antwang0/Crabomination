@@ -1411,6 +1411,16 @@ impl Bot for MctsBot {
         if candidates.is_empty() {
             return self.fallback.next_action(state, seat);
         }
+        // `mcts_land_first`: the land drop the menu offers is made, not
+        // searched. Against "pass" it can't win — the rollout after a pass
+        // plays the land itself later in the turn — so the two arms tie and
+        // pass took the coin flip: 646 of 4,226 own turns with a land in hand
+        // played none (FRA sealed, `mcts-net67-256` mirror, 2026-10-25).
+        if self.cfg.weights.mcts_land_first
+            && let Some((land, _)) = candidates.iter().find(|(a, _)| matches!(a, GameAction::PlayLand(_)))
+        {
+            return Some(land.clone());
+        }
         // Passing is always an option: a search that must spend something
         // will always find a reason to. Score zero — the do-nothing
         // baseline every candidate's score is implicitly measured against.
@@ -1431,6 +1441,30 @@ mod tests {
             toughness: t,
             ..Default::default()
         }
+    }
+
+    /// `mcts_land_first`: the land drop is made before the search. Searched,
+    /// it tied "pass" (the rollout plays the land later anyway) and lost the
+    /// coin flip in 15 % of turns.
+    #[test]
+    fn mcts_land_first_plays_the_land_drop_unsearched() {
+        let mut g = crate::game::two_player_game();
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, crate::catalog::plains());
+            }
+        }
+        g.add_card_to_battlefield(0, crate::catalog::plains());
+        let land = g.add_card_to_hand(0, crate::catalog::plains());
+        g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let mut bot = MctsBot::new(MctsConfig {
+            iterations: 8,
+            weights: EvalWeights { mcts_land_first: true, ..EvalWeights::default() },
+            ..MctsConfig::default()
+        });
+        assert_eq!(super::super::Bot::next_action(&mut bot, &g, 0), Some(GameAction::PlayLand(land)));
     }
 
     /// The pod share leaf runs only past two living hostile seats, so a duel

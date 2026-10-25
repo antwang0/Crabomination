@@ -894,6 +894,23 @@ pub struct EvalWeights {
     /// 51.3 FRA / 50.0 cube; the client pilot (`mcts-net67-taps` vs
     /// `mcts-net67-256`, 100 x 12) 48.9 / 49.8 / 51.5. In `fra-fixes`.
     pub no_empty_attacks: bool,
+    /// MCTS main phase: a land drop the candidate menu offers is played
+    /// before the search instead of being one of its arms. The rollout after
+    /// "pass" plays the land itself later in the turn, so the two arms score
+    /// the same and noise picked pass: the client pilot (`mcts-net67-256`)
+    /// skipped 646 of 4,226 land drops in FRA sealed mirrors, every scored
+    /// pilot none (2026-10-25). With it, 0 of 1,921 missed; the client pilot
+    /// with vs without read 49.5 ±2.2 (FRA, 100 x 12) — 31 % of the misses
+    /// came at 6+ lands, 5 % at 3 or fewer: mostly flood. In `fra-fixes`.
+    pub mcts_land_first: bool,
+    /// The counterspell pickers see a "choose one" instant with a counter
+    /// mode and cast it in that mode. `effect_counters_spells` never looked
+    /// inside `ChooseMode`, so Icy Reception (counter a creature or legendary
+    /// spell unless {3} is paid, or −5/−0) countered nothing: 0 of 212
+    /// windows in FRA sealed mirrors, every cast its pump mode (2026-10-25).
+    /// Vs `dflt` FRA sealed 50.1 / 50.1 (one seeded deck carries it). In
+    /// `fra-fixes`.
+    pub modal_counters: bool,
     /// A pump instant that carries a harmless rider — a keyword, untap or
     /// counter on the pumped creature, or card flow for the caster (Empower
     /// Jace, a draw, scry / surveil, an impulse) — is a combat trick to the
@@ -1495,6 +1512,8 @@ impl EvalWeights {
             attack_trades: false,
             tap_timing: false,
             no_empty_attacks: false,
+            mcts_land_first: false,
+            modal_counters: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1624,6 +1643,8 @@ impl EvalWeights {
             attack_trades: false,
             tap_timing: false,
             no_empty_attacks: false,
+            mcts_land_first: false,
+            modal_counters: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1736,6 +1757,8 @@ impl EvalWeights {
             attack_trades: false,
             tap_timing: false,
             no_empty_attacks: false,
+            mcts_land_first: false,
+            modal_counters: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2885,6 +2908,8 @@ impl EvalWeights {
             attack_trades: false,
             tap_timing: false,
             no_empty_attacks: false,
+            mcts_land_first: false,
+            modal_counters: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3023,6 +3048,8 @@ impl EvalWeights {
             attack_trades: false,
             tap_timing: false,
             no_empty_attacks: false,
+            mcts_land_first: false,
+            modal_counters: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3211,6 +3238,8 @@ impl EvalWeights {
             attack_trades: true,
             tap_timing: true,
             no_empty_attacks: true,
+            mcts_land_first: true,
+            modal_counters: true,
             ..self
         }
     }
@@ -3254,6 +3283,8 @@ impl EvalWeights {
             attack_trades: false,
             tap_timing: false,
             no_empty_attacks: false,
+            mcts_land_first: false,
+            modal_counters: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -4641,7 +4672,7 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
         .iter()
         .filter(|c| {
             c.definition.card_types.contains(&crate::card::CardType::Instant)
-                && effect_counters_spells(&c.definition.effect)
+                && counter_cast_mode(&c.definition.effect, w.modal_counters).is_some()
         })
         .collect();
     // Cheapest answer first — hold the expensive counter for later.
@@ -4669,7 +4700,7 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
                 card_id: c.id,
                 target: Some(crate::game::Target::Permanent(spell_id)),
                 additional_targets: vec![],
-                mode: None,
+                mode: counter_cast_mode(&c.definition.effect, w.modal_counters).flatten(),
                 x_value: None,
             },
         };
@@ -5229,6 +5260,19 @@ fn modal_counter_cast(
         spree_modes: picks.into_iter().map(|p| p.0).collect(),
         x_value: None,
     })
+}
+
+/// How to cast `eff` to counter a spell: `Some(None)` when it counters as
+/// printed, `Some(Some(i))` for a top-level "choose one" whose mode `i`
+/// counters (under `modal`, the `modal_counters` flag), `None` otherwise.
+fn counter_cast_mode(eff: &Effect, modal: bool) -> Option<Option<usize>> {
+    if effect_counters_spells(eff) {
+        return Some(None);
+    }
+    match eff {
+        Effect::ChooseMode(modes) if modal => modes.iter().position(effect_counters_spells).map(Some),
+        _ => None,
+    }
 }
 
 fn effect_counters_spells(eff: &Effect) -> bool {
@@ -22181,7 +22225,7 @@ fn pick_stack_response_scored(state: &GameState, seat: usize, w: &EvalWeights) -
         .iter()
         .filter(|c| {
             c.definition.card_types.contains(&crate::card::CardType::Instant)
-                && effect_counters_spells(&c.definition.effect)
+                && counter_cast_mode(&c.definition.effect, w.modal_counters).is_some()
         })
         .filter(|c| can_afford_in_state_with(state, seat, c, w, &sweep))
         .collect();
@@ -22197,7 +22241,7 @@ fn pick_stack_response_scored(state: &GameState, seat: usize, w: &EvalWeights) -
             card_id: c.id,
             target: Some(Target::Permanent(spell_id)),
             additional_targets: vec![],
-            mode: None,
+            mode: counter_cast_mode(&c.definition.effect, w.modal_counters).flatten(),
             x_value: None,
         };
         let Some(next) = state.accept(action.clone()) else { continue };
@@ -30433,6 +30477,38 @@ mod stack_response_tests {
                 assert_eq!(target, Some(Target::Permanent(wurm)), "targets the 7-drop");
             }
             other => panic!("expected a counterspell cast, got {other:?}"),
+        }
+    }
+
+    /// `modal_counters`: Icy Reception's counter mode answers the Pelakka
+    /// Wurm, cast in mode 0. Flagless it isn't recognised as a counter at all.
+    #[test]
+    fn modal_counters_casts_icy_reception_in_its_counter_mode() {
+        for on in [false, true] {
+            let mut g = two_player_game();
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            let wurm = g.add_card_to_hand(0, catalog::pelakka_wurm());
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 3);
+            g.players[0].mana_pool.add_colorless(5);
+            g.perform_action(GameAction::CastSpell { card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None })
+                .unwrap();
+            let icy = g.add_card_to_hand(1, catalog::icy_reception());
+            for _ in 0..2 {
+                g.add_card_to_battlefield(1, catalog::island());
+            }
+            g.priority.player_with_priority = 1;
+            let w = EvalWeights { modal_counters: on, ..EvalWeights::default() };
+            let picked = pick_stack_response(&g, 1, &w).map(|p| p.action());
+            if on {
+                assert!(
+                    matches!(picked, Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), mode: Some(0), .. })
+                        if card_id == icy && t == wurm),
+                    "{picked:?}"
+                );
+            } else {
+                assert!(picked.is_none(), "flagless: not a counter, {picked:?}");
+            }
         }
     }
 
