@@ -6721,10 +6721,9 @@ pub fn vote_out() -> CardDefinition {
 }
 
 /// Archenemy's Charm — {B}{B}{B} Instant. Choose one — exile target creature or
-/// planeswalker; or return up to two creature/planeswalker cards from your
-/// graveyard to your hand; or put two +1/+1 counters on a creature you control
-/// and it gains lifelink. (Mode 2's per-card targeting is modeled as "up to
-/// two".)
+/// planeswalker; or return one or two target creature and/or planeswalker
+/// cards from your graveyard to your hand; or put two +1/+1 counters on a
+/// creature you control and it gains lifelink.
 pub fn archenemys_charm() -> CardDefinition {
     CardDefinition {
         name: "Archenemy's Charm",
@@ -6736,9 +6735,16 @@ pub fn archenemys_charm() -> CardDefinition {
                         SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                     ),
                 },
-                Effect::ReturnGraveyardCardsToHand {
-                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                    max: Value::Const(2),
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 1,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::InYourGraveyard),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    }),
                 },
                 Effect::Seq(vec![
                     Effect::AddCounter {

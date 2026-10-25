@@ -2359,6 +2359,41 @@ fn archenemys_charm_exiles_creature() {
     assert!(g.battlefield_find(theirs).is_none(), "mode 0 exiles the creature");
 }
 
+/// CR 115.1 / 700.2 — Archenemy's Charm's second mode TARGETS one or two
+/// creature/planeswalker cards in your graveyard: cast with mode 1 and two
+/// Bears named, both return; an opponent's graveyard card isn't a legal target.
+#[test]
+fn archenemys_charm_returns_one_or_two_target_cards() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let cast = |g: &mut GameState, targets: Vec<CardId>| {
+        let charm = g.add_card_to_hand(0, catalog::archenemys_charm());
+        g.players[0].mana_pool.add(Color::Black, 3);
+        let mut ts = targets.into_iter().map(Target::Permanent);
+        g.perform_action(GameAction::CastSpell {
+            card_id: charm,
+            target: ts.next(),
+            additional_targets: ts.collect(),
+            mode: Some(1),
+            x_value: None,
+        })
+    };
+    let eff = catalog::archenemys_charm().effect;
+    let (first, rest) = g.auto_targets_for_effect_all_slots_x(&eff, 0, Some(1), false, None, None);
+    let mut picked: Vec<Target> = first.into_iter().chain(rest).collect();
+    picked.sort_by_key(|t| format!("{t:?}"));
+    assert_eq!(picked, vec![Target::Permanent(a), Target::Permanent(b)], "the bot's walker names both of yours");
+    assert!(cast(&mut g, vec![theirs]).is_err(), "not your graveyard");
+    cast(&mut g, vec![a, b]).expect("two targets");
+    drain_stack(&mut g);
+    assert!([a, b].iter().all(|id| g.players[0].hand.iter().any(|c| c.id == *id)));
+}
+
 /// CR 509.1b — Illvoi Infiltrator can't be blocked once its controller has cast
 /// two or more spells this turn.
 #[test]
