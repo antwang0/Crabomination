@@ -2140,7 +2140,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ziatora's Envoy | the top card can't be played as a land, and a miss is drawn rather than put into hand | `CastTopFreeIfElseDraw` |
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
 | 🟡 Dread | like No Mercy, damage from your own creatures is not watched | `PlayerDamaged` scoped to opponents' sources |
-| 🟡 Mister Hyde, Monster Within | the removed counter is always a +1/+1 counter | `RemoveCountersFromAmongThen` names one kind |
 | ~~Leatherhead, Swamp Stalker~~ ✅ | fixed 2026-10-24: `StaticEffect::SelfEntersWithKeywordCounter` puts the hexproof counter on as she enters (CR 614.1c) — `leatherhead_enters_already_hexproof` | — |
 | 🟡 The Duke, Rebel Sentry | the cost removes a +1/+1 counter, the only kind he enters with | `remove_counter_cost` |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |

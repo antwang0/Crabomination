@@ -480,6 +480,25 @@ fn mister_hyde_grows_at_upkeep() {
     assert_eq!(plus(&g, hyde), 1);
 }
 
+/// Mister Hyde's second mode removes a counter of any kind — the stun one off
+/// a creature you control before a +1/+1 one — and draws.
+#[test]
+fn mister_hyde_removes_a_stun_counter_and_draws() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mister_hyde_monster_within());
+    let stunned = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(stunned).unwrap().add_counters(CounterType::Stun, 1);
+    let grown = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(grown).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Mode(1)]));
+    let hand = g.players[0].hand.len();
+    fire(&mut g, TurnStep::Upkeep);
+    assert_eq!(g.battlefield_find(stunned).unwrap().counter_count(CounterType::Stun), 0);
+    assert_eq!(plus(&g, grown), 1, "the +1/+1 counter stays");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
 /// Nazar stores feeding counters and cashes three in on attack.
 #[test]
 fn nazar_feeds_then_draws() {

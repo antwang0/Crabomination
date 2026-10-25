@@ -665,20 +665,14 @@ pub fn shattered_perception() -> CardDefinition {
 
 /// Mister Hyde, Monster Within — {2}{G} legendary 2/2. Upkeep, choose one: a
 /// +1/+1 counter on him; or remove a counter from a creature you control, and
-/// if you do, draw a card. (Residual: the removed counter is a +1/+1 counter —
-/// `RemoveCountersFromAmongThen` names one kind.)
+/// if you do, draw a card.
 pub fn mister_hyde_monster_within() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
             effect: Effect::ChooseMode(vec![
                 counter_on(Selector::This, 1),
-                Effect::RemoveCountersFromAmongThen {
-                    kind: CounterType::PlusOnePlusOne,
-                    count: 1,
-                    filter: your_creature(),
-                    then: Box::new(draw(Value::ONE)),
-                },
+                Effect::RemoveAnyCounterFromAmongThen { filter: your_creature(), then: Box::new(draw(Value::ONE)) },
             ]),
         }],
         ..legend(
