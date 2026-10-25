@@ -1513,28 +1513,28 @@ fn mindclaw_shaman_steals_a_sorcery() {
     assert_eq!(g.players[1].hand[0].definition.name, "Grizzly Bears");
 }
 
-/// Swashbuckler Extraordinaire: a Treasure from its ETB buys one attacker
-/// double strike.
+/// CR 603.7 — Swashbuckler: sacrifice two Treasures as you attack, and the
+/// reflexive trigger gives up to two target creatures double strike — any
+/// creatures, a non-attacker included, never more than the count.
 #[test]
 fn swashbuckler_trades_treasure_for_double_strike() {
     let mut g = pod(2);
     let s = g.add_card_to_hand(0, catalog::swashbuckler_extraordinaire());
     cast(&mut g, s, &[]).expect("cast");
     assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+    g.add_token_to_battlefield(0, &crabomination::game::effects::treasure_token());
     g.clear_sickness(s);
     let bears = ready(&mut g, 0, catalog::grizzly_bears());
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let home = ready(&mut g, 0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(2)]));
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker: s, target: AttackTarget::Player(1) },
-        Attack { attacker: bears, target: AttackTarget::Player(1) },
-    ]))
-    .expect("attack");
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: s, target: AttackTarget::Player(1) }]))
+        .expect("attack");
     drain_stack(&mut g);
     assert_eq!(tokens_of(&g, 0, "Treasure"), 0);
-    let ds = [s, bears].iter().filter(|&&id| has_kw(&g, id, Keyword::DoubleStrike)).count();
-    assert_eq!(ds, 1, "one Treasure, one attacker");
+    let ds = [s, bears, home].iter().filter(|&&id| has_kw(&g, id, Keyword::DoubleStrike)).count();
+    assert_eq!(ds, 2, "two Treasures, up to two targets");
 }
 
 /// Toggo: landfall makes a Rock; the equipped creature flings it for 2.

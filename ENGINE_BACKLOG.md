@@ -254,7 +254,8 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
   attacking Spirits (13), Reckoner Bankbuster's Pilot crews as power 3 (21; cube pool too).
 - **Stale residual docs:** Liliana of the Dark Realms (58), Beorn's Hospitality (29), Ms. Marvel (11) — already a free
   choice / live P/T, tests pinned.
-- **OPEN, next by count:** Swashbuckler Extraordinaire (57; needs "sacrifice any number, then up to that many targets"),
+- **FIXED:** Swashbuckler Extraordinaire (57) on the existing `SacrificeAnyNumber` → `WithX` → `ReflexiveTrigger` → `CapTargetsAtX` shape. The `not untapping` census accepts an instant/sorcery `SkipNextUntap` (Chandra's Revolution, another session's card, read as a miss).
+- **OPEN, next by count:**
   Vexing Puzzlebox (48), Everflowing Well / Encroaching Mycosynth / Contagion Engine (32 each), Bilbo's Gambit (31),
   Agadeem's Awakening (29), Sakashima's Protege (27). `RemoveCountersUpTo`'s headless pick ignores whose side a counter
   helps (Heartless Act, Rhys the Evermore 14) — a side-aware pick would close both.

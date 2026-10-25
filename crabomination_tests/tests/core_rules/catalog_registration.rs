@@ -1873,8 +1873,16 @@ fn every_permanent_that_prints_not_untapping_does_not_untap() {
         // during your last turn") is `Keyword::DoesntUntapIfAttackedLastTurn`
         // and Steel Dromedary ("if it has a +1/+1 counter on it") is
         // `DoesntUntapWhileCounter` — both correct, and both read as misses
-        // against `PreventUntap` alone.
-        |_, body| body.contains("PreventUntap") || body.contains("DoesntUntap"),
+        // against `PreventUntap` alone. An instant or sorcery's "that land
+        // doesn't untap during its controller's next untap step" (Chandra's
+        // Revolution) is the one-shot `SkipNextUntap`.
+        |def, body| {
+            body.contains("PreventUntap")
+                || body.contains("DoesntUntap")
+                || (body.contains("SkipNextUntap")
+                    && (def.card_types.contains(&crabomination::card::CardType::Sorcery)
+                        || def.card_types.contains(&crabomination::card::CardType::Instant)))
+        },
     );
 }
 

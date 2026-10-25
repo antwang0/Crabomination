@@ -2713,30 +2713,40 @@ pub fn mindclaw_shaman() -> CardDefinition {
 
 /// Swashbuckler Extraordinaire — {2}{R} 2/2 Dragon Rogue Warrior. When it
 /// enters, create a Treasure. Whenever you attack, you may sacrifice one or
-/// more Treasures; up to that many target creatures gain double strike until
-/// end of turn. Each attacker of yours is offered a Treasure in turn
-/// (INCOMPLETE_CARDS).
+/// more Treasures; when you do, up to that many target creatures gain double
+/// strike until end of turn (CR 603.7 reflexive, capped at the count).
 pub fn swashbuckler_extraordinaire() -> CardDefinition {
-    let treasure = || R::HasArtifactSubtype(ArtifactSubtype::Treasure).and(R::ControlledByYou);
     CardDefinition {
         triggered_abilities: vec![
             etb(make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token())),
-            on_you_attack(Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    yours().and(R::IsAttacking).and(R::Not(Box::new(R::HasKeyword(Keyword::DoubleStrike)))),
-                ),
-                body: Box::new(Effect::MaySacrifice {
-                    description: "Sacrifice a Treasure to give this attacker double strike?".into(),
-                    filter: treasure(),
-                    count: Value::ONE,
-                    then: Box::new(Effect::GrantKeyword {
-                        what: Selector::TriggerSource,
-                        keyword: Keyword::DoubleStrike,
-                        duration: Duration::EndOfTurn,
+            on_you_attack(Effect::Seq(vec![
+                Effect::SacrificeAnyNumber {
+                    who: PlayerRef::You,
+                    filter: R::HasArtifactSubtype(ArtifactSubtype::Treasure),
+                    per_each: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::SacrificedCount, Value::ONE),
+                    then: Box::new(Effect::WithX {
+                        x: Value::SacrificedCount,
+                        body: Box::new(Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::CapTargetsAtX {
+                                body: Box::new(Effect::ApplyToTargets {
+                                    max_targets: 8,
+                                    min_targets: 0,
+                                    filter: R::Creature,
+                                    effect: Box::new(Effect::GrantKeyword {
+                                        what: Selector::Target(0),
+                                        keyword: Keyword::DoubleStrike,
+                                        duration: Duration::EndOfTurn,
+                                    }),
+                                }),
+                            }),
+                        }),
                     }),
-                    else_: None,
-                }),
-            }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
         ],
         ..creature(
             "Swashbuckler Extraordinaire",
