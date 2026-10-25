@@ -27820,6 +27820,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OneSearch { body } => {
+                // CR 701.23 — the body's picks share one search gate, as
+                // `SearchUpToN`'s do; a nested batch restores the outer one.
+                let outer = std::mem::replace(&mut self.search_batch, SearchBatch::First);
+                let step = self.run_effect(body, ctx, events);
+                self.search_batch = outer;
+                // A suspended pick's continuation runs later: keep it one search.
+                if let Some((d, p, tail)) = self.suspend_signal.take().map(|b| *b) {
+                    self.suspend_signal = Some(Box::new((d, p, Effect::OneSearch { body: Box::new(tail) })));
+                }
+                step
+            }
+
             e @ (Effect::Search { .. }
             | Effect::SearchPickedBy { .. }
             | Effect::SearchZones { .. }) => {

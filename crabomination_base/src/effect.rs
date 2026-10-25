@@ -7823,6 +7823,11 @@ pub enum Effect {
     /// Deathbellow War Cry (Minotaurs → battlefield). The "different names"
     /// rider is not enforced.
     SearchUpToN { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest, count: Value },
+    /// CR 701.23 — `body`'s searches are ONE search: "search for up to two
+    /// basic land cards, put one onto the battlefield tapped and the other
+    /// into your hand" (Cultivate) picks with two `Search`es but pays one
+    /// tax and is one search event (`game/search_batch.rs`).
+    OneSearch { body: Box<Effect> },
     /// CR 701.23a — `picker` searches `who`'s library: the pick decision
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
     /// "search target opponent's library ... exile that card").

@@ -11665,7 +11665,7 @@ pub(super) fn ability_makes_token(e: &Effect) -> bool {
     match e {
         Effect::CreateToken { .. } | Effect::CreateTokenAttacking { .. } => true,
         Effect::Seq(steps) => steps.iter().any(ability_makes_token),
-        Effect::Investigate { body } => ability_makes_token(body),
+        Effect::Investigate { body } | Effect::OneSearch { body } => ability_makes_token(body),
         _ => false,
     }
 }
@@ -19686,7 +19686,7 @@ fn x_zero_is_noop(e: &Effect) -> bool {
         | Effect::Mill { amount, .. }
         | Effect::AddCounter { amount, .. } => is_x(amount),
         Effect::CreateToken { count, .. } => is_x(count),
-        Effect::Investigate { body } => x_zero_is_noop(body),
+        Effect::Investigate { body } | Effect::OneSearch { body } => x_zero_is_noop(body),
         Effect::ApplyToTargets { effect, .. } => x_zero_is_noop(effect),
         Effect::MayDo { body, .. } => x_zero_is_noop(body),
         _ => false,
@@ -19732,6 +19732,7 @@ fn effect_uses_x(eff: &Effect) -> bool {
         Effect::ForEach { body, .. }
         | Effect::Repeat { body, .. }
         | Effect::Investigate { body }
+        | Effect::OneSearch { body }
         | Effect::DelayUntil { body, .. } => effect_uses_x(body),
         Effect::DealDamage { amount, .. }
         | Effect::GainLife { amount, .. }
@@ -20671,7 +20672,7 @@ fn emblem_value(state: &GameState, seat: usize, emblem: &crate::player::Emblem) 
                 6 * amount(a)
             }
             Effect::CreateToken { count, .. } => 10 * amount(count),
-            Effect::Investigate { body } => shape_value(body, amount),
+            Effect::Investigate { body } | Effect::OneSearch { body } => shape_value(body, amount),
             Effect::GainLife { amount: a, .. } => 2 * amount(a),
             Effect::Seq(v) => v.iter().map(|e| shape_value(e, amount)).sum(),
             Effect::If { then, else_, .. } => {

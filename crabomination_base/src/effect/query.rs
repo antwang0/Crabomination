@@ -1721,6 +1721,7 @@ impl Effect {
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -3433,6 +3434,7 @@ impl Effect {
             | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } | Effect::MayPayXUpTo { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -3690,6 +3692,7 @@ impl Effect {
             | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -3782,6 +3785,7 @@ impl Effect {
                 | Effect::MayDoBy { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
+                | Effect::OneSearch { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::ForEachOpponentTarget { body }
                 | Effect::ForEachPlayerTarget { body }
@@ -3928,6 +3932,7 @@ impl Effect {
             | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -4057,6 +4062,7 @@ impl Effect {
             | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -4170,6 +4176,7 @@ impl Effect {
             | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -4649,6 +4656,7 @@ impl Effect {
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -5025,6 +5033,7 @@ impl Effect {
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -5337,6 +5346,7 @@ impl Effect {
                 | Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
+                | Effect::OneSearch { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::ForEachOpponentTarget { body }
                 | Effect::ForEachPlayerTarget { body }
@@ -6316,6 +6326,7 @@ impl Effect {
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }
@@ -6525,6 +6536,7 @@ impl Effect {
             | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
@@ -6555,6 +6567,7 @@ impl Effect {
             | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
@@ -6622,6 +6635,7 @@ impl Effect {
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
+            | Effect::OneSearch { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::ForEachOpponentTarget { body }
             | Effect::ForEachPlayerTarget { body }

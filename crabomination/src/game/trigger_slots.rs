@@ -25,6 +25,7 @@ fn same_filter_fan_out(eff: &Effect) -> bool {
         Effect::MayDo { body, .. }
         | Effect::OptionalTargets { body, .. }
         | Effect::TargetsExactlyX { body }
+        | Effect::OneSearch { body }
         | Effect::CapTargetsAt { body, .. } => same_filter_fan_out(body),
         Effect::Seq(parts) => {
             let mut targeting = parts.iter().filter(|e| e.requires_target());

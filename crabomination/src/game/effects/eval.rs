@@ -358,7 +358,7 @@ impl GameState {
             }
             Effect::Populate { .. } => 1,
             Effect::MayDo { body, .. } => self.effect_token_estimate(body, ctx),
-            Effect::Investigate { body } => self.effect_token_estimate(body, ctx),
+            Effect::Investigate { body } | Effect::OneSearch { body } => self.effect_token_estimate(body, ctx),
             Effect::Seq(es) => es.iter().map(|e| self.effect_token_estimate(e, ctx)).sum(),
             // A branch the estimate can't settle is priced at its larger arm.
             Effect::If { then, else_, .. } => {

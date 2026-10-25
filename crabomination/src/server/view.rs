@@ -2869,6 +2869,7 @@ fn structural_children(effect: &Effect) -> Vec<&Effect> {
         | Effect::CapTargetsAt { body, .. }
         | Effect::CapTargetsAtX { body }
         | Effect::TargetsExactlyX { body }
+        | Effect::OneSearch { body }
         | Effect::OptionalTargets { body, .. }
         | Effect::WithX { body, .. }
         | Effect::ForEach { body, .. }

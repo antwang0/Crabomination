@@ -404,7 +404,8 @@ impl GameState {
             | Effect::WithDiscardedForCost { body, .. }
             | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
-            | Effect::Investigate { body } => Self::governing_modal(body),
+            | Effect::Investigate { body }
+            | Effect::OneSearch { body } => Self::governing_modal(body),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
                 Self::governing_modal(body)
             }

@@ -24,6 +24,7 @@ fn land_fetches(effect: &Effect) -> Vec<&R> {
             filter,
             to: ZoneDest::Battlefield { controller: PlayerRef::You, .. },
         } if names_land(filter) => vec![filter],
+        Effect::OneSearch { body } => land_fetches(body),
         Effect::Seq(steps) => {
             let all: Vec<Vec<&R>> = steps.iter().map(land_fetches).collect();
             if all.iter().any(Vec::is_empty) { Vec::new() } else { all.into_iter().flatten().collect() }
