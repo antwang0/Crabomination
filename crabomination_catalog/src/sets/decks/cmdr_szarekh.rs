@@ -150,6 +150,7 @@ pub fn biotransference() -> CardDefinition {
             effect: StaticEffect::OwnedCardsOffBattlefieldHaveCardType {
                 having: CardType::Creature,
                 add: CardType::Artifact,
+                nonland: false,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

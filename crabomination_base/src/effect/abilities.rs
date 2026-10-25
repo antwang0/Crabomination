@@ -2458,7 +2458,14 @@ pub enum StaticEffect {
     /// types" (Biotransference's creatures are artifacts). Read by the
     /// off-battlefield card-type arms (`card_off_battlefield_gains_card_type`);
     /// the battlefield half is an `AddCardTypeToMatching`. CR 205.1a / 611.3a.
-    OwnedCardsOffBattlefieldHaveCardType { having: crate::card::CardType, add: crate::card::CardType },
+    /// `nonland`: only cards that aren't lands too ("nonland permanent cards"
+    /// — Encroaching Mycosynth, one static per permanent type).
+    OwnedCardsOffBattlefieldHaveCardType {
+        having: crate::card::CardType,
+        add: crate::card::CardType,
+        #[serde(default)]
+        nonland: bool,
+    },
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,

@@ -160,8 +160,9 @@ impl GameState {
         };
         for c in self.battlefield.iter().filter(|c| c.controller == who) {
             for sa in &c.definition.static_abilities {
-                if let SE::OwnedCardsOffBattlefieldHaveCardType { having, add } = &sa.effect
+                if let SE::OwnedCardsOffBattlefieldHaveCardType { having, add, nonland } = &sa.effect
                     && has(having)
+                    && !(*nonland && card.definition.card_types.contains(&crate::card::CardType::Land))
                     && !card.definition.card_types.contains(add)
                     && !out.contains(add)
                 {
