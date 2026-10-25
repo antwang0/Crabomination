@@ -996,19 +996,16 @@ pub fn witchs_cottage() -> CardDefinition {
             },
             ..Default::default()
         }],
+        // CR 603.2 — "when this land enters untapped": the entry's state.
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: four_swamps(),
-                then: Box::new(Effect::MayDo {
-                    description: "Put a creature card from your graveyard on top of your library?"
-                        .into(),
-                    body: Box::new(Effect::Move {
-                        what: target_filtered(R::Creature.from_your_graveyard()),
-                        to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
-                    }),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::Untapped }),
+            effect: Effect::MayDo {
+                description: "Put a creature card from your graveyard on top of your library?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature.from_your_graveyard()),
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
                 }),
-                else_: Box::new(Effect::Noop),
             },
         }],
         ..Default::default()

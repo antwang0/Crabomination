@@ -138,18 +138,17 @@ pub fn gingerbread_cabin() -> CardDefinition {
                 },
             },
         }],
-        triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::EntityMatches {
-                what: Selector::This,
-                filter: R::Untapped,
-            },
-            then: Box::new(Effect::CreateToken {
+        // CR 603.2 — "when it enters untapped" is a trigger condition, read at
+        // the entry.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::Untapped }),
+            effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 definition: std::sync::Arc::new(food_token()),
-            }),
-            else_: Box::new(Effect::Noop),
-        })],
+            },
+        }],
         ..Default::default()
     }
 }

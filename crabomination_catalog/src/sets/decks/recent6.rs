@@ -949,33 +949,21 @@ pub fn mystic_sanctuary() -> CardDefinition {
         }],
         // ETB: if 4+ Islands (i.e. 3+ *other* Islands) it enters untapped and
         // may recur an I/S; otherwise it enters tapped.
+        // CR 603.2 — "when it enters untapped": the entry's tapped state, not
+        // the Island count again on resolution.
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        SelectionRequirement::HasLandType(LandType::Island)
-                            .and(SelectionRequirement::ControlledByYou),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::Untapped }),
+            effect: Effect::MayDo {
+                description: "Put an instant or sorcery from your graveyard on top of your library?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .from_your_graveyard(),
                     ),
-                    n: Value::Const(4),
-                },
-                then: Box::new(Effect::MayDo {
-                    description:
-                        "Put an instant or sorcery from your graveyard on top of your library?"
-                            .into(),
-                    body: Box::new(Effect::Move {
-                        what: target_filtered(
-                            SelectionRequirement::HasCardType(CardType::Instant)
-                                .or(SelectionRequirement::HasCardType(CardType::Sorcery))
-                                .from_your_graveyard(),
-                        ),
-                        to: ZoneDest::Library {
-                            who: PlayerRef::You,
-                            pos: LibraryPosition::Top,
-                        },
-                    }),
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
                 }),
-                else_: Box::new(Effect::Noop),
             },
         }],
         ..Default::default()

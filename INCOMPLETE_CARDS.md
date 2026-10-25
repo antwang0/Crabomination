@@ -2059,7 +2059,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Black Market Connections | "choose one or more" always takes the Treasure and the draw (two modes) | `ChooseN { picks: [0, 1] }` asks for exactly `picks.len()` modes; there is no "one or more" count |
 | 🟡 Chrome Mox | the imprinted card is the first nonartifact, nonland card in hand, not the player's pick (so the colour isn't chosen) | `Selector::take(CardsInZone{Hand}, 1)` keeps the first match |
 | 🟡 Urza's Saga | an artifact with no mana cost that isn't a land (Lotus Bloom) still counts as "{0}" | the filter is `Nonland & Colorless & ManaValueAtMost(1)`; no leaf reads `no_mana_cost` |
-| 🟡 Mystic Sanctuary | "when this land enters untapped" fires on any entry and re-checks four Islands on resolution | the ETB condition is the Island count, not the entered-untapped fact |
 | 🟡 Myriad Landscape | the second basic's "shares a land type" reads `LastMoved`, stale when the first pick found nothing | `SharesLandTypeWithLastMoved` |
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
 | ~~Lochmere Serpent~~ ✅ | fixed 2026-10-25: exactly five targets, all in one opponent's graveyard (`SameGraveyardAsTargetSlot(0)`, the 2019-10-04 ruling) — `lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard` | — |

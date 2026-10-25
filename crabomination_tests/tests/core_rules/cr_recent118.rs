@@ -1736,3 +1736,52 @@ fn cr_702_16b_the_bots_ability_pick_passes_over_a_protected_target() {
     assert_ne!(picked, Target::Permanent(angel));
     assert!(g.check_target_legality(&picked, 0).is_ok() && !g.ability_target_has_protection(&picked, pyro));
 }
+
+/// CR 603.2 — the castle lands' "when this land enters untapped" reads how it
+/// entered: put onto the battlefield tapped beside three other basics of its
+/// type, it does nothing (Mystic Sanctuary, Witch's Cottage and Dwarven Mine
+/// re-counted the basics instead); played untapped beside them, it fires.
+#[test]
+fn cr_603_2_a_castle_land_put_in_tapped_does_not_trigger() {
+    use crabomination::card::CardDefinition;
+    use crabomination::game::types::GameAction;
+    type Factory = fn() -> CardDefinition;
+    // (land, its basic, what firing leaves behind: a card on the library top or a new permanent)
+    let rows: [(Factory, Factory, bool); 4] = [
+        (catalog::mystic_sanctuary, catalog::island, true),
+        (catalog::witchs_cottage, catalog::swamp, true),
+        (catalog::dwarven_mine, catalog::mountain, false),
+        (catalog::gingerbread_cabin, catalog::forest, false),
+    ];
+    for (land, basic, recurs) in rows {
+        for tapped_entry in [true, false] {
+            let mut g = main_phase();
+            g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+                crabomination::decision::DecisionAnswer::Bool(true),
+            ]));
+            for _ in 0..3 {
+                g.add_card_to_battlefield(0, basic());
+            }
+            g.add_card_to_library(0, catalog::island());
+            // One legal recursion either way: an instant and a creature card.
+            g.add_card_to_graveyard(0, catalog::lightning_bolt());
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+            let id = g.add_card_to_hand(0, land());
+            let before = g.battlefield.len();
+            if tapped_entry {
+                let put = Effect::Move {
+                    what: Selector::ExactObjects(vec![id]),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                };
+                resolve(&mut g, id, None, &put);
+            } else {
+                g.perform_action(GameAction::PlayLand(id)).expect("land drop");
+                drain_stack(&mut g);
+            }
+            let name = land().name;
+            assert_eq!(g.battlefield_find(id).map(|c| c.tapped), Some(tapped_entry), "{name}");
+            let fired = if recurs { g.players[0].graveyard.len() == 1 } else { g.battlefield.len() > before + 1 };
+            assert_eq!(fired, !tapped_entry, "{name}, entered tapped: {tapped_entry}");
+        }
+    }
+}

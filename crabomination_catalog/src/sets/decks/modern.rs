@@ -60779,16 +60779,11 @@ pub fn dwarven_mine() -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![super::super::tap_add(Color::Red)],
-        triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::HasLandType(LandType::Mountain)
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                n: Value::Const(3),
-            },
-            then: Box::new(Effect::CreateToken {
+        // CR 603.2 — "when it enters untapped": the entry's state.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::Untapped }),
+            effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 definition: std::sync::Arc::new(TokenDefinition {
@@ -60803,9 +60798,8 @@ pub fn dwarven_mine() -> CardDefinition {
                     colors: vec![Color::Red],
                     ..Default::default()
                 }),
-            }),
-            else_: Box::new(Effect::Noop),
-        })],
+            },
+        }],
         ..Default::default()
     }
 }
