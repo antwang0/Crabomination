@@ -773,11 +773,19 @@ pub fn ashas_favor() -> CardDefinition {
 
 /// Arachnoform — {1}{G} Aura. +2/+2, reach, and every creature type.
 pub fn arachnoform() -> CardDefinition {
-    aura(
-        "Arachnoform",
-        cost(&[generic(1), g()]),
-        EquipBonus { power: 2, toughness: 2, keywords: vec![Keyword::Reach, Keyword::Changeling], ..Default::default() },
-    )
+    CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Enchanted creature is every creature type.",
+            effect: crate::effect::StaticEffect::EveryCreatureType {
+                applies_to: crate::effect::Selector::AttachedTo(Box::new(crate::effect::Selector::This)),
+            },
+        }],
+        ..aura(
+            "Arachnoform",
+            cost(&[generic(1), g()]),
+            EquipBonus { power: 2, toughness: 2, keywords: vec![Keyword::Reach], ..Default::default() },
+        )
+    }
 }
 
 /// Castle / Builder's Blessing — untapped creatures you control get +0/+2.

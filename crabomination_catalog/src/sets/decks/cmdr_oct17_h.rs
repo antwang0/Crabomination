@@ -451,12 +451,15 @@ pub fn rangers_longbow() -> CardDefinition {
 
 /// Amorphous Axe — {2} Equipment, equip {3}. +3/+0 and every creature type.
 pub fn amorphous_axe() -> CardDefinition {
-    equipment(
-        "Amorphous Axe",
-        cost(&[generic(2)]),
-        cost(&[generic(3)]),
-        EquipBonus { power: 3, keywords: vec![Keyword::Changeling], ..Default::default() },
-    )
+    CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Equipped creature is every creature type.",
+            effect: crate::effect::StaticEffect::EveryCreatureType {
+                applies_to: crate::effect::Selector::AttachedTo(Box::new(crate::effect::Selector::This)),
+            },
+        }],
+        ..equipment("Amorphous Axe", cost(&[generic(2)]), cost(&[generic(3)]), EquipBonus { power: 3, ..Default::default() })
+    }
 }
 
 /// Glaring Aegis — {W} Aura. ETB: tap target creature an opponent controls.

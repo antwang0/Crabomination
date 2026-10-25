@@ -1815,5 +1815,27 @@ fn cr_605_3b_the_auto_tapper_takes_both_of_a_filter_lands_pips() {
     assert!(g.battlefield_find(bear).is_none());
 }
 
+/// CR 205.3 / 613.6 — "equipped / enchanted creature is every creature type"
+/// is a layer-4 type: the host is every type, and stays so after losing all
+/// its abilities (a granted changeling keyword would go with them).
+#[test]
+fn cr_613_6_an_attachments_every_creature_type_survives_a_strip() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Duration, Effect, Selector};
+    let cards: [Def; 3] = [catalog::runed_stalactite, catalog::amorphous_axe, catalog::arachnoform];
+    for def in cards {
+        let mut g = peace_main();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let gear = g.add_card_to_battlefield(0, def());
+        g.battlefield_find_mut(gear).unwrap().attached_to = Some(bear);
+        let every = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Changeling);
+        assert!(every(&g), "{}", def().name);
+        let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+        g.resolve_effect(&Effect::LoseAllAbilities { what: Selector::ExactObjects(vec![bear]), duration: Duration::EndOfTurn }, &ctx)
+            .expect("strip");
+        assert!(every(&g), "{} after the strip", def().name);
+    }
+}
+
 /// A catalog factory, for the table-driven tests above.
 type Def = fn() -> crabomination::card::CardDefinition;

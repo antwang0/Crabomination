@@ -395,9 +395,16 @@ pub fn runed_stalactite() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Changeling],
             ..Default::default()
         }),
+        // CR 205.3 / 613.6 — a layer-4 type, which a strip of the creature's
+        // abilities leaves (a granted changeling would go with it).
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Equipped creature is every creature type.",
+            effect: crate::effect::StaticEffect::EveryCreatureType {
+                applies_to: crate::effect::Selector::AttachedTo(Box::new(crate::effect::Selector::This)),
+            },
+        }],
         ..Default::default()
     }
 }
