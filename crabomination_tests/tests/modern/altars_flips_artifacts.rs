@@ -200,6 +200,24 @@ fn obstinate_baloth_deploys_on_an_opponents_discard() {
     assert_eq!(g.players[1].life, life + 4, "and it entered, so the ETB gained 4");
 }
 
+/// Loxodon Smiter carries the same replacement (CR 614).
+#[test]
+fn loxodon_smiter_deploys_on_an_opponents_discard() {
+    let mut g = two_player_game();
+    let smiter = g.add_card_to_hand(1, catalog::loxodon_smiter());
+    let rot = g.add_card_to_hand(0, catalog::mind_rot());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rot, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the discard spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(smiter).is_some(), "deployed instead of binned");
+}
+
 /// Your own discard still bins it — the replacement is opponent-caused only.
 #[test]
 fn obstinate_baloth_is_binned_by_your_own_discard() {

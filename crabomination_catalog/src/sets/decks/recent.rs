@@ -11065,29 +11065,42 @@ pub fn phyrexian_missionary() -> CardDefinition {
 }
 
 /// Soul Transfer — {1}{B}{B} Sorcery. Exile target creature or planeswalker; or
-/// return target creature or planeswalker card from your graveyard to your hand. (The
-/// "choose both if you control an artifact and an enchantment" rider is omitted.)
+/// return target creature or planeswalker card from your graveyard to your hand;
+/// both if you control an artifact and an enchantment as you cast it.
 pub fn soul_transfer() -> CardDefinition {
     CardDefinition {
         name: "Soul Transfer",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                to: ZoneDest::Exile,
-            },
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker)
-                        .and(SelectionRequirement::InYourGraveyard),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-        ]),
+        modes_widen: Some(crate::card::ModesWiden::If(Predicate::All(vec![
+            Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+            )),
+            Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+            )),
+        ]))),
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                    to: ZoneDest::Exile,
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker)
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ],
+            min: 1,
+            max: 1,
+            allow_repeats: false,
+        },
         ..Default::default()
     }
 }

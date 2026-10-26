@@ -4146,6 +4146,30 @@ mod recent {
         assert!(g.exile.iter().any(|c| c.id == v), "creature exiled");
     }
 
+    /// Soul Transfer does both with an artifact and an enchantment out (the
+    /// cast-time widen), and is refused both without them.
+    #[test]
+    fn soul_transfer_does_both_with_an_artifact_and_an_enchantment() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let v = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let dead = g.add_card_to_graveyard(0, catalog::serra_angel());
+        let st = g.add_card_to_hand(0, catalog::soul_transfer());
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        let both = GameAction::CastSpellSpree {
+            card_id: st, spree_modes: vec![0, 1], target: Some(Target::Permanent(v)),
+            additional_targets: vec![Target::Permanent(dead)], x_value: None,
+        };
+        assert!(g.perform_action(both.clone()).is_err(), "no artifact and enchantment: one mode");
+        g.add_card_to_battlefield(0, catalog::sol_ring());
+        g.add_card_to_battlefield(0, catalog::enchantresss_presence());
+        g.perform_action(both).expect("both modes");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == v));
+        assert!(g.players[0].hand.iter().any(|c| c.id == dead));
+    }
+
     /// Cobblebrute is a 5/2 vanilla creature.
     #[test]
     fn cobblebrute_is_5_2() {

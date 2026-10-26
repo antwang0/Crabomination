@@ -50,8 +50,9 @@ pub fn palace_jailer() -> CardDefinition {
     }
 }
 
-/// Loxodon Smiter — {1}{G}{W} 4/4 Elephant Soldier. Can't be countered. (The
-/// discard→battlefield replacement is approximated to the uncounterable body.)
+/// Loxodon Smiter — {1}{G}{W} 4/4 Elephant Soldier. Can't be countered. An
+/// opponent's spell or ability making you discard it puts it onto the
+/// battlefield instead (CR 614, Obstinate Baloth's field).
 pub fn loxodon_smiter() -> CardDefinition {
     CardDefinition {
         name: "Loxodon Smiter",
@@ -64,6 +65,7 @@ pub fn loxodon_smiter() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::CantBeCountered],
+        opponent_discard_deploys: Some((crate::card::CounterType::PlusOnePlusOne, 0)),
         ..Default::default()
     }
 }
