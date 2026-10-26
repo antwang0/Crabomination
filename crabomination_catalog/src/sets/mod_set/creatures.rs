@@ -5038,10 +5038,8 @@ pub fn mesmeric_orb() -> CardDefinition {
 /// Whenever a player casts a spell with mana value equal to the number of
 /// charge counters on Chalice of the Void, counter that spell."
 ///
-/// Approximation: enters with X charge counters. The counter-spells-with-
-/// matching-MV trigger needs a SpellCast + MV-check predicate that reads
-/// counters off this permanent — wired as a SpellCast/AnyPlayer trigger
-/// gated on `ValueEquals(ManaValueOf(TriggerSource), CountersOn(This, Charge))`.
+/// Enters with X charge counters; the counter is a SpellCast/AnyPlayer
+/// trigger gated on `ValueEquals(ManaValueOf(TriggerSource), CountersOn(This, Charge))`.
 pub fn chalice_of_the_void() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::Predicate;
