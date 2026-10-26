@@ -779,6 +779,36 @@ fn officious_interrogation_scales_with_their_board() {
     );
 }
 
+/// "Choose any number of target players" with strive (CR 601.2f): two targets
+/// cost {W}{U}{W}{U} and investigate for both boards.
+#[test]
+fn officious_interrogation_takes_several_players_for_more() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::savannah_lions());
+    g.add_card_to_battlefield(2, catalog::savannah_lions());
+    let id = g.add_card_to_hand(0, catalog::officious_interrogation());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![Target::Player(2)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(cast(&mut g).is_err(), "the second target costs {{W}}{{U}} more");
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g).expect("cast for two");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Clue").count(), 3);
+}
+
 /// Vannifar's colorless mode grows only colorless creatures.
 #[test]
 fn vannifar_pumps_only_colorless_creatures() {

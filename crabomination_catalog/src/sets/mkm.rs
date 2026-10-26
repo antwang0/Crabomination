@@ -957,20 +957,29 @@ pub fn public_thoroughfare() -> CardDefinition {
     }
 }
 
-/// Officious Interrogation — {W}{U} Instant. Investigate once per creature the
-/// target player controls.
+/// Officious Interrogation — {W}{U} Instant. Any number of target players,
+/// {W}{U} more per target beyond the first; investigate once per creature
+/// they control in total.
 pub fn officious_interrogation() -> CardDefinition {
     CardDefinition {
         name: "Officious Interrogation",
         cost: cost(&[w(), u()]),
         card_types: vec![CardType::Instant],
-        effect: crate::effect::shortcut::investigate_by(PlayerRef::You, Value::CountMatching {
+        // "Choose any number of target players" — {W}{U} more for each target
+        // beyond the first (CR 601.2f); a Clue per creature each controls.
+        effect: Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 1,
+            filter: SelectionRequirement::Player,
+            effect: Box::new(crate::effect::shortcut::investigate_by(PlayerRef::You, Value::CountMatching {
                 sel: Box::new(Selector::ControlledBy {
                     who: PlayerRef::Target(0),
                     filter: SelectionRequirement::Creature,
                 }),
                 filter: SelectionRequirement::Any,
-            }),
+            })),
+        },
+        cost_per_extra_target: Some(cost(&[w(), u()])),
         ..Default::default()
     }
 }
