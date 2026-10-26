@@ -24,6 +24,25 @@ fn souls_of_the_lost_pt_tracks_graveyard_permanents() {
     assert_eq!((c.power, c.toughness), (3, 4));
 }
 
+/// Souls of the Lost's additional cost is "discard a card or sacrifice a
+/// permanent" (CR 601.2b): with an empty hand the sacrifice pays it.
+#[test]
+fn souls_of_the_lost_sacrifices_a_permanent_with_no_card_to_discard() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].hand.clear();
+    let land = g.add_card_to_battlefield(0, catalog::swamp());
+    let soul = g.add_card_to_hand(0, catalog::souls_of_the_lost());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: soul, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("sacrifice pays it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the Swamp was sacrificed");
+    assert!(g.battlefield_find(soul).is_some());
+}
+
 /// Frilled Cave-Wurm gets +2/+0 only with 4+ permanent cards in the graveyard.
 #[test]
 fn frilled_cave_wurm_descend_4_pump() {

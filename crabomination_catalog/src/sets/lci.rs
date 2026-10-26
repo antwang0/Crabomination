@@ -616,9 +616,9 @@ pub fn clay_fired_bricks() -> CardDefinition {
 
 // ── More LCI staples (Descend / fathomless descent) ─────────────────────────
 
-/// Souls of the Lost — {1}{B} Spirit. Additional cost: discard a card (the "or
-/// sacrifice a permanent" alternative is approximated as discard). Fathomless
-/// descent — its P/T is */*+1 = permanent cards in your graveyard.
+/// Souls of the Lost — {1}{B} Spirit. Additional cost: discard a card or
+/// sacrifice a permanent. Fathomless descent — its P/T is */*+1 = permanent
+/// cards in your graveyard.
 pub fn souls_of_the_lost() -> CardDefinition {
     CardDefinition {
         name: "Souls of the Lost",
@@ -628,10 +628,10 @@ pub fn souls_of_the_lost() -> CardDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        additional_cast_cost: vec![AdditionalCastCost::Discard {
-            count: 1,
-            filter: None,
-        }],
+        additional_cast_cost: vec![AdditionalCastCost::OneOf(vec![
+            AdditionalCastCost::Discard { count: 1, filter: None },
+            AdditionalCastCost::SacrificePermanent { filter: SelectionRequirement::Permanent, count: 1 },
+        ])],
         dynamic_pt: Some(DynamicPt::PermanentCardsInControllerGraveyard {
             base_p: 0,
             base_t: 1,
