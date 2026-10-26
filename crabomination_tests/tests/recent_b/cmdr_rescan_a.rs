@@ -1461,6 +1461,33 @@ fn phasing_of_zhalfir_replaces_the_dead_with_phyrexians() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
 }
 
+/// CR 702.26 — "can't phase in for as long as **you control** this Saga":
+/// the phased-out permanent comes back when its controller loses control of
+/// the Saga, not only when the Saga leaves.
+#[test]
+fn phasing_of_zhalfir_releases_when_you_lose_control_of_the_saga() {
+    let mut g = pod(2);
+    let saga = ready(&mut g, 0, catalog::the_phasing_of_zhalfir());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let chapter = g.battlefield_find(saga).unwrap().definition.saga_chapters[0].1.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(saga, 0, Some(Target::Permanent(bear)));
+    g.resolve_effect(&chapter, &ctx).expect("chapter I");
+    assert!(g.phased_out.iter().any(|c| c.id == bear), "phased out, held by the Saga");
+    // Losing control of the Saga ends the hold (CR 702.26); the Saga leaving
+    // already did.
+    let steal = crabomination::effect::Effect::GainControl {
+        what: crabomination::effect::Selector::ExactObjects(vec![saga]),
+        to: Some(crabomination::effect::PlayerRef::Seat(1)),
+        duration: crabomination::effect::Duration::Permanent,
+    };
+    let ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 0, 0);
+    let evs = g.resolve_effect(&steal, &ctx).expect("steal the Saga");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(saga).map(|c| c.controller), Some(1));
+    assert!(g.battlefield_find(bear).is_some(), "phased in when control changed");
+}
+
 /// CR 702.188 — Spiders-Man cast with web-slinging gains 3 and makes two
 /// Spiders; cast normally it does neither.
 #[test]

@@ -2157,7 +2157,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Koh, the Face Stealer | a new choice reverts every baked grant on Koh, not only the old borrow | `BorrowAbilitiesOfChosenExiled` |
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |
-| 🟡 The Phasing of Zhalfir | the phase-in lock ends when the Saga leaves the battlefield, not when you lose control of it | `PhaseOut { until_source_leaves }` |
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
 | 🟡 Azor, the Lawbringer | the {X}{W}{U}{U} attack payment is from floating mana only | `MayPayXPlus` |
 | 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |

@@ -1766,6 +1766,13 @@ pub struct ColdState {
     /// effect writes it, and an untap step drops a row only when one expired.
     #[serde(default)]
     pub(crate) phase_in_locks: Vec<(CardId, usize, u32)>,
+    /// CR 702.26 — sources whose phase-out hold ends when their controller
+    /// loses control of them, as (source, that controller): The Phasing of
+    /// Zhalfir's "for as long as you control this Saga". Cold: only
+    /// `Effect::HoldPhasedOutWhileYouControlSource` writes it, and the
+    /// control-change sweep drops a row only when one matches.
+    #[serde(default)]
+    pub(crate) control_bound_phase_holds: Vec<(CardId, usize)>,
     /// `Duration::UntilSourceCast` grants as (permanent, source card, the
     /// ability): `finalize_cast` strips each when its source is cast (Emrakul,
     /// the Exigent Doom's land). Cold: only that grant writes it.
@@ -26347,6 +26354,23 @@ impl GameState {
         // tenth permanent, to its new controller.
         for change in &control_changes {
             self.apply_permanent_ascend(change.0);
+        }
+        // CR 702.26 — a hold printed "for as long as you control [this]" ends
+        // as its controller changes (The Phasing of Zhalfir).
+        if !self.cold.control_bound_phase_holds.is_empty() {
+            let released: Vec<CardId> = control_changes
+                .iter()
+                .filter(|(id, prev, _)| {
+                    self.cold.control_bound_phase_holds.iter().any(|(s, who)| s == id && who == prev)
+                })
+                .map(|(id, ..)| *id)
+                .collect();
+            for id in released {
+                self.cold.control_bound_phase_holds.retain(|(s, _)| *s != id);
+                let mut evs = Vec::new();
+                self.phase_in_held_by(id, &mut evs);
+                self.queue_payment_events(evs);
+            }
         }
         let synthesized: Vec<GameEvent> = if deaths.is_empty()
             && control_changes.is_empty()

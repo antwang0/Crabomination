@@ -794,6 +794,7 @@ impl Effect {
         match self {
             Effect::ConniveFinish { .. }
             | Effect::MarkSourceThisTurn
+            | Effect::HoldPhasedOutWhileYouControlSource
             | Effect::Voyage { .. }
             | Effect::ShuffleIntoTopPile { .. }
             | Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }

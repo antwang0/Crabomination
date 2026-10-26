@@ -18731,6 +18731,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::HoldPhasedOutWhileYouControlSource => {
+                // CR 702.26 — the hold is "for as long as you control this",
+                // so the sweep releases it on a control change too.
+                if let Some(src) = ctx.source
+                    && !self.cold.control_bound_phase_holds.iter().any(|(s, _)| *s == src)
+                {
+                    self.cold.control_bound_phase_holds.push((src, ctx.controller));
+                }
+                Ok(())
+            }
+
             Effect::PhaseOutUntilYourNextTurnEnds { what } => {
                 let ids: crate::fxhash::HashSet<crate::card::CardId> = self
                     .resolve_selector(what, ctx)

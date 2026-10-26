@@ -1203,11 +1203,15 @@ pub fn fall_of_the_impostor() -> CardDefinition {
 /// The Phasing of Zhalfir — {2}{U}{U} Saga, read ahead. I, II — another
 /// target nonland permanent phases out and can't phase in while this Saga
 /// remains. III — destroy all creatures; each one's controller creates a 2/2
-/// black Phyrexian per creature of theirs destroyed. Approximation: the lock
-/// ends when the Saga leaves, not when you lose control of it. (Goldberry,
+/// black Phyrexian per creature of theirs destroyed. (Goldberry,
 /// River-Daughter.)
 pub fn the_phasing_of_zhalfir() -> CardDefinition {
-    let po = Effect::PhaseOut { what: target_filtered(R::Nonland.and(R::OtherThanSource)), until_source_leaves: true };
+    // CR 702.26 — "can't phase in for as long as you control this Saga": the
+    // marker ends the hold on a control change, the link on its leaving.
+    let po = Effect::Seq(vec![
+        Effect::PhaseOut { what: target_filtered(R::Nonland.and(R::OtherThanSource)), until_source_leaves: true },
+        Effect::HoldPhasedOutWhileYouControlSource,
+    ]);
     CardDefinition {
         read_ahead: true,
         ..saga(

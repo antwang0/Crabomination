@@ -9041,6 +9041,12 @@ pub enum Effect {
         #[serde(default)]
         until_source_leaves: bool,
     },
+    /// CR 702.26 — chain after a `PhaseOut { until_source_leaves: true }`
+    /// whose hold is printed "for as long as **you control** [this]" (The
+    /// Phasing of Zhalfir): losing control of the source phases them in, as
+    /// its leaving already does. A hold with no control clause (Out of Time,
+    /// Oubliette) does not take this.
+    HoldPhasedOutWhileYouControlSource,
     /// CR 702.26 — "[what] phase out. Until the end of your next turn, they
     /// can't phase in" (Teferi, Timeless Voyager's −8): each phases out as
     /// `PhaseOut` does and carries a `ColdState::phase_in_locks` row its
