@@ -34560,6 +34560,9 @@ fn event_amount(event: &GameEvent) -> u32 {
         // The exploited creature's last-known power (Henry Wu's "power 3 or greater").
         GameEvent::Exploited { power, .. } => (*power).max(0) as u32,
         GameEvent::AbilityActivated { paid, .. } => *paid,
+        // How many creatures crewed / saddled in this activation.
+        GameEvent::VehicleCrewed { crew, .. } => crew.len() as u32,
+        GameEvent::MountSaddled { riders, .. } => riders.len() as u32,
         _ => 0,
     }
 }

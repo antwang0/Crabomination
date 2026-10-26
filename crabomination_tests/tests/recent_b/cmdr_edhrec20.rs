@@ -251,6 +251,40 @@ fn mighty_servant_crewed_by_two_draws() {
     }
 }
 
+/// "Becomes crewed for the first time each turn, if it was crewed by exactly
+/// two creatures": each crewing is counted on its own, and only the first one
+/// each turn counts — one then one (two crewers this turn, never two at once),
+/// or one then two, is no draw grant.
+#[test]
+fn mighty_servant_reads_only_the_first_crew_each_turn() {
+    for second_pair in [false, true] {
+        let mut g = pod(2);
+        let servant = ready(&mut g, 0, catalog::mighty_servant_of_leuk_o());
+        let ox = ready(&mut g, 0, catalog::giant_ox());
+        g.perform_action(GameAction::Crew { vehicle: servant, crew_creatures: vec![ox] }).expect("crew by one");
+        drain_stack(&mut g);
+        let mut again = vec![ready(&mut g, 0, catalog::hotshot_mechanic())];
+        if second_pair {
+            again.push(ready(&mut g, 0, catalog::grizzly_bears()));
+        }
+        g.perform_action(GameAction::Crew { vehicle: servant, crew_creatures: again }).expect("crew again");
+        drain_stack(&mut g);
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        g.clear_sickness(servant);
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: servant, target: AttackTarget::Player(1) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::CombatDamage;
+        let ev = g.resolve_combat().expect("damage");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), 0, "second crew by a pair: {second_pair}");
+    }
+}
+
 /// Giant Ox and Hotshot Mechanic only crew (CR 702.122b): neither saddles
 /// Caustic Bronco's saddle 3 by toughness or with the +2 (CR 702.171a).
 #[test]
