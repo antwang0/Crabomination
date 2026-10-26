@@ -200,6 +200,20 @@ fn selfless_police_captain_hands_off_counter() {
     assert_eq!(cp.toughness, 3, "bear gained a +1/+1 counter (2/2 -> 3/3)");
 }
 
+/// Selfless Police Captain hands off all its +1/+1 counters as it last
+/// existed (CR 603.10a), not the one it entered with.
+#[test]
+fn selfless_police_captain_hands_off_every_counter() {
+    let mut g = two_player_game();
+    let cap = g.move_card_to_battlefield_for_test(0, catalog::selfless_police_captain());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    g.battlefield_find_mut(cap).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let _ = g.remove_to_graveyard_with_triggers(cap);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "three counters (2/2 -> 5/5)");
+}
+
 /// Spider-Bot searches a basic land onto the top of the library.
 #[test]
 fn spider_bot_tutors_basic_to_top() {

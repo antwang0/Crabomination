@@ -1263,6 +1263,24 @@ fn diregraf_rebirth_reanimates() {
     assert!(g.players[0].graveyard.iter().all(|c| c.id != corpse), "left the graveyard");
 }
 
+/// Diregraf Rebirth costs {1} less per creature that died this turn: three
+/// deaths make it {B}{G}.
+#[test]
+fn diregraf_rebirth_costs_less_per_death() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::diregraf_rebirth());
+    g.players[1].creatures_died_this_turn = 3;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(corpse)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("three deaths pay the generic part");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(corpse).is_some());
+}
+
 /// Edgar's Awakening reanimates a creature card from your graveyard.
 #[test]
 fn edgars_awakening_reanimates() {

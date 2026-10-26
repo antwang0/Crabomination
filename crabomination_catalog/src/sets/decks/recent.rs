@@ -8084,8 +8084,7 @@ pub fn gastal_thrillseeker() -> CardDefinition {
 // ── Recover (Coldsnap, CR 702.58) ───────────────────────────────────────────
 
 /// Grim Harvest — {1}{B} Instant. Return target creature card from your
-/// graveyard to your hand. Recover {2}{B}. (The main effect's graveyard zone
-/// filter is dropped per the Disentomb convention.)
+/// graveyard to your hand. Recover {2}{B}.
 pub fn grim_harvest() -> CardDefinition {
     CardDefinition {
         name: "Grim Harvest",

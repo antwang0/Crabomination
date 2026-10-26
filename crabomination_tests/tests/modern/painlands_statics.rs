@@ -322,6 +322,26 @@ fn simple_equipment_grants_bonus_and_keywords() {
     }
 }
 
+/// Type-adding Equipment (layer 4): Silverskin Armor's "is an artifact" and
+/// Paladin's Arms' "is a Knight in addition to its other types".
+#[test]
+fn equipment_adds_a_type_to_the_equipped_creature() {
+    use crabomination::card::CreatureType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armor = g.add_card_to_battlefield(0, catalog::silverskin_armor());
+    g.battlefield_find_mut(armor).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.card_types().contains(&CardType::Artifact) && cp.card_types().contains(&CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let arms = g.add_card_to_battlefield(0, catalog::paladins_arms());
+    g.battlefield_find_mut(arms).unwrap().attached_to = Some(elf);
+    let cp = g.computed_permanent(elf).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Knight));
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Elf), "in addition to its other types");
+}
+
 /// Darksteel Plate is itself indestructible.
 #[test]
 fn darksteel_plate_is_indestructible() {

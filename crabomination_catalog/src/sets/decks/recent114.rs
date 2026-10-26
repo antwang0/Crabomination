@@ -1123,21 +1123,34 @@ pub fn winds_of_rath() -> CardDefinition {
 }
 
 /// Calming Verse — {3}{G} Sorcery. Destroy all enchantments you don't control.
-/// (The reflexive "then destroy your own if you control an untapped land"
-/// clause is dropped.)
+/// Then if you control an untapped land, destroy all enchantments you control.
 pub fn calming_verse() -> CardDefinition {
     CardDefinition {
         name: "Calming Verse",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByOpponent),
-            ),
-            body: Box::new(Effect::Destroy {
-                what: Selector::TriggerSource,
-            }),
-        },
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou.negate()),
+                ),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Untapped),
+                )),
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

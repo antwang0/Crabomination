@@ -443,9 +443,8 @@ pub fn morlun_devourer_of_spiders() -> CardDefinition {
 }
 
 /// Selfless Police Captain — {1}{W} 1/1 Human Detective. Enters with a +1/+1
-/// counter. When it leaves the battlefield, put a +1/+1 counter on target
-/// creature you control. (Printed "its counters" modeled as the one it enters
-/// with; a growing count is approximated as a single counter.)
+/// counter. When it leaves the battlefield, put its +1/+1 counters (as it last
+/// existed) on target creature you control.
 pub fn selfless_police_captain() -> CardDefinition {
     CardDefinition {
         name: "Selfless Police Captain",
@@ -466,7 +465,7 @@ pub fn selfless_police_captain() -> CardDefinition {
             effect: Effect::AddCounter {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+                amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
             },
         }],
         ..Default::default()

@@ -1804,6 +1804,21 @@ mod recent114 {
         assert!(g.battlefield_find(mine).is_some(), "your own enchantment survives");
     }
 
+    /// Calming Verse's second sentence: with an untapped land, your own
+    /// enchantments go too.
+    #[test]
+    fn calming_verse_with_an_untapped_land_destroys_your_own() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::forest());
+        let mine = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
+        let theirs = g.add_card_to_battlefield(1, catalog::sigil_of_the_empty_throne());
+        let spell = g.add_card_to_hand(0, catalog::calming_verse());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        cast(&mut g, spell);
+        assert!(g.battlefield_find(theirs).is_none() && g.battlefield_find(mine).is_none());
+    }
+
     /// Root Out destroys an enchantment and leaves a Clue.
     #[test]
     fn root_out_destroys_and_investigates() {

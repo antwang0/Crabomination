@@ -765,7 +765,7 @@ fn escape_protocol_flickers_on_cycle() {
 fn protean_thaumaturge_constellation_copy() {
     let mut g = two_player_game();
     let pt = g.add_card_to_battlefield(0, catalog::protean_thaumaturge());
-    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
         crabomination::decision::DecisionAnswer::Bool(true),
@@ -774,6 +774,17 @@ fn protean_thaumaturge_constellation_copy() {
     drain_stack(&mut g);
     let c = g.battlefield_find(pt).unwrap();
     assert_eq!(c.definition.name, "Serra Angel", "became a copy");
+    // "Except it has this ability" (CR 707.9b): the copy keeps constellation,
+    // so a second enchantment lets it become something else.
+    let _ = g.remove_to_graveyard_with_triggers(angel);
+    g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    let ench2 = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench2 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pt).unwrap().definition.name, "Colossal Dreadmaw", "copied again");
 }
 
 /// Enigmatic Incarnation sacrifices an enchantment for a creature with
@@ -3712,6 +3723,30 @@ fn deathbellow_war_cry_tutors_minotaurs() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(m1).is_some() && g.battlefield_find(m2).is_some(),
         "both Minotaurs hit the battlefield");
+}
+
+/// Deathbellow War Cry's Minotaurs have different names: a second copy of a
+/// name already found is no legal pick.
+#[test]
+fn deathbellow_war_cry_finds_different_names() {
+    let mut g = two_player_game();
+    let m1 = g.add_card_to_library(0, catalog::rage_scarred_berserker());
+    let m2 = g.add_card_to_library(0, catalog::rage_scarred_berserker());
+    let spell = g.add_card_to_hand(0, catalog::deathbellow_war_cry());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(m1)),
+        crabomination::decision::DecisionAnswer::Search(Some(m2)),
+        crabomination::decision::DecisionAnswer::Search(None),
+        crabomination::decision::DecisionAnswer::Search(None),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Deathbellow War Cry");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m1).is_some());
+    assert!(g.battlefield_find(m2).is_none(), "the same name twice is not different names");
 }
 
 /// Nylea's Intervention mode 2 deals twice X to each flyer.

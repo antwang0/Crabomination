@@ -413,8 +413,8 @@ pub fn marshal_of_the_lost() -> CardDefinition {
 }
 
 /// Embermouth Sentinel — {2} 2/1 Chimera artifact creature. ETB: search your
-/// library for a basic land and put it on top. (The "onto the battlefield if
-/// you control a Dragon" branch is dropped.)
+/// library for a basic land and put it on top — onto the battlefield tapped
+/// instead if you control a Dragon.
 pub fn embermouth_sentinel() -> CardDefinition {
     CardDefinition {
         name: "Embermouth Sentinel",
@@ -426,13 +426,20 @@ pub fn embermouth_sentinel() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::IsBasicLand,
-            to: ZoneDest::Library {
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Dragon).and(SelectionRequirement::ControlledByYou),
+            )),
+            then: Box::new(Effect::Search {
                 who: PlayerRef::You,
-                pos: LibraryPosition::Top,
-            },
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+            else_: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            }),
         })],
         ..Default::default()
     }

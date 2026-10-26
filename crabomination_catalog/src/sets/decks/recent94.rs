@@ -479,16 +479,18 @@ pub fn khorvath_brightflame() -> CardDefinition {
 // ── More Equipment ───────────────────────────────────────────────────────────
 
 /// Silverskin Armor — {2} Equipment. Equipped creature gets +1/+1. Equip {2}.
-/// (The "is an artifact in addition to its other types" rider is dropped.)
+/// It is an artifact in addition to its other types (layer 4).
 pub fn silverskin_armor() -> CardDefinition {
-    simple_equipment(
-        "Silverskin Armor",
-        cost(&[generic(2)]),
-        cost(&[generic(2)]),
-        1,
-        1,
-        vec![],
-    )
+    let mut c = simple_equipment("Silverskin Armor", cost(&[generic(2)]), cost(&[generic(2)]), 1, 1, vec![]);
+    c.static_abilities.push(crate::card::StaticAbility {
+        description: "Equipped creature is an artifact in addition to its other types.",
+        effect: StaticEffect::AddCardTypeToMatching {
+            applies_to: crate::card::Selector::AttachedTo(Box::new(crate::card::Selector::This)),
+            card_type: crate::card::CardType::Artifact,
+            artifact_subtype: None,
+        },
+    });
+    c
 }
 
 /// O-Naginata — {1} Equipment. Equipped creature gets +3/+0 and has trample.

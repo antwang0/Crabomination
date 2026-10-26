@@ -120,8 +120,7 @@ pub fn plea_for_guidance() -> CardDefinition {
 }
 
 /// Three Dreams — {4}{W} Sorcery. Search your library for up to three Aura
-/// cards and put them into your hand. (The "with different names" rider is
-/// dropped.)
+/// cards with different names and put them into your hand.
 pub fn three_dreams() -> CardDefinition {
     CardDefinition {
         name: "Three Dreams",
@@ -129,7 +128,8 @@ pub fn three_dreams() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::SearchUpToN {
             who: PlayerRef::You,
-            filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+            filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                .and(SelectionRequirement::NameDiffersFromLastMoved),
             to: ZoneDest::Hand(PlayerRef::You),
             count: Value::Const(3),
         },

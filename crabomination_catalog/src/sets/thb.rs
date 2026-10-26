@@ -1082,8 +1082,7 @@ pub fn escape_protocol() -> CardDefinition {
 }
 
 /// Protean Thaumaturge — {1}{U} 1/1. Constellation — may become a copy of
-/// another target creature. (The "except it has this ability" rider is
-/// dropped — the copy is plain.)
+/// another target creature, except it has this ability (CR 707.9b).
 pub fn protean_thaumaturge() -> CardDefinition {
     CardDefinition {
         name: "Protean Thaumaturge",
@@ -1104,7 +1103,7 @@ pub fn protean_thaumaturge() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Become a copy of another target creature?".into(),
                 body: Box::new(Effect::BecomeCopyOf {
-                    keep_own_triggered: false,
+                    keep_own_triggered: true,
                     keep_own_activated: false,
                     keep_name: false,
                     what: Selector::This,
@@ -6875,8 +6874,8 @@ pub fn nyleas_intervention() -> CardDefinition {
 }
 
 /// Deathbellow War Cry — {5}{R}{R}{R} Sorcery. Search your library for up to
-/// four Minotaur creature cards and put them onto the battlefield, then
-/// shuffle. (The "different names" rider is not enforced.)
+/// four Minotaur creature cards with different names and put them onto the
+/// battlefield, then shuffle.
 pub fn deathbellow_war_cry() -> CardDefinition {
     CardDefinition {
         name: "Deathbellow War Cry",
@@ -6884,9 +6883,9 @@ pub fn deathbellow_war_cry() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::SearchUpToN {
             who: PlayerRef::You,
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::HasCreatureType(
-                CreatureType::Minotaur,
-            )),
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Minotaur))
+                .and(SelectionRequirement::NameDiffersFromLastMoved),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,

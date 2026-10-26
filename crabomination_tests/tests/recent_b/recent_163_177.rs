@@ -235,7 +235,7 @@ mod recent164 {
 
 mod recent165 {
     use crabomination::catalog;
-    use crabomination::card::Keyword;
+    use crabomination::card::{CounterType, Keyword};
     use crabomination::game::types::{Target, TurnStep};
     use crabomination::game::*;
 
@@ -284,6 +284,24 @@ mod recent165 {
         assert!(!g.computed_permanent(pal).unwrap().keywords().contains(&Keyword::FirstStrike), "no first strike on the opponent's turn");
     }
 
+    /// Inspiring Paladin: during your turn your creatures with +1/+1 counters
+    /// have first strike too; a counterless one and an opponent's don't.
+    #[test]
+    fn inspiring_paladin_grants_first_strike_to_countered_creatures() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::inspiring_paladin());
+        let marked = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(marked).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+        let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(foe).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+        let fs = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::FirstStrike);
+        g.active_player_idx = 0;
+        assert!(fs(&g, marked) && !fs(&g, plain) && !fs(&g, foe));
+        g.active_player_idx = 1;
+        assert!(!fs(&g, marked), "only during your turn");
+    }
+
     /// Dreadwing Scavenger loots on entry and gains deathtouch at Threshold.
     #[test]
     fn dreadwing_scavenger_loots_and_thresholds() {
@@ -301,7 +319,9 @@ mod recent165 {
         for _ in 0..7 {
             g.add_card_to_graveyard(0, catalog::island());
         }
-        assert!(g.computed_permanent(dread).unwrap().keywords().contains(&Keyword::Deathtouch), "Threshold grants deathtouch");
+        let cp = g.computed_permanent(dread).unwrap();
+        assert!(cp.keywords().contains(&Keyword::Deathtouch), "Threshold grants deathtouch");
+        assert_eq!((cp.power, cp.toughness), (3, 3), "and +1/+1");
     }
 }
 
@@ -2015,6 +2035,24 @@ mod recent172 {
         g.cast_spell(spell, Some(Target::Permanent(ring)), vec![], None, None).expect("cast Tune Up");
         drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.id == ring), "Sol Ring back on the battlefield");
+        assert!(!g.computed_permanent(ring).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+    }
+
+    /// Tune Up: a returned Vehicle becomes an artifact creature, uncrewed.
+    #[test]
+    fn tune_up_makes_a_vehicle_a_creature() {
+        let mut g = two_player_game();
+        let copter = g.add_card_to_graveyard(0, catalog::smugglers_copter());
+        let spell = g.add_card_to_hand(0, catalog::tune_up());
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.cast_spell(spell, Some(Target::Permanent(copter)), vec![], None, None).expect("cast Tune Up");
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(copter).unwrap();
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+        assert_eq!((cp.power, cp.toughness), (3, 3));
     }
 }
 

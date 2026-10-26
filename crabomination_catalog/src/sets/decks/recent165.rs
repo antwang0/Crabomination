@@ -59,9 +59,8 @@ pub fn starlight_snare() -> CardDefinition {
     }
 }
 
-/// Inspiring Paladin — {2}{W} 3/3 Human Knight. During your turn, it has first
-/// strike. (The team-wide "your +1/+1-countered creatures have first strike"
-/// rider is dropped.)
+/// Inspiring Paladin — {2}{W} 3/3 Human Knight. During your turn, it and your
+/// creatures with +1/+1 counters on them have first strike.
 pub fn inspiring_paladin() -> CardDefinition {
     CardDefinition {
         name: "Inspiring Paladin",
@@ -73,21 +72,35 @@ pub fn inspiring_paladin() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        static_abilities: vec![StaticAbility {
-            description: "During your turn, this creature has first strike.",
-            effect: StaticEffect::SelfHasKeywordIf {
-                keyword: Keyword::FirstStrike,
-                condition: Predicate::IsTurnOf(PlayerRef::You),
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, this creature has first strike.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::FirstStrike,
+                    condition: Predicate::IsTurnOf(PlayerRef::You),
+                },
             },
-        }],
+            StaticAbility {
+                description: "During your turn, creatures you control with +1/+1 counters on them have first strike.",
+                effect: StaticEffect::AnthemForFilterIf {
+                    filter: R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::WithCounter(crate::card::CounterType::PlusOnePlusOne)),
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::FirstStrike],
+                    condition: Predicate::IsTurnOf(PlayerRef::You),
+                    all_players: false,
+                },
+            },
+        ],
         ..Default::default()
     }
 }
 
 /// Dreadwing Scavenger — {1}{U}{B} 2/2 Nightmare Bird. Flying. When it enters or
-/// attacks, draw a card, then discard a card. Threshold — it has deathtouch as
-/// long as seven or more cards are in your graveyard. (The Threshold +1/+1 is
-/// dropped.)
+/// attacks, draw a card, then discard a card. Threshold — it gets +1/+1 and has
+/// deathtouch as long as seven or more cards are in your graveyard.
 pub fn dreadwing_scavenger() -> CardDefinition {
     use crate::mana::b;
     CardDefinition {
@@ -102,12 +115,12 @@ pub fn dreadwing_scavenger() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "Threshold — has deathtouch while seven or more cards are in your graveyard.",
-            effect: StaticEffect::SelfHasKeywordIf {
-                keyword: Keyword::Deathtouch,
-                condition: Predicate::ThresholdActive {
-                    who: PlayerRef::You,
-                },
+            description: "Threshold — +1/+1 and deathtouch while seven or more cards are in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Deathtouch],
             },
         }],
         triggered_abilities: vec![etb_loot(), on_attack_loot()],

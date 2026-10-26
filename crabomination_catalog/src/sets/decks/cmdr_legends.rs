@@ -228,7 +228,9 @@ pub fn tiamat() -> CardDefinition {
             cond: Predicate::SourceWasCast,
             then: Box::new(Effect::SearchUpToN {
                 who: PlayerRef::You,
-                filter: R::HasCreatureType(CreatureType::Dragon).and(R::HasName("Tiamat".into()).negate()),
+                filter: R::HasCreatureType(CreatureType::Dragon)
+                    .and(R::HasName("Tiamat".into()).negate())
+                    .and(R::NameDiffersFromLastMoved),
                 to: ZoneDest::Hand(PlayerRef::You),
                 count: Value::Const(5),
             }),

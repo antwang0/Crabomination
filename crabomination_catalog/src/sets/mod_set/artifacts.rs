@@ -1054,7 +1054,7 @@ pub fn prophetic_prism() -> CardDefinition {
 }
 
 /// Fountain of Renewal — {1} Artifact. "At the beginning of your upkeep, you
-/// gain 1 life." (The {4},{T}, Sacrifice: draw a card mode is omitted.) (M19)
+/// gain 1 life." {3}, Sacrifice: draw a card. (M19)
 pub fn fountain_of_renewal() -> CardDefinition {
     CardDefinition {
         name: "Fountain of Renewal",

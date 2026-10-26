@@ -413,8 +413,7 @@ pub fn march_of_the_world_ooze() -> CardDefinition {
 
 /// Possession Engine — {3}{U}{U} Artifact — Vehicle 5/5. Crew 3. ETB: gain
 /// control of target creature an opponent controls for as long as you control
-/// this Vehicle. (The "that creature can't attack or block" rider is dropped —
-/// no source-linked keyword duration yet.)
+/// this Vehicle; it can't attack or block for as long as you control this.
 pub fn possession_engine() -> CardDefinition {
     CardDefinition {
         name: "Possession Engine",

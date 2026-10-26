@@ -7823,8 +7823,8 @@ pub enum Effect {
     /// them into `to`." Resolves as a chain of single `Search` picks (each
     /// reuses the `SearchPending` suspend), shrinking `count` per pick.
     /// AutoDecider declines (finds none). Nylea's Intervention (lands → hand),
-    /// Deathbellow War Cry (Minotaurs → battlefield). The "different names"
-    /// rider is not enforced.
+    /// Deathbellow War Cry (Minotaurs → battlefield). "With different names"
+    /// is `R::NameDiffersFromLastMoved` in the filter.
     SearchUpToN { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest, count: Value },
     /// CR 701.23 — `body`'s searches are ONE search: "search for up to two
     /// basic land cards, put one onto the battlefield tapped and the other

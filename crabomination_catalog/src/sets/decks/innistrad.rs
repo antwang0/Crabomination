@@ -3290,8 +3290,8 @@ pub fn secrets_of_the_key() -> CardDefinition {
 }
 
 /// Diregraf Rebirth — {3}{B}{G} Sorcery. Return target creature card from your
-/// graveyard to the battlefield. Flashback {5}{B}{G}. (The cost-reduction-per-
-/// creature-that-died-this-turn rider is omitted.)
+/// graveyard to the battlefield. Flashback {5}{B}{G}. Costs {1} less for each
+/// creature that died this turn.
 pub fn diregraf_rebirth() -> CardDefinition {
     CardDefinition {
         name: "Diregraf Rebirth",
@@ -3307,6 +3307,10 @@ pub fn diregraf_rebirth() -> CardDefinition {
             },
         },
         keywords: vec![Keyword::Flashback(cost(&[generic(5), b(), g()]))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This spell costs {1} less to cast for each creature that died this turn.",
+            effect: crate::effect::StaticEffect::SelfCostReducedByValue { amount: crate::card::Value::CreaturesDiedThisTurnTotal },
+        }],
         ..Default::default()
     }
 }

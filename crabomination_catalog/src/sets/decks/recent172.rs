@@ -154,20 +154,33 @@ pub fn thundering_broodwagon() -> CardDefinition {
 }
 
 /// Tune Up — {3}{W} Sorcery. Return target artifact card from your graveyard to
-/// the battlefield. (If it's a Vehicle it becomes an artifact creature — that
-/// rider is dropped.)
+/// the battlefield. If it's a Vehicle, it becomes an artifact creature.
 pub fn tune_up() -> CardDefinition {
     CardDefinition {
         name: "Tune Up",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Move {
-            what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
-        },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::LastMoved,
+                    filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                },
+                then: Box::new(Effect::AddCardTypeIndefinitely {
+                    what: Selector::LastMoved,
+                    card_type: CardType::Creature,
+                    until_eot: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

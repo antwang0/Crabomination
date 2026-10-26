@@ -3793,6 +3793,17 @@ mod recent29 {
         assert_eq!(g.players[0].library[0].definition.name, "Forest", "basic on top");
     }
 
+    /// Embermouth Sentinel with a Dragon out puts the land onto the
+    /// battlefield tapped instead.
+    #[test]
+    fn embermouth_sentinel_with_a_dragon_deploys_the_land() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        let forest = g.add_card_to_library(0, catalog::forest());
+        etb_bf(&mut g, 0, catalog::embermouth_sentinel());
+        assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped), "onto the battlefield tapped");
+    }
+
     /// Rainveil Rejuvenator taps for green equal to its power.
     #[test]
     fn rainveil_rejuvenator_mana() {
