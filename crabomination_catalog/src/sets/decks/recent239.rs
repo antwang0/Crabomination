@@ -791,16 +791,17 @@ pub fn hollow_marauder() -> CardDefinition {
         affinity_graveyard_filter: Some(R::Creature),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ForEachOpponent {
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::Player(PlayerRef::Triggerer),
-                        amount: Value::ONE,
-                        random: false,
-                    },
+            // "Any number of target opponents" (CR 115.1): each picked seat
+            // discards; a draw for each who didn't discard a 4+.
+            effect: Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::OpponentPlayer,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::Target(0), amount: Value::ONE, random: false },
                     Effect::If {
                         cond: Predicate::Any(vec![
-                            Predicate::Not(Box::new(Predicate::DiscardedThisEffect { who: PlayerRef::Triggerer })),
+                            Predicate::Not(Box::new(Predicate::DiscardedThisEffect { who: PlayerRef::Target(0) })),
                             Predicate::LastDiscardedManaValueAtMost(3),
                         ]),
                         then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),

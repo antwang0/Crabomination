@@ -760,27 +760,33 @@ mod recent239 {
         let src = g.add_card_to_battlefield(0, catalog::hollow_marauder());
         let etb = def.triggered_abilities[0].effect.clone();
         let before = g.players[0].hand.len();
-        g.resolve_effect(&etb, &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+        g.resolve_effect(&etb, &EffectContext::for_trigger(src, 0, Some(Target::Player(1)), 0)).unwrap();
         assert_eq!(g.players[0].hand.len(), before + 1, "drew after a cheap discard");
         // Expensive discard → no draw.
         let mut g = two_player_game();
         g.add_card_to_hand(1, catalog::serra_angel()); // MV 5
         let src = g.add_card_to_battlefield(0, catalog::hollow_marauder());
         let before = g.players[0].hand.len();
-        g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+        g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, Some(Target::Player(1)), 0)).unwrap();
         assert_eq!(g.players[0].hand.len(), before, "no draw after an expensive discard");
-        // Multiplayer: one draw per opponent who didn't discard a 4+ — the
-        // cheap discard and the empty hand count, the Angel doesn't.
+        // Multiplayer, CR 115.1 "any number of target opponents": the ETB
+        // fills every opponent's slot; one draw per opponent who didn't
+        // discard a 4+ — the cheap discard and the empty hand count, the
+        // Angel doesn't.
         let mut g = crabomination::game::multi_player_game(4);
+        g.step = TurnStep::PreCombatMain;
         for _ in 0..3 {
             g.add_card_to_library(0, catalog::grizzly_bears());
         }
         g.add_card_to_hand(1, catalog::grizzly_bears());
         g.add_card_to_hand(2, catalog::serra_angel());
-        let src = g.add_card_to_battlefield(0, catalog::hollow_marauder());
-        let before = g.players[0].hand.len();
-        g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
-        assert_eq!(g.players[0].hand.len(), before + 2, "seat 1 and the empty-handed seat 3");
+        let marauder = g.add_card_to_hand(0, catalog::hollow_marauder());
+        g.players[0].mana_pool.add(Color::Black, 7);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: marauder, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), 2, "seat 1 and the empty-handed seat 3");
         assert!(g.players[1].hand.is_empty() && g.players[2].hand.is_empty());
     }
 
