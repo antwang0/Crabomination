@@ -2322,7 +2322,10 @@ Melody / Embolden 0.
 ("target player searches their library", "target player exiles a card from their graveyard"), but the body
 names no player target, so player hexproof, "becomes the target" and the seat choice at N > 2 are all missing
 (CR 115.1). Closed this pass: Fertilid (41 seats — it searched the CONTROLLER's library and put the land on
-their own side, with no target at all) and Scrabbling Claws' tap ability. **Open, by seats:** Lonis,
-Cryptozoologist 54 (the resolver owns the reveal); Jace, the Perfected Mind 12 (a loyalty ability carries one
+their own side, with no target at all) and Scrabbling Claws' tap ability. Lonis, Cryptozoologist 54 and the two other
+"target **opponent**" unit variants (Fertile Imagination, Liar's Pendulum) synthesized `Player`, so the caster was
+a legal choice, and the three "target **player**" ones (Cabal Therapy, Brain Pry, Stain the Mind) declared the
+slot only in `primary_target_filter` — so the ACTIVATION / CAST validator took a target the enumerator never
+offered, and Cabal Therapy cast with no target at all. **Open, by seats:** Jace, the Perfected Mind 12 (a loyalty ability carries one
 target — the Jeska row); Vindictive Lich 5 (its modes target, the sacrifice choice is the engine's); End of the
 Hunt 2; Cabal Therapist / Cabal Therapy / Careful Consideration / Sméagol 1 each; eleven more at 0 seats.

@@ -1682,8 +1682,9 @@ fn cabal_therapy_discards_all_copies_of_the_named_card() {
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::NamedCard("Lightning Bolt".into()),
     ]));
+    // "Target player reveals their hand" — the seat is a target (CR 115.1).
     g.perform_action(GameAction::CastSpell {
-        card_id: ct, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: ct, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cabal Therapy castable for {B}");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt1));
@@ -1703,8 +1704,9 @@ fn cabal_therapy_auto_decider_names_the_densest_card() {
     let ct = g.add_card_to_hand(0, catalog::cabal_therapy());
     g.players[0].mana_pool.add(Color::Black, 1);
     // No scripted name — the AutoDecider suggestion heuristic kicks in.
+    // "Target player reveals their hand" — the seat is a target (CR 115.1).
     g.perform_action(GameAction::CastSpell {
-        card_id: ct, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: ct, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cabal Therapy castable for {B}");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt1));

@@ -199,6 +199,31 @@ fn lonis_may_decline_the_revealed_card() {
     assert!(g.players[1].library.iter().any(|c| c.id == myr), "it went to the bottom");
 }
 
+/// CR 115.1 — "target **opponent** reveals": Lonis cannot name its own
+/// controller, and at three seats either opponent is legal.
+#[test]
+fn lonis_targets_an_opponent_only() {
+    let mut g = crabomination::game::multi_player_game(3);
+    let lonis = g.add_card_to_battlefield(0, catalog::lonis_cryptozoologist());
+    g.clear_sickness(lonis);
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::clue_token());
+    g.add_card_to_library(0, catalog::parcel_myr());
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let effect = catalog::lonis_cryptozoologist().activated_abilities[0].effect.clone();
+    let legal = g.enumerate_legal_targets(&effect, 0);
+    assert!(!legal.contains(&Target::Player(0)), "not its own controller: {legal:?}");
+    assert!(legal.contains(&Target::Player(1)) && legal.contains(&Target::Player(2)));
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: lonis, ability_index: 0, target: Some(Target::Player(0)),
+            additional_targets: vec![], x_value: Some(1), mode: None,
+        })
+        .is_err(),
+        "targeting yourself is illegal"
+    );
+}
+
 #[test]
 fn lonis_investigate_and_steal() {
     let mut g = two_player_game();

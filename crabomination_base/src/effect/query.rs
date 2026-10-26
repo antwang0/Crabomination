@@ -3343,10 +3343,13 @@ impl Effect {
             // falls back to `Any` and offers the board.
             Effect::NameCardTargetDiscardsOneOrYouDraw
             | Effect::NameCardTargetDiscardsMatching
-            | Effect::NameCardExileMatchingAllZones
-            | Effect::LiarsPendulum
+            | Effect::NameCardExileMatchingAllZones => Some(&IMPLICIT_PLAYER_TARGET),
+            // The same shape whose print says "target **opponent**" (Lonis,
+            // Fertile Imagination, Liar's Pendulum): the caster is not a
+            // legal choice.
+            Effect::LiarsPendulum
             | Effect::FertileImagination { .. }
-            | Effect::OpponentRevealsPickToBattlefield { .. } => Some(&IMPLICIT_PLAYER_TARGET),
+            | Effect::OpponentRevealsPickToBattlefield { .. } => Some(&IMPLICIT_OPPONENT_TARGET),
             Effect::Search { who, .. } | Effect::RevealTopThenShuffle { who, .. } => {
                 implicit_player_if_bare_player_ref(who)
             }
@@ -6254,6 +6257,26 @@ impl Effect {
                 } => sel_find(who, slot)
                     .or_else(|| eff_find(option_a, slot, mode, kicked))
                     .or_else(|| eff_find(option_b, slot, mode, kicked)),
+                // The unit variants whose whole shape is "target player / target
+                // opponent <acts>": slot 0 is a player by construction, with no
+                // field to read it off. `primary_target_filter` carries the same
+                // two lists — a slot walk that answers `None` here lets the
+                // ACTIVATION validator accept a target the enumerator never
+                // offered (Lonis could be aimed at its own controller).
+                Effect::NameCardTargetDiscardsOneOrYouDraw
+                | Effect::NameCardTargetDiscardsMatching
+                | Effect::NameCardExileMatchingAllZones
+                    if slot == 0 =>
+                {
+                    Some(&IMPLICIT_PLAYER_TARGET)
+                }
+                Effect::LiarsPendulum
+                | Effect::FertileImagination { .. }
+                | Effect::OpponentRevealsPickToBattlefield { .. }
+                    if slot == 0 =>
+                {
+                    Some(&IMPLICIT_OPPONENT_TARGET)
+                }
                 _ => None,
             }
         }
