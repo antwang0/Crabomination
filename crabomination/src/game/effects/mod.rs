@@ -43312,14 +43312,23 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileAtNextEndStep { what } => {
+            Effect::ExileAtNextEndStep { what } | Effect::ExileAtNextEndStepUnless { what, .. } => {
+                let exile = Effect::Exile { what: crate::effect::Selector::This };
+                let body = match effect {
+                    Effect::ExileAtNextEndStepUnless { unless, .. } => Effect::If {
+                        cond: unless.clone(),
+                        then: Box::new(Effect::Noop),
+                        else_: Box::new(exile),
+                    },
+                    _ => exile,
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: id,
                         kind: crate::game::types::DelayedKind::NextEndStep,
-                        effect: Effect::Exile { what: crate::effect::Selector::This },
+                        effect: body.clone(),
                         target: None,
                         bound_token: None,
                         bound_subject: None,

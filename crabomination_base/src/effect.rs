@@ -7552,6 +7552,10 @@ pub enum Effect {
     /// exile twin of [`Effect::SacrificeAtNextEndStep`]. The selector is
     /// resolved now; each hit gets its own CR 603.7a delayed trigger.
     ExileAtNextEndStep { what: Selector },
+    /// [`Effect::ExileAtNextEndStep`] with an intervening "unless": `unless`
+    /// is read as each delayed trigger resolves (Tilonalli's Summoner's
+    /// "exile those tokens unless you have the city's blessing").
+    ExileAtNextEndStepUnless { what: Selector, unless: Predicate },
     /// "Sacrifice this permanent unless you sacrifice any number of `filter`
     /// with total power `total_power` or greater" (Phyrexian Dreadnought's
     /// ETB). The controller picks the fodder (the source itself is never

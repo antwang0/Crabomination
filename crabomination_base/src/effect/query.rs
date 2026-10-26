@@ -1277,6 +1277,7 @@ impl Effect {
             | Effect::DestroyAtNextEndStep { what }
             | Effect::ReturnToOwnersHandAtNextEndStep { what } => sel_has_target(what),
             Effect::ExileAtNextEndStep { what }
+            | Effect::ExileAtNextEndStepUnless { what, .. }
             | Effect::AssignsNoCombatDamageThisTurn { what } => sel_has_target(what),
             Effect::SacrificeSourceUnlessSacrificeTotalPower { .. } => false,
             Effect::DiscardUnlessPutCardOnTop { who, then } => {
