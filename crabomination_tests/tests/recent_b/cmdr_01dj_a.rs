@@ -1601,6 +1601,19 @@ fn bolg_of_the_north_flings_and_amasses() {
     assert_eq!(plus(&g, army(&g, 0).expect("Army")), 3, "three excess");
 }
 
+/// Undead Butler: "you may exile it. When you do, return target creature
+/// card" — a reflexive trigger (CR 603.12) that targets after the exile.
+#[test]
+fn undead_butler_returns_another_creature_card_after_exiling_itself() {
+    let mut g = pod(2);
+    let butler = g.add_card_to_battlefield(0, catalog::undead_butler());
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, butler);
+    assert!(g.exile.iter().any(|c| c.id == butler), "exiled");
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf), "the Elves come back");
+}
+
 /// The Balrog goes to the bottom of its owner's library when an opponent's
 /// legendary creature dies — not for a nonlegendary one.
 #[test]

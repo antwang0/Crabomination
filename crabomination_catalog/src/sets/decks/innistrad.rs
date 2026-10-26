@@ -2501,8 +2501,8 @@ pub fn frenzied_devils() -> CardDefinition {
 // ── Black / Blue / Artifact (remainder) ──────────────────────────────────────
 
 /// Undead Butler — {1}{B} 1/2 Zombie. ETB mill three. When it dies, you may
-/// exile it; if you do, return target creature card from your graveyard to your
-/// hand.
+/// exile it; when you do, return target creature card from your graveyard to
+/// your hand.
 pub fn undead_butler() -> CardDefinition {
     CardDefinition {
         name: "Undead Butler",
@@ -2519,20 +2519,17 @@ pub fn undead_butler() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             }),
-            on_dies(Effect::MayDo {
-                description: "Exile Undead Butler to return a creature card from your graveyard?"
-                    .to_string(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Exile {
-                        what: Selector::This,
-                    },
-                    Effect::Move {
+            // CR 603.12 — "When you do": the return targets after the exile,
+            // so it can never name the Butler itself.
+            on_dies(Effect::MayExileSelfThen {
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Move {
                         what: target_filtered(
                             SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Creature),
                         ),
                         to: ZoneDest::Hand(PlayerRef::You),
-                    },
-                ])),
+                    }),
+                }),
             }),
         ],
         ..Default::default()
