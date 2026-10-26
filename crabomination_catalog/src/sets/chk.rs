@@ -1876,8 +1876,8 @@ pub fn seshiro_the_anointed() -> CardDefinition {
 
 /// Sosuke, Son of Seshiro — {2}{G}{G} Legendary Snake Warrior 3/4. Other Snakes
 /// you control get +1/+0; whenever a Warrior you control deals combat damage to
-/// a creature, destroy that creature. (Printed "at end of combat"; modeled as an
-/// immediate destroy of the just-damaged creature.)
+/// a creature, destroy that creature at end of combat (a CR 603.7a delayed
+/// trigger).
 pub fn sosuke_son_of_seshiro() -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {
@@ -1909,8 +1909,8 @@ pub fn sosuke_son_of_seshiro() -> CardDefinition {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Warrior),
             }),
-            effect: Effect::Destroy {
-                what: Selector::Target(0),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
             },
         }],
         ..Default::default()

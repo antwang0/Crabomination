@@ -239,6 +239,34 @@ fn ohran_viper_destroys_what_it_fought_at_end_of_combat() {
     assert!(g.battlefield_find(viper).is_some());
 }
 
+/// Sosuke's "destroy that creature at end of combat" (CR 603.7a): a Wall of
+/// Stone its Warrior damaged survives the damage step and dies at end of combat.
+#[test]
+fn sosuke_destroys_the_damaged_creature_at_end_of_combat() {
+    let mut g = main_phase(2);
+    let sosuke = g.add_card_to_battlefield(0, catalog::sosuke_son_of_seshiro());
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_stone());
+    g.clear_sickness(sosuke);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: sosuke, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, sosuke)])).expect("block");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(wall).map(|c| c.damage), Some(3), "damaged, alive in the damage step");
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(wall).is_none(), "destroyed at end of combat");
+}
+
 /// "Choose an opponent. That player returns a card" — the opponent's own
 /// graveyard, at a table where the other opponent's graveyard is full too.
 #[test]
