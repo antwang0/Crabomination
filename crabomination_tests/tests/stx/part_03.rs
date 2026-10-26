@@ -419,6 +419,32 @@ fn detention_sphere_exiles_until_it_leaves() {
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returns when the Sphere leaves");
 }
 
+/// "And all other permanents with the same name as that permanent": a
+/// second Grizzly Bears (yours) goes too, and both come back together.
+#[test]
+fn detention_sphere_exiles_every_permanent_sharing_the_targets_name() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::detention_sphere());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Detention Sphere castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(other).is_none());
+    assert!(g.battlefield_find(elf).is_some(), "a differently named permanent stays");
+    g.remove_from_battlefield_to_graveyard_raw(id);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(other).is_some(), "both return");
+}
+
 /// The printed "you may": declined, the target stays. And "not named
 /// Detention Sphere": with the Sphere the only nonland permanent, the
 /// trigger has no legal target and the Sphere does not exile itself
