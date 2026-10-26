@@ -2069,7 +2069,7 @@ pub fn elder_auntie() -> CardDefinition {
 
 /// Raphael, Most Attitude — {3}{R} legendary 4/3 menace Mutant Ninja Turtle.
 /// Alliance: you may exile your top card (linked). Attacks: until end of turn
-/// you may play the cards exiled with it.
+/// you may play one card exiled with it.
 pub fn raphael_most_attitude() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
@@ -2089,14 +2089,19 @@ pub fn raphael_most_attitude() -> CardDefinition {
                     }),
                 },
             },
-            on_attack(Effect::GrantMayPlay {
-                what: Selector::CardExiledWithSource,
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: false,
-                pay_own_cost: true,
-                any_color: false,
-            }),
+            // "You may play a card exiled with Raphael": one play spends the
+            // rest of the grant (`OneCastAmongGranted`; a land play too).
+            on_attack(Effect::Seq(vec![
+                Effect::GrantMayPlay {
+                    what: Selector::CardExiledWithSource,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                Effect::OneCastAmongGranted { what: Selector::CardExiledWithSource },
+            ])),
         ],
         ..legend(creature(
             "Raphael, Most Attitude",

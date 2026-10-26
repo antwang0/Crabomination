@@ -609,6 +609,33 @@ fn raphael_plays_what_alliance_exiled() {
     assert!(g.battlefield_find(top).is_some());
 }
 
+/// Raphael's "you may play a card exiled with Raphael" is one play: casting
+/// one exiled card spends the grant on the other.
+#[test]
+fn raphael_plays_only_one_exiled_card() {
+    let mut g = pod(2);
+    let raph = ready(&mut g, 0, catalog::raphael_most_attitude());
+    let second = g.add_card_to_library(0, catalog::grizzly_bears());
+    let first = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    for _ in 0..2 {
+        let auntie = g.add_card_to_hand(0, catalog::elder_auntie());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        cast(&mut g, auntie, None).expect("Elder Auntie");
+    }
+    assert!([first, second].iter().all(|id| g.exile.iter().any(|c| c.id == *id && c.exiled_with == Some(raph))));
+    attack(&mut g, &[(raph, 1)]);
+    g.step = TurnStep::PostCombatMain;
+    g.attacking.clear();
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: first, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("the first exiled Bears");
+    drain_stack(&mut g);
+    let again = g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: second, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(again.is_err(), "the grant was one play");
+}
+
 /// Raph's Bravado pumps attackers only on its controller's turn.
 #[test]
 fn raphs_bravado_pumps_your_attackers() {
