@@ -4270,19 +4270,21 @@ pub fn the_fire_nation_drill() -> CardDefinition {
         power: 6,
         toughness: 3,
         keywords: vec![Keyword::Trample, Keyword::Crew(2)],
-        triggered_abilities: vec![etb(Effect::MayDo {
+        // CR 603.12 — "you may tap it. When you do": the target is chosen
+        // after the tap, and only if the Drill was untapped to tap.
+        triggered_abilities: vec![etb(Effect::MayTap {
             description: "Tap The Fire Nation Drill to destroy a creature with power 4 or less?"
                 .to_string(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::Tap {
-                    what: Selector::This,
-                },
-                Effect::Destroy {
+            filter: SelectionRequirement::IsSource,
+            count: Value::ONE,
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Destroy {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(4)),
                     ),
-                },
-            ])),
+                }),
+            }),
+            else_: None,
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),

@@ -184,7 +184,10 @@ pub fn leyline_tyrant() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::MayPayXOfColor {
             color: Color::Red,
             description: "Pay any amount of {R} to deal that much damage?".into(),
-            body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::XFromCost }),
+            // CR 603.12 — "When you do": the target is chosen after the payment.
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::XFromCost }),
+            }),
         })],
         ..creature("Leyline Tyrant", cost(&[generic(2), r(), r()]), vec![CreatureType::Dragon], 4, 4)
     }

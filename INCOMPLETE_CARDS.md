@@ -2295,10 +2295,17 @@ Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei; 2026-10-23 second: Kang, Mm
 
 `scripts/audit_when_you_do.py` lists the implemented cards whose printed "When you do, … target …" has no
 `Reflexive` / `ReflexiveTrigger` in its factory: the payoff targets as the outer trigger goes on the stack,
-before the cost or choice that gates it, and resolves inline (no response window). **80 cards**; top by pod
-seats: Armix, Filigree Thrasher 73, Ancient Bronze Dragon 60, Guide of Souls 46, Leyline Tyrant 46, The Fugitive
-Doctor 39, Earthbender Ascension 33, Cut Your Losses 22, Dáin Ironfoot 19. Closed this pass: the Plans
-(`plan_payoff`), Bolg of the North, Yotia Declares War, Undead Butler. ⚠ A "may [cost]. When you do" wrapper
+before the cost or choice that gates it, and resolves inline (no response window). **80 cards** at the audit;
+closed: the Plans (`plan_payoff`), Bolg of the North, Yotia Declares War, Undead Butler; 2026-10-26 second pass:
+Armix (73 seats), Ancient Bronze Dragon, Leyline Tyrant, The Fugitive Doctor, Earthbender Ascension (also "target
+creature you control", was any creature), Eastfarthing Farmer, The Fire Nation Drill (`MayTap` on `IsSource`: a
+tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater;
+reviewed as not printed: Cut Your Losses, Wort (keyword reminder), Ancestral Katana, Glorybringer. **Open:** Guide
+of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type
+end-of-turn, printed indefinite), Dáin Ironfoot 19 (`LastCreatedToken` is not carried into a reflexive trigger —
+`ResolutionCarry` needs the last-created ids), Earth Rumble 10 (a spell whose earthbend slot precedes the fight
+slots), then the script's tail. The bot declines a "may [cost]. When you do" whose payoff has no legal target
+(`reflexive_payoff_untargetable`). ⚠ A "may [cost]. When you do" wrapper
 changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
 decline still holds when no target exists before converting one (Armix's discard).
 

@@ -820,16 +820,16 @@ pub fn doombot_harbinger() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             etb(may("Mill four cards?", Effect::Mill { who: Selector::You, amount: Value::Const(4) })),
-            crate::effect::shortcut::on_dies(may(
-                "Exile Doombot Harbinger to return a creature card from your graveyard?",
-                Effect::Seq(vec![
-                    Effect::Exile { what: Selector::This },
-                    Effect::Move {
-                        what: target_filtered(R::InYourGraveyard.and(R::Creature).and(R::OtherThanSource)),
+            // CR 603.12 — "you may exile this card. When you do": the return
+            // targets after the exile (Undead Butler's shape).
+            crate::effect::shortcut::on_dies(Effect::MayExileSelfThen {
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(R::InYourGraveyard.and(R::Creature)),
                         to: ZoneDest::Hand(PlayerRef::You),
-                    },
-                ]),
-            )),
+                    }),
+                }),
+            }),
         ],
         ..creature("Doombot Harbinger", cost(&[generic(2), b()]), vec![CreatureType::Robot, CreatureType::Villain], 2, 1)
     }

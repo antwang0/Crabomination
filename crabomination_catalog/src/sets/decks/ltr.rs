@@ -1187,13 +1187,16 @@ pub fn eastfarthing_farmer() -> CardDefinition {
                 count: Value::Const(1),
                 definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: food_count.clone(),
-                toughness: food_count,
-                duration: Duration::EndOfTurn,
+            // CR 603.12 — "When you do": targets after the Food is made.
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: food_count.clone(),
+                    toughness: food_count,
+                    duration: Duration::EndOfTurn,
+                }),
             },
         ]))],
         ..Default::default()

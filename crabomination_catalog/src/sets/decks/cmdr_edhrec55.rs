@@ -218,17 +218,23 @@ pub fn ancient_bronze_dragon() -> CardDefinition {
                 count: Value::ONE,
                 modifier: Value::Const(0),
                 reroll_at_most: 0,
+                // CR 603.12 — "When you do": the targets are chosen after the roll.
                 results: vec![(
                     1,
                     20,
-                    Effect::ApplyToTargets {
-                        max_targets: 2,
-                        min_targets: 0,
-                        filter: R::Creature,
-                        effect: Box::new(Effect::AddCounter {
-                            what: Selector::Target(0),
-                            kind: CounterType::PlusOnePlusOne,
-                            amount: Value::TriggerEventAmount,
+                    Effect::WithX {
+                        x: Value::LastDieRoll,
+                        body: Box::new(Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::ApplyToTargets {
+                                max_targets: 2,
+                                min_targets: 0,
+                                filter: R::Creature,
+                                effect: Box::new(Effect::AddCounter {
+                                    what: Selector::Target(0),
+                                    kind: CounterType::PlusOnePlusOne,
+                                    amount: Value::XFromCost,
+                                }),
+                            }),
                         }),
                     },
                 )],

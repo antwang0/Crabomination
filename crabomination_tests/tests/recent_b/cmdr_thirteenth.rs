@@ -283,6 +283,8 @@ fn the_fugitive_doctor_grants_flashback_for_2rg() {
     else {
         panic!("attack trigger")
     };
+    // CR 603.12 — the grant is the "when you do" reflexive trigger's body.
+    let Effect::ReflexiveTrigger { body: then } = *then else { panic!("reflexive") };
     let ctx = EffectContext::for_trigger(doc, 0, Some(Target::Permanent(bolt)), 0);
     g.resolve_effect(&then, &ctx).expect("grant");
     flood(&mut g, 0);

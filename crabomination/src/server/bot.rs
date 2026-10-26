@@ -6166,6 +6166,12 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     if body.is_some_and(|b| removal_targets_own_permanent(state, b)) {
         return false;
     }
+    // CR 603.12 — a "when you do" payoff picks its target only after the
+    // cost is paid; with no legal target, the cost buys nothing (Armix's
+    // discard with no defending creature).
+    if body.is_some_and(|b| reflexive_payoff_untargetable(state, source, b)) {
+        return false;
+    }
     // A "you may create a token" on an overkill board only grows it: Flourishing
     // Defenses offered an Elf Warrior per -1/-1 counter and the bot took all
     // 980 under Everlasting Torment until the six-seat pod's board cap
@@ -6311,6 +6317,29 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
         }
         _ => None,
     }
+}
+
+/// Whether `body` gates a reflexive payoff (`ReflexiveTrigger`) that requires
+/// a slot-0 target none of which exists for `source`'s controller now.
+fn reflexive_payoff_untargetable(state: &GameState, source: CardId, body: &Effect) -> bool {
+    let inner = match body {
+        Effect::ReflexiveTrigger { body } => body,
+        Effect::Seq(v) => match v.iter().find_map(|e| match e {
+            Effect::ReflexiveTrigger { body } => Some(body),
+            _ => None,
+        }) {
+            Some(b) => b,
+            None => return false,
+        },
+        _ => return false,
+    };
+    if inner.target_filter_for_slot_in_mode_kicked(0, None, false).is_none() || inner.target_slot_optional_x(0, None, 0) {
+        return false;
+    }
+    let seat = state.battlefield.find_by_id(source).map(|c| c.controller).or_else(|| {
+        state.players.iter().position(|p| p.graveyard.iter().chain(p.hand.iter()).any(|c| c.id == source))
+    });
+    seat.is_some_and(|seat| state.auto_targets_for_effect_all_slots_x(inner, seat, None, false, Some(source), None).0.is_none())
 }
 
 /// Whether `eff` (a "you may" body) imposes a clear cost on its controller —
@@ -23883,6 +23912,24 @@ mod tests {
         let id = g.add_card_to_battlefield(0, def);
         assert!(optional_trigger_beneficial(&g, id, "discard to draw?"),
             "a MayDiscard whose payoff is a draw is accepted");
+    }
+
+    /// CR 603.12 — a "when you do" payoff targets only after the cost; the
+    /// bot does not pay for one with no legal target (Armix's discard).
+    #[test]
+    fn bot_declines_a_reflexive_payoff_with_no_target() {
+        use crate::card::SelectionRequirement as R;
+        use crate::effect::Selector;
+        let mut g = two_player_game();
+        let killer = Effect::ReflexiveTrigger {
+            body: Box::new(Effect::Destroy {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+            }),
+        };
+        let id = g.add_card_to_battlefield(0, body_card("Reflex", killer));
+        assert!(!optional_trigger_beneficial(&g, id, "you may"), "nothing to destroy");
+        g.add_card_to_battlefield(1, body_card("Victim", Effect::Noop));
+        assert!(optional_trigger_beneficial(&g, id, "you may"), "an opposing creature to destroy");
     }
 
     #[test]

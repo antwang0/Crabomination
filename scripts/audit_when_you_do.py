@@ -21,6 +21,12 @@ REVIEWED = {
     "Construct a Cosmic Cube": "plan_payoff",
     "Doom Reigns Supreme": "plan_payoff",
     "Villainous Syndication": "plan_payoff",
+    # Not a printed payoff: the "when you do" is a keyword's reminder text,
+    # or the trigger IS the reflexive one.
+    "Cut Your Losses": "casualty",
+    "Wort, the Raidmother": "conspire",
+    "Ancestral Katana": "untargeted; the target is equip's reminder",
+    "Glorybringer": "`EventKind::Exerted` is the reflexive trigger",
 }
 NAMED = re.compile(r'(?:name:\s*|\b(?:legend|creature|spell|permanent|plan|sorcery|instant)\(\s*)"([^"]+)"')
 

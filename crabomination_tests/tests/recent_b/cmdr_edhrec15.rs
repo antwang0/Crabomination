@@ -2521,3 +2521,38 @@ fn invoke_justice_distributes_among_the_target_players_creatures() {
     let n = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
     assert_eq!((n(&g, theirs), n(&g, mine), n(&g, dead)), (4, 0, 0));
 }
+
+// ── CR 603.12 "When you do" payoffs (reflexive triggers) ───────────────────
+
+/// Doombot Harbinger: "you may exile this card. When you do, return target
+/// creature card" — the return targets after the exile, so the Harbinger can
+/// never fetch itself; declining the exile returns nothing.
+#[test]
+fn doombot_harbinger_exiles_itself_then_returns_a_creature_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for exile in [true, false] {
+        let mut g = pod(2);
+        let bot = ready(&mut g, 0, catalog::doombot_harbinger());
+        let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(exile)]));
+        let murder = g.add_card_to_hand(1, catalog::murder());
+        cast_as(&mut g, 1, murder, &[Target::Permanent(bot)]).expect("murder");
+        assert_eq!(g.exile.iter().any(|c| c.id == bot), exile);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == bears), exile);
+    }
+}
+
+/// Ancient Bronze Dragon: the d20 is rolled first, then the reflexive trigger
+/// puts that many +1/+1 counters on up to two target creatures.
+#[test]
+fn ancient_bronze_dragon_puts_the_roll_on_up_to_two_creatures() {
+    let mut g = pod(2);
+    let dragon = ready(&mut g, 0, catalog::ancient_bronze_dragon());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, &[(dragon, 1)]).expect("attack");
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 13);
+    let n = g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert!((1..=20).contains(&n), "the roll: {n}");
+    assert_eq!(g.battlefield_find(dragon).unwrap().counter_count(CounterType::PlusOnePlusOne), n);
+}

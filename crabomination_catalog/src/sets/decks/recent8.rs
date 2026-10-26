@@ -134,8 +134,10 @@ pub fn earth_village_ruffians() -> CardDefinition {
 }
 
 /// Earthbender Ascension — {2}{G} Enchantment. ETB earthbend 2, then ramp a
-/// basic onto the battlefield tapped. (Landfall quest-counter engine omitted.)
+/// basic onto the battlefield tapped. Landfall: a quest counter; at four or
+/// more, +1/+1 counter and trample on target creature you control.
 pub fn earthbender_ascension() -> CardDefinition {
+    let four_quest = || Predicate::SourceHasCountersAtLeast { counter: CounterType::Quest, n: 4 };
     CardDefinition {
         name: "Earthbender Ascension",
         cost: cost(&[generic(2), g()]),
@@ -152,11 +154,9 @@ pub fn earthbender_ascension() -> CardDefinition {
                     },
                 },
             ])),
-            // "Landfall — Whenever a land you control enters, put a quest
-            // counter on this enchantment. Then if it has four or more quest
-            // counters on it, put a +1/+1 counter on up to one target creature.
-            // That creature gains trample until end of turn" — shipped missing
-            // (the `cnt` audit column, 2026-09-10).
+            // Landfall — a quest counter; CR 603.12 "When you do, if it has
+            // four or more quest counters on it" is a reflexive trigger with an
+            // intervening if (CR 603.4), checked again on resolution.
             crate::effect::shortcut::landfall(Effect::Seq(vec![
                 Effect::AddCounter {
                     what: Selector::This,
@@ -164,23 +164,26 @@ pub fn earthbender_ascension() -> CardDefinition {
                     amount: Value::ONE,
                 },
                 Effect::If {
-                    cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Quest, n: 4 },
-                    then: Box::new(Effect::ApplyToTargets {
-                        max_targets: 1,
-                        min_targets: 0,
-                        filter: SelectionRequirement::Creature,
-                        effect: Box::new(Effect::Seq(vec![
-                            Effect::AddCounter {
-                                what: Selector::Target(0),
-                                kind: CounterType::PlusOnePlusOne,
-                                amount: Value::ONE,
-                            },
-                            Effect::GrantKeyword {
-                                what: Selector::Target(0),
-                                keyword: Keyword::Trample,
-                                duration: crate::effect::Duration::EndOfTurn,
-                            },
-                        ])),
+                    cond: four_quest(),
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::If {
+                            cond: four_quest(),
+                            then: Box::new(Effect::Seq(vec![
+                                Effect::AddCounter {
+                                    what: target_filtered(
+                                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                                    ),
+                                    kind: CounterType::PlusOnePlusOne,
+                                    amount: Value::ONE,
+                                },
+                                Effect::GrantKeyword {
+                                    what: Selector::Target(0),
+                                    keyword: Keyword::Trample,
+                                    duration: crate::effect::Duration::EndOfTurn,
+                                },
+                            ])),
+                            else_: Box::new(Effect::Noop),
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },

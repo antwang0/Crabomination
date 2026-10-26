@@ -1290,9 +1290,12 @@ pub fn foray_of_orcs() -> CardDefinition {
         CardType::Sorcery,
         Effect::Seq(vec![
             amass(Value::Const(2)),
-            Effect::DealDamage {
-                to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-                amount: army_power(),
+            // CR 603.12 — "When you do": the target is chosen after the amass.
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    amount: army_power(),
+                }),
             },
         ]),
     )

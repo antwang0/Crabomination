@@ -1064,16 +1064,19 @@ pub fn escape_protocol() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {1} to flicker an artifact or creature?".into(),
                 mana_cost: cost(&[generic(1)]),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Exile { what: tgt() },
-                    Effect::Move {
-                        what: Selector::Target(0),
-                        to: ZoneDest::Battlefield {
-                            controller: PlayerRef::OwnerOfMoved,
-                            tapped: false,
+                // CR 603.12 — "When you do": targets after the payment.
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Exile { what: tgt() },
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOfMoved,
+                                tapped: false,
+                            },
                         },
-                    },
-                ])),
+                    ])),
+                }),
                 else_: None,
             },
         }],

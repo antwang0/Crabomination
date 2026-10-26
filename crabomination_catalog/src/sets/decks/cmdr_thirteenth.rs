@@ -1077,9 +1077,12 @@ pub fn the_fugitive_doctor() -> CardDefinition {
                 description: "Sacrifice a Clue to give an instant or sorcery flashback?".into(),
                 filter: R::HasArtifactSubtype(ArtifactSubtype::Clue),
                 count: Value::ONE,
-                then: Box::new(Effect::GrantFlashbackWithCostThisTurn {
-                    what: target_filtered(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard)),
-                    cost: cost(&[generic(2), r(), g()]),
+                // CR 603.12 — "When you do": targets after the sacrifice.
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::GrantFlashbackWithCostThisTurn {
+                        what: target_filtered(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard)),
+                        cost: cost(&[generic(2), r(), g()]),
+                    }),
                 }),
                 else_: None,
             }),

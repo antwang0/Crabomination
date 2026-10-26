@@ -356,15 +356,18 @@ pub fn dream_eater() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(4),
             },
-            Effect::MayDo {
-                description: "Return a nonland permanent an opponent controls to its owner's hand?"
-                    .into(),
-                body: Box::new(Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Nonland
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            // CR 603.12 — "When you do": the target is chosen after the surveil.
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::MayDo {
+                    description: "Return a nonland permanent an opponent controls to its owner's hand?"
+                        .into(),
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Nonland
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    }),
                 }),
             },
         ]))],

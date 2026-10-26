@@ -2426,6 +2426,23 @@ fn fire_nation_drill_etb_destroys_small_creature() {
     assert!(g.battlefield_find(drill).unwrap().tapped, "Drill tapped itself");
 }
 
+/// CR 603.12 — "you may tap it. When you do": a Drill that enters tapped
+/// can't be tapped, so the reflexive trigger never fires.
+#[test]
+fn fire_nation_drill_entering_tapped_destroys_nothing() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let drill = g.add_card_to_battlefield(0, catalog::the_fire_nation_drill());
+    g.battlefield_find_mut(drill).unwrap().tapped = true;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Target(Target::Permanent(foe)),
+    ]));
+    g.fire_self_etb_triggers(drill, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_some());
+}
+
 /// Iroh, Grand Lotus grants flashback to instants/sorceries in your graveyard.
 #[test]
 fn iroh_grand_lotus_flashbacks_graveyard_spells() {

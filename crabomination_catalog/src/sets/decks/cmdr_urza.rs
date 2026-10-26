@@ -131,11 +131,15 @@ pub fn armix_filigree_thrasher() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::MayDiscard {
             description: "Discard a card to shrink a defending creature?".into(),
             count: Value::ONE,
-            then: Box::new(Effect::PumpPT {
-                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
-                power: negative(x()),
-                toughness: negative(x()),
-                duration: Duration::EndOfTurn,
+            // CR 603.12 — "When you do": targets after the discard, and X
+            // counts an artifact card just discarded.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                    power: negative(x()),
+                    toughness: negative(x()),
+                    duration: Duration::EndOfTurn,
+                }),
             }),
             else_: None,
         })],
