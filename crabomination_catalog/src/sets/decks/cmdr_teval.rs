@@ -991,29 +991,13 @@ pub fn rise_of_the_witch_king() -> CardDefinition {
     )
 }
 
-/// The deepest mana value Agadeem's Awakening's per-value return reaches.
-const AGADEEM_MAX_MV: u32 = 16;
-
 /// Agadeem's Awakening // Agadeem, the Undercrypt — {X}{B}{B}{B} Sorcery //
 /// Land. Return from your graveyard to the battlefield any number of target
 /// creature cards that each have a different mana value X or less. // As this
 /// land enters, you may pay 3 life. If you don't, it enters tapped. {T}: Add {B}.
-///
-/// Each mana value 0..=X returns at most one creature card of that value, so
-/// the "different mana value" rule holds by construction. Approximation: the
-/// cards are picked at resolution rather than targeted.
+/// The targets' different mana values are the cross-slot
+/// `ManaValueDiffersFromOtherTargets` (CR 601.2c).
 pub fn agadeems_awakening() -> CardDefinition {
-    let per_value = (0..=AGADEEM_MAX_MV)
-        .map(|mv| Effect::If {
-            cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(mv as i32)),
-            then: Box::new(from_graveyard(
-                R::Creature.and(R::ManaValueExactly(mv)),
-                true,
-                to_battlefield(false),
-            )),
-            else_: Box::new(Effect::Noop),
-        })
-        .collect();
     CardDefinition {
         back_face: Some(Box::new(CardDefinition {
             supertypes: vec![],
@@ -1024,7 +1008,15 @@ pub fn agadeems_awakening() -> CardDefinition {
             "Agadeem's Awakening",
             cost(&[x(), b(), b(), b()]),
             CardType::Sorcery,
-            Effect::Seq(per_value),
+            Effect::ApplyToTargets {
+                max_targets: 20,
+                min_targets: 0,
+                filter: R::Creature
+                    .from_your_graveyard()
+                    .and(R::ManaValueAtMostXFromCost)
+                    .and(R::ManaValueDiffersFromOtherTargets),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: to_battlefield(false) }),
+            },
         )
     }
 }

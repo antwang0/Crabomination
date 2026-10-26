@@ -5511,8 +5511,8 @@ pub fn invasion_of_new_phyrexia() -> CardDefinition {
 
 /// Long Rest — {X}{G}{G}{G} sorcery. Return X cards with different mana values
 /// from your graveyard to your hand; with eight or more returned, your life
-/// total becomes your starting life total. Exile it. (The X cards are picked
-/// at resolution rather than targeted — INCOMPLETE_CARDS.)
+/// total becomes your starting life total. Exile it. X targets, their
+/// different mana values the cross-slot `ManaValueDiffersFromOtherTargets`.
 pub fn long_rest() -> CardDefinition {
     CardDefinition {
         exile_on_resolve: true,
@@ -5522,7 +5522,14 @@ pub fn long_rest() -> CardDefinition {
             CardType::Sorcery,
             Effect::Seq(vec![
                 Effect::ClearLastMoved,
-                Effect::ReturnDistinctManaValuesFromGraveyard { who: PlayerRef::You, max: Some(Value::XFromCost) },
+                Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 20,
+                        min_targets: 0,
+                        filter: R::Any.from_your_graveyard().and(R::ManaValueDiffersFromOtherTargets),
+                        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+                    }),
+                },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(Selector::LastMoved)), Value::Const(8)),
                     then: Box::new(Effect::SetLifeTotal { who: Selector::You, amount: Value::StartingLifeTotal }),

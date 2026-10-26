@@ -2479,13 +2479,24 @@ fn long_rest_returns_distinct_values_and_resets_life() {
         catalog::forest(), catalog::llanowar_elves(), catalog::grizzly_bears(), catalog::hill_giant(),
         catalog::serra_angel(), catalog::murder(), catalog::lightning_bolt(), catalog::sol_ring(),
     ];
-    for card in pool {
-        g.add_card_to_graveyard(0, card);
-    }
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ids: Vec<CardId> = pool.into_iter().map(|card| g.add_card_to_graveyard(0, card)).collect();
+    let bears2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.players[0].life = 5;
     let rest = g.add_card_to_hand(0, catalog::long_rest());
-    cast_x(&mut g, rest, None, Some(3));
+    flood(&mut g, 0);
+    let cast = |g: &mut GameState, ts: &[CardId]| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: rest,
+            target: Some(Target::Permanent(ts[0])),
+            additional_targets: ts[1..].iter().map(|&t| Target::Permanent(t)).collect(),
+            mode: None,
+            x_value: Some(3),
+        })
+    };
+    // CR 601.2c — "X target cards with different mana values".
+    assert!(cast(&mut g, &[ids[0], ids[2], bears2]).is_err(), "two Bears share mana value 2");
+    cast(&mut g, &[ids[0], ids[1], ids[2]]).expect("cast");
+    drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 3);
     let mut mvs: Vec<u32> = g.players[0].hand.iter().map(|c| c.definition.cost.cmc()).collect();
     mvs.sort_unstable();

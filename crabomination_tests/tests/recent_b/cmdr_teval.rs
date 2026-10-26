@@ -792,7 +792,9 @@ fn rise_of_the_witch_king_returns_another_permanent() {
     assert!(on_battlefield(&g, old), "another permanent card returns");
 }
 
-/// Agadeem's Awakening returns at most one creature card per mana value ≤ X.
+/// Agadeem's Awakening targets creature cards with different mana values X or
+/// less (CR 601.2c cross-slot): two of one mana value, or one above X, is no
+/// legal target set.
 #[test]
 fn agadeems_awakening_returns_one_per_mana_value() {
     let mut g = main_phase();
@@ -801,10 +803,22 @@ fn agadeems_awakening_returns_one_per_mana_value() {
     let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let big = g.add_card_to_graveyard(0, catalog::the_scarab_god());
     let spell = g.add_card_to_hand(0, catalog::agadeems_awakening());
-    cast_with(&mut g, spell, None, Some(2));
-    assert!(on_battlefield(&g, bears));
-    assert_eq!([elves, elves2].iter().filter(|id| on_battlefield(&g, **id)).count(), 1);
-    assert!(!on_battlefield(&g, big), "mana value above X");
+    flood(&mut g, 0);
+    let cast = |g: &mut GameState, ts: &[CardId]| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(ts[0])),
+            additional_targets: ts[1..].iter().map(|&t| Target::Permanent(t)).collect(),
+            mode: None,
+            x_value: Some(2),
+        })
+    };
+    assert!(cast(&mut g, &[elves, elves2]).is_err(), "two of mana value 1");
+    assert!(cast(&mut g, &[elves, big]).is_err(), "mana value above X");
+    cast(&mut g, &[elves, bears]).expect("cast");
+    drain_stack(&mut g);
+    assert!(on_battlefield(&g, bears) && on_battlefield(&g, elves));
+    assert!(!on_battlefield(&g, elves2) && !on_battlefield(&g, big));
     // The back face: a land that taps for {B}.
     let back = catalog::agadeems_awakening().back_face.unwrap();
     assert_eq!(back.name, "Agadeem, the Undercrypt");
