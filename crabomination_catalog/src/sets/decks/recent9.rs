@@ -561,8 +561,8 @@ pub fn deserters_disciple() -> CardDefinition {
     }
 }
 
-/// Turtle-Duck — {G} 0/4. {3}: until end of turn, it gets +4/+0 and gains
-/// trample. (Modeled as a pump rather than a base-power set; same result.)
+/// Turtle-Duck — {G} 0/4. {3}: until end of turn, it has base power 4 and
+/// gains trample (CR 613.4b — a second activation doesn't stack).
 pub fn turtle_duck() -> CardDefinition {
     CardDefinition {
         name: "Turtle-Duck",
@@ -577,10 +577,9 @@ pub fn turtle_duck() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Seq(vec![
-                Effect::PumpPT {
+                Effect::SetBasePower {
                     what: Selector::This,
                     power: Value::Const(4),
-                    toughness: Value::ZERO,
                     duration: Duration::EndOfTurn,
                 },
                 Effect::GrantKeyword {

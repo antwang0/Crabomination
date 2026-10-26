@@ -11798,7 +11798,7 @@ mod recent9 {
         assert!(g.permanent_has_keyword(bear, &Keyword::Unblockable));
     }
 
-    /// Turtle-Duck pumps itself and gains trample.
+    /// Turtle-Duck has base power 4 and gains trample.
     #[test]
     fn turtle_duck_pumps_and_tramples() {
         let mut g = two_player_game();
@@ -11814,8 +11814,17 @@ mod recent9 {
         .expect("activate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(duck).unwrap();
-        assert_eq!(cp.power, 4, "0 base + 4");
+        assert_eq!(cp.power, 4, "base power 4");
         assert!(cp.keywords().contains(&Keyword::Trample));
+        // CR 613.4b — "has base power 4" sets, so a second activation is
+        // still 4, not 8.
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: duck, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("activate again");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(duck).unwrap().power, 4, "base power doesn't stack");
     }
 }
 
