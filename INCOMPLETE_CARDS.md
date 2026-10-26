@@ -2307,10 +2307,8 @@ decline still holds when no target exists before converting one (Armix's discard
 
 `/tmp`-free check — the oracle text says "any number of (other) target …" and the factory holds no multi-target
 construct (`max_targets` / `ApplyToTargets` / `ForEach*Target` / a slot past 0). Closed this pass: Priest of
-Forgotten Gods (79 seats), Hollow Marauder, Thraben Charm, Officious Interrogation. **Open, by seats:** Brago,
-King Eternal 39 (blinks every nonland permanent you control, not a chosen set — note the printed "those cards",
-so a token blinked this way should not return: `Paradoxical Outcome`'s `OwnedByYou.and(NotToken)` filter is the
-shape); Command the Dreadhorde 8 (the resolver owns the graveyard walk, `audit_target_zone`'s one exemption);
+Forgotten Gods (79 seats), Brago, King Eternal (39 — and it is now a legal target of its own ability, per the
+2020-11-10 ruling), Hollow Marauder, Thraben Charm, Officious Interrogation. **Open, by seats:** Command the Dreadhorde 8 (the resolver owns the graveyard walk, `audit_target_zone`'s one exemption);
 Iname, Life Aspect 7; Divine Resilience 7 (the unkicked half is one target, the kicked half every creature —
 printed is "any number" either way); Paradoxical Outcome 6; Nethroi, Apex of Death 6 and Reunion of the House 5
 (total power 10 or less — needs `SlotsTotalManaValueAtMost`'s power sibling); Ral Zarek, Guest Lecturer 5 (the

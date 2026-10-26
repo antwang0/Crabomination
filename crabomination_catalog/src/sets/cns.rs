@@ -479,11 +479,14 @@ pub fn brago_king_eternal() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::ExileAndReturnToOwner {
-                what: Selector::ControlledBy {
-                    who: PlayerRef::You,
-                    filter: R::Not(Box::new(R::Land)).and(R::OtherThanSource),
-                },
+            // "Exile any number of target nonland permanents you control"
+            // (CR 115.1) — Brago itself is a legal pick (2020-11-10 ruling),
+            // and "return those cards" leaves a blinked token exiled.
+            effect: Effect::ApplyToTargets {
+                max_targets: 20,
+                min_targets: 0,
+                filter: R::Nonland.and(R::ControlledByYou),
+                effect: Box::new(Effect::ExileAndReturnToOwner { what: Selector::Target(0) }),
             },
         }],
         ..Default::default()

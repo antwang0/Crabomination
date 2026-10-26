@@ -346,10 +346,39 @@ fn brago_blinks_your_board_on_connect() {
         g.advance_step(Vec::new()).expect("advance");
         drain_stack(&mut g);
     }
-    // The Wall left and re-entered, firing its ETB draw; Brago stayed put.
+    // The Wall left and re-entered, firing its ETB draw; Brago is back too
+    // (it is a legal target of its own ability, 2020-11-10 ruling).
     assert!(g.battlefield_find(brago).is_some());
     assert!(g.battlefield_find(wall).is_some());
     assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// CR 115.1 — "any number of target nonland permanents you control": a land
+/// and an opponent's permanent are not legal picks, and "return those cards"
+/// leaves a blinked token exiled (CR 111.7).
+#[test]
+fn brago_targets_only_your_nonland_permanents_and_eats_a_token() {
+    let mut g = main_phase();
+    let brago = g.add_card_to_battlefield(0, catalog::brago_king_eternal());
+    let land = g.add_card_to_battlefield(0, catalog::plains());
+    let theirs = g.add_card_to_battlefield(1, catalog::wall_of_omens());
+    let effect = catalog::brago_king_eternal().triggered_abilities[0].effect.clone();
+    let (first, rest) = g.auto_targets_for_effect_all_slots(&effect, 0, None);
+    let picked: Vec<_> = first.into_iter().chain(rest).collect();
+    assert!(picked.contains(&Target::Permanent(brago)), "Brago itself is legal: {picked:?}");
+    assert!(!picked.contains(&Target::Permanent(land)));
+    assert!(!picked.contains(&Target::Permanent(theirs)));
+    let spirit = crabomination::card::TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![crabomination::card::CardType::Creature],
+        ..Default::default()
+    };
+    let token = g.add_token_to_battlefield(0, &spirit);
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(brago, 0, Some(Target::Permanent(token)), 0);
+    g.resolve_effect(&effect, &ctx).expect("blink");
+    assert!(g.battlefield_find(token).is_none(), "the token ceased to exist");
 }
 
 #[test]
