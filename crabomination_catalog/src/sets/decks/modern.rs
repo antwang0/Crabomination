@@ -11138,8 +11138,7 @@ pub fn murmuring_mystic() -> CardDefinition {
 
 /// Werewolf Pack Leader — {G}{G} Human Werewolf 3/3. Pack tactics — attacks
 /// with total power 6+: draw a card. {3}{G}: until end of turn it has base
-/// power and toughness 5/3 and gains trample. (Residual: "and isn't a Human"
-/// is dropped — no lose-a-creature-type effect.)
+/// power and toughness 5/3, gains trample, and isn't a Human.
 pub fn werewolf_pack_leader() -> CardDefinition {
     CardDefinition {
         name: "Werewolf Pack Leader",

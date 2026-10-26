@@ -4487,8 +4487,8 @@ pub fn gaius_van_baelsar() -> CardDefinition {
 // ── modern_decks batch 4: FIN recursion, token lord, vehicle ──────────────────
 
 /// Sorceress's Schemes — {3}{R} Sorcery. Return target instant or sorcery card
-/// from your graveyard to your hand; add {R}. Flashback {4}{R}. (The exiled-
-/// flashback-card target is omitted.)
+/// from your graveyard or exiled card with flashback you own to your hand; add
+/// {R}. Flashback {4}{R}.
 pub fn sorceresss_schemes() -> CardDefinition {
     CardDefinition {
         name: "Sorceress's Schemes",

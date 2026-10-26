@@ -347,8 +347,7 @@ pub fn turn_inside_out() -> CardDefinition {
 }
 
 /// Huskburster Swarm — {7}{B} 6/6 Elemental Insect with menace and deathtouch.
-/// Costs {1} less per creature card in your graveyard. (The printed rider also
-/// counts exiled creature cards you own — that half is approximated.)
+/// Costs {1} less per creature card you own in exile and in your graveyard.
 pub fn huskburster_swarm() -> CardDefinition {
     CardDefinition {
         name: "Huskburster Swarm",
@@ -361,7 +360,23 @@ pub fn huskburster_swarm() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Menace, Keyword::Deathtouch],
-        affinity_graveyard_filter: Some(R::Creature),
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast for each creature card you own in exile and in your graveyard.",
+            effect: StaticEffect::SelfCostReducedByValue {
+                amount: Value::Sum(vec![
+                    Value::CountOf(Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: R::Creature,
+                    })),
+                    Value::CountOf(Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Exile,
+                        filter: R::Creature,
+                    })),
+                ]),
+            },
+        }],
         ..Default::default()
     }
 }

@@ -3008,5 +3008,10 @@ mod recent177 {
         for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
         g.add_card_to_graveyard(0, catalog::lightning_bolt()); // noncreature, ignored
         assert_eq!(cost_reduction_for_spell(&g, 0, &swarm, None), 3, "three creature cards → 3 generic off");
+        // "… you own in exile and in your graveyard": an exiled creature card
+        // you own counts, an opponent's doesn't.
+        g.add_card_to_exile(0, catalog::serra_angel());
+        g.add_card_to_exile(1, catalog::serra_angel());
+        assert_eq!(cost_reduction_for_spell(&g, 0, &swarm, None), 4);
     }
 }
