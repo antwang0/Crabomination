@@ -8690,6 +8690,7 @@ impl CardDefinition {
         let kindred = self.card_types.contains(&CardType::Kindred);
         crate::mana::SpellKind {
             not_owned: false,
+            not_a_cast_or_activation: false,
             freerunning: self.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
             wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),

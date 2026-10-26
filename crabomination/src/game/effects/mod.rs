@@ -48556,7 +48556,13 @@ impl GameState {
                 // tax); a Phyrexian pip paid with life bills the payer.
                 let mut cost = cost.clone();
                 self.phyrexianize_for_payer(payer, &mut cost);
-                match self.try_pay_with_auto_tap(payer, &cost) {
+                // Not a cast or an activation (CR 119.4b): Angel of Jubilation
+                // doesn't bar the life a Phyrexian pip here costs.
+                let kind = crate::mana::SpellKind {
+                    not_a_cast_or_activation: true,
+                    ..Default::default()
+                };
+                match self.try_pay_with_auto_tap_kind(payer, &cost, false, &kind) {
                     Ok(receipt) => {
                         events.extend(receipt.auto_events);
                         self.pay_life_cost(payer, receipt.side_effects.life_lost);

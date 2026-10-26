@@ -18752,7 +18752,7 @@ impl GameState {
         let first = self.try_pay_after_snapshot_mode_any_life(
             payer, cost, snapshot, forced_only, kind, spend_float,
         )?;
-        if self.cost_life_payable(payer, self.effective_life(payer), first.side_effects.life_lost) {
+        if self.payment_life_payable(payer, kind, first.side_effects.life_lost) {
             return Ok(first);
         }
         self.restore_payment_state(payer, pre.clone());
@@ -18779,7 +18779,7 @@ impl GameState {
             match self.try_pay_after_snapshot_mode_any_life(
                 payer, &attempt, pre.clone(), forced_only, kind, spend_float,
             ) {
-                Ok(r) if self.cost_life_payable(payer, self.effective_life(payer), r.side_effects.life_lost) => {
+                Ok(r) if self.payment_life_payable(payer, kind, r.side_effects.life_lost) => {
                     return Ok(r);
                 }
                 Ok(_) => self.restore_payment_state(payer, pre.clone()),

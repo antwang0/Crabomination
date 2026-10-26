@@ -114,6 +114,22 @@ impl GameState {
             || (life_payable(life, amount) && !self.cost_payments_restricted() && !self.player_cannot_lose_life_now(p))
     }
 
+    /// [`Self::cost_life_payable`] for a payment whose `kind` may say it is
+    /// not a cast or activation (a ward cost): then only the life total and
+    /// CR 119.8 gate it, not CR 119.4b's ban.
+    pub(crate) fn payment_life_payable(
+        &self,
+        p: usize,
+        kind: &crate::mana::SpellKind,
+        amount: u32,
+    ) -> bool {
+        if kind.not_a_cast_or_activation {
+            return amount == 0
+                || (life_payable(self.effective_life(p), amount) && !self.player_cannot_lose_life_now(p));
+        }
+        self.cost_life_payable(p, self.effective_life(p), amount)
+    }
+
     /// May `c` be sacrificed to pay a cost (CR 701.21)? Not when it can't be
     /// sacrificed at all (Assault Suit), nor a creature under Angel of
     /// Jubilation — judged by its current types, so an artifact creature can't

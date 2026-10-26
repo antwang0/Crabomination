@@ -190,6 +190,50 @@ fn krrik_pays_a_hybrid_black_pip_with_life() {
     assert_eq!(g.players[0].life, life - 2);
 }
 
+/// CR 119.4b — Angel of Jubilation bars life paid "to cast spells or activate
+/// abilities", and paying a ward / "unless that player pays" cost is neither:
+/// K'rrik's 2 life still pays Thrull Wizard's {B} and the spell survives.
+#[test]
+fn angel_of_jubilation_does_not_bar_an_unless_you_pay_cost() {
+    for angel in [false, true] {
+        let mut g = main_phase(2);
+        g.add_card_to_battlefield(0, catalog::krrik_son_of_yawgmoth());
+        if angel {
+            g.add_card_to_battlefield(1, catalog::angel_of_jubilation());
+        }
+        let wizard = g.add_card_to_battlefield(1, catalog::thrull_wizard());
+        g.clear_sickness(wizard);
+        let shade = g.add_card_to_hand(0, catalog::nantuko_shade());
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: shade,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast the Shade");
+        // Seat 0 is tapped out, so only K'rrik's 2 life can pay the {B}.
+        let life = g.players[0].life;
+        g.players[1].mana_pool.add(Color::Black, 1);
+        g.players[1].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: wizard,
+            ability_index: 0,
+            target: Some(Target::Permanent(shade)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("counter unless paid");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].life, life - 2, "the {{B}} was paid with 2 life (angel {angel})");
+        assert!(g.battlefield_find(shade).is_some(), "the Shade resolved (angel {angel})");
+    }
+}
+
 /// K'rrik's "for each {B} in a cost" reaches cycling (2024-06-07 ruling):
 /// Decree of Pain cycles for {3} and 4 life.
 #[test]

@@ -1311,6 +1311,13 @@ pub struct SpellKind {
     /// The caster doesn't own the spell being cast (Thieving Varmint's mana;
     /// filled by `GameState::spell_kind_for`).
     pub not_owned: bool,
+    /// This payment is **not** the cost of casting a spell or activating an
+    /// ability — a ward or other "unless [player] pays" cost paid as a
+    /// trigger resolves. CR 119.4b's ban (Angel of Jubilation's "players
+    /// can't pay life to cast spells or activate abilities") doesn't reach
+    /// it, so a Phyrexian pip's 2 life stays payable; the life total itself
+    /// and CR 119.8 ("can't lose life") still do.
+    pub not_a_cast_or_activation: bool,
     /// The spell has freerunning (CR 702.173) — Brotherhood Headquarters.
     pub freerunning: bool,
     /// The spell's rules text computes `ConvergedValue` (converge): the
