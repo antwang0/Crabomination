@@ -1272,9 +1272,8 @@ pub fn spiders_man_heroic_horde() -> CardDefinition {
 /// Grim Reaper's Scythe — {2}{B} legendary artifact. Whenever one or more
 /// creature cards leave your graveyard, create a 2/2 black Zombie. {3}{B},
 /// {T}, sacrifice two creatures: return target creature card from your
-/// graveyard to the battlefield with a finality counter; sorcery speed.
-/// Approximation: the finality counter goes on just after it enters. (Egon,
-/// God of Death.)
+/// graveyard to the battlefield with a finality counter (it enters with it,
+/// `SpellEntersWithCounters`); sorcery speed. (Egon, God of Death.)
 pub fn grim_reapers_scythe() -> CardDefinition {
     CardDefinition {
         name: "Grim Reaper's Scythe",
