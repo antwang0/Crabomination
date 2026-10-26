@@ -5370,6 +5370,11 @@ pub struct TokenDefinition {
     /// evaluates from the permanent's own context and would read X as 0).
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
+    /// CR 111.3 — a mana cost the creating effect defines ("She's a
+    /// {5}{W}{W}{W} legendary 6/6 Angel" — Nivea's Akroma). Empty for most
+    /// tokens, whose mana value is then 0 (CR 202.3b).
+    #[serde(default)]
+    pub cost: crate::mana::ManaCost,
 }
 
 impl TokenDefinition {

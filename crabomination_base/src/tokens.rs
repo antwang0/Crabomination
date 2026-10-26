@@ -45,9 +45,9 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         // here to extend its lifetime. The leak is bounded by the
         // number of unique token names produced over a session.
         name: crate::static_str_serde::intern(resolved_name),
-        cost: ManaCost::default(),
+        cost: token.cost.clone(),
         // CR 111.4 / 105.2c — a token's color comes from its creating effect,
-        // carried as a color indicator (tokens have no mana cost to define it).
+        // carried as a color indicator.
         color_indicator: token.colors.clone(),
         supertypes: token.supertypes.clone(),
         card_types: token.card_types.clone(),
