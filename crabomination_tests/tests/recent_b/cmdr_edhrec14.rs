@@ -225,6 +225,25 @@ fn fatal_grudge_matches_the_sacrificed_card_type() {
     assert!(g.battlefield_find(foe_bear).is_some() && g.battlefield_find(other_bear).is_some(), "creatures stay");
 }
 
+/// The cost sacrifice is the reference for EVERY opponent (CR 608.2h), not
+/// just the first: an artifact **creature** paid for the spell, so the seat
+/// with only an artifact and the seat with only a creature each lose one —
+/// the first opponent's own artifact must not narrow the match.
+#[test]
+fn fatal_grudge_keeps_the_cost_types_for_every_opponent() {
+    let mut g = pod(3);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::ornithopter());
+    let foe_ring = ready(&mut g, 1, catalog::sol_ring());
+    let other_bear = ready(&mut g, 2, catalog::grizzly_bears());
+    let grudge = g.add_card_to_hand(0, catalog::fatal_grudge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, grudge, None).expect("grudge");
+    assert!(g.battlefield_find(foe_ring).is_none(), "shares Artifact");
+    assert!(g.battlefield_find(other_bear).is_none(), "shares Creature with the artifact creature");
+}
+
 /// Demonic Gifts: the granted "when this creature dies, return it" brings the
 /// creature back under its owner's control.
 #[test]

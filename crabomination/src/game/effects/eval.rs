@@ -8536,6 +8536,20 @@ impl GameState {
     /// With nothing sacrificed yet this resolution it reads the permanent a
     /// spell's cost sacrificed (Fatal Grudge's "the sacrificed permanent").
     fn shares_card_type_with_first_sacrificed(&self, types: &[crate::card::CardType]) -> bool {
+        // A permanent sacrificed as an ADDITIONAL CAST COST is the reference
+        // for the whole resolution (Fatal Grudge): without this the first
+        // opponent's own sacrifice becomes `first_sacrificed_types` and the
+        // next opponents match against that instead, which only differs at
+        // three or more seats.
+        if let Some(first) = self.scratch.cost_sacrificed_batch.first()
+            && let Some(c) = self
+                .died_card_snapshots
+                .get(first)
+                .or_else(|| self.leaves_bf_lki.get(first))
+                .or_else(|| self.find_card_anywhere(*first))
+        {
+            return types.iter().any(|t| c.definition.card_types.contains(t));
+        }
         let theirs = &self.scratch.first_sacrificed_types;
         if theirs.is_empty() {
             return self

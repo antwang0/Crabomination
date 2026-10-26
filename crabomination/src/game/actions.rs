@@ -12655,6 +12655,14 @@ impl GameState {
         let mut sac_power = None;
         let mut chosen_override = chosen_sacrifices;
         let mut discard_override = chosen_discards;
+        // This cast's own cost sacrifices, for the resolution to read back
+        // (`Value::CardTypesAmongCostSacrificed`, Fatal Grudge's card-type
+        // match): an earlier activation's tally must not leak in, and the
+        // guard keeps a sacrifice-free cast off the cold scratch group.
+        let sacrifices_cost = costs.iter().any(|c| matches!(c, A::SacrificePermanent { .. }));
+        if sacrifices_cost || !self.scratch.cost_sacrificed_batch.is_empty() {
+            self.scratch.cost_sacrificed_batch = Vec::new();
+        }
         for cost in costs {
             match cost {
                 // Concretized before payment; a raw instance here (flashback
@@ -12757,6 +12765,7 @@ impl GameState {
                             self.sacrificed_colors = Some(colors);
                             self.stamp_sacrificed_card(id);
                         }
+                        self.scratch.cost_sacrificed_batch.push(id);
                         if is_creature {
                             if let Some(c) = self.dying_snapshot(id) {
                                 self.died_card_snapshots.insert(id, c);
