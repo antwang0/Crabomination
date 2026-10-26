@@ -4693,17 +4693,20 @@ pub fn selfcraft_mechan() -> CardDefinition {
             description: "Sacrifice an artifact?".into(),
             filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
             count: Value::Const(1),
-            then: Box::new(Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ])),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            }),
             else_: None,
         })],
         ..Default::default()

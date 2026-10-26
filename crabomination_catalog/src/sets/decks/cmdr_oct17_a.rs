@@ -104,7 +104,10 @@ pub fn general_traag_heart_of_stone() -> CardDefinition {
             description: "Sacrifice another artifact to deal 4 damage to a creature?".into(),
             filter: R::Artifact.and(R::OtherThanSource),
             count: Value::ONE,
-            then: Box::new(Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) }),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) }),
+            }),
             else_: None,
         })],
         ..creature(

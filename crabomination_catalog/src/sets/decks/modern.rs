@@ -57384,15 +57384,23 @@ pub fn heart_piercer_manticore() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Sacrifice another creature to deal its power in damage?".into(),
+            // CR 603.12 — "When you do": only a sacrifice triggers the payoff,
+            // which targets after it; the power rides the resolution carry.
             body: Box::new(Effect::Seq(vec![
                 Effect::SacrificeAndRemember {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::OtherThanSource),
                 },
-                Effect::DealDamage {
-                    to: crate::effect::shortcut::target_any(),
-                    amount: Value::SacrificedPower,
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::SacrificedCount, Value::ONE),
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamage {
+                            to: crate::effect::shortcut::target_any(),
+                            amount: Value::SacrificedPower,
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ])),
         })],

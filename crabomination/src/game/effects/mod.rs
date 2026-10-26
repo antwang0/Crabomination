@@ -1992,8 +1992,19 @@ impl GameState {
         if seat.is_some() {
             self.trigger_event_player_scratch = seat;
         }
+        // A hostile player slot aims at an opponent, as a directly-pushed
+        // trigger's picker does: the slot walk's two-seat caster-first rule
+        // (`hostile_player_slot`) sent Leyline Tyrant's damage at its own
+        // controller. No 2-player pool card has a reflexive player slot.
+        let caster_first = !self.players[ctx.controller].hostile_player_targets;
+        if caster_first {
+            self.players[ctx.controller].hostile_player_targets = true;
+        }
         let (mut slot0, mut additional) =
             self.auto_targets_for_effect_all_slots_x(body, ctx.controller, None, false, Some(src), x);
+        if caster_first {
+            self.players[ctx.controller].hostile_player_targets = false;
+        }
         self.trigger_event_player_scratch = saved_seat;
         if body.slot_past_x_cap(0, ctx.x_value) {
             slot0 = None;
@@ -34992,6 +35003,10 @@ impl GameState {
                     self.sacrificed_power = Some(power);
                     self.sacrificed_toughness = Some(toughness);
                     self.sacrificed_mana_value = Some(mv);
+                    // `sacrifice_one`'s tally too: "When you do" reads
+                    // whether anything was sacrificed (Heart-Piercer Manticore).
+                    self.sacrificed_total_power = self.sacrificed_total_power.saturating_add(power);
+                    self.sacrificed_count += 1;
                     let is_creature = self
                         .battlefield_find(cid)
                         .map(|c| self.computed_is_creature(c))

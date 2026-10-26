@@ -293,15 +293,19 @@ pub fn forum_filibuster() -> CardDefinition {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
             effect: Effect::Seq(vec![
                 make_inkling(),
-                Effect::OptionalTargets {
-                    min: 0,
-                    body: Box::new(Effect::AttachAuraFromGraveyardTo {
-                        aura: target_filtered(
-                            R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
-                                .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))
-                                .from_your_graveyard(),
-                        ),
-                        host: Selector::LastCreatedToken,
+                // CR 603.12 — "When you do": the Aura / Equipment is targeted
+                // after the Inkling exists; the carry names "that token".
+                Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::AttachAuraFromGraveyardTo {
+                            aura: target_filtered(
+                                R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                                    .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                                    .from_your_graveyard(),
+                            ),
+                            host: Selector::LastCreatedToken,
+                        }),
                     }),
                 },
             ]),

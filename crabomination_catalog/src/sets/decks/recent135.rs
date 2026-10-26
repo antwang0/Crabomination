@@ -656,9 +656,12 @@ pub fn merry_bards() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayPay {
             description: "Pay {1} to create a Young Hero Role?".into(),
             mana_cost: cost(&[generic(1)]),
-            body: Box::new(Effect::CreateTokenAttachedTo {
-                target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: std::sync::Arc::new(young_hero_role()),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::CreateTokenAttachedTo {
+                    target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    definition: std::sync::Arc::new(young_hero_role()),
+                }),
             }),
             else_: None,
         })],

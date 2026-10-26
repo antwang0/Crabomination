@@ -2302,13 +2302,16 @@ creature you control", was any creature), Eastfarthing Farmer, The Fire Nation D
 tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater, Dáin Ironfoot
 (`ResolutionCarry` now carries `LastCreatedToken`), Spellbook Vendor, Blaster Hulk, Curious Forager, Ty Lee, Artful
 Acrobat, Faebloom Trick, Killmonger, Meanders Guide, Sandbender Scavengers, Unscrupulous Contractor, Zoraline,
-Atraxa's Skitterfang (an absent oil counter no longer "does"), Edgar's Awakening (was an untargeted pick); the script now strips reminder text (madness / conspire / casualty) and counts an exert
+Atraxa's Skitterfang (an absent oil counter no longer "does"), Edgar's Awakening (was an untargeted pick), General
+Traag, Heart-Piercer Manticore, Hurska Sweet-Tooth, Icewrought Sentry (was an untargeted pick), Saheeli, Radiant
+Creator, Snaremaster Sprite, Aurora Shifter, Merry Bards, Selfcraft Mechan, Forum Filibuster; a reflexive trigger's
+hostile player slot now aims at an opponent at two seats too (Leyline Tyrant hit its own controller); the script now strips reminder text (madness / conspire / casualty) and counts an exert
 trigger as the reflexive one;
 **Open:** Guide
 of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type
 end-of-turn, printed indefinite), Earth Rumble 10 and Curse of the Werefox 4 (a spell whose cast-time slot
 the reflexive payoff also names — "that creature"), Kappa Tech-Wrecker 5 (no predicate for "a deathtouch counter
-was removed"), then the script's tail (Awaken the Honored Dead is cube). The bot declines a "may [cost]. When you do" whose payoff has no legal target
+was removed"), Savai Thundermane and Awaken the Honored Dead (cube — frozen), then the zero-seat tail. The bot declines a "may [cost]. When you do" whose payoff has no legal target
 (`reflexive_payoff_untargetable`). ⚠ A "may [cost]. When you do" wrapper
 changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
 decline still holds when no target exists before converting one (Armix's discard).

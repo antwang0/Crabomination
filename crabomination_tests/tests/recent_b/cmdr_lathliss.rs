@@ -164,12 +164,11 @@ fn two_leyline_tyrants_keep_red_mana_once() {
 
 /// Leyline Tyrant's death payment takes only {R}: floating green can't fund
 /// it, floating red can. The damage is a reflexive trigger (CR 603.12) that
-/// targets after the payment; a Commander seat aims it at an opponent.
+/// targets after the payment, at an opponent.
 #[test]
 fn leyline_tyrant_death_payment_takes_red_only() {
     for (color, dealt) in [(Color::Green, 0), (Color::Red, 2)] {
         let mut g = main_phase(2);
-        g.players[0].hostile_player_targets = true;
         let tyrant = g.add_card_to_battlefield(0, catalog::leyline_tyrant());
         let blade = g.add_card_to_hand(0, catalog::doom_blade());
         g.players[0].mana_pool.add(Color::Black, 1);

@@ -93,7 +93,9 @@ pub fn saheeli_radiant_creator() -> CardDefinition {
                     description: "Pay {E}{E}{E} to copy a permanent you control?".into(),
                     body: Box::new(Effect::PayEnergy {
                         amount: 3,
-                        then: Box::new(Effect::Seq(vec![
+                        // CR 603.12 — "When you do": the target is chosen
+                        // after the energy is paid.
+                        then: Box::new(Effect::ReflexiveTrigger { body: Box::new(Effect::Seq(vec![
                             Effect::CreateTokenCopyOf {
                                 who: PlayerRef::You,
                                 count: Value::ONE,
@@ -111,7 +113,7 @@ pub fn saheeli_radiant_creator() -> CardDefinition {
                                 remove_keywords: vec![],
                             },
                             Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedToken },
-                        ])),
+                        ])) }),
                     }),
                 },
             },

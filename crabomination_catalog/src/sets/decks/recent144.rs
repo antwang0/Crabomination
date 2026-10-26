@@ -13,14 +13,6 @@ use crate::effect::{
 };
 use crate::mana::{b, cost, generic, u, w};
 
-/// One opponent creature (for the auto-picked reflexive taps below).
-fn an_enemy_creature() -> Selector {
-    Selector::take(
-        Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
-        Value::ONE,
-    )
-}
-
 /// Icewrought Sentry — {2}{U} 2/3 Elemental Soldier with vigilance. Attacking,
 /// pay {1}{U} to tap an opponent's creature; tapping enemy creatures pumps it.
 pub fn icewrought_sentry() -> CardDefinition {
@@ -39,8 +31,11 @@ pub fn icewrought_sentry() -> CardDefinition {
             on_attack(Effect::MayPay {
                 description: "pay {1}{U} to tap an opponent's creature".into(),
                 mana_cost: cost(&[generic(1), u()]),
-                body: Box::new(Effect::Tap {
-                    what: an_enemy_creature(),
+                // CR 603.12 — "When you do": the target is chosen after the cost.
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Tap {
+                        what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    }),
                 }),
                 else_: None,
             }),

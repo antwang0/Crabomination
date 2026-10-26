@@ -419,11 +419,18 @@ pub fn hurska_sweet_tooth() -> CardDefinition {
             you_gain_life(Effect::MayPay {
                 description: "Pay {G/W} to pump a creature?".into(),
                 mana_cost: cost(&[hybrid(Color::Green, Color::White)]),
-                body: Box::new(Effect::PumpPT {
-                    what: target_filtered(R::Creature),
-                    power: x(),
-                    toughness: x(),
-                    duration: Duration::EndOfTurn,
+                // CR 603.12 — "When you do": the target is chosen after the
+                // payment; X (the life gained) rides in as the trigger's X.
+                body: Box::new(Effect::WithX {
+                    x: x(),
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::PumpPT {
+                            what: target_filtered(R::Creature),
+                            power: Value::XFromCost,
+                            toughness: Value::XFromCost,
+                            duration: Duration::EndOfTurn,
+                        }),
+                    }),
                 }),
                 else_: None,
             }),

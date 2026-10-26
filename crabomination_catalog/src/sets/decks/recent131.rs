@@ -225,13 +225,11 @@ pub fn snaremaster_sprite() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayPay {
             description: "Pay {2} to tap and stun a creature an opponent controls?".into(),
             mana_cost: cost(&[generic(2)]),
-            body: Box::new(Effect::ApplyToTargets {
-                max_targets: 1,
-                min_targets: 0,
-                filter: R::Creature.and(R::ControlledByOpponent),
-                effect: Box::new(Effect::Seq(vec![
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Seq(vec![
                     Effect::Tap {
-                        what: Selector::Target(0),
+                        what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                     },
                     Effect::AddCounter {
                         what: Selector::Target(0),
