@@ -346,6 +346,11 @@ struct Args {
     /// leaf, the gate's pilot) instead of the historical `net_eval_det1`,
     /// which chains from a base four adoptions behind the default.
     pilot_net67: bool,
+    /// `--actor-fra-fixes`: actors play with `EvalWeights::with_fra_fixes`
+    /// (round 83: the FRA net retrained on the pilot the client plays FRA
+    /// with; round 82's actors played the default, which misplayed burn,
+    /// counters and 0-power attackers).
+    actor_fra_fixes: bool,
     /// Build training decks with the gate-passed deck net as the judge
     /// (best-of-32 over the same noisy-greedy candidates the heuristic
     /// picks from) instead of taking the heuristic builder's own pick.
@@ -465,6 +470,7 @@ fn parse_args() -> Args {
         pg_prefetch: true,
         capture_settled: false,
         pilot_net67: false,
+        actor_fra_fixes: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -517,6 +523,7 @@ fn parse_args() -> Args {
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--actor-det" => a.actor_det = Some(val().parse().expect("--actor-det")),
+            "--actor-fra-fixes" => a.actor_fra_fixes = true,
             "--tail-reuse" => a.tail_reuse = val().parse().expect("--tail-reuse"),
             "--gpu-eval" => {
                 a.gpu_eval = true;
@@ -860,6 +867,9 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         };
         if let Some(d) = args.actor_det {
             pilot.determinize = d;
+        }
+        if args.actor_fra_fixes {
+            pilot = pilot.with_fra_fixes();
         }
         let rec = crabomination::selfplay::play_recorded_game_mcts(
             &template,

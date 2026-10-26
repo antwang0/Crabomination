@@ -651,6 +651,10 @@ fn play_recorded_game_mcts_inner(
         g.players[seat].smart_tap = w.smart_tap;
         g.players[seat].converge_rarest = w.converge_rarest;
         g.players[seat].hostile_player_targets = w.hostile_player_targets;
+        // The two `fra-fixes` seat flags (both off in the default), so an
+        // actor on `--actor-fra-fixes` plays what the ladder's pilot plays.
+        g.players[seat].duel_sinks = w.duel_sinks;
+        g.players[seat].tap_timing = w.tap_timing;
     }
     let mut rng = StdRng::seed_from_u64(seed);
     for seat in 0..2 {

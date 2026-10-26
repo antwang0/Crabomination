@@ -1025,13 +1025,40 @@ impl MctsBot {
         // Highest mean reward wins. (Robust-child — most visits — is the
         // usual MCTS choice, but with this few iterations the visit counts
         // are dominated by the seeding pass and carry little signal.)
-        let best = (0..n)
+        let mut best = (0..n)
             .filter(|&i| visits[i] != u32::MAX)
             .max_by(|&a, &b| {
                 let mean = |i: usize| total[i] / visits[i].max(1) as f64;
                 mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal)
             })
             .unwrap_or(0);
+        // `mcts_cast_ties`: "pass" in our post-combat main against a creature
+        // cast it barely beats is the rollout casting the creature next turn,
+        // not a reason to hold it. Cast the best such creature.
+        if self.cfg.weights.mcts_cast_ties
+            && matches!(candidates.get(best), Some(GameAction::PassPriority))
+            && state.step == TurnStep::PostCombatMain
+            && state.active_player_idx == seat
+            && state.stack.is_empty()
+        {
+            let mean = |i: usize| total[i] / visits[i].max(1) as f64;
+            let pass = mean(best);
+            let creature_cast = |a: &GameAction| match a {
+                GameAction::CastSpell { card_id, .. } => state.players[seat]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == *card_id)
+                    .is_some_and(|c| c.definition.card_types.contains(&crate::card::CardType::Creature)),
+                _ => false,
+            };
+            if let Some(cast) = (0..n)
+                .filter(|&i| visits[i] != u32::MAX && visits[i] > 0 && creature_cast(&candidates[i]))
+                .filter(|&i| mean(i) >= pass - CAST_TIE)
+                .max_by(|&a, &b| mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal))
+            {
+                best = cast;
+            }
+        }
         // Record the root decision with the search's per-arm means, so a
         // policy target can be distilled from what the *search* concluded
         // rather than from which action it happened to output. Without
@@ -1429,6 +1456,10 @@ impl Bot for MctsBot {
     }
 }
 
+/// `mcts_cast_ties`: how far below "pass" a creature cast's searched mean
+/// may sit and still count as a tie (rewards are win probabilities).
+const CAST_TIE: f64 = 0.02;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1441,6 +1472,32 @@ mod tests {
             toughness: t,
             ..Default::default()
         }
+    }
+
+    /// `mcts_cast_ties`: in our post-combat main with a castable creature and
+    /// nothing else to do, the search casts it rather than passing on a tie.
+    #[test]
+    fn mcts_cast_ties_casts_the_creature_post_combat() {
+        let mut g = crate::game::two_player_game();
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, crate::catalog::forest());
+            }
+        }
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        let bears = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let mut bot = MctsBot::new(MctsConfig {
+            iterations: 16,
+            weights: EvalWeights { mcts_cast_ties: true, ..EvalWeights::default() },
+            ..MctsConfig::default()
+        });
+        assert!(
+            matches!(super::super::Bot::next_action(&mut bot, &g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == bears)
+        );
     }
 
     /// `mcts_land_first`: the land drop is made before the search. Searched,

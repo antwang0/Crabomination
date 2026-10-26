@@ -6261,3 +6261,38 @@ four training seeds, +1.05 as the search leaf on one. Every non-FRA game's
 net leaf (client, lobby, server, `net67` profiles) reads it by default; FRA
 games keep `nets/fra-champion.safetensors`. Any later "vs champion" reading
 is against this net.
+
+**FRA round two: the fixes on by default in the client, five more flags,
+round 83 (2026-10-26).** The user asked for the remaining items. Work dir
+`.ladder/fra_next/`.
+
+- **The `fra-fixes` bundle is the client's FRA default (ADOPTED).** It was
+  measured on the client's own pilot for the first time: MCTS 256 on the FRA
+  net leaf, with the bundle vs without (`mcts-net67-fixes` vs
+  `mcts-net67-256`, CRAB_NET=fra-champion, FRA sealed 200 x 12):
+  **56.0 [54.4, 57.5] / 55.9 [54.3, 57.4]** (seeds 43 / 97). `local_bot`
+  turns it on in FRA games; `CRAB_FRA_FIXES=0` turns it off. The lobby has
+  no FRA format, so the client is the only FRA bot.
+- **Five flags**, each on top of `fra-fixes`. Scored cells on 48 seeded FRA
+  decks x 125 (`CRAB_SEALED_DECKS=48`, new; 6,000 games a seed), seeds 43 / 97:
+
+| flag | what | reading | |
+|---|---|---|---|
+| `duel_pumps` | lethal pump in duels, spare-mana pump, stop at 1 toughness (Undulating Witness) | 50.1 / 50.2 | in `fra-fixes` |
+| `hand_abilities` | discard-self kill from hand when uncastable (Proft, Sinister Mastermind) | 49.9 / 50.0 | in `fra-fixes` (rare; a visible misplay) |
+| `trade_pressure` | send trade-at-worst attackers once the defender is within two swings | 49.9 / 50.0 | in `fra-fixes` (the user's ask, no measured cost) |
+| `counter_reserve` | skip sorcery-speed casts that leave less than a held counter's cost (4+ mana) | **49.3 / 49.4** | NOT adopted |
+| `mcts_cast_ties` | MCTS post-combat: cast a creature within 0.02 of "pass" | **48.7** / pending (client pilot, 200 x 12) | see below |
+
+  Holding counter mana loses more development than the counters win back,
+  at least in this simple form. A version keyed to the opponent's likely
+  plays is the open lead. Also fixed under `trick_riders`: Charge the
+  Sanctum's untargeted mode carried the fight's creature as a stray target.
+  Karn, Gilded Guardian needs no rule: the re-rated builder plays it in
+  0 of 176 pools that hold it (the v3 builder: 87 %).
+- **Round 83 — the FRA net retrained on `fra-fixes` actors.**
+  `selfplay_train --actor-fra-fixes`, and the recorder now pushes the
+  `duel_sinks` / `tap_timing` seat flags. Round 82's recipe otherwise.
+  Pre-registration: `.ladder/run_r83_fra.sh`. Holdout AUC 0.8028 / 0.7753 /
+  0.7719 / 0.7793 (s43 / s97 / s151 / s199; three stopped stale). Gate vs the
+  r82 net: pending.

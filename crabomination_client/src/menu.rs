@@ -1911,10 +1911,12 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// does: the net reads only two-seat games, and the search on the material
 /// leaf is unmeasured in a pod.
 ///
-/// `CRAB_FRA_FIXES=1` adds the 2026-10-23 bot fixes
-/// ([`EvalWeights::with_fra_fixes`]: any-target burn at creatures, no X=0
-/// Hydra, no pointless counter shedding, no misaimed boons / removal). They
-/// are off in the default pilot until a ladder gate adopts them.
+/// An FRA game plays with the FRA bot fixes ([`EvalWeights::with_fra_fixes`]:
+/// burn at creatures and for lethal, no X=0 Hydra, trades and free attacks,
+/// tricks with riders, counters in their counter mode, ...): this pilot with
+/// them beat it without them 56.0 [54.4, 57.5] / 55.9 [54.3, 57.4] (FRA sealed, 200 x 12,
+/// ladder seeds 43 / 97, `.ladder/fra_next`). `CRAB_FRA_FIXES=0` turns them
+/// off there; `CRAB_FRA_FIXES=1` turns them on in every other game.
 ///
 /// An FRA game (`fra`, from `fra_mode::is_fra_game`) puts the Reality
 /// Fracture net under the search instead — `CRAB_FRA_NET` or
@@ -1930,10 +1932,14 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool) -> Box<dyn crabomination::ser
     if fra && load_fra_net_once() {
         weights.net_slot = crabomination::server::net_eval::SLOT_FRA;
     }
-    if std::env::var_os("CRAB_FRA_FIXES").is_some_and(|v| v != "0") {
+    let fixes = match std::env::var_os("CRAB_FRA_FIXES") {
+        Some(v) => v != "0",
+        None => fra,
+    };
+    if fixes {
         weights = weights.with_fra_fixes();
         static SAID: std::sync::Once = std::sync::Once::new();
-        SAID.call_once(|| eprintln!("CRAB_FRA_FIXES: the local bot plays with the 2026-10-23 FRA fixes"));
+        SAID.call_once(|| eprintln!("the local bot plays with the FRA fixes (CRAB_FRA_FIXES=0 turns them off)"));
     }
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,

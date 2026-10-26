@@ -614,6 +614,13 @@ fn audit_builder(pilot: Pilot, pools: usize, field: usize, pairs: usize, seed: u
         let mut rng = StdRng::seed_from_u64(salt);
         let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
         let pick = rated_sealed_build_in_colors(&pool, 64, 0x5EA1, ColorSet::empty());
+        // `CRAB_AUDIT_CARD=Name`: how often the pick plays a card the pool has.
+        if let Ok(card) = std::env::var("CRAB_AUDIT_CARD") {
+            let has = |d: &[Factory]| d.iter().any(|f| brief(*f).def.name == card);
+            if has(&pool) {
+                println!("{card}\tpool {p}\tplayed {}", has(&pick));
+            }
+        }
         let mut cands: Vec<(String, Vec<Factory>)> =
             vec![("pick".into(), pick.clone()), ("pick+land".into(), plus_land(&pick))];
         if std::env::var("CRAB_AUDIT_SWAPS").is_ok() {

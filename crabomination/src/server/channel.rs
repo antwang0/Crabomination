@@ -65,6 +65,61 @@ pub(super) fn pick_channel(state: &GameState, seat: usize, w: &EvalWeights) -> O
     best.map(|(_, a)| a)
 }
 
+/// `EvalWeights::hand_abilities`, duels: a nonland card's "{cost}, discard
+/// this card: target creature gets -N/-M" (Proft, Sinister Mastermind's {B}:
+/// -3/-1) aimed at the opponent's best creature it kills, while the card's
+/// own cast condition (Proft's threshold) keeps it from being cast. Once the
+/// card can be cast, casting it is the better use, so it is kept.
+pub(super) fn pick_hand_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    use crate::effect::{Effect, Value};
+    use crate::game::types::Target;
+    if !w.hand_abilities || state.players.len() != 2 || !state.stack.is_empty() {
+        return None;
+    }
+    let opp = 1 - seat;
+    for c in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
+        let castable_later = c.definition.cast_condition.as_ref().is_none_or(|cond| {
+            state.evaluate_predicate(cond, &crate::game::effects::EffectContext::for_trigger(c.id, seat, None, 0))
+        });
+        if castable_later {
+            continue;
+        }
+        for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
+            if !(ab.from_hand && ab.discard_self_cost) {
+                continue;
+            }
+            let Effect::PumpPT { toughness: Value::Const(t), .. } = &ab.effect else { continue };
+            if *t >= 0 {
+                continue;
+            }
+            // The opponent's creature it kills with the most power + toughness.
+            let victim = state
+                .battlefield
+                .iter()
+                .filter(|p| p.controller == opp)
+                .filter_map(|p| {
+                    let cp = state.computed_permanent(p.id)?;
+                    (state.computed_is_creature(p) && cp.toughness <= -*t)
+                        .then_some((p.id, cp.power + cp.toughness))
+                })
+                .max_by_key(|&(_, size)| size);
+            let Some((victim, _)) = victim else { continue };
+            let action = GameAction::ActivateAbility {
+                card_id: c.id,
+                ability_index: idx,
+                target: Some(Target::Permanent(victim)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,5 +151,29 @@ mod tests {
             Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == boseiju && t == rock
         ));
+    }
+
+    /// `hand_abilities`: Proft, Sinister Mastermind below threshold kills an
+    /// opposing X/1 from hand for {B}; at threshold it is kept to be cast.
+    #[test]
+    fn proft_below_threshold_kills_an_x1_from_hand() {
+        let mut g = crate::game::two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let proft = g.add_card_to_hand(0, crate::catalog::proft_sinister_mastermind());
+        let elf = g.add_card_to_battlefield(1, crate::catalog::llanowar_elves());
+        g.add_card_to_battlefield(1, crate::catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        let on = EvalWeights { hand_abilities: true, ..EvalWeights::default() };
+        assert_eq!(pick_hand_ability(&g, 0, &EvalWeights::default()), None, "flag off");
+        assert!(matches!(
+            pick_hand_ability(&g, 0, &on),
+            Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }) if card_id == proft && t == elf
+        ), "the 1/1 dies to -3/-1, the 2/2 doesn't");
+        for _ in 0..7 {
+            g.add_card_to_graveyard(0, crate::catalog::grizzly_bears());
+        }
+        assert_eq!(pick_hand_ability(&g, 0, &on), None, "threshold: cast it instead");
     }
 }

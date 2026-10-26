@@ -911,6 +911,37 @@ pub struct EvalWeights {
     /// Vs `dflt` FRA sealed 50.1 / 50.1 (one seeded deck carries it). In
     /// `fra-fixes`.
     pub modal_counters: bool,
+    /// Duels: an unblocked attacker's self-pump ("{2}: +1/-1", firebreathing)
+    /// is spent to lethal, and with mana nothing in hand could use. The
+    /// lethal pump was Commander-only, so Undulating Witness never pumped in
+    /// FRA sealed; a toughness-costing pump now stops at 1 toughness. On top
+    /// of `fra-fixes`, FRA sealed 48 decks x 125: 50.1 / 50.2 (seeds 43 / 97,
+    /// 2026-10-26). In `fra-fixes`.
+    pub duel_pumps: bool,
+    /// Duels: a nonland card's "{cost}, discard this card" ability (Proft,
+    /// Sinister Mastermind's {B}: −3/−1) is activated from hand when the card
+    /// can't be cast now and the ability kills an opposing creature. The
+    /// channel picker took lands only, in pods only. On top of `fra-fixes`:
+    /// 49.9 / 50.0 (rare; fixes a visible misplay). In `fra-fixes`.
+    pub hand_abilities: bool,
+    /// MCTS, own post-combat main: a creature cast whose searched mean is
+    /// within 0.02 of "pass" is cast. The rollout after a pass casts it next
+    /// turn, so the arms tie and noise picked pass: the client pilot idled
+    /// with a castable creature in 2.2 % of turns, scored pilots 0.1 %.
+    pub mcts_cast_ties: bool,
+    /// Own main phase: a sorcery-speed cast that would leave less mana than
+    /// the cheapest counterspell in hand is skipped while the opponent holds
+    /// cards, unless both fit. The bot always tapped out, so its counters
+    /// rotted in hand. On top of `fra-fixes`: **49.3 / 49.4** (seeds 43 / 97,
+    /// 48 decks x 125) — the development it costs outweighs the counters it
+    /// saves. NOT adopted.
+    pub counter_reserve: bool,
+    /// Attacks: an attacker whose worst block is a trade is sent when the
+    /// defender is within two turns of our attackers' lethal, though the
+    /// trade costs material. The sims price the trade as a loss even with the
+    /// defender at 5. On top of `fra-fixes`: 49.9 / 50.0 (the attacking the
+    /// user asked for, at no measured cost). In `fra-fixes`.
+    pub trade_pressure: bool,
     /// A pump instant that carries a harmless rider — a keyword, untap or
     /// counter on the pumped creature, or card flow for the caster (Empower
     /// Jace, a draw, scry / surveil, an impulse) — is a combat trick to the
@@ -1514,6 +1545,11 @@ impl EvalWeights {
             no_empty_attacks: false,
             mcts_land_first: false,
             modal_counters: false,
+            duel_pumps: false,
+            hand_abilities: false,
+            mcts_cast_ties: false,
+            counter_reserve: false,
+            trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1645,6 +1681,11 @@ impl EvalWeights {
             no_empty_attacks: false,
             mcts_land_first: false,
             modal_counters: false,
+            duel_pumps: false,
+            hand_abilities: false,
+            mcts_cast_ties: false,
+            counter_reserve: false,
+            trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1759,6 +1800,11 @@ impl EvalWeights {
             no_empty_attacks: false,
             mcts_land_first: false,
             modal_counters: false,
+            duel_pumps: false,
+            hand_abilities: false,
+            mcts_cast_ties: false,
+            counter_reserve: false,
+            trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2910,6 +2956,11 @@ impl EvalWeights {
             no_empty_attacks: false,
             mcts_land_first: false,
             modal_counters: false,
+            duel_pumps: false,
+            hand_abilities: false,
+            mcts_cast_ties: false,
+            counter_reserve: false,
+            trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3050,6 +3101,11 @@ impl EvalWeights {
             no_empty_attacks: false,
             mcts_land_first: false,
             modal_counters: false,
+            duel_pumps: false,
+            hand_abilities: false,
+            mcts_cast_ties: false,
+            counter_reserve: false,
+            trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3240,6 +3296,9 @@ impl EvalWeights {
             no_empty_attacks: true,
             mcts_land_first: true,
             modal_counters: true,
+            duel_pumps: true,
+            hand_abilities: true,
+            trade_pressure: true,
             ..self
         }
     }
@@ -3285,6 +3344,11 @@ impl EvalWeights {
             no_empty_attacks: false,
             mcts_land_first: false,
             modal_counters: false,
+            duel_pumps: false,
+            hand_abilities: false,
+            mcts_cast_ties: false,
+            counter_reserve: false,
+            trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3735,6 +3799,7 @@ impl HeuristicBot {
                     let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
                     let attacks = super::pod_attack::reaim_prohibited_attacks(state, seat, attacks);
                     let attacks = add_free_attackers(state, seat, attacks, &self.weights);
+                    let attacks = add_pressure_trades(state, seat, attacks, &self.weights);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
@@ -3871,6 +3936,7 @@ impl HeuristicBot {
                         .or_else(|| super::graveyard_hate::pick_graveyard_hate(state, seat))
                         .or_else(|| super::land_ramp::pick_land_ramp(state, seat))
                         .or_else(|| super::generic_sink::pick_generic_ability(state, seat, &self.weights))
+                        .or_else(|| super::channel::pick_hand_ability(state, seat, &self.weights))
                 {
                     return Some(BotStep::plain(cycle));
                 }
@@ -3890,7 +3956,8 @@ impl HeuristicBot {
                     .or_else(|| super::spell_response::pick_punish_response(state, seat))
                     .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
-                    .or_else(|| super::lethal_pump::pick_lethal_pump(state, seat))
+                    .or_else(|| super::lethal_pump::pick_lethal_pump(state, seat, &self.weights))
+                    .or_else(|| super::channel::pick_hand_ability(state, seat, &self.weights))
                     .or_else(|| super::pre_combat_tap::pick_pre_combat_tap(state, seat))
                     .or_else(|| super::upkeep_recursion::pick_upkeep_graveyard_ability(state, seat))
                     // Eiganjo's "attacking or blocking creature", once blocks are in.
@@ -8277,6 +8344,57 @@ pub(super) fn cast_candidates<'a>(
     // one.
     shared: Option<&SweepMana<'a>>,
 ) -> Vec<(GameAction, bool)> {
+    let mut out = cast_candidates_all(state, seat, w, shared);
+    if w.counter_reserve {
+        counter_reserve_filter(state, seat, w, &mut out);
+    }
+    out
+}
+
+/// `EvalWeights::counter_reserve`: in our own main phase of a duel, with a
+/// counterspell in hand we can pay for, four or more mana and an opponent
+/// holding cards, drop the sorcery-speed casts that would leave less than
+/// the cheapest counter's mana value up. Casts that fit beside the counter,
+/// instants and flash spells stay.
+fn counter_reserve_filter(state: &GameState, seat: usize, w: &EvalWeights, out: &mut Vec<(GameAction, bool)>) {
+    use crate::card::CardType;
+    if state.players.len() != 2
+        || state.active_player_idx != seat
+        || !matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+        || state.players[1 - seat].hand.is_empty()
+    {
+        return;
+    }
+    let budget = mana_upper_bound(state, seat);
+    if budget < 4 {
+        return;
+    }
+    let instant = |c: &crate::card::CardInstance| {
+        c.definition.card_types.contains(&CardType::Instant) || c.definition.keywords.has_kw(&crate::card::Keyword::Flash)
+    };
+    let Some(reserve) = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| instant(c) && counter_cast_mode(&c.definition.effect, w.modal_counters).is_some())
+        .map(|c| c.definition.cost.cmc())
+        .filter(|&cmc| cmc <= budget)
+        .min()
+    else {
+        return;
+    };
+    out.retain(|(a, _)| {
+        let GameAction::CastSpell { card_id, x_value, .. } = a else { return true };
+        let Some(c) = state.players[seat].hand.iter().find(|c| c.id == *card_id) else { return true };
+        instant(c) || c.definition.cost.cmc() + x_value.unwrap_or(0) + reserve <= budget
+    });
+}
+
+fn cast_candidates_all<'a>(
+    state: &'a GameState,
+    seat: usize,
+    w: &EvalWeights,
+    shared: Option<&SweepMana<'a>>,
+) -> Vec<(GameAction, bool)> {
     // Build list of castable non-land spells. Affordability + target
     // pre-filters reduce the candidate set; the FINAL gate is still the
     // engine dry-run, which discards anything the engine would reject
@@ -11456,6 +11574,11 @@ fn main_phase_action_with(
         return BotStep::plain(action);
     }
 
+    // Duels: a discard-self kill from hand (Proft below threshold).
+    if let Some(action) = super::channel::pick_hand_ability(state, seat, w) {
+        return BotStep::plain(action);
+    }
+
     BotStep::plain(GameAction::PassPriority)
 }
 
@@ -13316,6 +13439,60 @@ fn add_free_attackers(state: &GameState, seat: usize, mut attacks: Vec<Attack>, 
         if free {
             attacks.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
         }
+    }
+    attacks
+}
+
+/// `EvalWeights::trade_pressure`, duels: once the defender is within two
+/// swings of our creatures' total power, also send each creature no single
+/// blocker can kill without dying — a trade at worst. The scored sims price
+/// such a trade as a material loss and keep the creature home even with the
+/// defender at 5; the pressure is what the material eval can't see. Skipped
+/// when the swing back could kill us.
+fn add_pressure_trades(state: &GameState, seat: usize, mut attacks: Vec<Attack>, w: &EvalWeights) -> Vec<Attack> {
+    if !w.trade_pressure || state.players.len() != 2 {
+        return attacks;
+    }
+    let opp = 1 - seat;
+    let statics = crate::game::combat::attack_static_scan(state);
+    if state.attack_tax_possible(statics) {
+        return attacks;
+    }
+    let caps = state.attack_power_caps(statics);
+    let theirs: Vec<&crate::card::CardInstance> =
+        state.battlefield.iter().filter(|c| c.controller == opp && state.computed_is_creature(c)).collect();
+    let their_power: i32 =
+        theirs.iter().filter_map(|c| state.computed_permanent(c.id)).map(|cp| cp.power.max(0)).fold(0, i32::saturating_add);
+    if state.players[seat].life <= their_power {
+        return attacks;
+    }
+    let blockers: Vec<&crate::card::CardInstance> = theirs.iter().copied().filter(|c| !c.tapped).collect();
+    let able: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && state.computed_is_creature(c))
+        .filter_map(|c| {
+            let cp = state.computed_permanent(c.id)?;
+            (cp.power > 0 && state.attacker_is_able(seat, c, Some(&cp), &caps, statics)).then_some((c.id, cp.power))
+        })
+        .collect();
+    let power: i32 = able.iter().map(|(_, p)| *p).fold(0, i32::saturating_add);
+    if power == 0 || state.effective_life(opp) > power.saturating_mul(2) {
+        return attacks;
+    }
+    let before = attacks.clone();
+    for (id, _) in able {
+        if attacks.iter().any(|a| a.attacker == id) {
+            continue;
+        }
+        let Some(card) = state.battlefield.find_by_id(id) else { continue };
+        let (_, every_killer_dies) = block_outcomes(state, card, &blockers);
+        if every_killer_dies {
+            attacks.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
+        }
+    }
+    if attacks.len() != before.len() && !state.would_accept(GameAction::DeclareAttackers(attacks.clone())) {
+        return before;
     }
     attacks
 }
@@ -21839,9 +22016,19 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
             if !(saves || now_kills) {
                 continue;
             }
+            // `trick_riders`: a mode with no target (Charge the Sanctum's
+            // "creatures you control get +2/+0") is cast without one — the
+            // fight's creature was passed as a stray target.
+            let untargeted_mode = w.trick_riders
+                && mode.is_some()
+                && state.players[seat]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == cid)
+                    .is_some_and(|c| !mode_branch(&c.definition.effect, mode).requires_target());
             let action = GameAction::CastSpell {
                 card_id: cid,
-                target: Some(Target::Permanent(our_id)),
+                target: (!untargeted_mode).then_some(Target::Permanent(our_id)),
                 additional_targets: vec![],
                 mode,
                 x_value: None,
@@ -24320,6 +24507,94 @@ mod tests {
             matches!(picked.action(), GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. } if card_id == ascent && t == bear),
             "Academic Ascent on the bear"
         );
+    }
+
+    /// `trade_pressure`: a 4/2 facing a lone 2/2 blocker (a trade at worst)
+    /// is sent with the defender at 5, not at 20, and not when their swing
+    /// back would kill us.
+    #[test]
+    fn trade_pressure_sends_a_trade_near_lethal() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let ape = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Ape",
+            card_types: vec![crate::card::CardType::Creature],
+            power: 4,
+            toughness: 2,
+            ..Default::default()
+        });
+        g.clear_sickness(ape);
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let on = EvalWeights { trade_pressure: true, ..EvalWeights::default() };
+        assert!(add_pressure_trades(&g, 0, vec![], &on).is_empty(), "20 life: no pressure");
+        g.players[1].life = 5;
+        assert_eq!(add_pressure_trades(&g, 0, vec![], &on).len(), 1, "5 life: send the trade");
+        assert!(add_pressure_trades(&g, 0, vec![], &EvalWeights::default()).is_empty(), "off by default");
+        g.players[0].life = 2;
+        assert!(add_pressure_trades(&g, 0, vec![], &on).is_empty(), "the 2/2 swing back kills us");
+    }
+
+    /// `counter_reserve`: four Islands, Counterspell and Wind Drake in hand,
+    /// the opponent holding a card — the Drake (3 + 2 > 4) waits; with a
+    /// fifth Island both fit, and with the opponent's hand empty or the
+    /// flag off it is cast.
+    #[test]
+    fn counter_reserve_keeps_counter_mana_up() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        for _ in 0..4 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        g.add_card_to_hand(0, catalog::counterspell());
+        let drake = g.add_card_to_hand(0, catalog::wind_drake());
+        let theirs = g.add_card_to_hand(1, catalog::grizzly_bears());
+        let on = EvalWeights { counter_reserve: true, ..EvalWeights::default() };
+        let offers = |g: &GameState, w: &EvalWeights| {
+            cast_candidates(g, 0, w, None).iter().any(|(a, _)| matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == drake))
+        };
+        assert!(offers(&g, &EvalWeights::default()), "flag off");
+        assert!(!offers(&g, &on), "3 + 2 > 4: hold the counter mana");
+        g.add_card_to_battlefield(0, catalog::island());
+        assert!(offers(&g, &on), "five lands: both fit");
+        g.players[1].hand.retain(|c| c.id != theirs);
+        assert!(offers(&g, &on), "nothing to counter");
+    }
+
+    /// `trick_riders`: Charge the Sanctum's untargeted mode ("creatures you
+    /// control get +2/+0") is cast with no target; the targeted mode keeps
+    /// the fight's creature. Before, both carried the bear as a target.
+    #[test]
+    fn trick_riders_casts_an_untargeted_mode_without_a_target() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let blocker = g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.set_attacking(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(blocker, bear)]);
+        g.set_blockers_declared(true);
+        let charge = g.add_card_to_hand(0, catalog::charge_the_sanctum());
+        g.players[0].mana_pool.add(Color::Red, 3);
+        let on = EvalWeights { trick_riders: true, trick_modes_combat_only: true, ..EvalWeights::default() };
+        let picked = pick_combat_trick(&g, 0, &on).expect("+2/+0 wins the fight");
+        match picked.action() {
+            GameAction::CastSpell { card_id, target, mode: Some(0), .. } => {
+                assert_eq!(card_id, charge);
+                assert_eq!(target, None, "mode 0 has no target");
+            }
+            GameAction::CastSpell { card_id, target, mode: Some(1), .. } => {
+                assert_eq!(card_id, charge);
+                assert_eq!(target, Some(Target::Permanent(bear)));
+            }
+            other => panic!("expected Charge the Sanctum, got {other:?}"),
+        }
     }
 
     /// `burn_for_lethal`: No Admittance plus Stinging Vitriol (3 + 2) with
