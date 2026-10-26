@@ -15042,6 +15042,10 @@ pub struct ResolutionCarry {
     pub last_exiled: Option<crate::card::CardId>,
     /// `Selector::LastMoved` — the card a reveal-until-find took (Yuna's Whistle).
     pub last_moved: Vec<crate::card::CardId>,
+    /// `Selector::LastCreatedToken` — "create a token. When you do, attach
+    /// it" (Dáin Ironfoot's Axe).
+    #[serde(default)]
+    pub last_created_token: Option<crate::card::CardId>,
 }
 
 impl Default for Effect {

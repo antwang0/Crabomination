@@ -229,13 +229,15 @@ pub fn dain_ironfoot() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
-                // "When you do, attach it to target creature you control":
-                // the creature is chosen with the trigger, the Axe it gets is
-                // the one just made.
+                // CR 603.12 — "When you do, attach it to target creature you
+                // control": targets after the Axe exists; the reflexive
+                // trigger carries which token "it" is.
                 make(axe),
-                Effect::Attach {
-                    what: Selector::LastCreatedToken,
-                    to: target_filtered(R::Creature.and(R::ControlledByYou)),
+                Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Attach {
+                        what: Selector::LastCreatedToken,
+                        to: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    }),
                 },
             ])),
             on_attack(Effect::GrantKeyword {

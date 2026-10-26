@@ -2028,6 +2028,7 @@ impl GameState {
             greatest_discarded_mv: self.greatest_discarded_mv_this_resolution,
             last_exiled: self.scratch.exiled_card_ids_this_resolution.last().copied(),
             last_moved: self.scratch.last_moved_cards.clone(),
+            last_created_token: self.last_created_token,
         }
     }
 
@@ -2039,6 +2040,7 @@ impl GameState {
         self.sacrificed_count = c.sacrificed_count;
         self.last_discarded_mana_value = c.last_discarded_mana_value;
         self.greatest_discarded_mv_this_resolution = c.greatest_discarded_mv;
+        self.last_created_token = c.last_created_token;
     }
 
     /// CR 603.7c — a reflexive body bound to the scratch it was created

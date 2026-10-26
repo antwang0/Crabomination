@@ -2299,11 +2299,11 @@ before the cost or choice that gates it, and resolves inline (no response window
 closed: the Plans (`plan_payoff`), Bolg of the North, Yotia Declares War, Undead Butler; 2026-10-26 second pass:
 Armix (73 seats), Ancient Bronze Dragon, Leyline Tyrant, The Fugitive Doctor, Earthbender Ascension (also "target
 creature you control", was any creature), Eastfarthing Farmer, The Fire Nation Drill (`MayTap` on `IsSource`: a
-tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater;
+tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater, Dáin Ironfoot
+(`ResolutionCarry` now carries `LastCreatedToken`);
 reviewed as not printed: Cut Your Losses, Wort (keyword reminder), Ancestral Katana, Glorybringer. **Open:** Guide
 of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type
-end-of-turn, printed indefinite), Dáin Ironfoot 19 (`LastCreatedToken` is not carried into a reflexive trigger —
-`ResolutionCarry` needs the last-created ids), Earth Rumble 10 (a spell whose earthbend slot precedes the fight
+end-of-turn, printed indefinite), Earth Rumble 10 (a spell whose earthbend slot precedes the fight
 slots), then the script's tail. The bot declines a "may [cost]. When you do" whose payoff has no legal target
 (`reflexive_payoff_untargetable`). ⚠ A "may [cost]. When you do" wrapper
 changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
