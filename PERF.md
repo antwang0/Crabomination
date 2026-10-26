@@ -3136,6 +3136,25 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-26 (Commander run, `01AsBSRF`) — guardrail; copy-stamp refactor, emblem untap walk, token cost field
+
+New on hot-ish paths: `revert_copy_on_leave` reads one cold `Option` (`next_entries_copy`) per battlefield leave;
+`do_untap` walks each seat's (usually empty) emblem list once per untap step; `extra_permanent_adders_for` filters by
+`same_team` (2-seat fast path). `release-fast` bot_ladder, 4-core Xeon @ 2.80 GHz, base `96d699b5b` built in a worktree
+sharing the target dir, tip `3b518a46e`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical on base and tip; determinism ok;
+                 thread_determinism ok (3 vs 1); peak_rss_mib 56.4
+bench_ab.py      16 pairs base vs tip: -0.71 % median, +0.89 % mean (sd 5.94 — noise; no regression)
+pools            cube / sos / sealed x 300 (seed 10774): outcomes identical base vs tip (sos's 2 undecided on both)
+pods             seed 10774 x 500 at 2..8 seats: 3,500 / 3,500 decided, turns/game 19.01 / 32.75 / 45.70 / 56.92 /
+                 69.13 / 82.12 / 97.47 (6 and 8 seats identical on the base binary — seed, not tree)
+targeted pods    six 4-seat groups holding this run's cards x 200 (seed 10775): 1,199 / 1,200 decided; the one board
+                 cap reproduces on base; nothing panicked
+seat test        overflow profile, two shards: 6,093 seats green (551 s + 517 s, with a compile beside it)
+```
+
 ### 2026-10-25 late (Commander run, `claude/modern_decks` drain shortcut) — guardrail; a life-only loop watch, eight MoveChosen bodies
 
 New on hot-ish paths: every top-of-stack resolution reads one more cold `Option` (`drain_watch`, `game/drain_shortcut.rs`);

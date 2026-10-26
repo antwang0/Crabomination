@@ -17,6 +17,7 @@ INCOMPLETE_CARDS.md counts too, whatever its doc says (the two drift apart).
   scripts/pod_residuals.py --cards     # every flagged card with its doc line
   scripts/pod_residuals.py --summary   # one line: decks complete / partial
   scripts/pod_residuals.py --table     # the markdown table DECK_FEATURES carries
+  scripts/pod_residuals.py --rank [N]  # cards by decks they are the sole residual of
 """
 import re
 import sys
@@ -77,10 +78,35 @@ def deck_lists():
     return decks
 
 
+def rank(docs, open_rows, decks, n):
+    """Cards ranked by how many decks they alone keep from clean (plus half a
+    point per deck they share with one other residual)."""
+    import collections
+    sole, two, anyd = collections.Counter(), collections.Counter(), collections.Counter()
+    for _, cards in decks:
+        flagged = sorted({c for c in cards if MARKERS.search(docs.get(c, "")) or c in open_rows})
+        for c in flagged:
+            anyd[c] += 1
+        if len(flagged) == 1:
+            sole[flagged[0]] += 1
+        if len(flagged) == 2:
+            for c in flagged:
+                two[c] += 0.5
+    score = {c: sole[c] + two[c] for c in anyd}
+    for c, s in sorted(score.items(), key=lambda kv: -kv[1])[:n]:
+        where = "🟡 row" if c in open_rows else "doc"
+        print(f"{s:5.1f} sole={sole[c]:3} any={anyd[c]:4} {c} ({where})")
+
+
 def main():
     docs = factory_docs()
     open_rows = incomplete_factories()
     decks = deck_lists()
+    if "--rank" in sys.argv:
+        i = sys.argv.index("--rank")
+        n = int(sys.argv[i + 1]) if len(sys.argv) > i + 1 and sys.argv[i + 1].isdigit() else 40
+        rank(docs, open_rows, decks, n)
+        return
     show_cards = "--cards" in sys.argv
     table = "--table" in sys.argv
     if table:

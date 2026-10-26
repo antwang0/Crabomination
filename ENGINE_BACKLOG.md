@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps](#fixedopen-2026-10-26-commander-run-01asbsrf--40-seated-deck-cards-six-engine-primitives-two-stale-row-sweeps) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock](#fixedopen-2026-10-26-commander-run-01gqxp2b--26-seated-deck-cards-stale-residual-docs-the-mana-ability-lock) | 32 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01NTUmZf`) — a CR 732.2a drain shortcut, eight player-chosen returns, bot protection picks](#fixedopen-2026-10-25-commander-run-01ntumzf--a-cr-7322a-drain-shortcut-eight-player-chosen-returns-bot-protection-picks) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01M3bbRx`) — the targeted-player event, chosen-source redirects, a CR 903.4f misreading](#fixedopen-2026-10-25-commander-run-01m3bbrx--the-targeted-player-event-chosen-source-redirects-a-cr-9034f-misreading) | 9 |
@@ -286,6 +287,40 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 **`013mwV6T`'s gates line, moved verbatim from TODO's Commander NEXT by `01M3bbRx`:**
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
+
+## FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps
+
+No seats (the EDHREC well is dry). Worked seated-deck residuals by `pod_residuals.py`'s per-card "sole residual" ranking;
+clean seated decks **4,826 → 4,984 / 6,093**. Each fix has a test.
+- **Engine primitives:** `PlayerRef::EachWithMostControlled` (No Witnesses); `TokenDefinition.cost` (CR 111.3 — Nivea's
+  Akroma, Balefang's Baneslayer, Feroz's Ban); `Effect::ExileAtNextEndStepUnless` (Tilonalli's Summoner reads the
+  blessing at the end step); `DistributeCountersAmong` declares its selector's target slots in the four walkers
+  (Invoke Justice's target player); `GameState::stamp_copy` + a leave-funnel LKI snapshot (Mystic Reflection copies a
+  model that left as it last existed — its ruling); an emblem's `UntapAllYoursEachUntapStep` in `do_untap` (Teferi,
+  Who Slows the Sunset's −7, CR 502.3); Pir's "your team" reaches a teammate (CR 810).
+- **Cards:** Urza's Bauble (targets), Dúnedain Blade (Equip Human {1}), Take for a Ride (crime flash), Souls of the
+  Lost (`OneOf` discard-or-sacrifice), Detention Sphere (same-name sweep, not-named), Sosuke (end-of-combat destroy),
+  Louisoix's Sacrifice (abilities too), Serpentine Ambush (blue), Turtle-Duck (base power — two activations were +8),
+  Raphael, Most Attitude (one play, `OneCastAmongGranted`), Petty Larceny (face down), Iron Lad (top-card look), Pact
+  Weapon (X off the drawn card), You Look Upon the Tarrasque (`AllMustBlock`, later blockers bound), The Rise of Sozin II
+  (`NameCardThenExileFromZones`), Jetfire (target player's {C}, `NoNonartifactSpells`, non-mana per CR 605.1a — on the
+  structural audit's reviewed list).
+- **Stale docs / rows** (the code already did it): Ainok Wayfarer, Khorvath, Phyrexian Ironworks, Hardened Academic, Ark
+  of Hunger, Chalice of the Void, Grim Reaper's Scythe, Xathrid Gorgon (CR 602.5 lock, test added), Devout Invocation,
+  Feed the Pack (and `MaySacrifice`'s doc), Game of Chaos (only the 2^16 cap is real).
+- **Pool caution:** Doomsday Excruciator's "if it was cast" / face-down ETB is a cube-pool card — written, reverted, left
+  for a pool-change batch beside Wilt-Leaf Liege.
+
+OPEN (audited cheap, not done — each needs a bot-pick decision first):
+- Gix's Command — "up to one creature" should be any creature (`choose_some_then`), but the auto-pick could then pump
+  an opponent's; Rootweaver Druid — the searching opponent's pick (`ChooseOneAmong`); The Aesir Escape Valhalla
+  (`ChooseOneAmong`, Dino DNA's shape); Obsidian Battle-Axe (any-player Warrior scope); Rhys
+  (`RemoveCountersUpTo { only_helpful }`).
+- Board cap: Council of Reeds copying itself each combat beside Team Transmitter — `--pod-decks 1582,1346,1677,1451
+  --seed 10775 --first 141 --games 1` is 12 s / 8,734 actions (decided; exponential, not a loop).
+- Not cheap: Angel of Jubilation's non-cast Phyrexian life (13 payment sites carry no cast/activate flag); Scrap Welder's
+  X-for-a-sacrifice cost; Loki, God of Mischief (the targeting event carries no targets); Dog Umbra (a conditional
+  keyword on the Aura); Cantankerous Keepers (an exact "all" needs a variant).
 
 ## FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock
 
