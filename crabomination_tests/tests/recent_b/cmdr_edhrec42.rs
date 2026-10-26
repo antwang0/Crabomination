@@ -132,6 +132,26 @@ fn cr_702_131_tilonallis_summoner_elementals_leave_without_the_blessing() {
     assert!(named(&g, 0, "Elemental").is_empty(), "no blessing: exiled");
 }
 
+/// The blessing is read at the end step, not as the Elementals are made: the
+/// city's blessing gained after the attack keeps them (CR 702.131, 603.7a).
+#[test]
+fn cr_702_131_tilonallis_elementals_stay_with_a_blessing_gained_later() {
+    let mut g = pod(2);
+    let summoner = g.add_card_to_battlefield(0, catalog::tilonallis_summoner());
+    g.clear_sickness(summoner);
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: summoner, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.players[0].city_blessing = true;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, 0, "Elemental").len(), 2, "blessed at the end step: they stay");
+}
+
 /// Tom, Bert, and William trade a creature for cards, and come back from
 /// dying as a noncreature artifact.
 #[test]

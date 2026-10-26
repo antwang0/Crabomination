@@ -201,7 +201,7 @@ pub fn hanweir_the_writhing_township() -> CardDefinition {
 
 /// Tilonalli's Summoner — {1}{R} 1/1 Human Shaman, ascend. Attacking, you may
 /// pay {X}{R} for X 1/1 red Elementals tapped and attacking, exiled at the next
-/// end step unless you have the city's blessing (read as they're made).
+/// end step unless you have the city's blessing then.
 pub fn tilonallis_summoner() -> CardDefinition {
     let elemental = TokenDefinition {
         name: "Elemental".into(),
@@ -227,10 +227,9 @@ pub fn tilonallis_summoner() -> CardDefinition {
                         cleanup: AttackingTokenCleanup::None,
                         defender: None,
                     },
-                    Effect::If {
-                        cond: Predicate::HasCityBlessing { who: PlayerRef::You },
-                        then: Box::new(Effect::Noop),
-                        else_: Box::new(Effect::ExileAtNextEndStep { what: Selector::LastCreatedTokens }),
+                    Effect::ExileAtNextEndStepUnless {
+                        what: Selector::LastCreatedTokens,
+                        unless: Predicate::HasCityBlessing { who: PlayerRef::You },
                     },
                 ])),
             },
