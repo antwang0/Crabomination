@@ -134,7 +134,7 @@ pub fn black_widow_super_spy() -> CardDefinition {
 /// Petty Larceny — {3}{B} sorcery; freerunning {1}{B}. Look at the top two
 /// cards of target opponent's library and exile them face down; you may play
 /// them while they stay exiled, spending mana as though it were any type.
-/// Create a Treasure. (Residual: the cards are exiled face up.)
+/// Create a Treasure. The face-down exile is `ExileFaceDown` (CR 406.3).
 pub fn petty_larceny() -> CardDefinition {
     CardDefinition {
         name: "Petty Larceny",
@@ -143,14 +143,16 @@ pub fn petty_larceny() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::TargetPlayerThen {
                 filter: R::OpponentPlayer,
-                then: Box::new(Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::Target(0),
-                    count: Value::Const(2),
-                    duration: MayPlayDuration::WhileExiled,
-                    pay_any_color: true,
-                    max_mana_value: None,
-                    pay_own_cost: true,
-                    uncast_penalty: None,
+                then: Box::new(Effect::ExileFaceDown {
+                    body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::Target(0),
+                        count: Value::Const(2),
+                        duration: MayPlayDuration::WhileExiled,
+                        pay_any_color: true,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    }),
                 }),
             },
             Effect::CreateToken {

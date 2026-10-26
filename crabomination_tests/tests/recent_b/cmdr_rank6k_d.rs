@@ -149,4 +149,12 @@ fn petty_larceny_steals_two() {
         2
     );
     assert_eq!(named(&g, 0, "Treasure"), 1);
+    // CR 406.3 — exiled face down, and still castable through the grant.
+    let stolen: Vec<_> = g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").map(|c| (c.id, c.face_down)).collect();
+    assert!(stolen.iter().all(|&(_, down)| down), "face down");
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: stolen[0].0, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast a face-down stolen card");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(stolen[0].0).map(|c| c.controller), Some(0));
 }
