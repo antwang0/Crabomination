@@ -526,6 +526,23 @@ mod recent226 {
         assert!(!g.battlefield.iter().any(|c| c.id == a || c.id == b), "all creatures destroyed");
         assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Clue").count(), 1);
     }
+
+    /// No Witnesses: every player tied for the most creatures investigates,
+    /// the caster with fewer does not.
+    #[test]
+    fn no_witnesses_clues_go_to_the_players_tied_for_most_creatures() {
+        let mut g = crabomination::game::multi_player_game(3);
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for seat in [1, 2] {
+            for _ in 0..2 {
+                g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+            }
+        }
+        g.resolve_effect(&catalog::no_witnesses().effect.clone(), &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+        crabomination::game::drain_stack(&mut g);
+        let clues = |p| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Clue").count();
+        assert_eq!((clues(0), clues(1), clues(2)), (0, 1, 1));
+    }
 }
 
 mod recent227 {

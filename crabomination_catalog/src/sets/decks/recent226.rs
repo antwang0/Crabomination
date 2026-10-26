@@ -7,7 +7,7 @@ use crate::card::{
     StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{each_opponent, investigate, you_attack_with_three_or_more};
-use crate::effect::{Duration, Effect, Selector, StaticEffect, Value, ZoneRef};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneRef};
 use crate::mana::{b, cost, generic, r, w};
 
 /// Doorkeeper Thrull — {1}{W} 1/2 Thrull. Flash, flying; artifacts and creatures
@@ -229,16 +229,18 @@ pub fn karlov_watchdog() -> CardDefinition {
     }
 }
 
-/// No Witnesses — {2}{W}{W} Sorcery. Investigate, then destroy all creatures.
-/// (The "each player who controls the most creatures investigates" is modeled
-/// as a single investigate for you.)
+/// No Witnesses — {2}{W}{W} Sorcery. Each player who controls the most
+/// creatures (ties included) investigates, then destroy all creatures.
 pub fn no_witnesses() -> CardDefinition {
     CardDefinition {
         name: "No Witnesses",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            investigate(1),
+            crate::effect::shortcut::investigate_by(
+                PlayerRef::EachWithMostControlled(Box::new(R::Creature)),
+                Value::ONE,
+            ),
             Effect::Destroy {
                 what: Selector::EachMatching {
                     zone: ZoneRef::Battlefield,
