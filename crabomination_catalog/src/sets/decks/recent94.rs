@@ -429,9 +429,6 @@ pub fn sylvia_brightspear() -> CardDefinition {
 /// Khorvath Brightflame — {5}{R} 3/4 Legendary Dragon. Flying, haste. Knights
 /// you control have flying and haste. Partner with Sylvia Brightspear
 /// (CR 702.124c), whose ETB search is the keyword's printed trigger.
-///
-/// "your team" collapses to "you" outside a team format, which is how every
-/// other team-worded static in this catalog is spelled.
 pub fn khorvath_brightflame() -> CardDefinition {
     CardDefinition {
         name: "Khorvath Brightflame",

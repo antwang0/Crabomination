@@ -18,7 +18,7 @@ use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w};
 
 /// Ainok Wayfarer — {1}{G} 1/1 Dog Scout. ETB: mill three, you may take a land
-/// among them. (The "+1/+1 counter if you take no land" rider is dropped.)
+/// among them; if you don't, a +1/+1 counter on it.
 pub fn ainok_wayfarer() -> CardDefinition {
     CardDefinition {
         name: "Ainok Wayfarer",

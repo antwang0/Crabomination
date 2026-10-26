@@ -505,8 +505,7 @@ fn phyrexian_golem_token() -> TokenDefinition {
 
 /// Phyrexian Ironworks — {2}{R} Artifact. "Whenever you attack, you get {E}."
 /// "{T}, Pay {E}{E}{E}: Create a 3/3 Phyrexian Golem. Activate only as a
-/// sorcery." The energy trigger rides `Attacks/YourControl` (per attacker,
-/// the standard "whenever you attack" approximation).
+/// sorcery." The energy trigger is `YouAttack` (once per combat).
 pub fn phyrexian_ironworks() -> CardDefinition {
     CardDefinition {
         name: "Phyrexian Ironworks",

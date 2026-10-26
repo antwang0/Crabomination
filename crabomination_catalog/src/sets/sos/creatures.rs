@@ -1487,8 +1487,7 @@ pub fn startled_relic_sloth() -> CardDefinition {
 /// graveyard (returned-to-hand, exiled-from-gy, reanimated, flashback
 /// cast, persist/undying return), the trigger fires and lands a
 /// +1/+1 counter on a target friendly creature. The emission is
-/// per-card, but trigger dispatch collapses a simultaneous batch to a
-/// single fire, matching the printed "one or more cards leave".
+/// per-card, but trigger dispatch fires once for a simultaneous batch, matching the printed "one or more cards leave".
 pub fn hardened_academic() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     use crate::effect::shortcut::target_filtered;

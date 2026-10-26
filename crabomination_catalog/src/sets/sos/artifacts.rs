@@ -366,8 +366,8 @@ pub fn resonating_lute() -> CardDefinition {
 /// You may play that card this turn."
 ///
 /// Wired against the new `EventKind::CardLeftGraveyard` event — a
-/// gy-leave drains 1; trigger dispatch collapses a simultaneous
-/// multi-card exit to a single fire, matching the printed "one or
+/// gy-leave drains 1; trigger dispatch fires once for a simultaneous
+/// multi-card exit, matching the printed "one or
 /// more" (same batching as Hardened Academic / Spirit Mascot /
 /// Garrison Excavator).
 ///
