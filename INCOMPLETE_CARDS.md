@@ -2302,3 +2302,19 @@ Doctor 39, Earthbender Ascension 33, Cut Your Losses 22, Dáin Ironfoot 19. Clos
 (`plan_payoff`), Bolg of the North, Yotia Declares War, Undead Butler. ⚠ A "may [cost]. When you do" wrapper
 changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
 decline still holds when no target exists before converting one (Armix's discard).
+
+## "Any number of target players / opponents" modelled as one seat or as a fan-out (2026-10-26)
+
+`/tmp`-free check — the oracle text says "any number of (other) target …" and the factory holds no multi-target
+construct (`max_targets` / `ApplyToTargets` / `ForEach*Target` / a slot past 0). Closed this pass: Priest of
+Forgotten Gods (79 seats), Hollow Marauder, Thraben Charm, Officious Interrogation. **Open, by seats:** Brago,
+King Eternal 39 (blinks every nonland permanent you control, not a chosen set — note the printed "those cards",
+so a token blinked this way should not return: `Paradoxical Outcome`'s `OwnedByYou.and(NotToken)` filter is the
+shape); Command the Dreadhorde 8 (the resolver owns the graveyard walk, `audit_target_zone`'s one exemption);
+Iname, Life Aspect 7; Divine Resilience 7 (the unkicked half is one target, the kicked half every creature —
+printed is "any number" either way); Paradoxical Outcome 6; Nethroi, Apex of Death 6 and Reunion of the House 5
+(total power 10 or less — needs `SlotsTotalManaValueAtMost`'s power sibling); Ral Zarek, Guest Lecturer 5 (the
+one row `audit_target_opponent` still prints, 2-player pool); Portal Manipulator 4; Curse of Surveillance 2;
+Chong and Lily, Nomads 2; Frantic Salvage 2; Bone Harvest 2; Tocasia, Dig Site Mentor 1; Graceful Takedown 1;
+Turtle Tracks 1; Drafna's Restoration 1; Cabal Conditioning 1; Weaver of Lies / Reward the Faithful / Piper's
+Melody / Embolden 0.
