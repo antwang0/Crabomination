@@ -95,17 +95,20 @@ pub fn wicks_patrol() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::PumpPT {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-                power: Value::Times(
-                    Box::new(Value::GreatestManaValueInGraveyard(PlayerRef::You)),
-                    Box::new(Value::Const(-1)),
-                ),
-                toughness: Value::Times(
-                    Box::new(Value::GreatestManaValueInGraveyard(PlayerRef::You)),
-                    Box::new(Value::Const(-1)),
-                ),
-                duration: Duration::EndOfTurn,
+            // CR 603.12 — "When you do": the target is chosen after the mill.
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    power: Value::Times(
+                        Box::new(Value::GreatestManaValueInGraveyard(PlayerRef::You)),
+                        Box::new(Value::Const(-1)),
+                    ),
+                    toughness: Value::Times(
+                        Box::new(Value::GreatestManaValueInGraveyard(PlayerRef::You)),
+                        Box::new(Value::Const(-1)),
+                    ),
+                    duration: Duration::EndOfTurn,
+                }),
             },
         ]))],
         ..Default::default()

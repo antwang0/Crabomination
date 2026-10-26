@@ -5438,11 +5438,12 @@ pub fn sunfire_torch() -> CardDefinition {
                 description: "you may sacrifice Sunfire Torch".into(),
                 filter: SelectionRequirement::HasName("Sunfire Torch".into()),
                 count: Value::Const(1),
-                then: Box::new(Effect::DealDamage {
-                    to: target_filtered(
-                        SelectionRequirement::any_target(),
-                    ),
-                    amount: Value::Const(2),
+                // CR 603.12 — "When you do": the target is chosen after the sacrifice.
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::DealDamage {
+                        to: target_filtered(SelectionRequirement::any_target()),
+                        amount: Value::Const(2),
+                    }),
                 }),
                 else_: None,
             })],

@@ -1153,6 +1153,28 @@ fn traveling_botanist_digs_on_tap() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "nonland milled");
 }
 
+/// Traveling Botanist's "otherwise, you MAY put it into your graveyard": a
+/// UI seat that declines keeps the nonland on top.
+#[test]
+fn traveling_botanist_bin_is_optional_for_a_ui_seat() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    let bot = g.add_card_to_battlefield(0, catalog::traveling_botanist());
+    let spell = g.add_card_to_library(0, catalog::bewilder());
+    g.players[0].wants_ui = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: bot, actor: Some(0), as_attacker: false }]);
+    for _ in 0..8 {
+        if g.pending_decision.is_some() {
+            g.submit_decision(DecisionAnswer::Bool(false)).expect("decline");
+        } else if !g.stack.is_empty() {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        } else {
+            break;
+        }
+    }
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(spell), "kept on top");
+}
+
 // ── Siege cycle (CR 614 `enter_modes` persistent mode choice) ────────────────
 
 /// Cast `siege` from player 0's hand, choosing `enter_modes` index `mode_idx`.
@@ -2304,4 +2326,24 @@ fn another_round_blinks_x_plus_one_times() {
     drain_stack(&mut g);
     let _ = Target::Player(1);
     assert!(g.players[1].life < life_before, "the ETB fired on each blink");
+}
+
+/// Kishla Trawlers (CR 603.12): "you may exile a creature card from your
+/// graveyard. When you do, return target instant or sorcery card" — with no
+/// creature card to exile, nothing comes back.
+#[test]
+fn kishla_trawlers_returns_a_spell_only_after_exiling_a_creature_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for creature in [true, false] {
+        let mut g = two_player_game();
+        let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+        if creature {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        }
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let trawlers = g.move_card_to_battlefield_for_test(0, catalog::kishla_trawlers());
+        g.fire_self_etb_triggers(trawlers, 0);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == bolt), creature, "creature card: {creature}");
+    }
 }

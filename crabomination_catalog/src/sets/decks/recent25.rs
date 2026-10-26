@@ -278,10 +278,13 @@ pub fn anthropede() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayPay {
             description: "Pay {2} to destroy a Room".into(),
             mana_cost: cost(&[generic(2)]),
-            body: Box::new(Effect::Destroy {
-                what: target_filtered(SelectionRequirement::HasEnchantmentSubtype(
-                    EnchantmentSubtype::Room,
-                )),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::HasEnchantmentSubtype(
+                        EnchantmentSubtype::Room,
+                    )),
+                }),
             }),
             else_: None,
         })],

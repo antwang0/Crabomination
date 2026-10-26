@@ -86,9 +86,12 @@ pub fn cornered_crook() -> CardDefinition {
             description: "Sacrifice an artifact to deal 3 damage?".into(),
             filter: R::Artifact,
             count: Value::ONE,
-            then: Box::new(Effect::DealDamage {
-                to: target_any(),
-                amount: Value::Const(3),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(3),
+                }),
             }),
             else_: None,
         })],

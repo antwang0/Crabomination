@@ -260,7 +260,8 @@ pub fn boilerbilges_ripper() -> CardDefinition {
                 .or(SelectionRequirement::Enchantment)
                 .and(SelectionRequirement::OtherThanSource),
             count: Value::Const(1),
-            then: Box::new(deal(2, target_any())),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            then: Box::new(Effect::ReflexiveTrigger { body: Box::new(deal(2, target_any())) }),
             else_: None,
         })],
         ..Default::default()

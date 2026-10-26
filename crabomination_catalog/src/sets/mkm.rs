@@ -88,14 +88,17 @@ pub fn sample_collector() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![on_attack(Effect::CollectEvidence {
             amount: Value::Const(3),
-            then: Box::new(Effect::AddCounter {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+            // CR 603.12 — "When you do": the target is chosen after the evidence.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
             }),
         })],
         ..Default::default()

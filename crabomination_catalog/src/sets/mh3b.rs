@@ -1872,9 +1872,12 @@ pub fn cyclops_superconductor() -> CardDefinition {
                 description: "Pay {E}{E}{E} to deal damage equal to its power?".into(),
                 body: Box::new(Effect::PayEnergy {
                     amount: 3,
-                    then: Box::new(Effect::DealDamageEqualToPower {
-                        source: Selector::This,
-                        target: target_any(),
+                    // CR 603.12 — "When you do": the target is chosen after the cost.
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamageEqualToPower {
+                            source: Selector::This,
+                            target: target_any(),
+                        }),
                     }),
                 }),
             }),

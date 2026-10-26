@@ -3032,6 +3032,8 @@ pub fn kishla_trawlers() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Exile a creature card from your graveyard to return an instant/sorcery?"
                 .into(),
+            // CR 603.12 — only an exiled creature card triggers the payoff,
+            // which targets after the exile.
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::Take {
@@ -3043,14 +3045,20 @@ pub fn kishla_trawlers() -> CardDefinition {
                     },
                     to: ZoneDest::Exile,
                 },
-                Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::InYourGraveyard.and(
-                            SelectionRequirement::HasCardType(CardType::Instant)
-                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                        ),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                Effect::If {
+                    cond: Predicate::SelectorExists(Selector::LastMoved),
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(
+                                SelectionRequirement::InYourGraveyard.and(
+                                    SelectionRequirement::HasCardType(CardType::Instant)
+                                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                                ),
+                            ),
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ])),
         })],

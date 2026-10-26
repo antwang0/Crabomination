@@ -193,9 +193,13 @@ pub fn mount_velus_manticore() -> CardDefinition {
             effect: Effect::MayDiscard {
                 description: "discard a card to lob it?".into(),
                 count: Value::ONE,
-                then: Box::new(Effect::DealDamage {
-                    amount: Value::LastDiscardedCardTypes,
-                    to: target_any(),
+                // CR 603.12 — "When you do": the target is chosen after the
+                // discard; X (its card types) rides in as the trigger's X.
+                then: Box::new(Effect::WithX {
+                    x: Value::LastDiscardedCardTypes,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamage { amount: Value::XFromCost, to: target_any() }),
+                    }),
                 }),
                 else_: None,
             },

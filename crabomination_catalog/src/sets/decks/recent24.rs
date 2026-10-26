@@ -676,10 +676,13 @@ pub fn gastal_blockbuster() -> CardDefinition {
             description: "Sacrifice a creature or Vehicle? (destroy an opponent's artifact)".into(),
             filter: creature_or_vehicle(),
             count: Value::Const(1),
-            then: Box::new(Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByOpponent),
-                ),
+            // CR 603.12 — "When you do": the target is chosen after the cost.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                }),
             }),
             else_: None,
         })],

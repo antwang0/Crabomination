@@ -10936,16 +10936,15 @@ pub fn diregraf_horde() -> CardDefinition {
                 count: Value::Const(2),
                 definition: std::sync::Arc::new(decayed_zombie_token()),
             },
-            Effect::Move {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::EachPlayer,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Any,
-                    },
-                    Value::Const(2),
-                ),
-                to: ZoneDest::Exile,
+            // CR 603.12 — "When you do, exile up to two target cards from
+            // graveyards" (was an untargeted pick).
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: SelectionRequirement::InGraveyard,
+                    effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                }),
             },
         ]))],
         ..Default::default()
