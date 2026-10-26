@@ -290,7 +290,7 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock
 
 No seats (the EDHREC well is dry). Worked the residuals of seated decks by how many decks a card is the *only*
-residual of (`pod_residuals.py`'s per-card ranking); clean seated decks **4,649 → 4,800 / 6,093**. Fixed, each with a test:
+residual of (`pod_residuals.py`'s per-card ranking); clean seated decks **4,649 → 4,821 / 6,093**. Fixed, each with a test:
 - **Engine:** `Selector::CardsInZone { zone: Command }` and `Value::ManaValueOf` read the command zone (CR 408);
   `Value::DistinctDungeonsCompleted`; an emblem's `PumpPTByValue` applies (CR 114.4 — only `PumpTeamIf` was read).
 - **Rows closed:** Stinging Study (two commanders: X is the one you choose, a `ChooseOneAmong` pick), Trystan's
@@ -302,6 +302,9 @@ residual of (`pod_residuals.py`'s per-card ranking); clean seated decks **4,649 
   (CR 707.9b), Soul Transfer (widen), Loxodon Smiter (CR 614 discard deploy), Huskburster Swarm (owned exile),
   Winternight Stories, and "different names" on Three Dreams / Tiamat / Deathbellow War Cry
   (`R::NameDiffersFromLastMoved` — the `SearchUpToN` doc saying it was unenforced was stale).
+- **CR 601.2c `R::ManaValueDiffersFromOtherTargets`** (`NameDiffersFromOtherTargets`' sibling at all five cross-slot
+  sites): Agadeem's Awakening (the seated decks' single most common sole residual, 21) and Long Rest now target their
+  different-mana-value cards; bots cast both in pods (`--card-census`, nothing unplayed).
 - **Stale docs** (the code already did it): Fountain of Renewal, Grim Harvest, Possession Engine, Werewolf Pack
   Leader, Sorceress's Schemes. `pod_residuals.py` reads docs, so a stale one costs a deck its "clean".
 - **Pool caution:** Wilt-Leaf Liege's discard deploy (the Baloth field) is a one-line fix left undone because the
