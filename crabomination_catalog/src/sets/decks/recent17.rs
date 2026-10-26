@@ -594,9 +594,10 @@ pub fn kilnmouth_dragon() -> CardDefinition {
     }
 }
 
-/// Scrabbling Claws — {1} Artifact. {T}: Exile a card from a graveyard. {1},
-/// Sacrifice this artifact: Exile target card from a graveyard. Draw a card.
-/// (The first ability's "target player exiles" choice is auto-resolved.)
+/// Scrabbling Claws — {1} Artifact. {T}: target **player** exiles a card from
+/// their graveyard. {1}, Sacrifice this artifact: exile target card from a
+/// graveyard, draw a card. (Which card the targeted player exiles is the
+/// engine's pick, their cheapest.)
 pub fn scrabbling_claws() -> CardDefinition {
     CardDefinition {
         name: "Scrabbling Claws",
@@ -605,9 +606,16 @@ pub fn scrabbling_claws() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
-                    to: ZoneDest::Exile,
+                // CR 115.1 — the PLAYER is the target, so hexproof and
+                // "becomes the target" read it; they exile from their own
+                // graveyard, never another's.
+                effect: Effect::TargetPlayerThen {
+                    filter: SelectionRequirement::Player,
+                    then: Box::new(Effect::ExileFromGraveyard {
+                        who: PlayerRef::Target(0),
+                        count: Value::ONE,
+                        filter: SelectionRequirement::Any,
+                    }),
                 },
                 ..Default::default()
             },

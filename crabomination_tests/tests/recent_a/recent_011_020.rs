@@ -943,6 +943,28 @@ mod recent17 {
         assert!(g.players[1].graveyard.is_empty(), "gy card exiled");
     }
 
+    /// CR 115.1 — the tap ability targets a **player**, who exiles from their
+    /// own graveyard: another player's card is untouched, and an untargetable
+    /// seat can't be named.
+    #[test]
+    fn scrabbling_claws_taps_to_make_a_targeted_player_exile() {
+        let mut g = crabomination::game::multi_player_game(3);
+        g.step = TurnStep::PreCombatMain;
+        let claws = g.add_card_to_battlefield(0, catalog::scrabbling_claws());
+        g.clear_sickness(claws);
+        let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+        let other = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: claws, ability_index: 0, target: Some(Target::Player(1)),
+            additional_targets: vec![], x_value: None, mode: None,
+        }).expect("activate the tap ability");
+        drain_stack(&mut g);
+        assert!(g.players[1].graveyard.is_empty(), "the targeted player exiled their card");
+        assert!(g.exile.iter().any(|c| c.id == theirs));
+        assert!(g.players[2].graveyard.iter().any(|c| c.id == other), "an untargeted seat's stays");
+    }
+
     /// A Pirate-typed Cyclops is unaffected — sanity that the Pirate anthem is typed.
     #[test]
     fn corsair_anthem_is_pirate_typed() {
