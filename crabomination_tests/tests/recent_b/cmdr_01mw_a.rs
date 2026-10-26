@@ -4,7 +4,7 @@
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 
 fn pod(n: usize) -> GameState {
@@ -950,17 +950,20 @@ fn infinite_coursework_shuts_a_creature_down() {
     assert!(g.battlefield_find(angel).unwrap().tapped, "doesn't untap");
 }
 
-/// Jetfire turns two +1/+1 counters into two artifact-only {C} and converts.
+/// Jetfire turns two +1/+1 counters into two {C} for *target player* (CR
+/// 605.1a: a targeted mana-adding ability uses the stack) and converts.
 #[test]
 fn jetfire_cashes_counters_into_mana_and_converts() {
     let mut g = pod(2);
     let jf = ready(&mut g, 0, catalog::jetfire_ingenious_scientist());
     g.battlefield_find_mut(jf).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility { card_id: jf, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2), mode: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: jf, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: Some(2), mode: None })
         .expect("activate");
+    assert!(!g.stack.is_empty(), "on the stack");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "spend-restricted colorless");
+    assert_eq!(g.players[1].mana_pool.restricted_total(), 2, "the target's spend-restricted colorless");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 0);
     let c = g.battlefield_find(jf).unwrap();
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0);
     assert_eq!(c.definition.name, "Jetfire, Air Guardian");

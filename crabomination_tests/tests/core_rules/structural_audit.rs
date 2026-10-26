@@ -310,6 +310,8 @@ fn every_ability_that_could_add_mana_is_a_mana_ability() {
     /// of a mana-adding ability that is not a mana ability.
     const REVIEWED_TARGETING_MANA: &[&str] = &[
         "Deathrite Shaman",
+        // "Target player adds that much {C}" (Radiant Lotus's shape).
+        "Jetfire, Ingenious Scientist",
         "Priest of Forgotten Gods",
         "Radiant Lotus",
         // Alluring Eyes goads a target creature, then adds {R} (CR 605.1a).

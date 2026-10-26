@@ -2236,8 +2236,8 @@ pub fn madame_web_clairvoyant() -> CardDefinition {
 
 /// Jetfire, Ingenious Scientist // Jetfire, Air Guardian — {4}{U} legendary
 /// 3/4 flying Robot; More Than Meets the Eye {3}{U}. Remove X ≥ 1 +1/+1
-/// counters from among your artifacts: add X {C} that can't cast nonartifact
-/// spells, then convert. Back: 3/4 flying living-metal Vehicle; {U}{U}{U}:
+/// counters from among your artifacts: target player adds X {C} that can't
+/// cast nonartifact spells, then convert. Back: 3/4 flying living-metal Vehicle; {U}{U}{U}:
 /// convert, then adapt 3.
 pub fn jetfire_ingenious_scientist() -> CardDefinition {
     use crate::card::{ActivatedAbility, AlternativeCost, ArtifactSubtype, CounterType};
@@ -2274,12 +2274,14 @@ pub fn jetfire_ingenious_scientist() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_among_x: Some((Some(CounterType::PlusOnePlusOne), R::Artifact.and(R::ControlledByYou))),
             x_nonzero: true,
+            // "Target player adds that much {C}": targeted, so not a mana
+            // ability (CR 605.1a) — it uses the stack.
             effect: Effect::Seq(vec![
                 Effect::AddMana {
-                    who: PlayerRef::You,
+                    who: PlayerRef::Target(0),
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::Colorless(Value::XFromCost)),
-                        crate::mana::SpendRestriction::ArtifactOnly,
+                        crate::mana::SpendRestriction::NoNonartifactSpells,
                     ),
                 },
                 Effect::Transform { what: Selector::This },
