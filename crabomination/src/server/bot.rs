@@ -928,6 +928,9 @@ pub struct EvalWeights {
     /// within 0.02 of "pass" is cast. The rollout after a pass casts it next
     /// turn, so the arms tie and noise picked pass: the client pilot idled
     /// with a castable creature in 2.2 % of turns, scored pilots 0.1 %.
+    /// On the client pilot with `fra-fixes` (FRA sealed, 200 x 12):
+    /// **48.7 / 48.9** (seeds 43 / 97) — the near-tie "pass" was holding the
+    /// creature for a reason the search saw. NOT adopted.
     pub mcts_cast_ties: bool,
     /// Own main phase: a sorcery-speed cast that would leave less mana than
     /// the cheapest counterspell in hand is skipped while the opponent holds

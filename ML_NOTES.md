@@ -6282,8 +6282,11 @@ round 83 (2026-10-26).** The user asked for the remaining items. Work dir
 | `hand_abilities` | discard-self kill from hand when uncastable (Proft, Sinister Mastermind) | 49.9 / 50.0 | in `fra-fixes` (rare; a visible misplay) |
 | `trade_pressure` | send trade-at-worst attackers once the defender is within two swings | 49.9 / 50.0 | in `fra-fixes` (the user's ask, no measured cost) |
 | `counter_reserve` | skip sorcery-speed casts that leave less than a held counter's cost (4+ mana) | **49.3 / 49.4** | NOT adopted |
-| `mcts_cast_ties` | MCTS post-combat: cast a creature within 0.02 of "pass" | **48.7** / pending (client pilot, 200 x 12) | see below |
+| `mcts_cast_ties` | MCTS post-combat: cast a creature within 0.02 of "pass" | **48.7 / 48.9** (client pilot, 200 x 12) | NOT adopted |
 
+  The MCTS idle turns were not noise: casting the creature on a near-tie
+  costs ~1.2 points, so the search's pass carries information (a blocker
+  held back, a trick's mana). The 2.2 % idle rate stands as play, not a bug.
   Holding counter mana loses more development than the counters win back,
   at least in this simple form. A version keyed to the opponent's likely
   plays is the open lead. Also fixed under `trick_riders`: Charge the
@@ -6294,5 +6297,13 @@ round 83 (2026-10-26).** The user asked for the remaining items. Work dir
   `selfplay_train --actor-fra-fixes`, and the recorder now pushes the
   `duel_sinks` / `tap_timing` seat flags. Round 82's recipe otherwise.
   Pre-registration: `.ladder/run_r83_fra.sh`. Holdout AUC 0.8028 / 0.7753 /
-  0.7719 / 0.7793 (s43 / s97 / s151 / s199; three stopped stale). Gate vs the
-  r82 net: pending.
+  0.7719 / 0.7793 (s43 / s97 / s151 / s199; three stopped stale). **Gate:
+  worse.** Scored (`net67-fixes` vs `fra-fixes`, 1,000 x 12, seeds 43 / 97):
+  the r82 net 51.0 / 53.8, the fresh nets 51.45 / 50.65 / 49.95 / 48.70 a
+  seed (means), **fresh − r82 −2.21 [−4.07, −0.36]** (t, 4 seeds), every seed
+  negative. The joint bar (scored and search both > +0.5) cannot be met, so
+  the search cells were stopped unrun. The r82 net stays the FRA net. The
+  stale stops cut three seeds' data (133k–212k games against r82's 250k),
+  but the one full-length seed (s199) is the worst, so data volume is not
+  the explanation. Training on the pilot the net serves did not help it
+  serve that pilot. An open question, not a lead, without a second recipe.
