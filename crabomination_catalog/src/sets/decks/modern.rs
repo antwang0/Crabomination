@@ -32824,18 +32824,40 @@ pub fn subtle_strike() -> CardDefinition {
 }
 
 /// Resolute Strike — {W} Instant. Target creature gets +2/+2 until end of turn.
-/// (The "if it's a Warrior, attach an Equipment you control" rider is dropped.)
+/// If it's a Warrior, an Equipment you control (the caster's pick) attaches to
+/// it. (Approximation: the attach isn't optional.)
 pub fn resolute_strike() -> CardDefinition {
     CardDefinition {
         name: "Resolute Strike",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(2),
-            toughness: Value::Const(2),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: crate::effect::Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Warrior),
+                },
+                then: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Attach {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: Selector::Target(0),
+                    }),
+                    other: Box::new(Effect::Noop),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

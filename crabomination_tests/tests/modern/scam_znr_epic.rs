@@ -1448,6 +1448,21 @@ fn resolute_strike_pumps() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "2 + 2");
 }
 
+/// Resolute Strike on a Warrior attaches an Equipment you control to it; on a
+/// non-Warrior it only pumps.
+#[test]
+fn resolute_strike_equips_a_warrior() {
+    for (make, equips) in [(catalog::keldon_halberdier as fn() -> _, true), (catalog::grizzly_bears, false)] {
+        let mut g = two_player_game();
+        let host = g.add_card_to_battlefield(0, make());
+        let saw = g.add_card_to_battlefield(0, catalog::bone_saw());
+        let rs = g.add_card_to_hand(0, catalog::resolute_strike());
+        g.players[0].mana_pool.add(Color::White, 1);
+        cast_at(&mut g, rs, Target::Permanent(host));
+        assert_eq!(g.battlefield_find(saw).unwrap().attached_to == Some(host), equips);
+    }
+}
+
 /// Adventure Awaits digs five for a creature.
 #[test]
 fn adventure_awaits_finds_creature() {
