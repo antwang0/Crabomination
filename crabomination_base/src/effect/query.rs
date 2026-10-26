@@ -1132,7 +1132,6 @@ impl Effect {
             | Effect::ExileTopSelfPumpIfCreature
             | Effect::RandomGraveyardCardToBattlefieldElse { .. }
             | Effect::DistributeCountersAmongLastCreated { .. }
-            | Effect::DistributeCountersAmong { .. }
             | Effect::RevealAndReplayNamedPermanent
             | Effect::ChoosePlayerForSource { .. }
             | Effect::CopyEachCreatureToken => false,
@@ -2132,6 +2131,7 @@ impl Effect {
             | Effect::PutAuraFromHandAttachedTo { host: what }
             | Effect::TurnFaceUpFree { what, .. }
             | Effect::Tap { what }
+            | Effect::DistributeCountersAmong { what, .. }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what, .. }
             | Effect::TapBlockedByAndSkipUntap { what }
@@ -3130,6 +3130,7 @@ impl Effect {
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
+            | Effect::DistributeCountersAmong { what, .. }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what, .. }
@@ -4927,6 +4928,7 @@ impl Effect {
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
+            | Effect::DistributeCountersAmong { what, .. }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what, .. }
@@ -5877,6 +5879,7 @@ impl Effect {
                 | Effect::PutFaceDownAsNotedSpell { what, .. }
                 | Effect::TokenCopyTappedAttacking { source: what }
                 | Effect::Tap { what }
+                | Effect::DistributeCountersAmong { what, .. }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }
                 | Effect::TapAndLockWhileSourcePresent { what, .. }
