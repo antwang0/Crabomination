@@ -598,6 +598,20 @@ fn dunedain_blade_equips() {
     assert_eq!((b.power, b.toughness), (4, 3), "bear got +2/+1");
 }
 
+/// Dúnedain Blade's "Equip Human {1}" (CR 702.6a): a Human is equipped for
+/// {1}, which a non-Human can't use.
+#[test]
+fn dunedain_blade_equips_a_human_for_one() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::dunedain_blade());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let human = g.add_card_to_battlefield(0, catalog::elite_vanguard());
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::Equip { equipment: blade, target: bear }).is_err(), "{{3}} for a Bear");
+    g.perform_action(GameAction::Equip { equipment: blade, target: human }).expect("{1} for a Human");
+    assert_eq!(g.battlefield_find(blade).unwrap().attached_to, Some(human));
+}
+
 /// Erkenbrand pumps the team when a Human enters.
 #[test]
 fn erkenbrand_pumps_team_on_human_etb() {

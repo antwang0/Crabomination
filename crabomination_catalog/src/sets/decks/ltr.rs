@@ -836,8 +836,8 @@ pub fn lossarnach_captain() -> CardDefinition {
     }
 }
 
-/// Dúnedain Blade — {1}{W} Equipment. Equipped creature gets +2/+1. Equip {3}.
-/// (The reduced "Equip Human {1}" alternative is dropped — minor.)
+/// Dúnedain Blade — {1}{W} Equipment. Equipped creature gets +2/+1. Equip
+/// Human {1}. Equip {3}.
 pub fn dunedain_blade() -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus};
     CardDefinition {
@@ -849,6 +849,10 @@ pub fn dunedain_blade() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equip_filtered_cost: Some((
+            crate::card::SelectionRequirement::HasCreatureType(CreatureType::Human),
+            cost(&[generic(1)]),
+        )),
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 1,
