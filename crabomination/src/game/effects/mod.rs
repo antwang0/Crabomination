@@ -46839,7 +46839,10 @@ impl GameState {
                         Zone::Exile => self.exile.iter().filter(|c| c.owner == p).collect(),
                         Zone::Battlefield => self.battlefield.iter().filter(|c| c.controller == p).collect(),
                         Zone::Ante => self.players[p].ante.iter().collect(),
-                        Zone::Stack | Zone::Command => vec![],
+                        // CR 408 — "a commander you own in the command zone"
+                        // (Stinging Study's pick).
+                        Zone::Command => self.players[p].command.iter().collect(),
+                        Zone::Stack => vec![],
                     };
                     // For battlefield-resident cards we use the
                     // permanent-state-aware `evaluate_requirement_static`

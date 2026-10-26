@@ -1338,6 +1338,10 @@ impl GameState {
             Value::DungeonsCompleted => {
                 self.players[ctx.controller].dungeons_completed as i32
             }
+            Value::DistinctDungeonsCompleted => {
+                let done = &self.players[ctx.controller].completed_dungeons;
+                done.iter().enumerate().filter(|&(i, d)| !done[..i].contains(d)).count() as i32
+            }
             Value::ControllerExperience => self.players[ctx.controller].experience as i32,
             Value::MutateCount => ctx
                 .trigger_source
@@ -2165,6 +2169,7 @@ impl GameState {
                             StackItem::Spell { card, .. } if card.id == cid => Some(&**card),
                             _ => None,
                         }))
+                        .or_else(|| self.players.iter().find_map(|p| p.command.iter().find(|c| c.id == cid)))
                         .map(|c| self.zone_mana_value(c) as i32),
                     EntityRef::Player(_) => None,
                 })
