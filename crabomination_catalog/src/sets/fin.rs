@@ -8656,9 +8656,8 @@ pub fn clash_of_the_eikons() -> CardDefinition {
 }
 
 /// Louisoix's Sacrifice — {U} instant. As an additional cost, sacrifice a
-/// legendary creature or pay {2}. Counter target noncreature spell.
-/// (Approximation: the "counter an activated or triggered ability" halves are
-/// dropped — the noncreature-spell counter is the dominant mode.)
+/// legendary creature or pay {2}. Counter target activated ability, triggered
+/// ability, or noncreature spell (Voidslime's `CounterSpellOrAbility`).
 pub fn louisoixs_sacrifice() -> CardDefinition {
     use crate::card::AdditionalCastCost;
     CardDefinition {
@@ -8671,10 +8670,12 @@ pub fn louisoixs_sacrifice() -> CardDefinition {
             pay: 2,
             pay_pips: vec![],
         }],
-        effect: Effect::CounterSpell {
+        effect: Effect::CounterSpellOrAbility {
             what: Selector::TargetFiltered {
                 slot: 0,
-                filter: SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Noncreature),
+                filter: SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::Noncreature)
+                    .or(SelectionRequirement::HasAbilityOnStack),
             },
         },
         ..Default::default()

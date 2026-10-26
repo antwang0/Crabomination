@@ -4660,28 +4660,52 @@ fn clash_of_the_eikons_fights_with_its_two_targets() {
     assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(giant).is_some());
 }
 
-/// Louisoix's Sacrifice counters a noncreature spell and carries its sac-or-pay
-/// additional cost.
+/// Louisoix's Sacrifice counters an activated ability (paying {2} with no
+/// legendary creature to sacrifice), but a creature spell isn't a legal target.
 #[test]
-fn louisoixs_sacrifice_counters_noncreature() {
-    use crabomination::card::AdditionalCastCost;
-    let c = catalog::louisoixs_sacrifice();
-    assert!(matches!(
-        c.additional_cast_cost.first(),
-        Some(AdditionalCastCost::SacrificeOrPay { pay: 2, .. })
-    ));
+fn louisoixs_sacrifice_counters_an_ability_not_a_creature_spell() {
+    use crabomination::game::types::Target;
+    use crabomination::mana::Color;
     let mut g = two_player_game();
-    // Put a noncreature spell (an instant) on the stack owned by P1.
-    let bolt = g.add_card_to_hand(1, catalog::molten_rain()); // sorcery = noncreature
-    let _ = bolt;
-    // Resolve the counter against a stack item constructed via cast is heavy;
-    // just assert the counter targets a noncreature spell filter.
-    match c.effect {
-        crabomination::card::Effect::CounterSpell { what: crabomination::card::Selector::TargetFiltered { slot: 0, ref filter } } => {
-            assert!(format!("{filter:?}").contains("Noncreature"), "targets noncreature spell");
-        }
-        _ => panic!("expected CounterSpell"),
-    }
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.clear_sickness(stone);
+    g.players[1].mana_pool.add_colorless(1);
+    g.add_card_to_library(1, catalog::island());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("activate the draw/sac ability");
+    g.priority.player_with_priority = 0;
+    let ls = g.add_card_to_hand(0, catalog::louisoixs_sacrifice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[1].hand.len();
+    let ability = g.top_ability_of(stone).expect("an ability on the stack");
+    g.perform_action(GameAction::CastSpell {
+        card_id: ls, target: Some(Target::Permanent(ability)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("counter the ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before, "the ability was countered — no draw");
+
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the bear");
+    g.priority.player_with_priority = 0;
+    let ls = g.add_card_to_hand(0, catalog::louisoixs_sacrifice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: ls, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "a creature spell can't be targeted");
 }
 
 /// Kefka is a 4/5 DFC whose back is a 5/7 flier that draws off opponents' life
