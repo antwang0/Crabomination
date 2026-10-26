@@ -236,14 +236,18 @@ fn mistveil_plains_tucks_a_card() {
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bolt));
 }
 
-/// Currency Converter: {2}, {T}: loot; a discarded card is exiled with it,
-/// and {T} turns a nonland one into a 2/2 Rogue.
+/// Currency Converter: {2}, {T}: loot; a discarded card MAY be exiled with
+/// it, and {T} turns a nonland one into a 2/2 Rogue.
 #[test]
 fn currency_converter_loots_and_converts() {
     let mut g = pod(2);
     stock_libraries(&mut g, 5);
     let cc = g.add_card_to_battlefield(0, catalog::currency_converter());
-    g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Discard(vec![bolt]),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     activate(&mut g, 0, cc, 0, None).expect("loot");
     assert_eq!(g.exile.len(), 1, "the discarded card is exiled with it");
     g.battlefield.iter_mut().find(|c| c.id == cc).unwrap().tapped = false;

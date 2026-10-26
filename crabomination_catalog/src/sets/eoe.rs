@@ -6526,7 +6526,9 @@ pub fn terrasymbiosis() -> CardDefinition {
         name: "Terrasymbiosis",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![TriggeredAbility {
+        // "You may draw … Do this only once each turn": a decline doesn't
+        // spend the turn's draw (`once_each_turn_on_take`).
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(
                 EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                 EventScope::YouPutCounters,
@@ -6534,13 +6536,15 @@ pub fn terrasymbiosis() -> CardDefinition {
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            })
-            .once_per_turn(),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::TriggerEventAmount,
+            }),
+            effect: Effect::MayDo {
+                description: "Draw that many cards?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::TriggerEventAmount,
+                }),
             },
-        }],
+        })],
         ..Default::default()
     }
 }

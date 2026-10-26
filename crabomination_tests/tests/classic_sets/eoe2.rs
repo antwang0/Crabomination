@@ -195,6 +195,36 @@ fn dominion_bracelet_discounts_by_power_and_exiles_itself() {
     assert!(g.exile.iter().any(|c| c.id == bracelet), "the Bracelet exiled itself");
 }
 
+/// Moonlit Meditation's "you MAY instead": a UI seat that declines gets the
+/// printed tokens, and the turn's first time is spent.
+#[test]
+fn moonlit_meditation_can_be_declined_by_a_ui_seat() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::moonlit_meditation());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
+    g.players[0].wants_ui = true;
+    for alarm in 0..2 {
+        let id = g.add_card_to_hand(0, catalog::raise_the_alarm());
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        for _ in 0..8 {
+            if g.pending_decision.is_some() {
+                assert_eq!(alarm, 0, "asked only the first time");
+                g.submit_decision(DecisionAnswer::Bool(false)).expect("decline");
+            } else if !g.stack.is_empty() {
+                g.perform_action(GameAction::PassPriority).expect("pass");
+            } else {
+                break;
+            }
+        }
+    }
+    let named = |n: &str| g.battlefield.iter().filter(|c| c.is_token && c.definition.name == n).count();
+    assert_eq!((named("Soldier"), named("Grizzly Bears")), (4, 0));
+}
+
 /// Moonlit Meditation turns the turn's first token batch into copies of its
 /// host — and only that batch.
 #[test]

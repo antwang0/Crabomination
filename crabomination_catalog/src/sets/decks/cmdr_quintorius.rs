@@ -344,7 +344,10 @@ pub fn currency_converter() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
-            effect: Effect::ExileWithSource { what: Selector::TriggerSource },
+            effect: Effect::MayDo {
+                description: "Exile the discarded card with Currency Converter?".into(),
+                body: Box::new(Effect::ExileWithSource { what: Selector::TriggerSource }),
+            },
         }],
         activated_abilities: vec![
             ActivatedAbility {

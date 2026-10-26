@@ -2264,6 +2264,24 @@ fn mirrormind_crown_copies_the_first_tokens_each_turn() {
     assert_eq!(tokens_named(&g, "Soldier"), 2, "only the first batch each turn");
 }
 
+/// Mirrormind Crown's "you may instead" is a choice: declined, the batch is
+/// made as printed, and the turn's first time is still spent.
+#[test]
+fn mirrormind_crown_can_be_declined() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    let crown = ready(&mut g, 0, catalog::mirrormind_crown());
+    g.battlefield_find_mut(crown).unwrap().attached_to = Some(angel);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, alarm, &[]).expect("alarm");
+    assert_eq!(tokens_named(&g, "Soldier"), 2, "declined");
+    let again = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, again, &[]).expect("alarm again");
+    assert_eq!(tokens_named(&g, "Serra Angel"), 0, "the first time was the declined one");
+}
+
 /// Defiler of Dreams: a blue permanent spell draws a card, and its {U} can
 /// be 2 life.
 #[test]

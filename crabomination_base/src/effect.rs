@@ -12037,9 +12037,8 @@ pub enum Effect {
     },
 
     /// Look at the top card of `who`'s library; if it's a land, put it into
-    /// their hand, otherwise mill it (surveil-flavored dig). Both printed
-    /// "may" choices are auto-taken (the player-favorable line). Traveling
-    /// Botanist's "becomes tapped" trigger.
+    /// their hand, otherwise they may mill it (a UI seat is asked; headless
+    /// seats bin it). Traveling Botanist, Sarinth Steelseeker.
     LookTopLandToHandElseBin { who: PlayerRef },
 
     /// Reveal the top card of `who`'s library; if it's a permanent card with

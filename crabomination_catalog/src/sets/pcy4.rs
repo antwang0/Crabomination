@@ -640,7 +640,7 @@ pub fn forgotten_harvest() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
             effect: Effect::MayExileFromYourGraveyard {
-                max: None,
+                max: Some(1),
                 filter: R::Land,
                 then: Box::new(Effect::AddCounter {
                     what: target_filtered(R::Creature),

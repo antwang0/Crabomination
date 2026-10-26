@@ -24096,8 +24096,33 @@ impl GameState {
                 // asked before anything is minted (the replay-log contract),
                 // of the one seat whose first batch this turn it is.
                 let mut esix: Option<(usize, Option<CardId>)> = None;
+                // Moonlit Meditation's "you may instead": a UI seat is asked
+                // (one shared replay cursor with Esix's ask); a headless seat
+                // takes the copies. A decline still spends the first time.
+                let mut moonlit_declined: Vec<usize> = Vec::new();
+                let mut cursor = 0;
                 if base > 0 {
                     let creature = definition.card_types.contains(&crate::card::CardType::Creature);
+                    for &p in &players {
+                        if !self.seat_prompts(p) || self.scaled_token_count(p, base, creature) == 0 {
+                            continue;
+                        }
+                        let Some(host) = self.first_token_copy_host_for(p) else { continue };
+                        let name = self.battlefield_find(host).map_or_else(String::new, |c| c.definition.name.to_string());
+                        let Some(yes) = self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Create copies of {name} instead?"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                            OptionalKind::MayBody,
+                        ) else {
+                            return Ok(());
+                        };
+                        if !yes {
+                            moonlit_declined.push(p);
+                        }
+                    }
                     for &p in &players {
                         if self.first_token_copy_host_for(p).is_some()
                             || self.scaled_token_count(p, base, creature) == 0
@@ -24105,7 +24130,6 @@ impl GameState {
                             continue;
                         }
                         let Some(legal) = self.esix_copy_candidates(p) else { continue };
-                        let mut cursor = 0;
                         let Some(pick) = self.ask_seat_target_maybe_logged(
                             &mut cursor,
                             p,
@@ -24117,10 +24141,12 @@ impl GameState {
                         ) else {
                             return Ok(());
                         };
-                        self.clear_answer_log();
                         esix = Some((p, pick.and_then(|t| match t { Target::Permanent(id) => Some(id), _ => None })));
                         break;
                     }
+                }
+                if cursor > 0 {
+                    self.clear_answer_log();
                 }
                 for p in players {
                     // CR 614.13 token-doubling replacement: each
@@ -24137,7 +24163,7 @@ impl GameState {
                     // Moonlit Meditation — the turn's first token batch may
                     // instead be that many copies of the Aura's host.
                     let esix_here = esix.filter(|(q, _)| *q == p && n > 0);
-                    if esix_here.is_some() {
+                    if esix_here.is_some() || (n > 0 && moonlit_declined.contains(&p)) {
                         self.players[p].token_copy_replacement_used_this_turn = true;
                     }
                     if let Some(host) = esix_here
@@ -34505,10 +34531,28 @@ impl GameState {
             }
 
             Effect::LookTopLandToHandElseBin { who } => {
+                let mut cursor = 0;
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (cid, name, is_land) =
                         (top.id, top.definition.name, top.definition.is_land());
+                    // "Otherwise, you may put it into your graveyard": a UI
+                    // seat is asked; a headless one bins it, as it always has.
+                    if !is_land && self.seat_prompts(p) {
+                        let Some(bin) = self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Put {name} into your graveyard?"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                            OptionalKind::MayBody,
+                        ) else {
+                            return Ok(());
+                        };
+                        if !bin {
+                            continue;
+                        }
+                    }
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
                     let dest = if is_land {
                         ZoneDest::Hand(PlayerRef::Seat(p))
@@ -34517,6 +34561,7 @@ impl GameState {
                     };
                     self.move_card_to(cid, &dest, ctx, events);
                 }
+                self.clear_answer_log();
                 Ok(())
             }
 

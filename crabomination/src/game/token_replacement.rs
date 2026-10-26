@@ -174,9 +174,10 @@ impl GameState {
     }
 
     /// Mirrormind Crown — the first token batch `ctrl` creates each turn
-    /// becomes copies of the equipped creature (headless seats always take
-    /// it). The batch is the resolution that started it (`mirrormind_active`).
-    fn mirrormind_copy(&mut self, ctrl: usize, _def: &CardDefinition) -> Option<Arc<CardDefinition>> {
+    /// "may instead" be copies of the equipped creature. Asked once, on the
+    /// batch's first token; the batch is the resolution that started it
+    /// (`mirrormind_active`). A decline still spends the turn's first time.
+    fn mirrormind_copy(&mut self, ctrl: usize, def: &CardDefinition) -> Option<Arc<CardDefinition>> {
         let (crown, host) = self.battlefield.iter().find_map(|c| {
             (c.controller == ctrl
                 && c.definition
@@ -192,7 +193,32 @@ impl GameState {
             return (self.scratch.mirrormind_active == Some(crown)).then_some(copy);
         }
         self.turn.mirrormind_used.push(crown);
+        if !self.ask_mirrormind(ctrl, crown, host, def) {
+            return None;
+        }
         self.scratch.mirrormind_active = Some(crown);
         Some(copy)
+    }
+
+    /// The Crown's "you may instead": the headless pick takes the copies
+    /// unless the token is a creature with a bigger body than the host's.
+    fn ask_mirrormind(&mut self, ctrl: usize, crown: crate::card::CardId, host: crate::card::CardId, def: &CardDefinition) -> bool {
+        let body = self.computed_permanent(host).map_or(0, |c| c.power + c.toughness);
+        let take = !def.is_creature() || body >= def.power + def.toughness;
+        if !self.seat_prompts(ctrl) && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            return take;
+        }
+        let host_name = self.battlefield_find(host).map_or_else(String::new, |c| c.definition.name.to_string());
+        let (copies, keep) = (format!("Copies of {host_name}"), format!("Keep {}", def.name));
+        let options = if take { vec![copies, keep] } else { vec![keep, copies] };
+        let decision = crate::decision::Decision::ChooseOption {
+            source: crown,
+            prompt: "Create copies of the equipped creature instead?".to_string(),
+            options,
+        };
+        match self.ask_entering(ctrl, &decision) {
+            crate::decision::DecisionAnswer::Amount(n) => (n == 0) == take,
+            _ => take,
+        }
     }
 }

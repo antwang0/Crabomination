@@ -1233,7 +1233,7 @@ pub fn dragonbroods_relic() -> CardDefinition {
 
 /// Traveling Botanist — {1}{G} 2/3 Dog Scout. Whenever it becomes tapped, look
 /// at the top card of your library; if it's a land, put it into your hand,
-/// otherwise you may bin it (both printed "may"s auto-taken).
+/// otherwise you may bin it.
 pub fn traveling_botanist() -> CardDefinition {
     CardDefinition {
         name: "Traveling Botanist",

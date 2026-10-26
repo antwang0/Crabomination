@@ -2224,12 +2224,38 @@ fn terrasymbiosis_draws_on_counter() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::forest());
     let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
         card_id: bear, counter_type: CounterType::PlusOnePlusOne, count: 1, placer: None,
     }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew off the counter");
+}
+
+/// Terrasymbiosis: "you MAY draw … Do this only once each turn" — a declined
+/// draw doesn't spend the turn's, so the next counter can still draw.
+#[test]
+fn terrasymbiosis_draw_is_optional_and_a_decline_keeps_the_turns_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::terrasymbiosis());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    for n in [1, 2, 1] {
+        g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, n);
+        g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+            card_id: bear, counter_type: CounterType::PlusOnePlusOne, count: n, placer: None,
+        }]);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 2, "declined 1, took 2, then spent");
 }
 
 /// Weapons Manufacturing makes a Munitions token when a nontoken artifact enters.

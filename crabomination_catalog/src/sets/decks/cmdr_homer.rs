@@ -824,13 +824,12 @@ pub fn cryptic_trilobite() -> CardDefinition {
 
 /// Masked Vandal — {1}{G} Creature — Shapeshifter 1/3. Changeling. ETB: you may
 /// exile a creature card from your graveyard; if you do, exile target artifact
-/// or enchantment an opponent controls. (The graveyard exile is "one or more"
-/// under `MayExileFromYourGraveyard`.)
+/// or enchantment an opponent controls.
 pub fn masked_vandal() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Changeling],
         triggered_abilities: vec![etb(Effect::MayExileFromYourGraveyard {
-            max: None,
+            max: Some(1),
             filter: R::Creature,
             then: Box::new(Effect::Exile {
                 what: target_filtered(

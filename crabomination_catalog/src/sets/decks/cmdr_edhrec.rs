@@ -6818,7 +6818,7 @@ pub fn ingenious_artillerist() -> CardDefinition {
 
 /// Sarinth Steelseeker — {1}{G} 1/2 Human Artificer Scout. Whenever an
 /// artifact you control enters, look at the top card: a land goes to your
-/// hand, anything else to your graveyard (both "may"s taken).
+/// hand, anything else may go to your graveyard.
 pub fn sarinth_steelseeker() -> CardDefinition {
     CardDefinition {
         name: "Sarinth Steelseeker",
