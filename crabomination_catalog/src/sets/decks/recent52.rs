@@ -472,8 +472,8 @@ pub fn ghostly_dancers() -> CardDefinition {
 
 /// Pirated Copy — {4}{U} 0/0 Shapeshifter Pirate. May enter as a copy of any
 /// creature on the battlefield, except it's also a Pirate and has "whenever
-/// this deals combat damage to a player, draw a card." (The "another creature
-/// with the same name" half is approximated to the copy itself.)
+/// this creature or another creature with the same name deals combat damage
+/// to a player, you draw a card" — any creature of that name, anyone's.
 pub fn pirated_copy() -> CardDefinition {
     use crate::card::EntersAsCopy;
     CardDefinition {
@@ -488,7 +488,12 @@ pub fn pirated_copy() -> CardDefinition {
             filter: R::Creature,
             extra_creature_types: vec![CreatureType::Pirate],
             extra_triggered: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::SharesNameWithSource),
+                    },
+                ),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::ONE,

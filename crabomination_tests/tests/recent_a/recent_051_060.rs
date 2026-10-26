@@ -410,6 +410,40 @@ mod recent52 {
             "also a Pirate");
     }
 
+    /// Pirated Copy's granted trigger reads "this creature or another
+    /// creature with the same name": the model itself connecting draws too.
+    #[test]
+    fn pirated_copy_draws_when_a_same_named_creature_connects() {
+        let mut g = two_player_game();
+        let model = g.add_card_to_battlefield(0, catalog::serra_angel());
+        g.clear_sickness(model);
+        let pc = g.add_card_to_hand(0, catalog::pirated_copy());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.perform_action(GameAction::CastSpell {
+            card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Pirated Copy");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(pc).unwrap().definition.name, "Serra Angel");
+        for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+        let hand = g.players[0].hand.len();
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: model, target: AttackTarget::Player(1),
+        }])).expect("attack");
+        while g.step != TurnStep::PostCombatMain {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, 16);
+        assert_eq!(g.players[0].hand.len(), hand + 1, "the model's damage drew a card");
+    }
+
     #[test]
     fn unwanted_remake_destroys_and_manifests_dread() {
         let mut g = two_player_game();
