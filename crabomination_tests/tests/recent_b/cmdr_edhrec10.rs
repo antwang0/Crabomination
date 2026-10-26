@@ -1603,6 +1603,24 @@ fn pir_and_toothy_grow_and_cash_in() {
     assert_eq!(g.players[0].hand.len(), hand + 1 + 4, "Toothy back plus four draws");
 }
 
+/// Pir's "a permanent your team controls" reaches a Two-Headed Giant
+/// teammate's creature (CR 810.2) and not an opponent's.
+#[test]
+fn pir_adds_a_counter_on_a_teammates_permanent() {
+    let mut g = pod(4);
+    g.assign_teams(vec![vec![0, 2], vec![1, 3]]).expect("teams");
+    flood(&mut g, 0);
+    ready(&mut g, 0, catalog::pir_imaginative_rascal());
+    let mate = ready(&mut g, 2, catalog::grizzly_bears());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    for t in [mate, foe] {
+        let b = g.add_card_to_hand(0, catalog::battlegrowth());
+        cast(&mut g, b, &[perm(t)]).expect("battlegrowth");
+    }
+    let n = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((n(&g, mate), n(&g, foe)), (2, 1));
+}
+
 /// Sunderflock costs {4} less beside Twinflame Travelers and bounces only
 /// non-Elementals; Twinflame doubles its enters trigger (CR 603.2d).
 #[test]

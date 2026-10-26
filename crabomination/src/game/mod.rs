@@ -8711,19 +8711,19 @@ impl GameState {
             .sum()
     }
 
-    /// Number of "a permanent you control" adders `seat` controls (Pir, Doc
-    /// Samson): creatures and noncreatures alike, never the player. Doc
-    /// Samson's counts only when `seat` is the placer.
+    /// Number of permanent-counter adders reaching `seat`'s permanents:
+    /// Pir's "a permanent your team controls" (a teammate's Pir too, CR 810)
+    /// and Doc Samson's "you control", which counts only when `seat` places.
     fn extra_permanent_adders_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
         let placed_by_seat = placed_by(seat);
         self.battlefield
             .iter()
-            .filter(|c| c.controller == seat)
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter(|sa| match sa.effect {
+            .filter(|c| self.same_team(c.controller, seat))
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.controller, sa)))
+            .filter(|&(ctrl, sa)| match sa.effect {
                 StaticEffect::ExtraCounterOnPermanents => true,
-                StaticEffect::ExtraCounterOnPermanentsYouPut => placed_by_seat,
+                StaticEffect::ExtraCounterOnPermanentsYouPut => ctrl == seat && placed_by_seat,
                 _ => false,
             })
             .count() as u32
