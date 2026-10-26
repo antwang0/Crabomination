@@ -191,9 +191,12 @@ pub fn spellbook_vendor() -> CardDefinition {
                 description:
                     "Pay {1} to create a Sorcerer Role attached to a creature you control?".into(),
                 mana_cost: cost(&[generic(1)]),
-                body: Box::new(Effect::CreateTokenAttachedTo {
-                    target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                    definition: std::sync::Arc::new(sorcerer_role()),
+                // CR 603.12 — "When you do": targets after the payment.
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::CreateTokenAttachedTo {
+                        target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        definition: std::sync::Arc::new(sorcerer_role()),
+                    }),
                 }),
                 else_: None,
             },

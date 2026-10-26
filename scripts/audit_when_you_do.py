@@ -21,12 +21,6 @@ REVIEWED = {
     "Construct a Cosmic Cube": "plan_payoff",
     "Doom Reigns Supreme": "plan_payoff",
     "Villainous Syndication": "plan_payoff",
-    # Not a printed payoff: the "when you do" is a keyword's reminder text,
-    # or the trigger IS the reflexive one.
-    "Cut Your Losses": "casualty",
-    "Wort, the Raidmother": "conspire",
-    "Ancestral Katana": "untargeted; the target is equip's reminder",
-    "Glorybringer": "`EventKind::Exerted` is the reflexive trigger",
 }
 NAMED = re.compile(r'(?:name:\s*|\b(?:legend|creature|spell|permanent|plan|sorcery|instant)\(\s*)"([^"]+)"')
 
@@ -57,12 +51,16 @@ def main():
     for name, card in CACHE.items():
         if not isinstance(card, dict):
             continue
-        oracle = card.get("oracle_text") or ""
+        # Reminder text is not rules text (madness, conspire, casualty).
+        oracle = re.sub(r"\([^)]*\)", "", card.get("oracle_text") or "")
         low = oracle.lower()
         if "when you do" not in low:
             continue
         front = name.split(" // ")[0]
-        if front in REVIEWED or front not in bodies or any("Reflexive" in b for b in bodies[front]):
+        # An exert trigger (`on_exert` / `EventKind::Exerted`) is the reflexive one.
+        if front in REVIEWED or front not in bodies or any(
+            k in b for b in bodies[front] for k in ("Reflexive", "on_exert", "Exerted")
+        ):
             continue
         targeted = "target" in low.split("when you do", 1)[1][:200]
         if not (targeted or every):

@@ -35964,12 +35964,16 @@ pub fn curious_forager() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
+        // CR 603.12 — "When you do": the target is chosen after the forage,
+        // so a card the forage exiled can't be it.
         triggered_abilities: vec![etb(Effect::Forage {
-            then: Box::new(Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                }),
             }),
         })],
         ..Default::default()

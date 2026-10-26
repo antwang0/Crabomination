@@ -40,8 +40,12 @@ pub fn faebloom_trick() -> CardDefinition {
                 count: Value::Const(2),
                 definition: std::sync::Arc::new(faerie_token()),
             },
-            Effect::Tap {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            // CR 603.12 — "When you do": the target is chosen after the
+            // Faeries exist, on the reflexive trigger.
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Tap {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                }),
             },
         ]),
         ..Default::default()

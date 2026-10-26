@@ -3247,10 +3247,13 @@ pub fn ty_lee_artful_acrobat() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::MayPay {
             description: "Pay {1} to make a creature unable to block?".into(),
             mana_cost: cost(&[generic(1)]),
-            body: Box::new(Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::CantBlock,
-                duration: Duration::EndOfTurn,
+            // CR 603.12 — "When you do": targets after the payment.
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::EndOfTurn,
+                }),
             }),
             else_: None,
         })],

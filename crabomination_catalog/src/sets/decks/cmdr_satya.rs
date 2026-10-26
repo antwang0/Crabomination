@@ -232,11 +232,15 @@ pub fn blaster_hulk() -> CardDefinition {
             energy(2),
             Effect::PayEnergy {
                 amount: 8,
-                then: Box::new(Effect::DealDamageDivided {
-                    total: Value::Const(8),
-                    filter: R::any_target(),
-                    max_targets: 8,
-                    retaliate_to_source: false,
+                // CR 603.12 — "When you do": the eight targets are chosen
+                // after the energy is paid.
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::DealDamageDivided {
+                        total: Value::Const(8),
+                        filter: R::any_target(),
+                        max_targets: 8,
+                        retaliate_to_source: false,
+                    }),
                 }),
             },
         ]))],

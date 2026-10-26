@@ -2300,11 +2300,14 @@ closed: the Plans (`plan_payoff`), Bolg of the North, Yotia Declares War, Undead
 Armix (73 seats), Ancient Bronze Dragon, Leyline Tyrant, The Fugitive Doctor, Earthbender Ascension (also "target
 creature you control", was any creature), Eastfarthing Farmer, The Fire Nation Drill (`MayTap` on `IsSource`: a
 tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater, Dáin Ironfoot
-(`ResolutionCarry` now carries `LastCreatedToken`);
-reviewed as not printed: Cut Your Losses, Wort (keyword reminder), Ancestral Katana, Glorybringer. **Open:** Guide
+(`ResolutionCarry` now carries `LastCreatedToken`), Spellbook Vendor, Blaster Hulk, Curious Forager, Ty Lee, Artful
+Acrobat, Faebloom Trick; the script now strips reminder text (madness / conspire / casualty) and counts an exert
+trigger as the reflexive one;
+**Open:** Guide
 of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type
-end-of-turn, printed indefinite), Earth Rumble 10 (a spell whose earthbend slot precedes the fight
-slots), then the script's tail. The bot declines a "may [cost]. When you do" whose payoff has no legal target
+end-of-turn, printed indefinite), Earth Rumble 10 and Curse of the Werefox 4 (a spell whose cast-time slot
+the reflexive payoff also names — "that creature"), Kappa Tech-Wrecker 5 (no predicate for "a deathtouch counter
+was removed"), then the script's tail (Awaken the Honored Dead is cube). The bot declines a "may [cost]. When you do" whose payoff has no legal target
 (`reflexive_payoff_untargetable`). ⚠ A "may [cost]. When you do" wrapper
 changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
 decline still holds when no target exists before converting one (Armix's discard).
