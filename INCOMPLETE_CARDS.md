@@ -2147,7 +2147,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Mikey & Mona, Mutant Sitters | "each mode must target a different player" is not enforced | `ChooseN` over two `TargetPlayerThen` + `AsPlayer` modes |
 | 🟡 Ego Erasure | "and lose all creature types until end of turn" is not modelled (only the -2/-0) | `TargetPlayerThen` + `AsPlayer` pump |
-| 🟡 Yotia Declares War | chapter II's damage target is picked as the chapter triggers, not on the reflexive "when you do" after the artifacts are tapped | `TapAnyNumberThen` over a targeted `DealDamage` |
 | 🟡 Sensation Gorger | the top card is checked before you choose to look; a non-sharing top card is never offered | `If` over `SharesCreatureTypeWithSource`, then `MayDo` |
 | 🟡 Hydro-Man, Fluid Felon | the "{T}: Add {U}" he gains as a land is printed on the card, live only while he is a land, so he "has" a mana ability as a creature too (ability counts, Humility) | `ActivatedAbility::condition` (`This` is a Land) |
 | 🟡 Flying Drone | "costs {1}{U} less to activate if …" is two abilities: the full-price loot gated off the condition and a free one gated on it | two `ActivatedAbility::condition` arms |
@@ -2211,7 +2210,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Nathan Drake, Treasure Hunter | "spend mana as though any color" covers only the spell his attack casts (and that one only when you do not own it), not other unowned spells or abilities of permanents you control but do not own; the cast takes the first eligible exiled card, an unowned one first | `CastImmediateAnyManaType` / `CastWithoutPayingImmediate` |
 | 🟡 Kotose, the Silent Spider | "you may play one of the exiled cards" is one a turn while Kotose stays (`WhileSourceOnBattlefield { one_spell_a_turn }`), not exactly one ever; lands among them stay playable beside it | `GrantMayPlay` over the swept `LastMoved` |
 | 🟡 Soundwave, Sonic Spy | the instant or sorcery card is chosen as the trigger resolves (`MoveChosen` from the damaged player's graveyard), not targeted as it triggers | `MoveChosen` + `CastWithoutPayingImmediate { copy }` + `CastImmediatelyThisResolution` |
-| 🟡 Villainous Syndication | the fourth plan counter's "When you do, return target creature card" picks its target as the counter trigger goes on the stack, not after the sacrifice (CR 603.12) | `plan_payoff` |
 | 🟡 Goblin Plate Mail | "attach this Equipment to the amassed Army" attaches to the first Army you control, which is the amassed one unless you control two | `Amass` + `Attach { EachPermanent(Army) }` |
 | 🟡 Titania, Rugged Rumbler | Ward's "discard a card or pay {2}" auto-pays the mana when it can (no menu); the discard is the hand's first card | `WardCost::ManaOrDiscard` |
 | 🟡 Norritt | "controlled continuously since the beginning of the turn" reads "didn't enter this turn" (a creature that changed control this turn qualifies) | `R::Not(EnteredThisTurn)` + `DelayUntilWithCapture` |

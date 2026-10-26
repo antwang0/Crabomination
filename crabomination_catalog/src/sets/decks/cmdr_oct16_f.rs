@@ -266,11 +266,14 @@ pub fn yotia_declares_war() -> CardDefinition {
                 2,
                 // The target is picked as the chapter triggers rather than on
                 // the reflexive "when you do"; the damage is the tapped count.
+                // CR 603.12 — "When you do": targets after the tapping, X carried.
                 Effect::TapAnyNumberThen {
                     filter: R::Artifact,
-                    body: Box::new(Effect::DealDamage {
-                        to: target_filtered(R::Creature.or(R::Planeswalker)),
-                        amount: Value::XFromCost,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamage {
+                            to: target_filtered(R::Creature.or(R::Planeswalker)),
+                            amount: Value::XFromCost,
+                        }),
                     }),
                 },
             ),

@@ -182,7 +182,8 @@ fn activate(g: &mut GameState, id: CardId, idx: usize, target: Option<Target>) -
     Ok(())
 }
 
-/// Yotia Declares War II deals the tapped-artifact count; III makes a 4/4.
+/// Yotia Declares War II deals the tapped-artifact count — a reflexive
+/// trigger targeting after the tap (CR 603.12); III makes a 4/4.
 #[test]
 fn yotia_declares_war_taps_artifacts_for_damage_then_animates_one() {
     let mut g = pod(2);
@@ -191,8 +192,12 @@ fn yotia_declares_war_taps_artifacts_for_damage_then_animates_one() {
     let wurm = ready(&mut g, 1, catalog::craw_wurm());
     let chapter = |g: &GameState, n: usize| g.battlefield_find(saga).unwrap().definition.saga_chapters[n].1.clone();
     let ch2 = chapter(&g, 1);
-    g.resolve_effect(&ch2, &EffectContext::for_ability(saga, 0, Some(Target::Permanent(wurm)))).expect("II");
+    g.resolve_effect(&ch2, &EffectContext::for_ability(saga, 0, None)).expect("II");
+    assert_eq!(g.stack.len(), 1, "the \"when you do\" waits on the stack");
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 0);
+    drain_stack(&mut g);
     let tapped = rocks.iter().filter(|&&r| g.battlefield_find(r).unwrap().tapped).count();
+    assert!(tapped > 0);
     assert_eq!(g.battlefield_find(wurm).unwrap().damage, tapped as u32);
     let ch3 = chapter(&g, 2);
     g.resolve_effect(&ch3, &EffectContext::for_ability(saga, 0, Some(Target::Permanent(rocks[0])))).expect("III");
