@@ -629,9 +629,10 @@ pub fn invoke_justice() -> CardDefinition {
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
             Effect::DistributeCountersAmong {
-                what: Selector::EachPermanent(yours(
-                    R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
-                )),
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(1),
+                    filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                },
                 total: Value::Const(4),
                 counter: CounterType::PlusOnePlusOne,
             },

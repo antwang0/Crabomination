@@ -2498,3 +2498,19 @@ fn rulik_mons_may_put_the_land() {
         assert_eq!(tokens_named(&g, "Goblin"), usize::from(!take), "goblin: {take}");
     }
 }
+
+/// Invoke Justice's counters go among the creatures of the *target player*
+/// (CR 115.1, its second target); the auto-targeter names you for it.
+#[test]
+fn invoke_justice_distributes_among_the_target_players_creatures() {
+    let mut g = pod(3);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 2, catalog::grizzly_bears());
+    let ij = g.add_card_to_hand(0, catalog::invoke_justice());
+    let (first, rest) = g.auto_targets_for_effect_all_slots(&catalog::invoke_justice().effect, 0, None);
+    assert_eq!((first, rest), (Some(perm(dead)), vec![Target::Player(0)]), "the friendly pick");
+    cast(&mut g, ij, &[perm(dead), Target::Player(2)]).expect("invoke justice");
+    let n = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((n(&g, theirs), n(&g, mine), n(&g, dead)), (4, 0, 0));
+}
