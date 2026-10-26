@@ -1041,12 +1041,16 @@ pub fn light_the_way() -> CardDefinition {
 }
 
 /// Iron Lad, Diverging Destiny — {2}{U} 2/2 legendary artifact creature Human
-/// Hero, flying, vigilance. {T}: reveal your top card; if it's an artifact
-/// card, draw a card. (Looking at the top card any time isn't modeled.)
+/// Hero, flying, vigilance. You may look at the top card of your library any
+/// time. {T}: reveal your top card; if it's an artifact card, draw a card.
 pub fn iron_lad_diverging_destiny() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "You may look at the top card of your library any time.",
+            effect: StaticEffect::MayLookAtOwnLibraryTop,
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::If {

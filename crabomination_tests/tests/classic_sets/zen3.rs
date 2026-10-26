@@ -82,19 +82,21 @@ fn zen3_vanilla_bodies() {
     assert!(catalog::stonework_puma().card_types.contains(&CardType::Artifact));
 }
 
-/// Sphinx of Jwar Isle's controller — and only its controller — sees the top
-/// card of their library.
+/// "You may look at the top card of your library any time" (Sphinx of Jwar
+/// Isle, Iron Lad): its controller — and only its controller — sees it.
 #[test]
 fn sphinx_of_jwar_isle_shows_its_controller_the_top_card() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let own = crabomination::server::view::project(&g, 0);
-    assert!(own.players[0].library.known_top.is_empty(), "hidden without the Sphinx");
-    g.add_card_to_battlefield(0, catalog::sphinx_of_jwar_isle());
-    let own = crabomination::server::view::project(&g, 0);
-    let theirs = crabomination::server::view::project(&g, 1);
-    assert_eq!(own.players[0].library.known_top.len(), 1, "the controller may look");
-    assert!(theirs.players[0].library.known_top.is_empty(), "the opponent may not");
+    for def in [catalog::sphinx_of_jwar_isle as fn() -> _, catalog::iron_lad_diverging_destiny] {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, catalog::island());
+        let own = crabomination::server::view::project(&g, 0);
+        assert!(own.players[0].library.known_top.is_empty(), "hidden without it");
+        g.add_card_to_battlefield(0, def());
+        let own = crabomination::server::view::project(&g, 0);
+        let theirs = crabomination::server::view::project(&g, 1);
+        assert_eq!(own.players[0].library.known_top.len(), 1, "{}: the controller may look", def().name);
+        assert!(theirs.players[0].library.known_top.is_empty(), "the opponent may not");
+    }
 }
 
 // ── Landfall ────────────────────────────────────────────────────────────────
