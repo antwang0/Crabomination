@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock](#fixedopen-2026-10-26-commander-run-01gqxp2b--26-seated-deck-cards-stale-residual-docs-the-mana-ability-lock) | 32 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01NTUmZf`) — a CR 732.2a drain shortcut, eight player-chosen returns, bot protection picks](#fixedopen-2026-10-25-commander-run-01ntumzf--a-cr-7322a-drain-shortcut-eight-player-chosen-returns-bot-protection-picks) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01M3bbRx`) — the targeted-player event, chosen-source redirects, a CR 903.4f misreading](#fixedopen-2026-10-25-commander-run-01m3bbrx--the-targeted-player-event-chosen-source-redirects-a-cr-9034f-misreading) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01Y6ZRFx`) — the last five EDHREC singles, a state-trigger class, stale residual docs](#fixedopen-2026-10-25-commander-run-01y6zrfx--the-last-five-edhrec-singles-a-state-trigger-class-stale-residual-docs) | 27 |
@@ -285,6 +286,39 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 **`013mwV6T`'s gates line, moved verbatim from TODO's Commander NEXT by `01M3bbRx`:**
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
+
+## FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock
+
+No seats (the EDHREC well is dry). Worked the residuals of seated decks by how many decks a card is the *only*
+residual of (`pod_residuals.py`'s per-card ranking); clean seated decks **4,649 → 4,800 / 6,093**. Fixed, each with a test:
+- **Engine:** `Selector::CardsInZone { zone: Command }` and `Value::ManaValueOf` read the command zone (CR 408);
+  `Value::DistinctDungeonsCompleted`; an emblem's `PumpPTByValue` applies (CR 114.4 — only `PumpTeamIf` was read).
+- **Rows closed:** Stinging Study (two commanders: X is the one you choose, a `ChooseOneAmong` pick), Trystan's
+  Command and Kamahl's Will (their multi-target modes are `ApplyToTargets` slots — the per-mode slot counts and holes
+  the rows said were missing already exist, `spree_targets.rs`).
+- **Riders restored:** Ellywick's emblem (per distinct dungeon; keywords unconditional), Pirated Copy (any
+  same-named creature), Inspiring Paladin, Silverskin Armor, Paladin's Arms, Dreadwing Scavenger, Calming Verse,
+  Diregraf Rebirth, Embermouth Sentinel, Selfless Police Captain (LKI counters), Tune Up, Protean Thaumaturge
+  (CR 707.9b), Soul Transfer (widen), Loxodon Smiter (CR 614 discard deploy), Huskburster Swarm (owned exile),
+  Winternight Stories, and "different names" on Three Dreams / Tiamat / Deathbellow War Cry
+  (`R::NameDiffersFromLastMoved` — the `SearchUpToN` doc saying it was unenforced was stale).
+- **Stale docs** (the code already did it): Fountain of Renewal, Grim Harvest, Possession Engine, Werewolf Pack
+  Leader, Sorceress's Schemes. `pod_residuals.py` reads docs, so a stale one costs a deck its "clean".
+- **Pool caution:** Wilt-Leaf Liege's discard deploy (the Baloth field) is a one-line fix left undone because the
+  card is in the cube pool.
+
+OPEN:
+- **CR 602.5 / Arrest ruling — "its activated abilities can't be activated" stops mana abilities too.**
+  `Keyword::CantActivateAbilities` is checked only for non-mana activations (`actions.rs`, the CR 602.5c gate), so
+  23 cards (Arrest, Lawmage's Binding, Petrify, Prison Term, Encrust, Detention Vortex, Xathrid Gorgon, …) leave a
+  mana dork tapping. Two users (Faith's Fetters, Bound in Gold) print "unless they're mana abilities" and are right
+  today, so the fix needs a second keyword for them, then the lock in the shared mana walkers. The walkers already
+  disagree for Scheming Fence: `GrantScan::locked` is honoured by `mana_source_table` only, not by the payability
+  check (`actions.rs` ~19215), the per-colour count (~19578) or the bot's `available_mana`. One predicate in
+  `effective_mana_abilities_into` would cover all three engine walkers.
+- Rogue Class (cards exiled before level 3 never become playable), Galadriel's Dismissal (kicked: the creature
+  target is not chosen — needs a target-only permanent slot), Cruel Calculations (counts every card into the
+  graveyard, `milled_ids_this_turn` is the exact count) — rows unchanged.
 
 ## FIXED/OPEN 2026-10-25 (Commander run, `01NTUmZf`) — a CR 732.2a drain shortcut, eight player-chosen returns, bot protection picks
 
