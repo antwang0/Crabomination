@@ -1298,8 +1298,8 @@ pub fn eirdu_carrier_of_dawn() -> CardDefinition {
 }
 
 /// Rhys, the Evermore — {1}{W} 2/2 flash Elf Warrior. ETB gives another
-/// creature of yours persist this turn; {W}, {T}: remove counters from a
-/// creature of yours, as a sorcery.
+/// creature of yours persist this turn; {W}, {T}: remove any number of
+/// counters from a creature of yours, as a sorcery.
 pub fn rhys_the_evermore() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
@@ -1312,7 +1312,14 @@ pub fn rhys_the_evermore() -> CardDefinition {
             mana_cost: cost(&[w()]),
             tap_cost: true,
             sorcery_speed: true,
-            effect: Effect::RemoveAllCounters { what: target_filtered(mine()) },
+            // "Any number of counters": the remover's pick (`RemoveCountersUpTo`);
+            // `only_helpful` takes the harmful ones off its own creature and
+            // leaves a +1/+1 counter.
+            effect: Effect::RemoveCountersUpTo {
+                what: target_filtered(mine()),
+                amount: Value::Const(i32::MAX),
+                only_helpful: true,
+            },
             ..Default::default()
         }],
         ..legend("Rhys, the Evermore", cost(&[generic(1), w()]), vec![CreatureType::Elf, CreatureType::Warrior], 2, 2)

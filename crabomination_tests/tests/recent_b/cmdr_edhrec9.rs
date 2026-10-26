@@ -548,3 +548,20 @@ fn froghemoth_eats_only_the_damaged_players_graveyard() {
     assert!(mine.iter().all(|id| g.exile.iter().any(|c| c.id == *id)), "the damaged player's cards");
     assert!(other.iter().all(|id| g.players[2].graveyard.iter().any(|c| c.id == *id)), "not the other opponent's");
 }
+
+/// Rhys, the Evermore's "remove any number of counters": the harmful ones go
+/// (a stun counter) and a +1/+1 counter stays.
+#[test]
+fn rhys_removes_the_harmful_counters_and_keeps_the_good_ones() {
+    let mut g = pod(2);
+    let rhys = ready(&mut g, 0, catalog::rhys_the_evermore());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    {
+        let b = g.battlefield_find_mut(bear).unwrap();
+        b.add_counters(CounterType::PlusOnePlusOne, 1);
+        b.add_counters(CounterType::Stun, 2);
+    }
+    activate(&mut g, rhys, 0, Some(Target::Permanent(bear))).expect("{W}, {T}");
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.counter_count(CounterType::Stun), b.counter_count(CounterType::PlusOnePlusOne)), (0, 1));
+}
