@@ -239,6 +239,27 @@ fn mystic_reflection_copies_the_next_batch_of_entries_only() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Ornithopter"), "the batch after is itself");
 }
 
+/// Mystic Reflection's ruling: a model that left the battlefield is copied
+/// as it last existed there (CR 608.2h) — a dead token model still works.
+#[test]
+fn mystic_reflection_copies_a_model_that_left_as_it_last_existed() {
+    use crabomination::mana::Color;
+    let mut g = pod(4);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_from_hand(&mut g, catalog::raise_the_alarm()).expect("tokens");
+    let soldier = g.battlefield.iter().find(|c| c.is_token).unwrap().id;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, catalog::mystic_reflection(), Some(Target::Permanent(soldier))).expect("reflection");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, catalog::lightning_bolt(), Some(Target::Permanent(soldier))).expect("bolt");
+    assert!(g.battlefield_find(soldier).is_none());
+    cast_from_hand(&mut g, catalog::ornithopter()).expect("ornithopter");
+    let soldiers = g.battlefield.iter().filter(|c| !c.is_token && c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 1, "the Ornithopter entered as the dead Soldier token");
+}
+
 /// Painter's Servant (CR 105.3; rulings 2026-09-01): the chosen color is added
 /// to permanents (any controller's, colorless ones too) and to cards in hand
 /// and graveyard, beside their own colors; it goes when the Servant does.

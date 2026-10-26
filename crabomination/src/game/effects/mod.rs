@@ -38217,68 +38217,7 @@ impl GameState {
                 if let Some(src_def) = src_def {
                     for ent in self.resolve_selector(what, ctx) {
                         let Some(cid) = ent.as_permanent_id() else { continue };
-                        // "Except it has this ability" keeps the copier's
-                        // *printed* abilities — the definition before its
-                        // first copy — not whatever it last copied. Reading
-                        // the current definition re-appended the kept
-                        // abilities on every re-copy, so an Aurora Shifter
-                        // copying an Aurora Shifter doubled its trigger list
-                        // each turn until the process ran out of memory.
-                        let printed = self
-                            .temporary_copies
-                            .iter()
-                            .find(|t| t.card == cid)
-                            .and_then(|t| t.original.clone());
-                        if let Some(c) = self.battlefield.find_by_id_mut(cid) {
-                            let mut new_def = (*src_def).clone();
-                            for t in extra_creature_types {
-                                if !new_def.subtypes.creature_types.contains(t) {
-                                    new_def.subtypes.creature_types.push(*t);
-                                }
-                            }
-                            let own = printed.unwrap_or_else(|| c.definition.arc());
-                            if *keep_own_triggered {
-                                for t in &own.triggered_abilities {
-                                    if !new_def.triggered_abilities.contains(t) {
-                                        new_def.triggered_abilities.push(t.clone());
-                                    }
-                                }
-                            }
-                            if *keep_own_activated {
-                                for a in &own.activated_abilities {
-                                    if !new_def.activated_abilities.contains(a) {
-                                        new_def.activated_abilities.push(a.clone());
-                                    }
-                                }
-                            }
-                            if *keep_name {
-                                new_def.name = own.name;
-                            }
-                            // CR 708.10 — a face-down permanent that becomes a
-                            // copy keeps the face-down characteristics; only its
-                            // copiable values (what it turns up as) change.
-                            if c.face_down {
-                                c.face_up_def = Some(std::sync::Arc::new(new_def));
-                                continue;
-                            }
-                            // CR 123.6c — the copier's own name stickers stay
-                            // on over its new copiable values.
-                            let original = c.copiable_definition();
-                            c.set_copiable_definition(std::sync::Arc::new(new_def));
-                            // CR 400.7 — in its next zone the object is its
-                            // printed card again; `revert_copy_on_leave`
-                            // restores this (a dead Clone is a Clone in the
-                            // graveyard, so Vizier's embalm stays available).
-                            self.temporary_copies.push(crate::game::TempCopy {
-                    until_turn_of: None,
-                    shapeshifter: false,
-                                card: cid,
-                                original_name: original.name.to_string(),
-                                original: Some(original),
-                                duration: crate::effect::Duration::Permanent,
-                                source: None,
-                            });
-                        }
+                        self.stamp_copy(cid, &src_def, extra_creature_types, *keep_own_triggered, *keep_own_activated, *keep_name);
                     }
                 }
                 Ok(())
@@ -43897,7 +43836,7 @@ impl GameState {
             Effect::NextEntriesEnterAsCopy { of } => {
                 if let Some(model) = self.resolve_selector(of, ctx).into_iter().find_map(|e| e.as_permanent_id()) {
                     self.next_entries_copy =
-                        Some(crate::game::NextEntriesCopy { model, turn: self.turn_number, applied: false });
+                        Some(crate::game::NextEntriesCopy { model, turn: self.turn_number, applied: false, lki: None });
                 }
                 Ok(())
             }

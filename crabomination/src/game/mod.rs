@@ -1708,13 +1708,17 @@ pub struct TurnRegistries {
 /// A queued CR 704.5j group: the controller, the name, the duplicates.
 /// "The next time one or more creatures or planeswalkers enter this turn,
 /// they enter as copies of the chosen creature" (Mystic Reflection).
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub(crate) struct NextEntriesCopy {
     pub model: CardId,
     pub turn: u32,
     /// Set by the first entry it copies; the next SBA check ends it, so one
     /// simultaneous batch is copied and no later one.
     pub applied: bool,
+    /// The model's copiable values as it left the battlefield (its ruling:
+    /// last-known information), taken by `revert_copy_on_leave`.
+    #[serde(skip)]
+    pub lki: Option<std::sync::Arc<crate::card::CardDefinition>>,
 }
 
 pub(crate) type DeferredLegendChoice = (usize, String, Vec<(CardId, String)>);
@@ -20389,6 +20393,12 @@ impl GameState {
     /// departing card and drop its pending revert entries. Called from the
     /// battlefield-leave funnels alongside `turn_face_up`.
     pub(crate) fn revert_copy_on_leave(&mut self, card: &mut crate::card::CardInstance) {
+        // Mystic Reflection's model leaving: keep what it was a copy of.
+        if let Some(n) = self.next_entries_copy.as_mut()
+            && n.model == card.id
+        {
+            n.lki = Some(card.copiable_definition());
+        }
         // The oldest entry holds the original printed definition.
         if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card.id) {
             if let Some(def) = self.temporary_copies[pos].original_def() {
