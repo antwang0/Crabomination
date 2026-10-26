@@ -2049,14 +2049,12 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
 | 🟡 Fell Beast's Shriek | splice onto instant or sorcery isn't offered; a creature with hexproof or protection from the caster can't be the chosen one | `Keyword::Splice` takes a `SpellSubtype` quality (Arcane), not "instant or sorcery"; `OpponentChoosesPermanentThen` keeps only picks that are legal targets for the caster |
-| 🟡 Pir, Imaginative Rascal | a teammate's permanents get no extra counter ("your team" is read as you) | `StaticEffect::ExtraCounterOnPermanents` |
 | 🟡 Nine Lives | damage that can't be prevented still becomes an incarnation counter instead of being dealt | `ReplaceDamageToYouWithCountersOnSource` is a replacement (CR 614), not a prevention (CR 615) |
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
 | ~~Lochmere Serpent~~ ✅ | fixed 2026-10-25: exactly five targets, all in one opponent's graveyard (`SameGraveyardAsTargetSlot(0)`, the 2019-10-04 ruling) — `lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard` | — |
-| 🟡 Mystic Reflection | a token model that left the battlefield before the entries copies nothing (a card model copies from its new zone, which is its printed self) | `Effect::NextEntriesEnterAsCopy` stores the model's id, not its last-known copiable values |
 | 🟡 Angel of Jubilation | also bars a Phyrexian pip's life in a non-cast payment (a ward "pay {U/P}"), which the printed "to cast spells or activate abilities" doesn't | `cost_life_payable` gates the shared Phyrexian payment ladder |
 | 🟡 Fatal Grudge | at three or more seats, after the first opponent sacrifices, the next ones match that permanent's card types rather than the cost's (only differs for a multi-type sacrifice, e.g. an artifact creature) | `SharesCardTypeWithFirstSacrificed` reads the resolution's first sacrifice once there is one; the cost's card is its fallback |
 | 🟡 Offspring's Revenge | the token keeps haste past "until your next turn" | `CreateTokenCopyOf.extra_keywords` is permanent |
@@ -2066,7 +2064,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.11b) — the back face carries its {4}{W}{U} and is cast from hand | — |
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
 | 🟡 Iron Lad, Diverging Destiny | "you may look at the top card of your library any time" isn't modeled | no hidden-info permission for a seat |
-| 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
 | 🟡 Bane, Lord of Darkness | a nontoken creature of yours dying always draws you a card; the target opponent's choice to let you put a creature card with lesser or equal toughness from hand onto the battlefield instead isn't offered | no "target opponent chooses for you" ask with a toughness-bounded hand put |
@@ -2190,7 +2187,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Everforger | "do this only once each turn" counts the trigger, so declining the copy still spends the turn's | `SpellCast` `.once_per_turn()` + `MayDo { CopySpell }` |
 | 🟡 Touch of Moonglove | the granted "a creature it damaged dies" trigger doesn't look back (CR 603.10a) when the pumped creature dies in the same event as its victim | `GrantTriggeredAbility { EndOfTurn }` |
 | 🟡 Ib Halfheart, Goblin Tactician | the blocked Goblin deals its 4 just before it is sacrificed (the blockers leave the block map with it), and only while it is still yours | `DealDamageFrom` + `SacrificeSelected` |
-| 🟡 Xathrid Gorgon | a petrified creature's mana abilities can still be activated (`CantActivateAbilities` spares them) | `GrantKeyword { CantActivateAbilities, Permanent }` |
 | 🟡 Tocasia, Dig Site Mentor | the graveyard ability returns cheapest-first rather than the chosen targets | `MoveWithinTotalManaValue` |
 | 🟡 Nishoba Brawler | domain counts printed land types while the layers compute (CR 613.8), so a basic type a land only gains (Navigator's Compass) doesn't raise its power | `SelfBasePtFromValue { DomainCount }` |
 | 🟡 Crush Underfoot | the Giant is the greatest-power one you control, picked automatically rather than chosen (ties go to the first) | `DealDamageEqualToPower { TakeGreatestPower }` |
