@@ -318,9 +318,6 @@ OPEN:
   appended on a bestow cast + `StaticEffect::CastSelfFromGraveyardWithBestow` read by `cast_bestow` through
   `cast_hopped_from_graveyard`, the bot's BESTOW block widened to the graveyard — ~45 lines, written and reverted);
   Guide of Souls, Savai Thundermane, Awaken the Honored Dead (reflexive), The One Ring's "if you cast it".
-- Fatal Grudge's later opponents match the first opponent's sacrifice: `SharesCardTypeWithFirstSacrificed` needs the
-  COST's types, which only `sacrificed_card` holds and the first in-resolution sacrifice overwrites; seeding
-  `first_sacrificed_types` in `WithSacrificedPt` would store into the scratch on every sacrifice-cost resolution.
 - Miasma Demon (a reflexive's "up to that many" under `CapTargetsAt`). Kappa Tech-Wrecker was done late in the run
   (`Predicate::SourceHasKeywordCounter`). Earth Rumble and Curse of the Werefox were done late in the run (the Werefox's "that creature" is
   `AttachedTo(LastCreatedToken)` through the carry).
