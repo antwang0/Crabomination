@@ -2063,7 +2063,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Battletide Alchemist | the "you may prevent" is always taken for its controller's side and never for an opponent | `ReduceDamageToYourTeamByCount` has no per-event prompt |
 | ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.11b) — the back face carries its {4}{W}{U} and is cast from hand | — |
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
-| 🟡 Iron Lad, Diverging Destiny | "you may look at the top card of your library any time" isn't modeled | no hidden-info permission for a seat |
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
 | 🟡 Bane, Lord of Darkness | a nontoken creature of yours dying always draws you a card; the target opponent's choice to let you put a creature card with lesser or equal toughness from hand onto the battlefield instead isn't offered | no "target opponent chooses for you" ask with a toughness-bounded hand put |
@@ -2150,7 +2149,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
 | 🟡 Doctor Jane Foster | with life gained this turn the returned card passes through your hand before the battlefield | `Move` to hand, then `LastMoved` to battlefield |
 | 🟡 Black Widow, Super Spy | the +1/+1 counter and the cast aren't exclusive: the counter is offered and the exiled card stays castable either way | `ExileTopUntilNonlandMayPlay` + `MayDo` |
-| 🟡 Petty Larceny | the two cards are exiled face up rather than face down | `ExileTopAndGrantMayPlay { WhileExiled }` |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Mikey & Mona, Mutant Sitters | "each mode must target a different player" is not enforced | `ChooseN` over two `TargetPlayerThen` + `AsPlayer` modes |
 | 🟡 Ego Erasure | "and lose all creature types until end of turn" is not modelled (only the -2/-0) | `TargetPlayerThen` + `AsPlayer` pump |
@@ -2170,7 +2168,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |
 | 🟡 Devout Invocation | one yes/no per untapped creature instead of a single subset pick | `ForEach` + `MayDo` + `PermanentsTappedThisEffect` |
-| 🟡 Grim Reaper's Scythe | the finality counter goes on just after the creature enters, so its ETB triggers don't see it | `Move` + `AddCounter { LastMoved }` |
 | 🟡 The Phasing of Zhalfir | the phase-in lock ends when the Saga leaves the battlefield, not when you lose control of it | `PhaseOut { until_source_leaves }` |
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
 | 🟡 Azor, the Lawbringer | the {X}{W}{U}{U} attack payment is from floating mana only | `MayPayXPlus` |
