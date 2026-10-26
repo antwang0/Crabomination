@@ -2287,6 +2287,44 @@ fn wheel_of_misfortune_wheels_the_high_pickers() {
     assert_eq!(g.players[1].hand.len(), 1);
 }
 
+/// Wheel of Misfortune with every seat at a UI: the first wheeler's discard
+/// prompt suspends, and the second wheeler still wheels (CR 101.4 — "each
+/// player who didn't choose the lowest number", not the first of them).
+#[test]
+fn wheel_of_misfortune_wheels_every_high_picker_across_a_suspend() {
+    use crabomination::decision::Decision;
+    let mut g = pod(3);
+    for seat in 0..3 {
+        for _ in 0..8 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+        g.add_card_to_hand(seat, catalog::island());
+        g.players[seat].wants_ui = true;
+    }
+    let wheel = g.add_card_to_hand(0, catalog::wheel_of_misfortune());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: wheel, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    for _ in 0..40 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let seat = p.acting_player();
+            let answer = match &p.decision {
+                Decision::Discard { .. } => DecisionAnswer::Discard(g.players[seat].hand.iter().map(|c| c.id).collect()),
+                _ => DecisionAnswer::Amount(u32::from(seat != 2)),
+            };
+            g.submit_decision(answer).expect("answer");
+        } else if !g.stack.is_empty() {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        } else {
+            break;
+        }
+    }
+    assert!(g.pending_decision.is_none() && g.stack.is_empty());
+    assert_eq!(g.players[0].hand.len(), 7, "the caster wheels");
+    assert_eq!(g.players[1].hand.len(), 7, "the second wheeler is not dropped");
+    assert_eq!(g.players[2].hand.len(), 1, "the low picker keeps its hand");
+}
+
 // ── Katara, the Fearless's list ─────────────────────────────────────────────
 
 fn cast_on(g: &mut GameState, id: CardId, target: Option<Target>) {

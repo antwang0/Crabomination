@@ -32,7 +32,10 @@ arm destroys inline now, no `run_effect` at all) and
 `ExileRandomGraveyardCopyTapped` (its `Move` literal wrapped onto its own
 line, so `NEVER_ASKS` covers it and the entry never matched again).
 
-Reading now: **15 sites, 15 allowlisted, 0 unexplained** — 4 of the
+Reading now (2026-10-26): **20 sites, 20 allowlisted, 0 unexplained** — the
+nine a run of new arms left unlisted were re-triaged: `TemptingOffer`'s
+decliner loop and `WheelOfMisfortune` now splice, the other six run
+engine-built choiceless effects. It read 15/15/0 earlier — 4 of the
 allowlist entries are OPEN, each with the primitive it is waiting on (see
 ENGINE_BACKLOG's forty-third find). It read 18/18/0 at the find's closing tip,
 15/15/0 once `Selector::ExactObjects` and `Effect::BindTargetObjects` closed
@@ -117,6 +120,17 @@ ALLOW = {
         "`is_mana_ability_public` gates the pick: CR 605.1a mana abilities "
         "do not use the stack and do not ask",
     ("resolve_destroy_targets_polymorph", "&Effect::RevealUntilFind {"): "ditto",
+    ("CounterAbilityAndStripSource", "&strip"):
+        "`strip` is an engine-built `LoseAllAbilities` over exact objects",
+    ("AddCounterOfPresentKind", "&add"):
+        "`add` is an engine-built `AddPoison` / `AddExperience` / `AddEnergy`",
+    ("each_player_may_exile_hand_draw", "&body"):
+        "`body` is an engine-built hand `Move` (+ `GrantMayPlay`); the asks "
+        "all happen in the loop before it",
+    ("process_cumulative_upkeep", "&exile"):
+        "engine-built `ExileTopOfLibrary`, run off the stack",
+    ("process_cumulative_upkeep", "&make"): "engine-built `CreateToken`",
+    ("process_cumulative_upkeep", "&gain"): "engine-built `GainLife`",
     ("EachPlayerMillsYouMayCastOne",
      "&Effect::Mill { who: Selector::Player(PlayerRef::Seat(q)), amount: count.clone() }"):
         "a mill moves cards and asks nothing; the casts are gathered and "

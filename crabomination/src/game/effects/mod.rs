@@ -29263,17 +29263,6 @@ impl GameState {
                 self.clear_answer_log();
                 // "Each opponent who doesn't …" — before any body run, so a
                 // suspend inside one never replays it.
-                if let Some(declined) = declined {
-                    let decliners: Vec<usize> = self
-                        .apnap_sort((0..self.players.len()).filter(|&q| q != me && !self.same_team(q, me)).collect())
-                        .into_iter()
-                        .filter(|q| self.players[*q].is_alive() && !acceptors.contains(q))
-                        .collect();
-                    for seat in decliners {
-                        let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
-                        self.run_effect(declined, &run_ctx, events)?;
-                    }
-                }
                 // "Tempting offer" is an ABILITY WORD (CR 207.2c) with no
                 // rules entry of its own, so the shape is the printed text:
                 // the controller runs the body once, then once per acceptor
@@ -29285,20 +29274,36 @@ impl GameState {
                 runs.push(ctx.controller);
                 runs.extend(acceptors.iter().copied());
                 runs.extend(std::iter::repeat_n(ctx.controller, acceptors.len()));
+                let seated = |q: usize, e: &Effect| Effect::EachPlayerDoes { who: PlayerRef::Seat(q), body: Box::new(e.clone()) };
+                if let Some(declined) = declined {
+                    let decliners: Vec<usize> = self
+                        .apnap_sort((0..self.players.len()).filter(|&q| q != me && !self.same_team(q, me)).collect())
+                        .into_iter()
+                        .filter(|q| self.players[*q].is_alive() && !acceptors.contains(q))
+                        .collect();
+                    for (i, seat) in decliners.iter().copied().enumerate() {
+                        let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
+                        self.run_effect(declined, &run_ctx, events)?;
+                        // A suspend keeps the later decliners AND every body run.
+                        rewrap_parked(&mut self.suspend_signal, |carried| seated(seat, &carried));
+                        if splice_after_suspend(&mut self.suspend_signal, || {
+                            Effect::seq(vec![
+                                per_seat_continuation(&decliners[i + 1..], |q| seated(q, declined)),
+                                per_seat_continuation(&runs, |q| seated(q, body)),
+                            ])
+                        }) {
+                            return Ok(());
+                        }
+                    }
+                }
                 for (i, seat) in runs.iter().copied().enumerate() {
                     let run_ctx = EffectContext { controller: seat, ..ctx.clone() };
                     self.run_effect(body, &run_ctx, events)?;
                     // The seat's own parked remainder resumes as the caster unless it is
                     // re-seated, like `EachPlayerDoes` does.
-                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::EachPlayerDoes {
-                        who: PlayerRef::Seat(seat),
-                        body: Box::new(carried),
-                    });
+                    rewrap_parked(&mut self.suspend_signal, |carried| seated(seat, &carried));
                     if splice_after_suspend(&mut self.suspend_signal, || {
-                        per_seat_continuation(&runs[i + 1..], |q| Effect::EachPlayerDoes {
-                            who: PlayerRef::Seat(q),
-                            body: body.clone(),
-                        })
+                        per_seat_continuation(&runs[i + 1..], |q| seated(q, body))
                     }) {
                         return Ok(());
                     }
@@ -32631,29 +32636,30 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                for &(seat, n) in &picks {
-                    if n == high && high > 0 {
-                        let hit = Effect::DealDamage {
-                            to: Selector::Player(PlayerRef::Seat(seat)),
-                            amount: crate::effect::Value::Const(high as i32),
-                        };
-                        self.run_effect(&hit, ctx, events)?;
-                    }
-                }
-                for &(seat, n) in &picks {
-                    if n != low && self.players[seat].is_alive() {
-                        let wheel = Effect::Seq(vec![
-                            Effect::Discard {
-                                who: Selector::Player(PlayerRef::Seat(seat)),
-                                amount: crate::effect::Value::Const(100),
-                                random: false,
-                            },
-                            Effect::Draw {
-                                who: Selector::Player(PlayerRef::Seat(seat)),
-                                amount: crate::effect::Value::Const(7),
-                            },
-                        ]);
-                        self.run_effect(&wheel, ctx, events)?;
+                // Every hit, then every wheel. A seat's discard prompt can
+                // suspend, so the later steps ride the parked continuation.
+                let hits = picks.iter().filter(|&&(_, n)| n == high && high > 0).map(|&(seat, _)| Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::Seat(seat)),
+                    amount: crate::effect::Value::Const(high as i32),
+                });
+                let wheels = picks.iter().filter(|&&(seat, n)| n != low && self.players[seat].is_alive()).map(|&(seat, _)| {
+                    Effect::Seq(vec![
+                        Effect::Discard {
+                            who: Selector::Player(PlayerRef::Seat(seat)),
+                            amount: crate::effect::Value::Const(100),
+                            random: false,
+                        },
+                        Effect::Draw {
+                            who: Selector::Player(PlayerRef::Seat(seat)),
+                            amount: crate::effect::Value::Const(7),
+                        },
+                    ])
+                });
+                let steps: Vec<Effect> = hits.chain(wheels).collect();
+                for (i, step) in steps.iter().enumerate() {
+                    self.run_effect(step, ctx, events)?;
+                    if splice_after_suspend(&mut self.suspend_signal, || Effect::seq(steps[i + 1..].to_vec())) {
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -43686,7 +43692,8 @@ impl GameState {
                             None
                         };
                         if let Some(add) = kind {
-                            self.run_effect(&add, &EffectContext { controller: p, ..ctx.clone() }, events)?;
+                            let seat_ctx = EffectContext { controller: p, ..ctx.clone() };
+                            self.run_effect(&add, &seat_ctx, events)?;
                         }
                         continue;
                     }
