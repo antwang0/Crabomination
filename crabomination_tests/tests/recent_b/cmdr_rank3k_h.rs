@@ -172,6 +172,18 @@ fn reckless_crew_counts_and_equips() {
         "Dwarf Berserker"
     );
     assert_eq!(pt(&g, host), (5, 1));
+
+    // An Equipment already on another creature moves to a Dwarf: the printed
+    // text says "an Equipment you control", not an unattached one.
+    let mut g = pod(2);
+    let cleaver = ready(&mut g, 0, catalog::butchers_cleaver());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(cleaver).unwrap().attached_to = Some(bear);
+    let crew = g.add_card_to_hand(0, catalog::reckless_crew());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, crew, None);
+    let host = g.battlefield_find(cleaver).unwrap().attached_to.expect("still attached");
+    assert_eq!(g.battlefield_find(host).unwrap().definition.name, "Dwarf Berserker", "moved onto the Dwarf");
 }
 
 /// CR 702.84a — Mishra's Research Desk impulses two cards and unearths.

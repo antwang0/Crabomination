@@ -181,10 +181,10 @@ pub fn reckless_crew() -> CardDefinition {
                 selector: Selector::LastCreatedTokens,
                 body: Box::new(Effect::MayDo {
                     description: "Attach an Equipment you control to this Dwarf?".into(),
+                    // "An Equipment you control" — one already on another
+                    // creature may be moved to the Dwarf (CR 701.3b).
                     body: Box::new(Effect::Attach {
-                        what: Selector::one_of(yours(
-                            R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::Unattached),
-                        )),
+                        what: Selector::one_of(yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment))),
                         to: Selector::TriggerSource,
                     }),
                 }),

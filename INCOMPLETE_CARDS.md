@@ -2122,7 +2122,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |
-| 🟡 Reckless Crew | only unattached Equipment is offered, so an Equipment already on a creature stays put | `ForEach` + `Attach` over `R::Unattached` |
 | 🟡 Mishra's Research Desk | both exiled cards stay playable; "choose one of them" collapses | `ExileTopAndGrantMayPlay` |
 | 🟡 Ajani, Sleeper Agent | a missed +1 reveal always goes to the bottom rather than "may" | `RevealTopTakeMatchingToHand` |
 | 🟡 Magus of the Unseen | the "when you lose control of the artifact, tap it" rider is dropped | `GainControl { EndOfTurn }` |
