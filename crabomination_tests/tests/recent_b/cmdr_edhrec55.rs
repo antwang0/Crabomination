@@ -131,10 +131,12 @@ fn visions_of_phyrexia_makes_powerstones_when_unused() {
     assert_eq!(stones(&g), 1, "played from exile: no Powerstone");
 }
 
-/// Kamahl's Will with a commander out does both modes: the lands animate,
-/// then every creature you control hits the target.
+/// Kamahl's Will with a commander out does both modes: the targeted lands
+/// animate (an untargeted one stays a land; the land mode's unfilled slots
+/// are holes, CR 601.2c), then every creature you control hits the target.
 #[test]
 fn kamahls_will_does_both_with_a_commander() {
+    use crabomination::game::target_hole::TARGET_HOLE;
     let mut g = pod(2);
     ready(&mut g, 0, catalog::grizzly_bears());
     g.seat_commanders(0, vec![catalog::grizzly_bears()]);
@@ -142,21 +144,26 @@ fn kamahls_will_does_both_with_a_commander() {
     let cmdr_id = cmdr.id;
     g.battlefield.push(cmdr);
     g.clear_sickness(cmdr_id);
-    g.add_card_to_battlefield(0, catalog::forest());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let spare = g.add_card_to_battlefield(0, catalog::forest());
     let wurm = ready(&mut g, 1, catalog::colossal_dreadmaw());
     let will = g.add_card_to_hand(0, catalog::kamahls_will());
     fill_pool(&mut g);
+    let mut extra = vec![TARGET_HOLE; 19];
+    extra.push(Target::Permanent(wurm));
     g.perform_action(GameAction::CastSpellSpree {
         card_id: will,
         spree_modes: vec![0, 1],
-        target: Some(Target::Permanent(wurm)),
-        additional_targets: vec![],
+        target: Some(Target::Permanent(forest)),
+        additional_targets: extra,
         x_value: None,
     })
     .expect("both modes with a commander out");
     drain_stack(&mut g);
     // Two 2/2 Bears and a 1/1 Forest: five damage, not enough for a 6/6.
     assert_eq!(g.battlefield_find(wurm).unwrap().damage, 5);
+    assert!(g.computed_permanent(forest).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(!g.computed_permanent(spare).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "an untargeted land stays a land");
 }
 
 /// Cosmic Cube casts a free spell off the top when you attack, capped by the

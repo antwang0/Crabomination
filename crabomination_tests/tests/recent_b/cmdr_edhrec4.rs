@@ -923,6 +923,36 @@ fn trystans_command_destroys_and_pumps() {
     assert_eq!(g.computed_permanent(mine).unwrap().power, 5);
 }
 
+/// Trystan's Command's return mode targets one or two permanent cards (two
+/// slots of its own, CR 601.2c) ahead of the destroy mode's slot; an instant
+/// in the graveyard is no legal target.
+#[test]
+fn trystans_command_returns_two_targeted_cards() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let theirs = ready(&mut g, 1, catalog::serra_angel());
+    let command = g.add_card_to_hand(0, catalog::trystans_command());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let cast = |g: &mut GameState, first: CardId| {
+        g.perform_action(GameAction::CastSpellSpree {
+            spree_modes: vec![1, 2],
+            card_id: command,
+            target: Some(Target::Permanent(first)),
+            additional_targets: vec![Target::Permanent(forest), Target::Permanent(theirs)],
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g, bolt).is_err(), "an instant card is not a permanent card");
+    cast(&mut g, bears).expect("cast two modes");
+    drain_stack(&mut g);
+    let hand: Vec<CardId> = g.players[0].hand.iter().map(|c| c.id).collect();
+    assert!(hand.contains(&bears) && hand.contains(&forest) && !hand.contains(&bolt));
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
 /// Chakra Meditation: the ETB returns an instant; a cast draws and then
 /// discards unless three Lessons sit in the graveyard.
 #[test]

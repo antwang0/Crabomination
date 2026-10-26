@@ -1426,8 +1426,8 @@ pub fn tyvar_kell() -> CardDefinition {
 }
 
 /// Trystan's Command — {4}{B}{G} Kindred Sorcery — Elf. Choose two: a token
-/// copy of target Elf you control; return one or two permanent cards from your
-/// graveyard to your hand (chosen as it resolves, not targeted); destroy
+/// copy of target Elf you control; return one or two target permanent cards
+/// from your graveyard to your hand (a mode owning two slots); destroy
 /// target creature or enchantment; creatures target player controls get
 /// +3/+3 until end of turn and untap.
 pub fn trystans_command() -> CardDefinition {
@@ -1457,12 +1457,11 @@ pub fn trystans_command() -> CardDefinition {
                     enters_with_counters: None,
                     remove_keywords: vec![],
                 },
-                Effect::MoveChosen {
-                    from: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Permanent },
-                    filter: None,
-                    count: Value::Const(2),
-                    up_to: true,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 1,
+                    filter: R::PermanentCard.and(R::InYourGraveyard),
+                    effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
                 },
                 Effect::Destroy { what: target_filtered(R::Creature.or(R::Enchantment)) },
                 Effect::Seq(vec![

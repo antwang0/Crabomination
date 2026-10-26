@@ -244,9 +244,8 @@ pub fn ancient_bronze_dragon() -> CardDefinition {
 /// commander as you cast it): any number of target lands you control become
 /// 1/1 Elemental creatures with vigilance, indestructible and haste until end
 /// of turn; or each creature you control deals damage equal to its power to
-/// target creature you don't control. 🟡 The first mode animates every land
-/// you control, untargeted: "any number of target lands" ahead of the second
-/// mode's target would claim twenty target slots before it (INCOMPLETE_CARDS).
+/// target creature you don't control. The land mode owns twenty optional
+/// slots; with both modes, the unfilled ones are holes ahead of the creature's.
 pub fn kamahls_will() -> CardDefinition {
     CardDefinition {
         name: "Kamahl's Will",
@@ -255,13 +254,18 @@ pub fn kamahls_will() -> CardDefinition {
         modes_widen: Some(ModesWiden::If(Predicate::YouControlACommander)),
         effect: Effect::ChooseModesCast {
             modes: vec![
-                Effect::BecomeCreature {
-                    what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
-                    power: Value::ONE,
-                    toughness: Value::ONE,
-                    creature_types: vec![CreatureType::Elemental],
-                    keywords: vec![Keyword::Vigilance, Keyword::Indestructible, Keyword::Haste],
-                    duration: Duration::EndOfTurn,
+                Effect::ApplyToTargets {
+                    max_targets: 20,
+                    min_targets: 0,
+                    filter: R::Land.and(R::ControlledByYou),
+                    effect: Box::new(Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        creature_types: vec![CreatureType::Elemental],
+                        keywords: vec![Keyword::Vigilance, Keyword::Indestructible, Keyword::Haste],
+                        duration: Duration::EndOfTurn,
+                    }),
                 },
                 Effect::EachDealsDamageEqualToPower {
                     dealers: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),

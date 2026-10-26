@@ -2017,7 +2017,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 
 | Card | Residual | Why |
 |---|---|---|
-| 🟡 Trystan's Command | the "return one or two target permanent cards from your graveyard" mode picks the cards as it resolves (`MoveChosen`, up to two) instead of targeting them | a mode of `ChooseModesCast` holds one target slot; a mode with "one or two" targets of its own needs per-mode slot counts |
 | 🟡 Galadriel's Dismissal | kicked, the cast targets only the player (the creature target the printed text still names is not chosen) | modelled as `If SpellWasKicked { TargetPlayerThen } else { target creature }`; a kicker-only extra slot beside a required one needs per-branch slot counts |
 | 🟡 Exchange of Words | the text-box exchange outlasts the enchantment (it ends only as either creature leaves) | `ExchangeTextBoxes` bakes the swap into the two instances; a "for as long as this remains" duration needs a reversible layer-3 effect |
 | 🟡 Mikey & Don, Party Planners | "if you cast a creature spell this way" also counts a Mutant, Ninja or Turtle creature cast off the library top through another permission (Vizier of the Menagerie) | the extra counter keys on `R::WasCastFromLibrary`; an uncapped `PlayFromLibraryTop` cast records no granting source |
@@ -2075,7 +2074,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Faerie Slumber Party | your creatures, then each opponent's, return in separate batches rather than all at once | per-opponent `ForEachOpponent` bounce so "each opponent who controlled one" can be counted |
 | ~~The Fifteenth Doctor~~ ✅ | fixed 2026-10-24: gated on `CastSpellThisTurnWithout { types: [Artifact] }`; the improvise grant also never applied through its gate before this (`spell_granted_improvise` now peels) | — |
 | 🟡 The Muckslinger Gang | "creature spells you control and creature cards you own in any zone other than the battlefield or the stack get +3/+3" is not modelled — only the battlefield half (other creatures not attacking or blocking get +3/+3) | an off-battlefield P/T static read by every hand/graveyard/stack power check; no free board-presence lane to gate it |
-| 🟡 Kamahl's Will | the land mode animates every land you control, untargeted, rather than "any number of target lands" | an any-number target mode ahead of a single-target mode would claim twenty optional slots before it |
 | 🟡 Treasure Keeper | the dies walk exiles the cards it passes (cascade's walk) rather than revealing them | no reveal-until-cast-free effect without the exile |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
