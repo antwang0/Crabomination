@@ -28,13 +28,19 @@ pub fn seize_the_secrets() -> CardDefinition {
 }
 
 /// Take for a Ride — {2}{R} Sorcery. Gain control of target creature until end
-/// of turn, untap it, and it gains haste. (The "flash while you've committed a
-/// crime" rider is omitted — no conditional-flash primitive.)
+/// of turn, untap it, and it gains haste. It has flash as long as you've
+/// committed a crime this turn (CR 700.13).
 pub fn take_for_a_ride() -> CardDefinition {
     CardDefinition {
         name: "Take for a Ride",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Take for a Ride has flash as long as you've committed a crime this turn.",
+            effect: crate::effect::StaticEffect::SelfFlashIf {
+                condition: crate::effect::Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+            },
+        }],
         effect: Effect::Seq(vec![
             Effect::GainControl {
                 what: target_filtered(R::Creature),

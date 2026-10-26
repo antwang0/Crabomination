@@ -393,6 +393,28 @@ mod recent197 {
             .keywords().contains(&crabomination::card::Keyword::Haste), "granted haste");
     }
 
+    /// Take for a Ride has flash only once you've committed a crime this turn
+    /// (CR 700.13): an end-step cast fails before and works after.
+    #[test]
+    fn take_for_a_ride_has_flash_after_a_crime() {
+        let mut g = two_player_game();
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, catalog::take_for_a_ride());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let cast = GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Permanent(victim)),
+            additional_targets: vec![], mode: None, x_value: None,
+        };
+        assert!(g.perform_action(cast.clone()).is_err(), "no crime yet: sorcery speed");
+        g.players[0].committed_crime_this_turn = true;
+        g.perform_action(cast).expect("flash after a crime");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(victim).unwrap().controller, 0);
+    }
+
     /// Silver Deputy digs a basic to the top of your library on ETB.
     #[test]
     fn silver_deputy_digs_a_basic() {
