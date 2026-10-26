@@ -4994,6 +4994,11 @@ impl GameState {
                     self.graveyard_holding(o).is_some() && self.graveyard_holding(o) == self.graveyard_holding(target)
                 })
             }
+            R::InGraveyardOfTargetSlotController(slot) => {
+                slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
+                    self.target_slot_controller(o).is_some_and(|p| self.graveyard_holding(target) == Some(p))
+                })
+            }
             R::ManaValueAtMostTargetSlot(slot) => slots
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
@@ -5020,6 +5025,17 @@ impl GameState {
     /// The seat whose graveyard holds a targeted card, or a targeted player's
     /// own ("X target cards from **target player's** graveyard" — Suffer the
     /// Past); `None` for a card off the graveyards.
+    /// The controller of a chosen permanent target (a spell's caster on the
+    /// stack); a player target is itself.
+    fn target_slot_controller(&self, t: &Target) -> Option<usize> {
+        match t {
+            Target::Permanent(cid) => {
+                self.battlefield_find(*cid).map(|c| c.controller).or_else(|| self.stack_spell_caster(*cid))
+            }
+            Target::Player(p) => Some(*p),
+        }
+    }
+
     fn graveyard_holding(&self, t: &Target) -> Option<usize> {
         match t {
             Target::Permanent(cid) => self.players.iter().position(|p| p.graveyard.iter().any(|c| c.id == *cid)),
@@ -5910,6 +5926,11 @@ impl GameState {
                     None => true,
                 }
             }
+            R::InGraveyardOfTargetSlotController(slot) => self
+                .target_slots_scratch
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|o| self.target_slot_controller(o).is_some_and(|p| self.graveyard_holding(target) == Some(p))),
             R::ManaValueAtMostTargetSlot(slot) => self
                 .target_slots_scratch
                 .get(*slot as usize)
@@ -8029,7 +8050,8 @@ impl GameState {
             | R::SharesCardTypeWithTargetSlot(_)
             | R::NameDiffersFromOtherTargets
             | R::ManaValueDiffersFromOtherTargets
-            | R::SameGraveyardAsTargetSlot(_) => true,
+            | R::SameGraveyardAsTargetSlot(_)
+            | R::InGraveyardOfTargetSlotController(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;
                 let wild = self.card_off_battlefield_is_every_creature_type(card);

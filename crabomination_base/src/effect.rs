@@ -10114,10 +10114,10 @@ pub enum Effect {
     /// creature card goes to exile, a creature token is never made. Sets
     /// `Player.exiles_uncast_creatures_this_turn`.
     ExileUncastCreaturesThisTurn,
-    /// Goblin Welder: target artifact's controller simultaneously sacrifices
-    /// it and returns an artifact card from their graveyard to the
-    /// battlefield. The graveyard half is auto-picked (highest mana value).
-    WeldArtifacts { what: Selector },
+    /// Goblin Welder: if both targets are still legal, artifact `a`'s
+    /// controller simultaneously sacrifices it and returns artifact card `b`
+    /// from their graveyard to the battlefield.
+    WeldArtifacts { a: Selector, b: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: std::sync::Arc<TokenDefinition> },
     /// CR 614.13 — "Until end of turn, if one or more tokens would be created

@@ -1859,7 +1859,8 @@ impl Effect {
             Effect::ExchangeControl { a, b }
             | Effect::ExchangeSpellAndCreatureControl { a, b }
             | Effect::ExchangeTextBoxes { a, b }
-            | Effect::ExchangePower { a, b, .. } => {
+            | Effect::ExchangePower { a, b, .. }
+            | Effect::WeldArtifacts { a, b } => {
                 sel_has_target(a) || sel_has_target(b)
             }
             Effect::RedirectNextDamage { target, to, .. } => {
@@ -2343,8 +2344,7 @@ impl Effect {
             | Effect::GainControlWhileMonarch { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::CounterAbilityAndDestroySource { what }
-            | Effect::CounterAbilityAndStripSource { what }
-            | Effect::WeldArtifacts { what } => sel_has_target(what),
+            | Effect::CounterAbilityAndStripSource { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
             | Effect::Amass { who, count, .. }
@@ -2956,7 +2956,8 @@ impl Effect {
             Effect::ExchangeControl { a, b }
             | Effect::ExchangeSpellAndCreatureControl { a, b }
             | Effect::ExchangeTextBoxes { a, b }
-            | Effect::ExchangePower { a, b, .. } => {
+            | Effect::ExchangePower { a, b, .. }
+            | Effect::WeldArtifacts { a, b } => {
                 sel_filter(a).or_else(|| sel_filter(b))
             }
             // "Move a counter from this onto target creature" (Afiya Grove):
@@ -3084,7 +3085,6 @@ impl Effect {
             | Effect::ReturnSameNameFromAllGraveyards { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::CounterAbilityAndStripSource { what }
-            | Effect::WeldArtifacts { what }
             | Effect::GainControlAndReattachAura { what }
             | Effect::BounceStealAttachmentsReattach { what }
             | Effect::AddMusicCounterGrantUpkeepToll { what }
@@ -5609,7 +5609,8 @@ impl Effect {
                 Effect::ExchangeControl { a, b }
                 | Effect::ExchangeSpellAndCreatureControl { a, b }
                 | Effect::ExchangeTextBoxes { a, b }
-                | Effect::ExchangePower { a, b, .. } => {
+                | Effect::ExchangePower { a, b, .. }
+                | Effect::WeldArtifacts { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
                 Effect::MoveCounters { from, to, .. } => {
@@ -5784,8 +5785,7 @@ impl Effect {
                 | Effect::SacrificeThenRevealUntilSharedType { what }
                 | Effect::ExileThenRevealUntilSharedType { what }
                 | Effect::CounterAbilityAndDestroySource { what }
-                | Effect::CounterAbilityAndStripSource { what }
-                | Effect::WeldArtifacts { what } => sel_find(what, slot),
+                | Effect::CounterAbilityAndStripSource { what } => sel_find(what, slot),
                 Effect::RevealLibraryNamedCountPunish { who, .. }
                 | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),
                 Effect::ExileHandThenReclaimLinked => None,

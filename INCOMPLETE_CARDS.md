@@ -734,7 +734,7 @@ Three approximations the fixes left standing, each documented at its variant:
 | Card | Residual |
 | --- | --- |
 | Scrabbling Claws | 🟡 the first ability prints "**target player** exiles a card from their graveyard" — the *player* is the target and the choice is theirs. It is modelled as "exile target card from a graveyard", now correctly zoned, which is the second ability's wording. |
-| Goblin Welder | 🟡 the second target ("target artifact card in **that player's** graveyard") is auto-picked by `Effect::WeldArtifacts` at highest mana value rather than declared as a target — a cross-target constraint no slot can express today. |
+| Goblin Welder | ✅ fixed 2026-10-26: the graveyard card is slot 1, `InGraveyardOfTargetSlotController(0)` (CR 601.2c), and `WeldArtifacts { a, b }` does nothing unless both are still legal. |
 | Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
 
 ## A layer observation, filed by the card that surfaced it (2026-09-20)

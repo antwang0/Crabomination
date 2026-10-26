@@ -23587,35 +23587,27 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WeldArtifacts { what } => {
-                // Goblin Welder: the target artifact's controller sacrifices
-                // it and returns an artifact card from their graveyard
-                // (auto-pick: highest MV) to the battlefield simultaneously.
-                for ent in self.resolve_selector(what, ctx) {
-                    let Some(cid) = ent.as_permanent_id() else { continue };
-                    let Some(seat) = self.battlefield_find(cid).map(|c| c.controller) else {
-                        continue;
-                    };
-                    let Some(gy_id) = self.players[seat]
-                        .graveyard
-                        .iter()
-                        .filter(|c| c.definition.card_types.contains(&CardType::Artifact))
-                        .max_by_key(|c| c.definition.cost.cmc())
-                        .map(|c| c.id)
-                    else {
-                        continue;
-                    };
-                    self.sacrifice_one(cid, seat, events);
-                    self.move_card_to(
-                        gy_id,
-                        &crate::effect::ZoneDest::Battlefield {
-                            controller: crate::effect::PlayerRef::Seat(seat),
-                            tapped: false,
-                        },
-                        ctx,
-                        events,
-                    );
+            Effect::WeldArtifacts { a, b } => {
+                // Goblin Welder: both targets must still be legal, and the
+                // card still in the artifact controller's graveyard (the
+                // cross-slot filter isn't re-read at resolution, CR 608.2b).
+                let artifact = self.resolve_selector(a, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                let card = self.resolve_selector(b, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                let (Some(cid), Some(gy_id)) = (artifact, card) else { return Ok(()) };
+                let Some(seat) = self.battlefield_find(cid).map(|c| c.controller) else { return Ok(()) };
+                if !self.players[seat].graveyard.iter().any(|c| c.id == gy_id) {
+                    return Ok(());
                 }
+                self.sacrifice_one(cid, seat, events);
+                self.move_card_to(
+                    gy_id,
+                    &crate::effect::ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(seat),
+                        tapped: false,
+                    },
+                    ctx,
+                    events,
+                );
                 Ok(())
             }
 

@@ -3638,6 +3638,10 @@ pub enum SelectionRequirement {
     /// graveyard as the card already chosen for slot `.0`. Vacuously true
     /// while that slot is unchosen; read like `SameControllerAsTargetSlot`.
     SameGraveyardAsTargetSlot(u8),
+    /// CR 601.2c — "target … card in **that player's** graveyard": in the
+    /// graveyard of the player who controls slot `.0`'s permanent (Goblin
+    /// Welder). Vacuously true while that slot is unchosen.
+    InGraveyardOfTargetSlotController(u8),
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -5108,6 +5112,7 @@ impl SelectionRequirement {
             | Self::NameDiffersFromOtherTargets
             | Self::ManaValueDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
+            | Self::InGraveyardOfTargetSlotController(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX
             | Self::TargetsTakeDistinctTypeSlots(_) => true,
@@ -5134,6 +5139,7 @@ impl SelectionRequirement {
             | Self::NameDiffersFromOtherTargets
             | Self::ManaValueDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
+            | Self::InGraveyardOfTargetSlotController(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX
             | Self::TargetsTakeDistinctTypeSlots(_) => Self::Any,
@@ -5157,6 +5163,8 @@ impl SelectionRequirement {
             Self::SharesCreatureTypeWithTargetSlot(n) => Self::SharesCreatureTypeWithTargetSlot(s(n)),
             Self::SharesCardTypeWithTargetSlot(n) => Self::SharesCardTypeWithTargetSlot(s(n)),
             Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
+            Self::InGraveyardOfTargetSlotController(n) => Self::InGraveyardOfTargetSlotController(s(n)),
+            Self::DifferentControllerFromTargetSlot(n) => Self::DifferentControllerFromTargetSlot(s(n)),
             Self::And(a, b) => Self::And(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
             Self::Or(a, b) => Self::Or(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
             Self::Not(a) => Self::Not(Box::new(a.shift_target_slots(by))),

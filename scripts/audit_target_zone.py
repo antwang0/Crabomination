@@ -71,7 +71,6 @@ ENGINE_EFFECTS = os.path.join(ROOT, "crabomination", "src", "game", "effects", "
 RESOLVER_ZONE = {
     # Effect variant: the token its arm must still carry
     "CommandTheDreadhorde": "graveyard",
-    "WeldArtifacts": "graveyard",
 }
 
 # A definition with no targeted selector at all has not got the clause WRONG,

@@ -441,29 +441,94 @@ mod recent104 {
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "revealed card to hand");
     }
 
-    /// Goblin Welder swaps a battlefield artifact with the highest-MV artifact in
-    /// its controller's graveyard.
+    /// Goblin Welder's two targets (CR 601.2c): an artifact, and an artifact
+    /// card in **that player's** graveyard — the declared card comes back (not
+    /// the priciest), and one in another graveyard is not a legal second
+    /// target.
     #[test]
     fn goblin_welder_swaps_artifact_with_graveyard() {
+        let weld = |g: &mut GameState, welder, artifact, card| {
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: welder,
+                ability_index: 0,
+                target: Some(Target::Permanent(artifact)),
+                additional_targets: vec![Target::Permanent(card)],
+                x_value: None,
+                mode: None,
+            })
+        };
         let mut g = two_player_game();
         let welder = g.add_card_to_battlefield(0, catalog::goblin_welder());
         g.clear_sickness(welder);
         let small = g.add_card_to_battlefield(1, catalog::sol_ring());
-        let big = g.add_card_to_graveyard(1, catalog::mind_stone());
+        let cheap = g.add_card_to_graveyard(1, catalog::sol_ring());
+        g.add_card_to_graveyard(1, catalog::mind_stone());
+        let mine = g.add_card_to_graveyard(0, catalog::mind_stone());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        assert!(weld(&mut g, welder, small, mine).is_err(), "a card in another player's graveyard");
+        weld(&mut g, welder, small, cheap).expect("weld");
+        drain_stack(&mut g);
+        assert!(g.players[1].graveyard.iter().any(|c| c.id == small), "artifact sacrificed");
+        let ret = g.battlefield_find(cheap).expect("the targeted card returned");
+        assert_eq!(ret.controller, 1, "returned under its owner's control");
+    }
+
+    /// The bot's slot walk fills the second target from that player's
+    /// graveyard, never another's.
+    #[test]
+    fn goblin_welder_fills_the_second_target_from_that_graveyard() {
+        let mut g = two_player_game();
+        let welder = g.add_card_to_battlefield(0, catalog::goblin_welder());
+        g.clear_sickness(welder);
+        let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+        g.add_card_to_graveyard(0, catalog::mind_stone());
+        let theirs = g.add_card_to_graveyard(1, catalog::mind_stone());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let effect = catalog::goblin_welder().activated_abilities[0].effect.clone();
+        let (target, additional_targets) = g.auto_targets_for_effect_all_slots(&effect, 0, None);
+        assert_eq!(target, Some(Target::Permanent(ring)));
+        assert_eq!(additional_targets, vec![Target::Permanent(theirs)]);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: welder,
+            ability_index: 0,
+            target,
+            additional_targets,
+            x_value: None,
+            mode: None,
+        })
+        .expect("weld");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(1));
+        assert!(g.battlefield_find(ring).is_none());
+    }
+
+    /// CR 608.2b — "if both targets are still legal": the graveyard card
+    /// leaving first means the artifact stays.
+    #[test]
+    fn goblin_welder_does_nothing_when_the_card_is_gone() {
+        let mut g = two_player_game();
+        let welder = g.add_card_to_battlefield(0, catalog::goblin_welder());
+        g.clear_sickness(welder);
+        let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+        let stone = g.add_card_to_graveyard(1, catalog::mind_stone());
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: welder,
             ability_index: 0,
-            target: Some(Target::Permanent(small)),
-            additional_targets: vec![],
-            x_value: None, mode: None,
+            target: Some(Target::Permanent(ring)),
+            additional_targets: vec![Target::Permanent(stone)],
+            x_value: None,
+            mode: None,
         })
         .expect("weld");
+        let pos = g.players[1].graveyard.iter().position(|c| c.id == stone).unwrap();
+        let card = g.players[1].graveyard.remove(pos);
+        g.exile.push(card);
         drain_stack(&mut g);
-        assert!(g.players[1].graveyard.iter().any(|c| c.id == small), "artifact sacrificed");
-        let ret = g.battlefield_find(big).expect("graveyard artifact returned");
-        assert_eq!(ret.controller, 1, "returned under its owner's control");
+        assert!(g.battlefield_find(ring).is_some(), "the artifact is not sacrificed");
     }
 
     /// Gilt-Leaf Archdruid draws on Druid casts and steals a player's lands for

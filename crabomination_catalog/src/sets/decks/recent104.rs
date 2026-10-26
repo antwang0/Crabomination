@@ -76,9 +76,9 @@ pub fn twilight_prophet() -> CardDefinition {
     }
 }
 
-/// Goblin Welder — {R} 1/1 Goblin Artificer. {T}: target artifact's
-/// controller swaps it with an artifact card in their graveyard (auto-pick:
-/// highest mana value).
+/// Goblin Welder — {R} 1/1 Goblin Artificer. {T}: choose target artifact a
+/// player controls and target artifact card in that player's graveyard; if
+/// both are still legal, that player swaps them (CR 601.2c cross-slot).
 pub fn goblin_welder() -> CardDefinition {
     CardDefinition {
         name: "Goblin Welder",
@@ -93,7 +93,13 @@ pub fn goblin_welder() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::WeldArtifacts {
-                what: target_filtered(SelectionRequirement::Artifact),
+                a: target_filtered(SelectionRequirement::Artifact),
+                b: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::InGraveyard)
+                        .and(SelectionRequirement::InGraveyardOfTargetSlotController(0)),
+                },
             },
             ..Default::default()
         }],
