@@ -351,6 +351,12 @@ struct Args {
     /// with; round 82's actors played the default, which misplayed burn,
     /// counters and 0-power attackers).
     actor_fra_fixes: bool,
+    /// `--actor-rated-decks`: build training decks with the rated builder
+    /// (`selfplay::heuristic_sealed_build_rated`, one noisy sample like the
+    /// default's) on a pool the ratings cover (`card_ratings::rates_pool`),
+    /// so the net learns from the decks the client's opponent now builds
+    /// (round 84). Any other pool keeps `heuristic_sealed_build`.
+    actor_rated_decks: bool,
     /// Build training decks with the gate-passed deck net as the judge
     /// (best-of-32 over the same noisy-greedy candidates the heuristic
     /// picks from) instead of taking the heuristic builder's own pick.
@@ -471,6 +477,7 @@ fn parse_args() -> Args {
         capture_settled: false,
         pilot_net67: false,
         actor_fra_fixes: false,
+        actor_rated_decks: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -524,6 +531,7 @@ fn parse_args() -> Args {
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--actor-det" => a.actor_det = Some(val().parse().expect("--actor-det")),
             "--actor-fra-fixes" => a.actor_fra_fixes = true,
+            "--actor-rated-decks" => a.actor_rated_decks = true,
             "--tail-reuse" => a.tail_reuse = val().parse().expect("--tail-reuse"),
             "--gpu-eval" => {
                 a.gpu_eval = true;
@@ -834,6 +842,9 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                 let (cards, feats) = encode_deck(d, vocab);
                 net.forward(&cards, &feats) as f64
             }),
+            None if args.actor_rated_decks && crabomination::card_ratings::rates_pool(pool) => {
+                crabomination::selfplay::heuristic_sealed_build_rated(pool, seed)
+            }
             None => heuristic_sealed_build(pool, seed),
         };
         let deck_a = build(&pool_a, salt(3));

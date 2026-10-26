@@ -13,7 +13,10 @@ Reads a `fra_card_eval` output directory and prints rank correlations
            for its deck's results with its deck-mates' values held fixed;
            in win-rate points per copy
 
-usage: fra_card_eval.py RUN_DIR DRAFTSIM_TSV [--l17 17LANDS_JSON]
+usage: fra_card_eval.py RUN_DIR [DRAFTSIM_TSV] [--l17 17LANDS_JSON]
+
+Without DRAFTSIM_TSV (a set with no Draftsim file, `fra_card_eval --set
+sos`) it skips the comparisons and only writes ratings.tsv.
 
 Inputs (third-party, not tracked):
   DRAFTSIM_TSV  the `../data/FRA.txt` template literal embedded in Draftsim's
@@ -60,14 +63,14 @@ def spearman(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run")
-    ap.add_argument("draftsim")
+    ap.add_argument("draftsim", nargs="?")
     ap.add_argument("--l17")
     ap.add_argument("--min-decks", type=int, default=30)
     ap.add_argument("--show", type=int, default=12)
     args = ap.parse_args()
 
     ds = {}
-    for line in open(args.draftsim).read().strip().split("\n")[1:]:
+    for line in (open(args.draftsim).read().strip().split("\n")[1:] if args.draftsim else []):
         c = line.split("\t")
         if len(c) >= 8 and c[7] == "base":
             ds[c[0].replace("_", " ")] = float(c[6])
@@ -172,6 +175,9 @@ def main():
             rho, nn, (lo, hi) = spearman(col(rr, ref), col(rr, k))
             print(f"  {label:<10} {rho:6.3f}  [{lo:6.3f}, {hi:6.3f}]  {nn:4d}")
 
+    if not args.draftsim:
+        write_ratings(args.run, cards)
+        return
     table("Spearman vs Draftsim rating (all FRA cards)", nonland, "ds")
     for rar in "CURM":
         rows = [c for c in nonland if c["rarity"] == rar]
@@ -198,7 +204,11 @@ def main():
     for r in rows[::-1][: args.show]:
         print(fmt(r))
 
-    with open(os.path.join(args.run, "ratings.tsv"), "w") as f:
+    write_ratings(args.run, cards)
+
+
+def write_ratings(run, cards):
+    with open(os.path.join(run, "ratings.tsv"), "w") as f:
         f.write("name\trarity\tdraftsim\tl17_gih\tstatic\tplayed\tgpwr\tvalue\tdecks\n")
         for c in sorted(cards, key=lambda c: -c["value"]):
             f.write(f"{c['name']}\t{c['rarity']}\t{c['ds']}\t{c['gih']}\t{c['static']}\t"

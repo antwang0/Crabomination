@@ -52,7 +52,10 @@
 //! opponent-level mean, and every later list is also read as its paired
 //! difference against the first.
 //!
-//! `fra_card_eval --ab [--pools 2000] [--pairs 8] [--seed 43] [--pilot P]`
+//! `--set sos` rates Secrets of Strixhaven instead (`draft::SosPacks` pools,
+//! no `--ratings` file); `--ab` takes it too.
+//!
+//! `fra_card_eval --ab [--pools 2000] [--pairs 8] [--seed 43] [--pilot P] [--best N]`
 //! is the builder race instead: per FRA pool (`fra_mode::FraPacks`, no
 //! ratings file), the v3 build against the rated build
 //! (`SimConfig::rated_cards`, `card_ratings`), seat-swapped pairs under one
@@ -88,6 +91,34 @@ fn arg(name: &str) -> Option<String> {
 
 fn num(name: &str, default: usize) -> usize {
     arg(name).map(|v| v.parse().expect("numeric flag")).unwrap_or(default)
+}
+
+/// `--set sos`: Secrets of Strixhaven pools (`draft::SosPacks`) instead of
+/// FRA's. The rating run, `--ab` and nothing else read it.
+fn sos() -> bool {
+    arg("--set").as_deref() == Some("sos")
+}
+
+/// Six boosters of the `--set`.
+fn roll_pool(rng: &mut StdRng) -> Vec<Factory> {
+    if sos() {
+        let packs = crabomination::draft::SosPacks::sos_default();
+        return (0..6).flat_map(|_| packs.roll(rng)).collect();
+    }
+    let packs = crabomination::fra_mode::FraPacks::get();
+    (0..6).flat_map(|_| packs.roll(rng)).collect()
+}
+
+/// The SOS rating run's card list: every nonland card on the SOS sheet
+/// (no external ratings file; rarity unknown, written `?`).
+fn sos_cards() -> Vec<Card> {
+    let mut seen = std::collections::HashSet::new();
+    crabomination::draft::sos_draft_pool_ref()
+        .iter()
+        .copied()
+        .filter(|f| !crabomination::cube::card_brief(*f).is_land && seen.insert(*f as usize))
+        .map(|f| Card { name: crabomination::cube::card_brief(f).def.name.to_string(), rarity: '?', f })
+        .collect()
 }
 
 fn load_cards(path: &str) -> Vec<Card> {
@@ -126,8 +157,12 @@ fn open_pack(by_rarity: &HashMap<char, Vec<usize>>, rng: &mut StdRng) -> Vec<usi
 }
 
 /// `--ab`: the rated builder against the v3 builder it would replace.
-fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize) {
-    let packs = crabomination::fra_mode::FraPacks::get();
+/// `--best N` races the client's sealed-opponent recipes instead: best of
+/// N rated builds against `selfplay::v3_opponent_build` (best of N, curve);
+/// `--best N --shape` races the rated judge with its deck-shape term
+/// (`card_ratings::shape_penalty`) against the judge without it.
+fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize, best: usize) {
+    let shape = std::env::args().any(|a| a == "--shape");
     let next = AtomicUsize::new(0);
     let rows = std::sync::Mutex::new(Vec::with_capacity(pools));
     let start = std::time::Instant::now();
@@ -140,9 +175,23 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                 }
                 let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (i as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
                 let mut rng = StdRng::seed_from_u64(salt);
-                let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
-                let old = crabomination::selfplay::heuristic_sealed_build_v3(&pool, salt ^ 1);
-                let new = crabomination::selfplay::heuristic_sealed_build_rated(&pool, salt ^ 1);
+                let pool = roll_pool(&mut rng);
+                let (old, new) = if best > 0 && shape {
+                    (
+                        crabomination::selfplay::rated_sealed_build_shaped(&pool, best, salt ^ 1, false),
+                        crabomination::selfplay::rated_sealed_build_shaped(&pool, best, salt ^ 1, true),
+                    )
+                } else if best > 0 {
+                    (
+                        crabomination::selfplay::v3_opponent_build(&pool, best, salt ^ 1, ColorSet::empty()),
+                        crabomination::selfplay::rated_sealed_build(&pool, best, salt ^ 1),
+                    )
+                } else {
+                    (
+                        crabomination::selfplay::heuristic_sealed_build_v3(&pool, salt ^ 1),
+                        crabomination::selfplay::heuristic_sealed_build_rated(&pool, salt ^ 1),
+                    )
+                };
                 let same = {
                     let key = |d: &[Factory]| {
                         let mut v: Vec<usize> = d.iter().map(|f| *f as usize).collect();
@@ -767,10 +816,9 @@ fn main() {
     }
     if std::env::args().any(|a| a == "--ab") {
         let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("dflt"));
-        race_builders(pilot, num("--pools", 2000), num("--pairs", 8), num("--seed", 43) as u64, threads);
+        race_builders(pilot, num("--pools", 2000), num("--pairs", 8), num("--seed", 43) as u64, threads, num("--best", 0));
         return;
     }
-    let ratings = arg("--ratings").expect("--ratings FRA.tsv");
     let out = std::path::PathBuf::from(arg("--out").expect("--out DIR"));
     let pilot_name = arg("--pilot").unwrap_or_else(|| "dflt".into());
     let n_decks = num("--decks", 2000);
@@ -780,8 +828,8 @@ fn main() {
     let explore = num("--explore", 0);
     let pilot = pilot_named(&pilot_name);
 
-    let cards = load_cards(&ratings);
-    eprintln!("{} FRA cards resolved", cards.len());
+    let cards = if sos() { sos_cards() } else { load_cards(&arg("--ratings").expect("--ratings FRA.tsv")) };
+    eprintln!("{} cards resolved", cards.len());
     let index: HashMap<usize, usize> = cards.iter().enumerate().map(|(i, c)| (c.f as usize, i)).collect();
     let mut by_rarity: HashMap<char, Vec<usize>> = HashMap::new();
     for r in ['C', 'U', 'R', 'M'] {
@@ -797,15 +845,22 @@ fn main() {
     let mut in_deck = vec![0u32; cards.len()];
     let mut decks: Vec<Vec<Factory>> = Vec::with_capacity(n_decks);
     for d in 0..n_decks {
-        let pool_idx: Vec<usize> = (0..6).flat_map(|_| open_pack(&by_rarity, &mut rng)).collect();
+        // SOS pools come from its own pack roller (lands and all); a card
+        // outside `cards` (a land) is simply not counted.
+        let pool: Vec<Factory> = if sos() {
+            roll_pool(&mut rng)
+        } else {
+            (0..6).flat_map(|_| open_pack(&by_rarity, &mut rng)).map(|i| cards[i].f).collect()
+        };
         let mut seen = vec![false; cards.len()];
-        for &i in &pool_idx {
-            if !seen[i] {
+        for f in &pool {
+            if let Some(&i) = index.get(&(*f as usize))
+                && !seen[i]
+            {
                 seen[i] = true;
                 in_pool[i] += 1;
             }
         }
-        let pool: Vec<Factory> = pool_idx.iter().map(|&i| cards[i].f).collect();
         let mut deck = crabomination::selfplay::heuristic_sealed_build_v3(&pool, seed ^ (d as u64) << 20);
         // `--explore N`: N of the deck's spells swapped for pool cards the
         // build left out, inside the deck's colours. The v3 builder all but

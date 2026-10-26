@@ -309,14 +309,230 @@ pub const FRA_SIM_VALUE: &[(&str, f32)] = &[
     ("Yuriko, Hope from the Shadows", -1.62),
 ];
 
+/// [`SCALE`] / [`OFFSET`] for [`SOS_SIM_VALUE`]: its 151 cards' static
+/// scores (6.91 ± 3.18) matched to their values (−0.31 ± 1.61).
+const SOS_SCALE: f32 = 1.975;
+const SOS_OFFSET: f32 = 7.524;
+
+/// `(card name, win-rate points per copy)` for Secrets of Strixhaven, by
+/// the same method as [`FRA_SIM_VALUE`] (2026-10-26): `fra_card_eval --set
+/// sos --pilot dflt --decks 16000 --rounds 30 --pairs 2 --seed 7 --explore 3`
+/// (960k games; `dflt` because the SOS client plays default weights), then
+/// `scripts/fra_card_eval.py RUN` and `scripts/fra_card_table.py ratings.tsv
+/// 30`. 151 of the sheet's 152 nonland cards (Sylvan Library made 26 decks).
+/// Ridge λ 300 by 5-fold CV (FRA's: 30) — the SOS values are flatter.
+#[allow(clippy::approx_constant)]
+pub const SOS_SIM_VALUE: &[(&str, f32)] = &[
+    ("Additive Evolution", 2.10),
+    ("Adrix and Nev, Twincasters", 0.17),
+    ("Ambitious Augmenter", 2.00),
+    ("Applied Geometry", 2.28),
+    ("Arcane Omens", -1.35),
+    ("Archaeomancer", -0.65),
+    ("Archaic's Agony", -1.80),
+    ("Archmage Emeritus", -0.64),
+    ("Ark of Hunger", -3.53),
+    ("Arnyn, Deathbloom Botanist", 0.88),
+    ("Artistic Process", 1.32),
+    ("Ascendant Dustspeaker", 0.71),
+    ("Aziza, Mage Tower Captain", -2.88),
+    ("Banishing Betrayal", -0.32),
+    ("Berta, Wise Extrapolator", -2.07),
+    ("Blech, Loafing Pest", 0.10),
+    ("Bogwater Lumaret", -0.04),
+    ("Burrog Banemaker", 0.45),
+    ("Burrog Barrage", 0.42),
+    ("Campus Composer", -0.03),
+    ("Cauldron of Essence", 0.14),
+    ("Charging Strifeknight", 0.88),
+    ("Chase Inspiration", -2.16),
+    ("Chelonian Tackle", -1.03),
+    ("Choreographed Sparks", -4.68),
+    ("Codie, Vociferous Codex", -7.25),
+    ("Colorstorm Stallion", 2.07),
+    ("Daydream", 0.13),
+    ("Decorum Dissertation", -1.21),
+    ("Deluge Virtuoso", 0.41),
+    ("Divergent Equation", -1.88),
+    ("Dualcaster Mage", -2.34),
+    ("Duel Tactics", -0.23),
+    ("Eager Glyphmage", 1.16),
+    ("Echocasting Symposium", -1.31),
+    ("Efflorescence", -1.21),
+    ("Elemental Mascot", -0.55),
+    ("Emeritus of Ideation", 3.38),
+    ("Ennis, Debate Moderator", -1.64),
+    ("Environmental Scientist", 2.56),
+    ("Essenceknit Scholar", 0.17),
+    ("Fix What's Broken", -2.71),
+    ("Flow State", -0.66),
+    ("Follow the Lumarets", -0.91),
+    ("Foolish Fate", 2.22),
+    ("Forum Necroscribe", -0.43),
+    ("Fractal Anomaly", -1.12),
+    ("Fractal Mascot", 0.36),
+    ("Fractal Tender", -0.14),
+    ("Fractalize", -1.57),
+    ("Garrison Excavator", 0.81),
+    ("Geometer's Arthropod", -2.03),
+    ("Germination Practicum", 2.57),
+    ("Glorious Decay", -0.22),
+    ("Graduation Day", -2.04),
+    ("Grapple with Death", 0.98),
+    ("Grave Researcher", 0.74),
+    ("Grim Haruspex", 0.43),
+    ("Growth Curve", -1.07),
+    ("Hardened Academic", -0.57),
+    ("Homesickness", -1.04),
+    ("Imperious Inkmage", -0.67),
+    ("Improvisation Capstone", -0.03),
+    ("Informed Inkwright", 0.34),
+    ("Inkling Mascot", -1.97),
+    ("Inkshape Demonstrator", -0.00),
+    ("Interjection", -0.22),
+    ("Lecturing Scornmage", -0.79),
+    ("Library of Leng", -2.74),
+    ("Living History", 0.63),
+    ("Lluwen, Exchange Student", -0.70),
+    ("Lorehold Charm", -3.10),
+    ("Lorehold, the Historian", 0.80),
+    ("Lumaret's Favor", 0.17),
+    ("Magmablood Archaic", 0.53),
+    ("Magus of the Library", -2.00),
+    ("Mana Sculpt", -1.78),
+    ("Masterful Flourish", 0.04),
+    ("Melancholic Poet", -0.33),
+    ("Mica, Reader of Ruins", 0.35),
+    ("Mindful Biomancer", 0.56),
+    ("Molten Note", 1.40),
+    ("Moseo, Vein's New Dean", 1.70),
+    ("Murmuring Mystic", -2.41),
+    ("Muse's Encouragement", 0.34),
+    ("Nita, Forum Conciliator", -2.46),
+    ("Noxious Newt", 0.88),
+    ("Old-Growth Educator", 0.30),
+    ("Oracle's Restoration", 0.36),
+    ("Paradox Surveyor", 0.25),
+    ("Pest Mascot", -1.54),
+    ("Planar Engineering", -1.14),
+    ("Practiced Offense", -2.43),
+    ("Practiced Scrollsmith", -1.98),
+    ("Primary Research", -0.17),
+    ("Prismari Charm", -2.14),
+    ("Prismari, the Inspiration", -1.21),
+    ("Procrastinate", -0.36),
+    ("Proctor's Gaze", -0.61),
+    ("Professor Dellian Fel", 2.66),
+    ("Quandrix, the Proof", 1.76),
+    ("Rabid Attack", -1.89),
+    ("Ral Zarek, Guest Lecturer", -0.08),
+    ("Rapier Wit", 1.43),
+    ("Rapturous Moment", -2.12),
+    ("Rearing Embermare", 1.29),
+    ("Rehearsed Debater", 0.52),
+    ("Resonating Lute", -4.15),
+    ("Restoration Seminar", 0.02),
+    ("Rubble Rouser", -2.14),
+    ("Shattered Acolyte", 0.49),
+    ("Shopkeeper's Bane", 1.52),
+    ("Silverquill Charm", 0.15),
+    ("Silverquill, the Disputant", 0.57),
+    ("Slumbering Trudge", 4.24),
+    ("Snarl Song", -0.16),
+    ("Sneering Shadewriter", 1.30),
+    ("Snooping Page", -1.45),
+    ("Soaring Stoneglider", 0.59),
+    ("Social Snub", -1.15),
+    ("Spectacular Skywhale", -0.26),
+    ("Spirit Mascot", -1.59),
+    ("Splatter Technique", -0.18),
+    ("Stand Up for Yourself", 2.10),
+    ("Startled Relic Sloth", 0.66),
+    ("Steal the Show", -1.29),
+    ("Stirring Honormancer", -1.11),
+    ("Stirring Hopesinger", 2.09),
+    ("Stone Docent", 0.27),
+    ("Strife Scholar", -0.37),
+    ("Studious First-Year", 0.66),
+    ("Suspend Aggression", 0.24),
+    ("Tablet of Discovery", -0.85),
+    ("Textbook Tabulator", -0.07),
+    ("Thornfist Striker", 1.09),
+    ("Tome Blast", -0.62),
+    ("Top of the Class", -2.70),
+    ("Topiary Lecturer", 0.76),
+    ("Tragedy Feaster", 0.48),
+    ("Traumatic Critique", -0.63),
+    ("Unsubtle Mockery", 1.80),
+    ("Vicious Rivalry", -1.16),
+    ("Wander Off", 1.99),
+    ("Wild Hypothesis", 0.83),
+    ("Wildgrowth Archaic", 0.85),
+    ("Wilt in the Heat", 0.22),
+    ("Witherbloom, the Balancer", -1.38),
+    ("Withering Curse", -3.90),
+    ("Zaffai and the Tempests", -2.31),
+    ("Zealous Lorecaster", -0.18),
+    ("Zimone's Experiment", 0.57),
+];
+
 /// A card's measured value in builder-score units, when it has one.
 pub fn rated_score(name: &str) -> Option<i32> {
     static MAP: std::sync::OnceLock<crate::fxhash::HashMap<&'static str, i32>> = std::sync::OnceLock::new();
     MAP.get_or_init(|| {
-        FRA_SIM_VALUE.iter().map(|&(n, v)| (n, (OFFSET + SCALE * v).round() as i32)).collect()
+        let fra = FRA_SIM_VALUE.iter().map(|&(n, v)| (n, (OFFSET + SCALE * v).round() as i32));
+        let sos = SOS_SIM_VALUE.iter().map(|&(n, v)| (n, (SOS_OFFSET + SOS_SCALE * v).round() as i32));
+        fra.chain(sos).collect()
     })
     .get(name)
     .copied()
+}
+
+/// The deck-shape term of the rated builder's best-of-N judge, in
+/// builder-score units (a penalty, ≤ 0), over a deck's spells.
+///
+/// Per-card values are additive, so they cannot see that a deck needs
+/// enough creatures and a curve: a deck's count of creature cards is the sum
+/// of its cards' creature indicators, which the card values already price
+/// linearly, but not its curvature. On the 16,000 FRA pools behind
+/// [`FRA_SIM_VALUE`] the per-deck residual of the card-value fit is an
+/// inverted U in all three counts (`scripts/deck_shape_fit.py`, 2026-10-26):
+/// flat at 16–19 creatures and −0.7 / −1.6 / −2.3 win points at 14 / 13 / 12
+/// (−1.0 / −2.4 at 22 / 23); flat at 8–11 spells of mana value ≤ 2 (−0.7 at
+/// 5–6, −0.6 at 13–15); flat at 2–5 of mana value ≥ 5 (−0.7 at 1, −0.9 at
+/// 0). Modelled as `k · d²` win points, `d` the distance outside the flat
+/// range (creatures k 0.2, cheap 0.12, top 0.15), times [`SCALE`].
+pub fn shape_penalty(spells: &[crate::cube::CardFactory]) -> i32 {
+    let (mut creatures, mut cheap, mut top) = (0i32, 0i32, 0i32);
+    for f in spells {
+        let b = crate::cube::card_brief(*f);
+        if b.is_land {
+            continue;
+        }
+        creatures += i32::from(b.is_creature);
+        cheap += i32::from(b.cmc <= 2);
+        top += i32::from(b.cmc >= 5);
+    }
+    let out = |x: i32, lo: i32, hi: i32| (lo - x).max(x - hi).max(0) as f32;
+    let pts = 0.2 * out(creatures, 16, 19).powi(2) + 0.12 * out(cheap, 8, 11).powi(2) + 0.15 * out(top, 2, 5).powi(2);
+    -(SCALE * pts).round() as i32
+}
+
+/// Does the table rate this pool: are at least half its nonland cards
+/// listed? The sealed opponent's builder ([`crate::selfplay::sealed_opponent_build`])
+/// switches to the rated builder on such a pool and keeps v3 on any other
+/// (a cube pool, a set with no table).
+pub fn rates_pool(pool: &[crate::cube::CardFactory]) -> bool {
+    let (mut rated, mut all) = (0usize, 0usize);
+    for f in pool {
+        let def = crate::cube::card_def(*f);
+        if def.is_land() {
+            continue;
+        }
+        all += 1;
+        rated += usize::from(rated_score(def.name).is_some());
+    }
+    all > 0 && rated * 2 >= all
 }
 
 #[cfg(test)]

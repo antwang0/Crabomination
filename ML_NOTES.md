@@ -6307,3 +6307,68 @@ round 83 (2026-10-26).** The user asked for the remaining items. Work dir
   but the one full-length seed (s199) is the worst, so data volume is not
   the explanation. Training on the pilot the net serves did not help it
   serve that pilot. An open question, not a lead, without a second recipe.
+
+## Round 84 — rated opponents for FRA (+19.7) and SOS (+10.7); round 83's loss is not the pilot; deck shape +0.5 at 64 candidates; counter reads null; round 84 net training (2026-10-26)
+
+The six leads from the round-83 report, all queued at once. Work dir
+`.ladder/r84/`; each run's script there carries its pre-registered reading.
+
+- **#1 — the client's FRA opponent builds with the rated builder. ADOPTED.**
+  The client's sealed opponent (`selfplay::sealed_opponent_build`) was the
+  v3 builder's best-of-16 with the curve, on every set. A pool the ratings
+  cover (`card_ratings::rates_pool`: half its nonland cards listed) now goes
+  to `rated_sealed_build_in_colors`. `fra_card_eval --ab --best 16`
+  (new: the two client recipes, best-of-16 each), 2,000 FRA pools x 8
+  pairs, `fra-fixes` pilot: **69.73 % [69.12, 70.34] / 69.96 % [69.35,
+  70.57]** (seeds 43 / 97, pool-level). The single-sample `--ab` read 66.6;
+  best-of-N widens the gap, the rated judge picks better among its
+  candidates than v3's does among its own.
+- **#2 — SOS card values by play. ADOPTED (the SOS opponent goes rated).**
+  `fra_card_eval --set sos` (new: SOS pools from `draft::SosPacks`, no
+  ratings file) ran the FRA method: 16,000 pools, `--explore 3`, 30 rounds x
+  2 pairs, seed 7, `dflt` pilot (the SOS client plays default weights), 960k
+  games, 13 min. 151 of the sheet's 152 nonland cards over the 30-deck cut
+  (Sylvan Library 26); ridge λ 300 (FRA 30: flatter values, ±1.61 against
+  FRA's ±2.37); SCALE 1.975 OFFSET 7.524. `card_ratings::SOS_SIM_VALUE`.
+  `scripts/fra_card_eval.py RUN` now runs without a Draftsim file. Gate:
+  `--ab --set sos --best 16` **60.88 % [60.18, 61.58] / 60.58 % [59.89,
+  61.26]**, single samples 59.06 / 58.66 (seeds 43 / 97, `dflt`). With the
+  table, `rates_pool` is true on SOS pools, so the client's SOS opponent and
+  any `--actor-rated-decks` actor on SOS build rated.
+- **#3 — a deck-shape term for the rated judge. ADOPTED (small; pays only with many candidates).**
+  Linear deck counts are exactly collinear with the per-card values (a
+  deck's creature count is the sum of its cards' creature indicators), so
+  only curvature can be learned. On the FRA 16kx rating data the per-deck
+  residual of the card fit is an inverted U in creatures (flat 16–19; −0.7 /
+  −1.6 / −2.3 points at 14 / 13 / 12, −1.0 / −2.4 at 22 / 23), in spells of
+  mana value ≤ 2 (flat 8–11) and of ≥ 5 (flat 2–5)
+  (`scripts/deck_shape_fit.py`). `card_ratings::shape_penalty`
+  prices it (`k·d²` outside the flat range) and the judge can add it
+  (`selfplay::RATED_SHAPE_JUDGE`). Best-of-16 with against without:
+  **50.12 % [49.83, 50.40] / 50.17 % [49.88, 50.46]**; 1,509 / 1,470 of 2,000
+  pools built the same deck. The best-of-N candidates rarely differ in shape:
+  a judge cannot choose a shape the generator does not offer. A follow-up
+  (run after the pre-registered cells, so read it as such): best of 64,
+  `--build`'s candidate count, **50.43 % [50.10, 50.76] / 50.53 % [50.21,
+  50.85]**, 1,237 / 1,246 pools identical. Turned on: about +0.5 where the
+  judge has choices, a null at 16. The bigger lever is the generator —
+  putting the shape into the picks, not the judge — and is the open lead.
+- **#4 — why round 83 lost: not the pilot.** The r83 nets on the DEFAULT
+  pilot (`net67` vs `dflt`, the pilot r82's actors played; 1,000 x
+  12, seeds 43 / 97): r82 53.3 / 55.0, fresh − r82 **−3.01 [−5.20, −0.83]**
+  (the fixes pilot read −2.21). Every seed lost on both, in the same order
+  (s43 best, s199 worst). Training on `fra-fixes` actors made a worse net,
+  not a net for a different pilot. Two facts for the next look: the r83
+  learner took 0.31–0.34 steps a game against r82's 0.27 (each sample
+  reused more), and three of four seeds peaked early (best checkpoint at
+  57k–124k of their games) and stopped stale.
+- **#6 — counter mana keyed to a read of the opponent. NOT adopted.**
+  `counter_read`: the reserve rule only when the opponent holds two or more
+  cards and has four or more lands, our creatures' power is at least theirs
+  and theirs is under our life; `counter_read_board` also wants two
+  creatures of ours out. On top of `fra-fixes`, 48 FRA decks x 125, seeds 43
+  / 97: `counter_read` **49.9 / 49.8**, `counter_read_board` **49.9 / 49.8**
+  (the plain reserve: 49.3 / 49.4). The read removes most of the reserve's
+  cost and none of it turns into a gain: FRA's counters are few and the
+  development lost is still the larger term.
+- **#5 — round 84: the FRA net on rated-built decks.** Round 82's recipe plus `--actor-rated-decks` (new: actors build with `heuristic_sealed_build_rated` on a pool the ratings cover), `--actor-fra-fixes` dropped. Pre-registration and gate: `.ladder/run_r84_fra.sh` (scored on the rated field — `bot_ladder` `CRAB_SEALED_BUILDER=rated`, new — and the default field, then search). Training; the gate follows.

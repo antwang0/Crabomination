@@ -219,7 +219,16 @@ fn sealed_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
                 seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x5E_A1ED)
             };
             let pool = crabomination::selfplay::sealed_pool(salt(1));
-            let deck = crabomination::selfplay::heuristic_sealed_build(&pool, salt(2));
+            // `CRAB_SEALED_BUILDER=rated`: the field's decks from the rated
+            // builder on a pool the ratings cover (what round 84's actors
+            // and the client's opponent build), one noisy sample as before.
+            let rated = std::env::var("CRAB_SEALED_BUILDER").as_deref() == Ok("rated")
+                && crabomination::card_ratings::rates_pool(&pool);
+            let deck = if rated {
+                crabomination::selfplay::heuristic_sealed_build_rated(&pool, salt(2))
+            } else {
+                crabomination::selfplay::heuristic_sealed_build(&pool, salt(2))
+            };
             Archetype {
                 name: Box::leak(format!("sealed #{i}").into_boxed_str()),
                 deck,
@@ -621,6 +630,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "fixes+pumps" => Some(Pilot::Scored(EvalWeights { duel_pumps: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+hand" => Some(Pilot::Scored(EvalWeights { hand_abilities: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+reserve" => Some(Pilot::Scored(EvalWeights { counter_reserve: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+read" => Some(Pilot::Scored(EvalWeights { counter_read: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+read-board" => Some(Pilot::Scored(EvalWeights { counter_read_board: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+pressure" => Some(Pilot::Scored(EvalWeights { trade_pressure: true, ..EvalWeights::fra_fixes_on() })),
         "mcts-net67-fixes-casts" => Some(Pilot::Mcts(MctsConfig {
             iterations: 256,

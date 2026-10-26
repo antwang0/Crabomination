@@ -160,12 +160,33 @@ pub fn rated_sealed_build_lands(pool: &[CardFactory], n: usize, seed: u64, color
     rated_sealed_build_cfg(pool, n, seed, cfg)
 }
 
+/// Does the rated judge add [`crate::card_ratings::shape_penalty`]? On.
+/// With the term against without it (FRA, `fra_card_eval --ab --best N
+/// --shape`, 2,000 pools x 8 pairs, seeds 43 / 97, pool-level): best of 16
+/// **50.12 % [49.83, 50.40] / 50.17 % [49.88, 50.46]** (three pools in four
+/// build the same deck either way), best of 64 — `fra_card_eval --build`'s
+/// `--candidates` — **50.43 % [50.10, 50.76] / 50.53 % [50.21, 50.85]**.
+/// The term can only pick among the shapes the candidates offer, so it pays
+/// with more of them.
+pub const RATED_SHAPE_JUDGE: bool = true;
+
 /// The best of `n` rated v3 builds under `cfg` (its builder flags forced on).
 fn rated_sealed_build_cfg(pool: &[CardFactory], n: usize, seed: u64, cfg: SimConfig) -> Vec<CardFactory> {
+    rated_sealed_build_judged(pool, n, seed, cfg, RATED_SHAPE_JUDGE)
+}
+
+/// [`rated_sealed_build_in_colors`] with the judge's shape term chosen by
+/// the caller — the two arms `fra_card_eval --ab --best N --shape` races.
+pub fn rated_sealed_build_shaped(pool: &[CardFactory], n: usize, seed: u64, shape: bool) -> Vec<CardFactory> {
+    rated_sealed_build_judged(pool, n, seed, SimConfig::default(), shape)
+}
+
+fn rated_sealed_build_judged(pool: &[CardFactory], n: usize, seed: u64, cfg: SimConfig, shape: bool) -> Vec<CardFactory> {
     let cfg = SimConfig { builder_v3: true, rated_cards: true, ..cfg };
     let judge = |d: &[CardFactory]| {
         let spells: Vec<CardFactory> = d.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
-        crate::recommend::static_build_score_v3(&spells, spells.len(), true)
+        let shape_term = if shape { crate::card_ratings::shape_penalty(&spells) } else { 0 };
+        crate::recommend::static_build_score_v3(&spells, spells.len(), true) + shape_term
     };
     build_candidates_cfg(pool, n, seed, &cfg).into_iter().max_by_key(|d| judge(d)).unwrap_or_default()
 }
@@ -351,12 +372,30 @@ pub fn best_build_v3_in_colors(
 /// a chosen shape: a mana-value term in the pick scoring
 /// (`draft::aggro_curve_delta`) and reserved slots in the assembly
 /// (`recommend::CurveSlots`), so the early drops survive the cut.
+///
+/// A pool the measured ratings cover ([`crate::card_ratings::rates_pool`]:
+/// Reality Fracture and Secrets of Strixhaven) is built by
+/// [`rated_sealed_build_in_colors`] instead. Best-of-16 rated against this
+/// v3 recipe (`fra_card_eval --ab --best 16`, 2,000 pools x 8 pairs, seeds
+/// 43 / 97, pool-level, 2026-10-26), the rated deck won **69.73 % [69.12,
+/// 70.34] / 69.96 % [69.35, 70.57]** of FRA pools (`--pilot fra-fixes`) and
+/// **60.88 % [60.18, 61.58] / 60.58 % [59.89, 61.26]** of SOS pools
+/// (`--set sos --pilot dflt`).
 pub fn sealed_opponent_build(
     pool: &[CardFactory],
     n: usize,
     seed: u64,
     colors: ColorSet,
 ) -> Vec<CardFactory> {
+    if crate::card_ratings::rates_pool(pool) {
+        return rated_sealed_build_in_colors(pool, n, seed, colors);
+    }
+    v3_opponent_build(pool, n, seed, colors)
+}
+
+/// [`sealed_opponent_build`]'s v3 recipe on any pool — the control
+/// `fra_card_eval --ab --best N` races the rated build against.
+pub fn v3_opponent_build(pool: &[CardFactory], n: usize, seed: u64, colors: ColorSet) -> Vec<CardFactory> {
     best_build_v3_curved(pool, n, seed, colors, true)
 }
 

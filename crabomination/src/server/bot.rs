@@ -939,6 +939,18 @@ pub struct EvalWeights {
     /// 48 decks x 125) — the development it costs outweighs the counters it
     /// saves. NOT adopted.
     pub counter_reserve: bool,
+    /// [`Self::counter_reserve`] keyed to a read of the opponent: hold the
+    /// counter's mana only when a spell worth countering is likely (they
+    /// hold two or more cards and have four or more lands) and we can afford
+    /// to wait (our creatures' power at least theirs, their power under our
+    /// life). Implies the reserve rule under those conditions alone. On top
+    /// of `fra-fixes` (48 FRA decks x 125): **49.9 / 49.8** (seeds 43 / 97)
+    /// — most of the reserve's cost gone, no gain. NOT adopted.
+    pub counter_read: bool,
+    /// [`Self::counter_read`], and only once we have two creatures out (the
+    /// development the plain reserve cost us is already down). **49.9 /
+    /// 49.8**, the same setup. NOT adopted.
+    pub counter_read_board: bool,
     /// Attacks: an attacker whose worst block is a trade is sent when the
     /// defender is within two turns of our attackers' lethal, though the
     /// trade costs material. The sims price the trade as a loss even with the
@@ -1552,6 +1564,8 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_read: false,
+            counter_read_board: false,
             trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
@@ -1688,6 +1702,8 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_read: false,
+            counter_read_board: false,
             trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
@@ -1807,6 +1823,8 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_read: false,
+            counter_read_board: false,
             trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
@@ -2963,6 +2981,8 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_read: false,
+            counter_read_board: false,
             trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
@@ -3108,6 +3128,8 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_read: false,
+            counter_read_board: false,
             trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
@@ -3351,6 +3373,8 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_read: false,
+            counter_read_board: false,
             trade_pressure: false,
             free_attacks: false,
             trick_riders: false,
@@ -8348,10 +8372,41 @@ pub(super) fn cast_candidates<'a>(
     shared: Option<&SweepMana<'a>>,
 ) -> Vec<(GameAction, bool)> {
     let mut out = cast_candidates_all(state, seat, w, shared);
-    if w.counter_reserve {
+    if w.counter_reserve || ((w.counter_read || w.counter_read_board) && counter_read_holds(state, seat, w)) {
         counter_reserve_filter(state, seat, w, &mut out);
     }
     out
+}
+
+/// `EvalWeights::counter_read` / `counter_read_board`: is holding a
+/// counter worth a turn's development here? A duel where the opponent can
+/// cast something worth countering (two or more cards, four or more lands)
+/// and we are not racing from behind (our creatures' power at least theirs,
+/// their power under our life); `counter_read_board` also wants two
+/// creatures of ours on the battlefield.
+fn counter_read_holds(state: &GameState, seat: usize, w: &EvalWeights) -> bool {
+    if state.players.len() != 2 {
+        return false;
+    }
+    let opp = 1 - seat;
+    if state.players[opp].hand.len() < 2 {
+        return false;
+    }
+    let opp_lands = state.battlefield.iter().filter(|c| c.controller == opp && c.definition.is_land()).count();
+    if opp_lands < 4 {
+        return false;
+    }
+    let side = |who: usize| -> (i32, usize) {
+        state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == who && state.computed_is_creature(c))
+            .filter_map(|c| state.computed_permanent(c.id))
+            .fold((0, 0), |(p, n), cp| (p.saturating_add(cp.power.max(0)), n + 1))
+    };
+    let (ours, our_n) = side(seat);
+    let (theirs, _) = side(opp);
+    ours >= theirs && theirs < state.players[seat].life && (!w.counter_read_board || our_n >= 2)
 }
 
 /// `EvalWeights::counter_reserve`: in our own main phase of a duel, with a
@@ -24565,6 +24620,35 @@ mod tests {
         assert!(offers(&g, &on), "five lands: both fit");
         g.players[1].hand.retain(|c| c.id != theirs);
         assert!(offers(&g, &on), "nothing to counter");
+    }
+
+    /// `counter_read`: the same Drake-or-Counterspell spot holds only
+    /// against an opponent who can cast something (two cards, four lands),
+    /// and not while their board outpowers ours.
+    #[test]
+    fn counter_read_holds_only_against_a_loaded_opponent() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        for _ in 0..4 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        g.add_card_to_hand(0, catalog::counterspell());
+        let drake = g.add_card_to_hand(0, catalog::wind_drake());
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        let on = EvalWeights { counter_read: true, ..EvalWeights::default() };
+        let offers = |g: &GameState| {
+            cast_candidates(g, 0, &on, None).iter().any(|(a, _)| matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == drake))
+        };
+        assert!(offers(&g), "one card, no lands: nothing worth holding for");
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        for _ in 0..4 {
+            g.add_card_to_battlefield(1, catalog::forest());
+        }
+        assert!(!offers(&g), "two cards and four lands: hold the counter mana");
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        assert!(offers(&g), "their board outpowers ours: develop");
     }
 
     /// `trick_riders`: Charge the Sanctum's untargeted mode ("creatures you
