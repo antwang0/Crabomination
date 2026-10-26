@@ -2140,7 +2140,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Rinoa, Angel Wing | the once-a-turn cap is spent by the first attacking creature's death even when you decline the return | `EventSpec::once_per_turn` |
 | 🟡 Rona, Disciple of Gix | a land card exiled with Rona can be played too (the grant is "may play", not "may cast spells") | `GrantMayPlay { WhileSourceOnBattlefield }` |
 | 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
-| 🟡 Nivea, Beloved Battlemage | the Akroma token has no mana cost, so its mana value is 0 rather than 8 | `TokenDefinition` carries no cost |
 | 🟡 Loki Laufeyson | an instant or sorcery above Loki's power spends the watch without a copy instead of leaving it armed | `OnYourNextInstantSorceryThisTurn` |
 | ~~Wanda's Vision~~ ✅ | fixed 2026-10-24: `ExileTopUntilNonland` + `CastWithoutPayingImmediate` during the resolution | — |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
@@ -2161,7 +2160,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Yotia Declares War | chapter II's damage target is picked as the chapter triggers, not on the reflexive "when you do" after the artifacts are tapped | `TapAnyNumberThen` over a targeted `DealDamage` |
 | 🟡 Sensation Gorger | the top card is checked before you choose to look; a non-sharing top card is never offered | `If` over `SharesCreatureTypeWithSource`, then `MayDo` |
 | 🟡 Hydro-Man, Fluid Felon | the "{T}: Add {U}" he gains as a land is printed on the card, live only while he is a land, so he "has" a mana ability as a creature too (ability counts, Humility) | `ActivatedAbility::condition` (`This` is a Land) |
-| 🟡 Balefang the Unslayable | the Baneslayer Angel token's printed {3}{W}{W} isn't modelled: it reads mana value 0 (`TokenDefinition` has no cost) | `CreateToken` |
 | 🟡 Flying Drone | "costs {1}{U} less to activate if …" is two abilities: the full-price loot gated off the condition and a free one gated on it | two `ActivatedAbility::condition` arms |
 | 🟡 Lightmine Field | "each of those creatures" / "the number of attacking creatures" read every attacker as the trigger resolves, not the declaration that triggered it | `YouAttack` + `IsAttacking` |
 | 🟡 Pick Up the Pace | "cards exiled with this enchantment" stay playable after the enchantment leaves (the permission is not tied to it, like Neyali's) | `ExileTopAndGrantMayPlay { TurnsHolderAttacks }` |
@@ -2311,4 +2309,4 @@ Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei; 2026-10-23 second: Kang, Mm
 
 | Card | Missing | Needs |
 | --- | --- | --- |
-| 🟡 Feroz, Ulgrotha's Warden / Gogo / Arachne | Ban token's {6} (tokens carry no mana cost); Gogo's "can't be copied"; the hand look | cosmetic or minor |
+| 🟡 Gogo / Arachne | Gogo's "can't be copied"; the hand look | cosmetic or minor |

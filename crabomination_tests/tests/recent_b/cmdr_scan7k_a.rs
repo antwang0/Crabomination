@@ -1679,6 +1679,8 @@ fn feroz_birds_drop_and_ban() {
     g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 7);
     loyalty(&mut g, pw, 2, None);
     assert_eq!(named_count(&g, 0, "Feroz's Ban"), 1);
+    let ban = g.battlefield.iter().find(|c| c.definition.name == "Feroz's Ban").unwrap();
+    assert_eq!(ban.definition.cost.cmc(), 6, "a {{6}} artifact token (CR 111.3)");
     let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
     flood(&mut g);
     let before = g.players[0].mana_pool.total();

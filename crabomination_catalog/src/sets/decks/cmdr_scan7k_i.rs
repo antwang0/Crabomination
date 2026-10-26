@@ -179,9 +179,8 @@ pub fn power_of_fire() -> CardDefinition {
 /// Feroz, Ulgrotha's Warden — {3}{G}{W}{U} legendary planeswalker, loyalty 5;
 /// can be your commander. +2: two 1/1 blue flying Birds. 0: draw a card, then
 /// you may put a permanent card with mana value 4 or less from your hand onto
-/// the battlefield. −7: a Feroz's Ban token ("Creature spells cost {2} more
-/// to cast"). The token's printed {6} isn't modelled — tokens carry no mana
-/// cost here, so it reads mana value 0.
+/// the battlefield. −7: a {6} Feroz's Ban artifact token ("Creature spells
+/// cost {2} more to cast").
 pub fn feroz_ulgrothas_warden() -> CardDefinition {
     let bird = TokenDefinition {
         name: "Bird".into(),
@@ -195,6 +194,7 @@ pub fn feroz_ulgrothas_warden() -> CardDefinition {
     };
     let ban = TokenDefinition {
         name: "Feroz's Ban".into(),
+        cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Creature spells cost {2} more to cast.",

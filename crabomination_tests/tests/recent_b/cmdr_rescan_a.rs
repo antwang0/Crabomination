@@ -609,6 +609,7 @@ fn balefang_gives_a_goaded_baneslayer() {
     assert_ne!(angel.controller, 0);
     assert!(angel.tapped);
     assert!(!angel.goad_holds.is_empty(), "goaded for the game");
+    assert_eq!(angel.definition.cost.cmc(), 5, "a {{3}}{{W}}{{W}} token (CR 111.3)");
 }
 
 /// Kitsune's entry swaps two other creatures controlled by different players.

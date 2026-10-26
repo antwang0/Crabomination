@@ -166,11 +166,11 @@ pub fn seifer_balamb_rival() -> CardDefinition {
 /// Nivea, Beloved Battlemage — {2}{W} legendary 3/1 Human Wizard Warrior.
 /// Whenever a creature you control becomes blocked, you may untap it and
 /// remove it from combat. {5}{W}{W}{W}, sacrifice Nivea: create an Akroma,
-/// Angel of Wrath token. (Residual: the token has no mana cost, so its mana
-/// value is 0 rather than 8.)
+/// Angel of Wrath token ({5}{W}{W}{W}, mana value 8 — CR 111.3).
 pub fn nivea_beloved_battlemage() -> CardDefinition {
     let akroma = TokenDefinition {
         name: "Akroma, Angel of Wrath".into(),
+        cost: cost(&[generic(5), w(), w(), w()]),
         power: 6,
         toughness: 6,
         card_types: vec![CardType::Creature],

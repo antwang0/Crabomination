@@ -637,10 +637,11 @@ pub fn see_the_unwritten() -> CardDefinition {
 /// Balefang the Unslayable — {3}{R}{R} legendary 5/5 Demon Dragon; flying,
 /// trample, protection from Angels and from Archons. Players can't gain
 /// life. ETB: target opponent creates a tapped Baneslayer Angel token,
-/// goaded for the rest of the game. (The token's mana value reads 0.)
+/// goaded for the rest of the game. The token is {3}{W}{W}, mana value 5.
 pub fn balefang_the_unslayable() -> CardDefinition {
     let angel = TokenDefinition {
         tapped: true,
+        cost: cost(&[generic(3), w(), w()]),
         ..token(
             "Baneslayer Angel",
             5,

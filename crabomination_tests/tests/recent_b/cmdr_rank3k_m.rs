@@ -180,6 +180,8 @@ fn nivea_becomes_akroma() {
         .expect("token")
         .id;
     assert_eq!(pt(&g, akroma), (6, 6));
+    // CR 111.3 — the token's defined {5}{W}{W}{W} is its mana cost.
+    assert_eq!(g.battlefield_find(akroma).unwrap().definition.cost.cmc(), 8);
     assert!(
         g.computed_permanent(akroma)
             .unwrap()
