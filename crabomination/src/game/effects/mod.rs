@@ -1996,12 +1996,18 @@ impl GameState {
         // trigger's picker does: the slot walk's two-seat caster-first rule
         // (`hostile_player_slot`) sent Leyline Tyrant's damage at its own
         // controller. No 2-player pool card has a reflexive player slot.
+        // CR 603.3c — a modal payoff's mode is chosen as it is put on the
+        // stack, ahead of its targets (Atraxa's Skitterfang's keyword).
+        let mode = (matches!(body, Effect::ChooseMode(_)) || GameState::governing_modal(body).is_some())
+            .then(|| self.pick_trigger_mode(body, src, ctx.controller))
+            .flatten();
+        let target_mode = mode.filter(|&m| m != crate::game::types::MODE_PICK_DEFERRED);
         let caster_first = !self.players[ctx.controller].hostile_player_targets;
         if caster_first {
             self.players[ctx.controller].hostile_player_targets = true;
         }
         let (mut slot0, mut additional) =
-            self.auto_targets_for_effect_all_slots_x(body, ctx.controller, None, false, Some(src), x);
+            self.auto_targets_for_effect_all_slots_x(body, ctx.controller, target_mode, false, Some(src), x);
         if caster_first {
             self.players[ctx.controller].hostile_player_targets = false;
         }
@@ -2017,6 +2023,7 @@ impl GameState {
             crate::game::TriggerPush::new(src, ctx.controller, carried)
                 .target(slot0)
                 .additional_targets(additional)
+                .mode(mode)
                 .x_value(ctx.x_value)
                 .converged_value(ctx.converged_value)
                 .trigger_source(Some(subject))

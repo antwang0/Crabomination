@@ -3810,8 +3810,9 @@ fn churning_reservoir_oil_gate() {
 }
 
 /// Atraxa's Skitterfang (CR 603.12): "remove an oil counter. When you do" —
-/// with a counter, one comes off and the grant lands; with none, nothing is
-/// removed and nothing is granted.
+/// with a counter, one comes off and the reflexive trigger grants the chosen
+/// keyword (its mode, picked as it goes on the stack — CR 603.3c); with none,
+/// nothing is removed and nothing is granted.
 #[test]
 fn atraxas_skitterfang_grants_only_when_an_oil_counter_comes_off() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -3821,12 +3822,13 @@ fn atraxas_skitterfang_grants_only_when_an_oil_counter_comes_off() {
         g.battlefield_find_mut(fang).unwrap().counters.remove(&CounterType::Oil);
         g.battlefield_find_mut(fang).unwrap().add_counters(CounterType::Oil, oil);
         let trigger = g.battlefield_find(fang).unwrap().definition.triggered_abilities[0].effect.clone();
-        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-        let ctx = crabomination::game::effects::EffectContext::for_trigger(fang, 0, Some(Target::Permanent(fang)), 0);
+        // The may, then the reflexive trigger's mode (CR 603.3c): lifelink.
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Mode(3)]));
+        let ctx = crabomination::game::effects::EffectContext::for_trigger(fang, 0, None, 0);
         g.resolve_effect(&trigger, &ctx).unwrap();
         drain_stack(&mut g);
         let c = g.computed_permanent(fang).unwrap();
-        assert_eq!(c.keywords().contains(&Keyword::Flying), oil == 1, "oil {oil}");
+        assert_eq!(c.keywords().contains(&Keyword::Lifelink), oil == 1, "oil {oil}");
         assert_eq!(g.battlefield_find(fang).unwrap().counter_count(CounterType::Oil), 0);
     }
 }

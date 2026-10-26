@@ -311,9 +311,9 @@ No seats. Ranked INCOMPLETE's 🟡 rows and three audits by seated-deck count (`
 - **Rows:** Frostwalk Bastion animates as an artifact; Unholy Indenture's counter is part of the entry (CR 614.1c).
 
 OPEN:
-- ⚠ **A modal payoff cannot be a reflexive trigger:** `push_reflexive_trigger` picks no mode, so a `ChooseMode` inside
-  `ReflexiveTrigger` resolves at mode 0 unasked (`stack::modal_reachability` catches it). Skitterfang stays inline.
-  The fix is `pick_trigger_mode` + `.mode(m)` in the push and `Some(mode)` to the auto-target walk.
+- ✅ **A modal payoff can be a reflexive trigger** (late in the run): `push_reflexive_trigger` picks the mode with
+  `pick_trigger_mode` as it pushes (CR 603.3c) and targets for it; `stack::modal_reachability` accepts a modal under
+  a `ReflexiveTrigger`. Atraxa's Skitterfang uses it.
 - Cube-frozen, written up not built: Detective's Phoenix's bestow (`bestow_additional_cost: Vec<AdditionalCastCost>`
   appended on a bestow cast + `StaticEffect::CastSelfFromGraveyardWithBestow` read by `cast_bestow` through
   `cast_hopped_from_graveyard`, the bot's BESTOW block widened to the graveyard — ~45 lines, written and reverted);
